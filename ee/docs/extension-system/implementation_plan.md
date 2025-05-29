@@ -186,10 +186,14 @@ This document outlines the focused implementation plan for the Alga PSA Client E
   - Prevent cross-tenant data access
   - Add tenant ID to all database queries
 
-- [ ] Add simple caching layer:
-  - Implement in-memory cache with LRU policy
-  - Add cache invalidation on updates
-  - Keep cache implementation simple and testable
+- [ ] Implement Redis-based caching layer:
+  - Leverage existing Redis infrastructure for caching
+  - Create adapter for Redis connection and operations
+  - Implement TTL support at cache level with expiration time propagation
+  - Add cache invalidation patterns for updates and deletes
+  - Design fallback mechanism for Redis unavailability
+  - Implement circuit breaker pattern for Redis connection issues
+  - Add monitoring for cache hit/miss rates
 
 - [ ] Create basic quota management:
   - Implement per-extension storage limits
@@ -205,12 +209,45 @@ This document outlines the focused implementation plan for the Alga PSA Client E
 - `/server/src/lib/extensions/storage/index.ts` - Main entry point and interface definitions
 - `/server/src/lib/extensions/storage/storageService.ts` - Core service implementation
 - `/server/src/lib/extensions/storage/storageErrors.ts` - Custom error classes
-- `/server/src/lib/extensions/storage/cache.ts` - Simple caching implementation
+- `/server/src/lib/extensions/storage/redisCache.ts` - Redis cache adapter with circuit breaker
 - `/server/src/lib/extensions/storage/quota.ts` - Basic quota management
 - `/server/src/lib/extensions/storage/maintenance.ts` - Cleanup jobs
 - `/server/src/lib/extensions/storage/types.ts` - TypeScript type definitions
+- `/server/src/lib/extensions/storage/monitoring.ts` - Cache monitoring utilities
 
-**Example Implementation (80/20 Focused):**
+**Monitoring and Maintenance:**
+
+1. **Circuit Breaker Pattern**
+   - The Redis cache adapter implements a circuit breaker pattern to handle Redis outages gracefully
+   - When Redis fails repeatedly, the circuit opens and database-only mode is used
+   - After a timeout period, a half-open state tests Redis connectivity
+   - This prevents cascading failures when Redis is experiencing issues
+
+2. **Cache Monitoring**
+   - The storage service tracks key metrics like cache hit/miss rates
+   - Provides extension-specific Redis usage statistics
+   - Exposes monitoring endpoints for dashboards and alerts
+   - Logs cache operation performance for troubleshooting
+
+3. **Automated Maintenance**
+   - Expired key cleanup job runs regularly to prevent database bloat
+   - Orphaned data detection and cleanup for uninstalled extensions
+   - Cache synchronization to handle potential inconsistencies
+   - Quota usage reporting for extension administrators
+
+4. **TTL Management**
+   - Expired values are automatically pruned from both database and cache
+   - TTL values are synchronized between database and Redis
+   - When retrieving values from database, remaining TTL is calculated and applied to cache
+   - Background job handles expired items even when they're not accessed
+
+5. **Fire-and-Forget Cache Operations**
+   - Redis cache operations use a fire-and-forget pattern
+   - Cache errors never block or delay database operations
+   - This ensures the system remains operational even during Redis issues
+   - Comprehensive error logging for later investigation
+
+**Example Implementation with Redis Caching:**
 
 ```typescript
 // Core storage interface (simplified for 80/20)
@@ -239,41 +276,473 @@ interface StorageOptions {
   expiresIn?: number;
 }
 
-// Implementation
+// Redis cache adapter with circuit breaker
+class RedisCacheAdapter {
+  private redis: Redis;
+  private prefix: string;
+  private logger: Logger;
+  private circuitBreaker: {
+    failures: number;
+    lastFailure: number;
+    status: 'CLOSED' | 'OPEN' | 'HALF_OPEN';
+  };
+  private readonly FAILURE_THRESHOLD = 5;
+  private readonly RESET_TIMEOUT_MS = 30000; // 30 seconds
+  
+  constructor(redisClient: Redis, options: {
+    keyPrefix?: string;
+    logger?: Logger;
+  } = {}) {
+    this.redis = redisClient;
+    this.prefix = options.keyPrefix || 'ext:storage:';
+    this.logger = options.logger || console;
+    
+    // Initialize circuit breaker
+    this.circuitBreaker = {
+      failures: 0,
+      lastFailure: 0,
+      status: 'CLOSED'
+    };
+  }
+  
+  private getRedisKey(key: string): string {
+    return `${this.prefix}${key}`;
+  }
+  
+  /**
+   * Check if circuit breaker should allow operations
+   * Implementation of basic circuit breaker pattern to handle Redis outages
+   */
+  private async checkCircuitBreaker(): Promise<boolean> {
+    const now = Date.now();
+    
+    // If circuit is open, check if we should attempt to close it
+    if (this.circuitBreaker.status === 'OPEN') {
+      const timeElapsedSinceFailure = now - this.circuitBreaker.lastFailure;
+      
+      // If we've waited long enough, try half-open state
+      if (timeElapsedSinceFailure >= this.RESET_TIMEOUT_MS) {
+        this.circuitBreaker.status = 'HALF_OPEN';
+        this.logger.info('Circuit breaker entering half-open state', { prefix: this.prefix });
+      } else {
+        return false; // Still open, don't allow operation
+      }
+    }
+    
+    // Check Redis connection by pinging
+    if (this.circuitBreaker.status === 'HALF_OPEN') {
+      try {
+        await this.redis.ping();
+        // Success! Close the circuit
+        this.circuitBreaker.status = 'CLOSED';
+        this.circuitBreaker.failures = 0;
+        this.logger.info('Circuit breaker closed, Redis connection restored', { prefix: this.prefix });
+        return true;
+      } catch (error) {
+        // Still failing, open the circuit again
+        this.circuitBreaker.status = 'OPEN';
+        this.circuitBreaker.lastFailure = now;
+        this.logger.warn('Circuit breaker remains open, Redis still unavailable', { prefix: this.prefix });
+        return false;
+      }
+    }
+    
+    return true; // Circuit is closed, allow operation
+  }
+  
+  /**
+   * Handle operation failure and potentially trigger circuit breaker
+   */
+  private handleFailure(error: any, operation: string): void {
+    this.circuitBreaker.failures++;
+    this.circuitBreaker.lastFailure = Date.now();
+    
+    this.logger.warn(`Redis cache ${operation} failed`, { 
+      prefix: this.prefix,
+      error,
+      failures: this.circuitBreaker.failures
+    });
+    
+    // Open circuit if we exceed failure threshold
+    if (this.circuitBreaker.failures >= this.FAILURE_THRESHOLD) {
+      this.circuitBreaker.status = 'OPEN';
+      this.logger.error('Circuit breaker opened due to multiple Redis failures', { 
+        prefix: this.prefix,
+        failures: this.circuitBreaker.failures
+      });
+    }
+  }
+  
+  /**
+   * Get a value from the cache
+   */
+  async get<T>(key: string): Promise<T | null> {
+    // Skip operation if circuit breaker is open
+    if (!(await this.checkCircuitBreaker())) {
+      return null;
+    }
+    
+    const redisKey = this.getRedisKey(key);
+    try {
+      const value = await this.redis.get(redisKey);
+      if (!value) return null;
+      
+      // Reset failure count on success
+      if (this.circuitBreaker.failures > 0) {
+        this.circuitBreaker.failures = 0;
+      }
+      
+      return JSON.parse(value) as T;
+    } catch (error) {
+      this.handleFailure(error, 'get');
+      return null; // Fallback to database
+    }
+  }
+  
+  /**
+   * Get multiple values at once (for batch operations)
+   */
+  async mget<T>(keys: string[]): Promise<Record<string, T | null>> {
+    if (keys.length === 0) return {};
+    
+    // Skip operation if circuit breaker is open
+    if (!(await this.checkCircuitBreaker())) {
+      return {};
+    }
+    
+    const redisKeys = keys.map(k => this.getRedisKey(k));
+    const result: Record<string, T | null> = {};
+    
+    try {
+      const values = await this.redis.mget(...redisKeys);
+      
+      // Reset failure count on success
+      if (this.circuitBreaker.failures > 0) {
+        this.circuitBreaker.failures = 0;
+      }
+      
+      // Map redis results back to original keys
+      for (let i = 0; i < keys.length; i++) {
+        const value = values[i];
+        if (value) {
+          try {
+            result[keys[i]] = JSON.parse(value) as T;
+          } catch (e) {
+            this.logger.warn('Failed to parse cached value', { key: keys[i], error: e });
+            result[keys[i]] = null;
+          }
+        } else {
+          result[keys[i]] = null;
+        }
+      }
+      
+      return result;
+    } catch (error) {
+      this.handleFailure(error, 'mget');
+      return {}; // Fallback to individual database lookups
+    }
+  }
+  
+  /**
+   * Set a value in the cache with optional TTL
+   */
+  async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
+    // Skip operation if circuit breaker is open
+    if (!(await this.checkCircuitBreaker())) {
+      return;
+    }
+    
+    const redisKey = this.getRedisKey(key);
+    const serializedValue = JSON.stringify(value);
+    
+    try {
+      if (ttlSeconds) {
+        await this.redis.set(redisKey, serializedValue, 'EX', ttlSeconds);
+      } else {
+        await this.redis.set(redisKey, serializedValue);
+      }
+      
+      // Reset failure count on success
+      if (this.circuitBreaker.failures > 0) {
+        this.circuitBreaker.failures = 0;
+      }
+    } catch (error) {
+      this.handleFailure(error, 'set');
+      // Non-critical error, we can continue without caching
+    }
+  }
+  
+  /**
+   * Set multiple values at once with optional TTL
+   */
+  async mset<T>(entries: Record<string, T>, ttlSeconds?: number): Promise<void> {
+    // Skip operation if circuit breaker is open
+    if (!(await this.checkCircuitBreaker())) {
+      return;
+    }
+    
+    try {
+      // Use transaction for atomic operation
+      const pipeline = this.redis.pipeline();
+      
+      for (const [key, value] of Object.entries(entries)) {
+        const redisKey = this.getRedisKey(key);
+        const serializedValue = JSON.stringify(value);
+        
+        if (ttlSeconds) {
+          pipeline.set(redisKey, serializedValue, 'EX', ttlSeconds);
+        } else {
+          pipeline.set(redisKey, serializedValue);
+        }
+      }
+      
+      await pipeline.exec();
+      
+      // Reset failure count on success
+      if (this.circuitBreaker.failures > 0) {
+        this.circuitBreaker.failures = 0;
+      }
+    } catch (error) {
+      this.handleFailure(error, 'mset');
+      // Non-critical error, we can continue without caching
+    }
+  }
+  
+  /**
+   * Delete a value from the cache
+   */
+  async delete(key: string): Promise<void> {
+    // Skip operation if circuit breaker is open
+    if (!(await this.checkCircuitBreaker())) {
+      return;
+    }
+    
+    const redisKey = this.getRedisKey(key);
+    try {
+      await this.redis.del(redisKey);
+      
+      // Reset failure count on success
+      if (this.circuitBreaker.failures > 0) {
+        this.circuitBreaker.failures = 0;
+      }
+    } catch (error) {
+      this.handleFailure(error, 'delete');
+      // Non-critical operation, can continue
+    }
+  }
+  
+  /**
+   * Delete multiple values at once
+   */
+  async mdelete(keys: string[]): Promise<void> {
+    if (keys.length === 0) return;
+    
+    // Skip operation if circuit breaker is open
+    if (!(await this.checkCircuitBreaker())) {
+      return;
+    }
+    
+    const redisKeys = keys.map(k => this.getRedisKey(k));
+    
+    try {
+      await this.redis.del(...redisKeys);
+      
+      // Reset failure count on success
+      if (this.circuitBreaker.failures > 0) {
+        this.circuitBreaker.failures = 0;
+      }
+    } catch (error) {
+      this.handleFailure(error, 'mdelete');
+      // Non-critical operation, can continue
+    }
+  }
+  
+  /**
+   * Clear all values with a specific pattern
+   */
+  async clear(pattern: string = '*'): Promise<void> {
+    // Skip operation if circuit breaker is open
+    if (!(await this.checkCircuitBreaker())) {
+      return;
+    }
+    
+    try {
+      // Find all matching keys
+      const keys = await this.redis.keys(`${this.prefix}${pattern}`);
+      
+      if (keys.length > 0) {
+        // Delete them all at once
+        await this.redis.del(...keys);
+      }
+      
+      // Reset failure count on success
+      if (this.circuitBreaker.failures > 0) {
+        this.circuitBreaker.failures = 0;
+      }
+      
+      this.logger.debug('Cache cleared', { pattern, keysRemoved: keys.length });
+    } catch (error) {
+      this.handleFailure(error, 'clear');
+      // Non-critical operation, can continue
+    }
+  }
+  
+  /**
+   * Get cache stats - useful for monitoring
+   */
+  async getStats(): Promise<{ 
+    keyCount: number; 
+    memoryUsage: string;
+    circuitStatus: string;
+  }> {
+    try {
+      // Only attempt if circuit is not open
+      if (this.circuitBreaker.status !== 'OPEN') {
+        const info = await this.redis.info();
+        const keyCount = await this.redis.dbsize();
+        const memory = info.split('\n').find(line => line.startsWith('used_memory_human:'))?.split(':')[1]?.trim() || 'unknown';
+        
+        return {
+          keyCount,
+          memoryUsage: memory,
+          circuitStatus: this.circuitBreaker.status
+        };
+      }
+    } catch (error) {
+      this.handleFailure(error, 'getStats');
+    }
+    
+    return {
+      keyCount: 0,
+      memoryUsage: 'unavailable',
+      circuitStatus: this.circuitBreaker.status
+    };
+  }
+}
+
+// Storage errors
+class StorageError extends Error {
+  constructor(message: string, options?: { cause?: Error }) {
+    super(message, options);
+    this.name = 'StorageError';
+  }
+}
+
+class QuotaExceededError extends StorageError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'QuotaExceededError';
+  }
+}
+
+class KeyNotFoundError extends StorageError {
+  constructor(key: string) {
+    super(`Key not found: ${key}`);
+    this.name = 'KeyNotFoundError';
+  }
+}
+
+class SerializationError extends StorageError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SerializationError';
+  }
+}
+
+// Implementation with enhanced Redis integration
 class ExtensionStorageService implements ExtensionStorage {
   private extensionId: string;
   private tenantId: string;
-  private cache: SimpleCache;
+  private redisCache: RedisCacheAdapter;
   private db: Database;
   private namespace: string = '';
+  private logger: Logger;
+  private metrics: {
+    cacheHits: number;
+    cacheMisses: number;
+    dbQueries: number;
+    writeOperations: number;
+  };
   
-  constructor(extensionId: string, tenantId: string, options: { namespace?: string } = {}) {
+  constructor(
+    extensionId: string, 
+    tenantId: string, 
+    options: { 
+      namespace?: string;
+      redis?: Redis;
+      logger?: Logger;
+      db?: Database;
+    } = {}
+  ) {
     this.extensionId = extensionId;
     this.tenantId = tenantId;
-    this.cache = new SimpleCache(1000); // Simple LRU cache with 1000 items limit
-    this.db = getDatabase();
+    this.db = options.db || getDatabase();
     this.namespace = options.namespace || '';
+    this.logger = options.logger || console;
+    
+    // Initialize metrics for monitoring
+    this.metrics = {
+      cacheHits: 0,
+      cacheMisses: 0,
+      dbQueries: 0,
+      writeOperations: 0
+    };
+    
+    // Initialize Redis cache with tenant and extension isolation
+    const redisKeyPrefix = `tenant:${tenantId}:ext:${extensionId}:${this.namespace ? this.namespace + ':' : ''}`;
+    this.redisCache = new RedisCacheAdapter(options.redis || getRedisClient(), {
+      keyPrefix: redisKeyPrefix,
+      logger: this.logger
+    });
   }
   
-  // Build the full key with tenant and namespace isolation
+  // Build the full key with namespace isolation
   private getFullKey(key: string): string {
-    return `${this.tenantId}:${this.extensionId}:${this.namespace}:${key}`;
+    return key;
   }
   
+  // Build the database key for queries
+  private getDbKey(key: string): string {
+    return this.namespace ? `${this.namespace}:${key}` : key;
+  }
+  
+  /**
+   * Get a value from storage
+   * First tries Redis cache, then falls back to database
+   */
   async get<T>(key: string): Promise<T | null> {
     const fullKey = this.getFullKey(key);
     
     try {
-      // Try cache first for performance
-      const cachedValue = this.cache.get<T>(fullKey);
-      if (cachedValue !== undefined) {
+      // Try Redis cache first for performance
+      const cachedValue = await this.redisCache.get<T>(fullKey);
+      
+      if (cachedValue !== null) {
+        // Cache hit - record metric and return value
+        this.metrics.cacheHits++;
+        this.logger.debug('Cache hit', { 
+          key: fullKey, 
+          extension: this.extensionId,
+          tenant: this.tenantId,
+          hitRate: this.getCacheHitRate()
+        });
         return cachedValue;
       }
+      
+      // Cache miss - need to query database
+      this.metrics.cacheMisses++;
+      this.metrics.dbQueries++;
+      this.logger.debug('Cache miss', { 
+        key: fullKey, 
+        extension: this.extensionId,
+        tenant: this.tenantId,
+        hitRate: this.getCacheHitRate()
+      });
       
       // Get from database with tenant isolation
       const result = await this.db.query(
         'SELECT value, expires_at FROM extension_storage WHERE extension_id = $1 AND tenant_id = $2 AND key = $3',
-        [this.extensionId, this.tenantId, key]
+        [this.extensionId, this.tenantId, this.getDbKey(key)]
       );
       
       if (result.rows.length === 0) {
@@ -284,35 +753,217 @@ class ExtensionStorageService implements ExtensionStorage {
       if (result.rows[0].expires_at && new Date(result.rows[0].expires_at) < new Date()) {
         // Data has expired, delete it asynchronously and return null
         this.delete(key).catch(err => {
-          console.error('Failed to delete expired key', { key, error: err });
+          this.logger.error('Failed to delete expired key', { 
+            key, 
+            error: err,
+            extension: this.extensionId,
+            tenant: this.tenantId
+          });
         });
         return null;
       }
       
       // Parse the JSON value
-      const value = JSON.parse(result.rows[0].value);
+      let value: T;
+      try {
+        value = JSON.parse(result.rows[0].value);
+      } catch (error) {
+        this.logger.error('Failed to parse JSON from database', { 
+          key, 
+          error,
+          extension: this.extensionId,
+          tenant: this.tenantId
+        });
+        throw new SerializationError(`Failed to parse JSON for key ${key}`);
+      }
       
-      // Cache the result for future queries
-      this.cache.set(fullKey, value);
+      // Calculate TTL for Redis if expires_at is set
+      let ttlSeconds: number | undefined;
+      if (result.rows[0].expires_at) {
+        const expiryDate = new Date(result.rows[0].expires_at);
+        const ttlMs = expiryDate.getTime() - Date.now();
+        if (ttlMs > 0) {
+          ttlSeconds = Math.floor(ttlMs / 1000);
+        }
+      }
+      
+      // Cache the result in Redis for future queries (don't await - fire and forget)
+      this.redisCache.set(fullKey, value, ttlSeconds)
+        .catch(error => {
+          // Just log and continue - cache errors shouldn't impact the main flow
+          this.logger.warn('Failed to set Redis cache', { 
+            key, 
+            error,
+            extension: this.extensionId,
+            tenant: this.tenantId
+          });
+        });
       
       return value;
     } catch (error) {
-      console.error('Failed to get key', { key, error });
-      throw new StorageError(`Failed to get key ${key}`, { cause: error });
+      if (error instanceof SerializationError) {
+        throw error;
+      }
+      
+      this.logger.error('Failed to get key', { 
+        key, 
+        error,
+        extension: this.extensionId,
+        tenant: this.tenantId
+      });
+      throw new StorageError(`Failed to get key ${key}`, { cause: error as Error });
     }
   }
   
+  /**
+   * Get multiple values at once for better performance
+   */
+  async getBatch<T>(keys: string[]): Promise<Map<string, T>> {
+    if (keys.length === 0) {
+      return new Map();
+    }
+    
+    const result = new Map<string, T>();
+    const keysToFetch = new Set<string>();
+    
+    try {
+      // Try Redis cache first for all keys
+      const cachedValues = await this.redisCache.mget<T>(keys.map(k => this.getFullKey(k)));
+      
+      // Identify which keys were cache hits and which need database lookups
+      for (const key of keys) {
+        const fullKey = this.getFullKey(key);
+        if (cachedValues[fullKey] !== null && cachedValues[fullKey] !== undefined) {
+          // Cache hit
+          this.metrics.cacheHits++;
+          result.set(key, cachedValues[fullKey] as T);
+        } else {
+          // Cache miss - need to fetch from database
+          this.metrics.cacheMisses++;
+          keysToFetch.add(key);
+        }
+      }
+      
+      // If all keys were in cache, return early
+      if (keysToFetch.size === 0) {
+        return result;
+      }
+      
+      // Fetch remaining keys from database
+      this.metrics.dbQueries++;
+      
+      // Convert Set to Array for database query
+      const dbKeys = Array.from(keysToFetch);
+      const dbPlaceholders = dbKeys.map((_, i) => `$${i + 3}`).join(',');
+      
+      const dbResult = await this.db.query(
+        `SELECT key, value, expires_at FROM extension_storage 
+         WHERE extension_id = $1 AND tenant_id = $2 AND key IN (${dbPlaceholders})`,
+        [this.extensionId, this.tenantId, ...dbKeys.map(k => this.getDbKey(k))]
+      );
+      
+      // Process database results
+      const cacheUpdates: Record<string, T> = {};
+      const cacheTTLs: Record<string, number> = {};
+      
+      for (const row of dbResult.rows) {
+        // Check for expiration
+        if (row.expires_at && new Date(row.expires_at) < new Date()) {
+          // Skip expired entries and delete them asynchronously
+          this.delete(row.key).catch(err => {
+            this.logger.error('Failed to delete expired key', { 
+              key: row.key, 
+              error: err,
+              extension: this.extensionId,
+              tenant: this.tenantId
+            });
+          });
+          continue;
+        }
+        
+        // Parse JSON value
+        try {
+          const value = JSON.parse(row.value);
+          result.set(row.key, value as T);
+          
+          // Prepare for cache update
+          const fullKey = this.getFullKey(row.key);
+          cacheUpdates[fullKey] = value as T;
+          
+          // Calculate TTL if expires_at is set
+          if (row.expires_at) {
+            const expiryDate = new Date(row.expires_at);
+            const ttlMs = expiryDate.getTime() - Date.now();
+            if (ttlMs > 0) {
+              cacheTTLs[fullKey] = Math.floor(ttlMs / 1000);
+            }
+          }
+        } catch (error) {
+          this.logger.error('Failed to parse JSON from database', { 
+            key: row.key, 
+            error,
+            extension: this.extensionId,
+            tenant: this.tenantId
+          });
+          // Skip this entry but continue processing others
+        }
+      }
+      
+      // Update Redis cache with all values (fire and forget)
+      if (Object.keys(cacheUpdates).length > 0) {
+        // For each entry, set with its TTL if it has one
+        Object.keys(cacheUpdates).forEach(key => {
+          const ttl = cacheTTLs[key];
+          this.redisCache.set(key, cacheUpdates[key], ttl).catch(error => {
+            this.logger.warn('Failed to update Redis cache', { 
+              key, 
+              error,
+              extension: this.extensionId,
+              tenant: this.tenantId
+            });
+          });
+        });
+      }
+      
+      return result;
+    } catch (error) {
+      this.logger.error('Failed to get batch keys', { 
+        keys, 
+        error,
+        extension: this.extensionId,
+        tenant: this.tenantId
+      });
+      throw new StorageError(`Failed to get batch keys`, { cause: error as Error });
+    }
+  }
+  
+  /**
+   * Set a value in storage
+   * Updates both database and Redis cache
+   */
   async set<T>(key: string, value: T, options: StorageOptions = {}): Promise<void> {
     const fullKey = this.getFullKey(key);
     
     try {
+      // Serialize the value to check size
+      let serializedValue: string;
+      try {
+        serializedValue = JSON.stringify(value);
+      } catch (error) {
+        throw new SerializationError(`Failed to serialize value for key ${key}: ${error.message}`);
+      }
+      
       // Check quota before storing
-      await this.checkQuota(key, JSON.stringify(value).length);
+      await this.checkQuota(key, serializedValue.length);
       
       // Calculate expiration time if TTL is provided
       const expiresAt = options.expiresIn 
         ? new Date(Date.now() + options.expiresIn * 1000) 
         : null;
+      
+      // Track metrics
+      this.metrics.writeOperations++;
+      this.metrics.dbQueries++;
       
       // Store in database with tenant isolation
       await this.db.query(
@@ -320,51 +971,497 @@ class ExtensionStorageService implements ExtensionStorage {
          VALUES ($1, $2, $3, $4, $5)
          ON CONFLICT (extension_id, tenant_id, key) 
          DO UPDATE SET value = $4, expires_at = $5, updated_at = NOW()`,
-        [this.extensionId, this.tenantId, key, JSON.stringify(value), expiresAt]
+        [this.extensionId, this.tenantId, this.getDbKey(key), serializedValue, expiresAt]
       );
       
-      // Update cache
-      this.cache.set(fullKey, value);
+      // Update Redis cache with the same TTL (fire and forget)
+      this.redisCache.set(fullKey, value, options.expiresIn)
+        .catch(error => {
+          // Just log and continue - cache errors shouldn't impact the main flow
+          this.logger.warn('Failed to set Redis cache', { 
+            key, 
+            error,
+            extension: this.extensionId,
+            tenant: this.tenantId
+          });
+        });
+      
     } catch (error) {
-      console.error('Failed to set key', { key, error });
-      throw new StorageError(`Failed to set key ${key}`, { cause: error });
+      if (error instanceof QuotaExceededError || error instanceof SerializationError) {
+        throw error;
+      }
+      
+      this.logger.error('Failed to set key', { 
+        key, 
+        error,
+        extension: this.extensionId,
+        tenant: this.tenantId
+      });
+      throw new StorageError(`Failed to set key ${key}`, { cause: error as Error });
     }
   }
   
-  // Simple namespace implementation
+  /**
+   * Set multiple values at once for better performance
+   */
+  async setBatch<T>(entries: Record<string, T>, options: StorageOptions = {}): Promise<void> {
+    if (Object.keys(entries).length === 0) {
+      return;
+    }
+    
+    try {
+      // Prepare batch operation
+      const keysToStore = Object.keys(entries);
+      
+      // Track metrics
+      this.metrics.writeOperations += keysToStore.length;
+      this.metrics.dbQueries++;
+      
+      // Serialize all values and check quota
+      const serializedEntries: Record<string, string> = {};
+      let totalSize = 0;
+      
+      for (const key of keysToStore) {
+        try {
+          const serialized = JSON.stringify(entries[key]);
+          serializedEntries[key] = serialized;
+          totalSize += serialized.length;
+        } catch (error) {
+          throw new SerializationError(`Failed to serialize value for key ${key}: ${error.message}`);
+        }
+      }
+      
+      // Check total quota
+      await this.checkQuotaBatch(totalSize);
+      
+      // Calculate expiration time if TTL is provided
+      const expiresAt = options.expiresIn 
+        ? new Date(Date.now() + options.expiresIn * 1000) 
+        : null;
+      
+      // Use a transaction for all database operations
+      await this.db.transaction(async (client) => {
+        for (const key of keysToStore) {
+          await client.query(
+            `INSERT INTO extension_storage (extension_id, tenant_id, key, value, expires_at)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (extension_id, tenant_id, key) 
+             DO UPDATE SET value = $4, expires_at = $5, updated_at = NOW()`,
+            [this.extensionId, this.tenantId, this.getDbKey(key), serializedEntries[key], expiresAt]
+          );
+        }
+      });
+      
+      // Update Redis cache with all values (fire and forget)
+      const cacheEntries: Record<string, T> = {};
+      for (const key of keysToStore) {
+        cacheEntries[this.getFullKey(key)] = entries[key];
+      }
+      
+      this.redisCache.mset(cacheEntries, options.expiresIn)
+        .catch(error => {
+          this.logger.warn('Failed to update Redis cache in batch', { 
+            keys: keysToStore, 
+            error,
+            extension: this.extensionId,
+            tenant: this.tenantId
+          });
+        });
+      
+    } catch (error) {
+      if (error instanceof QuotaExceededError || error instanceof SerializationError) {
+        throw error;
+      }
+      
+      this.logger.error('Failed to set batch entries', { 
+        keys: Object.keys(entries), 
+        error,
+        extension: this.extensionId,
+        tenant: this.tenantId
+      });
+      throw new StorageError(`Failed to set batch entries`, { cause: error as Error });
+    }
+  }
+  
+  /**
+   * Delete a value from storage
+   * Removes from both database and Redis cache
+   */
+  async delete(key: string): Promise<boolean> {
+    const fullKey = this.getFullKey(key);
+    
+    try {
+      // Track metrics
+      this.metrics.writeOperations++;
+      this.metrics.dbQueries++;
+      
+      // Delete from database
+      const result = await this.db.query(
+        'DELETE FROM extension_storage WHERE extension_id = $1 AND tenant_id = $2 AND key = $3 RETURNING key',
+        [this.extensionId, this.tenantId, this.getDbKey(key)]
+      );
+      
+      const deleted = result.rowCount > 0;
+      
+      // Delete from Redis cache regardless of database result (fire and forget)
+      this.redisCache.delete(fullKey)
+        .catch(error => {
+          this.logger.warn('Failed to delete from Redis cache', { 
+            key, 
+            error,
+            extension: this.extensionId,
+            tenant: this.tenantId
+          });
+        });
+      
+      return deleted;
+    } catch (error) {
+      this.logger.error('Failed to delete key', { 
+        key, 
+        error,
+        extension: this.extensionId,
+        tenant: this.tenantId
+      });
+      throw new StorageError(`Failed to delete key ${key}`, { cause: error as Error });
+    }
+  }
+  
+  /**
+   * Check if a key exists in storage
+   */
+  async has(key: string): Promise<boolean> {
+    const fullKey = this.getFullKey(key);
+    
+    try {
+      // Try Redis cache first for performance
+      const cachedValue = await this.redisCache.get(fullKey);
+      if (cachedValue !== null) {
+        // Cache hit
+        this.metrics.cacheHits++;
+        return true;
+      }
+      
+      // Cache miss - check database
+      this.metrics.cacheMisses++;
+      this.metrics.dbQueries++;
+      
+      const result = await this.db.query(
+        'SELECT 1 FROM extension_storage WHERE extension_id = $1 AND tenant_id = $2 AND key = $3 AND (expires_at IS NULL OR expires_at > NOW())',
+        [this.extensionId, this.tenantId, this.getDbKey(key)]
+      );
+      
+      return result.rowCount > 0;
+    } catch (error) {
+      this.logger.error('Failed to check key existence', { 
+        key, 
+        error,
+        extension: this.extensionId,
+        tenant: this.tenantId
+      });
+      throw new StorageError(`Failed to check if key ${key} exists`, { cause: error as Error });
+    }
+  }
+  
+  /**
+   * Get all keys in the current namespace
+   */
+  async keys(): Promise<string[]> {
+    try {
+      // We always query the database for keys since Redis might have partial data
+      this.metrics.dbQueries++;
+      
+      const queryPrefix = this.namespace ? `${this.namespace}:%` : '';
+      const whereClause = this.namespace 
+        ? 'AND key LIKE $4' 
+        : 'AND key NOT LIKE \'%:%\''; // Exclude namespaced keys when no namespace is specified
+      
+      const params = [
+        this.extensionId, 
+        this.tenantId, 
+        new Date() // current time for expiration check
+      ];
+      
+      if (this.namespace) {
+        params.push(queryPrefix);
+      }
+      
+      const result = await this.db.query(
+        `SELECT key FROM extension_storage 
+         WHERE extension_id = $1 AND tenant_id = $2 
+         AND (expires_at IS NULL OR expires_at > $3) 
+         ${whereClause}`,
+        params
+      );
+      
+      // Strip namespace prefix if needed
+      return result.rows.map(row => {
+        const key = row.key;
+        return this.namespace ? key.substring(this.namespace.length + 1) : key;
+      });
+    } catch (error) {
+      this.logger.error('Failed to list keys', { 
+        namespace: this.namespace, 
+        error,
+        extension: this.extensionId,
+        tenant: this.tenantId
+      });
+      throw new StorageError('Failed to list keys', { cause: error as Error });
+    }
+  }
+  
+  /**
+   * Clear all keys in the current namespace
+   */
+  async clear(): Promise<void> {
+    try {
+      // Track metrics
+      this.metrics.writeOperations++;
+      this.metrics.dbQueries++;
+      
+      // Delete from database
+      const queryPrefix = this.namespace ? `${this.namespace}:%` : '';
+      const whereClause = this.namespace 
+        ? 'AND key LIKE $3' 
+        : ''; // Clear all when no namespace is specified
+      
+      const params = [this.extensionId, this.tenantId];
+      
+      if (this.namespace) {
+        params.push(queryPrefix);
+      }
+      
+      await this.db.query(
+        `DELETE FROM extension_storage 
+         WHERE extension_id = $1 AND tenant_id = $2 ${whereClause}`,
+        params
+      );
+      
+      // Clear from Redis cache (fire and forget)
+      const pattern = this.namespace ? `${this.namespace}:*` : '*';
+      this.redisCache.clear(pattern)
+        .catch(error => {
+          this.logger.warn('Failed to clear Redis cache', { 
+            namespace: this.namespace, 
+            error,
+            extension: this.extensionId,
+            tenant: this.tenantId
+          });
+        });
+    } catch (error) {
+      this.logger.error('Failed to clear storage', { 
+        namespace: this.namespace, 
+        error,
+        extension: this.extensionId,
+        tenant: this.tenantId
+      });
+      throw new StorageError('Failed to clear storage', { cause: error as Error });
+    }
+  }
+  
+  /**
+   * Create a namespaced storage instance
+   * This allows extensions to organize their data into logical groups
+   */
   getNamespace(namespace: string): ExtensionStorage {
+    if (!namespace) {
+      throw new Error('Namespace cannot be empty');
+    }
+    
     return new ExtensionStorageService(
       this.extensionId, 
       this.tenantId, 
-      { namespace: this.namespace ? `${this.namespace}.${namespace}` : namespace }
+      { 
+        namespace: this.namespace ? `${this.namespace}:${namespace}` : namespace,
+        redis: this.redisCache['redis'], // Pass the same Redis client
+        logger: this.logger,
+        db: this.db
+      }
     );
   }
   
-  // Basic quota check
+  /**
+   * Get cache statistics for monitoring
+   */
+  async getCacheStats(): Promise<{
+    hitRate: number;
+    keyCount: number;
+    memoryUsage: string;
+    circuitStatus: string;
+  }> {
+    const redisStats = await this.redisCache.getStats();
+    
+    return {
+      hitRate: this.getCacheHitRate(),
+      keyCount: redisStats.keyCount,
+      memoryUsage: redisStats.memoryUsage,
+      circuitStatus: redisStats.circuitStatus
+    };
+  }
+  
+  /**
+   * Calculate cache hit rate as a percentage
+   */
+  private getCacheHitRate(): number {
+    const total = this.metrics.cacheHits + this.metrics.cacheMisses;
+    if (total === 0) return 0;
+    return Math.round((this.metrics.cacheHits / total) * 100);
+  }
+  
+  /**
+   * Basic quota check for a single key
+   */
   private async checkQuota(key: string, dataSize: number): Promise<void> {
-    const quotaLimit = await getExtensionQuota(this.extensionId);
+    await this.checkQuotaBatch(dataSize);
+  }
+  
+  /**
+   * Quota check for batch operations
+   */
+  private async checkQuotaBatch(additionalSize: number): Promise<void> {
+    const quotaLimit = await this.getExtensionQuota();
     const currentUsage = await this.getCurrentUsage();
     
     // Check if this update would exceed the quota
-    if (currentUsage + dataSize > quotaLimit) {
+    if (currentUsage + additionalSize > quotaLimit) {
       throw new QuotaExceededError(
-        `Storage quota exceeded for extension ${this.extensionId}`
+        `Storage quota exceeded for extension ${this.extensionId}. ` +
+        `Current usage: ${formatSize(currentUsage)}, ` +
+        `Additional requested: ${formatSize(additionalSize)}, ` +
+        `Limit: ${formatSize(quotaLimit)}`
       );
     }
   }
   
-  // Other methods...
+  /**
+   * Get the storage quota for this extension
+   */
+  private async getExtensionQuota(): Promise<number> {
+    // Implementation would fetch from configuration or database
+    // This is a simplified version
+    return 10 * 1024 * 1024; // 10 MB default quota
+  }
+  
+  /**
+   * Calculate current storage usage for this extension
+   */
+  private async getCurrentUsage(): Promise<number> {
+    try {
+      const result = await this.db.query(
+        `SELECT SUM(LENGTH(value)) AS total_size
+         FROM extension_storage
+         WHERE extension_id = $1 AND tenant_id = $2`,
+        [this.extensionId, this.tenantId]
+      );
+      
+      return result.rows[0]?.total_size || 0;
+    } catch (error) {
+      this.logger.error('Failed to calculate storage usage', { 
+        error,
+        extension: this.extensionId,
+        tenant: this.tenantId
+      });
+      // Return 0 on error to avoid blocking operations, but log the issue
+      return 0;
+    }
+  }
+}
+
+/**
+ * Helper function to format byte sizes into readable strings
+ */
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} bytes`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+```
+
+**Practical Usage Examples:**
+
+Here are practical examples of how extensions would use the storage service:
+
+```typescript
+// Extension example: Task management extension storing user preferences
+async function saveUserPreferences(extensionContext, userId, preferences) {
+  // Get storage with tenant isolation
+  const storage = extensionContext.getStorage();
+  
+  // Use namespacing for organization
+  const userStorage = storage.getNamespace('user-prefs');
+  
+  // Store with TTL of 30 days
+  await userStorage.set(userId, preferences, { expiresIn: 30 * 24 * 60 * 60 });
+}
+
+// Extension example: Cache API results with TTL
+async function getExternalApiData(extensionContext, apiEndpoint) {
+  const storage = extensionContext.getStorage();
+  const cacheStorage = storage.getNamespace('api-cache');
+  
+  // Generate a cache key from the endpoint
+  const cacheKey = `endpoint:${md5(apiEndpoint)}`;
+  
+  // Try to get from cache first
+  let data = await cacheStorage.get(cacheKey);
+  if (data) {
+    return data;
+  }
+  
+  // Cache miss - fetch from API
+  data = await fetchFromExternalApi(apiEndpoint);
+  
+  // Cache for 15 minutes
+  await cacheStorage.set(cacheKey, data, { expiresIn: 15 * 60 });
+  
+  return data;
+}
+
+// Extension example: Batch operations for performance
+async function batchUpdateUserSettings(extensionContext, updates) {
+  const storage = extensionContext.getStorage();
+  const settingsStorage = storage.getNamespace('settings');
+  
+  // Prepare batch entries
+  const entries = {};
+  for (const [userId, settings] of Object.entries(updates)) {
+    entries[userId] = settings;
+  }
+  
+  // Update all in one operation
+  await settingsStorage.setBatch(entries);
+}
+
+// Extension example: Using different namespaces for different data types
+function initializeStorage(extensionContext) {
+  const storage = extensionContext.getStorage();
+  
+  // Create namespaces for different types of data
+  return {
+    settings: storage.getNamespace('settings'),
+    cache: storage.getNamespace('cache'),
+    userPreferences: storage.getNamespace('user-prefs'),
+    temporaryData: storage.getNamespace('temp')
+  };
+}
+
+// Extension example: Storing temporary data with TTL
+async function storeTemporaryAuthToken(extensionContext, userId, token) {
+  const storage = extensionContext.getStorage();
+  const tempStorage = storage.getNamespace('temp');
+  
+  // Store auth token with 1 hour expiration
+  await tempStorage.set(`auth:${userId}`, token, { expiresIn: 60 * 60 });
 }
 ```
 
 **Features Deferred for Future Phases:**
 
 1. **Advanced Transactions**: Will implement simpler atomic operations first, add full transactions later
-2. **Complex Caching Strategies**: Start with basic in-memory cache, enhance with Redis/distributed caching later
+2. **Complex Caching Strategies**: Using Redis provides most benefits; advanced patterns can be added later
 3. **Data Versioning**: Not needed for initial implementation
 4. **Advanced Search**: Extensions can implement their own search logic initially
 5. **Encryption at Rest**: Will be added when handling more sensitive data
-6. **Advanced Prefetching**: Basic cache will provide most performance benefits
+6. **Advanced Prefetching**: Current caching provides most performance benefits
 
 **Dependencies:**
 - Extension registry for extension validation
