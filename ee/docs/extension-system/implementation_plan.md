@@ -1471,32 +1471,513 @@ async function storeTemporaryAuthToken(extensionContext, userId, token) {
 
 #### 1.6 Core UI Extension Framework
 
+**Key Concepts:**
+
+1. **Extension Points (Slots)**: Pre-defined areas in the UI where extensions can render components
+2. **Extension Components**: React components provided by extensions to render in slots
+3. **Extension Context**: React context providing extension metadata and services
+4. **Lazy Loading**: Dynamic loading of extension components only when needed
+5. **Error Boundaries**: Isolated error handling to prevent extension failures from crashing the app
+6. **Permissions**: RBAC-based control of which extensions can render where
+7. **Metrics**: Performance tracking for extension rendering and errors
+
+**Component Architecture:**
+
+```
+┌─────────────────────────────────────────┐
+│ ExtensionProvider                       │
+│  ┌─────────────────────────────────────┐│
+│  │ Application                         ││
+│  │  ┌────────────────────────────────┐ ││
+│  │  │ ExtensionSlot (name: "nav")    │ ││
+│  │  │  ┌─────────────────────────────┐│ ││
+│  │  │  │ExtensionErrorBoundary       ││ ││
+│  │  │  │ ┌───────────────────────────┐│ ││
+│  │  │  │ │ExtensionRenderer          ││ ││
+│  │  │  │ │ (loads & renders Extension││ ││
+│  │  │  │ │  Components from multiple ││ ││
+│  │  │  │ │  registered extensions)   ││ ││
+│  │  │  │ └───────────────────────────┘│ ││
+│  │  │  └─────────────────────────────┘│ ││
+│  │  └────────────────────────────────┘ ││
+│  │                                     ││
+│  │  ┌────────────────────────────────┐ ││
+│  │  │ ExtensionSlot (name: "widget") │ ││
+│  │  │  ...                           │ ││
+│  │  └────────────────────────────────┘ ││
+│  └─────────────────────────────────────┘│
+└─────────────────────────────────────────┘
+```
+
 **Tasks:**
-- [ ] Design component architecture for extension rendering
-- [ ] Create `ExtensionSlot` component for defining extension points
-- [ ] Implement `ExtensionRenderer` to load and render extension components
-- [ ] Add `ExtensionErrorBoundary` for graceful error handling
-- [ ] Create extension context provider for React
-- [ ] Implement dynamic component loading
-- [ ] Add permissions checking for UI components
-- [ ] Create extension component caching mechanism
-- [ ] Implement sandbox attributes for security
-- [ ] Add performance monitoring hooks
+
+- [ ] Design component architecture for extension rendering:
+  - Create clear interfaces for extension components
+  - Define a registry for extension points
+  - Design a system for extension component discovery
+  - Create a mechanism for passing props to extension components
+  - Design sandbox restrictions for security
+
+- [ ] Create `ExtensionSlot` component:
+  - Implement slot registration in registry
+  - Add support for slot-specific props
+  - Allow configuration of ordering extensions within slots
+  - Create filtering mechanism to select relevant extensions
+  - Add slot-level error boundaries
+
+- [ ] Implement `ExtensionRenderer`:
+  - Create lazy loading mechanism using dynamic imports
+  - Implement component caching to prevent redundant loads
+  - Support asynchronous component loading with loading states
+  - Design performance metrics collection during render
+  - Add debugging options for development mode
+
+- [ ] Add `ExtensionErrorBoundary`:
+  - Implement React error boundary for extension components
+  - Create fallback UI for failed extensions
+  - Add error reporting to monitoring system
+  - Prevent cascading failures between extensions
+  - Allow recovery options for end users
+
+- [ ] Create Extension Context Provider:
+  - Expose extension metadata to components
+  - Provide access to extension services (storage, API)
+  - Create tenant isolation at the context level
+  - Add session information for the current user
+  - Implement context versioning for compatibility
+
+- [ ] Implement dynamic component loading:
+  - Create a module resolution system for extension components
+  - Implement a caching mechanism to optimize performance
+  - Support code splitting for extension modules
+  - Add prefetching for common extension points
+  - Create retry mechanism for failed loads
+
+- [ ] Add permissions checking:
+  - Integrate with RBAC system for extension components
+  - Implement permission checks at render time
+  - Add support for dynamic permission updates
+  - Create permission-aware extension slots
+  - Implement an extensible authorization hook
+
+- [ ] Create extension component caching:
+  - Implement in-memory cache for loaded components
+  - Add cache invalidation on extension updates
+  - Create a component registry for fast lookups
+  - Support SSR-compatible component caching
+  - Add cache metrics for monitoring
+
+- [ ] Implement sandbox attributes:
+  - Create restricted execution context for extensions
+  - Add prop filtering for security-sensitive data
+  - Implement iframe isolation for high-risk extensions
+  - Create data access policies for extension components
+  - Add runtime checks for dangerous operations
+
+- [ ] Add performance monitoring:
+  - Track rendering time for each extension
+  - Monitor memory usage of extension components
+  - Create warning system for slow-rendering extensions
+  - Add custom events for extension lifecycle
+  - Implement performance budgets for extensions
 
 **Files to Create:**
-- `/server/src/lib/extensions/ui/ExtensionSlot.tsx`
-- `/server/src/lib/extensions/ui/ExtensionRenderer.tsx`
-- `/server/src/lib/extensions/ui/ExtensionErrorBoundary.tsx`
-- `/server/src/lib/extensions/ui/ExtensionProvider.tsx`
-- `/server/src/lib/extensions/ui/ExtensionLoader.tsx`
-- `/server/src/lib/extensions/ui/sandbox.ts`
-- `/server/src/lib/extensions/ui/index.ts`
+
+- `/server/src/lib/extensions/ui/types.ts` - Type definitions for UI extensions
+- `/server/src/lib/extensions/ui/ExtensionSlot.tsx` - Component for defining extension points
+- `/server/src/lib/extensions/ui/ExtensionRenderer.tsx` - Component for rendering extension components
+- `/server/src/lib/extensions/ui/ExtensionErrorBoundary.tsx` - Error handling for extension components
+- `/server/src/lib/extensions/ui/ExtensionProvider.tsx` - Context provider for extensions
+- `/server/src/lib/extensions/ui/ExtensionLoader.tsx` - Lazy loading for extension components
+- `/server/src/lib/extensions/ui/ExtensionRegistry.ts` - Registry for extension points and components
+- `/server/src/lib/extensions/ui/sandbox.ts` - Security sandbox for extension components
+- `/server/src/lib/extensions/ui/hooks/useExtension.ts` - Hook for accessing extension context
+- `/server/src/lib/extensions/ui/hooks/useExtensionPermission.ts` - Hook for checking permissions
+- `/server/src/lib/extensions/ui/hooks/useExtensionMetrics.ts` - Hook for performance monitoring
+- `/server/src/lib/extensions/ui/index.ts` - Main entry point for UI extension system
+
+**Example Implementation:**
+
+```typescript
+// Extension slot types
+interface ExtensionPointDefinition {
+  id: string;
+  name: string;
+  description: string;
+  allowMultiple: boolean;
+  requiredPermission?: string;
+}
+
+// Extension component definition in manifest
+interface ExtensionComponentDefinition {
+  extensionId: string;
+  slotName: string; // Which slot this component targets
+  componentPath: string; // Path to the component module
+  priority: number; // For ordering within the slot
+  requiredPermissions: string[];
+  props?: Record<string, any>; // Default props
+}
+
+// Extension slot registry
+class ExtensionRegistry {
+  private slots: Map<string, ExtensionPointDefinition> = new Map();
+  private components: Map<string, ExtensionComponentDefinition[]> = new Map();
+  
+  registerSlot(slot: ExtensionPointDefinition): void {
+    this.slots.set(slot.id, slot);
+    if (!this.components.has(slot.id)) {
+      this.components.set(slot.id, []);
+    }
+  }
+  
+  registerComponent(component: ExtensionComponentDefinition): void {
+    const slotId = component.slotName;
+    if (!this.slots.has(slotId)) {
+      throw new Error(`Extension slot ${slotId} not registered`);
+    }
+    
+    const components = this.components.get(slotId) || [];
+    components.push(component);
+    components.sort((a, b) => b.priority - a.priority);
+    this.components.set(slotId, components);
+  }
+  
+  getComponentsForSlot(slotId: string): ExtensionComponentDefinition[] {
+    return this.components.get(slotId) || [];
+  }
+}
+
+// ExtensionProvider component
+const ExtensionContext = React.createContext<ExtensionContextValue>(null);
+
+function ExtensionProvider({ children }: { children: React.ReactNode }) {
+  const [registry] = useState(() => new ExtensionRegistry());
+  const { user, tenant } = useAuth();
+  const { checkPermission } = usePermissions();
+  
+  // Initialize registry with extensions from the server
+  useEffect(() => {
+    async function loadExtensions() {
+      const extensions = await fetchEnabledExtensions(tenant.id);
+      
+      // Register components from extensions
+      extensions.forEach(extension => {
+        extension.components.forEach(component => {
+          registry.registerComponent({
+            extensionId: extension.id,
+            slotName: component.slotName,
+            componentPath: component.componentPath,
+            priority: component.priority || 0,
+            requiredPermissions: component.requiredPermissions || [],
+            props: component.defaultProps
+          });
+        });
+      });
+    }
+    
+    loadExtensions();
+  }, [tenant.id, registry]);
+  
+  const contextValue = {
+    registry,
+    user,
+    tenant,
+    checkPermission
+  };
+  
+  return (
+    <ExtensionContext.Provider value={contextValue}>
+      {children}
+    </ExtensionContext.Provider>
+  );
+}
+
+// Extension Slot component
+function ExtensionSlot({ 
+  name, 
+  props = {}, 
+  filter 
+}: { 
+  name: string; 
+  props?: Record<string, any>;
+  filter?: (component: ExtensionComponentDefinition) => boolean;
+}) {
+  const { registry, checkPermission } = useContext(ExtensionContext);
+  const [metrics, trackMetric] = useExtensionMetrics();
+  
+  // Get components for this slot
+  const components = registry.getComponentsForSlot(name);
+  
+  // Filter components if needed
+  const filteredComponents = useMemo(() => {
+    return components
+      .filter(component => {
+        // Apply custom filter if provided
+        if (filter && !filter(component)) {
+          return false;
+        }
+        
+        // Check permissions
+        const hasPermission = component.requiredPermissions.every(
+          permission => checkPermission(`extension:${component.extensionId}:${permission}`)
+        );
+        
+        return hasPermission;
+      });
+  }, [components, filter, checkPermission]);
+  
+  return (
+    <div className="extension-slot" data-slot-name={name}>
+      {filteredComponents.map(component => (
+        <ExtensionErrorBoundary
+          key={`${component.extensionId}-${component.componentPath}`}
+          extensionId={component.extensionId}
+          onError={(error) => {
+            trackMetric('error', {
+              extensionId: component.extensionId,
+              slotName: name,
+              error: error.message
+            });
+          }}
+        >
+          <ExtensionRenderer
+            extensionId={component.extensionId}
+            componentPath={component.componentPath}
+            slotProps={props}
+            defaultProps={component.props || {}}
+            onRender={(timing) => {
+              trackMetric('render', {
+                extensionId: component.extensionId,
+                slotName: name,
+                renderTime: timing
+              });
+            }}
+          />
+        </ExtensionErrorBoundary>
+      ))}
+    </div>
+  );
+}
+
+// Extension Renderer with lazy loading
+function ExtensionRenderer({
+  extensionId,
+  componentPath,
+  slotProps,
+  defaultProps,
+  onRender
+}: {
+  extensionId: string;
+  componentPath: string;
+  slotProps: Record<string, any>;
+  defaultProps: Record<string, any>;
+  onRender: (timing: number) => void;
+}) {
+  const [Component, setComponent] = useState<React.ComponentType<any> | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const startTime = useRef(Date.now());
+  
+  // Combine props
+  const combinedProps = { ...defaultProps, ...slotProps };
+  
+  // Dynamically load the component
+  useEffect(() => {
+    let isMounted = true;
+    
+    async function loadComponent() {
+      try {
+        // Dynamic import to load the extension component
+        const module = await import(
+          /* webpackIgnore: true */
+          `/extensions/${extensionId}/${componentPath}`
+        );
+        
+        // Get the default export
+        const Component = module.default;
+        
+        if (isMounted) {
+          setComponent(() => Component);
+          setLoading(false);
+          
+          // Track rendering performance
+          const loadTime = Date.now() - startTime.current;
+          onRender(loadTime);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err as Error);
+          setLoading(false);
+        }
+      }
+    }
+    
+    loadComponent();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [extensionId, componentPath, onRender]);
+  
+  if (loading) {
+    return <div className="extension-loading">Loading extension...</div>;
+  }
+  
+  if (error || !Component) {
+    return <div className="extension-error">Failed to load extension component</div>;
+  }
+  
+  // Apply sandbox restrictions to the component
+  const SandboxedComponent = applySandbox(Component, extensionId);
+  
+  return <SandboxedComponent {...combinedProps} />;
+}
+
+// Error boundary for extensions
+class ExtensionErrorBoundary extends React.Component<{
+  extensionId: string;
+  children: React.ReactNode;
+  onError: (error: Error) => void;
+}> {
+  state = { hasError: false, error: null };
+  
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error(`Error in extension ${this.props.extensionId}:`, error, errorInfo);
+    this.props.onError(error);
+  }
+  
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="extension-error-boundary">
+          <p>An error occurred in this extension</p>
+          <button onClick={() => this.setState({ hasError: false })}>
+            Try again
+          </button>
+        </div>
+      );
+    }
+    
+    return this.props.children;
+  }
+}
+
+// Custom hook for extension metrics
+function useExtensionMetrics() {
+  const metricsRef = useRef<Record<string, any[]>>({
+    render: [],
+    error: []
+  });
+  
+  const trackMetric = useCallback((type: string, data: any) => {
+    if (!metricsRef.current[type]) {
+      metricsRef.current[type] = [];
+    }
+    
+    metricsRef.current[type].push({
+      ...data,
+      timestamp: Date.now()
+    });
+    
+    // Report metrics to monitoring system
+    reportExtensionMetric(type, data);
+  }, []);
+  
+  return [metricsRef.current, trackMetric];
+}
+
+// Example usage in application
+function App() {
+  return (
+    <ExtensionProvider>
+      <div className="app">
+        <header>
+          <ExtensionSlot name="navigation" />
+        </header>
+        <main>
+          <div className="dashboard">
+            <ExtensionSlot 
+              name="dashboard-widget" 
+              props={{ location: 'main' }}
+              filter={(component) => component.props?.widgetSize === 'large'}
+            />
+          </div>
+          <div className="sidebar">
+            <ExtensionSlot 
+              name="dashboard-widget" 
+              props={{ location: 'sidebar' }}
+              filter={(component) => component.props?.widgetSize === 'small'} 
+            />
+          </div>
+        </main>
+      </div>
+    </ExtensionProvider>
+  );
+}
+```
+
+**Security Considerations:**
+
+1. **Sandbox Isolation**:
+   - Component rendering within restricted contexts
+   - Limiting access to global objects
+   - Preventing access to sensitive APIs
+   - Content Security Policy restrictions
+
+2. **Permission Enforcement**:
+   - Runtime checks for component rendering
+   - Validating extension permissions before rendering
+   - Tenant isolation in all extension code
+   - Role-based access control integration
+
+3. **Error Isolation**:
+   - Preventing extension errors from affecting host application
+   - Limiting cascading failures between extensions
+   - Resource limits for extension rendering
+   - Timeout mechanisms for long-running extensions
+
+4. **Data Access Control**:
+   - Filtering sensitive data from props
+   - Scoping extension API access
+   - Preventing cross-extension data access
+   - Auditing data access patterns
+
+**Performance Considerations:**
+
+1. **Lazy Loading Strategy**:
+   - Only load extensions when their slot is visible
+   - Implement code splitting for extension components
+   - Prioritize critical extension points
+   - Use preloading for common extensions
+
+2. **Caching Mechanisms**:
+   - Cache loaded extension components
+   - Implement intelligent cache invalidation
+   - Use memory-efficient caching strategies
+   - Support server-side rendering for extensions
+
+3. **Rendering Optimizations**:
+   - Monitor extension render performance
+   - Implement render timeouts for slow extensions
+   - Use React.memo for extension components
+   - Add virtualization for lists of extensions
+
+4. **Resource Management**:
+   - Track memory usage of extensions
+   - Implement resource quotas for extensions
+   - Garbage collect unused extension components
+   - Detect and mitigate memory leaks
 
 **Dependencies:**
-- Extension registry
-- React component system
-- Dynamic import capability
+- Extension registry system
+- React (v18+) for component rendering
+- Dynamic import capability (webpack/vite)
 - Performance monitoring tools
+- Permission checking system
 
 #### 1.7 Extension Administration UI
 
