@@ -6,70 +6,239 @@ This document outlines the focused implementation plan for the Alga PSA Client E
 
 ### Phase 1: Minimum Viable Extension System
 
-#### 1.1 Basic Database Schema and Registry
+#### 1.0 Database Schema Planning
 
 **Tasks:**
-- [ ] Create simple database migration for core extension tables
-- [ ] Implement minimal extension registry service
-- [ ] Add basic manifest validation using Zod
-- [ ] Create extension lifecycle management (activate/deactivate)
+- [ ] Analyze existing database structure to determine optimal extension table placement
+- [ ] Document extension-related data requirements and relationships
+- [ ] Design normalization approach for extension tables
+- [ ] Create entity-relationship diagrams for extension system tables
+- [ ] Review schema design with database team
+- [ ] Finalize schema naming conventions and constraints
+
+**Deliverables:**
+- Schema design document with table definitions
+- ER diagram for extension system
+- SQL naming conventions document
+
+**Dependencies:**
+- Access to existing database schema
+- Knowledge of multi-tenant data architecture
+
+#### 1.1 Extension Tables Migration
+
+**Tasks:**
+- [ ] Create migration file for `extensions` table with fields:
+  - `id` (UUID primary key)
+  - `tenant_id` (for multi-tenant support)
+  - `name` (display name)
+  - `description` (extension description)
+  - `version` (semantic version string)
+  - `manifest` (JSONB for storing manifest data)
+  - `main_entry_point` (path to main JS file)
+  - `is_enabled` (boolean activation status)
+  - `created_at`, `updated_at` timestamps
+  - Appropriate indexes on `tenant_id`, `name`, etc.
+- [ ] Create migration for `extension_permissions` table with:
+  - `id` (UUID primary key)
+  - `extension_id` (foreign key to extensions)
+  - `resource` (string, e.g. "tickets")
+  - `action` (string, e.g. "read")
+  - `created_at` timestamp
+- [ ] Create migration for `extension_files` table with:
+  - `id` (UUID primary key)
+  - `extension_id` (foreign key to extensions)
+  - `path` (relative file path)
+  - `content_hash` (for integrity verification)
+  - `size` (file size in bytes)
+  - Appropriate indexes
+- [ ] Add RLS (Row-Level Security) policies for tenant isolation
+- [ ] Create database functions for extension management operations
 
 **Files to Create:**
 - `/server/migrations/TIMESTAMP_create_extension_tables.cjs`
-- `/server/src/lib/extensions/registry.ts`
-- `/server/src/lib/extensions/validator.ts`
-- `/server/src/lib/extensions/index.ts`
+- `/server/migrations/TIMESTAMP_create_extension_permissions_table.cjs`
+- `/server/migrations/TIMESTAMP_create_extension_files_table.cjs`
+- `/server/migrations/TIMESTAMP_add_extension_rls_policies.cjs`
 
 **Dependencies:**
 - Database migration system
 - Existing tenant system
+- Access to Postgres with JSONB support
 
-#### 1.2 Simple Extension Storage
+#### 1.2 Extension Data Storage Tables
 
 **Tasks:**
-- [ ] Implement basic extension-specific storage
-- [ ] Add tenant isolation for extension data
-- [ ] Implement simple key-value storage API
+- [ ] Create migration for `extension_storage` table with:
+  - `id` (UUID primary key)
+  - `extension_id` (foreign key to extensions)
+  - `tenant_id` (for multi-tenant isolation)
+  - `key` (storage key name)
+  - `value` (JSONB for stored values)
+  - `created_at`, `updated_at` timestamps
+  - Unique constraint on `(extension_id, tenant_id, key)`
+- [ ] Create migration for `extension_settings` table with:
+  - `id` (UUID primary key)
+  - `extension_id` (foreign key to extensions)
+  - `tenant_id` (for multi-tenant settings)
+  - `settings` (JSONB for configuration)
+  - `created_at`, `updated_at` timestamps
+- [ ] Add appropriate indexes for query performance
+- [ ] Add tenant isolation constraints
+- [ ] Create utility functions for storage operations
+
+**Files to Create:**
+- `/server/migrations/TIMESTAMP_create_extension_storage_table.cjs`
+- `/server/migrations/TIMESTAMP_create_extension_settings_table.cjs`
+- `/server/migrations/TIMESTAMP_add_extension_storage_indexes.cjs`
+
+**Dependencies:**
+- Extension tables from previous step
+- Knowledge of key-value storage patterns
+
+#### 1.3 Basic Extension Registry Service
+
+**Tasks:**
+- [ ] Create `ExtensionRegistry` class with:
+  - Method to register extensions from manifest
+  - Method to list all registered extensions
+  - Method to get extension by ID
+  - Method to enable/disable extensions
+  - Method to check if an extension is enabled
+- [ ] Implement extension initialization queue
+- [ ] Create extension context factory
+- [ ] Implement extension lifecycle hooks (register, init, enable, disable)
+- [ ] Add manifest version compatibility checking
+- [ ] Create permission validation logic
+- [ ] Add event emitters for extension lifecycle events
+- [ ] Implement basic error handling and logging
+
+**Files to Create:**
+- `/server/src/lib/extensions/registry.ts`
+- `/server/src/lib/extensions/context.ts`
+- `/server/src/lib/extensions/lifecycle.ts`
+- `/server/src/lib/extensions/errors.ts`
+- `/server/src/lib/extensions/index.ts`
+
+**Dependencies:**
+- Extension database tables
+- Event emitter system
+- Logging infrastructure
+
+#### 1.4 Manifest Validation System
+
+**Tasks:**
+- [ ] Create Zod schema for extension manifest validation
+- [ ] Implement required field validation
+- [ ] Add semantic version validation
+- [ ] Create permission schema validation
+- [ ] Implement extension point validation
+- [ ] Add validation for component paths
+- [ ] Create validation error reporting system
+- [ ] Implement custom validators for specific fields
+- [ ] Add schema documentation generation
+
+**Files to Create:**
+- `/server/src/lib/extensions/validator.ts`
+- `/server/src/lib/extensions/schemas/manifest.schema.ts`
+- `/server/src/lib/extensions/schemas/permissions.schema.ts`
+- `/server/src/lib/extensions/schemas/extension-points.schema.ts`
+
+**Dependencies:**
+- Zod validation library
+- Extension registry
+
+#### 1.5 Extension Storage Service
+
+**Tasks:**
+- [ ] Create `ExtensionStorage` class with:
+  - Methods for get/set/delete/clear operations
+  - Tenant isolation enforcement
+  - Batch operations support
+  - Error handling for storage failures
+- [ ] Implement storage quota enforcement
+- [ ] Add caching layer for frequently accessed data
+- [ ] Create automatic cleanup for orphaned data
+- [ ] Implement transaction support for atomic operations
+- [ ] Add logging and monitoring
 
 **Files to Create:**
 - `/server/src/lib/extensions/storage.ts`
-- `/server/migrations/TIMESTAMP_create_extension_data_table.cjs`
+- `/server/src/lib/extensions/storage-cache.ts`
+- `/server/src/lib/extensions/quota.ts`
 
 **Dependencies:**
 - Extension registry
+- Database connection pool
+- Redis for caching (optional)
 
-#### 1.3 Core UI Extension System
+#### 1.6 Core UI Extension Framework
 
 **Tasks:**
-- [ ] Create basic ExtensionSlot component
-- [ ] Implement simple ExtensionRenderer
-- [ ] Add error boundary for extension components
+- [ ] Design component architecture for extension rendering
+- [ ] Create `ExtensionSlot` component for defining extension points
+- [ ] Implement `ExtensionRenderer` to load and render extension components
+- [ ] Add `ExtensionErrorBoundary` for graceful error handling
+- [ ] Create extension context provider for React
+- [ ] Implement dynamic component loading
+- [ ] Add permissions checking for UI components
+- [ ] Create extension component caching mechanism
+- [ ] Implement sandbox attributes for security
+- [ ] Add performance monitoring hooks
 
 **Files to Create:**
 - `/server/src/lib/extensions/ui/ExtensionSlot.tsx`
 - `/server/src/lib/extensions/ui/ExtensionRenderer.tsx`
 - `/server/src/lib/extensions/ui/ExtensionErrorBoundary.tsx`
+- `/server/src/lib/extensions/ui/ExtensionProvider.tsx`
+- `/server/src/lib/extensions/ui/ExtensionLoader.tsx`
+- `/server/src/lib/extensions/ui/sandbox.ts`
 - `/server/src/lib/extensions/ui/index.ts`
 
 **Dependencies:**
 - Extension registry
 - React component system
+- Dynamic import capability
+- Performance monitoring tools
 
-#### 1.4 Basic Admin Interface
+#### 1.7 Extension Administration UI
 
 **Tasks:**
-- [ ] Create simple extension management UI
-- [ ] Implement extension enable/disable functionality
-- [ ] Add extension installation/uninstallation
+- [ ] Create extensions list page with:
+  - Display of all installed extensions
+  - Status indicators (enabled/disabled)
+  - Basic filtering and sorting
+- [ ] Implement extension detail view with:
+  - Manifest information display
+  - Requested permissions list
+  - Enable/disable toggle
+  - Uninstall button
+  - Extension settings section
+- [ ] Create extension installation workflow:
+  - File upload component
+  - Manifest validation display
+  - Permission review step
+  - Installation confirmation
+- [ ] Add extension management actions:
+  - Enable/disable server action
+  - Uninstall server action
+  - Reset settings server action
+- [ ] Implement notifications for extension operations
+- [ ] Add loading states and error handling
 
 **Files to Create:**
 - `/server/src/components/settings/extensions/Extensions.tsx`
 - `/server/src/components/settings/extensions/ExtensionDetails.tsx`
+- `/server/src/components/settings/extensions/InstallExtension.tsx`
+- `/server/src/components/settings/extensions/ExtensionPermissions.tsx`
+- `/server/src/components/settings/extensions/ExtensionSettings.tsx`
 - `/server/src/lib/actions/extension-actions/extensionActions.ts`
 
 **Dependencies:**
 - Extension registry
 - UI components library
+- Server actions framework
+- File upload handling
 
 ### Phase 2: Core UI Extensions
 
