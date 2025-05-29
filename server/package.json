@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "predev": "node --loader ts-node/esm src/scripts/validateEnvStartup.ts",
     "dev": "NEXT_PUBLIC_EDITION=enterprise next dev",
     "build": "NEXT_PUBLIC_EDITION=enterprise next build",
     "start": "next start",

@@ -7,10 +7,10 @@ permissions:
 
 on:
   workflow_run:
-    branches:
-      - main
     workflows: ["E2E Fresh Install Tests"]    # must match the name: of your test workflow
     types: [ completed ]
+    branches:
+      - main
   push:
     tags:
       - 'v*.*.*' # Trigger on version tags like v1.0.0, v1.2.3-alpha
