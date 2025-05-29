@@ -140,26 +140,174 @@ This document outlines the focused implementation plan for the Alga PSA Client E
 #### 1.5 Extension Storage Service
 
 **Tasks:**
-- [ ] Create `ExtensionStorage` class with:
-  - Methods for get/set/delete/clear operations
-  - Tenant isolation enforcement
-  - Batch operations support
-  - Error handling for storage failures
-- [ ] Implement storage quota enforcement
-- [ ] Add caching layer for frequently accessed data
-- [ ] Create automatic cleanup for orphaned data
-- [ ] Implement transaction support for atomic operations
-- [ ] Add logging and monitoring
+- [ ] Design storage service architecture:
+  - Create architecture diagram for extension storage
+  - Define service interfaces and contracts
+  - Document storage limits and performance targets
+  - Design error handling and recovery strategies
+  - Plan multi-tenant isolation approach
+
+- [ ] Implement `ExtensionStorageService` class with:
+  - Core interface definition with TypeScript generics for type safety
+  - Robust error handling with custom error classes
+  - Comprehensive logging with request context
+  - Performance metrics collection
+
+- [ ] Create key-value operations implementation:
+  - Type-safe get/set methods with JSON serialization
+  - Support for primitive types, arrays, and objects
+  - Efficient batch get/set/delete operations
+  - Key namespacing for organization
+  - Atomic operations support
+  - TTL (time-to-live) support for temporary data
+
+- [ ] Add advanced storage features:
+  - Transaction support with commit/rollback
+  - Optimistic locking for concurrent operations
+  - Data versioning with history tracking
+  - Data validation hooks
+  - Search capabilities for stored values
+  - Import/export functionality
+
+- [ ] Implement tenant isolation:
+  - Strict tenant boundary enforcement
+  - Tenant-aware caching strategies
+  - Cross-tenant operation prevention
+  - Tenant storage usage reporting
+
+- [ ] Create storage quota management:
+  - Per-extension storage limits configuration
+  - Storage usage tracking and reporting
+  - Quota enforcement with graceful handling
+  - Admin alerts for approaching limits
+  - Automatic cleanup policies for unused data
+
+- [ ] Implement caching strategy:
+  - Multi-level cache (memory, Redis)
+  - Cache invalidation patterns
+  - Cache warming for frequently accessed data
+  - Configurable TTL by data category
+  - Intelligent prefetching for related keys
+
+- [ ] Add data integrity and security features:
+  - Sensitive data encryption at rest
+  - Automated data validation
+  - Data integrity checks
+  - Audit logging for all operations
+  - Compliance with data protection requirements
+
+- [ ] Implement automated maintenance:
+  - Scheduled data cleanup jobs
+  - Orphaned data detection and removal
+  - Index optimization
+  - Storage compaction
+  - Backup integration
 
 **Files to Create:**
-- `/server/src/lib/extensions/storage.ts`
-- `/server/src/lib/extensions/storage-cache.ts`
-- `/server/src/lib/extensions/quota.ts`
+- `/server/src/lib/extensions/storage/index.ts` - Main entry point and interface definitions
+- `/server/src/lib/extensions/storage/storageService.ts` - Core service implementation
+- `/server/src/lib/extensions/storage/kvStore.ts` - Key-value storage implementation
+- `/server/src/lib/extensions/storage/cacheManager.ts` - Caching implementation
+- `/server/src/lib/extensions/storage/quotaManager.ts` - Storage quota tracking and enforcement
+- `/server/src/lib/extensions/storage/transactionManager.ts` - Transaction support
+- `/server/src/lib/extensions/storage/storageErrors.ts` - Custom error classes
+- `/server/src/lib/extensions/storage/encryptionService.ts` - Data encryption utilities
+- `/server/src/lib/extensions/storage/maintenanceJobs.ts` - Cleanup and maintenance
+- `/server/src/lib/extensions/storage/metrics.ts` - Performance monitoring
+- `/server/src/lib/extensions/storage/types.ts` - TypeScript type definitions
+
+**Example Implementation:**
+
+```typescript
+// Basic interface
+interface ExtensionStorage {
+  // Basic operations
+  get<T>(key: string): Promise<T | null>;
+  set<T>(key: string, value: T, options?: StorageOptions): Promise<void>;
+  delete(key: string): Promise<boolean>;
+  has(key: string): Promise<boolean>;
+  
+  // Batch operations
+  getBatch<T>(keys: string[]): Promise<Map<string, T>>;
+  setBatch<T>(entries: Map<string, T>, options?: StorageOptions): Promise<void>;
+  deleteBatch(keys: string[]): Promise<number>;
+  
+  // Namespacing
+  getNamespace(namespace: string): ExtensionStorage;
+  
+  // Transactions
+  beginTransaction(): Promise<StorageTransaction>;
+  
+  // Utilities
+  clear(): Promise<void>;
+  keys(pattern?: string): Promise<string[]>;
+  size(): Promise<number>;
+}
+
+// Implementation
+class ExtensionStorageService implements ExtensionStorage {
+  private extensionId: string;
+  private tenantId: string;
+  private cacheManager: CacheManager;
+  private quotaManager: QuotaManager;
+  private db: Database;
+  private metrics: StorageMetrics;
+  
+  constructor(extensionId: string, tenantId: string, options: StorageServiceOptions) {
+    this.extensionId = extensionId;
+    this.tenantId = tenantId;
+    this.cacheManager = new CacheManager(options.cache);
+    this.quotaManager = new QuotaManager(extensionId, tenantId);
+    this.db = options.database;
+    this.metrics = new StorageMetrics(extensionId);
+  }
+  
+  async get<T>(key: string): Promise<T | null> {
+    const metricTimer = this.metrics.startTimer('get');
+    const fullKey = this.getFullKey(key);
+    
+    try {
+      // Try cache first
+      const cachedValue = await this.cacheManager.get<T>(fullKey);
+      if (cachedValue !== null) {
+        metricTimer.end(true);
+        return cachedValue;
+      }
+      
+      // Get from database
+      const result = await this.db.query(
+        'SELECT value FROM extension_storage WHERE extension_id = $1 AND tenant_id = $2 AND key = $3',
+        [this.extensionId, this.tenantId, key]
+      );
+      
+      if (result.rows.length === 0) {
+        metricTimer.end(true);
+        return null;
+      }
+      
+      const value = JSON.parse(result.rows[0].value);
+      
+      // Cache the result for future queries
+      await this.cacheManager.set(fullKey, value);
+      
+      metricTimer.end(true);
+      return value;
+    } catch (error) {
+      metricTimer.end(false);
+      throw new StorageError(`Failed to get key ${key}`, { cause: error });
+    }
+  }
+  
+  // Other methods...
+}
+```
 
 **Dependencies:**
-- Extension registry
-- Database connection pool
-- Redis for caching (optional)
+- Extension registry for extension validation
+- Database connection pool for persistent storage
+- Redis for distributed caching (optional but recommended)
+- Metrics collection system
+- Job scheduler for maintenance tasks
 
 #### 1.6 Core UI Extension Framework
 
