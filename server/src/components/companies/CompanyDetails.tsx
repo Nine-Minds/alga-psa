@@ -112,9 +112,8 @@ const TextDetailItem: React.FC<{
   }, [localValue, updateMetadata, label]);
 
   const handleBlur = () => {
-    if (localValue !== value) {
-      onEdit(localValue);
-    }
+    // Always call onEdit to allow parent to determine if changes should be tracked
+    onEdit(localValue);
   };
   
   return (
@@ -329,7 +328,34 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       return updatedCompany;
     });
     
-    setHasUnsavedChanges(true);
+    // Check if the updated company matches the original company
+    setHasUnsavedChanges(() => {
+      // Create a temporary copy to compare
+      const tempCompany = JSON.parse(JSON.stringify(editedCompany)) as ICompany;
+      
+      // Apply the change to temp company for comparison
+      if (field.startsWith('properties.') && field !== 'properties.account_manager_id') {
+        const propertyField = field.split('.')[1];
+        if (!tempCompany.properties) {
+          tempCompany.properties = {};
+        }
+        (tempCompany.properties as any)[propertyField] = value;
+        if (propertyField === 'website' && typeof value === 'string') {
+          tempCompany.url = value;
+        }
+      } else if (field === 'url') {
+        tempCompany.url = value as string;
+        if (!tempCompany.properties) {
+          tempCompany.properties = {};
+        }
+        (tempCompany.properties as any).website = value as string;
+      } else {
+        (tempCompany as any)[field] = value;
+      }
+      
+      // Compare with original company to determine if there are unsaved changes
+      return JSON.stringify(tempCompany) !== JSON.stringify(company);
+    });
   };
 
   const handleSave = async () => {
