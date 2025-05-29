@@ -69,7 +69,7 @@ exports.up = async function(knex) {
             tickets t
         LEFT JOIN comments c ON t.tenant = c.tenant AND t.ticket_id = c.ticket_id
         LEFT JOIN users u ON c.tenant = u.tenant AND c.user_id = u.user_id
-        LEFT JOIN contacts cn ON c.tenant = cn.tenant AND c.contact_name_id = cn.contact_name_id
+        LEFT JOIN contacts cn ON c.tenant = cn.tenant AND c.contact_id = cn.contact_name_id
         ORDER BY 
             c.ticket_id, c.created_at;
     `);
