@@ -87,6 +87,8 @@ COPY --from=builder /app/server/seeds/ ./server/seeds/
 COPY --from=builder /app/server/src/ ./server/src/
 COPY --from=deps /app/node_modules ./node_modules
 
+COPY --from=builder ./app/ee/server/migrations/ ./server/migrations/
+
 COPY server/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 

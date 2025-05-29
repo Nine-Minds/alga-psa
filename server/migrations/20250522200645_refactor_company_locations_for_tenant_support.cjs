@@ -76,28 +76,9 @@ exports.up = async function(knex) {
     table.index(['tenant', 'is_active']);
   });
   
-  // Create a trigger to ensure only one default location per company
-  await knex.raw(`
-    CREATE OR REPLACE FUNCTION ensure_single_default_location()
-    RETURNS TRIGGER AS $$
-    BEGIN
-      IF NEW.is_default = true THEN
-        UPDATE company_locations 
-        SET is_default = false 
-        WHERE company_id = NEW.company_id 
-        AND tenant = NEW.tenant
-        AND location_id != NEW.location_id
-        AND is_default = true;
-      END IF;
-      RETURN NEW;
-    END;
-    $$ LANGUAGE plpgsql;
-    
-    CREATE TRIGGER ensure_single_default_location_trigger
-    BEFORE INSERT OR UPDATE ON company_locations
-    FOR EACH ROW
-    EXECUTE FUNCTION ensure_single_default_location();
-  `);
+  // Note: CitusDB doesn't support triggers on distributed tables
+  // The single default location constraint will be enforced at the application level
+  // in the company locations service/model
   
   // Add RLS policy for company_locations
   await knex.raw(`
@@ -112,10 +93,6 @@ exports.up = async function(knex) {
 };
 
 exports.down = async function(knex) {
-  // Drop the trigger and function
-  await knex.raw('DROP TRIGGER IF EXISTS ensure_single_default_location_trigger ON company_locations');
-  await knex.raw('DROP FUNCTION IF EXISTS ensure_single_default_location()');
-  
   // Drop RLS policies
   await knex.raw('DROP POLICY IF EXISTS tenant_isolation ON company_locations');
   await knex.raw('DROP POLICY IF EXISTS company_locations_tenant_isolation ON company_locations');
