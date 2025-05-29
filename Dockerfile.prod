@@ -51,6 +51,7 @@ RUN mkdir -p /app/secrets && \
 COPY .env.example /app/.env   
 COPY .env.example /app/server/.env  
 
+
 WORKDIR /app
 RUN npm run build
 
