@@ -226,6 +226,19 @@ jobs:
           exit 1
         shell: bash
 
+      - name: Collect initial container logs
+        if: steps.changed_files_check.outputs.any_changed == 'true' && steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
+        run: |
+          echo "=== CONTAINER STATUS ==="
+          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml ps
+          
+          echo -e "\n=== ALL CONTAINER LOGS ==="
+          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml logs --tail=100
+          
+          echo -e "\n=== SERVER LOGS (detailed) ==="
+          docker-compose -p alga-e2e-test logs server --tail=200
+        shell: bash
+
       - name: Wait for Server service to be healthy
         if: steps.changed_files_check.outputs.any_changed == 'true' && steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
         run: |
@@ -241,10 +254,20 @@ jobs:
           until curl --output /dev/null --silent --head --fail $HEALTH_CHECK_URL; do
             if [ $ATTEMPT_NUM -ge $MAX_ATTEMPTS ]; then
               echo "Timeout: Server service did not become healthy at $HEALTH_CHECK_URL within the allocated time."
-              docker-compose -p alga-e2e-test logs server
+              echo "=== FINAL SERVER LOGS ==="
+              docker-compose -p alga-e2e-test logs server --tail=500
+              echo "=== ALL CONTAINER STATUS ==="
+              docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml ps
               exit 1
             fi
             echo "Attempt $ATTEMPT_NUM/$MAX_ATTEMPTS: Server not yet healthy at $HEALTH_CHECK_URL. Waiting 10 seconds..."
+            
+            # Show server logs every 5 attempts to debug issues
+            if [ $((ATTEMPT_NUM % 5)) -eq 0 ]; then
+              echo "=== SERVER LOGS (attempt $ATTEMPT_NUM) ==="
+              docker-compose -p alga-e2e-test logs server --tail=50
+            fi
+            
             sleep 10
             ATTEMPT_NUM=$((ATTEMPT_NUM+1))
           done
@@ -430,6 +453,70 @@ jobs:
           E2E_USER_PASSWORD="${{ steps.capture_creds.outputs.e2e_user_password }}" \
           npx playwright test
         shell: bash
+
+      - name: Collect all container logs on failure
+        if: failure() && steps.changed_files_check.outputs.any_changed == 'true' && steps.install_docker_compose.outcome == 'success'
+        run: |
+          echo "=== COLLECTING ALL LOGS DUE TO FAILURE ==="
+          
+          echo "=== CONTAINER STATUS ==="
+          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml ps || echo "Could not get container status"
+          
+          echo -e "\n=== DOCKER SYSTEM INFO ==="
+          docker system df
+          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}"
+          
+          echo -e "\n=== ALL CONTAINER LOGS ==="
+          docker-compose -p alga-e2e-test logs --tail=1000 || echo "Could not get compose logs"
+          
+          echo -e "\n=== INDIVIDUAL SERVICE LOGS ==="
+          for service in server setup postgres redis pgbouncer hocuspocus workflow-worker; do
+            echo "--- $service logs ---"
+            docker-compose -p alga-e2e-test logs $service --tail=200 2>/dev/null || echo "No logs for $service"
+          done
+          
+          echo -e "\n=== DOCKER INSPECT (running containers) ==="
+          docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep alga-e2e-test || echo "No running containers found"
+          
+          # Try to get logs from any containers that might have the project name
+          echo -e "\n=== DIRECT DOCKER LOGS ==="
+          for container in $(docker ps -a --filter "name=alga-e2e-test" --format "{{.Names}}"); do
+            echo "--- Direct logs for $container ---"
+            docker logs $container --tail=100 2>/dev/null || echo "Could not get logs for $container"
+          done
+        shell: bash
+
+      - name: Save container logs as artifacts
+        if: always() && steps.changed_files_check.outputs.any_changed == 'true' && steps.install_docker_compose.outcome == 'success'
+        run: |
+          mkdir -p logs
+          
+          # Save logs for each service
+          for service in server setup postgres redis pgbouncer hocuspocus workflow-worker; do
+            echo "Saving logs for $service..."
+            docker-compose -p alga-e2e-test logs $service --no-color > "logs/${service}.log" 2>/dev/null || echo "No logs for $service" > "logs/${service}.log"
+          done
+          
+          # Save combined logs
+          docker-compose -p alga-e2e-test logs --no-color > "logs/all-services.log" 2>/dev/null || echo "Could not save combined logs"
+          
+          # Save container status
+          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml ps > "logs/container-status.txt" 2>/dev/null || echo "Could not save container status"
+          
+          # Save environment info
+          echo "Environment variables:" > logs/environment.txt
+          env | grep -E "(APP_|NODE_|DB_|REDIS_)" >> logs/environment.txt || echo "Could not save environment"
+          
+          ls -la logs/
+        shell: bash
+
+      - name: Upload logs as artifacts
+        if: always() && steps.changed_files_check.outputs.any_changed == 'true' && steps.install_docker_compose.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: container-logs
+          path: logs/
+          retention-days: 7
 
       # - name: Upload Playwright Test Report
       #   if: always() && steps.changed_files_check.outputs.any_changed == 'true' && steps.wait_for_setup.outputs.status == 'success' && !env.ACT # Run even if tests fail, but setup was ok. Skip in ACT due to token issues.
