@@ -1,6 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { authorizationMiddleware } from './middleware/authorizationMiddleware';
-import './lib/init/serverInit';  // Import server initialization
 import { getToken } from 'next-auth/jwt';
 
 // Handle API requests
