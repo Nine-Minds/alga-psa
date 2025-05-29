@@ -137,89 +137,83 @@ This document outlines the focused implementation plan for the Alga PSA Client E
 - Zod validation library
 - Extension registry
 
-#### 1.5 Extension Storage Service
+#### 1.5 Extension Storage Service - 80/20 Approach
 
-**Tasks:**
-- [ ] Design storage service architecture:
-  - Create architecture diagram for extension storage
-  - Define service interfaces and contracts
-  - Document storage limits and performance targets
-  - Design error handling and recovery strategies
-  - Plan multi-tenant isolation approach
+**Pareto Analysis of Storage Features**
 
-- [ ] Implement `ExtensionStorageService` class with:
-  - Core interface definition with TypeScript generics for type safety
-  - Robust error handling with custom error classes
-  - Comprehensive logging with request context
-  - Performance metrics collection
+| Feature | Benefit | Implementation Cost | 80/20 Decision | Reasoning |
+|---------|---------|---------------------|----------------|-----------|
+| Basic CRUD operations | High | Low | **Include** | Core functionality needed by all extensions |
+| Type-safe interface | High | Low | **Include** | Prevents runtime errors with minimal effort |
+| Tenant isolation | High | Low | **Include** | Critical security requirement |
+| JSON serialization | High | Low | **Include** | Essential for storing complex data |
+| Simple TTL support | Medium | Low | **Include** | Basic version provides value at low cost |
+| Error handling | High | Low | **Include** | Required for reliability |
+| Basic caching | High | Medium | **Include** | Significant performance benefit |
+| Storage quotas | High | Medium | **Include** | Prevents resource abuse |
+| Batch operations | Medium | Low | **Include** | Performance benefit for bulk operations |
+| Namespacing | Medium | Low | **Include** | Helps organize data with minimal effort |
+| Transactions | Medium | High | **Defer** | Complex to implement, can use batching instead |
+| Advanced caching | Medium | High | **Defer** | Basic caching provides most of the value |
+| Data versioning | Low | High | **Defer** | Complex for limited initial use cases |
+| Search capabilities | Low | High | **Defer** | Extensions can implement their own search |
+| Optimistic locking | Low | Medium | **Defer** | Not needed for most extension scenarios |
+| Encryption at rest | Medium | Medium | **Defer** | Can be added later for sensitive data |
 
-- [ ] Create key-value operations implementation:
-  - Type-safe get/set methods with JSON serialization
-  - Support for primitive types, arrays, and objects
-  - Efficient batch get/set/delete operations
-  - Key namespacing for organization
-  - Atomic operations support
-  - TTL (time-to-live) support for temporary data
+**Tasks (Core Implementation):**
 
-- [ ] Add advanced storage features:
-  - Transaction support with commit/rollback
-  - Optimistic locking for concurrent operations
-  - Data versioning with history tracking
-  - Data validation hooks
-  - Search capabilities for stored values
-  - Import/export functionality
+- [ ] Define extension storage interfaces:
+  - Create TypeScript interface with generics for type safety
+  - Define core methods: get, set, delete, has
+  - Add simple options including basic TTL
+  - Document method contracts and error handling
+
+- [ ] Implement basic `ExtensionStorageService`:
+  - Create class implementing the storage interface
+  - Add error handling with specific error types
+  - Implement logging for operations
+  - Ensure proper tenant isolation
+
+- [ ] Add core storage features:
+  - Type-safe get/set with JSON serialization
+  - Support for primitive types and objects
+  - Basic key namespacing (prefix-based)
+  - Simple TTL implementation with expiry timestamp
+  - Batch operations for better performance
 
 - [ ] Implement tenant isolation:
-  - Strict tenant boundary enforcement
-  - Tenant-aware caching strategies
-  - Cross-tenant operation prevention
-  - Tenant storage usage reporting
+  - Enforce tenant boundaries in all operations
+  - Prevent cross-tenant data access
+  - Add tenant ID to all database queries
 
-- [ ] Create storage quota management:
-  - Per-extension storage limits configuration
-  - Storage usage tracking and reporting
-  - Quota enforcement with graceful handling
-  - Admin alerts for approaching limits
-  - Automatic cleanup policies for unused data
+- [ ] Add simple caching layer:
+  - Implement in-memory cache with LRU policy
+  - Add cache invalidation on updates
+  - Keep cache implementation simple and testable
 
-- [ ] Implement caching strategy:
-  - Multi-level cache (memory, Redis)
-  - Cache invalidation patterns
-  - Cache warming for frequently accessed data
-  - Configurable TTL by data category
-  - Intelligent prefetching for related keys
+- [ ] Create basic quota management:
+  - Implement per-extension storage limits
+  - Add size checking on write operations
+  - Create simple reporting for administrators
 
-- [ ] Add data integrity and security features:
-  - Sensitive data encryption at rest
-  - Automated data validation
-  - Data integrity checks
-  - Audit logging for all operations
-  - Compliance with data protection requirements
-
-- [ ] Implement automated maintenance:
-  - Scheduled data cleanup jobs
-  - Orphaned data detection and removal
-  - Index optimization
-  - Storage compaction
-  - Backup integration
+- [ ] Add maintenance functionality:
+  - Create simple job to clean expired items (daily)
+  - Implement basic orphaned data cleanup
 
 **Files to Create:**
+
 - `/server/src/lib/extensions/storage/index.ts` - Main entry point and interface definitions
 - `/server/src/lib/extensions/storage/storageService.ts` - Core service implementation
-- `/server/src/lib/extensions/storage/kvStore.ts` - Key-value storage implementation
-- `/server/src/lib/extensions/storage/cacheManager.ts` - Caching implementation
-- `/server/src/lib/extensions/storage/quotaManager.ts` - Storage quota tracking and enforcement
-- `/server/src/lib/extensions/storage/transactionManager.ts` - Transaction support
 - `/server/src/lib/extensions/storage/storageErrors.ts` - Custom error classes
-- `/server/src/lib/extensions/storage/encryptionService.ts` - Data encryption utilities
-- `/server/src/lib/extensions/storage/maintenanceJobs.ts` - Cleanup and maintenance
-- `/server/src/lib/extensions/storage/metrics.ts` - Performance monitoring
+- `/server/src/lib/extensions/storage/cache.ts` - Simple caching implementation
+- `/server/src/lib/extensions/storage/quota.ts` - Basic quota management
+- `/server/src/lib/extensions/storage/maintenance.ts` - Cleanup jobs
 - `/server/src/lib/extensions/storage/types.ts` - TypeScript type definitions
 
-**Example Implementation:**
+**Example Implementation (80/20 Focused):**
 
 ```typescript
-// Basic interface
+// Core storage interface (simplified for 80/20)
 interface ExtensionStorage {
   // Basic operations
   get<T>(key: string): Promise<T | null>;
@@ -227,74 +221,135 @@ interface ExtensionStorage {
   delete(key: string): Promise<boolean>;
   has(key: string): Promise<boolean>;
   
-  // Batch operations
+  // Batch operations for performance
   getBatch<T>(keys: string[]): Promise<Map<string, T>>;
-  setBatch<T>(entries: Map<string, T>, options?: StorageOptions): Promise<void>;
-  deleteBatch(keys: string[]): Promise<number>;
+  setBatch<T>(entries: Record<string, T>, options?: StorageOptions): Promise<void>;
   
-  // Namespacing
+  // Simple namespace support
   getNamespace(namespace: string): ExtensionStorage;
   
-  // Transactions
-  beginTransaction(): Promise<StorageTransaction>;
-  
-  // Utilities
+  // Basic utilities
   clear(): Promise<void>;
-  keys(pattern?: string): Promise<string[]>;
-  size(): Promise<number>;
+  keys(): Promise<string[]>;
+}
+
+// Storage options (simplified)
+interface StorageOptions {
+  // Simple TTL in seconds
+  expiresIn?: number;
 }
 
 // Implementation
 class ExtensionStorageService implements ExtensionStorage {
   private extensionId: string;
   private tenantId: string;
-  private cacheManager: CacheManager;
-  private quotaManager: QuotaManager;
+  private cache: SimpleCache;
   private db: Database;
-  private metrics: StorageMetrics;
+  private namespace: string = '';
   
-  constructor(extensionId: string, tenantId: string, options: StorageServiceOptions) {
+  constructor(extensionId: string, tenantId: string, options: { namespace?: string } = {}) {
     this.extensionId = extensionId;
     this.tenantId = tenantId;
-    this.cacheManager = new CacheManager(options.cache);
-    this.quotaManager = new QuotaManager(extensionId, tenantId);
-    this.db = options.database;
-    this.metrics = new StorageMetrics(extensionId);
+    this.cache = new SimpleCache(1000); // Simple LRU cache with 1000 items limit
+    this.db = getDatabase();
+    this.namespace = options.namespace || '';
+  }
+  
+  // Build the full key with tenant and namespace isolation
+  private getFullKey(key: string): string {
+    return `${this.tenantId}:${this.extensionId}:${this.namespace}:${key}`;
   }
   
   async get<T>(key: string): Promise<T | null> {
-    const metricTimer = this.metrics.startTimer('get');
     const fullKey = this.getFullKey(key);
     
     try {
-      // Try cache first
-      const cachedValue = await this.cacheManager.get<T>(fullKey);
-      if (cachedValue !== null) {
-        metricTimer.end(true);
+      // Try cache first for performance
+      const cachedValue = this.cache.get<T>(fullKey);
+      if (cachedValue !== undefined) {
         return cachedValue;
       }
       
-      // Get from database
+      // Get from database with tenant isolation
       const result = await this.db.query(
-        'SELECT value FROM extension_storage WHERE extension_id = $1 AND tenant_id = $2 AND key = $3',
+        'SELECT value, expires_at FROM extension_storage WHERE extension_id = $1 AND tenant_id = $2 AND key = $3',
         [this.extensionId, this.tenantId, key]
       );
       
       if (result.rows.length === 0) {
-        metricTimer.end(true);
         return null;
       }
       
+      // Check if the data has expired
+      if (result.rows[0].expires_at && new Date(result.rows[0].expires_at) < new Date()) {
+        // Data has expired, delete it asynchronously and return null
+        this.delete(key).catch(err => {
+          console.error('Failed to delete expired key', { key, error: err });
+        });
+        return null;
+      }
+      
+      // Parse the JSON value
       const value = JSON.parse(result.rows[0].value);
       
       // Cache the result for future queries
-      await this.cacheManager.set(fullKey, value);
+      this.cache.set(fullKey, value);
       
-      metricTimer.end(true);
       return value;
     } catch (error) {
-      metricTimer.end(false);
+      console.error('Failed to get key', { key, error });
       throw new StorageError(`Failed to get key ${key}`, { cause: error });
+    }
+  }
+  
+  async set<T>(key: string, value: T, options: StorageOptions = {}): Promise<void> {
+    const fullKey = this.getFullKey(key);
+    
+    try {
+      // Check quota before storing
+      await this.checkQuota(key, JSON.stringify(value).length);
+      
+      // Calculate expiration time if TTL is provided
+      const expiresAt = options.expiresIn 
+        ? new Date(Date.now() + options.expiresIn * 1000) 
+        : null;
+      
+      // Store in database with tenant isolation
+      await this.db.query(
+        `INSERT INTO extension_storage (extension_id, tenant_id, key, value, expires_at)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (extension_id, tenant_id, key) 
+         DO UPDATE SET value = $4, expires_at = $5, updated_at = NOW()`,
+        [this.extensionId, this.tenantId, key, JSON.stringify(value), expiresAt]
+      );
+      
+      // Update cache
+      this.cache.set(fullKey, value);
+    } catch (error) {
+      console.error('Failed to set key', { key, error });
+      throw new StorageError(`Failed to set key ${key}`, { cause: error });
+    }
+  }
+  
+  // Simple namespace implementation
+  getNamespace(namespace: string): ExtensionStorage {
+    return new ExtensionStorageService(
+      this.extensionId, 
+      this.tenantId, 
+      { namespace: this.namespace ? `${this.namespace}.${namespace}` : namespace }
+    );
+  }
+  
+  // Basic quota check
+  private async checkQuota(key: string, dataSize: number): Promise<void> {
+    const quotaLimit = await getExtensionQuota(this.extensionId);
+    const currentUsage = await this.getCurrentUsage();
+    
+    // Check if this update would exceed the quota
+    if (currentUsage + dataSize > quotaLimit) {
+      throw new QuotaExceededError(
+        `Storage quota exceeded for extension ${this.extensionId}`
+      );
     }
   }
   
@@ -302,12 +357,20 @@ class ExtensionStorageService implements ExtensionStorage {
 }
 ```
 
+**Features Deferred for Future Phases:**
+
+1. **Advanced Transactions**: Will implement simpler atomic operations first, add full transactions later
+2. **Complex Caching Strategies**: Start with basic in-memory cache, enhance with Redis/distributed caching later
+3. **Data Versioning**: Not needed for initial implementation
+4. **Advanced Search**: Extensions can implement their own search logic initially
+5. **Encryption at Rest**: Will be added when handling more sensitive data
+6. **Advanced Prefetching**: Basic cache will provide most performance benefits
+
 **Dependencies:**
 - Extension registry for extension validation
 - Database connection pool for persistent storage
-- Redis for distributed caching (optional but recommended)
-- Metrics collection system
-- Job scheduler for maintenance tasks
+- Simple caching implementation
+- Basic job scheduler for cleanup tasks
 
 #### 1.6 Core UI Extension Framework
 
