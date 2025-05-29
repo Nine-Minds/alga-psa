@@ -12,7 +12,9 @@ class InteractionModel {
         .where('interactions.tenant', tenant)
         .select(
           'interactions.interaction_id',
+          'interactions.type_id',
           db.raw(`COALESCE(it.type_name, sit.type_name) as type_name`),
+          db.raw(`COALESCE(it.icon, sit.icon) as icon`),
           'interactions.interaction_date',
           'interactions.description',
           'interactions.contact_name_id',
@@ -81,6 +83,7 @@ class InteractionModel {
           'interactions.interaction_id',
           'interactions.type_id',
           db.raw(`COALESCE(it.type_name, sit.type_name) as type_name`),
+          db.raw(`COALESCE(it.icon, sit.icon) as icon`),
           'interactions.contact_name_id',
           'contacts.full_name as contact_name',
           'interactions.company_id',
@@ -224,6 +227,7 @@ class InteractionModel {
         .select(
           'interactions.*',
           db.raw(`COALESCE(it.type_name, sit.type_name) as type_name`),
+          db.raw(`COALESCE(it.icon, sit.icon) as icon`),
           'contacts.full_name as contact_name',
           'companies.company_name',
           'users.username as user_name'

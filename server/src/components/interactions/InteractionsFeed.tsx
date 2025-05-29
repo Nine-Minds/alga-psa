@@ -1,7 +1,8 @@
 'use client'
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader } from '../ui/Card';
-import { Calendar, Phone, Mail, FileText, CheckSquare, Filter, RefreshCw } from 'lucide-react';
+import { Filter, RefreshCw } from 'lucide-react';
+import InteractionIcon from 'server/src/components/ui/InteractionIcon';
 import { IInteraction, IInteractionType, ISystemInteractionType } from '../../interfaces/interaction.interfaces';
 import { QuickAddInteraction } from './QuickAddInteraction';
 import { getInteractionsForEntity, getInteractionById } from '../../lib/actions/interactionActions';
@@ -25,17 +26,6 @@ interface InteractionsFeedProps {
   setInteractions: React.Dispatch<React.SetStateAction<IInteraction[]>>;
 }
 
-const InteractionIcon = ({ type }: { type: string }) => {
-  const lowerType = type.toLowerCase();
-  switch (lowerType) {
-    case 'call': return <Phone className="text-gray-500" />;
-    case 'email': return <Mail className="text-gray-500" />;
-    case 'meeting': return <Calendar className="text-gray-500" />;
-    case 'note': return <FileText className="text-gray-500" />;
-    case 'task': return <CheckSquare className="text-gray-500" />;
-    default: return <FileText className="text-gray-500" />; // Default to note icon
-  }
-};
 
 const InteractionsFeed: React.FC<InteractionsFeedProps> = ({ 
   id = 'interactions-feed',
@@ -196,7 +186,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
                 onClick={() => handleInteractionClick(interaction)}
               >
                 <div className="flex-shrink-0">
-                  <InteractionIcon type={interaction.type_name} />
+                  <InteractionIcon icon={interaction.icon} typeName={interaction.type_name} />
                 </div>
                 <div className="flex-grow">
                   <p className="font-semibold">{interaction.description}</p>

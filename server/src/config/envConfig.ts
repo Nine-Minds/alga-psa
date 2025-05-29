@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import process from 'process';
 
 // Helper functions for type coercion
 const coerceNumber = (val: unknown): number | undefined => {
@@ -208,5 +209,5 @@ export function validateEnv(): EnvConfig {
   }
 }
 
-//const env = validateEnv();
-//export default env;
+// Export the validation function and types, but don't run validation at module load
+export default validateEnv;
