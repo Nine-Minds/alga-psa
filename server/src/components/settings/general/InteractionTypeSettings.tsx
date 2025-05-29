@@ -7,7 +7,6 @@ import { Plus, X, Edit2, Lock, MoreVertical } from "lucide-react";
 import { IInteractionType, ISystemInteractionType } from 'server/src/interfaces/interaction.interfaces';
 import { 
   getAllInteractionTypes, 
-  createInteractionType, 
   updateInteractionType, 
   deleteInteractionType,
   getSystemInteractionTypes 
@@ -16,7 +15,8 @@ import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { QuickAddInteractionType } from './QuickAddInteractionType';
+import InteractionIcon from 'server/src/components/ui/InteractionIcon';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -26,8 +26,6 @@ import {
 const InteractionTypesSettings: React.FC = () => {
   const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
   const [systemTypes, setSystemTypes] = useState<ISystemInteractionType[]>([]);
-  const [newTypeName, setNewTypeName] = useState('');
-  const [selectedSystemType, setSelectedSystemType] = useState<string>('');
   const [editingTypeId, setEditingTypeId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
@@ -40,6 +38,7 @@ const InteractionTypesSettings: React.FC = () => {
     typeId: '',
     typeName: ''
   });
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   useEffect(() => {
     fetchTypes();
@@ -79,25 +78,6 @@ const InteractionTypesSettings: React.FC = () => {
     setError(null);
   };
 
-  const handleCreateType = async () => {
-    if (newTypeName.trim()) {
-      try {
-        const typeData = {
-          type_name: newTypeName.trim(),
-          system_type_id: selectedSystemType || undefined
-        };
-        
-        await createInteractionType(typeData);
-        setNewTypeName('');
-        setSelectedSystemType('');
-        setError(null);
-        fetchTypes();
-      } catch (error) {
-        console.error('Error creating interaction type:', error);
-        setError('Failed to create interaction type');
-      }
-    }
-  };
 
   const handleUpdateType = async (typeId: string) => {
     const newValue = editInputRef.current?.value.trim();
@@ -135,11 +115,12 @@ const InteractionTypesSettings: React.FC = () => {
     {
       title: 'Name',
       dataIndex: 'type_name',
-      render: (value: string) => (
+      render: (value: string, record: ISystemInteractionType) => (
         <div className="flex items-center space-x-2">
-          <Lock className="h-4 w-4 text-gray-400" />
+          <InteractionIcon icon={record.icon} typeName={record.type_name} />
           <span className="text-gray-700 font-medium">{value}</span>
           <span className="text-xs text-gray-400">(System)</span>
+          <Lock className="h-4 w-4 text-gray-400" />
         </div>
       ),
     },
@@ -174,7 +155,8 @@ const InteractionTypesSettings: React.FC = () => {
               className="w-full"
             />
           ) : (
-            <div className="flex items-center">
+            <div className="flex items-center space-x-2">
+              <InteractionIcon icon={record.icon} typeName={record.type_name} />
               <span className="text-gray-700">{value}</span>
               {record.system_type_id && (
                 <span className="ml-2 text-xs text-gray-400">
@@ -283,34 +265,13 @@ const InteractionTypesSettings: React.FC = () => {
           columns={tenantTypeColumns}
           pagination={false}
         />
-        <div className="flex space-x-2 mt-4">
-          <div className="flex-grow space-y-2">
-            <Input
-              type="text"
-              value={newTypeName}
-              onChange={(e) => setNewTypeName(e.target.value)}
-              placeholder="New Interaction Type"
-              className="w-full"
-            />
-            <CustomSelect
-              options={[
-                { value: 'standalone', label: 'Create as standalone type' },
-                ...systemTypes.map((type): { value: string; label: string } => ({
-                  value: type.type_id,
-                  label: `Inherit from ${type.type_name}`
-                }))
-              ]}
-              value={selectedSystemType || 'standalone'}
-              onValueChange={(value) => setSelectedSystemType(value === 'standalone' ? '' : value)}
-              placeholder="Optional: Inherit from system type"
-            />
-          </div>
+        <div className="mt-4">
           <Button 
-            id='add-button'
-            onClick={handleCreateType} 
-            className="bg-primary-500 text-white hover:bg-primary-600 self-start"
+            id='add-interaction-type-button'
+            onClick={() => setShowAddDialog(true)} 
+            className="bg-primary-500 text-white hover:bg-primary-600"
           >
-            <Plus className="h-4 w-4 mr-2" /> Add
+            <Plus className="h-4 w-4 mr-2" /> Add Interaction Type
           </Button>
         </div>
       </div>
@@ -323,6 +284,16 @@ const InteractionTypesSettings: React.FC = () => {
         message={`Are you sure you want to delete the interaction type "${deleteDialog.typeName}"?\n\nWarning: If there are any records using this interaction type, the deletion will fail.`}
         confirmLabel="Delete"
         cancelLabel="Cancel"
+      />
+
+      <QuickAddInteractionType
+        isOpen={showAddDialog}
+        onClose={() => setShowAddDialog(false)}
+        onSuccess={() => {
+          fetchTypes();
+          setError(null);
+        }}
+        systemTypes={systemTypes}
       />
     </div>
   );
