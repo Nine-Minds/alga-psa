@@ -3,12 +3,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ChevronDown, Search } from 'lucide-react';
-import { AutomationProps, FormFieldComponent, ButtonComponent, ContainerComponent } from '../../types/ui-reflection/types';
+import { AutomationProps, ButtonComponent, ContainerComponent } from '../../types/ui-reflection/types';
 import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 import { Input } from './Input';
 import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
-import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
+import { CommonActions } from '../../types/ui-reflection/actionBuilders';
 
 interface UserPickerProps {
   label?: string;
@@ -38,7 +38,7 @@ const OptionButton: React.FC<OptionButtonProps> = ({ id, label, onClick, classNa
     type: 'button',
     id,
     label: `${parentId} - ${label}`,
-    actions: ['click']
+    actions: [CommonActions.click()]
   }, parentId);
 
   return (
@@ -107,15 +107,13 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
     type: 'button',
     id: `${pickerId}-trigger`,
     label: `${label} - ${selectedUserName}`,
-    actions: ['click'],
     disabled
-  });
+  }, [CommonActions.click()]);
 
   // Update metadata when picker state changes
   useEffect(() => {
     if (updateMetadata) {
       updateMetadata({
-        value,
         label,
         disabled
       });
@@ -152,7 +150,7 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
       if (userIdsToFetch.length === 0) return;
       
       // Fetch avatar URLs for all needed users
-      const urlPromises = userIdsToFetch.map(async (userId) => {
+      const urlPromises = userIdsToFetch.map(async (userId): Promise<{ userId: string; url: string | null }> => {
         try {
           fetchedUserIdsRef.current.add(userId);
           const url = await getUserAvatarUrl(userId, tenant);
@@ -178,7 +176,7 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
       }
     };
     
-    fetchAvatarUrls();
+    void fetchAvatarUrls();
   }, [currentUser, isOpen, filteredUsers, users]);
 
 
@@ -356,7 +354,7 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
               </OptionButton>
               
               {/* User options */}
-              {filteredUsers.map((user) => {
+              {filteredUsers.map((user): JSX.Element => {
                 const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User';
                 return (
                   <OptionButton
