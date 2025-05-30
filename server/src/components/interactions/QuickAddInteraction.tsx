@@ -6,8 +6,10 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Input } from 'server/src/components/ui/Input';
+import TextEditor from '../editor/TextEditor';
+import { PartialBlock } from '@blocknote/core';
 import InteractionIcon from 'server/src/components/ui/InteractionIcon';
-import { addInteraction, getInteractionById } from 'server/src/lib/actions/interactionActions';
+import { addInteraction, getInteractionById, getInteractionStatuses } from 'server/src/lib/actions/interactionActions';
 import { getAllInteractionTypes } from 'server/src/lib/actions/interactionTypeActions';
 import { IInteraction, IInteractionType, ISystemInteractionType } from 'server/src/interfaces/interaction.interfaces';
 import { useTenant } from 'server/src/components/TenantProvider';
@@ -35,33 +37,44 @@ export function QuickAddInteraction({
   isOpen, 
   onClose 
 }: QuickAddInteractionProps) {
-  const [description, setDescription] = useState('');
+  const [title, setTitle] = useState('');
+  const [notesContent, setNotesContent] = useState<PartialBlock[]>([]);
   const [typeId, setTypeId] = useState('');
   const [duration, setDuration] = useState('');
+  const [statusId, setStatusId] = useState('');
   const [interactionTypes, setInteractionTypes] = useState<(IInteractionType | ISystemInteractionType)[]>([]);
+  const [statuses, setStatuses] = useState<any[]>([]);
   const tenant = useTenant()!;
   const { data: session } = useSession();
 
   useEffect(() => {
-    const fetchInteractionTypes = async () => {
+    const fetchData = async () => {
       try {
+        // Fetch interaction types
         const types = await getAllInteractionTypes();
-        // Sort to ensure system types appear first
         const sortedTypes = types.sort((a, b) => {
-          // If both are system types or both are tenant types, sort by name
           if (('created_at' in a) === ('created_at' in b)) {
             return a.type_name.localeCompare(b.type_name);
           }
-          // System types ('created_at' exists) come first
           return 'created_at' in a ? -1 : 1;
         });
         setInteractionTypes(sortedTypes);
+
+        // Fetch interaction statuses
+        const statusList = await getInteractionStatuses();
+        setStatuses(statusList);
+        
+        // Set default status if available
+        const defaultStatus = statusList.find(s => s.is_default);
+        if (defaultStatus) {
+          setStatusId(defaultStatus.status_id);
+        }
       } catch (error) {
-        console.error('Error fetching interaction types:', error);
+        console.error('Error fetching data:', error);
       }
     };
 
-    fetchInteractionTypes();
+    fetchData();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -73,9 +86,11 @@ export function QuickAddInteraction({
   
     try {
       const interactionData: Partial<IInteraction> = {
-        description,
+        title,
+        notes: JSON.stringify(notesContent),
         type_id: typeId,
         duration: duration ? parseInt(duration, 10) : null,
+        status_id: statusId,
         user_id: session.user.id,
         tenant: tenant
       };
@@ -98,8 +113,10 @@ export function QuickAddInteraction({
       onInteractionAdded(fullInteraction);
       onClose();
       // Clear form fields
-      setDescription('');
+      setTitle('');
+      setNotesContent([]);
       setTypeId('');
+      setStatusId('');
       setDuration('');
     } catch (error) {
       console.error('Error adding interaction:', error);
@@ -141,11 +158,31 @@ export function QuickAddInteraction({
               />
               <Input
                 type="text"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Description"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Title"
                 required
               />
+              <CustomSelect
+                options={statuses.map((status) => ({ 
+                  value: status.status_id, 
+                  label: status.name 
+                }))}
+                value={statusId}
+                onValueChange={setStatusId}
+                placeholder="Select Status"
+                className="w-full"
+              />
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Notes</label>
+                <div className="border rounded-md min-h-[120px]">
+                  <TextEditor
+                    id="interaction-notes-editor"
+                    initialContent={notesContent}
+                    onContentChange={setNotesContent}
+                  />
+                </div>
+              </div>
               <Input
                 type="number"
                 value={duration}

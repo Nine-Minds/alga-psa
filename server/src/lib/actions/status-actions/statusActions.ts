@@ -408,6 +408,16 @@ export async function deleteStatus(statusId: string) {
 
         inUseCount = Number(tasksCount?.count || 0) + Number(mappingsCount?.count || 0);
         errorMessage = 'Cannot delete status that is in use by project tasks or status mappings';
+      } else if (status.status_type === 'interaction') {
+        const interactionsCount = await trx('interactions')
+          .where({
+            tenant,
+            status_id: statusId
+          })
+          .count('interaction_id as count')
+          .first();
+        inUseCount = Number(interactionsCount?.count || 0);
+        errorMessage = 'Cannot delete status that is in use by interactions';
       }
 
       if (inUseCount > 0) {

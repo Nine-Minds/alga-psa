@@ -93,7 +93,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
 
   const filteredInteractions = useMemo(() => {
     return interactions.filter(interaction =>
-      (interaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (interaction.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
        interaction.type_name.toLowerCase().includes(searchTerm.toLowerCase())) &&
       (selectedType === 'all' || selectedType === '' || interaction.type_id === selectedType) &&
       (!startDate || new Date(interaction.interaction_date) >= new Date(startDate)) &&
@@ -190,8 +190,11 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
                   <InteractionIcon icon={interaction.icon} typeName={interaction.type_name} />
                 </div>
                 <div className="flex-grow">
-                  <p className="font-semibold">{interaction.description}</p>
+                  <p className="font-semibold">{interaction.title}</p>
                   <p className="text-sm text-gray-500">{new Date(interaction.interaction_date).toLocaleString()}</p>
+                  {interaction.status_name && (
+                    <p className="text-xs text-blue-600">{interaction.status_name}</p>
+                  )}
                 </div>
               </li>
             ))}

@@ -183,6 +183,57 @@ exports.seed = function (knex) {
                         })
                         .select('user_id'),
                     status_type: 'project_task'
+                },
+                {
+                    tenant: tenant.tenant,
+                    order_number: 1,
+                    name: 'Crystal Ball Awaiting',
+                    created_by: knex('users')
+                        .where({
+                            tenant: tenant.tenant,
+                            username: 'glinda'
+                        })
+                        .select('user_id'),
+                    item_type: 'interaction'
+                },
+                {
+                    tenant: tenant.tenant,
+                    order_number: 2,
+                    name: 'Yellow Brick Chat',
+                    created_by: knex('users')
+                        .where({
+                            tenant: tenant.tenant,
+                            username: 'glinda'
+                        })
+                        .select('user_id'),
+                    item_type: 'interaction'
+                },
+                {
+                    tenant: tenant.tenant,
+                    order_number: 3,
+                    name: 'Emerald Communication',
+                    created_by: knex('users')
+                        .where({
+                            tenant: tenant.tenant,
+                            username: 'glinda'
+                        })
+                        .select('user_id'),
+                    item_type: 'interaction',
+                    is_closed: true,
+                    is_default: true
+                },
+                {
+                    tenant: tenant.tenant,
+                    order_number: 4,
+                    name: 'Tornado Interrupted',
+                    created_by: knex('users')
+                        .where({
+                            tenant: tenant.tenant,
+                            username: 'glinda'
+                        })
+                        .select('user_id'),
+                    item_type: 'interaction',
+                    is_closed: true
                 }
             ]);
         });

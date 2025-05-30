@@ -11,6 +11,23 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 
 import { createTenantKnex } from 'server/src/lib/db';
 
+// Helper function to get default status ID for interactions
+async function getDefaultInteractionStatusId(trx: any, tenant: string): Promise<string> {
+  const defaultStatus = await trx('statuses')
+    .where({ 
+      tenant,
+      is_default: true,
+      status_type: 'interaction'
+    })
+    .first();
+
+  if (!defaultStatus) {
+    throw new Error('No default status found for interactions');
+  }
+
+  return defaultStatus.status_id;
+}
+
 export async function addInteraction(interactionData: Omit<IInteraction, 'interaction_date'>): Promise<IInteraction> {
   try {
     const { knex: db, tenant } = await createTenantKnex();
@@ -29,8 +46,12 @@ export async function addInteraction(interactionData: Omit<IInteraction, 'intera
     }
 
     const newInteraction = await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Set default status if none provided
+      const status_id = interactionData.status_id || await getDefaultInteractionStatusId(trx, tenant);
+      
       return await InteractionModel.addInteraction({
         ...interactionData,
+        status_id,
         tenant,
         interaction_date: new Date(),
       });
@@ -136,5 +157,27 @@ export async function getInteractionById(interactionId: string): Promise<IIntera
   } catch (error) {
     console.error('Error fetching interaction:', error);
     throw new Error('Failed to fetch interaction');
+  }
+}
+
+export async function getInteractionStatuses(): Promise<any[]> {
+  try {
+    const { tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant context is required');
+    }
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('statuses')
+        .where({ 
+          tenant,
+          status_type: 'interaction'
+        })
+        .select('*')
+        .orderBy('order_number');
+    });
+  } catch (error) {
+    console.error('Error fetching interaction statuses:', error);
+    throw new Error('Failed to fetch interaction statuses');
   }
 }

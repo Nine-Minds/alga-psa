@@ -16,6 +16,10 @@ exports.seed = async function(knex) {
     { name: 'Done', item_type: 'project_task', display_order: 3, tenant: tenant.tenant, is_closed: 'true' },
     { name: 'Open', item_type: 'ticket', display_order: 1, tenant: tenant.tenant },
     { name: 'In Progress', item_type: 'ticket', display_order: 2, tenant: tenant.tenant },
-    { name: 'Resolved', item_type: 'ticket', display_order: 3, tenant: tenant.tenant, is_closed: 'true' }
+    { name: 'Resolved', item_type: 'ticket', display_order: 3, tenant: tenant.tenant, is_closed: 'true' },
+    { name: 'Planned', item_type: 'interaction', display_order: 1, tenant: tenant.tenant },
+    { name: 'In Progress', item_type: 'interaction', display_order: 2, tenant: tenant.tenant },
+    { name: 'Completed', item_type: 'interaction', display_order: 3, tenant: tenant.tenant, is_closed: 'true', is_default: 'true' },
+    { name: 'Cancelled', item_type: 'interaction', display_order: 4, tenant: tenant.tenant, is_closed: 'true' }
   ]);
 };
