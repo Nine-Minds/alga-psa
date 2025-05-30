@@ -26,7 +26,7 @@ import { useSearchParams } from 'next/navigation';
 
 // Dynamic import for EE Extensions component
 const ExtensionsComponent = React.lazy(() => 
-  import('../../../ee/server/src/components/settings/extensions/Extensions')
+  import('../../../../ee/server/src/components/settings/extensions/Extensions')
     .then(module => ({ default: module.default }))
     .catch(() => ({ default: () => <div>Extensions not available in this edition</div> }))
 );
@@ -43,7 +43,7 @@ const SettingsPage = (): JSX.Element =>  {
     const checkEEAvailability = async () => {
       try {
         // Try to dynamically import the EE extension system
-        await import('../../../ee/server/src/components/settings/extensions/Extensions');
+        await import('../../../../ee/server/src/components/settings/extensions/Extensions');
         setIsEEAvailable(true);
       } catch (error) {
         // EE not available, that's fine
