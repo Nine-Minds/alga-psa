@@ -44,10 +44,10 @@ main() {
     PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h postgres -U postgres -d server -c 'GRANT ALL ON SCHEMA public TO postgres;' || true
 
     log "Running combined CE and EE migrations..."
-    node /app/ee/server/run-migrations.cjs || true
+    cd /app/server && NODE_ENV=migration npx knex --knexfile knexfile.cjs migrate:latest || true
 
-    log "Running combined CE and EE seeds..."
-    node /app/ee/server/run-seeds.cjs || true
+    log "Running seeds..."
+    cd /app/server && NODE_ENV=migration npx knex --knexfile knexfile.cjs seed:run || true
 
     log "Setup completed!"
     
