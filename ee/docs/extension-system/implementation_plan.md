@@ -2062,115 +2062,57 @@ function App() {
 
 ### Phase 2: Core UI Extensions
 
-#### 2.1 Navigation Extensions
+#### 2.1 Navigation Extensions (80/20 Implementation)
 
 **Overview:**
-Navigation extensions allow third-party extensions to add their own items to the application's navigation menu. This enables extensions to integrate seamlessly into the application's user flow and provide entry points to their custom pages or functionality.
+Navigation extensions allow third-party extensions to add their own items to the application's navigation menu, providing entry points to custom pages or functionality.
 
-**Extension Point Architecture:**
-
-```
-┌─────────────────────────────────────────────────┐
-│ MainNavigation                                  │
-│  ┌─────────────────────┐ ┌───────────────────┐  │
-│  │ Core Nav Items      │ │ ExtensionSlot     │  │
-│  │ - Dashboard         │ │  ┌───────────────┐│  │
-│  │ - Tickets           │ │  │Extension Nav 1││  │
-│  │ - Clients           │ │  └───────────────┘│  │
-│  │ - Reports           │ │  ┌───────────────┐│  │
-│  │ - Settings          │ │  │Extension Nav 2││  │
-│  └─────────────────────┘ │  └───────────────┘│  │
-│                          └───────────────────┘  │
-└─────────────────────────────────────────────────┘
-```
-
-**Navigation Item Schema:**
+**Core Navigation Item Schema:**
 ```typescript
 interface NavigationItemProps {
   id: string;             // Unique identifier
   label: string;          // Display text
-  icon?: React.ReactNode; // Optional icon
+  icon?: string;          // Icon name from IconRegistry
   path: string;           // Route path
-  priority: number;       // Order in the menu (higher = earlier)
-  badge?: number | null;  // Optional notification badge
-  children?: NavigationItemProps[]; // Sub-menu items
+  priority?: number;      // Order in the menu (higher = earlier)
   permissions?: string[]; // Required permissions
-  section?: 'main' | 'bottom' | 'user'; // Menu section
 }
 ```
 
-**Manifest Definition:**
-Extensions define their navigation items in their manifest:
-
+**Manifest Definition Example:**
 ```json
 {
-  "name": "Task Manager Extension",
-  "version": "1.0.0",
   "components": [
     {
       "type": "navigation-item",
       "slot": "main-navigation",
-      "component": "./components/TaskNavItem",
       "props": {
+        "id": "tasks",
         "label": "Tasks",
         "icon": "ChecklistIcon",
         "path": "/extensions/task-manager",
         "priority": 80,
-        "section": "main",
         "permissions": ["view:tasks"]
-      }
-    },
-    {
-      "type": "navigation-item",
-      "slot": "main-navigation",
-      "component": "./components/ReportsNavItem",
-      "props": {
-        "label": "Task Reports",
-        "icon": "BarChartIcon",
-        "path": "/extensions/task-manager/reports",
-        "priority": 40,
-        "section": "main",
-        "permissions": ["view:task_reports"]
       }
     }
   ]
 }
 ```
 
-**Tasks:**
+**Minimal Tasks:**
 
-- [ ] Define navigation extension slot specification:
-  - Create schema for navigation item properties
-  - Define validation rules for navigation items
-  - Document available icons and sections
-  - Specify permission requirements for navigation
-
-- [ ] Implement `NavigationExtensionPoint` component:
+- [ ] Implement `NavigationSlot` component:
   - Add extension slot to the main navigation component
-  - Create filtering for different navigation sections
-  - Implement sorting by priority
-  - Add support for navigation item badges
-  - Implement permission checking for navigation items
+  - Sort navigation items by priority
+  - Check user permissions before rendering
 
 - [ ] Create `NavItemRenderer` component:
   - Implement consistent styling with native navigation
-  - Support for icons (both built-in and custom)
-  - Handle active state detection
-  - Implement badge rendering
-  - Support for nested navigation (sub-menus)
+  - Support for icons from the icon registry
+  - Handle active state detection based on current route
 
-- [ ] Enhance main navigation layout:
-  - Modify navigation component to integrate extension items
-  - Implement section-based rendering
-  - Ensure responsive design with extension items
-  - Add hover and active states consistent with core navigation
-  - Implement keyboard navigation support
-
-- [ ] Add navigation metrics and management:
-  - Track navigation item usage
-  - Implement overflow handling for many extension items
-  - Add ability to collapse/expand extension navigation sections
-  - Create admin interface for reordering navigation items
+- [ ] Modify main navigation layout:
+  - Add extension slot to navigation component
 
 **Files to Create/Modify:**
 
@@ -2178,48 +2120,36 @@ Extensions define their navigation items in their manifest:
 - `/server/src/lib/extensions/ui/navigation/NavigationSlot.tsx` - Extension slot for navigation items
 - `/server/src/lib/extensions/ui/navigation/NavItemRenderer.tsx` - Renderer for navigation items
 - `/server/src/lib/extensions/ui/navigation/NavItemTypes.ts` - Type definitions for navigation items
-- `/server/src/lib/extensions/ui/navigation/useNavigationItems.ts` - Hook for retrieving and filtering navigation items
-- `/server/src/lib/extensions/schemas/navigation.schema.ts` - Validation schema for navigation items
-- `/server/src/components/settings/extensions/NavigationManagement.tsx` - Admin UI for managing nav items
 
-**Example Implementation:**
+**Simplified Example Implementation:**
 
 ```typescript
 // NavigationSlot.tsx
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useExtensionComponents } from '../hooks/useExtensionComponents';
 import { NavItemRenderer } from './NavItemRenderer';
 import { NavigationItemProps } from './NavItemTypes';
+import { usePermissions } from '../../hooks/usePermissions';
 
-interface NavigationSlotProps {
-  section: 'main' | 'bottom' | 'user';
-  className?: string;
-}
-
-export function NavigationSlot({ section, className }: NavigationSlotProps) {
-  // Get all navigation items registered for the 'main-navigation' slot
-  const { components, loading, error } = useExtensionComponents('main-navigation');
+export function NavigationSlot() {
+  const { components } = useExtensionComponents('main-navigation');
+  const { hasPermission } = usePermissions();
   
-  // Filter and sort navigation items for the requested section
-  const navigationItems = useMemo(() => {
-    if (!components || loading) return [];
-    
-    return components
-      .filter(comp => comp.props?.section === section)
-      .sort((a, b) => (b.props?.priority || 0) - (a.props?.priority || 0));
-  }, [components, section, loading]);
-  
-  if (loading) return <div className="nav-placeholder animate-pulse" />;
-  if (error) return null; // Fail silently for navigation errors
+  // Filter components by permission and sort by priority
+  const navigationItems = components
+    .filter(comp => {
+      const permissions = comp.props?.permissions || [];
+      return permissions.every(p => hasPermission(p));
+    })
+    .sort((a, b) => (b.props?.priority || 0) - (a.props?.priority || 0));
   
   return (
-    <div className={`navigation-section ${className || ''}`}>
+    <div className="extension-navigation">
       {navigationItems.map(item => (
         <NavItemRenderer
-          key={`${item.extensionId}-${item.props.id || item.componentPath}`}
+          key={`${item.extensionId}-${item.props.id}`}
           extensionId={item.extensionId}
-          component={item.component}
-          props={item.props as NavigationItemProps}
+          {...item.props}
         />
       ))}
     </div>
@@ -2230,53 +2160,19 @@ export function NavigationSlot({ section, className }: NavigationSlotProps) {
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { NavigationItemProps } from './NavItemTypes';
-import { IconRegistry } from '../../../components/icons';
+import { getIcon } from '../../../components/icons';
 
-interface NavItemRendererProps {
-  extensionId: string;
-  component: React.ComponentType<any> | null;
-  props: NavigationItemProps;
-}
-
-export function NavItemRenderer({ extensionId, component, props }: NavItemRendererProps) {
+export function NavItemRenderer({ id, label, icon, path }: NavigationItemProps) {
   const location = useLocation();
-  const isActive = location.pathname.startsWith(props.path);
-  
-  // If a custom component is provided, use it
-  if (component) {
-    return (
-      <ExtensionErrorBoundary extensionId={extensionId} fallback={<DefaultNavItem {...props} isActive={isActive} />}>
-        {React.createElement(component, { ...props, isActive })}
-      </ExtensionErrorBoundary>
-    );
-  }
-  
-  // Otherwise use the default navigation item renderer
-  return <DefaultNavItem {...props} isActive={isActive} />;
-}
-
-function DefaultNavItem({ label, icon, path, badge, isActive, children }: NavigationItemProps & { isActive: boolean }) {
-  // Resolve icon component from IconRegistry if it's a string
-  const IconComponent = typeof icon === 'string' ? IconRegistry[icon] : icon;
+  const isActive = location.pathname.startsWith(path);
+  const IconComponent = icon ? getIcon(icon) : null;
   
   return (
     <div className={`nav-item ${isActive ? 'active' : ''}`}>
       <Link to={path} className="nav-item-link">
-        {IconComponent && <span className="nav-item-icon">{IconComponent}</span>}
+        {IconComponent && <span className="nav-item-icon"><IconComponent /></span>}
         <span className="nav-item-label">{label}</span>
-        {badge != null && <span className="nav-item-badge">{badge}</span>}
       </Link>
-      {children && children.length > 0 && isActive && (
-        <div className="nav-item-children">
-          {children.map(child => (
-            <DefaultNavItem
-              key={child.id}
-              {...child}
-              isActive={location.pathname === child.path}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -2294,140 +2190,43 @@ export function Navigation() {
         {/* ... other core navigation items */}
       </div>
       
-      {/* Extension navigation items - main section */}
-      <NavigationSlot section="main" className="extension-nav-items" />
-      
-      <div className="nav-separator" />
-      
-      {/* Bottom navigation section with core items */}
-      <div className="bottom-nav-items">
-        <NavItem icon="settings" label="Settings" path="/settings" />
-      </div>
-      
-      {/* Extension navigation items - bottom section */}
-      <NavigationSlot section="bottom" className="extension-nav-items-bottom" />
-      
-      {/* User section with profile, etc. */}
-      <div className="user-nav-section">
-        <UserProfileNav />
-        <NavigationSlot section="user" className="extension-nav-items-user" />
-      </div>
+      {/* Extension navigation items */}
+      <NavigationSlot />
     </nav>
   );
 }
 ```
 
-**Security Considerations:**
-
-1. **Path Validation**:
-   - Validate extension navigation paths to prevent open redirect vulnerabilities
-   - Ensure navigation paths follow the extension namespace pattern
-   - Restrict navigation to appropriate extension routes
-
-2. **Permission Checking**:
-   - Verify user permissions before rendering navigation items
-   - Update navigation when permissions change
-   - Log unauthorized navigation attempts
-
-3. **Content Security**:
-   - Sanitize navigation labels to prevent XSS
-   - Validate icons to ensure they are from approved sources
-   - Restrict HTML in navigation items
-
-4. **Performance Protection**:
-   - Limit the number of navigation items per extension
-   - Implement performance budget for navigation rendering
-   - Cache navigation structure to prevent frequent re-renders
-
-**User Experience Guidelines:**
-
-1. **Consistency**:
-   - Extension navigation should match core navigation styling
-   - Interactions (hover, active states) should be consistent
-   - Icons should follow application design language
-
-2. **Discoverability**:
-   - Extension navigation items should be clearly labeled
-   - Group related extension items when possible
-   - Use appropriate icons that convey meaning
-
-3. **Responsiveness**:
-   - Navigation should adapt to smaller screens
-   - Consider collapsible sections for many extension items
-   - Ensure touch targets are appropriate size
-
-4. **Accessibility**:
-   - All navigation items must be keyboard navigable
-   - Screen reader compatibility for extension items
-   - Sufficient color contrast for all states
-
-**Admin Configuration Options:**
-
-1. **Extension Management UI**:
-   - Enable/disable specific navigation items
-   - Reorder navigation items across extensions
-   - Configure custom priorities for navigation items
-
-2. **User Customization**:
-   - Allow users to pin/favorite extension navigation items
-   - Support for collapsing extension navigation sections
-   - Remember user's navigation preferences
+**Core Security Considerations:**
+- Validate extension navigation paths to enforce extension namespace pattern
+- Check user permissions before rendering navigation items
+- Sanitize navigation labels to prevent XSS
 
 **Dependencies:**
 - Core extension system (1.6)
 - Main navigation component
-- Icon registry system
+- Icon registry
 - Permission checking system
-- React Router or equivalent navigation library
 
-#### 2.2 Dashboard Widget Extensions
+#### 2.2 Dashboard Widget Extensions (80/20 Implementation)
 
 **Overview:**
-Dashboard widget extensions allow third-party extensions to contribute widgets to the application's dashboard, providing at-a-glance information, quick actions, and relevant insights to users. Widgets can be placed in different dashboard regions and sized appropriately to create a cohesive user experience.
+Dashboard widget extensions allow third-party extensions to contribute widgets to the application's dashboard, providing at-a-glance information and quick actions to users.
 
-**Dashboard Widget Architecture:**
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ Dashboard                                                       │
-│ ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────────┐ │
-│ │ Core Widget     │ │ Extension Widget│ │ Core Widget         │ │
-│ │                 │ │                 │ │                      │ │
-│ └─────────────────┘ └─────────────────┘ └─────────────────────┘ │
-│ ┌─────────────────────────────┐ ┌───────────────────────────┐   │
-│ │ Extension Widget (large)    │ │ Extension Widget          │   │
-│ │                             │ │                           │   │
-│ │                             │ └───────────────────────────┘   │
-│ └─────────────────────────────┘ ┌───────────────────────────┐   │
-│                                 │ Extension Widget          │   │
-│                                 │                           │   │
-│                                 └───────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-**Widget Schema:**
+**Core Widget Schema:**
 ```typescript
 interface DashboardWidgetProps {
-  id: string;              // Unique identifier
-  title: string;           // Widget title
-  size: 'small' | 'medium' | 'large' | 'full'; // Widget size
-  minHeight?: number;      // Minimum height in pixels
+  id: string;             // Unique identifier
+  title: string;          // Widget title
+  size: 'small' | 'medium' | 'large'; // Widget size
   refreshInterval?: number; // Refresh data interval in seconds
-  permissions?: string[];  // Required permissions
-  preferences?: Record<string, any>; // User configurable preferences
-  defaultRegion?: 'main' | 'side' | 'bottom'; // Preferred dashboard region
-  priority?: number;       // Display priority (higher = earlier)
-  loading?: boolean;       // Loading state indicator
+  permissions?: string[]; // Required permissions
 }
 ```
 
-**Manifest Definition:**
-Extensions define their dashboard widgets in their manifest:
-
+**Manifest Definition Example:**
 ```json
 {
-  "name": "Task Manager Extension",
-  "version": "1.0.0",
   "components": [
     {
       "type": "dashboard-widget",
@@ -2438,73 +2237,30 @@ Extensions define their dashboard widgets in their manifest:
         "title": "Task Summary",
         "size": "medium",
         "refreshInterval": 300,
-        "defaultRegion": "main",
-        "priority": 90,
         "permissions": ["view:tasks"]
-      }
-    },
-    {
-      "type": "dashboard-widget",
-      "slot": "dashboard-widgets",
-      "component": "./components/TaskStatusChart",
-      "props": {
-        "id": "task-status-chart",
-        "title": "Task Status",
-        "size": "large",
-        "refreshInterval": 600,
-        "defaultRegion": "main",
-        "priority": 80,
-        "permissions": ["view:task_reports"]
       }
     }
   ]
 }
 ```
 
-**Tasks:**
+**Minimal Tasks:**
 
-- [ ] Define dashboard widget extension slot specification:
-  - Create schema for widget properties
-  - Define validation rules for widgets
-  - Document available widget sizes and regions
-  - Specify requirements for widget loading states
-  - Create guidelines for widget refreshing behavior
-
-- [ ] Implement `DashboardWidgetExtensionPoint` component:
+- [ ] Implement `DashboardWidgetSlot` component:
   - Add extension slot to the dashboard component
-  - Create grid layout system for widgets
-  - Implement responsive sizing based on widget size property
-  - Add support for widget regions (main, side, bottom)
-  - Create drag-and-drop reordering capability
+  - Check user permissions before rendering widgets
+  - Apply basic size-based styling to widgets
 
 - [ ] Create `WidgetRenderer` component:
   - Implement consistent styling for widget containers
-  - Add header with title and actions
-  - Implement loading state handling
-  - Add widget refresh capability
-  - Create widget error states
-  - Support for widget settings/configuration
+  - Add simple header with title
+  - Handle basic loading and error states
+  - Add minimal refresh capability
 
-- [ ] Add widget data fetching system:
-  - Create data fetching hook for widgets
-  - Implement automatic refresh based on interval
-  - Add client-side caching for widget data
-  - Create stale-while-revalidate pattern
-  - Implement error handling for data fetching
-
-- [ ] Enhance dashboard layout system:
-  - Create responsive grid for widgets
-  - Implement widget regions with appropriate sizing
-  - Add support for collapsible widgets
-  - Implement widget drag-and-drop capabilities
-  - Create widget persistence system for layout
-
-- [ ] Add widget personalization:
-  - Create user preference storage for widgets
-  - Implement widget visibility toggles
-  - Add capability to resize widgets
-  - Store user's preferred dashboard layout
-  - Implement widget instance configuration
+- [ ] Add simple data fetching for widgets:
+  - Create basic API endpoint for widget data
+  - Implement data fetching hook with refresh support
+  - Add error handling for failed requests
 
 **Files to Create/Modify:**
 
@@ -2512,220 +2268,131 @@ Extensions define their dashboard widgets in their manifest:
 - `/server/src/lib/extensions/ui/dashboard/DashboardWidgetSlot.tsx` - Extension slot for dashboard widgets
 - `/server/src/lib/extensions/ui/dashboard/WidgetRenderer.tsx` - Renderer for dashboard widgets
 - `/server/src/lib/extensions/ui/dashboard/WidgetTypes.ts` - Type definitions for dashboard widgets
-- `/server/src/lib/extensions/ui/dashboard/WidgetGrid.tsx` - Responsive grid system for widgets
 - `/server/src/lib/extensions/ui/dashboard/useWidgetData.ts` - Hook for widget data fetching
-- `/server/src/lib/extensions/ui/dashboard/WidgetSettings.tsx` - Component for widget configuration
-- `/server/src/lib/extensions/ui/dashboard/WidgetDragAndDrop.tsx` - Drag and drop reordering
-- `/server/src/lib/extensions/schemas/widget.schema.ts` - Validation schema for widgets
+- `/server/src/pages/api/extensions/[extensionId]/widget-data/[widgetId].ts` - API endpoint for widget data
 
-**Example Implementation:**
+**Simplified Example Implementation:**
 
 ```typescript
 // DashboardWidgetSlot.tsx
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useExtensionComponents } from '../hooks/useExtensionComponents';
 import { WidgetRenderer } from './WidgetRenderer';
 import { DashboardWidgetProps } from './WidgetTypes';
-import { WidgetGrid } from './WidgetGrid';
-import { useDashboardLayout } from './useDashboardLayout';
+import { usePermissions } from '../../hooks/usePermissions';
 
-interface DashboardWidgetSlotProps {
-  region: 'main' | 'side' | 'bottom';
-  className?: string;
-}
-
-export function DashboardWidgetSlot({ region, className }: DashboardWidgetSlotProps) {
-  // Get all widgets registered for the dashboard
-  const { components, loading, error } = useExtensionComponents('dashboard-widgets');
-  const { layout, updateLayout } = useDashboardLayout();
+export function DashboardWidgetSlot() {
+  const { components } = useExtensionComponents('dashboard-widgets');
+  const { hasPermission } = usePermissions();
   
-  // Filter and sort widgets for the requested region
-  const widgets = useMemo(() => {
-    if (!components || loading) return [];
-    
-    // Get components that belong to this region (either by default or user preference)
-    let regionWidgets = components.filter(comp => {
-      const widgetId = comp.props?.id;
-      const userRegion = layout[widgetId]?.region;
-      const defaultRegion = comp.props?.defaultRegion || 'main';
-      
-      return (userRegion || defaultRegion) === region;
-    });
-    
-    // Sort by user-defined order if available, or by priority
-    regionWidgets.sort((a, b) => {
-      const aId = a.props?.id;
-      const bId = b.props?.id;
-      
-      // User-defined order takes precedence
-      if (layout[aId]?.order !== undefined && layout[bId]?.order !== undefined) {
-        return layout[aId].order - layout[bId].order;
-      }
-      
-      // Fall back to priority
-      return (b.props?.priority || 0) - (a.props?.priority || 0);
-    });
-    
-    return regionWidgets;
-  }, [components, region, layout, loading]);
-  
-  if (loading) return <div className="widgets-loading-placeholder" />;
-  if (error) return <div className="widgets-error">Failed to load dashboard widgets</div>;
+  // Filter widgets by permission
+  const widgets = components.filter(comp => {
+    const permissions = comp.props?.permissions || [];
+    return permissions.every(p => hasPermission(p));
+  });
   
   return (
-    <WidgetGrid 
-      className={`widget-region ${className || ''}`}
-      region={region}
-      onReorder={(newOrder) => updateLayout(region, newOrder)}
-    >
-      {widgets.map(widget => {
-        // Get user preferences for this widget if they exist
-        const widgetId = widget.props?.id;
-        const userPrefs = layout[widgetId]?.preferences || {};
-        const userSize = layout[widgetId]?.size;
-        
-        return (
-          <WidgetRenderer
-            key={`${widget.extensionId}-${widgetId}`}
-            extensionId={widget.extensionId}
-            component={widget.component}
-            props={{
-              ...widget.props,
-              size: userSize || widget.props?.size || 'medium',
-              preferences: { ...widget.props?.preferences, ...userPrefs }
-            } as DashboardWidgetProps}
-            onSettingsChange={(newPrefs) => {
-              updateLayout(region, null, widgetId, { preferences: newPrefs });
-            }}
-            onSizeChange={(newSize) => {
-              updateLayout(region, null, widgetId, { size: newSize });
-            }}
-          />
-        );
-      })}
-    </WidgetGrid>
+    <div className="dashboard-widgets">
+      {widgets.map(widget => (
+        <WidgetRenderer
+          key={`${widget.extensionId}-${widget.props.id}`}
+          extensionId={widget.extensionId}
+          component={widget.component}
+          {...widget.props}
+        />
+      ))}
+    </div>
   );
 }
 
 // WidgetRenderer.tsx
-import React, { useState } from 'react';
+import React from 'react';
 import { DashboardWidgetProps } from './WidgetTypes';
 import { useWidgetData } from './useWidgetData';
-import { WidgetSettings } from './WidgetSettings';
+import { ExtensionErrorBoundary } from '../ExtensionErrorBoundary';
 
-interface WidgetRendererProps {
+interface WidgetRendererProps extends DashboardWidgetProps {
   extensionId: string;
   component: React.ComponentType<any> | null;
-  props: DashboardWidgetProps;
-  onSettingsChange: (preferences: Record<string, any>) => void;
-  onSizeChange: (size: 'small' | 'medium' | 'large' | 'full') => void;
 }
 
 export function WidgetRenderer({ 
+  id,
+  title,
+  size,
+  refreshInterval,
   extensionId, 
-  component, 
-  props,
-  onSettingsChange,
-  onSizeChange
+  component 
 }: WidgetRendererProps) {
-  const [showSettings, setShowSettings] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  
-  // Use the data fetching hook if the component doesn't handle its own data
+  // Fetch widget data
   const { data, isLoading, error, refetch } = useWidgetData(
     extensionId, 
-    props.id, 
-    props.refreshInterval
+    id, 
+    refreshInterval
   );
-  
-  // If a custom component is provided, render it with the widget wrapper
-  const renderWidget = () => {
-    if (!component) {
-      return (
-        <div className="widget-no-component">
-          Widget component not found
-        </div>
-      );
-    }
-    
-    return (
-      <ExtensionErrorBoundary 
-        extensionId={extensionId}
-        fallback={
-          <div className="widget-error">
-            An error occurred loading this widget
-            <button onClick={() => window.location.reload()}>Refresh</button>
-          </div>
-        }
-      >
-        {React.createElement(component, {
-          ...props,
-          data,
-          isLoading: isLoading || props.loading,
-          error,
-          refetch,
-          collapsed: isCollapsed
-        })}
-      </ExtensionErrorBoundary>
-    );
-  };
   
   return (
-    <div className={`dashboard-widget widget-size-${props.size}`} data-widget-id={props.id}>
+    <div className={`dashboard-widget widget-size-${size}`}>
       <div className="widget-header">
-        <h3 className="widget-title">{props.title}</h3>
-        <div className="widget-actions">
-          <button 
-            className="widget-refresh" 
-            onClick={() => refetch()}
-            aria-label="Refresh widget"
-          >
-            <RefreshIcon />
-          </button>
-          <button 
-            className="widget-collapse" 
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            aria-label={isCollapsed ? "Expand widget" : "Collapse widget"}
-          >
-            {isCollapsed ? <ExpandIcon /> : <CollapseIcon />}
-          </button>
-          <button 
-            className="widget-settings" 
-            onClick={() => setShowSettings(true)}
-            aria-label="Widget settings"
-          >
-            <SettingsIcon />
-          </button>
-        </div>
+        <h3 className="widget-title">{title}</h3>
+        <button 
+          onClick={refetch}
+          aria-label="Refresh widget"
+        >
+          Refresh
+        </button>
       </div>
       
-      <div className={`widget-content ${isCollapsed ? 'collapsed' : ''}`}>
-        {isLoading && <div className="widget-loading-overlay"><Spinner /></div>}
+      <div className="widget-content">
+        {isLoading && <div className="widget-loading">Loading...</div>}
         {error && !isLoading && (
-          <div className="widget-error-message">
+          <div className="widget-error">
             Failed to load widget data
-            <button onClick={() => refetch()}>Retry</button>
+            <button onClick={refetch}>Retry</button>
           </div>
         )}
-        {renderWidget()}
+        {!isLoading && !error && component && (
+          <ExtensionErrorBoundary extensionId={extensionId}>
+            {React.createElement(component, { data })}
+          </ExtensionErrorBoundary>
+        )}
       </div>
-      
-      {showSettings && (
-        <WidgetSettings
-          widgetId={props.id}
-          title={props.title}
-          preferences={props.preferences || {}}
-          size={props.size}
-          onClose={() => setShowSettings(false)}
-          onSave={(newPrefs) => {
-            onSettingsChange(newPrefs);
-            setShowSettings(false);
-          }}
-          onSizeChange={onSizeChange}
-        />
-      )}
     </div>
   );
+}
+
+// useWidgetData.ts - Hook for handling widget data fetching
+function useWidgetData(extensionId, widgetId, refreshInterval) {
+  const [data, setData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/extensions/${extensionId}/widget-data/${widgetId}`);
+      if (!response.ok) throw new Error(`Failed to fetch widget data`);
+      const result = await response.json();
+      setData(result);
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [extensionId, widgetId]);
+  
+  // Fetch data on mount and set up refresh interval
+  useEffect(() => {
+    fetchData();
+    
+    if (refreshInterval) {
+      const intervalId = setInterval(fetchData, refreshInterval * 1000);
+      return () => clearInterval(intervalId);
+    }
+  }, [fetchData, refreshInterval]);
+  
+  return { data, isLoading, error, refetch: fetchData };
 }
 
 // In Dashboard.tsx (existing dashboard component)
@@ -2736,155 +2403,31 @@ export function Dashboard() {
     <div className="dashboard-container">
       <div className="dashboard-header">
         <h1>Dashboard</h1>
-        {/* Dashboard controls, filters, etc. */}
       </div>
       
-      <div className="dashboard-layout">
-        <div className="dashboard-main-region">
-          {/* Core dashboard widgets */}
-          <CoreWidget1 />
-          <CoreWidget2 />
-          
-          {/* Extension dashboard widgets - main region */}
-          <DashboardWidgetSlot region="main" />
-        </div>
-        
-        <div className="dashboard-side-region">
-          {/* Core sidebar widgets */}
-          <CoreSidebarWidget />
-          
-          {/* Extension dashboard widgets - side region */}
-          <DashboardWidgetSlot region="side" />
-        </div>
+      {/* Core dashboard widgets */}
+      <div className="core-widgets">
+        <CoreWidget1 />
+        <CoreWidget2 />
       </div>
       
-      <div className="dashboard-bottom-region">
-        {/* Extension dashboard widgets - bottom region */}
-        <DashboardWidgetSlot region="bottom" />
-      </div>
+      {/* Extension dashboard widgets */}
+      <DashboardWidgetSlot />
     </div>
   );
 }
-
-// useWidgetData.ts - Hook for handling widget data fetching
-function useWidgetData(extensionId: string, widgetId: string, refreshInterval?: number) {
-  const [data, setData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // Call the widget's data endpoint
-      const response = await fetch(`/api/extensions/${extensionId}/widget-data/${widgetId}`);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch widget data: ${response.statusText}`);
-      }
-      
-      const result = await response.json();
-      setData(result);
-    } catch (err) {
-      setError(err as Error);
-      console.error(`Error fetching data for widget ${widgetId}:`, err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [extensionId, widgetId]);
-  
-  // Fetch data on mount and set up refresh interval if specified
-  useEffect(() => {
-    fetchData();
-    
-    if (refreshInterval && refreshInterval > 0) {
-      const intervalId = setInterval(fetchData, refreshInterval * 1000);
-      return () => clearInterval(intervalId);
-    }
-  }, [fetchData, refreshInterval]);
-  
-  return {
-    data,
-    isLoading,
-    error,
-    refetch: fetchData
-  };
-}
 ```
 
-**Security Considerations:**
-
-1. **Data Validation**:
-   - Validate all data returned from extension API endpoints
-   - Implement content security policy for widget content
-   - Sanitize HTML content from widgets
-   - Prevent widget-to-widget communication except through defined channels
-
-2. **Resource Usage**:
-   - Limit API request frequency for widget data
-   - Implement timeout for widget rendering
-   - Monitor and limit memory usage of widgets
-   - Prevent excessive CPU usage from widgets
-
-3. **Authentication**:
-   - Verify user permissions before rendering widget data
-   - Ensure proper credential handling for API requests
-   - Scope API tokens appropriately for widget endpoints
-   - Audit data access patterns for security analysis
-
-4. **Extension Isolation**:
-   - Prevent widgets from accessing DOM outside their container
-   - Restrict network requests to allowed endpoints
-   - Implement sandboxed environment for widget JavaScript
-   - Limit storage access to widget's own namespace
-
-**User Experience Guidelines:**
-
-1. **Consistency**:
-   - Widgets should follow application design language
-   - Loading and error states should be consistent
-   - Widget actions (refresh, settings) should behave predictably
-   - Animation and transitions should match application standards
-
-2. **Performance**:
-   - Widgets should render quickly (< 200ms target)
-   - Data loading should show clear loading indicators
-   - Async operations should not block the UI
-   - Consider skeleton screens for loading states
-
-3. **Customization**:
-   - Allow users to move widgets between regions
-   - Support resizing of widgets where appropriate
-   - Enable/disable specific widgets
-   - Preserve user customizations between sessions
-
-4. **Accessibility**:
-   - All widget controls must be keyboard accessible
-   - Use proper ARIA roles and labels
-   - Ensure sufficient color contrast
-   - Support screen readers with appropriate announcements
-
-**Administrator Configuration Options:**
-
-1. **Widget Management**:
-   - Enable/disable specific widgets per tenant or user role
-   - Configure default widget placements
-   - Set tenant-wide widget preferences
-   - Control which widgets are available in which regions
-
-2. **Data Refresh Policies**:
-   - Configure maximum refresh rates for widgets
-   - Set data caching policies
-   - Control API request limits
-   - Configure default timeouts for widget loading
+**Core Security Considerations:**
+- Validate all data returned from extension API endpoints
+- Check user permissions before rendering widget data
+- Implement proper error boundaries for widgets
+- Limit API request frequency for widget data
 
 **Dependencies:**
 - Core extension system (1.6)
-- Dashboard layout component
+- Dashboard component
 - API endpoint framework
-- Drag and drop library (react-dnd or similar)
-- Local storage or server persistence for layouts
 
 #### 2.3 Custom Page Extensions
 
