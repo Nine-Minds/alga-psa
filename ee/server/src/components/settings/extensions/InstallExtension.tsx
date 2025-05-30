@@ -8,13 +8,13 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ReflectionContainer } from '@/lib/ui-reflection/ReflectionContainer';
-import { useAutomationIdAndRegister } from '@/lib/ui-reflection/useAutomationIdAndRegister';
-import { ContainerComponent } from '@/lib/ui-reflection/types';
-import { ExtensionManifest } from '@/lib/extensions/types';
+import { ReflectionContainer } from '../../../../../server/src/lib/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from '../../../../../server/src/lib/ui-reflection/useAutomationIdAndRegister';
+import { ContainerComponent } from '../../../../../server/src/lib/ui-reflection/types';
+import { ExtensionManifest } from '../../../lib/extensions/types';
 import { ChevronLeftIcon, UploadIcon, FilePlus2Icon, AlertCircleIcon, ShieldIcon, CheckCircleIcon } from 'lucide-react';
-import { logger } from '@/utils/logger';
-import { installExtension } from '@/lib/actions/extensionActions';
+import { logger } from '../../../../../server/src/utils/logger';
+import { installExtension } from '../../../lib/actions/extensionActions';
 import { ExtensionPermissions } from './ExtensionPermissions';
 
 /**

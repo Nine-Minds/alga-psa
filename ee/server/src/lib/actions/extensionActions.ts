@@ -3,9 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createTenantKnex } from '../../../../../server/src/lib/db'
-import { ExtensionRegistry } from '../extensions/ExtensionRegistry'
-import { ExtensionStorageService } from '../extensions/ExtensionStorageService'
-import { logger } from '@/utils/logger'
+import { ExtensionRegistry } from '../extensions/registry'
+import { ExtensionStorageService } from '../extensions/storage/storageService'
+import logger from '../../../../../shared/core/logger'
 import { Extension, ExtensionManifest } from '../extensions/types'
 
 /**
@@ -16,11 +16,11 @@ import { Extension, ExtensionManifest } from '../extensions/types'
  * Fetch all extensions for the current tenant
  */
 export async function fetchExtensions(): Promise<Extension[]> {
-  const { knex } = await createTenantKnex()
+  const { knex, tenant } = await createTenantKnex()
   
   try {
     const registry = new ExtensionRegistry(knex)
-    return await registry.getAllExtensions()
+    return await registry.getAllExtensions(tenant.id)
   } finally {
     await knex.destroy()
   }
@@ -30,11 +30,11 @@ export async function fetchExtensions(): Promise<Extension[]> {
  * Fetch a specific extension by ID
  */
 export async function fetchExtensionById(extensionId: string): Promise<Extension | null> {
-  const { knex } = await createTenantKnex()
+  const { knex, tenant } = await createTenantKnex()
   
   try {
     const registry = new ExtensionRegistry(knex)
-    return await registry.getExtension(extensionId)
+    return await registry.getExtension(extensionId, { tenant_id: tenant.id })
   } finally {
     await knex.destroy()
   }
@@ -44,21 +44,21 @@ export async function fetchExtensionById(extensionId: string): Promise<Extension
  * Enable or disable an extension
  */
 export async function toggleExtension(extensionId: string): Promise<{ success: boolean; message: string }> {
-  const { knex } = await createTenantKnex()
+  const { knex, tenant } = await createTenantKnex()
   
   try {
     const registry = new ExtensionRegistry(knex)
-    const extension = await registry.getExtension(extensionId)
+    const extension = await registry.getExtension(extensionId, { tenant_id: tenant.id })
     
     if (!extension) {
       return { success: false, message: 'Extension not found' }
     }
     
-    if (extension.isEnabled) {
-      await registry.disableExtension(extensionId)
+    if (extension.is_enabled) {
+      await registry.disableExtension(extensionId, { tenant_id: tenant.id })
       logger.info('Extension disabled', { extensionId, name: extension.name })
     } else {
-      await registry.enableExtension(extensionId)
+      await registry.enableExtension(extensionId, { tenant_id: tenant.id })
       logger.info('Extension enabled', { extensionId, name: extension.name })
     }
     
@@ -68,7 +68,7 @@ export async function toggleExtension(extensionId: string): Promise<{ success: b
     
     return { 
       success: true, 
-      message: `Extension ${extension.isEnabled ? 'disabled' : 'enabled'} successfully` 
+      message: `Extension ${extension.is_enabled ? 'disabled' : 'enabled'} successfully` 
     }
   } catch (error) {
     logger.error('Failed to toggle extension', { extensionId, error })
@@ -82,23 +82,23 @@ export async function toggleExtension(extensionId: string): Promise<{ success: b
  * Uninstall an extension
  */
 export async function uninstallExtension(extensionId: string): Promise<{ success: boolean; message: string }> {
-  const { knex } = await createTenantKnex()
+  const { knex, tenant } = await createTenantKnex()
   
   try {
     const registry = new ExtensionRegistry(knex)
-    const extension = await registry.getExtension(extensionId)
+    const extension = await registry.getExtension(extensionId, { tenant_id: tenant.id })
     
     if (!extension) {
       return { success: false, message: 'Extension not found' }
     }
     
     // First disable the extension if it's enabled
-    if (extension.isEnabled) {
-      await registry.disableExtension(extensionId)
+    if (extension.is_enabled) {
+      await registry.disableExtension(extensionId, { tenant_id: tenant.id })
     }
     
     // Remove the extension
-    await registry.unregisterExtension(extensionId)
+    await registry.unregisterExtension(extensionId, { tenant_id: tenant.id })
     
     logger.info('Extension uninstalled', { extensionId, name: extension.name })
     
@@ -118,7 +118,7 @@ export async function uninstallExtension(extensionId: string): Promise<{ success
  * Install an extension from uploaded file
  */
 export async function installExtension(formData: FormData): Promise<{ success: boolean; message: string; extensionId?: string }> {
-  const { knex } = await createTenantKnex()
+  const { knex, tenant } = await createTenantKnex()
   
   try {
     const file = formData.get('extension') as File

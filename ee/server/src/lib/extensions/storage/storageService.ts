@@ -3,9 +3,9 @@
  * 
  * Provides extension data storage with tenant isolation
  */
-import { knex } from '../../../lib/db';
-import { logger } from '../../../lib/utils/logger';
-import { getRedisClient } from '../../../config/redisConfig';
+import { createTenantKnex } from '../../../../../../server/src/lib/db';
+import logger from '../../../../../../shared/core/logger';
+import { getRedisClient } from '../../../../../../server/src/config/redisConfig';
 import { 
   ExtensionStorageService as IExtensionStorageService,
   StorageOptions
@@ -30,7 +30,7 @@ class RedisCacheAdapter {
   private readonly RESET_TIMEOUT_MS = 30000; // 30 seconds
   
   constructor(extensionId: string, tenantId: string, namespace: string = '') {
-    this.redis = getRedisClient();
+    this.redis = null; // Will be initialized async
     this.prefix = `tenant:${tenantId}:ext:${extensionId}:${namespace ? namespace + ':' : ''}`;
     
     // Initialize circuit breaker
@@ -39,8 +39,31 @@ class RedisCacheAdapter {
       lastFailure: 0,
       status: 'CLOSED'
     };
+    
+    // Initialize Redis connection asynchronously
+    this.initializeRedis();
   }
   
+  /**
+   * Initialize Redis connection
+   */
+  private async initializeRedis(): Promise<void> {
+    try {
+      this.redis = await getRedisClient();
+      logger.debug('Redis connection initialized for extension storage', { 
+        prefix: this.prefix 
+      });
+    } catch (error) {
+      logger.error('Failed to initialize Redis connection for extension storage', { 
+        prefix: this.prefix,
+        error 
+      });
+      this.circuitBreaker.status = 'OPEN';
+      this.circuitBreaker.failures = this.FAILURE_THRESHOLD;
+      this.circuitBreaker.lastFailure = Date.now();
+    }
+  }
+
   /**
    * Get full Redis key
    */
@@ -70,6 +93,9 @@ class RedisCacheAdapter {
     // Check Redis connection by pinging
     if (this.circuitBreaker.status === 'HALF_OPEN') {
       try {
+        if (!this.redis) {
+          throw new Error('Redis client not initialized');
+        }
         await this.redis.ping();
         // Success! Close the circuit
         this.circuitBreaker.status = 'CLOSED';
@@ -122,6 +148,9 @@ class RedisCacheAdapter {
     
     const redisKey = this.getRedisKey(key);
     try {
+      if (!this.redis) {
+        throw new Error('Redis client not initialized');
+      }
       const value = await this.redis.get(redisKey);
       if (!value) return null;
       
@@ -150,6 +179,9 @@ class RedisCacheAdapter {
     const serializedValue = JSON.stringify(value);
     
     try {
+      if (!this.redis) {
+        throw new Error('Redis client not initialized');
+      }
       if (ttlSeconds) {
         await this.redis.set(redisKey, serializedValue, 'EX', ttlSeconds);
       } else {
@@ -177,6 +209,9 @@ class RedisCacheAdapter {
     
     const redisKey = this.getRedisKey(key);
     try {
+      if (!this.redis) {
+        throw new Error('Redis client not initialized');
+      }
       await this.redis.del(redisKey);
       
       // Reset failure count on success
@@ -260,6 +295,7 @@ export class ExtensionStorageService implements IExtensionStorageService {
   private tenantId: string;
   private redisCache: RedisCacheAdapter;
   private namespace: string = '';
+  private knex: any;
   private metrics: {
     cacheHits: number;
     cacheMisses: number;
@@ -270,11 +306,13 @@ export class ExtensionStorageService implements IExtensionStorageService {
   constructor(
     extensionId: string, 
     tenantId: string, 
+    knexInstance: any,
     namespace: string = ''
   ) {
     this.extensionId = extensionId;
     this.tenantId = tenantId;
     this.namespace = namespace;
+    this.knex = knexInstance;
     
     // Initialize Redis cache
     this.redisCache = new RedisCacheAdapter(extensionId, tenantId, namespace);
@@ -326,7 +364,7 @@ export class ExtensionStorageService implements IExtensionStorageService {
       });
       
       // Get from database with tenant isolation
-      const result = await knex('extension_storage')
+      const result = await this.knex('extension_storage')
         .where({
           extension_id: this.extensionId,
           tenant_id: this.tenantId,
@@ -407,7 +445,7 @@ export class ExtensionStorageService implements IExtensionStorageService {
       this.metrics.dbQueries++;
       
       // Store in database with tenant isolation
-      await knex('extension_storage')
+      await this.knex('extension_storage')
         .insert({
           extension_id: this.extensionId,
           tenant_id: this.tenantId,
@@ -459,7 +497,7 @@ export class ExtensionStorageService implements IExtensionStorageService {
       this.metrics.dbQueries++;
       
       // Delete from database
-      const result = await knex('extension_storage')
+      const result = await this.knex('extension_storage')
         .where({
           extension_id: this.extensionId,
           tenant_id: this.tenantId,
@@ -509,7 +547,7 @@ export class ExtensionStorageService implements IExtensionStorageService {
       this.metrics.cacheMisses++;
       this.metrics.dbQueries++;
       
-      const result = await knex('extension_storage')
+      const result = await this.knex('extension_storage')
         .where({
           extension_id: this.extensionId,
           tenant_id: this.tenantId,
@@ -546,7 +584,7 @@ export class ExtensionStorageService implements IExtensionStorageService {
       
       const dbKeys = keys.map(k => this.getDbKey(k));
       
-      const dbResults = await knex('extension_storage')
+      const dbResults = await this.knex('extension_storage')
         .where({
           extension_id: this.extensionId,
           tenant_id: this.tenantId
@@ -681,7 +719,7 @@ export class ExtensionStorageService implements IExtensionStorageService {
         params.push(queryPrefix);
       }
       
-      const query = knex('extension_storage')
+      const query = this.knex('extension_storage')
         .where({
           extension_id: this.extensionId,
           tenant_id: this.tenantId
@@ -725,7 +763,7 @@ export class ExtensionStorageService implements IExtensionStorageService {
       this.metrics.dbQueries++;
       
       // Delete from database
-      const query = knex('extension_storage')
+      const query = this.knex('extension_storage')
         .where({
           extension_id: this.extensionId,
           tenant_id: this.tenantId
@@ -821,7 +859,7 @@ export class ExtensionStorageService implements IExtensionStorageService {
    */
   private async getCurrentUsage(): Promise<number> {
     try {
-      const result = await knex('extension_storage')
+      const result = await this.knex('extension_storage')
         .where({
           extension_id: this.extensionId,
           tenant_id: this.tenantId

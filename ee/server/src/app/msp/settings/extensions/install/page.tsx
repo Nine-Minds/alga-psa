@@ -1,5 +1,5 @@
-import InstallExtension from '@/components/settings/extensions/InstallExtension';
+import { DynamicInstallExtensionComponent } from '../../../lib/extensions/ExtensionComponentLoader';
 
 export default function InstallExtensionPage() {
-  return <InstallExtension />;
+  return <DynamicInstallExtensionComponent />;
 }

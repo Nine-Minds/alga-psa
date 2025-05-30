@@ -194,11 +194,11 @@ function validateCustomPage(component: any, index: number, errors: ValidationErr
     
     // Ensure path doesn't conflict with core routes
     const protectedPaths = ['/msp', '/auth', '/api'];
-    for (const protected of protectedPaths) {
-      if (component.props.path.startsWith(protected)) {
+    for (const protectedPath of protectedPaths) {
+      if (component.props.path.startsWith(protectedPath)) {
         errors.push({
           path: `components[${index}].props.path`,
-          message: `Custom page path cannot start with protected route "${protected}"`
+          message: `Custom page path cannot start with protected route "${protectedPath}"`
         });
       }
     }

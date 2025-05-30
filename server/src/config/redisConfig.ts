@@ -1,5 +1,7 @@
 import { z } from 'zod';
+import { createClient } from 'redis';
 import logger from '@shared/core/logger';
+import { getSecret } from '../lib/utils/getSecret';
 
 // Construct Redis URL from environment variables
 function getRedisUrl(): string {
@@ -86,4 +88,30 @@ export function getEventStream(eventType: string): string {
 // Helper function to generate consumer name
 export function getConsumerName(processId: string = process.pid.toString()): string {
   return `consumer-${processId}`;
+}
+
+// Create Redis client for general use
+export async function getRedisClient() {
+  const config = getRedisConfig();
+  const password = await getSecret('redis_password', 'REDIS_PASSWORD');
+  
+  if (!password) {
+    logger.warn('[Redis] No Redis password configured - this is not recommended for production');
+  }
+  
+  const client = createClient({
+    url: config.url,
+    password,
+    socket: {
+      reconnectStrategy: (retries) => {
+        if (retries > 20) {
+          return new Error('Max reconnection attempts reached');
+        }
+        return Math.min(500 * Math.pow(2, retries), 5000);
+      }
+    }
+  });
+
+  await client.connect();
+  return client;
 }
