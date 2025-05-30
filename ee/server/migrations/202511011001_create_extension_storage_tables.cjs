@@ -7,7 +7,7 @@ exports.up = function(knex) {
     .createTable('extension_storage', (table) => {
       table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       table.uuid('extension_id').notNullable().references('id').inTable('extensions').onDelete('CASCADE');
-      table.uuid('tenant_id').notNullable().references('id').inTable('tenants').onDelete('CASCADE');
+      table.uuid('tenant_id').notNullable().references('tenant').inTable('tenants').onDelete('CASCADE');
       table.string('key').notNullable();
       table.jsonb('value').notNullable();
       table.timestamp('expires_at').nullable();
@@ -27,7 +27,7 @@ exports.up = function(knex) {
     .createTable('extension_settings', (table) => {
       table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       table.uuid('extension_id').notNullable().references('id').inTable('extensions').onDelete('CASCADE');
-      table.uuid('tenant_id').notNullable().references('id').inTable('tenants').onDelete('CASCADE');
+      table.uuid('tenant_id').notNullable().references('tenant').inTable('tenants').onDelete('CASCADE');
       table.jsonb('settings').notNullable().defaultTo('{}');
       table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
       table.timestamp('updated_at').notNullable().defaultTo(knex.fn.now());

@@ -3,10 +3,12 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createTenantKnex } from '../../../../../server/src/lib/db'
+import { withTransaction } from '../../../../../shared/db'
 import { ExtensionRegistry } from '../extensions/registry'
 import { ExtensionStorageService } from '../extensions/storage/storageService'
 import logger from '../../../../../shared/core/logger'
 import { Extension, ExtensionManifest } from '../extensions/types'
+import { Knex } from 'knex'
 
 /**
  * Server actions for extension management
@@ -18,12 +20,14 @@ import { Extension, ExtensionManifest } from '../extensions/types'
 export async function fetchExtensions(): Promise<Extension[]> {
   const { knex, tenant } = await createTenantKnex()
   
-  try {
-    const registry = new ExtensionRegistry(knex)
-    return await registry.getAllExtensions(tenant.id)
-  } finally {
-    await knex.destroy()
+  if (!tenant) {
+    throw new Error('Tenant not found')
   }
+  
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const registry = new ExtensionRegistry(trx)
+    return await registry.getAllExtensions(tenant.id)
+  })
 }
 
 /**
@@ -32,12 +36,14 @@ export async function fetchExtensions(): Promise<Extension[]> {
 export async function fetchExtensionById(extensionId: string): Promise<Extension | null> {
   const { knex, tenant } = await createTenantKnex()
   
-  try {
-    const registry = new ExtensionRegistry(knex)
-    return await registry.getExtension(extensionId, { tenant_id: tenant.id })
-  } finally {
-    await knex.destroy()
+  if (!tenant) {
+    throw new Error('Tenant not found')
   }
+  
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const registry = new ExtensionRegistry(trx)
+    return await registry.getExtension(extensionId, { tenant_id: tenant.id })
+  })
 }
 
 /**
@@ -46,35 +52,39 @@ export async function fetchExtensionById(extensionId: string): Promise<Extension
 export async function toggleExtension(extensionId: string): Promise<{ success: boolean; message: string }> {
   const { knex, tenant } = await createTenantKnex()
   
+  if (!tenant) {
+    throw new Error('Tenant not found')
+  }
+  
   try {
-    const registry = new ExtensionRegistry(knex)
-    const extension = await registry.getExtension(extensionId, { tenant_id: tenant.id })
-    
-    if (!extension) {
-      return { success: false, message: 'Extension not found' }
-    }
-    
-    if (extension.is_enabled) {
-      await registry.disableExtension(extensionId, { tenant_id: tenant.id })
-      logger.info('Extension disabled', { extensionId, name: extension.name })
-    } else {
-      await registry.enableExtension(extensionId, { tenant_id: tenant.id })
-      logger.info('Extension enabled', { extensionId, name: extension.name })
-    }
-    
-    // Revalidate the extensions page
-    revalidatePath('/msp/settings/extensions')
-    revalidatePath(`/msp/settings/extensions/${extensionId}`)
-    
-    return { 
-      success: true, 
-      message: `Extension ${extension.is_enabled ? 'disabled' : 'enabled'} successfully` 
-    }
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const registry = new ExtensionRegistry(trx)
+      const extension = await registry.getExtension(extensionId, { tenant_id: tenant.id })
+      
+      if (!extension) {
+        return { success: false, message: 'Extension not found' }
+      }
+      
+      if (extension.is_enabled) {
+        await registry.disableExtension(extensionId, { tenant_id: tenant.id })
+        logger.info('Extension disabled', { extensionId, name: extension.name })
+      } else {
+        await registry.enableExtension(extensionId, { tenant_id: tenant.id })
+        logger.info('Extension enabled', { extensionId, name: extension.name })
+      }
+      
+      // Revalidate the extensions page
+      revalidatePath('/msp/settings/extensions')
+      revalidatePath(`/msp/settings/extensions/${extensionId}`)
+      
+      return { 
+        success: true, 
+        message: `Extension ${extension.is_enabled ? 'disabled' : 'enabled'} successfully` 
+      }
+    })
   } catch (error) {
     logger.error('Failed to toggle extension', { extensionId, error })
     return { success: false, message: 'Failed to toggle extension' }
-  } finally {
-    await knex.destroy()
   }
 }
 
@@ -84,33 +94,37 @@ export async function toggleExtension(extensionId: string): Promise<{ success: b
 export async function uninstallExtension(extensionId: string): Promise<{ success: boolean; message: string }> {
   const { knex, tenant } = await createTenantKnex()
   
+  if (!tenant) {
+    throw new Error('Tenant not found')
+  }
+  
   try {
-    const registry = new ExtensionRegistry(knex)
-    const extension = await registry.getExtension(extensionId, { tenant_id: tenant.id })
-    
-    if (!extension) {
-      return { success: false, message: 'Extension not found' }
-    }
-    
-    // First disable the extension if it's enabled
-    if (extension.is_enabled) {
-      await registry.disableExtension(extensionId, { tenant_id: tenant.id })
-    }
-    
-    // Remove the extension
-    await registry.unregisterExtension(extensionId, { tenant_id: tenant.id })
-    
-    logger.info('Extension uninstalled', { extensionId, name: extension.name })
-    
-    // Revalidate the extensions page
-    revalidatePath('/msp/settings/extensions')
-    
-    return { success: true, message: 'Extension uninstalled successfully' }
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const registry = new ExtensionRegistry(trx)
+      const extension = await registry.getExtension(extensionId, { tenant_id: tenant.id })
+      
+      if (!extension) {
+        return { success: false, message: 'Extension not found' }
+      }
+      
+      // First disable the extension if it's enabled
+      if (extension.is_enabled) {
+        await registry.disableExtension(extensionId, { tenant_id: tenant.id })
+      }
+      
+      // Remove the extension
+      await registry.unregisterExtension(extensionId, { tenant_id: tenant.id })
+      
+      logger.info('Extension uninstalled', { extensionId, name: extension.name })
+      
+      // Revalidate the extensions page
+      revalidatePath('/msp/settings/extensions')
+      
+      return { success: true, message: 'Extension uninstalled successfully' }
+    })
   } catch (error) {
     logger.error('Failed to uninstall extension', { extensionId, error })
     return { success: false, message: 'Failed to uninstall extension' }
-  } finally {
-    await knex.destroy()
   }
 }
 
@@ -120,55 +134,59 @@ export async function uninstallExtension(extensionId: string): Promise<{ success
 export async function installExtension(formData: FormData): Promise<{ success: boolean; message: string; extensionId?: string }> {
   const { knex, tenant } = await createTenantKnex()
   
+  if (!tenant) {
+    throw new Error('Tenant not found')
+  }
+  
   try {
     const file = formData.get('extension') as File
     if (!file) {
       return { success: false, message: 'No file provided' }
     }
     
-    // In a real implementation, this would:
-    // 1. Extract and validate the extension package
-    // 2. Parse the manifest
-    // 3. Validate permissions and dependencies
-    // 4. Store the extension files
-    // 5. Register the extension
-    
-    // For now, we'll simulate this process
-    const registry = new ExtensionRegistry(knex)
-    
-    // Mock manifest - in reality this would be parsed from the uploaded file
-    const mockManifest: ExtensionManifest = {
-      id: `uploaded-extension-${Date.now()}`,
-      name: file.name.replace(/\.(zip|tgz|tar\.gz)$/i, ''),
-      version: '1.0.0',
-      description: 'Uploaded extension',
-      author: 'Unknown',
-      components: [],
-      permissions: [],
-      settings: []
-    }
-    
-    const extensionId = await registry.registerExtension(mockManifest, {
-      isEnabled: false,
-      createdAt: new Date(),
-      updatedAt: new Date()
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // In a real implementation, this would:
+      // 1. Extract and validate the extension package
+      // 2. Parse the manifest
+      // 3. Validate permissions and dependencies
+      // 4. Store the extension files
+      // 5. Register the extension
+      
+      // For now, we'll simulate this process
+      const registry = new ExtensionRegistry(trx)
+      
+      // Mock manifest - in reality this would be parsed from the uploaded file
+      const mockManifest: ExtensionManifest = {
+        id: `uploaded-extension-${Date.now()}`,
+        name: file.name.replace(/\.(zip|tgz|tar\.gz)$/i, ''),
+        version: '1.0.0',
+        description: 'Uploaded extension',
+        author: 'Unknown',
+        components: [],
+        permissions: [],
+        settings: []
+      }
+      
+      const extensionId = await registry.registerExtension(mockManifest, {
+        isEnabled: false,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      
+      logger.info('Extension installed', { extensionId, name: mockManifest.name })
+      
+      // Revalidate the extensions page
+      revalidatePath('/msp/settings/extensions')
+      
+      return { 
+        success: true, 
+        message: 'Extension installed successfully',
+        extensionId 
+      }
     })
-    
-    logger.info('Extension installed', { extensionId, name: mockManifest.name })
-    
-    // Revalidate the extensions page
-    revalidatePath('/msp/settings/extensions')
-    
-    return { 
-      success: true, 
-      message: 'Extension installed successfully',
-      extensionId 
-    }
   } catch (error) {
     logger.error('Failed to install extension', { error })
     return { success: false, message: 'Failed to install extension' }
-  } finally {
-    await knex.destroy()
   }
 }
 
@@ -176,17 +194,21 @@ export async function installExtension(formData: FormData): Promise<{ success: b
  * Get extension settings
  */
 export async function getExtensionSettings(extensionId: string): Promise<Record<string, any> | null> {
-  const { knex } = await createTenantKnex()
+  const { knex, tenant } = await createTenantKnex()
+  
+  if (!tenant) {
+    throw new Error('Tenant not found')
+  }
   
   try {
-    const storageService = new ExtensionStorageService(knex)
-    const settings = await storageService.get(extensionId, 'settings')
-    return settings || {}
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const storageService = new ExtensionStorageService(trx)
+      const settings = await storageService.get(extensionId, 'settings')
+      return settings || {}
+    })
   } catch (error) {
     logger.error('Failed to get extension settings', { extensionId, error })
     return null
-  } finally {
-    await knex.destroy()
   }
 }
 
@@ -197,30 +219,34 @@ export async function updateExtensionSettings(
   extensionId: string, 
   settings: Record<string, any>
 ): Promise<{ success: boolean; message: string }> {
-  const { knex } = await createTenantKnex()
+  const { knex, tenant } = await createTenantKnex()
+  
+  if (!tenant) {
+    throw new Error('Tenant not found')
+  }
   
   try {
-    const registry = new ExtensionRegistry(knex)
-    const extension = await registry.getExtension(extensionId)
-    
-    if (!extension) {
-      return { success: false, message: 'Extension not found' }
-    }
-    
-    const storageService = new ExtensionStorageService(knex)
-    await storageService.set(extensionId, 'settings', settings)
-    
-    logger.info('Extension settings updated', { extensionId, name: extension.name })
-    
-    // Revalidate the extension settings page
-    revalidatePath(`/msp/settings/extensions/${extensionId}/settings`)
-    
-    return { success: true, message: 'Settings updated successfully' }
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const registry = new ExtensionRegistry(trx)
+      const extension = await registry.getExtension(extensionId)
+      
+      if (!extension) {
+        return { success: false, message: 'Extension not found' }
+      }
+      
+      const storageService = new ExtensionStorageService(trx)
+      await storageService.set(extensionId, 'settings', settings)
+      
+      logger.info('Extension settings updated', { extensionId, name: extension.name })
+      
+      // Revalidate the extension settings page
+      revalidatePath(`/msp/settings/extensions/${extensionId}/settings`)
+      
+      return { success: true, message: 'Settings updated successfully' }
+    })
   } catch (error) {
     logger.error('Failed to update extension settings', { extensionId, error })
     return { success: false, message: 'Failed to update settings' }
-  } finally {
-    await knex.destroy()
   }
 }
 
@@ -228,29 +254,33 @@ export async function updateExtensionSettings(
  * Reset extension settings to default
  */
 export async function resetExtensionSettings(extensionId: string): Promise<{ success: boolean; message: string }> {
-  const { knex } = await createTenantKnex()
+  const { knex, tenant } = await createTenantKnex()
+  
+  if (!tenant) {
+    throw new Error('Tenant not found')
+  }
   
   try {
-    const registry = new ExtensionRegistry(knex)
-    const extension = await registry.getExtension(extensionId)
-    
-    if (!extension) {
-      return { success: false, message: 'Extension not found' }
-    }
-    
-    const storageService = new ExtensionStorageService(knex)
-    await storageService.remove(extensionId, 'settings')
-    
-    logger.info('Extension settings reset', { extensionId, name: extension.name })
-    
-    // Revalidate the extension settings page
-    revalidatePath(`/msp/settings/extensions/${extensionId}/settings`)
-    
-    return { success: true, message: 'Settings reset to default' }
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const registry = new ExtensionRegistry(trx)
+      const extension = await registry.getExtension(extensionId)
+      
+      if (!extension) {
+        return { success: false, message: 'Extension not found' }
+      }
+      
+      const storageService = new ExtensionStorageService(trx)
+      await storageService.remove(extensionId, 'settings')
+      
+      logger.info('Extension settings reset', { extensionId, name: extension.name })
+      
+      // Revalidate the extension settings page
+      revalidatePath(`/msp/settings/extensions/${extensionId}/settings`)
+      
+      return { success: true, message: 'Settings reset to default' }
+    })
   } catch (error) {
     logger.error('Failed to reset extension settings', { extensionId, error })
     return { success: false, message: 'Failed to reset settings' }
-  } finally {
-    await knex.destroy()
   }
 }

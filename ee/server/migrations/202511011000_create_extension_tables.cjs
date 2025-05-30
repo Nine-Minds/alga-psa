@@ -6,7 +6,7 @@ exports.up = function(knex) {
     // Create the extensions table
     .createTable('extensions', (table) => {
       table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
-      table.uuid('tenant_id').notNullable().references('id').inTable('tenants').onDelete('CASCADE');
+      table.uuid('tenant_id').notNullable().references('tenant').inTable('tenants').onDelete('CASCADE');
       table.string('name').notNullable();
       table.text('description');
       table.string('version').notNullable();
