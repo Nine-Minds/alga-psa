@@ -168,7 +168,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
       })
       .orderBy('name');
 
-    return extensions.map(extension => ({
+    return extensions.map((extension: any) => ({
       ...extension,
       manifest: extension.manifest
     }));
@@ -397,7 +397,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
         components.push({
           ...component,
           extensionId: extension.id
-        } as ExtensionComponentDefinition);
+        } as unknown as ExtensionComponentDefinition);
       });
     }
 
@@ -428,7 +428,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
         components.push({
           ...component,
           extensionId: extension.id
-        } as ExtensionComponentDefinition);
+        } as unknown as ExtensionComponentDefinition);
       });
     }
 
@@ -472,7 +472,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
     
     const extensions = await query.orderBy('name');
 
-    return extensions.map(extension => ({
+    return extensions.map((extension: any) => ({
       ...extension,
       manifest: typeof extension.manifest === 'string' 
         ? JSON.parse(extension.manifest) 

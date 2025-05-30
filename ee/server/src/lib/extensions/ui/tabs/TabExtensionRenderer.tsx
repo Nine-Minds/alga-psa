@@ -8,7 +8,7 @@
 import React from 'react';
 import { TabExtensionRendererProps } from './TabExtensionTypes';
 import { ExtensionRenderer } from '../ExtensionRenderer';
-import { logger } from '../../../../utils/logger';
+import logger from '../../../../../../../server/src/utils/logger';
 
 /**
  * Tab Extension Renderer component

@@ -219,7 +219,7 @@ function validateCustomPage(component: any, index: number, errors: ValidationErr
 export function validateComponentPath(componentPath: string): boolean {
   // Component path should be a relative path and not navigate outside the extension
   return (
-    componentPath &&
+    Boolean(componentPath) &&
     !componentPath.startsWith('/') &&
     !componentPath.startsWith('./') &&
     !componentPath.includes('../')

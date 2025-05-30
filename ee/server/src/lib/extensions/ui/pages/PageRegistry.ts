@@ -5,7 +5,7 @@
  */
 import { CustomPageProps, ExtensionComponentType } from '../../types';
 import { ExtensionPage } from './PageTypes';
-import { logger } from '../../../../utils/logger';
+import logger from '../../../../../../../server/src/utils/logger';
 
 /**
  * Registry for custom page extensions

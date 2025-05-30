@@ -9,7 +9,7 @@ export * from './types';
 export * from './errors';
 
 // Export registry and validation
-export { extensionRegistry } from './registry';
+export { ExtensionRegistry } from './registry';
 export { validateManifest } from './validator';
 export { isValidPermission } from './schemas/permissions.schema';
 export { isValidExtensionPoint } from './schemas/extension-points.schema';

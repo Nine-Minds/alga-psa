@@ -267,7 +267,7 @@ class RedisCacheAdapter {
       if (this.circuitBreaker.status !== 'OPEN') {
         const info = await this.redis.info();
         const keyCount = await this.redis.dbsize();
-        const memory = info.split('\n').find(line => line.startsWith('used_memory_human:'))?.split(':')[1]?.trim() || 'unknown';
+        const memory = info.split('\n').find((line: string) => line.startsWith('used_memory_human:'))?.split(':')[1]?.trim() || 'unknown';
         
         return {
           keyCount,
@@ -648,7 +648,7 @@ export class ExtensionStorageService implements IExtensionStorageService {
         : null;
       
       // Use a transaction for all database operations
-      await knex.transaction(async (trx) => {
+      await this.knex.transaction(async (trx: any) => {
         for (const key of keysToStore) {
           await trx('extension_storage')
             .insert({
@@ -736,7 +736,7 @@ export class ExtensionStorageService implements IExtensionStorageService {
       const result = await query;
       
       // Strip namespace prefix if needed
-      return result.map(row => {
+      return result.map((row: any) => {
         const key = row.key;
         return this.namespace && key.startsWith(this.namespace + ':')
           ? key.substring(this.namespace.length + 1)

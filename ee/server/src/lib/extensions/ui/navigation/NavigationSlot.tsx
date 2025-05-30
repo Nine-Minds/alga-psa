@@ -8,11 +8,11 @@
 import React, { useEffect, useState } from 'react';
 import { NavigationSlotProps, ExtensionNavigationItem } from './NavigationTypes';
 import { NavItemRenderer } from './NavItemRenderer';
-import { ReflectionContainer } from '../../../../types/ui-reflection/ReflectionContainer';
-import { useAutomationIdAndRegister } from '../../../../types/ui-reflection/useAutomationIdAndRegister';
-import { ContainerComponent } from '../../../../types/ui-reflection/types';
+import { ReflectionContainer } from '../../../../../../../server/src/types/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from '../../../../../../../server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ContainerComponent } from '../../../../../../../server/src/types/ui-reflection/types';
 import { useExtensionContext } from '../ExtensionProvider';
-import { logger } from '../../../../utils/logger';
+import logger from '../../../../../../../server/src/utils/logger';
 
 /**
  * Navigation Slot component
@@ -33,8 +33,7 @@ export function NavigationSlot({
   const { automationIdProps } = useAutomationIdAndRegister<ContainerComponent>({
     id: `extension-navigation`,
     type: 'container',
-    label: `Extension Navigation Items`,
-    variant: 'default'
+    label: `Extension Navigation Items`
   });
   
   // Fetch navigation items

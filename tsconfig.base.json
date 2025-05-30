@@ -30,7 +30,9 @@
       "@shared/core": ["shared/core"],
       "@shared/core/*": ["shared/core/*"],
       "@shared/types": ["shared/types"],
-      "@shared/types/*": ["shared/types/*"]
+      "@shared/types/*": ["shared/types/*"],
+      "@ee": ["ee/server/src", "server/src/empty"],
+      "@ee/*": ["ee/server/src/*", "server/src/empty/*"]
     }
   }
 }

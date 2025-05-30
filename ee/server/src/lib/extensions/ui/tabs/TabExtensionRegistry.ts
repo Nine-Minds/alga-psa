@@ -5,7 +5,7 @@
  */
 import { TabExtensionProps, ExtensionComponentType } from '../../types';
 import { ExtensionTabItem } from './TabExtensionTypes';
-import { logger } from '../../../../utils/logger';
+import logger from '../../../../../../../server/src/utils/logger';
 
 /**
  * Registry for tab extensions

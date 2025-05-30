@@ -96,7 +96,7 @@ export const permissionSets = {
 
 // Helper function to get a permission set by name
 export function getPermissionSet(name: keyof typeof permissionSets): string[] {
-  return permissionSets[name];
+  return [...permissionSets[name]];
 }
 
 // Helper to check if a permission is valid

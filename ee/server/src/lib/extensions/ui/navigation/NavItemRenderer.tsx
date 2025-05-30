@@ -12,7 +12,7 @@ import * as Tooltip from '@radix-ui/react-tooltip';
 import * as RadixIcons from '@radix-ui/react-icons';
 import { NavItemRendererProps } from './NavigationTypes';
 import { ExtensionRenderer } from '../ExtensionRenderer';
-import { logger } from '../../../../utils/logger';
+import logger from '../../../../../../../server/src/utils/logger';
 
 /**
  * Navigation Item Renderer component

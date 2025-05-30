@@ -8,7 +8,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ExtensionRendererProps } from './types';
 import { ExtensionErrorBoundary } from './ExtensionErrorBoundary';
-import { logger } from '../../../utils/logger';
+import logger from '../../../../../../server/src/utils/logger';
 
 // Cache for loaded components
 const componentCache = new Map<string, React.ComponentType<any>>();

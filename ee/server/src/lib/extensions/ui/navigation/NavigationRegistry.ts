@@ -5,7 +5,7 @@
  */
 import { NavigationItemProps, ExtensionComponentType } from '../../types';
 import { ExtensionNavigationItem } from './NavigationTypes';
-import { logger } from '../../../../utils/logger';
+import logger from '../../../../../../../server/src/utils/logger';
 
 /**
  * Registry for navigation extensions

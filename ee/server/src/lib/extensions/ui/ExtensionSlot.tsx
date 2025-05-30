@@ -8,10 +8,10 @@
 import React, { useEffect, useState } from 'react';
 import { ExtensionSlotProps } from './types';
 import { ExtensionRenderer } from './ExtensionRenderer';
-import { ReflectionContainer } from '../../../types/ui-reflection/ReflectionContainer';
-import { useAutomationIdAndRegister } from '../../../types/ui-reflection/useAutomationIdAndRegister';
-import { ContainerComponent } from '../../../types/ui-reflection/types';
-import { logger } from '../../../utils/logger';
+import { ReflectionContainer } from '../../../../../../server/src/types/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from '../../../../../../server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ContainerComponent } from '../../../../../../server/src/types/ui-reflection/types';
+import logger from '../../../../../../server/src/utils/logger';
 import { useExtensionContext } from './ExtensionProvider';
 
 /**
@@ -29,8 +29,7 @@ export function ExtensionSlot({ name, filter, props = {} }: ExtensionSlotProps) 
   const { automationIdProps } = useAutomationIdAndRegister<ContainerComponent>({
     id: `extension-slot-${name}`,
     type: 'container',
-    label: `Extension Slot: ${name}`,
-    variant: 'default'
+    label: `Extension Slot: ${name}`
   });
   
   // Fetch components for this slot

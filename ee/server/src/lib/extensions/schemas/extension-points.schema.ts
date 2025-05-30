@@ -75,7 +75,7 @@ export const extensionPointPermissions = {
 export function getRequiredPermissions(
   extensionPoint: ExtensionPoint
 ): string[] {
-  return extensionPointPermissions[extensionPoint];
+  return [...extensionPointPermissions[extensionPoint]];
 }
 
 // Helper to check if an extension point is valid

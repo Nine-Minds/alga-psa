@@ -8,10 +8,10 @@
 import React from 'react';
 import { PageRendererProps } from './PageTypes';
 import { ExtensionRenderer } from '../ExtensionRenderer';
-import { ReflectionContainer } from '../../../../types/ui-reflection/ReflectionContainer';
-import { useAutomationIdAndRegister } from '../../../../types/ui-reflection/useAutomationIdAndRegister';
-import { ContainerComponent } from '../../../../types/ui-reflection/types';
-import { logger } from '../../../../utils/logger';
+import { ReflectionContainer } from '../../../../../../../server/src/types/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from '../../../../../../../server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ContainerComponent } from '../../../../../../../server/src/types/ui-reflection/types';
+import logger from '../../../../../../../server/src/utils/logger';
 
 /**
  * Custom Page Renderer component
@@ -31,8 +31,7 @@ export function PageRenderer({
   const { automationIdProps } = useAutomationIdAndRegister<ContainerComponent>({
     id: `extension-page-${id}`,
     type: 'container',
-    label: title,
-    variant: 'default'
+    label: title
   });
   
   return (

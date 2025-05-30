@@ -1,8 +1,10 @@
 import dynamic from 'next/dynamic';
 
-// Dynamically load the extension install component from EE
+// Dynamically load the extension install component from EE with fallback
 const DynamicInstallExtensionComponent = dynamic(
-  () => import('@ee/components/settings/extensions/InstallExtensionSimple'),
+  () => import('@ee/components/settings/extensions/InstallExtensionSimple').catch(() => 
+    import('../../../../../empty/components/settings/extensions/InstallExtensionSimple')
+  ),
   {
     ssr: false,
     loading: () => (
@@ -15,21 +17,5 @@ const DynamicInstallExtensionComponent = dynamic(
 );
 
 export default function InstallExtensionPage() {
-  // Check if EE is available
-  const isEE = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
-  
-  if (!isEE) {
-    return (
-      <div className="p-6">
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Extensions Not Available</h3>
-          <p className="text-gray-600">
-            Extensions are only available in the Enterprise Edition of Alga PSA.
-          </p>
-        </div>
-      </div>
-    );
-  }
-  
   return <DynamicInstallExtensionComponent />;
 }

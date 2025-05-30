@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { ExtensionErrorBoundaryProps, ExtensionErrorBoundaryState } from './types';
-import { logger } from '../../../utils/logger';
+import logger from '../../../../../../server/src/utils/logger';
 
 /**
  * Default fallback UI for extension errors
