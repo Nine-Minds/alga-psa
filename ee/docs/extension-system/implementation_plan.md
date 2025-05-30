@@ -137,7 +137,31 @@ This document outlines the focused implementation plan for the Alga PSA Client E
 - Zod validation library
 - Extension registry
 
-#### 1.5 Extension Storage Service - 80/20 Approach
+#### 1.5 Extension Storage Service - 80/20 Approach for Alga PSA
+
+**Integration with Alga's Existing Infrastructure**
+
+The Extension Storage Service will leverage Alga's existing infrastructure:
+
+1. **Database Integration**
+   - Utilize Alga's existing PostgreSQL database with proper tenant isolation
+   - Follow Alga's migration patterns and naming conventions
+   - Leverage existing database connection pooling and transaction support
+
+2. **Redis Integration**
+   - Use Alga's existing Redis configuration from `/server/src/config/redisConfig.ts`
+   - Adopt the same connection handling and resilience patterns
+   - Follow existing Redis key naming conventions
+
+3. **Logging Integration**
+   - Use Alga's logging system from `/server/src/utils/logger.tsx`
+   - Maintain consistent log formats and levels
+   - Integrate with existing monitoring patterns
+
+4. **Error Handling**
+   - Follow Alga's error handling patterns from `/server/src/utils/apiErrors.ts`
+   - Use consistent error types and status codes
+   - Maintain proper error boundaries and fallbacks
 
 **Pareto Analysis of Storage Features**
 
@@ -2062,7 +2086,241 @@ function App() {
 
 ### Phase 2: Core UI Extensions
 
-#### 2.1 Navigation Extensions (80/20 Implementation)
+#### 2.1 Tab Extensions (80/20 Implementation)
+
+**Overview:**
+Tab extensions allow third-party extensions to add new tabs to existing Alga PSA pages (like Billing, Tickets, Projects, etc.), enabling seamless integration of custom functionality within the existing application structure.
+
+**Core Tab Item Schema:**
+```typescript
+interface TabExtensionProps {
+  id: string;             // Unique identifier
+  parentPage: string;     // Parent page to attach to (e.g., "billing", "tickets")
+  label: string;          // Display text for the tab
+  icon?: string;          // Optional icon name
+  priority?: number;      // Order in the tabs (higher = earlier)
+  permissions?: string[]; // Required permissions
+}
+```
+
+**Manifest Definition Example:**
+```json
+{
+  "components": [
+    {
+      "type": "tab-extension",
+      "slot": "page-tabs",
+      "component": "./components/BillingReportTab",
+      "props": {
+        "id": "custom-billing-report",
+        "parentPage": "billing",
+        "label": "Custom Reports",
+        "icon": "FileTextIcon",
+        "priority": 50,
+        "permissions": ["view:billing"]
+      }
+    }
+  ]
+}
+```
+
+**Minimal Tasks:**
+
+- [ ] Identify common tab pattern in Alga PSA pages:
+  - Analyze existing tab implementation in pages like Billing, Settings, etc.
+  - Document tab switching mechanism and URL pattern
+
+- [ ] Implement `TabExtensionRegistry` service:
+  - Create registry for extension tabs with parent page association
+  - Add methods to register and retrieve tabs for specific pages
+  - Support permission filtering and priority sorting
+
+- [ ] Create `TabExtensionSlot` component:
+  - Implement reusable component to be added to each tabbed page
+  - Render extension tabs alongside native tabs with consistent styling
+  - Support URL-based tab activation matching Alga's pattern
+
+- [ ] Create `TabExtensionRenderer` component:
+  - Handle dynamic loading of tab content components
+  - Implement error boundaries for tab content
+  - Support tab-specific permissions
+
+- [ ] Modify key page components:
+  - Update Billing, Tickets, Projects, and other main pages to include extension tabs
+  - Ensure tab state management works with dynamic tabs
+  - Maintain proper URL synchronization
+
+**Files to Create/Modify:**
+
+- `/server/src/lib/extensions/ui/tabs/TabExtensionRegistry.ts` - Registry for tab extensions
+- `/server/src/lib/extensions/ui/tabs/TabExtensionSlot.tsx` - Component for rendering extension tabs
+- `/server/src/lib/extensions/ui/tabs/TabExtensionRenderer.tsx` - Component for rendering tab content
+- `/server/src/components/billing-dashboard/Billing.tsx` - Update to include extension tabs
+- `/server/src/components/tickets/Tickets.tsx` - Update to include extension tabs
+- `/server/src/components/projects/Projects.tsx` - Update to include extension tabs
+- `/server/src/components/settings/Settings.tsx` - Update to include extension tabs
+
+**Example Implementation:**
+
+```typescript
+// TabExtensionSlot.tsx - Integrated with Alga's UI system
+import React from 'react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useExtensionRegistry } from '../hooks/useExtensionRegistry';
+import { TabExtensionRenderer } from './TabExtensionRenderer';
+import { TabExtensionProps } from './TabExtensionTypes';
+import { usePermissions } from '../../hooks/usePermissions';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ContainerComponent } from 'server/src/types/ui-reflection/types';
+
+interface TabExtensionSlotProps {
+  parentPage: string;  // Which page these tabs belong to (e.g., "billing")
+  currentTab: string;  // Currently active tab
+  onTabChange: (tabId: string) => void; // Tab change handler
+}
+
+export function TabExtensionSlot({ parentPage, currentTab, onTabChange }: TabExtensionSlotProps) {
+  // Register with Alga's UI automation system
+  const { automationIdProps } = useAutomationIdAndRegister<ContainerComponent>({
+    id: `extension-tabs-${parentPage}`,
+    type: 'container',
+    label: `Extension Tabs for ${parentPage}`,
+    variant: 'default'
+  });
+
+  const { getTabExtensions } = useExtensionRegistry();
+  const { hasPermission } = usePermissions();
+  
+  // Get extension tabs for this parent page
+  const tabExtensions = getTabExtensions(parentPage);
+  
+  // Filter tabs by permission and sort by priority
+  const availableTabs = tabExtensions
+    .filter(tab => {
+      const permissions = tab.props?.permissions || [];
+      return permissions.every(p => hasPermission(p));
+    })
+    .sort((a, b) => (b.props?.priority || 0) - (a.props?.priority || 0));
+  
+  if (availableTabs.length === 0) {
+    return null; // No tabs to render
+  }
+  
+  return (
+    <ReflectionContainer id={`extension-tabs-${parentPage}`} label={`Extension Tabs for ${parentPage}`}>
+      <div className="extension-tabs" {...automationIdProps}>
+        {availableTabs.map(tab => (
+          <button
+            key={tab.props.id}
+            className={`px-4 py-2 border-b-2 ${currentTab === tab.props.id 
+              ? 'border-primary-500 text-primary-700 font-medium' 
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+            onClick={() => onTabChange(tab.props.id)}
+          >
+            {tab.props.label}
+          </button>
+        ))}
+      </div>
+      
+      {/* Render the content of the active tab */}
+      {availableTabs.map(tab => (
+        <div key={tab.props.id} style={{ display: currentTab === tab.props.id ? 'block' : 'none' }}>
+          {currentTab === tab.props.id && (
+            <TabExtensionRenderer
+              extensionId={tab.extensionId}
+              component={tab.component}
+              {...tab.props}
+            />
+          )}
+        </div>
+      ))}
+    </ReflectionContainer>
+  );
+}
+```
+
+**Integration Example:**
+
+```typescript
+// In Billing.tsx (example of integration in an existing page)
+import { TabExtensionSlot } from '../../lib/extensions/ui/tabs/TabExtensionSlot';
+
+export function Billing() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  
+  // Get the current tab from URL query params
+  const currentTab = searchParams.get('tab') || 'overview';
+  
+  // Native tabs definition
+  const tabs = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'generate-invoices', label: 'Generate Invoices' },
+    { id: 'invoices', label: 'Invoices' },
+    // ... other native tabs
+  ];
+  
+  // Handle tab change including extension tabs
+  const handleTabChange = (tabId) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('tab', tabId);
+    router.push(`${pathname}?${params.toString()}`);
+  };
+  
+  return (
+    <div className="billing-page">
+      <h1 className="text-2xl font-bold mb-4">Billing</h1>
+      
+      <div className="tabs-container mb-4 border-b">
+        {/* Native tabs */}
+        <div className="flex">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              className={`px-4 py-2 border-b-2 ${currentTab === tab.id 
+                ? 'border-primary-500 text-primary-700 font-medium' 
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+              onClick={() => handleTabChange(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+          
+          {/* Extension tabs - will render after native tabs */}
+          <TabExtensionSlot 
+            parentPage="billing" 
+            currentTab={currentTab} 
+            onTabChange={handleTabChange} 
+          />
+        </div>
+      </div>
+      
+      {/* Tab content - native tabs */}
+      {currentTab === 'overview' && <BillingOverview />}
+      {currentTab === 'generate-invoices' && <GenerateInvoices />}
+      {currentTab === 'invoices' && <Invoices />}
+      {/* ... other native tab contents */}
+      
+      {/* Extension tab content is handled by TabExtensionSlot */}
+    </div>
+  );
+}
+```
+
+**Core Security Considerations:**
+- Validate tab IDs to prevent collisions with native tabs
+- Check user permissions before rendering tab content
+- Ensure proper error isolation for extension tab content
+- Apply route protection consistent with Alga's security model
+
+**Dependencies:**
+- Core extension system (1.6)
+- Alga's routing system
+- Permission checking system
+
+#### 2.2 Navigation Extensions (80/20 Implementation)
 
 **Overview:**
 Navigation extensions allow third-party extensions to add their own items to the application's navigation menu, providing entry points to custom pages or functionality.
@@ -2102,17 +2360,20 @@ interface NavigationItemProps {
 **Minimal Tasks:**
 
 - [ ] Implement `NavigationSlot` component:
-  - Add extension slot to the main navigation component
-  - Sort navigation items by priority
-  - Check user permissions before rendering
+  - Add extension slot to Alga's `Sidebar` component defined in `/server/src/components/layout/Sidebar.tsx`
+  - Sort navigation items by priority using the same approach as in `menuConfig.ts`
+  - Integrate with Alga's `ReflectionContainer` for UI automation tracking
+  - Check user permissions before rendering using existing permission hooks
 
 - [ ] Create `NavItemRenderer` component:
-  - Implement consistent styling with native navigation
-  - Support for icons from the icon registry
-  - Handle active state detection based on current route
+  - Implement consistent styling matching `SidebarMenuItem` component
+  - Support for icons from Radix and Lucide libraries used in Alga
+  - Handle active state detection based on current route using `usePathname()` hook
+  - Support collapsible sidebar behavior with tooltips in collapsed state
 
 - [ ] Modify main navigation layout:
-  - Add extension slot to navigation component
+  - Add extension slot to `Sidebar.tsx` component between core and bottom menu items
+  - Ensure proper UI reflection registration for extension navigation items
 
 **Files to Create/Modify:**
 
@@ -2124,14 +2385,25 @@ interface NavigationItemProps {
 **Simplified Example Implementation:**
 
 ```typescript
-// NavigationSlot.tsx
+// NavigationSlot.tsx - Integrated with Alga's UI Reflection System
 import React from 'react';
 import { useExtensionComponents } from '../hooks/useExtensionComponents';
 import { NavItemRenderer } from './NavItemRenderer';
 import { NavigationItemProps } from './NavItemTypes';
 import { usePermissions } from '../../hooks/usePermissions';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ContainerComponent } from 'server/src/types/ui-reflection/types';
 
 export function NavigationSlot() {
+  // Register with Alga's UI automation system
+  const { automationIdProps } = useAutomationIdAndRegister<ContainerComponent>({
+    id: `extension-navigation`,
+    type: 'container',
+    label: `Extension Navigation Items`,
+    variant: 'default'
+  });
+
   const { components } = useExtensionComponents('main-navigation');
   const { hasPermission } = usePermissions();
   
@@ -2144,57 +2416,126 @@ export function NavigationSlot() {
     .sort((a, b) => (b.props?.priority || 0) - (a.props?.priority || 0));
   
   return (
-    <div className="extension-navigation">
-      {navigationItems.map(item => (
-        <NavItemRenderer
-          key={`${item.extensionId}-${item.props.id}`}
-          extensionId={item.extensionId}
-          {...item.props}
-        />
-      ))}
-    </div>
+    <ReflectionContainer id="extension-navigation" label="Extension Navigation Items">
+      <ul className="space-y-1" {...automationIdProps}>
+        {navigationItems.map(item => (
+          <li key={`${item.extensionId}-${item.props.id}`}>
+            <NavItemRenderer
+              extensionId={item.extensionId}
+              {...item.props}
+            />
+          </li>
+        ))}
+      </ul>
+    </ReflectionContainer>
   );
 }
 
-// NavItemRenderer.tsx
+// NavItemRenderer.tsx - Using Alga's sidebar item styling
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { usePathname } from 'next/navigation';
+import * as RadixIcons from '@radix-ui/react-icons';
+import * as Tooltip from '@radix-ui/react-tooltip';
+import Link from 'next/link';
 import { NavigationItemProps } from './NavItemTypes';
-import { getIcon } from '../../../components/icons';
 
-export function NavItemRenderer({ id, label, icon, path }: NavigationItemProps) {
-  const location = useLocation();
-  const isActive = location.pathname.startsWith(path);
-  const IconComponent = icon ? getIcon(icon) : null;
+export function NavItemRenderer({ 
+  id, 
+  label, 
+  icon, 
+  path,
+  extensionId
+}: NavigationItemProps & { extensionId: string }) {
+  const pathname = usePathname();
+  const isActive = pathname === path;
+  const { sidebarOpen } = useSidebar(); // Assuming there's a sidebar context
   
-  return (
-    <div className={`nav-item ${isActive ? 'active' : ''}`}>
-      <Link to={path} className="nav-item-link">
-        {IconComponent && <span className="nav-item-icon"><IconComponent /></span>}
-        <span className="nav-item-label">{label}</span>
-      </Link>
-    </div>
+  // Get icon component - supports both Radix and Lucide icons
+  let IconComponent = null;
+  if (icon) {
+    if (icon in RadixIcons) {
+      IconComponent = RadixIcons[icon];
+    } else if (typeof window !== 'undefined' && window.LucideIcons && icon in window.LucideIcons) {
+      IconComponent = window.LucideIcons[icon];
+    }
+  }
+  
+  const navItemContent = (
+    <Link
+      href={path}
+      className={`flex items-center py-2 px-3 rounded-md transition-colors ${isActive 
+        ? 'bg-[#2a2b32] text-white' 
+        : 'text-gray-300 hover:bg-[#2a2b32] hover:text-white'}`}
+      id={`extension-menu-${id.toLowerCase().replace(/\s+/g, '-')}`}
+    >
+      {IconComponent && (
+        <span className="mr-3">
+          <IconComponent className="h-5 w-5" />
+        </span>
+      )}
+      {sidebarOpen && <span className="text-sm">{label}</span>}
+    </Link>
   );
+
+  // If sidebar is collapsed, wrap with tooltip like in Sidebar.tsx
+  if (!sidebarOpen) {
+    return (
+      <Tooltip.Provider delayDuration={300}>
+        <Tooltip.Root>
+          <Tooltip.Trigger asChild>
+            {navItemContent}
+          </Tooltip.Trigger>
+          <Tooltip.Portal>
+            <Tooltip.Content
+              className="bg-subMenu-bg text-subMenu-text px-2 py-1 rounded-md text-sm"
+              side="right"
+              sideOffset={5}
+            >
+              {label}
+              <Tooltip.Arrow style={{ fill: 'var(--color-submenu-bg)' }} />
+            </Tooltip.Content>
+          </Tooltip.Portal>
+        </Tooltip.Root>
+      </Tooltip.Provider>
+    );
+  }
+
+  return navItemContent;
 }
 
-// In Navigation.tsx (existing app navigation)
+// Integration with Sidebar.tsx
 import { NavigationSlot } from '../lib/extensions/ui/navigation/NavigationSlot';
 
-export function Navigation() {
+const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }): JSX.Element => {
+  // ... existing code
+  
   return (
-    <nav className="main-navigation">
-      {/* Core navigation items */}
-      <div className="core-nav-items">
-        <NavItem icon="dashboard" label="Dashboard" path="/" />
-        <NavItem icon="ticket" label="Tickets" path="/tickets" />
-        {/* ... other core navigation items */}
-      </div>
-      
-      {/* Extension navigation items */}
-      <NavigationSlot />
-    </nav>
+    <ReflectionContainer id="main-sidebar" label="Main Navigation">
+      <aside className={`bg-[#1e1f25] text-white h-screen flex flex-col relative transition-all duration-300 ease-in-out ${sidebarOpen ? 'w-64' : 'w-16'}`}>
+        {/* ... Logo and search ... */}
+        
+        <nav className="mt-4 flex-grow overflow-y-auto">
+          <ul className="space-y-1">
+            {menuItems.map(renderMenuItem)}
+          </ul>
+          
+          {/* Extension navigation items - added here */}
+          <NavigationSlot />
+        </nav>
+        
+        <div className="mt-auto">
+          <ul className="space-y-1">
+            {bottomMenuItems.map((item) => (
+              // ... bottom menu items
+            ))}
+          </ul>
+        </div>
+        
+        {/* ... Collapse button ... */}
+      </aside>
+    </ReflectionContainer>
   );
-}
+};
 ```
 
 **Core Security Considerations:**
@@ -2244,23 +2585,24 @@ interface DashboardWidgetProps {
 }
 ```
 
-**Minimal Tasks:**
+**Minimal Tasks (Deprioritized for v2):**
 
 - [ ] Implement `DashboardWidgetSlot` component:
-  - Add extension slot to the dashboard component
-  - Check user permissions before rendering widgets
-  - Apply basic size-based styling to widgets
+  - Add extension slot to Alga's existing `Dashboard.tsx` component at `/server/src/components/dashboard/Dashboard.tsx`
+  - Integrate with Alga's `ReflectionContainer` for UI automation tracking
+  - Check user permissions before rendering widgets using existing permission hooks
+  - Apply size-based styling to widgets matching Alga's existing `FeatureCard` component style
 
 - [ ] Create `WidgetRenderer` component:
-  - Implement consistent styling for widget containers
-  - Add simple header with title
-  - Handle basic loading and error states
-  - Add minimal refresh capability
+  - Implement consistent styling matching Alga's existing card designs using Tailwind CSS classes
+  - Add header with title using the same styling as the existing cards
+  - Handle loading and error states with the same visual design language
+  - Add refresh capability consistent with Alga's UX patterns
 
 - [ ] Add simple data fetching for widgets:
-  - Create basic API endpoint for widget data
-  - Implement data fetching hook with refresh support
-  - Add error handling for failed requests
+  - Create API endpoint for widget data at `/server/src/pages/api/extensions/[extensionId]/widget-data/[widgetId].ts`
+  - Implement data fetching hook with refresh support that respects tenant isolation
+  - Add error handling consistent with Alga's existing error patterns
 
 **Files to Create/Modify:**
 
@@ -2274,14 +2616,25 @@ interface DashboardWidgetProps {
 **Simplified Example Implementation:**
 
 ```typescript
-// DashboardWidgetSlot.tsx
+// DashboardWidgetSlot.tsx - Integrated with Alga's UI system
 import React from 'react';
 import { useExtensionComponents } from '../hooks/useExtensionComponents';
 import { WidgetRenderer } from './WidgetRenderer';
 import { DashboardWidgetProps } from './WidgetTypes';
 import { usePermissions } from '../../hooks/usePermissions';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ContainerComponent } from 'server/src/types/ui-reflection/types';
 
 export function DashboardWidgetSlot() {
+  // Register with Alga's UI automation system
+  const { automationIdProps } = useAutomationIdAndRegister<ContainerComponent>({
+    id: `extension-dashboard-widgets`,
+    type: 'container',
+    label: `Extension Dashboard Widgets`,
+    variant: 'default'
+  });
+  
   const { components } = useExtensionComponents('dashboard-widgets');
   const { hasPermission } = usePermissions();
   
@@ -2292,24 +2645,30 @@ export function DashboardWidgetSlot() {
   });
   
   return (
-    <div className="dashboard-widgets">
-      {widgets.map(widget => (
-        <WidgetRenderer
-          key={`${widget.extensionId}-${widget.props.id}`}
-          extensionId={widget.extensionId}
-          component={widget.component}
-          {...widget.props}
-        />
-      ))}
-    </div>
+    <ReflectionContainer id="extension-dashboard-widgets" label="Extension Dashboard Widgets">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" {...automationIdProps}>
+        {widgets.map(widget => (
+          <WidgetRenderer
+            key={`${widget.extensionId}-${widget.props.id}`}
+            extensionId={widget.extensionId}
+            component={widget.component}
+            {...widget.props}
+          />
+        ))}
+      </div>
+    </ReflectionContainer>
   );
 }
 
-// WidgetRenderer.tsx
+// WidgetRenderer.tsx - Using Alga's card and styling patterns
 import React from 'react';
 import { DashboardWidgetProps } from './WidgetTypes';
 import { useWidgetData } from './useWidgetData';
 import { ExtensionErrorBoundary } from '../ExtensionErrorBoundary';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ButtonComponent } from 'server/src/types/ui-reflection/types';
+import { RefreshCw } from 'lucide-react'; // Using Lucide icons like in Alga
 
 interface WidgetRendererProps extends DashboardWidgetProps {
   extensionId: string;
@@ -2324,6 +2683,14 @@ export function WidgetRenderer({
   extensionId, 
   component 
 }: WidgetRendererProps) {
+  // Register with Alga's UI automation system
+  const { automationIdProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: `widget-${extensionId}-${id}`,
+    type: 'component',
+    label: title,
+    variant: 'default'
+  });
+  
   // Fetch widget data
   const { data, isLoading, error, refetch } = useWidgetData(
     extensionId, 
@@ -2331,56 +2698,96 @@ export function WidgetRenderer({
     refreshInterval
   );
   
+  // Determine size class based on size prop - match FeatureCard pattern
+  const sizeClass = {
+    'small': 'col-span-1',
+    'medium': 'col-span-1 md:col-span-2',
+    'large': 'col-span-1 md:col-span-2 lg:col-span-3',
+  }[size] || 'col-span-1';
+  
   return (
-    <div className={`dashboard-widget widget-size-${size}`}>
-      <div className="widget-header">
-        <h3 className="widget-title">{title}</h3>
-        <button 
-          onClick={refetch}
-          aria-label="Refresh widget"
-        >
-          Refresh
-        </button>
+    <ReflectionContainer id={`widget-${extensionId}-${id}`} label={title}>
+      <div 
+        className={`${sizeClass} rounded-lg border border-[rgb(var(--color-border-200))] bg-white hover:shadow-lg transition-shadow p-4`}
+        {...automationIdProps}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold" style={{ color: 'rgb(var(--color-text-900))' }}>{title}</h3>
+          <button 
+            onClick={refetch}
+            aria-label="Refresh widget"
+            className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+          >
+            <RefreshCw className="h-4 w-4" style={{ color: 'rgb(var(--color-primary-500))' }} />
+          </button>
+        </div>
+        
+        <div className="widget-content">
+          {isLoading && (
+            <div className="flex items-center justify-center py-4">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-500"></div>
+              <span className="ml-2 text-sm" style={{ color: 'rgb(var(--color-text-500))' }}>Loading...</span>
+            </div>
+          )}
+          
+          {error && !isLoading && (
+            <div className="py-4 text-center">
+              <p className="text-sm text-red-500 mb-2">Failed to load widget data</p>
+              <button 
+                onClick={refetch}
+                className="px-3 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+          
+          {!isLoading && !error && component && (
+            <ExtensionErrorBoundary extensionId={extensionId}>
+              {React.createElement(component, { data })}
+            </ExtensionErrorBoundary>
+          )}
+        </div>
       </div>
-      
-      <div className="widget-content">
-        {isLoading && <div className="widget-loading">Loading...</div>}
-        {error && !isLoading && (
-          <div className="widget-error">
-            Failed to load widget data
-            <button onClick={refetch}>Retry</button>
-          </div>
-        )}
-        {!isLoading && !error && component && (
-          <ExtensionErrorBoundary extensionId={extensionId}>
-            {React.createElement(component, { data })}
-          </ExtensionErrorBoundary>
-        )}
-      </div>
-    </div>
+    </ReflectionContainer>
   );
 }
 
-// useWidgetData.ts - Hook for handling widget data fetching
+// useWidgetData.ts - Hook for handling widget data fetching with tenant awareness
+import { useState, useEffect, useCallback } from 'react';
+import { useTenant } from '../../hooks/useTenant'; // Using Alga's tenant hook
+
 function useWidgetData(extensionId, widgetId, refreshInterval) {
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const tenant = useTenant(); // Get current tenant for isolation
   
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/extensions/${extensionId}/widget-data/${widgetId}`);
-      if (!response.ok) throw new Error(`Failed to fetch widget data`);
+      // Include tenant in request headers for proper isolation
+      const response = await fetch(`/api/extensions/${extensionId}/widget-data/${widgetId}`, {
+        headers: {
+          'X-Tenant-ID': tenant.id
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch widget data: ${response.status}`);
+      }
+      
       const result = await response.json();
       setData(result);
       setError(null);
     } catch (err) {
-      setError(err.message);
+      console.error('Widget data fetch error:', err);
+      setError(err.message || 'Failed to load widget data');
     } finally {
       setIsLoading(false);
     }
-  }, [extensionId, widgetId]);
+  }, [extensionId, widgetId, tenant.id]);
   
   // Fetch data on mount and set up refresh interval
   useEffect(() => {
@@ -2395,8 +2802,51 @@ function useWidgetData(extensionId, widgetId, refreshInterval) {
   return { data, isLoading, error, refetch: fetchData };
 }
 
-// In Dashboard.tsx (existing dashboard component)
+// Integration with Dashboard.tsx (Alga's existing dashboard component)
 import { DashboardWidgetSlot } from '../lib/extensions/ui/dashboard/DashboardWidgetSlot';
+
+const WelcomeDashboard = () => {
+  return (
+    <ReflectionContainer id="dashboard-main" label="MSP Dashboard">
+      <div className="p-6 min-h-screen" style={{ background: 'rgb(var(--background))' }}>
+        {/* Welcome Banner */}
+        <div className="rounded-lg mb-6 p-6" 
+             style={{ background: 'linear-gradient(to right, rgb(var(--color-primary-500)), rgb(var(--color-secondary-500)))' }}>
+          <div className="max-w-3xl">
+            <h1 className="text-3xl font-bold mb-2 text-white">Welcome to Your MSP Command Center</h1>
+            <p className="text-lg text-white opacity-90">
+              Your all-in-one platform for managing IT services, tracking assets, 
+              and delivering exceptional support to your clients.
+            </p>
+          </div>
+        </div>
+
+        {/* Quick Start Section */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-4" style={{ color: 'rgb(var(--color-text-900))' }}>Quick Start Guide</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Quick start cards... */}
+          </div>
+        </div>
+
+        {/* Features Grid - Core features */}
+        <h2 className="text-xl font-semibold mb-4" style={{ color: 'rgb(var(--color-text-900))' }}>Platform Features</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Core feature cards... */}
+        </div>
+        
+        {/* Extension dashboard widgets - added here */}
+        <h2 className="text-xl font-semibold my-4" style={{ color: 'rgb(var(--color-text-900))' }}>Extension Features</h2>
+        <DashboardWidgetSlot />
+
+        {/* Getting Started Footer */}
+        <div className="mt-8 rounded-lg border border-dashed border-[rgb(var(--color-border-200))] bg-white p-4">
+          {/* Footer content... */}
+        </div>
+      </div>
+    </ReflectionContainer>
+  );
+};
 
 export function Dashboard() {
   return (
@@ -2429,54 +2879,81 @@ export function Dashboard() {
 - Dashboard component
 - API endpoint framework
 
-#### 2.3 Custom Page Extensions
+#### 2.3 Custom Page Extensions (Prioritized for v1)
+
+**Integration with Alga's Next.js App Router:**
+
+Alga PSA uses Next.js for routing, so we'll integrate our custom pages with the app router structure while maintaining Alga's UI patterns and authentication flow.
 
 **Tasks:**
-- [ ] Implement custom page extension points
-- [ ] Create dynamic route handling for extension pages
-- [ ] Add basic permission checking for custom pages
+- [ ] Implement custom page extension points using Next.js App Router's dynamic routes
+- [ ] Create dynamic route handling for extension pages that follows Alga's layout patterns
+- [ ] Add permission checking using Alga's existing RBAC system
+- [ ] Integrate with Alga's UI reflection system for consistent UI tracking
+- [ ] Ensure tenant isolation is maintained for all extension pages
 
 **Files to Create:**
-- `/server/src/app/extensions/[extensionId]/[...path]/page.tsx`
-- `/server/src/lib/extensions/ui/pages/PageRenderer.tsx`
+- `/server/src/app/msp/extensions/[extensionId]/[...path]/page.tsx` - Follow Alga's path structure
+- `/server/src/app/msp/extensions/[extensionId]/[...path]/layout.tsx` - Use Alga's layout components
+- `/server/src/lib/extensions/ui/pages/PageRenderer.tsx` - Handle extension page rendering with proper UI reflection
 
 **Dependencies:**
 - Core extension system
-- Next.js routing system
+- Alga's Next.js App Router configuration
+- Alga's authentication middleware
+- Alga's UI reflection system
 
 ### Phase 3: Basic API Extensions
 
 #### 3.1 Simple Custom API Endpoints
 
+**Integration with Alga's API Structure:**
+
+Alga PSA has a well-defined API structure with proper tenant isolation, error handling, and authentication. We'll ensure our extension API endpoints follow these patterns.
+
 **Tasks:**
-- [ ] Implement basic custom endpoint registration
-- [ ] Create simple endpoint request handler
-- [ ] Add basic permission checking for endpoints
+- [ ] Implement custom endpoint registration that follows Alga's API patterns
+- [ ] Create endpoint request handler with proper tenant isolation
+- [ ] Add permission checking using Alga's existing RBAC system
+- [ ] Ensure consistent error handling and response formatting
+- [ ] Add proper logging and monitoring integration
 
 **Files to Create:**
-- `/server/src/pages/api/extensions/[extensionId]/[...path].ts`
-- `/server/src/lib/extensions/api/endpointHandler.ts`
+- `/server/src/pages/api/extensions/[extensionId]/[...path].ts` - Main API route
+- `/server/src/lib/extensions/api/endpointHandler.ts` - Extension API handler
+- `/server/src/middleware/extensionApiMiddleware.ts` - Middleware for tenant isolation and auth
 
 **Dependencies:**
 - Core extension system
-- API routing system
+- Alga's API structure and middleware
+- Tenant isolation system
+- RBAC permission system
 
 #### 3.2 Essential Developer SDK
 
+**Alga-Specific Developer SDK:**
+
+We'll create an SDK that provides extension developers with access to Alga's UI components, styling, and API patterns to ensure a consistent experience.
+
 **Tasks:**
-- [ ] Define minimal SDK interfaces and types
-- [ ] Create simple API client wrapper for extensions
-- [ ] Implement basic UI component library for extensions
+- [ ] Define SDK interfaces and types that match Alga's type system
+- [ ] Create API client wrapper that supports Alga's API patterns and tenant isolation
+- [ ] Implement UI component library that uses Alga's existing components and styling
+- [ ] Add helper functions for common Alga-specific operations
+- [ ] Create proper TypeScript definitions for all SDK components
 
 **Files to Create:**
-- `/server/src/lib/extensions/sdk/index.ts`
-- `/server/src/lib/extensions/sdk/api-client.ts`
-- `/server/src/lib/extensions/sdk/ui-components.ts`
+- `/server/src/lib/extensions/sdk/index.ts` - Main SDK entry point
+- `/server/src/lib/extensions/sdk/api-client.ts` - API client with tenant awareness
+- `/server/src/lib/extensions/sdk/ui-components.ts` - UI components matching Alga's design
+- `/server/src/lib/extensions/sdk/hooks.ts` - React hooks for Alga-specific features
+- `/server/src/lib/extensions/sdk/types.ts` - TypeScript type definitions
 
 **Dependencies:**
 - Extension registry
-- API client
-- UI component library
+- Alga's API client structure
+- Alga's UI component library
+- Alga's theming system
 
 #### 3.3 Developer Tools - Essentials
 
@@ -2495,32 +2972,33 @@ export function Dashboard() {
 ## Future Phases (Deferred for Later)
 
 ### Future Phase A: Advanced UI Extensions
-- Entity page extensions
-- Action menu integrations
-- Extension settings UI
-- Form field customizations
+- Entity page extensions integrated with Alga's entity detail pages
+- Action menu integrations for tickets, projects, and other entities
+- Extension settings UI using Alga's settings page patterns
+- Form field customizations integrated with Alga's form system
 
 ### Future Phase B: Advanced API Extensions
-- API middleware system
-- Extension-specific API tokens
-- Resource usage monitoring
-- API request sandboxing
+- API middleware system that enhances Alga's existing middleware
+- Extension-specific API tokens with Alga's security model
+- Resource usage monitoring integrated with Alga's monitoring
+- API request sandboxing with proper tenant isolation
 
 ### Future Phase C: Data Extensions
-- Custom fields framework
-- Custom reports
-- Data exports
+- Custom fields framework integrated with Alga's existing entity models
+- Custom reports that extend Alga's reporting capabilities
+- Data exports integrated with Alga's existing export functionality
 
 ### Future Phase D: Workflow Extensions
-- Custom workflow actions
-- Custom workflow triggers
-- Custom workflow forms
+- Custom workflow actions that integrate with Alga's workflow system
+- Custom workflow triggers for Alga-specific events
+- Custom workflow forms that use Alga's form components
+- Integration with Alga's automation hub
 
 ### Future Phase E: Advanced Features
-- Extension marketplace
-- Extension debugging tools
-- Analytics and monitoring
-- Advanced security features
+- Extension marketplace with Alga-specific extension categories
+- Extension debugging tools integrated with Alga's development workflow
+- Analytics and monitoring using Alga's existing monitoring infrastructure
+- Advanced security features aligned with Alga's security model
 
 ## Resource Requirements (80/20 Approach)
 
@@ -2562,7 +3040,10 @@ All CE features plus:
    - Administrator can manage extensions without technical knowledge
 
 3. **Adoption**
-   - 5 sample extensions available at launch
+   - 5 sample extensions available at launch, including:
+     - At least 2 tab extensions for existing pages (e.g., Billing, Tickets)
+     - At least 1 custom page extension
+     - At least 1 navigation extension
    - >30% of EE customers using at least one extension within 6 months
 
 ## Documentation Plan (80/20 Approach)
@@ -2578,4 +3059,24 @@ All CE features plus:
 
 ## Roadmap Beyond MVP
 
-After delivering the core extension system described above, we'll evaluate usage patterns and customer feedback to prioritize the next set of features from our deferred phases. The long-term vision remains comprehensive, but we'll build incrementally based on real-world usage data.
+After delivering the core extension system described above, we'll evaluate usage patterns and customer feedback to prioritize the next set of features from our deferred phases.
+
+**Initial Priorities:**
+
+1. Tab Extensions (v1 - highest priority)
+   - Allow extending existing pages with new tabs
+   - Focus on key pages like Billing, Tickets, Projects, and Settings
+
+2. Custom Pages (v1)
+   - Enable creation of entirely new pages with custom functionality
+   - Integrate with Alga's navigation and layout system
+
+3. Navigation Extensions (v1)
+   - Add custom items to the main navigation menu
+   - Support proper permissions and tenant isolation
+
+4. Dashboard Widgets (v2)
+   - Add custom widgets to the dashboard
+   - Support data fetching and refresh capabilities
+
+The long-term vision remains comprehensive, but we'll build incrementally based on real-world usage data from our initial release.
