@@ -22,17 +22,9 @@ RUN mkdir -p /app/ee/server/src/app
 COPY ./server /app/server 
 COPY ./ee/server/setup /app/server/setup 
 COPY ./ee/server/src /app/ee/server/src 
-COPY ./ee/server/run-migrations.cjs /app/ee/server/run-migrations.cjs 
-COPY ./ee/server/run-seeds.cjs /app/ee/server/run-seeds.cjs 
-COPY ./ee/server/knexfile.cjs /app/ee/server/knexfile.cjs
 
-# Create migration directories
-RUN mkdir -p ./app/migrations /app/server/migrations
-
-# Copy migrations directories if they exist (using COPY's built-in error handling)
-COPY ./server/migrations/ /app/migrations/
+# Copy base migrations first, then EE migrations (EE migrations will be mixed with CE ones)
 COPY ./server/migrations/ /app/server/migrations/
-COPY ./ee/server/migrations/ /app/migrations/
 COPY ./ee/server/migrations/ /app/server/migrations/
 
 # Create seeds directory and copy seed files

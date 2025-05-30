@@ -85,7 +85,7 @@ services:
       HOST: ${HOST}
       DB_TYPE: ${DB_TYPE:-postgres}
       DB_HOST: postgres
-      DB_PORT: ${DB_PORT:-5432}
+      DB_PORT: 5432
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
       LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
