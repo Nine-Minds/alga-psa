@@ -13,8 +13,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { mockExtensionData } from './mock-data';
-import { ExtensionSettingDefinition, ExtensionSettingType } from '@/lib/extensions/types';
+import { fetchExtensionById, getExtensionSettings, updateExtensionSettings, resetExtensionSettings } from '@/lib/actions/extensionActions';
+import { Extension, ExtensionSettingDefinition, ExtensionSettingType } from '@/lib/extensions/types';
 
 export default function ExtensionSettings() {
   const params = useParams();
@@ -24,11 +24,7 @@ export default function ExtensionSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [settingsData, setSettingsData] = useState<Record<string, any>>({});
   const [hasChanges, setHasChanges] = useState(false);
-  
-  // Get extension data and settings definitions
-  const extension = useMemo(() => {
-    return mockExtensionData.find(ext => ext.id === extensionId);
-  }, [extensionId]);
+  const [extension, setExtension] = useState<Extension | null>(null);
   
   const settingsDefinitions = useMemo(() => {
     return extension?.manifest?.settings || [];
@@ -56,25 +52,36 @@ export default function ExtensionSettings() {
     return Object.keys(settingsByCategory);
   }, [settingsByCategory]);
   
-  // Load initial settings data
+  // Load extension and settings data
   useEffect(() => {
-    if (!extension) return;
-    
-    const loadSettings = async () => {
+    const loadExtensionAndSettings = async () => {
       setIsLoading(true);
       
       try {
-        // In a real implementation, this would fetch from API
-        // const response = await fetch(`/api/extensions/${extensionId}/settings`);
-        // const data = await response.json();
+        // Load extension data
+        const extensionData = await fetchExtensionById(extensionId);
+        if (!extensionData) {
+          setExtension(null);
+          setIsLoading(false);
+          return;
+        }
         
-        // For now, use mock data or defaults from settings definitions
-        const mockSettings: Record<string, any> = {};
-        settingsDefinitions.forEach(def => {
-          mockSettings[def.key] = def.defaultValue !== undefined ? def.defaultValue : null;
+        setExtension(extensionData);
+        
+        // Load settings
+        const savedSettings = await getExtensionSettings(extensionId);
+        
+        // Initialize with defaults if no saved settings
+        const initialSettings: Record<string, any> = {};
+        extensionData.manifest.settings?.forEach(def => {
+          initialSettings[def.key] = savedSettings?.[def.key] !== undefined 
+            ? savedSettings[def.key] 
+            : def.defaultValue !== undefined 
+              ? def.defaultValue 
+              : null;
         });
         
-        setSettingsData(mockSettings);
+        setSettingsData(initialSettings);
         setHasChanges(false);
       } catch (error) {
         console.error('Failed to load extension settings', error);
@@ -88,8 +95,8 @@ export default function ExtensionSettings() {
       }
     };
     
-    loadSettings();
-  }, [extension, extensionId, settingsDefinitions]);
+    loadExtensionAndSettings();
+  }, [extensionId]);
   
   // Handle settings change
   const handleSettingChange = (key: string, value: any) => {
@@ -105,15 +112,16 @@ export default function ExtensionSettings() {
     setIsLoading(true);
     
     try {
-      // In a real implementation, this would call an API
-      // await fetch(`/api/extensions/${extensionId}/settings`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(settingsData),
-      // });
+      const result = await updateExtensionSettings(extensionId, settingsData);
       
-      // Mock successful save
-      await new Promise(resolve => setTimeout(resolve, 500));
+      if (!result.success) {
+        toast({
+          title: 'Error',
+          description: result.message,
+          variant: 'destructive',
+        });
+        return;
+      }
       
       toast({
         title: 'Success',
@@ -134,14 +142,48 @@ export default function ExtensionSettings() {
   };
   
   // Reset settings to defaults
-  const handleResetToDefaults = () => {
-    const defaultSettings: Record<string, any> = {};
-    settingsDefinitions.forEach(def => {
-      defaultSettings[def.key] = def.defaultValue !== undefined ? def.defaultValue : null;
-    });
+  const handleResetToDefaults = async () => {
+    if (!confirm('Are you sure you want to reset all settings to their default values?')) {
+      return;
+    }
     
-    setSettingsData(defaultSettings);
-    setHasChanges(true);
+    setIsLoading(true);
+    
+    try {
+      const result = await resetExtensionSettings(extensionId);
+      
+      if (!result.success) {
+        toast({
+          title: 'Error',
+          description: result.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // Reset local state to defaults
+      const defaultSettings: Record<string, any> = {};
+      settingsDefinitions.forEach(def => {
+        defaultSettings[def.key] = def.defaultValue !== undefined ? def.defaultValue : null;
+      });
+      
+      setSettingsData(defaultSettings);
+      setHasChanges(false);
+      
+      toast({
+        title: 'Success',
+        description: 'Settings reset to default values.',
+      });
+    } catch (error) {
+      console.error('Failed to reset extension settings', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to reset extension settings.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   // Render setting input based on type

@@ -14,7 +14,7 @@ import { ContainerComponent } from '@/lib/ui-reflection/types';
 import { ExtensionManifest } from '@/lib/extensions/types';
 import { ChevronLeftIcon, UploadIcon, FilePlus2Icon, AlertCircleIcon, ShieldIcon, CheckCircleIcon } from 'lucide-react';
 import { logger } from '@/utils/logger';
-import { mockExtensionData } from './mock-data';
+import { installExtension } from '@/lib/actions/extensionActions';
 import { ExtensionPermissions } from './ExtensionPermissions';
 
 /**
@@ -60,9 +60,19 @@ export default function InstallExtension() {
       // Simulate validation
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      // Use mock data
-      const mockExtension = mockExtensionData[2]; // Using QuickBooks Pro Sync as an example
-      setManifest(mockExtension.manifest);
+      // For now, create a mock manifest from the file
+      // In a real implementation, this would parse the actual extension package
+      const mockManifest: ExtensionManifest = {
+        id: `uploaded-extension-${Date.now()}`,
+        name: file.name.replace(/\.(zip|tgz|tar\.gz)$/i, ''),
+        version: '1.0.0',
+        description: 'Uploaded extension package',
+        author: 'Unknown',
+        components: [],
+        permissions: ['company:read'],
+        settings: []
+      };
+      setManifest(mockManifest);
       setUploadState('success');
     } catch (err) {
       logger.error('Failed to parse extension package', { fileName: file.name, error: err });
@@ -75,7 +85,7 @@ export default function InstallExtension() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     
-    if (!manifest) return;
+    if (!manifest || !fileName) return;
     
     try {
       setInstallProgress(0);
@@ -92,11 +102,24 @@ export default function InstallExtension() {
         });
       }, 300);
       
-      // Simulate installation
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Create form data for the file upload
+      const formData = new FormData();
+      const fileInput = fileInputRef.current;
+      if (fileInput && fileInput.files && fileInput.files[0]) {
+        formData.append('extension', fileInput.files[0]);
+      }
+      
+      // Install the extension
+      const result = await installExtension(formData);
       
       clearInterval(interval);
       setInstallProgress(100);
+      
+      if (!result.success) {
+        setErrorMessage(result.message);
+        setUploadState('error');
+        return;
+      }
       
       // Redirect to extensions list after successful installation
       setTimeout(() => {
@@ -105,7 +128,7 @@ export default function InstallExtension() {
       
       logger.info('Extension installed successfully', { name: manifest.name, version: manifest.version });
     } catch (err) {
-      logger.error('Failed to install extension', { name: manifest.name, error: err });
+      logger.error('Failed to install extension', { name: manifest?.name, error: err });
       setErrorMessage('Failed to install extension. Please try again.');
       setUploadState('error');
     }

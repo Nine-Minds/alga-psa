@@ -13,7 +13,7 @@ import { ContainerComponent } from '@/lib/ui-reflection/types';
 import { Extension } from '@/lib/extensions/types';
 import { PlusIcon, AlertCircleIcon, CheckCircleIcon, XCircleIcon, Settings, EyeIcon } from 'lucide-react';
 import { logger } from '@/utils/logger';
-import { mockExtensionData } from './mock-data';
+import { fetchExtensions, toggleExtension, uninstallExtension } from '@/lib/actions/extensionActions';
 
 /**
  * Extensions management page
@@ -33,14 +33,10 @@ export default function Extensions() {
   
   // Fetch extensions
   useEffect(() => {
-    const fetchExtensions = async () => {
+    const fetchExtensionsData = async () => {
       try {
-        // In a real implementation, this would fetch from an API endpoint
-        // For example: /api/extensions
-        
-        // For now, we'll use the mock data
-        await new Promise(resolve => setTimeout(resolve, 300));
-        setExtensions(mockExtensionData);
+        const extensionsData = await fetchExtensions();
+        setExtensions(extensionsData);
         setLoading(false);
       } catch (err) {
         logger.error('Failed to fetch extensions', { error: err });
@@ -49,17 +45,17 @@ export default function Extensions() {
       }
     };
     
-    fetchExtensions();
+    fetchExtensionsData();
   }, []);
   
   // Handle enabling/disabling extensions
   const handleToggleExtension = async (id: string, currentStatus: boolean) => {
     try {
-      // In a real implementation, this would call an API endpoint
-      // For example: /api/extensions/${id}/toggle
-      
-      // For now, we'll use a placeholder implementation
-      await new Promise(resolve => setTimeout(resolve, 300));
+      const result = await toggleExtension(id);
+      if (!result.success) {
+        alert(result.message);
+        return;
+      }
       
       // Update local state
       setExtensions(prevExtensions => 
@@ -82,11 +78,11 @@ export default function Extensions() {
     }
     
     try {
-      // In a real implementation, this would call an API endpoint
-      // For example: /api/extensions/${id}
-      
-      // For now, we'll use a placeholder implementation
-      await new Promise(resolve => setTimeout(resolve, 300));
+      const result = await uninstallExtension(id);
+      if (!result.success) {
+        alert(result.message);
+        return;
+      }
       
       // Update local state
       setExtensions(prevExtensions => 

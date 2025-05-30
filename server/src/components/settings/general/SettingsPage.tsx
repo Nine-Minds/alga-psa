@@ -24,12 +24,35 @@ import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 // Removed import: import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
+// Dynamic import for EE Extensions component
+const ExtensionsComponent = React.lazy(() => 
+  import('../../../ee/server/src/components/settings/extensions/Extensions')
+    .then(module => ({ default: module.default }))
+    .catch(() => ({ default: () => <div>Extensions not available in this edition</div> }))
+);
+
 // Revert to standard function component
 const SettingsPage = (): JSX.Element =>  {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
+  const [isEEAvailable, setIsEEAvailable] = React.useState(false);
 
+  // Check if EE extension system is available
+  React.useEffect(() => {
+    const checkEEAvailability = async () => {
+      try {
+        // Try to dynamically import the EE extension system
+        await import('../../../ee/server/src/components/settings/extensions/Extensions');
+        setIsEEAvailable(true);
+      } catch (error) {
+        // EE not available, that's fine
+        setIsEEAvailable(false);
+      }
+    };
+    
+    checkEEAvailability();
+  }, []);
 
   // Map URL slugs (kebab-case) to Tab Labels
   const slugToLabelMap: Record<string, string> = {
@@ -42,7 +65,8 @@ const SettingsPage = (): JSX.Element =>  {
     'time-entry': 'Time Entry',
     'billing': 'Billing',
     'tax': 'Tax',
-    'integrations': 'Integrations' // Add slug for Integrations tab
+    'integrations': 'Integrations',
+    ...(isEEAvailable && { 'extensions': 'Extensions' }) // Only add if EE is available
   };
 
   // Determine initial active tab based on URL parameter
@@ -62,7 +86,7 @@ const SettingsPage = (): JSX.Element =>  {
     }
   }, [tabParam]); // Correct dependency array
 
-  const tabContent: TabContent[] = [
+  const baseTabContent: TabContent[] = [
     {
       label: "General",
       content: (
@@ -163,6 +187,29 @@ const SettingsPage = (): JSX.Element =>  {
       content: <QboIntegrationSettings />,
     }
   ];
+
+  // Add Extensions tab conditionally if EE is available
+  const tabContent: TabContent[] = isEEAvailable 
+    ? [
+        ...baseTabContent,
+        {
+          label: "Extensions",
+          content: (
+            <Card>
+              <CardHeader>
+                <CardTitle>Extension Management</CardTitle>
+                <CardDescription>Install, configure, and manage extensions to extend Alga PSA functionality</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <React.Suspense fallback={<div>Loading extensions...</div>}>
+                  <ExtensionsComponent />
+                </React.Suspense>
+              </CardContent>
+            </Card>
+          ),
+        }
+      ]
+    : baseTabContent;
 
 
   return (

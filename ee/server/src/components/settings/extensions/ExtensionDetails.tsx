@@ -14,7 +14,7 @@ import { ContainerComponent } from '@/lib/ui-reflection/types';
 import { Extension } from '@/lib/extensions/types';
 import { ChevronLeftIcon, InfoIcon, SettingsIcon, PackageIcon, ShieldIcon, AlertCircleIcon, CheckCircleIcon, XCircleIcon } from 'lucide-react';
 import { logger } from '@/utils/logger';
-import { mockExtensionData } from './mock-data';
+import { fetchExtensionById, toggleExtension, uninstallExtension } from '@/lib/actions/extensionActions';
 import { ExtensionPermissions } from './ExtensionPermissions';
 
 /**
@@ -41,12 +41,7 @@ export default function ExtensionDetails() {
   useEffect(() => {
     const fetchExtensionDetails = async () => {
       try {
-        // In a real implementation, this would fetch from an API endpoint
-        // For example: /api/extensions/${extensionId}
-        
-        // For now, we'll use the mock data
-        await new Promise(resolve => setTimeout(resolve, 300));
-        const foundExtension = mockExtensionData.find(ext => ext.id === extensionId) || null;
+        const foundExtension = await fetchExtensionById(extensionId);
         setExtension(foundExtension);
         setLoading(false);
       } catch (err) {
@@ -64,11 +59,11 @@ export default function ExtensionDetails() {
     if (!extension) return;
     
     try {
-      // In a real implementation, this would call an API endpoint
-      // For example: /api/extensions/${extensionId}/toggle
-      
-      // For now, we'll use a placeholder implementation
-      await new Promise(resolve => setTimeout(resolve, 300));
+      const result = await toggleExtension(extensionId);
+      if (!result.success) {
+        alert(result.message);
+        return;
+      }
       
       // Update local state
       setExtension(prevExtension => 
@@ -89,11 +84,11 @@ export default function ExtensionDetails() {
     }
     
     try {
-      // In a real implementation, this would call an API endpoint
-      // For example: /api/extensions/${extensionId}
-      
-      // For now, we'll use a placeholder implementation
-      await new Promise(resolve => setTimeout(resolve, 300));
+      const result = await uninstallExtension(extensionId);
+      if (!result.success) {
+        alert(result.message);
+        return;
+      }
       
       logger.info('Extension removed', { extensionId });
       
