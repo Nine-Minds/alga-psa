@@ -8,18 +8,52 @@ let color_red = (ansi red)
 let color_cyan = (ansi cyan)
 # --- End Color Constants ---
 
+# Find the project root directory by looking for key files
+def find-project-root [] {
+    let current_dir = pwd
+    mut search_dir = $current_dir
+    
+    # Look for characteristic files that indicate project root
+    let root_indicators = ["package.json", "docker-compose.yaml", "README.md", "cli"]
+    
+    # Search up the directory tree
+    loop {
+        # Check if all indicators exist in current directory
+        let current_search_dir = $search_dir  # Copy to avoid capture issue
+        let has_indicators = ($root_indicators | all { |indicator| 
+            ($current_search_dir | path join $indicator | path exists)
+        })
+        
+        if $has_indicators {
+            return $search_dir
+        }
+        
+        # Move up one directory
+        let parent = ($search_dir | path dirname)
+        
+        # If we've reached the filesystem root, stop
+        if $parent == $search_dir {
+            error make { msg: $"($color_red)Could not find project root. Make sure you're running from within the alga-psa project directory.($color_reset)" }
+        }
+        
+        $search_dir = $parent
+    }
+}
+
 
 # Manage database migrations
 def migrate [
     action: string # The migration action to perform: up, latest, down, or status
 ] {
+    let project_root = find-project-root
+    
     match $action {
         "up" => {
             print $"($color_cyan)Running next pending database migration...($color_reset)"
             # Change to the server directory and run the knex command
             # Capture stdout and stderr
             let result = do {
-                cd server
+                cd ($project_root | path join "server")
                 npx knex migrate:up --knexfile knexfile.cjs --env migration | complete # Use migrate:up
             }
 
@@ -37,7 +71,7 @@ def migrate [
             # Change to the server directory and run the knex command
             # Capture stdout and stderr
             let result = do {
-                cd server
+                cd ($project_root | path join "server")
                 npx knex migrate:latest --knexfile knexfile.cjs --env migration | complete # Use migrate:latest
             }
 
@@ -55,7 +89,7 @@ def migrate [
             # Change to the server directory and run the knex command
             # Capture stdout and stderr
             let result = do {
-                cd server
+                cd ($project_root | path join "server")
                 npx knex migrate:down --knexfile knexfile.cjs --env migration | complete
             }
 
@@ -73,7 +107,7 @@ def migrate [
             # Change to the server directory and run the knex command
             # Capture stdout and stderr
             let result = do {
-                cd server
+                cd ($project_root | path join "server")
                 npx knex migrate:status --knexfile knexfile.cjs --env migration | complete
             }
 
@@ -96,7 +130,8 @@ def migrate [
 
 # Load Database Environment Variables from server/.env
 def load-db-env [] {
-    let env_path = "server/.env"
+    let project_root = find-project-root
+    let env_path = ($project_root | path join "server" ".env")
     if not ($env_path | path exists) {
         error make { msg: $"($color_red)Database environment file not found: ($env_path)($color_reset)" }
     }
@@ -121,10 +156,11 @@ def load-db-env [] {
 def update-workflow [
    workflow_name: string # The BASE name of the workflow (e.g., 'invoice-sync', 'qboCustomerSyncWorkflow'), without path or .ts extension
 ] {
+   let project_root = find-project-root
    print $"($color_cyan)Updating system workflow registration for '($workflow_name)'...($color_reset)"
 
    # Construct file path (assuming .ts extension)
-   let workflow_file = $"server/src/lib/workflows/($workflow_name).ts"
+   let workflow_file = ($project_root | path join "server" "src" "lib" "workflows" $"($workflow_name).ts")
 
    # Check if file exists
    if not ($workflow_file | path exists) {
@@ -156,7 +192,7 @@ def update-workflow [
 
    # Execute psql command using explicit connection params from loaded env
    let result = do {
-       cd server
+       cd ($project_root | path join "server")
        with-env { PGPASSWORD: $db_env.DB_PASSWORD_ADMIN } {
            $sql_update | psql -h $db_env.DB_HOST -p $db_env.DB_PORT -U $db_env.DB_USER_ADMIN -d $db_env.DB_NAME_SERVER -v ON_ERROR_STOP=1 -v $"content=($file_content)" -v $"workflow_name=($workflow_name)" -f - | complete
        }
@@ -184,10 +220,11 @@ def update-workflow [
 def register-workflow [
     workflow_name: string # The BASE name of the workflow (e.g., 'invoice-sync', 'qboCustomerSyncWorkflow'), without path or .ts extension
 ] {
+    let project_root = find-project-root
     print $"($color_cyan)Registering/Versioning system workflow '($workflow_name)'...($color_reset)"
 
     # Construct file path
-    let workflow_file = $"server/src/lib/workflows/($workflow_name).ts"
+    let workflow_file = ($project_root | path join "server" "src" "lib" "workflows" $"($workflow_name).ts")
     if not ($workflow_file | path exists) {
         error make { msg: $"($color_red)Workflow file not found: ($workflow_file)($color_reset)" }
     }
@@ -207,7 +244,7 @@ def register-workflow [
     LIMIT 1;
     "
     let check_result = do {
-        cd server
+        cd ($project_root | path join "server")
         with-env { PGPASSWORD: $db_env.DB_PASSWORD_ADMIN } {
             $sql_check | psql -h $db_env.DB_HOST -p $db_env.DB_PORT -U $db_env.DB_USER_ADMIN -d $db_env.DB_NAME_SERVER -v $"workflow_name=($workflow_name)" -t -A -f - | complete
         }
@@ -279,7 +316,7 @@ def register-workflow [
  
     # Execute psql command using explicit connection params from loaded env
     let result = do {
-        cd server
+        cd ($project_root | path join "server")
         with-env { PGPASSWORD: $db_env.DB_PASSWORD_ADMIN } {
             $sql_transaction | psql -h $db_env.DB_HOST -p $db_env.DB_PORT -U $db_env.DB_USER_ADMIN -d $db_env.DB_NAME_SERVER -v ON_ERROR_STOP=1 -v $"workflow_name=($workflow_name)" -v $"new_version_string=($new_version_string)" -v $"content=($file_content)" -f - | complete
         }
@@ -296,19 +333,91 @@ def register-workflow [
     }
 }
 
+# Start development environment with Docker Compose
+def dev-up [
+    --detached (-d) # Run in detached mode (background)
+    --edition (-e): string = "ce" # Edition to start: ce (community) or ee (enterprise)
+] {
+    let project_root = find-project-root
+    
+    # Validate edition parameter
+    if not ($edition in ["ce", "ee"]) {
+        error make { msg: $"($color_red)Invalid edition '($edition)'. Must be 'ce' (community) or 'ee' (enterprise).($color_reset)" }
+    }
+    
+    let edition_file = if $edition == "ce" { "docker-compose.prebuilt.ce.yaml" } else { "docker-compose.ee.yaml" }
+    let base_file = if $edition == "ce" { "docker-compose.prebuilt.base.yaml" } else { "docker-compose.base.yaml" }
+    let edition_name = if $edition == "ce" { "Community Edition" } else { "Enterprise Edition" }
+    
+    print $"($color_cyan)Starting development environment (($edition_name))...($color_reset)"
+    print $"($color_cyan)Project root: ($project_root)($color_reset)"
+    
+    if $detached {
+        let command = $"docker compose -f ($base_file) -f ($edition_file) --env-file server/.env up -d"
+        print $"($color_yellow)Running: ($command)($color_reset)"
+        
+        let result = do {
+            cd $project_root
+            docker compose -f $base_file -f $edition_file --env-file server/.env up -d | complete
+        }
+        
+        if $result.exit_code == 0 {
+            print $"($color_green)Development environment (($edition_name)) started in background.($color_reset)"
+            print $"($color_cyan)Access the application at: http://localhost:3000($color_reset)"
+            print $"($color_cyan)View logs with: docker compose logs -f($color_reset)"
+        } else {
+            print $"($color_red)($result.stderr)($color_reset)"
+            error make { msg: $"($color_red)Failed to start development environment($color_reset)", code: $result.exit_code }
+        }
+    } else {
+        let command = $"docker compose -f ($base_file) -f ($edition_file) --env-file server/.env up"
+        print $"($color_yellow)Running: ($command)($color_reset)"
+        
+        # Stream output directly without capturing
+        cd $project_root
+        docker compose -f $base_file -f $edition_file --env-file server/.env up
+    }
+}
+
+# Stop development environment
+def dev-down [] {
+    let project_root = find-project-root
+    print $"($color_cyan)Stopping development environment...($color_reset)"
+    
+    let result = do {
+        cd $project_root
+        docker compose down | complete
+    }
+    
+    if $result.exit_code == 0 {
+        print $result.stdout
+        print $"($color_green)Development environment stopped.($color_reset)"
+    } else {
+        print $"($color_red)($result.stderr)($color_reset)"
+        error make { msg: $"($color_red)Failed to stop development environment($color_reset)", code: $result.exit_code }
+    }
+}
+
 # Alga Development CLI Entry Point
 # Handles command-line arguments to run migration or workflow actions.
-def main [
-   command?: string, # The command to run ('migrate' or 'update-workflow')
-   arg2?: string     # The action for 'migrate' or the BASE workflow_name for workflow commands
+def --wrapped main [
+   ...args: string   # All arguments and flags as strings
 ] {
+   let command = ($args | get 0? | default null)
+   
    # Basic usage check
-   if $command == null or $arg2 == null {
+   if $command == null {
        print $"($color_cyan)Alga Dev CLI($color_reset)"
        print "Usage:"
        print "  nu main.nu migrate <action>"
        print "    Action: up, latest, down, status"
        print "    Example: nu main.nu migrate latest"
+       print ""
+       print "  nu main.nu -- dev-up [--detached] [--edition ce|ee]  # Start development environment"
+       print "  nu main.nu dev-down               # Stop development environment"
+       print ""
+       print "Note: Use '--' before dev-up when using flags to prevent Nu from parsing them:"
+       print "  nu main.nu -- dev-up --edition ee --detached"
        print ""
        print "  nu main.nu update-workflow <base_workflow_name> # Update latest version definition"
        print "    Example: nu main.nu update-workflow invoice-sync"
@@ -317,6 +426,8 @@ def main [
        print "    Example: nu main.nu register-workflow customer-sync"
        print "\nAlternatively, source the script ('source main.nu') and run commands directly:"
        print "  migrate <action>"
+       print "  dev-up [--detached] [--edition ce|ee]"
+       print "  dev-down"
        print "  update-workflow <workflow_name>"
        print "  register-workflow <workflow_name>"
        return # Exit if arguments are missing
@@ -325,25 +436,55 @@ def main [
    # Route command
    match $command {
        "migrate" => {
+           let action = ($args | get 1? | default null)
+           if $action == null {
+               error make { msg: $"($color_red)migrate command requires an action: up, latest, down, status($color_reset)" }
+           }
            # Validate the migrate action
-           if not ($arg2 in ["up", "latest", "down", "status"]) {
-                error make { msg: $"($color_red)Invalid migrate action '($arg2)'. Must be one of: up, latest, down, status($color_reset)" }
+           if not ($action in ["up", "latest", "down", "status"]) {
+                error make { msg: $"($color_red)Invalid migrate action '($action)'. Must be one of: up, latest, down, status($color_reset)" }
            }
            # Call the migrate command
-           migrate $arg2
+           migrate $action
+       }
+       "dev-up" => {
+           # Parse flags from args (skip the command itself)
+           let command_args = ($args | skip 1)
+           let detached = ($command_args | any { |arg| $arg == "--detached" or $arg == "-d" })
+           let edition_idx = ($command_args | enumerate | where {|item| $item.item == "--edition" or $item.item == "-e"} | get 0?.index | default null)
+           let edition = if $edition_idx != null { 
+               ($command_args | get ($edition_idx + 1) | default "ce")
+           } else { 
+               "ce" 
+           }
+           
+           if $detached {
+               dev-up --detached --edition $edition
+           } else {
+               dev-up --edition $edition
+           }
+       }
+       "dev-down" => {
+           dev-down
        }
        "update-workflow" => {
-           # No specific validation here, the function handles file existence etc.
+           let workflow_name = ($args | get 1? | default null)
+           if $workflow_name == null {
+               error make { msg: $"($color_red)update-workflow command requires a workflow name($color_reset)" }
+           }
            # Call the update-workflow command
-           update-workflow $arg2
+           update-workflow $workflow_name
        }
        "register-workflow" => {
-           # No specific validation here, the function handles file existence etc.
+           let workflow_name = ($args | get 1? | default null)
+           if $workflow_name == null {
+               error make { msg: $"($color_red)register-workflow command requires a workflow name($color_reset)" }
+           }
            # Call the register-workflow command
-           register-workflow $arg2
+           register-workflow $workflow_name
        }
        _ => {
-           error make { msg: $"($color_red)Unknown command: '($command)'. Must be 'migrate', 'update-workflow', or 'register-workflow'.($color_reset)" }
+           error make { msg: $"($color_red)Unknown command: '($command)'. Must be 'migrate', 'dev-up', 'dev-down', 'update-workflow', or 'register-workflow'.($color_reset)" }
        }
    }
 }
