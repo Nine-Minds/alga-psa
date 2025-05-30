@@ -10,7 +10,7 @@ import { Checkbox } from "server/src/components/ui/Checkbox";
 import { Plus, Trash } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getTenantDetails, updateTenantName, addCompanyToTenant, removeCompanyFromTenant, setDefaultCompany } from "server/src/lib/actions/tenantActions";
-import { getAllCompanies } from "server/src/lib/actions/companyActions";
+import { getAllCompanies } from "server/src/lib/actions/company-actions/companyActions";
 import { CompanyPicker } from "server/src/components/companies/CompanyPicker";
 import { ICompany } from "server/src/interfaces/company.interfaces";
 

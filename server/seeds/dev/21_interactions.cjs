@@ -5,7 +5,7 @@ exports.seed = function (knex) {
             return knex('interactions').insert([
                 {
                     tenant: tenant.tenant,
-                    type_id: knex('interaction_types').where({ tenant: tenant.tenant, type_name: 'Call' }).select('type_id').first(),
+                    type_id: knex('system_interaction_types').where({ type_name: 'Call' }).select('type_id').first(),
                     contact_name_id: knex('contacts').where({ tenant: tenant.tenant }).whereRaw("full_name ILIKE '%alice%'").select('contact_name_id').first(),
                     company_id: knex('companies').where({ tenant: tenant.tenant, company_name: 'Wonderland' }).select('company_id').first(),
                     user_id: knex('users').where({ tenant: tenant.tenant, username: 'glinda' }).select('user_id').first(),
@@ -16,7 +16,7 @@ exports.seed = function (knex) {
                 },
                 {
                     tenant: tenant.tenant,
-                    type_id: knex('interaction_types').where({ tenant: tenant.tenant, type_name: 'Email' }).select('type_id').first(),
+                    type_id: knex('system_interaction_types').where({ type_name: 'Email' }).select('type_id').first(),
                     contact_name_id: knex('contacts').where({ tenant: tenant.tenant }).whereRaw("full_name ILIKE '%alice%'").select('contact_name_id').first(),
                     company_id: knex('companies').where({ tenant: tenant.tenant, company_name: 'Wonderland' }).select('company_id').first(),
                     user_id: knex('users').where({ tenant: tenant.tenant, username: 'glinda' }).select('user_id').first(),
@@ -27,7 +27,7 @@ exports.seed = function (knex) {
                 },
                 {
                     tenant: tenant.tenant,
-                    type_id: knex('interaction_types').where({ tenant: tenant.tenant, type_name: 'Meeting' }).select('type_id').first(),
+                    type_id: knex('system_interaction_types').where({ type_name: 'Meeting' }).select('type_id').first(),
                     contact_name_id: knex('contacts').where({ tenant: tenant.tenant }).whereRaw("full_name ILIKE '%dorothy%'").select('contact_name_id').first(),
                     company_id: knex('companies').where({ tenant: tenant.tenant, company_name: 'Emerald City' }).select('company_id').first(),
                     user_id: knex('users').where({ tenant: tenant.tenant, username: 'glinda' }).select('user_id').first(),
@@ -38,7 +38,7 @@ exports.seed = function (knex) {
                 },
                 {
                     tenant: tenant.tenant,
-                    type_id: knex('interaction_types').where({ tenant: tenant.tenant, type_name: 'Note' }).select('type_id').first(),
+                    type_id: knex('system_interaction_types').where({ type_name: 'Note' }).select('type_id').first(),
                     contact_name_id: knex('contacts').where({ tenant: tenant.tenant }).whereRaw("full_name ILIKE '%alice%'").select('contact_name_id').first(),
                     company_id: knex('companies').where({ tenant: tenant.tenant, company_name: 'Wonderland' }).select('company_id').first(),
                     user_id: knex('users').where({ tenant: tenant.tenant, username: 'glinda' }).select('user_id').first(),

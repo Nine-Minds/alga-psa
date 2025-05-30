@@ -65,9 +65,10 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
   const readable = new ReadableStream({
     async start(controller) {
       // Utility for sending SSE events
-      function sendEvent(type: StreamEventType, data: string) {
+      function sendEvent(type: StreamEventType, data: string | object) {
         console.log(`\x1b[34m[AI-ROUTE] 📡 Sending SSE event: ${type}\x1b[0m`);
-        const event: StreamEvent = { type, data };
+        const dataString = typeof data === 'string' ? data : JSON.stringify(data);
+        const event: StreamEvent = { type, data: dataString };
         const payload = `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`;
         controller.enqueue(textEncoder.encode(payload));
       }
@@ -81,7 +82,7 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
           model: process.env.CUSTOM_OPENAI_MODEL || 'gpt-4o-mini',
           systemPrompt: systemMessage,
           messages: messageHistory,
-          maxTokens: 1024,
+          maxTokens: 32768,
           temperature: 0.2,
         });
 
@@ -113,11 +114,11 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
 
                 // Send tool use event and close the stream
                 console.log(`\x1b[31m[AI-ROUTE] 🚀 Sending tool_use event for: ${funcCall.funcName}\x1b[0m`);
-                sendEvent('tool_use', JSON.stringify({
+                sendEvent('tool_use', {
                   name: funcCall.funcName,
                   input: funcCall.xmlArgs,
                   tool_use_id: toolUseId
-                }));
+                });
 
                 // Close the stream - frontend will make a new request
                 sendEvent('done', 'true');

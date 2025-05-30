@@ -3,7 +3,7 @@
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
 import { unparseCSV } from 'server/src/lib/utils/csvParser';
-import { createDefaultTaxSettings } from './taxSettingsActions';
+import { createDefaultTaxSettings } from '../taxSettingsActions';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getCompanyLogoUrl } from 'server/src/lib/utils/avatarUtils';
@@ -18,10 +18,18 @@ export async function getCompanyById(companyId: string): Promise<ICompany | null
     throw new Error('Tenant not found');
   }
   
-  // Fetch company data
+  // Fetch company data with account manager info
   const companyData = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('companies')
-      .where({ company_id: companyId, tenant })
+    return await trx('companies as c')
+      .leftJoin('users as u', function() {
+        this.on('c.account_manager_id', '=', 'u.user_id')
+            .andOn('c.tenant', '=', 'u.tenant');
+      })
+      .select(
+        'c.*',
+        trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`)
+      )
+      .where({ 'c.company_id': companyId, 'c.tenant': tenant })
       .first();
   });
 
@@ -140,49 +148,82 @@ export async function updateCompany(companyId: string, updateData: Partial<Omit<
   }
 }
 
-export async function createCompany(company: Omit<ICompany, 'company_id' | 'created_at' | 'updated_at' | 'account_manager_full_name'>): Promise<ICompany> {
+export async function createCompany(company: Omit<ICompany, 'company_id' | 'created_at' | 'updated_at' | 'account_manager_full_name'>): Promise<{ success: true; data: ICompany } | { success: false; error: string }> {
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
   }
 
-  // Ensure website field is synchronized between properties.website and url
-  const companyData = { ...company };
-  
-  // If properties.website exists but url doesn't, sync url from properties.website
-  if (companyData.properties?.website && !companyData.url) {
-    companyData.url = companyData.properties.website;
-  }
-  
-  // If url exists but properties.website doesn't, sync properties.website from url
-  if (companyData.url && (!companyData.properties || !companyData.properties.website)) {
-    if (!companyData.properties) {
-      companyData.properties = {};
+  try {
+    // Ensure website field is synchronized between properties.website and url
+    const companyData = { ...company };
+    
+    // If properties.website exists but url doesn't, sync url from properties.website
+    if (companyData.properties?.website && !companyData.url) {
+      companyData.url = companyData.properties.website;
     }
-    companyData.properties.website = companyData.url;
+    
+    // If url exists but properties.website doesn't, sync properties.website from url
+    if (companyData.url && (!companyData.properties || !companyData.properties.website)) {
+      if (!companyData.properties) {
+        companyData.properties = {};
+      }
+      companyData.properties.website = companyData.url;
+    }
+
+    const createdCompany = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const [created] = await trx<ICompany>('companies')
+        .insert({
+          ...companyData,
+          tenant,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .returning('*');
+        
+      return created;
+    });
+
+    if (!createdCompany) {
+      throw new Error('Failed to create company');
+    }
+
+    // Create default tax settings for the new company
+    await createDefaultTaxSettings(createdCompany.company_id);
+
+    return { success: true, data: createdCompany };
+  } catch (error: any) {
+    console.error('Error creating company:', error);
+    
+    // Handle specific database constraint violations
+    if (error.code === '23505') { // PostgreSQL unique constraint violation
+      if (error.constraint && error.constraint.includes('companies_tenant_company_name_unique')) {
+        return { success: false, error: `A company with the name "${company.company_name}" already exists. Please choose a different name.` };
+      } else if (error.constraint && error.constraint.includes('companies_tenant_email_unique')) {
+        return { success: false, error: `A company with the email "${company.email}" already exists. Please use a different email address.` };
+      } else {
+        return { success: false, error: 'A company with these details already exists. Please check the company name and email address.' };
+      }
+    }
+    
+    // Handle other database errors
+    if (error.code === '23514') { // Check constraint violation
+      return { success: false, error: 'Invalid data provided. Please check all fields and try again.' };
+    }
+    
+    if (error.code === '23503') { // Foreign key constraint violation
+      return { success: false, error: 'Referenced data not found. Please check account manager selection.' };
+    }
+    
+    
+    // Re-throw system errors (these should still be 500)
+    if (error.message && !error.code) {
+      throw error;
+    }
+    
+    // Default fallback for system errors
+    throw new Error('Failed to create company. Please try again.');
   }
-
-  const createdCompany = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const [created] = await trx<ICompany>('companies')
-      .insert({
-        ...companyData,
-        tenant,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .returning('*');
-      
-    return created;
-  });
-
-  if (!createdCompany) {
-    throw new Error('Failed to create company');
-  }
-
-  // Create default tax settings for the new company
-  await createDefaultTaxSettings(createdCompany.company_id);
-
-  return createdCompany;
 }
 
 export async function getAllCompanies(includeInactive: boolean = true): Promise<ICompany[]> {
@@ -196,16 +237,21 @@ export async function getAllCompanies(includeInactive: boolean = true): Promise<
     const { companiesData, fileIdMap } = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Start building the query
       let baseQuery = trx('companies as c')
+        .leftJoin('users as u', function() {
+          this.on('c.account_manager_id', '=', 'u.user_id')
+              .andOn('c.tenant', '=', 'u.tenant');
+        })
         .where({ 'c.tenant': tenant });
 
       if (!includeInactive) {
         baseQuery = baseQuery.andWhere('c.is_inactive', false);
       }
 
-      // Get unique companies with document associations
+      // Get unique companies with document associations and account manager info
       const companies = await baseQuery
         .select(
           'c.*',
+          trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`),
           trx.raw(
             `(SELECT document_id 
             FROM document_associations da 
@@ -689,10 +735,13 @@ export async function uploadCompanyLogo(
       return { success: false, message: result.message };
     }
 
-    // Invalidate cache for relevant paths
+    // Invalidate cache for relevant paths - be more comprehensive
     revalidatePath(`/client-portal/settings`);
     revalidatePath(`/companies/${companyId}`);
-    revalidatePath(`/settings/general`); // Also invalidate general settings where company logo might appear
+    revalidatePath(`/msp/companies/${companyId}`);
+    revalidatePath(`/msp/companies`);
+    revalidatePath(`/settings/general`);
+    revalidatePath('/'); // Main dashboard that might show company info
 
     console.log(`[uploadCompanyLogo] Upload process finished successfully for company ${companyId}. Returning URL: ${result.imageUrl}`);
     return { success: true, logoUrl: result.imageUrl };
@@ -719,21 +768,26 @@ export async function deleteCompanyLogo(
   // TODO: Add permission check here if needed
 
   try {
+    console.log(`[deleteCompanyLogo] Starting deletion process for company ${companyId}, tenant: ${tenant}`);
     const result = await deleteEntityImage(
       'company',
       companyId,
       currentUser.user_id,
       tenant
     );
+    console.log(`[deleteCompanyLogo] deleteEntityImage result:`, result);
 
     if (!result.success) {
       return { success: false, message: result.message };
     }
 
-    // Invalidate cache for relevant paths
+    // Invalidate cache for relevant paths - be more comprehensive
     revalidatePath(`/client-portal/settings`);
     revalidatePath(`/companies/${companyId}`);
-    revalidatePath(`/settings/general`); // Also invalidate general settings
+    revalidatePath(`/msp/companies/${companyId}`);
+    revalidatePath(`/msp/companies`);
+    revalidatePath(`/settings/general`);
+    revalidatePath('/'); // Main dashboard that might show company info
 
     console.log(`[deleteCompanyLogo] Deletion process finished successfully for company ${companyId}.`);
     return { success: true };

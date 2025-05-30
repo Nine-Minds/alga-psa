@@ -35,12 +35,12 @@ export const getUIState: Tool = {
       
       const apiResult = await response.json();
       console.log('🔍 [GET-UI-STATE] API response:', {
-        success: apiResult.success,
-        hasState: apiResult.hasState,
-        componentCount: apiResult.componentCount
+        hasResult: !!apiResult.result,
+        resultType: typeof apiResult.result,
+        componentCount: apiResult.result?.components?.length || 0
       });
       
-      baseState = apiResult.state;
+      baseState = apiResult.result;
       console.log('🔍 [GET-UI-STATE] Retrieved state:', baseState ? {
         id: baseState.id,
         title: baseState.title,

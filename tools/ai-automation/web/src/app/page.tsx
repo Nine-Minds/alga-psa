@@ -154,6 +154,7 @@ export default function ControlPanel() {
   const eventSourceRef = useRef<EventSource | null>(null);
   const logEntryRefs = useRef<{[key: string]: HTMLDivElement | null}>({});
   const currentAssistantMessageRef = useRef<string>('');
+  const isCancelledRef = useRef<boolean>(false);
 
   const scrollToLogEntry = (toolCallId: string) => {
     const ref = logEntryRefs.current[toolCallId];
@@ -282,6 +283,7 @@ export default function ControlPanel() {
 
   const cancelGeneration = () => {
     console.log('Cancelling generation');
+    isCancelledRef.current = true;
     if (eventSourceRef.current) {
       console.log('Closing SSE connection for cancellation');
       eventSourceRef.current.close();
@@ -300,6 +302,7 @@ export default function ControlPanel() {
 
   const clearConversation = () => {
     console.log('Clearing conversation');
+    isCancelledRef.current = false; // Reset cancellation flag
     // Close any existing SSE connection
     if (eventSourceRef.current) {
       console.log('Closing SSE connection for conversation clear');
@@ -411,6 +414,12 @@ export default function ControlPanel() {
   };
 
   const startNewSseSession = (messages: ChatMessage[]) => {
+    // Check if cancelled before starting new session
+    if (isCancelledRef.current) {
+      console.log('Session cancelled, not starting new SSE connection');
+      return null;
+    }
+    
     // Close any existing SSE connection first
     if (eventSourceRef.current) {
       console.log('Closing existing SSE connection before starting new one');
@@ -451,6 +460,7 @@ export default function ControlPanel() {
   const sendMessagesToAI = async (messages: ChatMessage[]) => {
     setIsGenerating(true);
     setUserMessage('');
+    isCancelledRef.current = false; // Reset cancellation flag when starting new generation
     
     let hasToolCalls = false;
 
@@ -470,6 +480,12 @@ export default function ControlPanel() {
 
     try {
       const eventSource = startNewSseSession(filteredMessages);
+      
+      // If session was cancelled, don't proceed
+      if (!eventSource) {
+        setIsGenerating(false);
+        return;
+      }
 
       // Handle incoming events
       eventSource.onmessage = (event) => {
@@ -533,14 +549,14 @@ export default function ControlPanel() {
         try {
           hasToolCalls = true; // Mark that we have tool calls in this session
           console.log('%c[FRONTEND] 🎯 Received tool use event', 'color: #ff6b6b; font-weight: bold', event);
-          const toolEvent = cleanAndParseJSON(event.data);
+          const toolEvent = JSON.parse(event.data);
           if (!toolEvent) {
             console.error('%c[FRONTEND] ❌ Invalid tool use event data', 'color: #ff4757');
             return;
           }
           console.log('%c[FRONTEND] 📋 Tool use requested', 'color: #5f27cd; font-weight: bold', toolEvent);
 
-          const toolData = cleanAndParseJSON(toolEvent.data);
+          const toolData = JSON.parse(toolEvent.data);
           if (!toolData) {
             throw new Error('Invalid tool data');
           }
@@ -565,6 +581,19 @@ export default function ControlPanel() {
           console.log(`%c[FRONTEND] 🚀 Invoking tool: ${toolContent.name}`, 'color: #ff9ff3; font-weight: bold');
           const result = await invokeTool(toolContent.name, toolContent.input);
           console.log(`%c[FRONTEND] ✅ Tool execution result`, 'color: #54a0ff; font-weight: bold', result);
+          
+          // Check if cancelled before processing result
+          if (isCancelledRef.current) {
+            console.log('%c[FRONTEND] ⚠️ Tool execution cancelled, ignoring result', 'color: #ffa502; font-weight: bold');
+            setLog(prev => [...prev, {
+              type: 'tool_result',
+              title: 'Tool Cancelled',
+              content: 'Tool execution was cancelled before result could be processed',
+              timestamp: new Date().toISOString(),
+              toolCallId: toolCallId
+            }]);
+            return;
+          }
           
           // Create tool result message
           const toolResult: ChatMessage = {

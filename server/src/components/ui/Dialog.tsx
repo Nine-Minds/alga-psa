@@ -26,7 +26,6 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({ isOpen, onClos
     type: 'dialog',
     title,
     open: isOpen,
-    actions: ['submit', 'cancel']
   });
 
   // Update dialog metadata when props change

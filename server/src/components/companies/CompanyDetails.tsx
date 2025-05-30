@@ -13,7 +13,7 @@ import CompanyContactsList from 'server/src/components/contacts/CompanyContactsL
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from 'server/src/components/ui/Switch';
 import BillingConfiguration from './BillingConfiguration';
-import { updateCompany, uploadCompanyLogo, deleteCompanyLogo, getCompanyById } from 'server/src/lib/actions/companyActions';
+import { updateCompany, uploadCompanyLogo, deleteCompanyLogo, getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
 import { Button } from 'server/src/components/ui/Button';
@@ -92,7 +92,7 @@ const TextDetailItem: React.FC<{
   const [localValue, setLocalValue] = useState(value);
 
   // Register for UI automation with meaningful label
-  const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+  const { automationIdProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
     id: automationId,
     type: 'formField',
     fieldType: 'textField',
@@ -101,10 +101,19 @@ const TextDetailItem: React.FC<{
     helperText: `Input field for ${label}`
   });
 
-  const handleBlur = () => {
-    if (localValue !== value) {
-      onEdit(localValue);
+  // Update metadata when localValue changes
+  useEffect(() => {
+    if (updateMetadata) {
+      updateMetadata({
+        value: localValue,
+        label: label
+      });
     }
+  }, [localValue, updateMetadata, label]);
+
+  const handleBlur = () => {
+    // Always call onEdit to allow parent to determine if changes should be tracked
+    onEdit(localValue);
   };
   
   return (
@@ -164,6 +173,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const drawer = useDrawer();
+
 
   // 1. Implement refreshCompanyData function
   const refreshCompanyData = useCallback(async () => {
@@ -318,7 +328,34 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       return updatedCompany;
     });
     
-    setHasUnsavedChanges(true);
+    // Check if the updated company matches the original company
+    setHasUnsavedChanges(() => {
+      // Create a temporary copy to compare
+      const tempCompany = JSON.parse(JSON.stringify(editedCompany)) as ICompany;
+      
+      // Apply the change to temp company for comparison
+      if (field.startsWith('properties.') && field !== 'properties.account_manager_id') {
+        const propertyField = field.split('.')[1];
+        if (!tempCompany.properties) {
+          tempCompany.properties = {};
+        }
+        (tempCompany.properties as any)[propertyField] = value;
+        if (propertyField === 'website' && typeof value === 'string') {
+          tempCompany.url = value;
+        }
+      } else if (field === 'url') {
+        tempCompany.url = value as string;
+        if (!tempCompany.properties) {
+          tempCompany.properties = {};
+        }
+        (tempCompany.properties as any).website = value as string;
+      } else {
+        (tempCompany as any)[field] = value;
+      }
+      
+      // Compare with original company to determine if there are unsaved changes
+      return JSON.stringify(tempCompany) !== JSON.stringify(company);
+    });
   };
 
   const handleSave = async () => {
@@ -445,70 +482,72 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       content: (
         <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Left Column - Company Info */}
-            <TextDetailItem
-              label="Client Name"
-              value={editedCompany.company_name}
-              onEdit={(value) => handleFieldChange('company_name', value)}
-              automationId="client-name-field"
-            />
-            <TextDetailItem
-              label="Phone"
-              value={editedCompany.phone_no || ''}
-              onEdit={(value) => handleFieldChange('phone_no', value)}
-              automationId="phone-field"
-            />
-            
-            <TextDetailItem
-              label="Industry"
-              value={editedCompany.properties?.industry || ''}
-              onEdit={(value) => handleFieldChange('properties.industry', value)}
-              automationId="industry-field"
-            />
-            <TextDetailItem
-              label="Email"
-              value={editedCompany.email || ''}
-              onEdit={(value) => handleFieldChange('email', value)}
-              automationId="email-field"
-            />
-            
-            <div className="space-y-2" {...(() => {
-              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
-                id: 'account-manager-field',
-                type: 'formField',
-                fieldType: 'select',
-                label: 'Account Manager',
-                value: editedCompany.account_manager_full_name || '',
-                helperText: 'Select the account manager for this company'
-              });
-              return automationIdProps;
-            })()}>
-              <Text as="label" size="2" className="text-gray-700 font-medium">Account Manager</Text>
-              <UserPicker
-                value={editedCompany.account_manager_id || ''}
-                onValueChange={(value) => handleFieldChange('account_manager_id', value)}
-                users={internalUsers}
-                disabled={isLoadingUsers}
-                placeholder={isLoadingUsers ? "Loading users..." : "Select Account Manager"}
-                buttonWidth="full"
+            {/* Left Column - All Form Fields */}
+            <div className="space-y-6">
+              <TextDetailItem
+                label="Client Name"
+                value={editedCompany.company_name}
+                onEdit={(value) => handleFieldChange('company_name', value)}
+                automationId="client-name-field"
+              />
+                           
+              <FieldContainer
+                label="Account Manager"
+                fieldType="select"
+                value={editedCompany.account_manager_full_name || ''}
+                helperText="Select the account manager for this company"
+                automationId="account-manager-field"
+              >
+                <Text as="label" size="2" className="text-gray-700 font-medium">Account Manager</Text>
+                <UserPicker
+                  value={editedCompany.account_manager_id || ''}
+                  onValueChange={(value) => handleFieldChange('account_manager_id', value)}
+                  users={internalUsers}
+                  disabled={isLoadingUsers}
+                  placeholder={isLoadingUsers ? "Loading users..." : "Select Account Manager"}
+                  buttonWidth="full"
+                />
+              </FieldContainer>
+              
+              <TextDetailItem
+                label="Website"
+                value={editedCompany.properties?.website || ''}
+                onEdit={(value) => handleFieldChange('properties.website', value)}
+                automationId="website-field"
+              />
+
+              <TextDetailItem
+                label="Industry"
+                value={editedCompany.properties?.industry || ''}
+                onEdit={(value) => handleFieldChange('properties.industry', value)}
+                automationId="industry-field"
+              />
+
+              <TextDetailItem
+                label="Company Size"
+                value={editedCompany.properties?.company_size || ''}
+                onEdit={(value) => handleFieldChange('properties.company_size', value)}
+                automationId="company-size-field"
+              />
+              
+              <TextDetailItem
+                label="Annual Revenue"
+                value={editedCompany.properties?.annual_revenue || ''}
+                onEdit={(value) => handleFieldChange('properties.annual_revenue', value)}
+                automationId="annual-revenue-field"
+              />
+              
+              <SwitchDetailItem
+                value={!editedCompany.is_inactive || false}
+                onEdit={(isActive) => handleFieldChange('is_inactive', !isActive)}
+                automationId="company-status-field"
               />
             </div>
-            <TextDetailItem
-              label="Website"
-              value={editedCompany.properties?.website || ''}
-              onEdit={(value) => handleFieldChange('properties.website', value)}
-              automationId="website-field"
-            />
             
-            <TextDetailItem
-              label="Company Size"
-              value={editedCompany.properties?.company_size || ''}
-              onEdit={(value) => handleFieldChange('properties.company_size', value)}
-              automationId="company-size-field"
-            />
-            <div className="flex flex-col space-y-2">
+            {/* Right Column - Company Locations Only */}
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700">Locations</span>
+                <Text as="label" size="2" className="text-gray-700 font-medium">Company Locations</Text>
                 <Button
                   id="locations-button"
                   size="sm"
@@ -519,30 +558,20 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                   Manage Locations
                 </Button>
               </div>
-              <CompanyLocations 
-                companyId={editedCompany.company_id} 
-                isEditing={false}
-              />
+              <div>
+                <CompanyLocations 
+                  companyId={editedCompany.company_id} 
+                  isEditing={false}
+                />
+              </div>
             </div>
-            
-            <TextDetailItem
-              label="Annual Revenue"
-              value={editedCompany.properties?.annual_revenue || ''}
-              onEdit={(value) => handleFieldChange('properties.annual_revenue', value)}
-              automationId="annual-revenue-field"
-            />
-            <SwitchDetailItem
-              value={!editedCompany.is_inactive || false}
-              onEdit={(isActive) => handleFieldChange('is_inactive', !isActive)}
-              automationId="company-status-field"
-            />
           </div>
           
           <Flex gap="4" justify="end" align="center" className="pt-6">
             <Button
               id="save-company-changes-btn"
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={isSaving || !hasUnsavedChanges}
               className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving ? 'Saving...' : 'Save Changes'}
@@ -550,7 +579,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             <Button
               id="add-ticket-btn"
               onClick={() => setIsQuickAddTicketOpen(true)}
-              variant="secondary"
+              variant="default"
             >
               Add Ticket
             </Button>
@@ -669,23 +698,19 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               onEdit={(value) => handleFieldChange('properties.parent_company_name', value)}
               automationId="parent-company-field"
             />
-            <div className="space-y-2" {...(() => {
-              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
-                id: 'timezone-field',
-                type: 'formField',
-                fieldType: 'select',
-                label: 'Timezone',
-                value: editedCompany.timezone || '',
-                helperText: 'Select the timezone for this company'
-              });
-              return automationIdProps;
-            })()}>
+            <FieldContainer
+              label="Timezone"
+              fieldType="select"
+              value={editedCompany.timezone || ''}
+              helperText="Select the timezone for this company"
+              automationId="timezone-field"
+            >
               <Text as="label" size="2" className="text-gray-700 font-medium">Timezone</Text>
               <TimezonePicker
                 value={editedCompany.timezone ?? ""}
                 onValueChange={(value) => handleFieldChange('timezone', value)}
               />
-            </div>
+            </FieldContainer>
             <TextDetailItem
               label="Last Contact Date"
               value={editedCompany.properties?.last_contact_date ?? ""}
@@ -698,7 +723,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             <Button
               id="save-additional-info-btn"
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={isSaving || !hasUnsavedChanges}
               className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving ? 'Saving...' : 'Save Changes'}
@@ -805,7 +830,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             imageUrl={editedCompany.logoUrl ?? null}
             uploadAction={uploadCompanyLogo}
             deleteAction={deleteCompanyLogo}
-            onImageChange={(newLogoUrl) => {
+            onImageChange={async (newLogoUrl) => {
               console.log("CompanyDetails: Logo URL changed:", newLogoUrl);
               setEditedCompany(prev => {
                 if (!prev) return prev;
@@ -814,6 +839,12 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                   logoUrl: newLogoUrl
                 };
               });
+              
+              // If logo was deleted (newLogoUrl is null), refresh company data to ensure consistency
+              if (newLogoUrl === null) {
+                console.log("Logo deleted, refreshing company data...");
+                await refreshCompanyData();
+              }
             }}
             size="md"
           />
@@ -854,6 +885,29 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
         </Dialog>
       </div>
     </ReflectionContainer>
+  );
+};
+
+const FieldContainer: React.FC<{
+  label: string;
+  fieldType: 'select' | 'textField';
+  value: string;
+  helperText: string;
+  automationId?: string;
+  children: React.ReactNode;
+}> = ({ label, fieldType, value, helperText, automationId, children }) => {
+  const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    type: 'formField',
+    fieldType,
+    label,
+    value,
+    helperText
+  }, true, automationId);
+
+  return (
+    <div className="space-y-2" {...automationIdProps}>
+      {children}
+    </div>
   );
 };
 

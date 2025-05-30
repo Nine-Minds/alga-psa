@@ -34,9 +34,9 @@ exports.up = async function(knex) {
   
   console.log(`Removed RLS from ${tables.length} tables`);
   
-  // Drop the get_current_tenant_id() function as it's no longer needed
-  console.log('Dropping get_current_tenant_id() function...');
-  await knex.raw(`DROP FUNCTION IF EXISTS get_current_tenant_id()`);
+  // Note: Skipping function drop due to CitusDB distributed table operation restrictions
+  // The get_current_tenant_id() function will be left in place but unused
+  console.log('Note: get_current_tenant_id() function left in place due to CitusDB restrictions');
   
   console.log('CitusDB migration completed - RLS removed, tenant isolation now handled at shard level');
 };

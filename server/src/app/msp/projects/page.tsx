@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Projects from 'server/src/components/projects/Projects';
 import { getProjects } from 'server/src/lib/actions/project-actions/projectActions';
-import { getAllCompanies } from 'server/src/lib/actions/companyActions';
+import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
 import { IProject } from 'server/src/interfaces/project.interfaces';
 import { ICompany } from 'server/src/interfaces';
 

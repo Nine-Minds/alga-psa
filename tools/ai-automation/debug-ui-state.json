@@ -1,0 +1,3 @@
+{
+  "code": "(async () => { const uiState = await helper.query(); const findComponent = (components, id) => { for (const component of components) { if (component.id === id) return component; if (component.children) { const found = findComponent(component.children, id); if (found) return found; } } return null; }; const menuClients = findComponent(uiState?.components || [], 'menu-clients'); return { found: !!menuClients, component: menuClients }; })()"
+}

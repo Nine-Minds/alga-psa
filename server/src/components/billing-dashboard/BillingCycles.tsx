@@ -12,7 +12,7 @@ import {
   canCreateNextBillingCycle,
   createNextBillingCycle
 } from 'server/src/lib/actions/billingCycleActions';
-import { getAllCompanies } from 'server/src/lib/actions/companyActions';
+import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
 import { BillingCycleType, ICompany } from 'server/src/interfaces';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 

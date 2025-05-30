@@ -31,8 +31,8 @@ import {
   updateCompanyBundle,
   deactivateCompanyBundle,
   applyBundleToCompany
-} from 'server/src/lib/actions/companyPlanBundleActions';
-import { getCompanyById } from 'server/src/lib/actions/companyActions';
+} from 'server/src/lib/actions/company-actions/companyPlanBundleActions';
+import { getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 import { Badge } from 'server/src/components/ui/Badge';

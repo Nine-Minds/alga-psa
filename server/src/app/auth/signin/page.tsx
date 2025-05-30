@@ -4,13 +4,13 @@ import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useRegisterUIComponent } from '../../../types/ui-reflection/useRegisterUIComponent';
 import { ContainerComponent, CardComponent, DialogComponent, FormComponent, ButtonComponent, FormFieldComponent } from '../../../types/ui-reflection/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
-import MspLoginForm from 'server/src/components/auth/MspLoginForm';
-import ClientLoginForm from 'server/src/components/auth/ClientLoginForm';
-import RegisterForm from 'server/src/components/auth/RegisterForm';
-import TwoFactorInput from 'server/src/components/auth/TwoFA';
-import Alert from 'server/src/components/auth/Alert';
-import { AlertProps } from 'server/src/interfaces';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/Card';
+import MspLoginForm from '../../../components/auth/MspLoginForm';
+import ClientLoginForm from '../../../components/auth/ClientLoginForm';
+import RegisterForm from '../../../components/auth/RegisterForm';
+import TwoFactorInput from '../../../components/auth/TwoFA';
+import Alert from '../../../components/auth/Alert';
+import { AlertProps } from '../../../interfaces';
 
 export default function SignIn() {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
@@ -54,8 +54,7 @@ export default function SignIn() {
     id: 'signin-2fa-close-button',
     type: 'button',
     label: 'Close 2FA Dialog',
-    parentId: 'signin-2fa',
-    actions: ['click']
+    parentId: 'signin-2fa'
   });
 
   // Register main card

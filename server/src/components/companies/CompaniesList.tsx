@@ -3,9 +3,13 @@ import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { useRouter } from 'next/navigation';
 import { MoreVertical, Pencil, Trash2 } from "lucide-react";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from 'server/src/components/ui/DropdownMenu';
+import { ReflectedDropdownMenu } from 'server/src/components/ui/ReflectedDropdownMenu';
 import { Button } from 'server/src/components/ui/Button';
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
+import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
+import { useRegisterChild } from 'server/src/types/ui-reflection/useRegisterChild';
+import { FormFieldComponent, ButtonComponent } from 'server/src/types/ui-reflection/types';
+import { CommonActions } from 'server/src/types/ui-reflection/actionBuilders';
 interface CompaniesListProps {
     selectedCompanies: string[];
     filteredCompanies: ICompany[];
@@ -14,6 +18,64 @@ interface CompaniesListProps {
     handleEditCompany: (companyId: string) => void;
     handleDeleteCompany: (company: ICompany) => void;
 }
+
+// Component for company selection checkbox
+interface CompanyCheckboxProps {
+  companyId: string;
+  checked: boolean;
+  onChange: () => void;
+}
+
+const CompanyCheckbox: React.FC<CompanyCheckboxProps> = ({ companyId, checked, onChange }) => {
+  const checkboxId = `company-checkbox-${companyId}`;
+  
+  useRegisterChild<FormFieldComponent>({
+    id: checkboxId,
+    type: 'formField',
+    label: 'Select Company',
+    value: checked ? 'true' : 'false',
+    fieldType: 'checkbox'
+  });
+
+  return (
+    <input
+      type="checkbox"
+      data-automation-id={checkboxId}
+      className="form-checkbox h-4 w-4 cursor-pointer"
+      checked={checked}
+      onChange={onChange}
+    />
+  );
+};
+
+// Component for company name link
+interface CompanyLinkProps {
+  company: ICompany;
+  onClick: (e: React.MouseEvent) => void;
+}
+
+const CompanyLink: React.FC<CompanyLinkProps> = ({ company, onClick }) => {
+  const linkId = `company-link-${company.company_id}`;
+  
+  useRegisterChild<ButtonComponent>({
+    id: linkId,
+    type: 'button',
+    label: company.company_name,
+    actions: [CommonActions.click('Click this button')]
+  });
+
+  return (
+    <a
+      data-automation-id={linkId}
+      href={`/msp/companies/${company.company_id}`}
+      onClick={onClick}
+      className="text-blue-600 hover:underline font-medium truncate"
+      title={company.company_name}
+    >
+      {company.company_name}
+    </a>
+  );
+};
 
 const CompaniesList = ({ selectedCompanies, filteredCompanies, setSelectedCompanies, handleCheckboxChange, handleEditCompany, handleDeleteCompany }: CompaniesListProps) => {
   const router = useRouter(); // Get router instance
@@ -29,11 +91,10 @@ const CompaniesList = ({ selectedCompanies, filteredCompanies, setSelectedCompan
             width: '4%',
             render: (value: string, record: ICompany) => (
                 <div onClick={(e) => e.stopPropagation()} className="flex justify-center">
-                  <input
-                      type="checkbox"
-                      className="form-checkbox h-4 w-4 cursor-pointer"
-                      checked={selectedCompanies.includes(record.company_id)}
-                      onChange={() => handleCheckboxChange(record.company_id)}
+                  <CompanyCheckbox
+                    companyId={record.company_id}
+                    checked={selectedCompanies.includes(record.company_id)}
+                    onChange={() => handleCheckboxChange(record.company_id)}
                   />
                 </div>
             ),
@@ -51,14 +112,10 @@ const CompaniesList = ({ selectedCompanies, filteredCompanies, setSelectedCompan
                         size="sm"
                         className="mr-2 flex-shrink-0"
                     />
-                    <a
-                      href={`/msp/companies/${record.company_id}`}
+                    <CompanyLink
+                      company={record}
                       onClick={(e) => e.stopPropagation()}
-                      className="text-blue-600 hover:underline font-medium truncate"
-                      title={record.company_name}
-                    >
-                        {record.company_name}
-                    </a>
+                    />
                 </div>
             ),
         },
@@ -106,10 +163,12 @@ const CompaniesList = ({ selectedCompanies, filteredCompanies, setSelectedCompan
             render: (value: string, record: ICompany) => (
                 // Wrap DropdownMenu in a div and stop propagation on its click
                 <div onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                    <ReflectedDropdownMenu
+                        id={`company-list-actions-${record.company_id}`}
+                        triggerLabel="Company Actions"
+                        trigger={
                             <Button
-                                id={`company-actions-${record.company_id}`}
+                                id={`company-actions-trigger-${record.company_id}`}
                                 variant="ghost"
                                 size="sm"
                                 className="h-8 w-8 p-0"
@@ -117,24 +176,28 @@ const CompaniesList = ({ selectedCompanies, filteredCompanies, setSelectedCompan
                                 <span className="sr-only">Open menu</span>
                                 <MoreVertical className="h-4 w-4" />
                             </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-white z-50">
-                            <DropdownMenuItem
-                                className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
-                                onSelect={() => handleEditCompany(record.company_id)}
-                            >
-                                <Pencil size={14} className="mr-2" />
-                                Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 text-red-600 flex items-center"
-                                onSelect={() => handleDeleteCompany(record)}
-                            >
-                                <Trash2 size={14} className="mr-2" />
-                                Delete
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                        }
+                        items={[
+                            {
+                                id: 'edit',
+                                text: 'Edit',
+                                icon: <Pencil size={14} />,
+                                variant: 'default',
+                                onSelect: () => handleEditCompany(record.company_id)
+                            },
+                            {
+                                id: 'delete',
+                                text: 'Delete',
+                                icon: <Trash2 size={14} />,
+                                variant: 'destructive',
+                                onSelect: () => handleDeleteCompany(record)
+                            }
+                        ]}
+                        contentProps={{
+                            align: "end",
+                            className: "bg-white z-50"
+                        }}
+                    />
                 </div>
             ),
         },
@@ -143,6 +206,7 @@ const CompaniesList = ({ selectedCompanies, filteredCompanies, setSelectedCompan
     return (
         <div className="w-full">
             <DataTable
+                id="companies-table"
                 data={filteredCompanies.map((company): ICompany => ({
                     ...company,
                     company_id: company.company_id

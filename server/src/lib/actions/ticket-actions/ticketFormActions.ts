@@ -5,7 +5,7 @@ import { getAllUsers, getCurrentUser } from 'server/src/lib/actions/user-actions
 import { getAllChannels } from 'server/src/lib/actions/channel-actions/channelActions';
 import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
 import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
-import { getAllCompanies, getCompanyById } from 'server/src/lib/actions/companyActions';
+import { getAllCompanies, getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
 import { getContactsByCompany } from 'server/src/lib/actions/contact-actions/contactActions';
 
 export interface TicketFormData {

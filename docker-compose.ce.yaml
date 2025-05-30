@@ -6,7 +6,7 @@ services:
     container_name: ${APP_NAME:-sebastian}_server_ce
     build:
       context: .
-      dockerfile: server/Dockerfile
+      dockerfile: Dockerfile.prod
     environment:
       EDITION: community
       DB_NAME: server

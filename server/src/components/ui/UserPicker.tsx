@@ -3,10 +3,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ChevronDown, Search } from 'lucide-react';
-import { AutomationProps, FormFieldComponent } from '../../types/ui-reflection/types';
+import { AutomationProps, ButtonComponent, ContainerComponent } from '../../types/ui-reflection/types';
 import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 import { Input } from './Input';
 import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
+import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
+import { CommonActions } from '../../types/ui-reflection/actionBuilders';
 
 interface UserPickerProps {
   label?: string;
@@ -21,6 +23,36 @@ interface UserPickerProps {
   placeholder?: string;
 }
 
+// Component for individual option buttons that registers with UI reflection
+interface OptionButtonProps {
+  id: string;
+  label: string;
+  onClick: (e: React.MouseEvent) => void;
+  className?: string;
+  children: React.ReactNode;
+  parentId: string;
+}
+
+const OptionButton: React.FC<OptionButtonProps> = ({ id, label, onClick, className, children, parentId }) => {
+  useRegisterUIComponent<ButtonComponent>({
+    type: 'button',
+    id,
+    label: `${parentId} - ${label}`,
+    actions: [CommonActions.click()]
+  }, parentId);
+
+  return (
+    <div
+      data-automation-id={id}
+      data-automation-type="button"
+      className={className}
+      onClick={onClick}
+    >
+      {children}
+    </div>
+  );
+};
+
 const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({ 
   label, 
   value, 
@@ -32,7 +64,8 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
   labelStyle = 'bold',
   buttonWidth = 'fit',
   placeholder = 'Not assigned',
-  'data-automation-id': dataAutomationId
+  'data-automation-id': dataAutomationId,
+  'data-automation-type': dataAutomationType = 'user-picker'
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,15 +76,9 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   
-  // Register with UI reflection system
-  const { automationIdProps: pickerProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
-    type: 'formField',
-    fieldType: 'select',
-    label,
-    value,
-    disabled,
-  }, true, dataAutomationId);
-
+  // Create stable automation ID for the picker
+  const pickerId = dataAutomationId || 'account-manager-picker';
+  
   // Filter for internal users only
   const internalUsers = users.filter(user => user.user_type === 'internal');
   
@@ -61,6 +88,37 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
     const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim().toLowerCase();
     return fullName.includes(searchQuery.toLowerCase());
   });
+
+  // Calculate selected user name for display
+  const selectedUserName = currentUser 
+    ? `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || 'Unnamed User'
+    : placeholder;
+
+  // Register the main container first, then the trigger button
+  // Try to register as a child of company-details if we're in that context
+  useRegisterUIComponent<ContainerComponent>({
+    type: 'container',
+    id: pickerId,
+    label: label || 'User Picker'
+  }, 'company-details');
+
+  // Register the trigger button as a child component
+  const { automationIdProps: pickerProps, updateMetadata } = useAutomationIdAndRegister<ButtonComponent>({
+    type: 'button',
+    id: `${pickerId}-trigger`,
+    label: `${label} - ${selectedUserName}`,
+    disabled
+  }, [CommonActions.click()]);
+
+  // Update metadata when picker state changes
+  useEffect(() => {
+    if (updateMetadata) {
+      updateMetadata({
+        label,
+        disabled
+      });
+    }
+  }, [value, label, disabled, updateMetadata]);
   
   // Fetch avatar URLs for visible users
   useEffect(() => {
@@ -92,7 +150,7 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
       if (userIdsToFetch.length === 0) return;
       
       // Fetch avatar URLs for all needed users
-      const urlPromises = userIdsToFetch.map(async (userId) => {
+      const urlPromises = userIdsToFetch.map(async (userId): Promise<{ userId: string; url: string | null }> => {
         try {
           fetchedUserIdsRef.current.add(userId);
           const url = await getUserAvatarUrl(userId, tenant);
@@ -118,19 +176,9 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
       }
     };
     
-    fetchAvatarUrls();
+    void fetchAvatarUrls();
   }, [currentUser, isOpen, filteredUsers, users]);
 
-  // Update metadata when value changes
-  useEffect(() => {
-    if (updateMetadata) {
-      updateMetadata({
-        value,
-        label,
-        disabled,
-      });
-    }
-  }, [updateMetadata, value, label, disabled]);
 
   // Handle click outside to close dropdown
   useEffect(() => {
@@ -221,10 +269,6 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
     setIsOpen(false);
   };
 
-  const selectedUserName = currentUser 
-    ? `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || 'Unnamed User'
-    : placeholder;
-
   return (
     <div className={`relative inline-block ${buttonWidth === 'full' ? 'w-full' : ''} ${className || ''}`} ref={dropdownRef} onClick={(e) => e.stopPropagation()}>
       {label && labelStyle !== 'none' && (
@@ -242,6 +286,7 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
         onClick={toggleDropdown}
         disabled={disabled}
         {...pickerProps}
+        data-automation-type={dataAutomationType}
         className={`inline-flex items-center justify-between rounded-lg p-2 h-10 text-sm font-medium transition-colors bg-white cursor-pointer border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ${
           buttonWidth === 'full' ? 'w-full' : 'w-fit min-w-[150px]'
         }`}
@@ -298,36 +343,45 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
               maxHeight: dropdownPosition === 'bottom' ? '200px' : '250px' 
             }}>
               {/* Not assigned option */}
-              <div
-                className="relative flex items-center px-3 py-2 text-sm rounded text-gray-900 cursor-pointer hover:bg-gray-100 focus:bg-gray-100"
+              <OptionButton
+                id={`${pickerId}-option-unassigned`}
+                label="Not assigned"
                 onClick={(e) => handleSelectUser('unassigned', e)}
+                className="relative flex items-center px-3 py-2 text-sm rounded text-gray-900 cursor-pointer hover:bg-gray-100 focus:bg-gray-100"
+                parentId={pickerId}
               >
                 Not assigned
-              </div>
+              </OptionButton>
               
               {/* User options */}
-              {filteredUsers.map((user) => (
-                <div
-                  key={user.user_id}
-                  className={`relative flex items-center px-3 py-2 text-sm rounded cursor-pointer hover:bg-gray-100 focus:bg-gray-100 ${
-                    user.is_inactive ? 'text-gray-400 bg-gray-50' : 'text-gray-900'
-                  }`}
-                  onClick={(e) => handleSelectUser(user.user_id, e)}
-                >
-                  <div className="flex items-center gap-2">
-                    <UserAvatar
-                      userId={user.user_id}
-                      userName={`${user.first_name || ''} ${user.last_name || ''}`.trim()}
-                      avatarUrl={avatarUrls[user.user_id] || null}
-                      size={size === 'sm' ? 'sm' : 'md'}
-                    />
-                    <span>{`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User'}</span>
-                    {user.is_inactive && (
-                      <span className="ml-1 text-xs text-gray-400">(Inactive)</span>
-                    )}
-                  </div>
-                </div>
-              ))}
+              {filteredUsers.map((user): JSX.Element => {
+                const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User';
+                return (
+                  <OptionButton
+                    key={user.user_id}
+                    id={`${pickerId}-option-${user.user_id}`}
+                    label={userName}
+                    onClick={(e) => handleSelectUser(user.user_id, e)}
+                    className={`relative flex items-center px-3 py-2 text-sm rounded cursor-pointer hover:bg-gray-100 focus:bg-gray-100 ${
+                      user.is_inactive ? 'text-gray-400 bg-gray-50' : 'text-gray-900'
+                    }`}
+                    parentId={pickerId}
+                  >
+                    <div className="flex items-center gap-2">
+                      <UserAvatar
+                        userId={user.user_id}
+                        userName={userName}
+                        avatarUrl={avatarUrls[user.user_id] || null}
+                        size={size === 'sm' ? 'sm' : 'md'}
+                      />
+                      <span>{userName}</span>
+                      {user.is_inactive && (
+                        <span className="ml-1 text-xs text-gray-400">(Inactive)</span>
+                      )}
+                    </div>
+                  </OptionButton>
+                );
+              })}
               
               {filteredUsers.length === 0 && searchQuery && (
                 <div className="px-3 py-2 text-sm text-gray-500">No users found</div>

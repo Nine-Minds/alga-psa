@@ -1,0 +1,3 @@
+{
+  "code": "console.log('Starting debug...'); const result = await helper.execute('menu-clients', 'click'); console.log('Result:', result); result;"
+}

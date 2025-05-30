@@ -2,17 +2,38 @@
 import React from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Slot } from '@radix-ui/react-slot';
+import { ReflectionParentContext } from '../../types/ui-reflection/ReflectionParentContext';
+import { AutomationProps } from '../../types/ui-reflection/types';
 
 export const Card = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={`rounded-lg border bg-card text-card-foreground shadow-sm ${className}`}
-    {...props}
-  />
-));
+  React.HTMLAttributes<HTMLDivElement> & AutomationProps & { id?: string }
+>(({ className, id, 'data-automation-id': dataAutomationId, 'data-automation-type': dataAutomationType, children, ...props }, ref) => {
+  const cardContent = (
+    <div
+      ref={ref}
+      className={`rounded-lg border bg-card text-card-foreground shadow-sm ${className}`}
+      id={id}
+      data-automation-id={dataAutomationId}
+      data-automation-type={dataAutomationType}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+
+  // If this card has automation props, provide parent context for child components
+  // Use the data-automation-id as the parent context value
+  if (dataAutomationId) {
+    return (
+      <ReflectionParentContext.Provider value={dataAutomationId}>
+        {cardContent}
+      </ReflectionParentContext.Provider>
+    );
+  }
+
+  return cardContent;
+});
 Card.displayName = 'Card';
 
 export const CardHeader = React.forwardRef<

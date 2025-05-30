@@ -1,13 +1,13 @@
 // server/src/lib/actions/companyPlanBundleActions.ts
 'use server'
 
-import { withTransaction } from '../../../../shared/db';
+import { withTransaction } from '../../../../../shared/db';
 import { Knex } from 'knex';
 import CompanyPlanBundle from 'server/src/lib/models/companyPlanBundle';
 import { ICompanyPlanBundle } from 'server/src/interfaces/planBundle.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getServerSession } from "next-auth/next";
-import { options } from "../../app/api/auth/[...nextauth]/options";
+import { options } from "../../../app/api/auth/[...nextauth]/options";
 import { Temporal } from '@js-temporal/polyfill'; // Import Temporal for date comparison
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils'; // Import date utility
 

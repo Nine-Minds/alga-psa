@@ -9,7 +9,7 @@ import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/documentActions';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
-import { getAllCompanies } from 'server/src/lib/actions/companyActions';
+import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
 
 const ContactDetailPage = ({ params }: { params: { id: string } }) => {
   const [contact, setContact] = useState<IContact | null>(null);

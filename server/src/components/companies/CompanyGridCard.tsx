@@ -1,11 +1,6 @@
 import { useRouter } from 'next/navigation';
 import { Button } from 'server/src/components/ui/Button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "server/src/components/ui/DropdownMenu";
+import { ReflectedDropdownMenu } from "server/src/components/ui/ReflectedDropdownMenu";
 import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { MouseEvent } from 'react';
 import { ICompany } from "server/src/interfaces/company.interfaces";
@@ -111,44 +106,44 @@ const CompanyGridCard = ({
 
                 {/* Actions Menu */}
                 <div onClick={stopPropagation} className="flex-shrink-0">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <ReflectedDropdownMenu
+                        id={`company-actions-${company.company_id}`}
+                        triggerLabel="Company Actions"
+                        trigger={
                             <Button
-                                id={`task-actions-${company.company_id}`}
+                                id={`company-actions-trigger-${company.company_id}`}
                                 variant="ghost"
                                 size="sm"
                                 className="h-6 w-6 p-0 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                                data-testid={`company-actions-trigger-${company.company_id}`}
+                                onClick={(e) => e.stopPropagation()}
                             >
                                 <MoreVertical className="h-4 w-4" />
                                 <span className="sr-only">Company Actions</span>
                             </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                            align="end"
-                            sideOffset={5}
-                            className="bg-white rounded-md shadow-lg p-1 border border-gray-200 min-w-[120px]"
-                            data-testid={`company-actions-menu-${company.company_id}`}
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <DropdownMenuItem
-                                className="flex items-center px-2 py-1.5 text-sm cursor-pointer hover:bg-gray-100 rounded-[3px] focus:outline-none focus:bg-gray-100"
-                                onSelect={() => handleEditCompany(company.company_id)}
-                                data-testid={`company-edit-button-${company.company_id}`}
-                            >
-                                <Pencil size={14} className="mr-2" />
-                                Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                className="flex items-center px-2 py-1.5 text-sm cursor-pointer text-red-600 hover:bg-red-50 hover:text-red-700 rounded-[3px] focus:outline-none focus:bg-red-50 focus:text-red-700"
-                                onSelect={() => handleDeleteCompany(company)}
-                                data-testid={`company-delete-button-${company.company_id}`}
-                            >
-                                <Trash2 size={14} className="mr-2" />
-                                Delete
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                        }
+                        items={[
+                            {
+                                id: 'edit',
+                                text: 'Edit',
+                                icon: <Pencil size={14} />,
+                                variant: 'default',
+                                onSelect: () => handleEditCompany(company.company_id)
+                            },
+                            {
+                                id: 'delete',
+                                text: 'Delete',
+                                icon: <Trash2 size={14} />,
+                                variant: 'destructive',
+                                onSelect: () => handleDeleteCompany(company)
+                            }
+                        ]}
+                        contentProps={{
+                            align: "end",
+                            sideOffset: 5,
+                            className: "bg-white rounded-md shadow-lg p-1 border border-gray-200 min-w-[120px]",
+                            onClick: (e) => e.stopPropagation()
+                        }}
+                    />
                 </div>
             </div>
         </div>

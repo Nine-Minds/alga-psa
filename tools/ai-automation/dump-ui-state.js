@@ -93,7 +93,23 @@ async function dumpUIState() {
       }
       
       if (component.actions && component.actions.length > 0) {
-        console.log(`${indent}   Actions: [${component.actions.join(', ')}]`);
+        // Handle both old string array format and new ComponentAction object format
+        if (typeof component.actions[0] === 'string') {
+          console.log(`${indent}   Actions: [${component.actions.join(', ')}]`);
+        } else {
+          // New format with ComponentAction objects
+          const actionDescriptions = component.actions.map(action => {
+            const availability = action.available ? '✅' : '❌';
+            const params = action.parameters && action.parameters.length > 0 
+              ? ` (params: ${action.parameters.map(p => p.name).join(', ')})` 
+              : '';
+            return `${availability} ${action.type}${params}`;
+          });
+          console.log(`${indent}   Actions:`);
+          actionDescriptions.forEach(desc => {
+            console.log(`${indent}     ${desc}`);
+          });
+        }
       }
       
       if (component.visible !== undefined) {
@@ -118,6 +134,20 @@ async function dumpUIState() {
           displayValue = String(component.value);
         }
         console.log(`${indent}   Value: ${displayValue}`);
+      }
+      
+      // For TextComponent, show the text content
+      if (component.text !== undefined && component.text !== null) {
+        let displayText;
+        if (typeof component.text === 'string') {
+          // Truncate long text for readability
+          displayText = component.text.length > 50 
+            ? `"${component.text.substring(0, 47)}..."` 
+            : `"${component.text}"`;
+        } else {
+          displayText = String(component.text);
+        }
+        console.log(`${indent}   Text: ${displayText}`);
       }
       
       if (component.fieldType) {

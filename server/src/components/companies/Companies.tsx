@@ -4,7 +4,7 @@ import { ICompany } from 'server/src/interfaces/company.interfaces';
 import GenericDialog from '../ui/GenericDialog';
 import { Button } from '../ui/Button';
 import QuickAddCompany from './QuickAddCompany';
-import { createCompany, getAllCompanies, deleteCompany, importCompaniesFromCSV, exportCompaniesToCSV } from 'server/src/lib/actions/companyActions';
+import { createCompany, getAllCompanies, deleteCompany, importCompaniesFromCSV, exportCompaniesToCSV } from 'server/src/lib/actions/company-actions/companyActions';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 import CompaniesGrid from './CompaniesGrid';
@@ -12,7 +12,7 @@ import CompaniesList from './CompaniesList';
 import ViewSwitcher, { ViewSwitcherOption } from '../ui/ViewSwitcher';
 import { TrashIcon, MoreVertical, CloudDownload, Upload, LayoutGrid, List, Search } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { CompanyPicker } from '../companies/CompanyPicker';
+import CustomSelect from '../ui/CustomSelect';
 import { getCurrentUser, getUserPreference, setUserPreference } from 'server/src/lib/actions/user-actions/userActions';
 import CompaniesImportDialog from './CompaniesImportDialog';
 import { ConfirmationDialog } from '../ui/ConfirmationDialog';
@@ -78,7 +78,6 @@ const Companies: React.FC = () => {
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
   const [companies, setCompanies] = useState<ICompany[]>([]);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isMultiDeleteDialogOpen, setIsMultiDeleteDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -150,7 +149,7 @@ const Companies: React.FC = () => {
     });
   };
   
-  const statusFilteredCompanies = companies.filter(company =>
+  const filteredCompanies = companies.filter(company =>
     company.company_name.toLowerCase().includes(searchTerm.toLowerCase()) &&
     (filterStatus === 'all' || 
      (filterStatus === 'active' && !company.is_inactive) ||
@@ -159,10 +158,6 @@ const Companies: React.FC = () => {
      (clientTypeFilter === 'company' && company.client_type === 'company') ||
      (clientTypeFilter === 'individual' && company.client_type === 'individual'))
   );
-  
-  const filteredCompanies = selectedCompanyId
-    ? statusFilteredCompanies.filter(company => company.company_id === selectedCompanyId)
-    : statusFilteredCompanies;
 
   const handleEditCompany = (companyId: string) => {
     router.push(`/msp/companies/${companyId}`);
@@ -388,80 +383,101 @@ const Companies: React.FC = () => {
           onCompanyAdded={handleCompanyAdded}
         />
 
-        <div className="flex justify-end mb-4 flex-wrap gap-6">
-          {/* Search */}
-          <div className="relative">
-            <Input
-              {...searchProps}
-              type="text"
-              placeholder="Search clients"
-              className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+        <div className="flex justify-between items-start mb-4 flex-wrap gap-4">
+          {/* Left side - Search and Filters */}
+          <div className="flex items-center gap-4 flex-wrap">
+            {/* Search */}
+            <div className="relative">
+              <Input
+                {...searchProps}
+                type="text"
+                placeholder="Search clients"
+                className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            </div>
+
+            {/* Status Filter */}
+            <div className="w-48">
+              <CustomSelect
+                id="status-filter"
+                value={filterStatus}
+                onValueChange={(value) => setFilterStatus(value as 'all' | 'active' | 'inactive')}
+                options={[
+                  { value: 'active', label: 'Active Clients' },
+                  { value: 'inactive', label: 'Inactive Clients' },
+                  { value: 'all', label: 'All Clients' }
+                ]}
+                placeholder="Filter by status"
+                label="Status Filter"
+              />
+            </div>
+
+            {/* Client Type Filter */}
+            <div className="w-48">
+              <CustomSelect
+                id="client-type-filter"
+                value={clientTypeFilter}
+                onValueChange={(value) => setClientTypeFilter(value as 'all' | 'company' | 'individual')}
+                options={[
+                  { value: 'all', label: 'All Types' },
+                  { value: 'company', label: 'Companies' },
+                  { value: 'individual', label: 'Individuals' }
+                ]}
+                placeholder="Filter by type"
+                label="Client Type Filter"
+              />
+            </div>
           </div>
 
-        {/* Company Picker */}
-        <div className="w-64 relative [&>div]:rounded-md overflow-visible">
-          <div className="relative z-[1000]">
-            <CompanyPicker
-              id='company-picker'
-              onSelect={(companyId) => setSelectedCompanyId(companyId)}
-              selectedCompanyId={selectedCompanyId}
-              companies={statusFilteredCompanies}
-              filterState={filterStatus}
-              onFilterStateChange={(state) => setFilterStatus(state)}
-              clientTypeFilter={clientTypeFilter}
-              onClientTypeFilterChange={(type) => setClientTypeFilter(type)}
-            />
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-2">
-          <button
-            {...createButtonProps}
-            onClick={() => setIsDialogOpen(true)}
-            className="px-4 py-2 text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 rounded"
-          >
-            + Create Client
-          </button>
-
-          <DropdownMenu.Root>
-            <DropdownMenu.Trigger asChild>
-              <button {...actionsMenuProps} className="border border-gray-300 rounded-md p-2 flex items-center gap-2">
-                <MoreVertical size={16} />
-                Actions
+          {/* Right side - Actions and View Switcher */}
+          <div className="flex items-center gap-4">
+            {/* Actions */}
+            <div className="flex gap-2">
+              <button
+                {...createButtonProps}
+                onClick={() => setIsDialogOpen(true)}
+                className="px-4 py-2 text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 rounded"
+              >
+                + Create Client
               </button>
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Content className="bg-white rounded-md shadow-lg p-1">
-              <DropdownMenu.Item 
-                className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
-                onSelect={() => setIsImportDialogOpen(true)}
-              >
-                <Upload size={14} className="mr-2" />
-                Upload CSV
-              </DropdownMenu.Item>
-              <DropdownMenu.Item 
-                className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
-                onSelect={handleExportToCSV}
-              >
-                <CloudDownload size={14} className="mr-2" />
-                Download CSV
-              </DropdownMenu.Item>
-            </DropdownMenu.Content>
-          </DropdownMenu.Root>
-        </div>
 
-        {/* View Switcher */}
-        <ViewSwitcher
-          currentView={viewMode}
-          onChange={handleViewModeChange}
-          options={viewOptions}
-          className="ms-4"
-        />
-      </div>
+              <DropdownMenu.Root>
+                <DropdownMenu.Trigger asChild>
+                  <button {...actionsMenuProps} className="border border-gray-300 rounded-md p-2 flex items-center gap-2">
+                    <MoreVertical size={16} />
+                    Actions
+                  </button>
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Content className="bg-white rounded-md shadow-lg p-1">
+                  <DropdownMenu.Item 
+                    className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
+                    onSelect={() => setIsImportDialogOpen(true)}
+                  >
+                    <Upload size={14} className="mr-2" />
+                    Upload CSV
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item 
+                    className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
+                    onSelect={() => void handleExportToCSV()}
+                  >
+                    <CloudDownload size={14} className="mr-2" />
+                    Download CSV
+                  </DropdownMenu.Item>
+                </DropdownMenu.Content>
+              </DropdownMenu.Root>
+            </div>
+
+            {/* View Switcher */}
+            <ViewSwitcher
+              currentView={viewMode}
+              onChange={(mode) => void handleViewModeChange(mode)}
+              options={viewOptions}
+            />
+          </div>
+        </div>
 
       {/* Delete */}
       <div className="flex items-center gap-8 mb-6 ms-4">
@@ -514,7 +530,7 @@ const Companies: React.FC = () => {
         id="multi-delete-confirmation-dialog"
         isOpen={isMultiDeleteDialogOpen}
         onClose={() => setIsMultiDeleteDialogOpen(false)}
-        onConfirm={confirmMultiDelete}
+        onConfirm={() => void confirmMultiDelete()}
         title="Delete Selected Companies"
         message={
           multiDeleteError 
@@ -534,7 +550,7 @@ const Companies: React.FC = () => {
           setCompanyToDelete(null);
           setDeleteError(null);
         }}
-        onConfirm={confirmDelete}
+        onConfirm={() => void confirmDelete()}
         title="Delete Company"
         message={
           deleteError 
@@ -549,7 +565,7 @@ const Companies: React.FC = () => {
       <CompaniesImportDialog
         isOpen={isImportDialogOpen}
         onClose={() => setIsImportDialogOpen(false)}
-        onImportComplete={handleImportComplete}
+        onImportComplete={(companies, updateExisting) => void handleImportComplete(companies, updateExisting)}
       />
     </div>
     </ReflectionContainer>

@@ -2,7 +2,8 @@
 
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
-import { DataTableComponent, AutomationProps } from 'server/src/types/ui-reflection/types';
+import { DataTableComponent, AutomationProps, TextComponent } from 'server/src/types/ui-reflection/types';
+import { useRegisterChild } from 'server/src/types/ui-reflection/useRegisterChild';
 import {
   useReactTable,
   getCoreRowModel,
@@ -35,6 +36,86 @@ const getNestedValue = (obj: unknown, path: string | string[]): unknown => {
     }
     return undefined;
   }, obj);
+};
+
+// Helper function to extract display text from column render function
+const getDisplayText = (columnDef: ColumnDefinition<any> | undefined, cellValue: unknown, rowData: any): string => {
+  if (!columnDef || !columnDef.render) {
+    // No custom render, use the raw value
+    return typeof cellValue === 'string' ? cellValue : String(cellValue || '');
+  }
+
+  // For columns with render functions, simulate what the render would show
+  const renderResult = columnDef.render(cellValue, rowData, 0);
+  
+  // If render returns a string, use it directly
+  if (typeof renderResult === 'string') {
+    return renderResult;
+  }
+  
+  // For JSX elements, try to extract text content based on common patterns
+  if (React.isValidElement(renderResult)) {
+    // Handle common patterns in the codebase
+    if (renderResult.props && renderResult.props.children) {
+      const children = renderResult.props.children;
+      if (typeof children === 'string') {
+        return children;
+      }
+      // Handle nested text content
+      if (Array.isArray(children)) {
+        return children.filter(child => typeof child === 'string').join(' ');
+      }
+    }
+  }
+  
+  // Fallback: use the original value with N/A handling
+  if (cellValue === null || cellValue === undefined || cellValue === '') {
+    return 'N/A';
+  }
+  
+  return String(cellValue);
+};
+
+// Component to register table cell content with UI reflection system
+interface ReflectedTableCellProps {
+  id: string;
+  content: string;
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+const ReflectedTableCell: React.FC<ReflectedTableCellProps> = ({ 
+  id, 
+  content, 
+  children, 
+  className, 
+  style 
+}) => {
+  // Register the cell content as a text component if it contains meaningful text
+  const shouldRegister = content !== null && content !== undefined && content.trim() !== '';
+  
+  // Use conditional registration - only register if content is meaningful
+  const registrationId = shouldRegister ? id : `__skip_registration_${id}`;
+  
+  useRegisterChild<TextComponent>({
+    id: registrationId,
+    type: 'text',
+    text: content,
+    visible: shouldRegister
+  });
+
+  return (
+    <td
+      className={className}
+      style={style}
+      data-automation-id={shouldRegister ? id : undefined}
+    >
+      <div className="truncate w-full">
+        {children}
+      </div>
+    </td>
+  );
 };
 
 export interface ExtendedDataTableProps<T extends object> extends DataTableProps<T>, AutomationProps {
@@ -368,16 +449,29 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                   >
                     {row.getVisibleCells().map((cell, cellIndex): JSX.Element => {
                       const columnId = cell.column.columnDef.id || cell.column.id;
+                      const cellValue = cell.getValue();
+                      
+                      // For columns with custom renders, use the raw value; for others, convert to string
+                      const columnDef = columns.find(col => {
+                        const colId = Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex;
+                        return colId === columnId;
+                      });
+                      
+                      // Extract the display text that would actually be shown to the user
+                      const cellContent = getDisplayText(columnDef, cellValue, row.original);
+                      
+                      const cellId = `${id}-cell-${rowId}-${columnId}`;
+                      
                       return (
-                        <td
+                        <ReflectedTableCell
                           key={`cell_${rowId}_${columnId}_${cellIndex}`}
+                          id={cellId}
+                          content={cellContent}
                           className="px-6 py-4 text-[14px] text-[rgb(var(--color-text-700))] max-w-0"
                           style={{ width: columns.find(col => col.dataIndex === cell.column.id)?.width }}
                         >
-                        <div className="truncate w-full">
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </div>
-                        </td>
+                        </ReflectedTableCell>
                       );
                     })}
                   </tr>

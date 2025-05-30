@@ -31,7 +31,6 @@ const TwoFactorInput: React.FC<TwoFactorInputProps> = ({ isOpen, onClose, onComp
     type: 'button',
     label: 'Verify',
     parentId: 'signin-2fa',
-    actions: ['click']
   });
 
   useEffect(() => {

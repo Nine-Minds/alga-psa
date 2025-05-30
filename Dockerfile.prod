@@ -51,6 +51,7 @@ RUN mkdir -p /app/secrets && \
 COPY .env.example /app/.env   
 COPY .env.example /app/server/.env  
 
+
 WORKDIR /app
 RUN npm run build
 
@@ -83,8 +84,7 @@ COPY --from=builder /app/package-lock.json ./
 COPY --from=builder /app/server/knexfile.cjs ./server/
 COPY --from=builder /app/server/migrations/ ./server/migrations/
 COPY --from=builder /app/server/seeds/ ./server/seeds/
-COPY --from=builder /app/server/src/scripts/ ./server/src/scripts/
-COPY --from=builder /app/server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/assemblyscript
+COPY --from=builder /app/server/src/ ./server/src/
 COPY --from=deps /app/node_modules ./node_modules
 
 COPY server/entrypoint.sh /app/entrypoint.sh

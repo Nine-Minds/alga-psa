@@ -6,7 +6,7 @@ import CustomSelect from '../ui/CustomSelect';
 import { ICompanyBillingCycle, IService } from '../../interfaces/billing.interfaces';
 import { ICompany } from '../../interfaces';
 import { getAvailableBillingPeriods } from '../../lib/actions/billingAndTax';
-import { getAllCompanies } from '../../lib/actions/companyActions';
+import { getAllCompanies } from '../../lib/actions/company-actions/companyActions';
 import { getServices } from '../../lib/actions/serviceActions';
 import AutomaticInvoices from './AutomaticInvoices';
 import PrepaymentInvoices from './PrepaymentInvoices';

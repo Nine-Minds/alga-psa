@@ -1,34 +1,53 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ICompanyLocation } from '../../interfaces/company.interfaces';
+import { ICompanyLocation } from 'server/src/interfaces/company.interfaces';
 import { 
   getCompanyLocations, 
   createCompanyLocation, 
   updateCompanyLocation, 
   deleteCompanyLocation,
   setDefaultCompanyLocation 
-} from '../../lib/actions/companyLocationActions';
-import { getActiveTaxRegions } from '../../lib/actions/taxSettingsActions';
-import { ITaxRegion } from '../../interfaces/tax.interfaces';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
-import { Label } from '../ui/Label';
-import { TextArea } from '../ui/TextArea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/Dialog';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { Switch } from '../ui/Switch';
-import CustomSelect from '../ui/CustomSelect';
+} from 'server/src/lib/actions/company-actions/companyLocationActions';
+import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions';
+import { getAllCountries, ICountry } from 'server/src/lib/actions/company-actions/countryActions';
+import { ITaxRegion } from 'server/src/interfaces/tax.interfaces';
+import CountryPicker from 'server/src/components/ui/CountryPicker';
+import { Button } from 'server/src/components/ui/Button';
+import { Input } from 'server/src/components/ui/Input';
+import { Label } from 'server/src/components/ui/Label';
+import { TextArea } from 'server/src/components/ui/TextArea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
+import { Switch } from 'server/src/components/ui/Switch';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Plus, Edit2, Trash2, MapPin, Star } from 'lucide-react';
-import { useToast } from '../../hooks/use-toast';
-import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
-import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
-import { DialogComponent, FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types';
+import { useToast } from 'server/src/hooks/use-toast';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { ReflectionParentContext } from 'server/src/types/ui-reflection/ReflectionParentContext';
+import { DialogComponent, FormFieldComponent } from 'server/src/types/ui-reflection/types';
 
 interface CompanyLocationsProps {
   companyId: string;
   isEditing: boolean;
 }
+
+/**
+ * Sanitizes a string to be used as a valid HTML ID or data-automation-id
+ * Removes or replaces characters that are invalid in HTML IDs
+ * @param input - The input string to sanitize
+ * @returns A sanitized string safe for use as HTML ID
+ */
+const sanitizeIdString = (input: string): string => {
+  return input
+    .toLowerCase()
+    .replace(/[^a-zA-Z0-9\s-]/g, '') // Remove all special characters except spaces and hyphens
+    .replace(/\s+/g, '-')             // Replace spaces with hyphens
+    .replace(/-+/g, '-')              // Replace multiple consecutive hyphens with single hyphen
+    .replace(/^-|-$/g, '');           // Remove leading/trailing hyphens
+};
 
 interface LocationFormData {
   location_name: string;
@@ -49,6 +68,158 @@ interface LocationFormData {
   is_shipping_address: boolean;
   is_default: boolean;
 }
+
+interface LocationCardProps {
+  location: ICompanyLocation;
+  onEdit: (location: ICompanyLocation) => void;
+  onDelete: (locationId: string) => void;
+  onSetDefault: (locationId: string) => void;
+  formatAddress: (location: ICompanyLocation) => string;
+  showActions?: boolean;
+}
+
+// Component for individual location detail fields that registers within the proper parent context
+const LocationDetailField: React.FC<{
+  id: string;
+  label: string;
+  value: string;
+  helperText: string;
+  children: React.ReactNode;
+}> = ({ id, label, value, helperText, children }) => {
+  const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id,
+    type: 'formField',
+    fieldType: 'textField',
+    label,
+    value,
+    helperText
+  });
+
+  return <div {...automationIdProps}>{children}</div>;
+};
+
+const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete, onSetDefault, formatAddress, showActions = true }) => {
+
+  return (
+    <ReflectionContainer 
+      id={`location-card-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}`}
+      label={location.location_name || 'Unnamed Location'}
+    >
+      <Card className="relative">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              {location.location_name || 'Unnamed Location'}
+              {location.is_default && (
+                <Star className="h-4 w-4 text-yellow-500 fill-current" />
+              )}
+            </CardTitle>
+            
+            {showActions && (
+              <div className="flex gap-2">
+                {!location.is_default && (
+                  <Button
+                    id={`set-default-location-${location.location_id}-button`}
+                    data-automation-id={`set-default-location-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}-button`}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onSetDefault(location.location_id)}
+                    title="Set as default"
+                  >
+                    <Star className="h-4 w-4" />
+                  </Button>
+                )}
+                
+                <Button
+                  id={`edit-location-${location.location_id}-button`}
+                  data-automation-id={`edit-location-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}-button`}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onEdit(location)}
+                >
+                  <Edit2 className="h-4 w-4" />
+                </Button>
+                
+                <Button
+                  id={`delete-location-${location.location_id}-button`}
+                  data-automation-id={`delete-location-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}-button`}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onDelete(location.location_id)}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        
+        <CardContent className="pt-0">
+          <div className="text-sm text-gray-600">
+            <LocationDetailField
+              id={`address-display-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}`}
+              label="Address"
+              value={formatAddress(location)}
+              helperText="Full address for this location"
+            >
+              {formatAddress(location)}
+            </LocationDetailField>
+            
+            {location.phone && (
+              <LocationDetailField
+                id={`phone-display-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}`}
+                label="Phone"
+                value={location.phone}
+                helperText="Phone number for this location"
+              >
+                <div className="mt-1">Phone: {location.phone}</div>
+              </LocationDetailField>
+            )}
+            
+            {location.email && (
+              <LocationDetailField
+                id={`email-display-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}`}
+                label="Email"
+                value={location.email}
+                helperText="Email address for this location"
+              >
+                Email: {location.email}
+              </LocationDetailField>
+            )}
+            
+            <div className="flex gap-4 mt-2">
+              {location.is_billing_address && (
+                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                  Billing
+                </span>
+              )}
+              {location.is_shipping_address && (
+                <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
+                  Shipping
+                </span>
+              )}
+            </div>
+            
+            {location.notes && (
+              <LocationDetailField
+                id={`notes-display-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}`}
+                label="Notes"
+                value={location.notes}
+                helperText="Additional notes for this location"
+              >
+                <div className="mt-2 text-xs text-gray-500">
+                  {location.notes}
+                </div>
+              </LocationDetailField>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </ReflectionContainer>
+  );
+};
 
 const initialFormData: LocationFormData = {
   location_name: '',
@@ -77,20 +248,17 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
   const [formData, setFormData] = useState<LocationFormData>(initialFormData);
   const [isLoading, setIsLoading] = useState(false);
   const [taxRegions, setTaxRegions] = useState<Pick<ITaxRegion, 'region_code' | 'region_name'>[]>([]);
+  const [countries, setCountries] = useState<ICountry[]>([]);
+  const [isLoadingCountries, setIsLoadingCountries] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [locationToDelete, setLocationToDelete] = useState<ICompanyLocation | null>(null);
   const { toast } = useToast();
 
-  // Register dialog for UI automation
-  const { automationIdProps: dialogProps } = useAutomationIdAndRegister<DialogComponent>({
-    id: 'company-location-dialog',
-    type: 'dialog',
-    label: 'Company Location Dialog',
-    title: editingLocation ? 'Edit Location' : 'Add New Location',
-    helperText: 'Dialog for adding or editing company locations'
-  });
 
   useEffect(() => {
     loadLocations();
     loadTaxRegions();
+    loadCountries();
   }, [companyId]);
 
   const loadTaxRegions = async () => {
@@ -104,6 +272,24 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
         description: 'Failed to load tax regions',
         variant: 'destructive',
       });
+    }
+  };
+
+  const loadCountries = async () => {
+    if (isLoadingCountries || countries.length > 0) return;
+    setIsLoadingCountries(true);
+    try {
+      const countriesData = await getAllCountries();
+      setCountries(countriesData);
+    } catch (error) {
+      console.error('Error loading countries:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load countries',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingCountries(false);
     }
   };
 
@@ -194,12 +380,18 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
   };
 
   const handleDeleteLocation = async (locationId: string) => {
-    if (!confirm('Are you sure you want to delete this location?')) {
-      return;
-    }
+    const location = locations.find(loc => loc.location_id === locationId);
+    if (!location) return;
+    
+    setLocationToDelete(location);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteLocation = async () => {
+    if (!locationToDelete) return;
 
     try {
-      await deleteCompanyLocation(locationId);
+      await deleteCompanyLocation(locationToDelete.location_id);
       toast({
         title: 'Success',
         description: 'Location deleted successfully',
@@ -212,6 +404,9 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
         description: 'Failed to delete location',
         variant: 'destructive',
       });
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setLocationToDelete(null);
     }
   };
 
@@ -233,53 +428,87 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
     }
   };
 
-  const formatAddress = (location: ICompanyLocation) => {
-    const parts = [
-      location.address_line1,
-      location.address_line2,
-      location.address_line3,
-      location.city,
-      location.state_province,
-      location.postal_code,
-      location.country_name
-    ].filter(Boolean);
-    
-    return parts.join(', ');
+  const handleCountryChange = (countryCode: string, countryName: string) => {
+    setFormData(prev => ({
+      ...prev,
+      country_code: countryCode,
+      country_name: countryName
+    }));
   };
 
-  // Read-only mode - show default location or "No locations"
+  const formatAddress = (location: ICompanyLocation) => {
+    const addressParts = [];
+    
+    // Combine address lines (address_line1, address_line2, address_line3)
+    const addressLines = [
+      location.address_line1,
+      location.address_line2,
+      location.address_line3
+    ].filter(Boolean);
+    
+    if (addressLines.length > 0) {
+      addressParts.push(addressLines.join(', '));
+    }
+    
+    // Add city if present
+    if (location.city) {
+      addressParts.push(location.city);
+    }
+    
+    // Add state/province and postal code together (space-separated, not comma-separated)
+    const statePostalParts = [];
+    if (location.state_province) {
+      statePostalParts.push(location.state_province);
+    }
+    if (location.postal_code) {
+      statePostalParts.push(location.postal_code);
+    }
+    if (statePostalParts.length > 0) {
+      addressParts.push(statePostalParts.join(' '));
+    }
+    
+    // Add country if present
+    if (location.country_name) {
+      addressParts.push(location.country_name);
+    }
+    
+    // Join all major address components with comma-space
+    return addressParts.join(', ');
+  };
+
+  // Read-only mode - show default location card or "No locations"
   if (!isEditing) {
     const defaultLocation = locations.find(loc => loc.is_default);
     if (defaultLocation) {
       return (
-        <div className="text-sm text-gray-600">
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4" />
-            <span>{formatAddress(defaultLocation)}</span>
-          </div>
-        </div>
+        <LocationCard
+          location={defaultLocation}
+          onEdit={() => {}} // No-op in read-only mode
+          onDelete={() => {}} // No-op in read-only mode
+          onSetDefault={() => {}} // No-op in read-only mode
+          formatAddress={formatAddress}
+          showActions={false}
+        />
       );
     }
-    return <span className="text-gray-400 text-sm">No locations</span>;
+    return (
+      <div className="text-center py-4 text-gray-500">
+        <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+        <p className="text-sm">No locations added yet</p>
+      </div>
+    );
   }
 
   // Editing mode - show full management interface
   return (
     <ReflectionContainer id="company-locations-manager" label="Company Locations Manager">
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-medium">Locations</h3>
           <Button 
-            {...(() => {
-              const { automationIdProps } = useAutomationIdAndRegister<ButtonComponent>({
-                id: 'add-company-location-button',
-                type: 'button',
-                label: 'Add Location',
-                variant: 'default',
-                helperText: 'Add a new location for this company'
-              });
-              return automationIdProps;
-            })()}
+            id="add-company-location-button"
+            variant="default"
+            data-automation-id="add-company-location-button"
             onClick={handleAddLocation} 
             size="sm"
           >
@@ -290,10 +519,11 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
       </div>
       {/* Location Form Dialog */}
       <Dialog 
-        {...dialogProps}
+        id="company-location-dialog"
         isOpen={isDialogOpen} 
         onClose={() => setIsDialogOpen(false)}
         className="max-w-2xl max-h-[90vh] overflow-y-auto"
+        title={editingLocation ? 'Edit Location' : 'Add New Location'}
       >
         <DialogContent>
           <DialogHeader>
@@ -431,43 +661,24 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
             
             <div {...(() => {
               const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
-                id: 'country-code-field',
+                id: 'country-picker-field',
                 type: 'formField',
-                fieldType: 'textField',
-                label: 'Country Code',
+                fieldType: 'select',
+                label: 'Country',
                 value: formData.country_code,
-                helperText: 'Two-letter country code (required)'
+                helperText: 'Select country (required)'
               });
               return automationIdProps;
             })()}>
-              <Label htmlFor="country-code-input">Country Code *</Label>
-              <Input
-                id="country-code-input"
+              <Label htmlFor="country-picker">Country *</Label>
+              <CountryPicker
+                data-automation-id="country-picker"
                 value={formData.country_code}
-                onChange={(e) => setFormData(prev => ({ ...prev, country_code: e.target.value }))}
-                placeholder="US"
-                maxLength={2}
-                required
-              />
-            </div>
-            
-            <div {...(() => {
-              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
-                id: 'country-name-field',
-                type: 'formField',
-                fieldType: 'textField',
-                label: 'Country Name',
-                value: formData.country_name,
-                helperText: 'Full country name (required)'
-              });
-              return automationIdProps;
-            })()}>
-              <Label htmlFor="country-name-input">Country Name *</Label>
-              <Input
-                id="country-name-input"
-                value={formData.country_name}
-                onChange={(e) => setFormData(prev => ({ ...prev, country_name: e.target.value }))}
-                required
+                onValueChange={handleCountryChange}
+                countries={countries}
+                disabled={isLoadingCountries || isLoading}
+                placeholder={isLoadingCountries ? "Loading countries..." : "Select Country"}
+                buttonWidth="full"
               />
             </div>
             
@@ -618,16 +829,8 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
             
             <DialogFooter>
               <Button 
-                {...(() => {
-                  const { automationIdProps } = useAutomationIdAndRegister<ButtonComponent>({
-                    id: 'cancel-location-button',
-                    type: 'button',
-                    label: 'Cancel',
-                    variant: 'outline',
-                    helperText: 'Cancel location creation/editing'
-                  });
-                  return automationIdProps;
-                })()}
+                id="cancel-location-button"
+                data-automation-id="cancel-location-button"
                 variant="outline" 
                 onClick={() => setIsDialogOpen(false)}
                 disabled={isLoading}
@@ -636,16 +839,8 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
                 Cancel
               </Button>
               <Button 
-                {...(() => {
-                  const { automationIdProps } = useAutomationIdAndRegister<ButtonComponent>({
-                    id: 'save-location-button',
-                    type: 'button',
-                    label: 'Save Location',
-                    variant: 'default',
-                    helperText: 'Save the location information'
-                  });
-                  return automationIdProps;
-                })()}
+                id="save-location-button"
+                data-automation-id="save-location-button"
                 type="submit"
                 disabled={isLoading || !formData.address_line1 || !formData.city || !formData.country_name}
               >
@@ -655,87 +850,33 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        id="delete-location-confirmation-dialog"
+        isOpen={isDeleteDialogOpen}
+        onClose={() => {
+          setIsDeleteDialogOpen(false);
+          setLocationToDelete(null);
+        }}
+        onConfirm={confirmDeleteLocation}
+        title="Delete Location"
+        message={locationToDelete ? `Are you sure you want to delete the location "${locationToDelete.location_name || 'Unnamed Location'}"? This action cannot be undone.` : ""}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+      />
       
       {/* Locations List */}
       <div className="space-y-3">
         {locations.map((location) => (
-          <Card key={location.location_id} className="relative">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  {location.location_name || 'Unnamed Location'}
-                  {location.is_default && (
-                    <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                  )}
-                </CardTitle>
-                
-                <div className="flex gap-2">
-                  {!location.is_default && (
-                    <Button
-                      id={`set-default-location-${location.location_id}-button`}
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleSetDefault(location.location_id)}
-                      title="Set as default"
-                    >
-                      <Star className="h-4 w-4" />
-                    </Button>
-                  )}
-                  
-                  <Button
-                    id={`edit-location-${location.location_id}-button`}
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEditLocation(location)}
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
-                  
-                  <Button
-                    id={`delete-location-${location.location_id}-button`}
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteLocation(location.location_id)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            
-            <CardContent className="pt-0">
-              <div className="text-sm text-gray-600">
-                <div>{formatAddress(location)}</div>
-                {location.phone && (
-                  <div className="mt-1">Phone: {location.phone}</div>
-                )}
-                {location.email && (
-                  <div>Email: {location.email}</div>
-                )}
-                
-                <div className="flex gap-4 mt-2">
-                  {location.is_billing_address && (
-                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                      Billing
-                    </span>
-                  )}
-                  {location.is_shipping_address && (
-                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
-                      Shipping
-                    </span>
-                  )}
-                </div>
-                
-                {location.notes && (
-                  <div className="mt-2 text-xs text-gray-500">
-                    {location.notes}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <LocationCard
+            key={location.location_id}
+            location={location}
+            onEdit={handleEditLocation}
+            onDelete={handleDeleteLocation}
+            onSetDefault={handleSetDefault}
+            formatAddress={formatAddress}
+          />
         ))}
         
         {locations.length === 0 && (
