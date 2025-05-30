@@ -5,13 +5,13 @@ exports.seed = function (knex) {
             
             // Get status IDs for the tenant
             const completedStatus = await knex('statuses')
-                .where({ tenant: tenant.tenant, status_type: 'interaction', name: 'Completed' })
+                .where({ tenant: tenant.tenant, status_type: 'interaction', name: 'Emerald Communication' })
                 .select('status_id').first();
             const plannedStatus = await knex('statuses')
-                .where({ tenant: tenant.tenant, status_type: 'interaction', name: 'Planned' })
+                .where({ tenant: tenant.tenant, status_type: 'interaction', name: 'Crystal Ball Awaiting' })
                 .select('status_id').first();
             const inProgressStatus = await knex('statuses')
-                .where({ tenant: tenant.tenant, status_type: 'interaction', name: 'In Progress' })
+                .where({ tenant: tenant.tenant, status_type: 'interaction', name: 'Yellow Brick Chat' })
                 .select('status_id').first();
 
             return knex('interactions').insert([

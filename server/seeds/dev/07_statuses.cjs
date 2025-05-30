@@ -194,7 +194,7 @@ exports.seed = function (knex) {
                             username: 'glinda'
                         })
                         .select('user_id'),
-                    item_type: 'interaction'
+                    status_type: 'interaction'
                 },
                 {
                     tenant: tenant.tenant,
@@ -206,7 +206,7 @@ exports.seed = function (knex) {
                             username: 'glinda'
                         })
                         .select('user_id'),
-                    item_type: 'interaction'
+                    status_type: 'interaction'
                 },
                 {
                     tenant: tenant.tenant,
@@ -218,7 +218,7 @@ exports.seed = function (knex) {
                             username: 'glinda'
                         })
                         .select('user_id'),
-                    item_type: 'interaction',
+                    status_type: 'interaction',
                     is_closed: true,
                     is_default: true
                 },
@@ -232,7 +232,7 @@ exports.seed = function (knex) {
                             username: 'glinda'
                         })
                         .select('user_id'),
-                    item_type: 'interaction',
+                    status_type: 'interaction',
                     is_closed: true
                 }
             ]);
