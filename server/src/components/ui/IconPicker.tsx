@@ -6,7 +6,7 @@ import {
   Calendar, Presentation, Coffee, Handshake, StickyNote, BookOpen,
   Clipboard, Edit, CheckSquare, Target, Flag, AlarmClock, Settings,
   Star, Heart, Zap, Award, Briefcase, Clock, MapPin, Tag,
-  Bell, Globe, Shield, Key, Search, Filter, Send, Download
+  Bell, Shield, Key, Search, Send
 } from 'lucide-react';
 import { Button } from './Button';
 import { cn } from 'server/src/lib/utils';
@@ -57,13 +57,10 @@ const INTERACTION_ICONS: IconOption[] = [
   { value: 'map-pin', label: 'Location', icon: MapPin, category: 'Business' },
   { value: 'tag', label: 'Label', icon: Tag, category: 'Business' },
   { value: 'bell', label: 'Notification', icon: Bell, category: 'Business' },
-  { value: 'globe', label: 'Website', icon: Globe, category: 'Business' },
   { value: 'shield', label: 'Security', icon: Shield, category: 'Business' },
   { value: 'key', label: 'Access', icon: Key, category: 'Business' },
   { value: 'heart', label: 'Favorite', icon: Heart, category: 'Business' },
   { value: 'search', label: 'Research', icon: Search, category: 'Business' },
-  { value: 'filter', label: 'Filter', icon: Filter, category: 'Business' },
-  { value: 'download', label: 'Download', icon: Download, category: 'Business' },
 ];
 
 const ICON_CATEGORIES = ['Communication', 'Meetings', 'Documents', 'Tasks', 'Business'];

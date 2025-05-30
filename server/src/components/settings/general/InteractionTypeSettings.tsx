@@ -1,13 +1,11 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Input } from 'server/src/components/ui/Input';
+import React, { useState, useEffect } from 'react';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, X, Edit2, Lock, MoreVertical } from "lucide-react";
+import { Plus, Lock, MoreVertical } from "lucide-react";
 import { IInteractionType, ISystemInteractionType } from 'server/src/interfaces/interaction.interfaces';
 import { 
   getAllInteractionTypes, 
-  updateInteractionType, 
   deleteInteractionType,
   getSystemInteractionTypes 
 } from 'server/src/lib/actions/interactionTypeActions';
@@ -26,9 +24,7 @@ import {
 const InteractionTypesSettings: React.FC = () => {
   const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
   const [systemTypes, setSystemTypes] = useState<ISystemInteractionType[]>([]);
-  const [editingTypeId, setEditingTypeId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const editInputRef = useRef<HTMLInputElement>(null);
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
     typeId: string;
@@ -39,6 +35,7 @@ const InteractionTypesSettings: React.FC = () => {
     typeName: ''
   });
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingType, setEditingType] = useState<IInteractionType | null>(null);
 
   useEffect(() => {
     fetchTypes();
@@ -62,36 +59,9 @@ const InteractionTypesSettings: React.FC = () => {
     }
   };
 
-  const startEditing = (typeId: string, initialValue: string) => {
-    setEditingTypeId(typeId);
+  const startEditing = (type: IInteractionType) => {
+    setEditingType(type);
     setError(null);
-    setTimeout(() => {
-      if (editInputRef.current) {
-        editInputRef.current.value = initialValue;
-        editInputRef.current.focus();
-      }
-    }, 0);
-  };
-
-  const cancelEditing = () => {
-    setEditingTypeId(null);
-    setError(null);
-  };
-
-
-  const handleUpdateType = async (typeId: string) => {
-    const newValue = editInputRef.current?.value.trim();
-    if (newValue) {
-      try {
-        await updateInteractionType(typeId, { type_name: newValue });
-        setEditingTypeId(null);
-        setError(null);
-        fetchTypes();
-      } catch (error) {
-        console.error('Error updating interaction type:', error);
-        setError('Failed to update interaction type');
-      }
-    }
   };
 
   const handleDeleteType = async () => {
@@ -125,8 +95,9 @@ const InteractionTypesSettings: React.FC = () => {
       ),
     },
     {
-      title: 'Action',
+      title: 'Actions',
       dataIndex: 'type_id',
+      width: '10%',
       render: () => (
         <div className="flex items-center justify-end">
           <span className="text-xs text-gray-400">Read-only</span>
@@ -140,38 +111,16 @@ const InteractionTypesSettings: React.FC = () => {
       title: 'Name',
       dataIndex: 'type_name',
       render: (value: string, record: IInteractionType) => (
-        <div>
-          {editingTypeId === record.type_id ? (
-            <Input
-              ref={editInputRef}
-              defaultValue={value}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleUpdateType(record.type_id);
-                } else if (e.key === 'Escape') {
-                  cancelEditing();
-                }
-              }}
-              className="w-full"
-            />
-          ) : (
-            <div className="flex items-center space-x-2">
-              <InteractionIcon icon={record.icon} typeName={record.type_name} />
-              <span className="text-gray-700">{value}</span>
-              {record.system_type_id && (
-                <span className="ml-2 text-xs text-gray-400">
-                  (Inherits from system type)
-                </span>
-              )}
-            </div>
-          )}
+        <div className="flex items-center space-x-2">
+          <InteractionIcon icon={record.icon} typeName={record.type_name} />
+          <span className="text-gray-700">{value}</span>
         </div>
       ),
     },
     {
       title: 'Actions',
       dataIndex: 'type_id',
-      width: '5%',
+      width: '10%',
       render: (_: any, record: IInteractionType) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -186,56 +135,29 @@ const InteractionTypesSettings: React.FC = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {editingTypeId === record.type_id ? (
-              <>
-                <DropdownMenuItem
-                  id={`save-interaction-type-${record.type_id}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleUpdateType(record.type_id);
-                  }}
-                >
-                  Save
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  id={`cancel-edit-interaction-type-${record.type_id}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    cancelEditing();
-                  }}
-                >
-                  Cancel
-                </DropdownMenuItem>
-              </>
-            ) : (
-              <>
-                {!record.system_type_id && (
-                  <DropdownMenuItem
-                    id={`edit-interaction-type-${record.type_id}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      startEditing(record.type_id, record.type_name);
-                    }}
-                  >
-                    Edit
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem
-                  id={`delete-interaction-type-${record.type_id}`}
-                  className="text-red-600 focus:text-red-600"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDeleteDialog({
-                      isOpen: true,
-                      typeId: record.type_id,
-                      typeName: record.type_name
-                    });
-                  }}
-                >
-                  Delete
-                </DropdownMenuItem>
-              </>
-            )}
+            <DropdownMenuItem
+              id={`edit-interaction-type-${record.type_id}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                startEditing(record);
+              }}
+            >
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              id={`delete-interaction-type-${record.type_id}`}
+              className="text-red-600 focus:text-red-600"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeleteDialog({
+                  isOpen: true,
+                  typeId: record.type_id,
+                  typeName: record.type_name
+                });
+              }}
+            >
+              Delete
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -293,7 +215,17 @@ const InteractionTypesSettings: React.FC = () => {
           fetchTypes();
           setError(null);
         }}
-        systemTypes={systemTypes}
+      />
+
+      <QuickAddInteractionType
+        isOpen={!!editingType}
+        onClose={() => setEditingType(null)}
+        onSuccess={() => {
+          fetchTypes();
+          setError(null);
+          setEditingType(null);
+        }}
+        editingType={editingType}
       />
     </div>
   );

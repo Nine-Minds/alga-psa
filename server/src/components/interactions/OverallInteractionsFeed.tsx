@@ -7,11 +7,12 @@ import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IContact } from 'server/src/interfaces';
 import { Calendar, Phone, Mail, FileText, CheckSquare, Filter, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
-import { getRecentInteractions } from 'server/src/lib/actions/interactionActions';
+import { getRecentInteractions, getInteractionStatuses } from 'server/src/lib/actions/interactionActions';
 import { getAllInteractionTypes } from 'server/src/lib/actions/interactionTypeActions';
 import { useDrawer } from "server/src/context/DrawerContext";
 import InteractionDetails from './InteractionDetails';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
+import InteractionIcon from 'server/src/components/ui/InteractionIcon';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import { Input } from 'server/src/components/ui/Input';
@@ -23,23 +24,14 @@ interface OverallInteractionsFeedProps {
   contacts: IContact[];
 }
 
-const InteractionIcon = ({ type }: { type: string }) => {
-  const lowerType = type.toLowerCase();
-  switch (lowerType) {
-    case 'call': return <Phone className="text-gray-500" />;
-    case 'email': return <Mail className="text-gray-500" />;
-    case 'meeting': return <Calendar className="text-gray-500" />;
-    case 'note': return <FileText className="text-gray-500" />;
-    case 'task': return <CheckSquare className="text-gray-500" />;
-    default: return <FileText className="text-gray-500" />;
-  }
-};
 
 const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users, contacts }) => {
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [interactionTypes, setInteractionTypes] = useState<(IInteractionType | ISystemInteractionType)[]>([]);
+  const [statuses, setStatuses] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>('all');
   const [selectedContact, setSelectedContact] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -49,6 +41,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
 
   useEffect(() => {
     fetchInteractionTypes();
+    fetchStatuses();
     fetchInteractions();
   }, []);
 
@@ -70,6 +63,15 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
     }
   };
 
+  const fetchStatuses = async () => {
+    try {
+      const statusList = await getInteractionStatuses();
+      setStatuses(statusList);
+    } catch (error) {
+      console.error('Error fetching interaction statuses:', error);
+    }
+  };
+
   const fetchInteractions = useCallback(async () => {
     try {
       const fetchedInteractions = await getRecentInteractions({});
@@ -80,37 +82,39 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
   }, []);
 
   const getTypeLabel = (type: IInteractionType | ISystemInteractionType) => {
-    if ('created_at' in type) {
-      // It's a system type
-      return `${type.type_name} (System)`;
-    }
-    if (type.system_type_id) {
-      // It's a tenant type that inherits from a system type
-      return `${type.type_name} (Custom)`;
-    }
-    return type.type_name;
+    const isSystemType = 'created_at' in type;
+    const suffix = isSystemType ? ' (System)' : ' (Custom)';
+    
+    return (
+      <div className="flex items-center gap-2">
+        <InteractionIcon icon={type.icon} typeName={type.type_name} />
+        <span>{type.type_name}{suffix}</span>
+      </div>
+    );
   };
 
   const filteredInteractions = useMemo(() => {
     return interactions.filter(interaction =>
-      (interaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (interaction.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
        interaction.contact_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
        interaction.company_name?.toLowerCase().includes(searchTerm.toLowerCase())) &&
       (selectedUser === 'all' || interaction.user_id === selectedUser) &&
       (selectedContact === 'all' || interaction.contact_name_id === selectedContact) &&
+      (selectedStatus === 'all' || interaction.status_id === selectedStatus) &&
       (interactionTypeId === 'all' || interaction.type_id === interactionTypeId) &&
       (!startDate || new Date(interaction.interaction_date) >= new Date(startDate)) &&
       (!endDate || new Date(interaction.interaction_date) <= new Date(endDate))
     );
-  }, [interactions, searchTerm, selectedUser, selectedContact, interactionTypeId, startDate, endDate]);
+  }, [interactions, searchTerm, selectedUser, selectedContact, selectedStatus, interactionTypeId, startDate, endDate]);
 
   const isFilterActive = useMemo(() => {
     return selectedUser !== 'all' ||
            selectedContact !== 'all' ||
+           selectedStatus !== 'all' ||
            interactionTypeId !== 'all' ||
            startDate !== '' ||
            endDate !== '';
-  }, [selectedUser, selectedContact, interactionTypeId, startDate, endDate]);
+  }, [selectedUser, selectedContact, selectedStatus, interactionTypeId, startDate, endDate]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -123,6 +127,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
   const resetFilters = () => {
     setSelectedUser('all');
     setSelectedContact('all');
+    setSelectedStatus('all');
     setStartDate('');
     setEndDate('');
     setInteractionTypeId('all');
@@ -191,7 +196,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
             <CustomSelect
               options={[
                 { value: 'all', label: 'All Types' },
-                ...interactionTypes.map((type): { value: string; label: string } => ({
+                ...interactionTypes.map((type) => ({
                   value: type.type_id,
                   label: getTypeLabel(type)
                 }))
@@ -215,6 +220,18 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
               onValueChange={handleContactChange}
               placeholder="All Contacts"
               buttonWidth="full"
+            />
+            <CustomSelect
+              options={[
+                { value: 'all', label: 'All Statuses' },
+                ...statuses.map((status) => ({
+                  value: status.status_id,
+                  label: status.name
+                }))
+              ]}
+              value={selectedStatus}
+              onValueChange={setSelectedStatus}
+              placeholder="Status"
             />
             <Input
               type="date"
@@ -252,9 +269,9 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
       <ul className="space-y-4 overflow-y-auto max-h-[calc(100vh-300px)]">
         {filteredInteractions.map((interaction: IInteraction): JSX.Element => (
           <li key={interaction.interaction_id} className="flex items-start space-x-3 p-2 hover:bg-gray-100 rounded cursor-pointer" onClick={() => handleInteractionClick(interaction)}>
-            <InteractionIcon type={interaction.type_name} />
+            <InteractionIcon icon={interaction.icon} typeName={interaction.type_name} />
             <div>
-              <p className="font-semibold">{interaction.description}</p>
+              <p className="font-semibold">{interaction.title}</p>
               <p className="text-sm text-gray-500">
                 {new Date(interaction.interaction_date).toLocaleString()} - 
                 {interaction.contact_name && (
@@ -264,7 +281,15 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
                 )}
                 {interaction.company_name && ` (${interaction.company_name})`}
               </p>
-              <p className="text-xs text-gray-400">By {interaction.user_name}</p>
+              <div className="flex items-center gap-2 text-xs text-gray-400">
+                <span>By {interaction.user_name}</span>
+                {interaction.status_name && (
+                  <>
+                    <span>•</span>
+                    <span className="text-blue-600">{interaction.status_name}</span>
+                  </>
+                )}
+              </div>
             </div>
           </li>
         ))}

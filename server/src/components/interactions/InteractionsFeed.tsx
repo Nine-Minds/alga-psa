@@ -1,21 +1,21 @@
 'use client'
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card, CardContent, CardHeader } from '../ui/Card';
-import { Filter, RefreshCw } from 'lucide-react';
+import { Card, CardContent, CardHeader } from 'server/src/components/ui/Card';
+import { Filter, Plus, RefreshCw } from 'lucide-react';
 import InteractionIcon from 'server/src/components/ui/InteractionIcon';
-import { IInteraction, IInteractionType, ISystemInteractionType } from '../../interfaces/interaction.interfaces';
-import { QuickAddInteraction } from './QuickAddInteraction';
-import { getInteractionsForEntity, getInteractionById } from '../../lib/actions/interactionActions';
-import { getAllInteractionTypes } from '../../lib/actions/interactionTypeActions';
-import { useDrawer } from '../../context/DrawerContext';
-import InteractionDetails from './InteractionDetails';
-import CustomSelect from '../ui/CustomSelect';
-import { Input } from '../ui/Input';
-import { Button } from '../ui/Button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/Dialog';
-import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
-import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
-import { ButtonComponent, FormFieldComponent, ContainerComponent } from '../../types/ui-reflection/types';
+import { IInteraction, IInteractionType, ISystemInteractionType } from 'server/src/interfaces/interaction.interfaces';
+import { QuickAddInteraction } from 'server/src/components/interactions/QuickAddInteraction';
+import { getInteractionsForEntity, getInteractionById } from 'server/src/lib/actions/interactionActions';
+import { getAllInteractionTypes } from 'server/src/lib/actions/interactionTypeActions';
+import { useDrawer } from 'server/src/context/DrawerContext';
+import InteractionDetails from 'server/src/components/interactions/InteractionDetails';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Input } from 'server/src/components/ui/Input';
+import { Button } from 'server/src/components/ui/Button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { ButtonComponent, FormFieldComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
 
 interface InteractionsFeedProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -80,20 +80,20 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
   };
 
   const getTypeLabel = (type: IInteractionType | ISystemInteractionType) => {
-    if ('created_at' in type) {
-      // It's a system type
-      return `${type.type_name} (System)`;
-    }
-    if (type.system_type_id) {
-      // It's a tenant type that inherits from a system type
-      return `${type.type_name} (Custom)`;
-    }
-    return type.type_name;
+    const isSystemType = 'created_at' in type;
+    const suffix = isSystemType ? ' (System)' : ' (Custom)';
+    
+    return (
+      <div className="flex items-center gap-2">
+        <InteractionIcon icon={type.icon} typeName={type.type_name} />
+        <span>{type.type_name}{suffix}</span>
+      </div>
+    );
   };
 
   const filteredInteractions = useMemo(() => {
     return interactions.filter(interaction =>
-      (interaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (interaction.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
        interaction.type_name.toLowerCase().includes(searchTerm.toLowerCase())) &&
       (selectedType === 'all' || selectedType === '' || interaction.type_id === selectedType) &&
       (!startDate || new Date(interaction.interaction_date) >= new Date(startDate)) &&
@@ -150,8 +150,9 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               id='add-interaction-button'
               onClick={() => setIsQuickAddOpen(true)} 
               size="default"
-              className="bg-purple-600 hover:bg-purple-700 text-white"
+              variant="default"
             >
+              <Plus className="mr-2 h-4 w-4" />
               Add Interaction
             </Button>
           </div>
@@ -189,8 +190,11 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
                   <InteractionIcon icon={interaction.icon} typeName={interaction.type_name} />
                 </div>
                 <div className="flex-grow">
-                  <p className="font-semibold">{interaction.description}</p>
+                  <p className="font-semibold">{interaction.title}</p>
                   <p className="text-sm text-gray-500">{new Date(interaction.interaction_date).toLocaleString()}</p>
+                  {interaction.status_name && (
+                    <p className="text-xs text-blue-600">{interaction.status_name}</p>
+                  )}
                 </div>
               </li>
             ))}
@@ -208,7 +212,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               id='type-select'
               options={[
                 { value: 'all', label: 'All Types' },
-                ...interactionTypes.map((type): { value: string; label: string } => ({
+                ...interactionTypes.map((type) => ({
                   value: type.type_id,
                   label: getTypeLabel(type)
                 }))

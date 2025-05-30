@@ -12,9 +12,15 @@ export interface IInteraction extends TenantEntity {
   user_id: string;
   user_name: string; 
   ticket_id: string | null;
-  description: string;
+  title: string;
+  notes?: string;
   interaction_date: Date;
+  start_time?: Date;
+  end_time?: Date;
   duration: number | null;
+  status_id?: string;
+  status_name?: string;
+  is_status_closed?: boolean;
 }
 
 export interface ISystemInteractionType {
@@ -29,5 +35,4 @@ export interface IInteractionType extends TenantEntity {
   type_id: string;
   type_name: string;
   icon?: string;
-  system_type_id?: string;
 }

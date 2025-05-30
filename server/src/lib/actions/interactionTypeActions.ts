@@ -77,7 +77,7 @@ export async function getSystemInteractionTypeById(typeId: string): Promise<ISys
 }
 
 export async function createInteractionType(
-  interactionType: Omit<IInteractionType, 'type_id' | 'tenant'> & { system_type_id?: string }
+  interactionType: Omit<IInteractionType, 'type_id' | 'tenant'>
 ): Promise<IInteractionType> {
   try {
     const currentUser = await getCurrentUser();
@@ -87,25 +87,13 @@ export async function createInteractionType(
 
     const {knex: db} = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      // If system_type_id is provided, verify it exists
-      if (interactionType.system_type_id) {
-        const systemType = await trx('system_interaction_types')
-          .where({ type_id: interactionType.system_type_id })
-          .first();
-        
-        if (!systemType) {
-          throw new Error('Invalid system interaction type');
-        }
-      }
-
       // Extract only the allowed fields from interactionType
-      const { type_name, icon, system_type_id } = interactionType;
+      const { type_name, icon } = interactionType;
       
       const [newType] = await trx('interaction_types')
         .insert({
           type_name,
           icon,
-          system_type_id,
           tenant: currentUser.tenant
         })
         .returning('*');
@@ -119,7 +107,7 @@ export async function createInteractionType(
 
 export async function updateInteractionType(
   typeId: string, 
-  data: Partial<Omit<IInteractionType, 'type_id' | 'tenant' | 'system_type_id'>>
+  data: Partial<Omit<IInteractionType, 'type_id' | 'tenant'>>
 ): Promise<IInteractionType> {
   try {
     const currentUser = await getCurrentUser();
@@ -129,17 +117,13 @@ export async function updateInteractionType(
 
     const {knex: db} = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Check if this is a system-inherited type
+      // Check if the type exists
       const existingType = await trx('interaction_types')
         .where({ type_id: typeId, tenant: currentUser.tenant })
         .first();
 
       if (!existingType) {
         throw new Error('Interaction type not found or not authorized');
-      }
-
-      if (existingType.system_type_id) {
-        throw new Error('Cannot modify a system-inherited interaction type');
       }
 
       const [updatedType] = await trx('interaction_types')
@@ -165,17 +149,13 @@ export async function deleteInteractionType(typeId: string): Promise<void> {
     const {knex: db} = await createTenantKnex();
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Check if this is a system-inherited type
+      // Check if the type exists
       const typeToDelete = await trx('interaction_types')
         .where({ type_id: typeId, tenant: currentUser.tenant })
         .first();
 
       if (!typeToDelete) {
         throw new Error('Interaction type not found or not authorized');
-      }
-
-      if (typeToDelete.system_type_id) {
-        throw new Error('Cannot delete a system-inherited interaction type');
       }
 
       // Check for existing records

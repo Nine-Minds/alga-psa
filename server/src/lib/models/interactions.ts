@@ -16,7 +16,10 @@ class InteractionModel {
           db.raw(`COALESCE(it.type_name, sit.type_name) as type_name`),
           db.raw(`COALESCE(it.icon, sit.icon) as icon`),
           'interactions.interaction_date',
-          'interactions.description',
+          'interactions.title',
+          'interactions.notes',
+          'interactions.start_time',
+          'interactions.end_time',
           'interactions.contact_name_id',
           'contacts.full_name as contact_name',
           'interactions.company_id',
@@ -24,7 +27,10 @@ class InteractionModel {
           'interactions.user_id',
           'users.username as user_name',
           'interactions.ticket_id',
-          'interactions.duration'
+          'interactions.duration',
+          'interactions.status_id',
+          'statuses.name as status_name',
+          'statuses.is_closed as is_status_closed'
         )
         .leftJoin('interaction_types as it', function() {
           this.on('interactions.type_id', '=', 'it.type_id')
@@ -44,6 +50,10 @@ class InteractionModel {
         .leftJoin('users', function() {
           this.on('interactions.user_id', '=', 'users.user_id')
             .andOn('interactions.tenant', '=', 'users.tenant');
+        })
+        .leftJoin('statuses', function() {
+          this.on('interactions.status_id', '=', 'statuses.status_id')
+            .andOn('interactions.tenant', '=', 'statuses.tenant');
         })
         .orderBy('interactions.interaction_date', 'desc');
 
@@ -91,9 +101,15 @@ class InteractionModel {
           'interactions.user_id',
           'users.username as user_name',
           'interactions.ticket_id',
-          'interactions.description',
+          'interactions.title',
+          'interactions.notes',
           'interactions.interaction_date',
-          'interactions.duration'
+          'interactions.start_time',
+          'interactions.end_time',
+          'interactions.duration',
+          'interactions.status_id',
+          'statuses.name as status_name',
+          'statuses.is_closed as is_status_closed'
         )
         .leftJoin('interaction_types as it', function() {
           this.on('interactions.type_id', '=', 'it.type_id')
@@ -114,6 +130,10 @@ class InteractionModel {
         .leftJoin('users', function() {
           this.on('interactions.user_id', '=', 'users.user_id')
             .andOn('interactions.tenant', '=', 'users.tenant');
+        })
+        .leftJoin('statuses', function() {
+          this.on('interactions.status_id', '=', 'statuses.status_id')
+            .andOn('interactions.tenant', '=', 'statuses.tenant');
         });
 
       if (filters.userId) {
@@ -230,7 +250,9 @@ class InteractionModel {
           db.raw(`COALESCE(it.icon, sit.icon) as icon`),
           'contacts.full_name as contact_name',
           'companies.company_name',
-          'users.username as user_name'
+          'users.username as user_name',
+          'statuses.name as status_name',
+          'statuses.is_closed as is_status_closed'
         )
         .leftJoin('interaction_types as it', function() {
           this.on('interactions.type_id', '=', 'it.type_id')
@@ -250,6 +272,10 @@ class InteractionModel {
         .leftJoin('users', function() {
           this.on('interactions.user_id', '=', 'users.user_id')
             .andOn('interactions.tenant', '=', 'users.tenant');
+        })
+        .leftJoin('statuses', function() {
+          this.on('interactions.status_id', '=', 'statuses.status_id')
+            .andOn('interactions.tenant', '=', 'statuses.tenant');
         })
         .where('interactions.interaction_id', interactionId)
         .first();

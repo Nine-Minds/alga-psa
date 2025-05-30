@@ -193,17 +193,58 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
       
       <div className="space-y-4">
         <EditableField 
-          label="Description" 
-          value={interaction.description || 'No description'}
-          onSave={(value) => handleSaveField('description', value)}
+          label="Title" 
+          value={interaction.title || 'No title'}
+          onSave={(value) => handleSaveField('title', value)}
           icon={<FileText className="w-5 h-5 text-gray-500" />}
         />
+        
+        {interaction.notes && (
+          <div className="space-y-2">
+            <Text size="2" weight="bold" className="flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Notes
+            </Text>
+            <div className="p-3 bg-gray-50 rounded-md">
+              <Text size="2">{interaction.notes}</Text>
+            </div>
+          </div>
+        )}
+
+        {interaction.status_name && (
+          <div className="space-y-2">
+            <Text size="2" weight="bold">Status</Text>
+            <Text size="2" className="text-blue-600">{interaction.status_name}</Text>
+          </div>
+        )}
+        
         <EditableField 
           label="Duration (minutes)" 
           value={interaction.duration?.toString() || 'Not set'}
           onSave={(value) => handleSaveField('duration', value)}
           icon={<Clock className="w-5 h-5 text-gray-500" />}
         />
+        
+        {interaction.start_time && (
+          <div className="flex items-center">
+            <Clock className="w-5 h-5 mr-2 text-gray-500" />
+            <span className="font-semibold">Start Time:</span>
+            <span className="ml-2">
+              {formatDate(interaction.start_time)}
+            </span>
+          </div>
+        )}
+        
+        {interaction.end_time && (
+          <div className="flex items-center">
+            <Clock className="w-5 h-5 mr-2 text-gray-500" />
+            <span className="font-semibold">End Time:</span>
+            <span className="ml-2">
+              {formatDate(interaction.end_time)}
+            </span>
+          </div>
+        )}
+        
         <div className="flex items-center">
           <Calendar className="w-5 h-5 mr-2 text-gray-500" />
           <span className="font-semibold">Date:</span>
@@ -250,7 +291,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
         <Button
           id="add-ticket-button"
           onClick={() => setIsQuickAddTicketOpen(true)}
-          className="bg-purple-600 hover:bg-purple-700 text-white"
+          variant="default"
         >
           <Plus className="mr-2 h-4 w-4" />
           Add Ticket
@@ -270,7 +311,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
           id: interaction.contact_name_id,
           name: interaction.contact_name || ''
         } : undefined}
-        prefilledDescription={interaction.description}
+        prefilledDescription={interaction.notes}
       />
     </div>
   );
