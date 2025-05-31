@@ -9,7 +9,7 @@ import React, { createContext, ReactNode, useContext, useEffect, useState } from
 import { ExtensionContextValue } from './types';
 // import { useTenant } from '../../../hooks/useTenant';
 // import { useAuth } from '../../../auth/session';
-import logger from '../../../../../../shared/core/logger';
+import logger from '@/utils/logger';
 
 // Temporary fallbacks for missing hooks
 const useTenant = () => ({ id: 'default-tenant' });
