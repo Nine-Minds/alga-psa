@@ -8,28 +8,99 @@
 exports.up = async function(knex) {
   console.log('📧 Registering System Email Processing Workflow...');
 
+  // Create system workflow tables if they don't exist
+  const systemWorkflowRegistrationsExists = await knex.schema.hasTable('system_workflow_registrations');
+  if (!systemWorkflowRegistrationsExists) {
+    await knex.schema.createTable('system_workflow_registrations', (table) => {
+      table.uuid('registration_id').defaultTo(knex.raw('gen_random_uuid()')).primary();
+      table.text('name').notNullable();
+      table.text('description').nullable();
+      table.text('category').nullable();
+      table.specificType('tags', 'TEXT[]').nullable();
+      table.text('version').notNullable();
+      table.text('status').notNullable(); // e.g., 'active', 'draft'
+      table.uuid('source_template_id').nullable();
+      table.uuid('created_by').nullable();
+      table.timestamp('created_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
+      table.timestamp('updated_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
+      table.jsonb('definition').notNullable();
+      table.jsonb('parameters').nullable();
+      table.jsonb('execution_config').nullable();
+
+      // Indexes
+      table.index(['category'], 'idx_system_workflow_registrations_category');
+      table.index(['name'], 'idx_system_workflow_registrations_name');
+      table.index(['tags'], 'idx_system_workflow_registrations_tags', 'gin');
+      table.index(['source_template_id'], 'idx_system_workflow_registrations_template');
+    });
+
+    await knex.schema.createTable('system_workflow_registration_versions', (table) => {
+      table.uuid('version_id').defaultTo(knex.raw('gen_random_uuid()')).primary();
+      table.uuid('registration_id').notNullable();
+      table.foreign('registration_id').references('system_workflow_registrations.registration_id').onDelete('CASCADE');
+      table.text('version').notNullable();
+      table.boolean('is_current').notNullable().defaultTo(false);
+      table.jsonb('definition').notNullable();
+      table.jsonb('parameters').nullable();
+      table.jsonb('execution_config').nullable();
+      table.uuid('created_by').nullable();
+      table.timestamp('created_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
+      table.timestamp('updated_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
+
+      table.unique(['registration_id', 'version'], { indexName: 'idx_system_workflow_reg_versions_reg_version' });
+    });
+
+    // Create the partial unique index
+    await knex.raw(`
+      CREATE UNIQUE INDEX idx_system_workflow_reg_versions_current
+      ON system_workflow_registration_versions (registration_id)
+      WHERE is_current = true;
+    `);
+
+    await knex.schema.createTable('system_workflow_event_attachments', (table) => {
+      table.uuid('attachment_id').defaultTo(knex.raw('gen_random_uuid()')).primary();
+      table.uuid('workflow_id').notNullable();
+      table.foreign('workflow_id').references('system_workflow_registrations.registration_id').onDelete('CASCADE');
+      table.uuid('event_id').notNullable();
+      table.boolean('is_active').defaultTo(true);
+      table.timestamp('created_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
+      table.timestamp('updated_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
+
+      table.unique(['workflow_id', 'event_id'], { indexName: 'system_workflow_event_attachments_workflow_id_event_id_unique' });
+      table.index(['event_id'], 'idx_system_workflow_event_attachments_event_id');
+    });
+
+    console.log('✅ Created system workflow tables');
+  }
+
   // 1. Register the workflow definition
   const workflowRegistrationId = knex.raw('gen_random_uuid()');
   
   await knex('system_workflow_registrations').insert({
-    id: workflowRegistrationId,
+    registration_id: workflowRegistrationId,
     name: 'system-email-processing',
-    display_name: 'System Email Processing Workflow',
     description: 'System-managed workflow that processes inbound emails and creates tickets with email threading support',
     category: 'Email Processing',
-    is_active: true,
-    is_system_managed: true,
+    version: '1.0.0',
+    status: 'active',
+    definition: JSON.stringify({
+      name: 'system-email-processing',
+      type: 'typescript',
+      entryPoint: 'systemEmailProcessingWorkflow',
+      isSystemManaged: true
+    }),
     created_at: knex.fn.now(),
     updated_at: knex.fn.now()
   });
 
   // 2. Create the initial version of the workflow
   await knex('system_workflow_registration_versions').insert({
-    id: knex.raw('gen_random_uuid()'),
+    version_id: knex.raw('gen_random_uuid()'),
     registration_id: workflowRegistrationId,
     version: '1.0.0',
-    is_active: true,
-    code: `
+    is_current: true,
+    definition: JSON.stringify({
+      code: `
 /**
  * System Email Processing Workflow - TypeScript Code
  * This workflow processes inbound emails and creates tickets with email threading support
@@ -38,7 +109,7 @@ import { systemEmailProcessingWorkflow } from '../workflows/system-email-process
 
 export default systemEmailProcessingWorkflow;
 `.trim(),
-    schema: JSON.stringify({
+      schema: {
       type: 'object',
       properties: {
         triggerEvent: {
@@ -109,6 +180,7 @@ export default systemEmailProcessingWorkflow;
         }
       },
       required: ['triggerEvent']
+      }
     }),
     created_at: knex.fn.now()
   });
@@ -119,14 +191,10 @@ export default systemEmailProcessingWorkflow;
     .first();
 
   if (emailReceivedEvent) {
-    await knex('workflow_event_attachments').insert({
-      id: knex.raw('gen_random_uuid()'),
-      workflow_registration_id: workflowRegistrationId,
+    await knex('system_workflow_event_attachments').insert({
+      attachment_id: knex.raw('gen_random_uuid()'),
+      workflow_id: workflowRegistrationId,
       event_id: emailReceivedEvent.event_id,
-      trigger_condition: JSON.stringify({
-        type: 'always',
-        description: 'Trigger for all INBOUND_EMAIL_RECEIVED events'
-      }),
       is_active: true,
       created_at: knex.fn.now(),
       updated_at: knex.fn.now()
@@ -138,6 +206,8 @@ export default systemEmailProcessingWorkflow;
   }
 
   // 4. Create task definitions for the human tasks used in this workflow
+  // TODO: Task definitions might need to be handled differently for system workflows
+  /*
   await knex('workflow_task_definitions').insert([
     {
       id: knex.raw('gen_random_uuid()'),
@@ -233,6 +303,7 @@ export default systemEmailProcessingWorkflow;
       updated_at: knex.fn.now()
     }
   ]);
+  */
 
   console.log('✅ System Email Processing Workflow registered successfully');
   console.log('   - Workflow: system-email-processing v1.0.0');
@@ -253,24 +324,19 @@ exports.down = async function(knex) {
     .first();
 
   if (workflow) {
-    // Remove task definitions
-    await knex('workflow_task_definitions')
-      .where('workflow_registration_id', workflow.id)
-      .del();
-
     // Remove event attachments
-    await knex('workflow_event_attachments')
-      .where('workflow_registration_id', workflow.id)
+    await knex('system_workflow_event_attachments')
+      .where('workflow_id', workflow.registration_id)
       .del();
 
     // Remove workflow versions
     await knex('system_workflow_registration_versions')
-      .where('registration_id', workflow.id)
+      .where('registration_id', workflow.registration_id)
       .del();
 
     // Remove workflow registration
     await knex('system_workflow_registrations')
-      .where('id', workflow.id)
+      .where('registration_id', workflow.registration_id)
       .del();
 
     console.log('✅ System Email Processing Workflow removed successfully');

@@ -6,7 +6,9 @@
  */
 exports.up = async function(knex) {
   // 1. Create system_workflow_registrations table (mirrors workflow_registrations without tenant_id)
-  await knex.schema.createTable('system_workflow_registrations', (table) => {
+  const systemWorkflowRegistrationsExists = await knex.schema.hasTable('system_workflow_registrations');
+  if (!systemWorkflowRegistrationsExists) {
+    await knex.schema.createTable('system_workflow_registrations', (table) => {
     table.uuid('registration_id').defaultTo(knex.raw('gen_random_uuid()')).primary();
     table.text('name').notNullable();
     table.text('description').nullable();
@@ -81,10 +83,15 @@ exports.up = async function(knex) {
     table.index(['event_id'], 'idx_system_workflow_event_attachments_event_id');
   });
 
-  // Add FK for event_id if event_catalog table exists and is global
-  // await knex.schema.alterTable('system_workflow_event_attachments', (table) => {
-  //   table.foreign('event_id').references('event_catalog.event_id').onDelete('CASCADE');
-  // });
+    // Add FK for event_id if event_catalog table exists and is global
+    // await knex.schema.alterTable('system_workflow_event_attachments', (table) => {
+    //   table.foreign('event_id').references('event_catalog.event_id').onDelete('CASCADE');
+    // });
+
+    console.log('✅ Created system workflow tables');
+  } else {
+    console.log('✅ System workflow tables already exist, skipping creation');
+  }
 
   // Add trigger for updated_at timestamp (assuming the function exists or creating it if not)
   // Check if function exists before creating
