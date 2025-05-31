@@ -8,11 +8,11 @@
 import React, { useEffect, useState } from 'react';
 import { TabExtensionSlotProps, ExtensionTabItem } from './TabExtensionTypes';
 import { TabExtensionRenderer } from './TabExtensionRenderer';
-import { ReflectionContainer } from '../../../../../../../server/src/types/ui-reflection/ReflectionContainer';
-import { useAutomationIdAndRegister } from '../../../../../../../server/src/types/ui-reflection/useAutomationIdAndRegister';
-import { ContainerComponent } from '../../../../../../../server/src/types/ui-reflection/types';
+import { ReflectionContainer } from '@/types/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
+import { ContainerComponent } from '@/types/ui-reflection/types';
 import { useExtensionContext } from '../ExtensionProvider';
-import logger from '../../../../../../../server/src/utils/logger';
+import logger from '@/utils/logger';
 
 /**
  * Tab Extension Slot component
