@@ -1109,3 +1109,133 @@ export async function createCompanyContact({
     throw error;
   }
 }
+
+/**
+ * Find contact by email address (without requiring company_id)
+ * Used for email processing workflows
+ */
+export async function findContactByEmailAddress(email: string): Promise<IContact | null> {
+  try {
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
+    const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('contacts')
+        .select(
+          'contacts.*',
+          'companies.company_name'
+        )
+        .leftJoin('companies', function (this: Knex.JoinClause) {
+          this.on('contacts.company_id', 'companies.company_id')
+            .andOn('companies.tenant', 'contacts.tenant')
+        })
+        .where({
+          'contacts.email': email.toLowerCase(),
+          'contacts.tenant': tenant
+        })
+        .first();
+    });
+
+    return contact || null;
+  } catch (error) {
+    console.error('Error finding contact by email address:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create or find contact - if contact exists, return it; otherwise create new one
+ */
+export async function createOrFindContactByEmail({
+  email,
+  name,
+  companyId,
+  phone,
+  title
+}: {
+  email: string;
+  name?: string;
+  companyId: string;
+  phone?: string;
+  title?: string;
+}): Promise<{ contact: IContact; isNew: boolean }> {
+  try {
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // First, try to find existing contact
+      const existingContact = await trx('contacts')
+        .select(
+          'contacts.*',
+          'companies.company_name'
+        )
+        .leftJoin('companies', function (this: Knex.JoinClause) {
+          this.on('contacts.company_id', 'companies.company_id')
+            .andOn('companies.tenant', 'contacts.tenant')
+        })
+        .where({
+          'contacts.email': email.toLowerCase(),
+          'contacts.company_id': companyId,
+          'contacts.tenant': tenant
+        })
+        .first();
+
+      if (existingContact) {
+        return { contact: existingContact, isNew: false };
+      }
+
+      // Create new contact if not found
+      const contactName = name || extractNameFromEmail(email);
+      const now = new Date();
+
+      const [newContact] = await trx('contacts')
+        .insert({
+          tenant,
+          company_id: companyId,
+          full_name: contactName,
+          email: email.toLowerCase(),
+          phone_number: phone,
+          role: title,
+          is_inactive: false,
+          created_at: now,
+          updated_at: now
+        })
+        .returning('*');
+
+      // Add company name for consistency
+      const company = await trx('companies')
+        .select('company_name')
+        .where({ company_id: companyId, tenant })
+        .first();
+
+      const contactWithCompany = {
+        ...newContact,
+        company_name: company?.company_name || ''
+      };
+
+      return { contact: contactWithCompany, isNew: true };
+    });
+  } catch (error) {
+    console.error('Error creating or finding contact:', error);
+    throw error;
+  }
+}
+
+/**
+ * Extract a reasonable name from email address if no name provided
+ */
+function extractNameFromEmail(email: string): string {
+  const localPart = email.split('@')[0];
+  
+  // Replace common separators with spaces and capitalize words
+  return localPart
+    .replace(/[._-]/g, ' ')
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}

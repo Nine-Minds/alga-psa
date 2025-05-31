@@ -6,14 +6,14 @@ import { z } from 'zod';
  */
 export const EventTypeEnum = z.enum([
   'TICKET_CREATED',
-  'TICKET_UPDATED',
+  'TICKET_UPDATED', 
   'TICKET_CLOSED',
   'TICKET_ASSIGNED',
   'TICKET_COMMENT_ADDED',
   'TICKET_DELETED',
   'PROJECT_CREATED',
   'PROJECT_UPDATED',
-  'PROJECT_CLOSED',
+  'PROJECT_CLOSED', 
   'PROJECT_ASSIGNED',
   'PROJECT_TASK_ASSIGNED',
   'TIME_ENTRY_SUBMITTED',
@@ -34,8 +34,7 @@ export interface IEventCatalogEntry {
   name: string;
   description?: string;
   category?: string;
-  payload_schema: Record<string, any>; // JSON Schema for the event payload
-  // is_system_event: boolean; // Removed as per system_event_catalog introduction
+  payload_schema: Record<string, any>;
   tenant: string;
   created_at: string;
   updated_at: string;
@@ -50,7 +49,6 @@ export interface ICreateEventCatalogEntry {
   description?: string;
   category?: string;
   payload_schema: Record<string, any>;
-  // is_system_event?: boolean; // Removed as per system_event_catalog introduction
   tenant: string;
 }
 
@@ -62,7 +60,6 @@ export interface IUpdateEventCatalogEntry {
   description?: string;
   category?: string;
   payload_schema?: Record<string, any>;
-  // is_system_event?: boolean; // Removed as per system_event_catalog introduction
 }
 
 /**
@@ -135,12 +132,12 @@ export interface IUpdateWorkflowEventMapping {
 export interface IWorkflowEventAttachment {
   attachment_id: string;
   workflow_id: string;
-  workflow_name: string; // Added workflow name
-  workflow_version: string; // Added workflow version
-  event_type: string; // Changed from event_id
+  workflow_name: string;
+  workflow_version: string;
+  event_type: string;
   tenant: string;
   is_active: boolean;
-  isSystemManaged?: boolean; // Added flag for system managed workflows
+  isSystemManaged?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -150,7 +147,7 @@ export interface IWorkflowEventAttachment {
  */
 export interface ICreateWorkflowEventAttachment {
   workflow_id: string;
-  event_type: string; // Changed from event_id
+  event_type: string;
   tenant: string;
   is_active?: boolean;
 }
@@ -166,55 +163,54 @@ export interface IUpdateWorkflowEventAttachment {
  * Zod schema for validating event catalog entries
  */
 export const EventCatalogEntrySchema = z.object({
-  event_id: z.string().uuid(),
+  event_id: z.string(),
   event_type: EventTypeEnum,
-  name: z.string().min(1),
+  name: z.string(),
   description: z.string().optional(),
   category: z.string().optional(),
   payload_schema: z.record(z.any()),
-  // is_system_event: z.boolean().default(false), // Removed as per system_event_catalog introduction
-  tenant: z.string().uuid(),
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime()
+  tenant: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
 });
 
 /**
  * Zod schema for validating workflow triggers
  */
 export const WorkflowTriggerSchema = z.object({
-  trigger_id: z.string().uuid(),
-  tenant: z.string().uuid(),
-  name: z.string().min(1),
+  trigger_id: z.string(),
+  tenant: z.string(),
+  name: z.string(),
   description: z.string().optional(),
   event_type: EventTypeEnum,
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime()
+  created_at: z.string(),
+  updated_at: z.string(),
 });
 
 /**
  * Zod schema for validating workflow event mappings
  */
 export const WorkflowEventMappingSchema = z.object({
-  mapping_id: z.string().uuid(),
-  trigger_id: z.string().uuid(),
-  event_field_path: z.string().min(1),
-  workflow_parameter: z.string().min(1),
+  mapping_id: z.string(),
+  trigger_id: z.string(),
+  event_field_path: z.string(),
+  workflow_parameter: z.string(),
   transform_function: z.string().optional(),
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime()
+  created_at: z.string(),
+  updated_at: z.string(),
 });
 
 /**
  * Zod schema for validating workflow event attachments
  */
 export const WorkflowEventAttachmentSchema = z.object({
-  attachment_id: z.string().uuid(),
-  workflow_id: z.string().uuid(),
-  workflow_name: z.string(), // Added workflow name
-  workflow_version: z.string(), // Added workflow version
-  event_type: z.string(), // Changed from event_id: z.string().uuid()
-  tenant: z.string().uuid(),
+  attachment_id: z.string(),
+  workflow_id: z.string(),
+  workflow_name: z.string(),
+  workflow_version: z.string(),
+  event_type: z.string(),
+  tenant: z.string(),
   is_active: z.boolean().default(true),
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime()
+  created_at: z.string(),
+  updated_at: z.string(),
 });
