@@ -74,10 +74,8 @@ exports.up = async function(knex) {
   }
 
   // 1. Register the workflow definition
-  const workflowRegistrationId = knex.raw('gen_random_uuid()');
-  
-  await knex('system_workflow_registrations').insert({
-    registration_id: workflowRegistrationId,
+  const [workflowRegistration] = await knex('system_workflow_registrations').insert({
+    registration_id: knex.raw('gen_random_uuid()'),
     name: 'system-email-processing',
     description: 'System-managed workflow that processes inbound emails and creates tickets with email threading support',
     category: 'Email Processing',
@@ -91,7 +89,9 @@ exports.up = async function(knex) {
     }),
     created_at: knex.fn.now(),
     updated_at: knex.fn.now()
-  });
+  }).returning('registration_id');
+
+  const workflowRegistrationId = workflowRegistration.registration_id;
 
   // 2. Create the initial version of the workflow
   await knex('system_workflow_registration_versions').insert({
