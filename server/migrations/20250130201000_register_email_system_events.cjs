@@ -3,6 +3,45 @@
  * @returns { Promise<void> }
  */
 exports.up = async function(knex) {
+  // Create the system_event_catalog table if it doesn't exist
+  const tableExists = await knex.schema.hasTable('system_event_catalog');
+  if (!tableExists) {
+    await knex.schema.createTable('system_event_catalog', (table) => {
+      table.uuid('event_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      table.string('event_type', 255).notNullable().unique();
+      table.string('name', 255).notNullable();
+      table.text('description');
+      table.string('category', 100);
+      table.jsonb('payload_schema'); // Store JSON schema for payload validation
+      table.timestamp('created_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
+      table.timestamp('updated_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
+    });
+
+    // Add indexes
+    await knex.schema.alterTable('system_event_catalog', (table) => {
+      table.index('event_type');
+      table.index('category');
+    });
+
+    // Add trigger for updated_at
+    await knex.raw(`
+      CREATE OR REPLACE FUNCTION trigger_set_timestamp()
+      RETURNS TRIGGER AS $$
+      BEGIN
+        NEW.updated_at = NOW();
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+
+      CREATE TRIGGER set_timestamp
+      BEFORE UPDATE ON system_event_catalog
+      FOR EACH ROW
+      EXECUTE FUNCTION trigger_set_timestamp();
+    `);
+
+    console.log('✅ Created system_event_catalog table');
+  }
+
   // Register email events in the system event catalog
   await knex('system_event_catalog').insert([
     {
