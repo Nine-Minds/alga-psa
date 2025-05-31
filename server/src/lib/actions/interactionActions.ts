@@ -181,3 +181,32 @@ export async function getInteractionStatuses(): Promise<any[]> {
     throw new Error('Failed to fetch interaction statuses');
   }
 }
+
+export async function deleteInteraction(interactionId: string): Promise<void> {
+  try {
+    const { tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant context is required');
+    }
+    const { knex } = await createTenantKnex();
+    
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Delete the interaction
+      const deletedCount = await trx('interactions')
+        .where({ 
+          interaction_id: interactionId,
+          tenant 
+        })
+        .del();
+
+      if (deletedCount === 0) {
+        throw new Error('Interaction not found or could not be deleted');
+      }
+
+      revalidatePath('/'); // Revalidate to update any cached data
+    });
+  } catch (error) {
+    console.error('Error deleting interaction:', error);
+    throw new Error('Failed to delete interaction');
+  }
+}

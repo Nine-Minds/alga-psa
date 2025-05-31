@@ -120,8 +120,30 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
     setSearchTerm(e.target.value);
   };
 
+  const handleInteractionDeleted = useCallback((deletedInteractionId: string) => {
+    // Remove the deleted interaction from the list
+    setInteractions(prevInteractions => 
+      prevInteractions.filter(i => i.interaction_id !== deletedInteractionId)
+    );
+  }, [setInteractions]);
+
+  const handleInteractionUpdated = useCallback((updatedInteraction: IInteraction) => {
+    // Update the interaction in the list
+    setInteractions(prevInteractions => 
+      prevInteractions.map(i => 
+        i.interaction_id === updatedInteraction.interaction_id ? updatedInteraction : i
+      )
+    );
+  }, [setInteractions]);
+
   const handleInteractionClick = (interaction: IInteraction) => {
-    openDrawer(<InteractionDetails interaction={interaction} />);
+    openDrawer(
+      <InteractionDetails 
+        interaction={interaction} 
+        onInteractionDeleted={() => handleInteractionDeleted(interaction.interaction_id)}
+        onInteractionUpdated={handleInteractionUpdated}
+      />
+    );
   };
 
   const resetFilters = () => {
@@ -286,7 +308,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
                 {interaction.status_name && (
                   <>
                     <span>•</span>
-                    <span className="text-blue-600">{interaction.status_name}</span>
+                    <span className="text-gray-600">{interaction.status_name}</span>
                   </>
                 )}
               </div>

@@ -106,11 +106,32 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
     setIsQuickAddOpen(false);
   };
 
+  const handleInteractionDeleted = useCallback((deletedInteractionId: string) => {
+    // Remove the deleted interaction from the list
+    setInteractions(prevInteractions => 
+      prevInteractions.filter(i => i.interaction_id !== deletedInteractionId)
+    );
+  }, [setInteractions]);
+
+  const handleInteractionUpdated = useCallback((updatedInteraction: IInteraction) => {
+    // Update the interaction in the list
+    setInteractions(prevInteractions => 
+      prevInteractions.map(i => 
+        i.interaction_id === updatedInteraction.interaction_id ? updatedInteraction : i
+      )
+    );
+  }, [setInteractions]);
+
   const handleInteractionClick = useCallback((interaction: IInteraction) => {
     openDrawer(
-      <InteractionDetails interaction={interaction} />,
+      <InteractionDetails 
+        interaction={interaction} 
+        onInteractionDeleted={() => handleInteractionDeleted(interaction.interaction_id)}
+        onInteractionUpdated={handleInteractionUpdated}
+      />,
       async () => {
         try {
+          // Check if interaction still exists (in case it was edited)
           const updatedInteraction = await getInteractionById(interaction.interaction_id);
           setInteractions(prevInteractions => 
             prevInteractions.map((i): IInteraction => 
@@ -118,11 +139,12 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
             )
           );
         } catch (error) {
-          console.error('Error fetching updated interaction:', error);
+          // If interaction doesn't exist (was deleted), don't treat it as an error
+          console.log('Interaction no longer exists (likely deleted)');
         }
       }
     );
-  }, [openDrawer, setInteractions]);
+  }, [openDrawer, setInteractions, handleInteractionDeleted, handleInteractionUpdated]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -193,7 +215,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
                   <p className="font-semibold">{interaction.title}</p>
                   <p className="text-sm text-gray-500">{new Date(interaction.interaction_date).toLocaleString()}</p>
                   {interaction.status_name && (
-                    <p className="text-xs text-blue-600">{interaction.status_name}</p>
+                    <p className="text-xs text-gray-600">{interaction.status_name}</p>
                   )}
                 </div>
               </li>
