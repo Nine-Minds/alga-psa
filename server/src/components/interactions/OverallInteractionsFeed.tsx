@@ -5,7 +5,8 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { IInteraction, IInteractionType, ISystemInteractionType } from 'server/src/interfaces/interaction.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IContact } from 'server/src/interfaces';
-import { Calendar, Phone, Mail, FileText, CheckSquare, Filter, RefreshCw } from 'lucide-react';
+import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { Filter, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { getRecentInteractions, getInteractionStatuses } from 'server/src/lib/actions/interactionActions';
 import { getAllInteractionTypes } from 'server/src/lib/actions/interactionTypeActions';
@@ -15,7 +16,9 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import InteractionIcon from 'server/src/components/ui/InteractionIcon';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { ContactPicker } from 'server/src/components/ui/ContactPicker';
+import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import { Input } from 'server/src/components/ui/Input';
+import { DateTimePicker } from 'server/src/components/ui/DateTimePicker';
 import { Button } from 'server/src/components/ui/Button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
@@ -25,21 +28,25 @@ import { ButtonComponent, FormFieldComponent, ContainerComponent } from 'server/
 interface OverallInteractionsFeedProps {
   users: IUserWithRoles[];
   contacts: IContact[];
+  companies: ICompany[];
 }
 
 
-const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users, contacts }) => {
+const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users, contacts, companies }) => {
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [interactionTypes, setInteractionTypes] = useState<(IInteractionType | ISystemInteractionType)[]>([]);
   const [statuses, setStatuses] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>('all');
   const [selectedContact, setSelectedContact] = useState<string>('all');
+  const [selectedCompany, setSelectedCompany] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
+  const [startTime, setStartTime] = useState<Date | undefined>(undefined);
+  const [endTime, setEndTime] = useState<Date | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [interactionTypeId, setInteractionTypeId] = useState<string>('all');
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
+  const [companyFilterState, setCompanyFilterState] = useState<'all' | 'active' | 'inactive'>('all');
+  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const { openDrawer } = useDrawer();
 
   // UI Reflection System Integration
@@ -63,6 +70,30 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
     type: 'button',
     label: 'Reset Filters',
     helperText: 'Clear all applied filters'
+  });
+
+  const { automationIdProps: companyPickerProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: 'overall-interactions-company-picker',
+    type: 'formField',
+    fieldType: 'select',
+    label: 'Filter by Company',
+    helperText: 'Filter interactions by associated company'
+  });
+
+  const { automationIdProps: startTimePickerProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: 'overall-interactions-start-time',
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'Interaction Start Time',
+    helperText: 'Filter interactions from this start time'
+  });
+
+  const { automationIdProps: endTimePickerProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: 'overall-interactions-end-time',
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'Interaction End Time',
+    helperText: 'Filter interactions until this end time'
   });
 
   useEffect(() => {
@@ -120,27 +151,42 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
   };
 
   const filteredInteractions = useMemo(() => {
-    return interactions.filter(interaction =>
-      (interaction.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       interaction.contact_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       interaction.company_name?.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (selectedUser === 'all' || interaction.user_id === selectedUser) &&
-      (selectedContact === 'all' || interaction.contact_name_id === selectedContact) &&
-      (selectedStatus === 'all' || interaction.status_id === selectedStatus) &&
-      (interactionTypeId === 'all' || interaction.type_id === interactionTypeId) &&
-      (!startDate || new Date(interaction.interaction_date) >= new Date(startDate)) &&
-      (!endDate || new Date(interaction.interaction_date) <= new Date(endDate))
-    );
-  }, [interactions, searchTerm, selectedUser, selectedContact, selectedStatus, interactionTypeId, startDate, endDate]);
+    return interactions.filter(interaction => {
+      // Text search
+      const matchesSearch = !searchTerm || (
+        interaction.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        interaction.contact_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        interaction.company_name?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      
+      // Filter conditions
+      const matchesUser = selectedUser === 'all' || interaction.user_id === selectedUser;
+      const matchesContact = selectedContact === 'all' || interaction.contact_name_id === selectedContact;
+      const matchesCompany = selectedCompany === 'all' || interaction.company_id === selectedCompany;
+      const matchesStatus = selectedStatus === 'all' || interaction.status_id === selectedStatus;
+      const matchesType = interactionTypeId === 'all' || interaction.type_id === interactionTypeId;
+      
+      // Time-based filtering (using start_time and end_time if available, fallback to interaction_date)
+      const interactionStartTime = interaction.start_time ? new Date(interaction.start_time) : new Date(interaction.interaction_date);
+      const interactionEndTime = interaction.end_time ? new Date(interaction.end_time) : new Date(interaction.interaction_date);
+      
+      const matchesStartTime = !startTime || interactionStartTime >= startTime;
+      const matchesEndTime = !endTime || interactionEndTime <= endTime;
+      
+      return matchesSearch && matchesUser && matchesContact && matchesCompany && 
+             matchesStatus && matchesType && matchesStartTime && matchesEndTime;
+    });
+  }, [interactions, searchTerm, selectedUser, selectedContact, selectedCompany, selectedStatus, interactionTypeId, startTime, endTime]);
 
   const isFilterActive = useMemo(() => {
     return selectedUser !== 'all' ||
            selectedContact !== 'all' ||
+           selectedCompany !== 'all' ||
            selectedStatus !== 'all' ||
            interactionTypeId !== 'all' ||
-           startDate !== '' ||
-           endDate !== '';
-  }, [selectedUser, selectedContact, selectedStatus, interactionTypeId, startDate, endDate]);
+           startTime !== undefined ||
+           endTime !== undefined;
+  }, [selectedUser, selectedContact, selectedCompany, selectedStatus, interactionTypeId, startTime, endTime]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -175,9 +221,10 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
   const resetFilters = () => {
     setSelectedUser('all');
     setSelectedContact('all');
+    setSelectedCompany('all');
     setSelectedStatus('all');
-    setStartDate('');
-    setEndDate('');
+    setStartTime(undefined);
+    setEndTime(undefined);
     setInteractionTypeId('all');
   };
 
@@ -195,6 +242,25 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
     setSelectedContact(contactId === '' ? 'all' : contactId);
   };
   const contactPickerValue = selectedContact === 'all' ? '' : selectedContact;
+  
+  const handleCompanyChange = (companyId: string | null) => {
+    const newCompanySelection = companyId === null || companyId === '' ? 'all' : companyId;
+    setSelectedCompany(newCompanySelection);
+    
+    // Reset contact selection when company changes
+    if (newCompanySelection !== selectedCompany) {
+      setSelectedContact('all');
+    }
+  };
+  const selectedCompanyValue = selectedCompany === 'all' ? null : selectedCompany;
+  
+  // Filter contacts based on selected company
+  const filteredContacts = useMemo(() => {
+    if (selectedCompany === 'all') {
+      return contacts; // Show all contacts if no company is selected
+    }
+    return contacts.filter(contact => contact.company_id === selectedCompany);
+  }, [contacts, selectedCompany]);
 
   return (
     <ReflectionContainer id="overall-interactions-feed" label="Overall Interactions Feed">
@@ -256,20 +322,32 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
               placeholder="Interaction Type"
             />
             <UserPicker
-              label="Filter by User"
               users={users}
               value={userPickerValue}
               onValueChange={handleUserChange}
               placeholder="All Users"
               buttonWidth="full"
-            />
+            />      
+            <div className="space-y-2">
+              <CompanyPicker
+                {...companyPickerProps}
+                companies={companies}
+                onSelect={handleCompanyChange}
+                selectedCompanyId={selectedCompanyValue}
+                filterState={companyFilterState}
+                onFilterStateChange={setCompanyFilterState}
+                clientTypeFilter={clientTypeFilter}
+                onClientTypeFilterChange={setClientTypeFilter}
+                fitContent={false}
+              />
+            </div>
             <ContactPicker
-              label="Filter by Contact"
-              contacts={contacts}
+              contacts={filteredContacts}
               value={contactPickerValue}
               onValueChange={handleContactChange}
-              placeholder="All Contacts"
+              placeholder={selectedCompany === 'all' ? "All Contacts" : "Contacts from selected company"}
               buttonWidth="full"
+              disabled={selectedCompany !== 'all' && filteredContacts.length === 0}
             />
             <CustomSelect
               options={[
@@ -283,18 +361,30 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
               onValueChange={setSelectedStatus}
               placeholder="Status"
             />
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              placeholder="Start Date"
-            />
-            <Input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              placeholder="End Date"
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Interaction Start Time</label>
+                <DateTimePicker
+                  {...startTimePickerProps}
+                  value={startTime}
+                  onChange={setStartTime}
+                  placeholder="Filter from this start time"
+                  label="Start Time"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Interaction End Time</label>
+                <DateTimePicker
+                  {...endTimePickerProps}
+                  value={endTime}
+                  onChange={setEndTime}
+                  placeholder="Filter until this end time"
+                  label="End Time"
+                  minDate={startTime}
+                />
+              </div>
+            </div>
             <div className="flex justify-between">
               <Button 
                 id="reset-filters-button"
