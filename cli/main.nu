@@ -353,7 +353,7 @@ def dev-up [
     print $"($color_cyan)Project root: ($project_root)($color_reset)"
     
     if $detached {
-        let command = $"docker compose -f ($base_file) -f ($edition_file) --env-file server/.env up -d"
+        let command = $"docker compose -f ($base_file) -f ($edition_file) --env-file server/.env up --build -d"
         print $"($color_yellow)Running: ($command)($color_reset)"
         
         let result = do {
@@ -375,7 +375,7 @@ def dev-up [
         
         # Stream output directly without capturing
         cd $project_root
-        docker compose -f $base_file -f $edition_file --env-file server/.env up
+        docker compose -f $base_file -f $edition_file --env-file server/.env up --build
     }
 }
 

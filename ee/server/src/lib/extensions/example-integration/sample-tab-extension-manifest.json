@@ -1,0 +1,62 @@
+{
+  "name": "custom-billing-reports",
+  "description": "Adds custom billing reports tabs to the Billing page",
+  "version": "1.0.0",
+  "author": "Example Author",
+  "homepage": "https://example.com/extensions/custom-billing-reports",
+  "license": "MIT",
+  "main": "index.js",
+  "components": [
+    {
+      "type": "tab-extension",
+      "slot": "billing-tabs",
+      "component": "./components/BillingReportTab",
+      "props": {
+        "id": "custom-billing-report",
+        "parentPage": "billing",
+        "label": "Custom Reports",
+        "icon": "FileTextIcon",
+        "priority": 50,
+        "permissions": ["view:billing"]
+      }
+    },
+    {
+      "type": "tab-extension",
+      "slot": "billing-tabs",
+      "component": "./components/BillingAnalyticsTab",
+      "props": {
+        "id": "billing-analytics",
+        "parentPage": "billing",
+        "label": "Analytics",
+        "icon": "BarChartIcon",
+        "priority": 40,
+        "permissions": ["view:billing"]
+      }
+    }
+  ],
+  "permissions": [
+    "view:billing",
+    "storage:read",
+    "storage:write"
+  ],
+  "settings": [
+    {
+      "key": "reportRefreshInterval",
+      "type": "number",
+      "label": "Report Refresh Interval (seconds)",
+      "description": "How often to refresh report data",
+      "default": 300
+    },
+    {
+      "key": "defaultReportType",
+      "type": "select",
+      "label": "Default Report Type",
+      "options": [
+        { "label": "Summary", "value": "summary" },
+        { "label": "Detailed", "value": "detailed" },
+        { "label": "Charts", "value": "charts" }
+      ],
+      "default": "summary"
+    }
+  ]
+}

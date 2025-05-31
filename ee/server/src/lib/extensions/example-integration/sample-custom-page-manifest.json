@@ -1,0 +1,69 @@
+{
+  "name": "asset-management-extension",
+  "description": "Adds custom asset management pages and features",
+  "version": "1.0.0",
+  "author": "Example Author",
+  "homepage": "https://example.com/extensions/asset-management",
+  "license": "MIT",
+  "main": "index.js",
+  "components": [
+    {
+      "type": "custom-page",
+      "slot": "custom-pages",
+      "component": "./components/AssetDashboardPage",
+      "props": {
+        "id": "asset-dashboard",
+        "path": "/assets",
+        "title": "Asset Dashboard",
+        "icon": "LayoutDashboardIcon",
+        "permissions": ["view:assets"]
+      }
+    },
+    {
+      "type": "custom-page",
+      "slot": "custom-pages",
+      "component": "./components/AssetDetailsPage",
+      "props": {
+        "id": "asset-details",
+        "path": "/assets/:id",
+        "title": "Asset Details",
+        "icon": "ServerIcon",
+        "permissions": ["view:assets"]
+      }
+    },
+    {
+      "type": "navigation-item",
+      "slot": "main-navigation",
+      "props": {
+        "id": "asset-nav",
+        "label": "Asset Management",
+        "icon": "ServerIcon",
+        "path": "/msp/extensions/asset-management-extension/assets",
+        "priority": 75,
+        "permissions": ["view:assets"]
+      }
+    }
+  ],
+  "permissions": [
+    "view:assets",
+    "storage:read",
+    "storage:write",
+    "api:read"
+  ],
+  "settings": [
+    {
+      "key": "assetRefreshInterval",
+      "type": "number",
+      "label": "Asset Data Refresh Interval (seconds)",
+      "description": "How often to refresh asset data",
+      "default": 300
+    },
+    {
+      "key": "showDepreciationData",
+      "type": "boolean",
+      "label": "Show Depreciation Data",
+      "description": "Whether to show depreciation data for assets",
+      "default": true
+    }
+  ]
+}

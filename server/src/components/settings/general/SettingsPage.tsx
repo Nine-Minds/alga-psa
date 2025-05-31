@@ -22,6 +22,7 @@ import { TaxRegionsManager } from '../tax/TaxRegionsManager'; // Import the new 
 import QboIntegrationSettings from '../integrations/QboIntegrationSettings'; // Import the actual settings component
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
+import { DynamicExtensionsComponent } from 'server/src/lib/extensions/ExtensionComponentLoader';
 // Removed import: import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
 // Revert to standard function component
@@ -29,7 +30,9 @@ const SettingsPage = (): JSX.Element =>  {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
-
+  // Extensions are conditionally available based on edition
+  // The webpack alias will resolve to either the EE component or empty component
+  const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
   // Map URL slugs (kebab-case) to Tab Labels
   const slugToLabelMap: Record<string, string> = {
@@ -42,7 +45,8 @@ const SettingsPage = (): JSX.Element =>  {
     'time-entry': 'Time Entry',
     'billing': 'Billing',
     'tax': 'Tax',
-    'integrations': 'Integrations' // Add slug for Integrations tab
+    'integrations': 'Integrations',
+    ...(isEEAvailable && { 'extensions': 'Extensions' }) // Only add if EE is available
   };
 
   // Determine initial active tab based on URL parameter
@@ -62,7 +66,7 @@ const SettingsPage = (): JSX.Element =>  {
     }
   }, [tabParam]); // Correct dependency array
 
-  const tabContent: TabContent[] = [
+  const baseTabContent: TabContent[] = [
     {
       label: "General",
       content: (
@@ -163,6 +167,27 @@ const SettingsPage = (): JSX.Element =>  {
       content: <QboIntegrationSettings />,
     }
   ];
+
+  // Add Extensions tab conditionally if EE is available
+  const tabContent: TabContent[] = isEEAvailable 
+    ? [
+        ...baseTabContent,
+        {
+          label: "Extensions",
+          content: (
+            <Card>
+              <CardHeader>
+                <CardTitle>Extension Management</CardTitle>
+                <CardDescription>Install, configure, and manage extensions to extend Alga PSA functionality</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DynamicExtensionsComponent />
+              </CardContent>
+            </Card>
+          ),
+        }
+      ]
+    : baseTabContent;
 
 
   return (
