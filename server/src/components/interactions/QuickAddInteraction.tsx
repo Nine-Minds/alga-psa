@@ -25,6 +25,8 @@ import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ButtonComponent, FormFieldComponent, DialogComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
 import { X } from 'lucide-react';
 
 interface QuickAddInteractionProps {
@@ -70,6 +72,108 @@ export function QuickAddInteraction({
   const { data: session } = useSession();
   
   const isEditMode = !!editingInteraction;
+
+  // UI Reflection System Integration
+  const { automationIdProps: typeSelectProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-type-select`,
+    type: 'formField',
+    fieldType: 'select',
+    label: 'Interaction Type',
+    helperText: 'Select the type of interaction (phone call, email, meeting, etc.)'
+  });
+
+  const { automationIdProps: titleInputProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-title-input`,
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'Interaction Title',
+    helperText: 'Enter a descriptive title for this interaction'
+  });
+
+  const { automationIdProps: notesEditorProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-notes-editor`,
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'Interaction Notes',
+    helperText: 'Add detailed notes about this interaction'
+  });
+
+  const { automationIdProps: statusSelectProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-status-select`,
+    type: 'formField',
+    fieldType: 'select',
+    label: 'Interaction Status',
+    helperText: 'Set the current status of this interaction'
+  });
+
+  const { automationIdProps: userPickerProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-user-picker`,
+    type: 'formField',
+    fieldType: 'select',
+    label: 'Assigned User',
+    helperText: 'Select the user responsible for this interaction'
+  });
+
+  const { automationIdProps: companyPickerProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-company-picker`,
+    type: 'formField',
+    fieldType: 'select',
+    label: 'Associated Company',
+    helperText: 'Select the company this interaction is related to'
+  });
+
+  const { automationIdProps: contactPickerProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-contact-picker`,
+    type: 'formField',
+    fieldType: 'select',
+    label: 'Associated Contact',
+    helperText: 'Select the contact this interaction is with'
+  });
+
+  const { automationIdProps: startTimeProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-start-time`,
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'Start Time',
+    helperText: 'When did this interaction start?'
+  });
+
+  const { automationIdProps: endTimeProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-end-time`,
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'End Time',
+    helperText: 'When did this interaction end?'
+  });
+
+  const { automationIdProps: durationProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-duration`,
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'Duration',
+    helperText: 'Duration of the interaction in minutes'
+  });
+
+  const { automationIdProps: cancelButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: `${id}-cancel-button`,
+    type: 'button',
+    label: 'Cancel',
+    helperText: 'Cancel creating/editing this interaction'
+  });
+
+  const { automationIdProps: saveButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: `${id}-save-button`,
+    type: 'button',
+    label: isEditMode ? 'Update Interaction' : 'Save Interaction',
+    helperText: isEditMode ? 'Save changes to this interaction' : 'Create this new interaction'
+  });
+
+  const { automationIdProps: closeButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: `${id}-close-button`,
+    type: 'button',
+    label: 'Close Dialog',
+    helperText: 'Close the interaction dialog'
+  });
 
   useEffect(() => {
     console.log('QuickAddInteraction props:', { isEditMode, editingInteraction, isOpen });
@@ -342,7 +446,7 @@ export function QuickAddInteraction({
               </Dialog.Title>
               <Dialog.Close asChild>
                 <Button 
-                  id="close-interaction-dialog-button"
+                  {...closeButtonProps}
                   variant="ghost" 
                   size="sm"
                   className="h-8 w-8 p-0"
@@ -353,6 +457,7 @@ export function QuickAddInteraction({
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <CustomSelect
+                {...typeSelectProps}
                 options={interactionTypes.map((type) => ({ 
                   value: type.type_id, 
                   label: getTypeLabel(type)
@@ -364,6 +469,7 @@ export function QuickAddInteraction({
                 required
               />
               <Input
+                {...titleInputProps}
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -379,7 +485,7 @@ export function QuickAddInteraction({
                   {isNotesContentReady ? (
                     <TextEditor
                       key={isEditMode ? `edit-${editingInteraction?.interaction_id}` : 'add'}
-                      id="interaction-notes-editor"
+                      {...notesEditorProps}
                       initialContent={notesContent}
                       onContentChange={setNotesContent}
                     />

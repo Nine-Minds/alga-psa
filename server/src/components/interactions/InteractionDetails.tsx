@@ -3,6 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { IInteraction } from 'server/src/interfaces/interaction.interfaces';
 import { Clock, FileText, ArrowLeft, Plus, Pen, Trash2 } from 'lucide-react';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { ButtonComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
 import { useDrawer } from "server/src/context/DrawerContext";
 import ContactDetailsView from '../contacts/ContactDetailsView';
 import CompanyDetails from '../companies/CompanyDetails';
@@ -33,6 +36,35 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
   const [isEditInteractionOpen, setIsEditInteractionOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [userFullName, setUserFullName] = useState<string>('');
+
+  // UI Reflection System Integration
+  const { automationIdProps: editButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: 'interaction-details-edit-button',
+    type: 'button',
+    label: 'Edit Interaction',
+    helperText: 'Edit this interaction details'
+  });
+
+  const { automationIdProps: deleteButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: 'interaction-details-delete-button',
+    type: 'button',
+    label: 'Delete Interaction',
+    helperText: 'Delete this interaction permanently'
+  });
+
+  const { automationIdProps: backButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: 'interaction-details-back-button',
+    type: 'button',
+    label: 'Back',
+    helperText: 'Go back to previous view'
+  });
+
+  const { automationIdProps: addTicketButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: 'interaction-details-add-ticket-button',
+    type: 'button',
+    label: 'Add Ticket',
+    helperText: 'Create a new ticket related to this interaction'
+  });
 
   useEffect(() => {
     console.log('Initial interaction:', initialInteraction);
@@ -172,12 +204,13 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
   };
 
   return (
-    <div className="p-6 relative bg-white shadow rounded-lg">
+    <ReflectionContainer id="interaction-details" label="Interaction Details">
+      <div className="p-6 relative bg-white shadow rounded-lg">
       <div className="flex justify-between items-center mb-6">
         <Heading size="6">Interaction Details</Heading>
         <div className="flex gap-2">
           <Button
-            id="edit-interaction-button"
+            {...editButtonProps}
             onClick={() => setIsEditInteractionOpen(true)}
             variant="ghost"
             size="sm"
@@ -186,7 +219,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
             Edit
           </Button>
           <Button
-            id="delete-interaction-button"
+            {...deleteButtonProps}
             onClick={() => setIsDeleteDialogOpen(true)}
             variant="ghost"
             size="sm"
@@ -196,7 +229,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
             Delete
           </Button>
           <Button
-            id="back-button"
+            {...backButtonProps}
             onClick={goBack}
             variant="ghost"
             size="sm"
@@ -316,7 +349,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
 
       <Flex justify="end" align="center" className="mt-6">
         <Button
-          id="add-ticket-button"
+          {...addTicketButtonProps}
           onClick={() => setIsQuickAddTicketOpen(true)}
           variant="default"
         >
@@ -362,7 +395,8 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
         confirmLabel="Delete"
         cancelLabel="Cancel"
       />
-    </div>
+      </div>
+    </ReflectionContainer>
   );
 };
 

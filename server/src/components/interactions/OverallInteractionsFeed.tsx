@@ -18,6 +18,9 @@ import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { ButtonComponent, FormFieldComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
 
 interface OverallInteractionsFeedProps {
   users: IUserWithRoles[];
@@ -38,6 +41,29 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
   const [interactionTypeId, setInteractionTypeId] = useState<string>('all');
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
   const { openDrawer } = useDrawer();
+
+  // UI Reflection System Integration
+  const { automationIdProps: searchInputProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: 'overall-interactions-search',
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'Search All Interactions',
+    helperText: 'Search across all interactions in the system'
+  });
+
+  const { automationIdProps: filterButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: 'overall-interactions-filter-button',
+    type: 'button',
+    label: 'Filter Interactions',
+    helperText: 'Open advanced filter options for interactions'
+  });
+
+  const { automationIdProps: resetButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: 'overall-interactions-reset-button',
+    type: 'button',
+    label: 'Reset Filters',
+    helperText: 'Clear all applied filters'
+  });
 
   useEffect(() => {
     fetchInteractionTypes();
@@ -171,12 +197,14 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
   const contactPickerValue = selectedContact === 'all' ? '' : selectedContact;
 
   return (
-    <div className="bg-white shadow rounded-lg p-6">
+    <ReflectionContainer id="overall-interactions-feed" label="Overall Interactions Feed">
+      <div className="bg-white shadow rounded-lg p-6">
       <h2 className="text-xl font-bold mb-4">Recent Interactions</h2>
       <div className="flex flex-nowrap items-stretch gap-4 mb-4">
         <div className="flex-grow min-w-0">
           <div className="flex items-center gap-2 w-full h-full">
             <Input
+              {...searchInputProps}
               type="text"
               value={searchTerm}
               onChange={handleSearchChange}
@@ -187,7 +215,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
         </div>
         {isFilterActive ? (
           <Button
-            id="reset-filters-outside-button"
+            {...resetButtonProps}
             onClick={resetFilters}
             size="lg"
             variant="outline"
@@ -198,7 +226,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
           </Button>
         ) : (
           <Button
-            id="open-filter-button"
+            {...filterButtonProps}
             onClick={() => setIsFilterDialogOpen(true)}
             size="lg"
             className="flex-shrink-0 whitespace-nowrap"
@@ -316,7 +344,8 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
           </li>
         ))}
       </ul>
-    </div>
+      </div>
+    </ReflectionContainer>
   );
 };
 
