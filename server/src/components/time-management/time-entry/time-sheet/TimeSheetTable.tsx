@@ -7,6 +7,10 @@ import { Trash } from 'lucide-react';
 import { ITimeEntryWithWorkItemString } from 'server/src/interfaces/timeEntry.interfaces';
 import { IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { formatISO, parseISO } from 'date-fns';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ButtonComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
+import { CommonActions } from 'server/src/types/ui-reflection/actionBuilders';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 
 interface TimeSheetTableProps {
     dates: Date[];
@@ -79,8 +83,48 @@ export function TimeSheetTable({
 }: TimeSheetTableProps): JSX.Element {
     const [selectedWorkItemToDelete, setSelectedWorkItemToDelete] = useState<string | null>(null);
     
+    // Register add work item button for automation
+    const { automationIdProps: addWorkItemProps } = useAutomationIdAndRegister<ButtonComponent>({
+        type: 'button',
+        id: 'add-work-item-button',
+        label: 'Add new work item',
+        disabled: !isEditable,
+    }, () => [
+        CommonActions.click('Add new work item to timesheet'),
+        CommonActions.focus('Focus on add work item button')
+    ]);
+
+    // Register the timesheet table container
+    const { automationIdProps: tableProps } = useAutomationIdAndRegister<ContainerComponent>({
+        type: 'container',
+        id: 'timesheet-table',
+        label: 'Time Sheet Data Table',
+    }, () => [
+        CommonActions.focus('Focus on timesheet table'),
+        {
+            type: 'click' as const,
+            available: true,
+            description: 'Click on time entry cells to add or edit time entries',
+            parameters: [
+                {
+                    name: 'workItemId',
+                    type: 'string' as const,
+                    required: true,
+                    description: 'ID of the work item'
+                },
+                {
+                    name: 'date',
+                    type: 'string' as const,
+                    required: true,
+                    description: 'Date for the time entry (YYYY-MM-DD format)'
+                }
+            ]
+        }
+    ]);
+    
     return (
-        <React.Fragment>
+        <ReflectionContainer id="timesheet-table" label="Time Sheet Data Table">
+            <React.Fragment>
             <ConfirmationDialog
                 isOpen={!!selectedWorkItemToDelete}
                 onConfirm={async () => {
@@ -94,7 +138,7 @@ export function TimeSheetTable({
                 message="This will permanently delete all time entries for this work item. This action cannot be undone."
                 confirmLabel="Delete"
             />
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" {...tableProps}>
             <table className="min-w-full divide-y divide-gray-200" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
                 <thead>
                     <tr>
@@ -111,6 +155,7 @@ export function TimeSheetTable({
                 <tbody className="divide-y divide-gray-200">
                     <tr className="h-10 bg-primary-100">
                         <td
+                            {...addWorkItemProps}
                             colSpan={1}
                             className="px-6 py-3 whitespace-nowrap text-xs text-gray-400 cursor-pointer relative shadow-[4px_0_6px_rgba(0,0,0,0.1)] sticky left-0 z-10 w-[25vw] truncate bg-primary-100"
                             onClick={onAddWorkItem}
@@ -128,6 +173,8 @@ export function TimeSheetTable({
                                     <td 
                                         className="px-6 py-4 pr-1 whitespace-nowrap text-sm font-medium text-gray-900 shadow-[4px_0_6px_rgba(0,0,0,0.1)] border-t border-b sticky left-0 z-10 bg-white min-w-fit max-w-[15%] truncate bg-white cursor-pointer hover:bg-white"
                                         onClick={() => onWorkItemClick(workItem)}
+                                        data-automation-id={`work-item-${workItem.work_item_id}`}
+                                        data-automation-type="work-item-cell"
                                     >
                                         <div className="flex flex-col pr-8">
                                             <span>
@@ -198,6 +245,8 @@ export function TimeSheetTable({
                                                 <td
                                                     key={formatISO(date)}
                                                     className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 cursor-pointer border transition-colors relative min-h-[100px]"
+                                                    data-automation-id={`time-cell-${workItem.work_item_id}-${formatISO(date, { representation: 'date' })}`}
+                                                    data-automation-type="time-entry-cell"
                                                     onClick={() => {
                                                         if (!isEditable) return;
                                                         
@@ -311,6 +360,7 @@ export function TimeSheetTable({
                 </div>
             </div>
         </div>
-        </React.Fragment>
+            </React.Fragment>
+        </ReflectionContainer>
     );
 }
