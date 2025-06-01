@@ -1592,6 +1592,177 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       }
     }
   );
+
+  // === Email Domain Verification Workflow Actions ===
+  
+  // Create Resend Domain Action
+  actionRegistry.registerSimpleAction(
+    'createResendDomain',
+    'Create a new domain in Resend for tenant email verification',
+    [
+      { name: 'tenantId', type: 'string', required: true },
+      { name: 'domain', type: 'string', required: true },
+      { name: 'region', type: 'string', required: false }
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      logger.info(`[ACTION] createResendDomain called for domain: ${params.domain}, tenant: ${params.tenantId}`);
+      
+      try {
+        // For now, return a mock response until we implement the actual Resend provider
+        // This will be replaced when we implement the ResendEmailProvider
+        const mockResult = {
+          resendDomainId: `rd_${Date.now()}`,
+          domain: params.domain,
+          status: 'pending',
+          region: params.region || 'us-east-1',
+          dnsRecords: [
+            {
+              type: 'TXT',
+              name: `resend._domainkey.${params.domain}`,
+              value: 'mock-dkim-key-value'
+            },
+            {
+              type: 'TXT', 
+              name: `send.${params.domain}`,
+              value: 'v=spf1 include:resend.net ~all'
+            },
+            {
+              type: 'MX',
+              name: `send.${params.domain}`,
+              value: '10 feedback-smtp.us-east-1.amazonses.com'
+            }
+          ]
+        };
+        
+        logger.info(`[ACTION] createResendDomain: Mock domain created with ID: ${mockResult.resendDomainId}`);
+        return { success: true, ...mockResult };
+      } catch (error: any) {
+        logger.error(`[ACTION] createResendDomain: Error creating domain ${params.domain}`, error);
+        return { success: false, message: error.message, error };
+      }
+    }
+  );
+
+  // Send DNS Instructions Action
+  actionRegistry.registerSimpleAction(
+    'sendDNSInstructions',
+    'Send DNS configuration instructions to tenant',
+    [
+      { name: 'tenantId', type: 'string', required: true },
+      { name: 'domain', type: 'string', required: true },
+      { name: 'dnsRecords', type: 'object', required: true }
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      logger.info(`[ACTION] sendDNSInstructions called for domain: ${params.domain}, tenant: ${params.tenantId}`);
+      
+      try {
+        // For now, just log the DNS instructions
+        // In a real implementation, this would send an email or create a notification
+        logger.info(`[ACTION] sendDNSInstructions: DNS records for ${params.domain}:`, params.dnsRecords);
+        
+        // Mock success response
+        return { 
+          success: true, 
+          notificationSent: true,
+          message: `DNS instructions sent for domain ${params.domain}`
+        };
+      } catch (error: any) {
+        logger.error(`[ACTION] sendDNSInstructions: Error sending DNS instructions for ${params.domain}`, error);
+        return { success: false, message: error.message, error };
+      }
+    }
+  );
+
+  // Trigger Domain Verification Action
+  actionRegistry.registerSimpleAction(
+    'triggerDomainVerification',
+    'Trigger domain verification check in Resend',
+    [
+      { name: 'tenantId', type: 'string', required: true },
+      { name: 'resendDomainId', type: 'string', required: true }
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      logger.info(`[ACTION] triggerDomainVerification called for resendDomainId: ${params.resendDomainId}, tenant: ${params.tenantId}`);
+      
+      try {
+        // For now, return a mock response
+        // In a real implementation, this would call the Resend API to verify the domain
+        const mockStatuses = ['pending', 'verified', 'failed'];
+        const randomStatus = mockStatuses[Math.floor(Math.random() * mockStatuses.length)];
+        
+        const result = {
+          status: randomStatus,
+          resendDomainId: params.resendDomainId,
+          verifiedAt: randomStatus === 'verified' ? new Date().toISOString() : null,
+          failureReason: randomStatus === 'failed' ? 'DNS records not found' : null
+        };
+        
+        logger.info(`[ACTION] triggerDomainVerification: Domain verification status: ${result.status}`);
+        return { success: true, ...result };
+      } catch (error: any) {
+        logger.error(`[ACTION] triggerDomainVerification: Error verifying domain ${params.resendDomainId}`, error);
+        return { success: false, message: error.message, error };
+      }
+    }
+  );
+
+  // Activate Custom Domain Action
+  actionRegistry.registerSimpleAction(
+    'activateCustomDomain',
+    'Activate a verified custom domain for tenant email sending',
+    [
+      { name: 'tenantId', type: 'string', required: true },
+      { name: 'domain', type: 'string', required: true },
+      { name: 'resendDomainId', type: 'string', required: true }
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      logger.info(`[ACTION] activateCustomDomain called for domain: ${params.domain}, tenant: ${params.tenantId}`);
+      
+      try {
+        // For now, just log the activation
+        // In a real implementation, this would update tenant email settings in the database
+        logger.info(`[ACTION] activateCustomDomain: Activating domain ${params.domain} for tenant ${params.tenantId}`);
+        
+        return { 
+          success: true, 
+          domainActivated: true,
+          domain: params.domain,
+          resendDomainId: params.resendDomainId
+        };
+      } catch (error: any) {
+        logger.error(`[ACTION] activateCustomDomain: Error activating domain ${params.domain}`, error);
+        return { success: false, message: error.message, error };
+      }
+    }
+  );
+
+  // Send Domain Verification Success Notification Action
+  actionRegistry.registerSimpleAction(
+    'sendDomainVerificationSuccess',
+    'Send success notification to tenant about domain verification',
+    [
+      { name: 'tenantId', type: 'string', required: true },
+      { name: 'domain', type: 'string', required: true }
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      logger.info(`[ACTION] sendDomainVerificationSuccess called for domain: ${params.domain}, tenant: ${params.tenantId}`);
+      
+      try {
+        // For now, just log the success notification
+        // In a real implementation, this would send an email or create a notification
+        logger.info(`[ACTION] sendDomainVerificationSuccess: Domain ${params.domain} successfully verified for tenant ${params.tenantId}`);
+        
+        return { 
+          success: true, 
+          notificationSent: true,
+          message: `Success notification sent for domain ${params.domain}`
+        };
+      } catch (error: any) {
+        logger.error(`[ACTION] sendDomainVerificationSuccess: Error sending success notification for ${params.domain}`, error);
+        return { success: false, message: error.message, error };
+      }
+    }
+  );
 }
 
 /**
