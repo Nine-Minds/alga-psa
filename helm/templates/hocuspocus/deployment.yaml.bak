@@ -1,0 +1,123 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hocuspocus
+  namespace: {{ include "sebastian.namespace" . }}
+  labels:
+    {{- include "sebastian.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.hocuspocus.replicaCount }}
+  selector:
+    matchLabels:
+      app: hocuspocus
+  template:
+    metadata:
+      labels:
+        app: hocuspocus
+    spec:
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.hocuspocus.image.is_private }}
+      imagePullSecrets:
+        - name: "{{ .Values.hocuspocus.image.credentials }}"
+      {{- end }}
+      initContainers:
+        - name: wait-for-redis
+          image: redis:latest
+          command: ['sh', '-c', 'until redis-cli -h $REDIS_HOST -p $REDIS_PORT -a $REDIS_PASSWORD ping; do echo waiting for redis; sleep 2; done;']
+          env:
+          {{- if .Values.redis.enabled }}
+            - name: REDIS_HOST
+              value: "redis.{{ .Values.namespace }}.svc.cluster.local"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: REDIS_DB
+              value: "1"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-credentials
+                  key: REDIS_PASSWORD
+            {{- else }}
+            - name: REDIS_HOST
+              value: "{{ .Values.config.redis.host }}.{{ .Values.namespace }}.svc.cluster.local"
+            - name: REDIS_PORT
+              value: "{{ .Values.config.redis.port }}"
+            - name: REDIS_DB
+              value: "{{ .Values.config.redis.db }}"
+            - name: REDIS_PASSWORD
+              value: "{{ .Values.config.redis.password }}"
+            {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.hocuspocus.image.name }}:{{ .Values.hocuspocus.image.tag }}"
+          imagePullPolicy: {{ .Values.hocuspocus.pullPolicy }}
+          env:
+          {{- if .Values.redis.enabled }}
+          - name: REDIS_HOST
+            value: "redis.{{ .Values.namespace }}.svc.cluster.local"
+          - name: REDIS_PORT
+            value: "6379"
+          - name: REDIS_DB
+            value: "1"
+          - name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: redis-credentials
+                key: REDIS_PASSWORD
+          {{- else }}
+          - name: REDIS_HOST
+            value: "{{ .Values.config.redis.host }}.{{ .Values.namespace }}.svc.cluster.local"
+          - name: REDIS_PORT
+            value: "{{ .Values.config.redis.port }}"
+          - name: REDIS_DB
+            value: "{{ .Values.config.redis.db }}"
+          - name: REDIS_PASSWORD
+            value: "{{ .Values.config.redis.password }}"
+          {{- end }}
+          {{- if .Values.db.enabled }}
+          - name: DB_HOST
+            value: "db.{{ .Values.namespace }}.svc.cluster.local"
+          - name: DB_USER_HOCUSPOCUS
+            value: "hocuspocus_user"
+          - name: DB_PORT
+            value: "5432"
+          - name: DB_NAME_HOCUSPOCUS
+            value: "hocuspocus"
+          - name: DB_PASSWORD_HOCUSPOCUS
+            valueFrom:
+              secretKeyRef:
+                name: db-credentials
+                key: DB_PASSWORD_HOCUSPOCUS
+          {{- else }}
+          - name: DB_HOST
+            value: "{{ .Values.config.db.host }}.{{ .Values.namespace }}.svc.cluster.local"
+          - name: DB_USER_HOCUSPOCUS
+            value: "{{ .Values.config.db.user }}"
+          - name: DB_PORT
+            value: "{{ .Values.config.db.port }}"
+          - name: DB_NAME_HOCUSPOCUS
+            value: "{{ .Values.config.db.hocuspocus_database }}"
+          - name: DB_PASSWORD_HOCUSPOCUS
+            value: "{{ .Values.config.db.password }}"
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.hocuspocus.service.port }}
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

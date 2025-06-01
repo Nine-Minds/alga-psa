@@ -2,11 +2,13 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "sebastian.fullname" . }}
-  namespace: {{ .Values.namespace }}
+  namespace: {{ include "sebastian.namespace" . }}
   labels:
     {{- include "sebastian.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.server.replicaCount }}
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       {{- include "sebastian.selectorLabels" . | nindent 6 }}
@@ -21,9 +23,7 @@ spec:
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-    spec:
-      strategy:
-        type: Recreate    
+    spec:    
       {{- if .Values.server.image.is_private }}
       imagePullSecrets:
         - name: "{{ .Values.server.image.credentials }}"
@@ -66,7 +66,7 @@ spec:
           # ----------- REDIS ----------------
           {{- if .Values.redis.enabled }}
           - name: REDIS_HOST
-            value: "redis.{{ .Values.namespace }}.svc.cluster.local"
+            value: "redis.{{ include "sebastian.namespace" . }}.svc.cluster.local"
           - name: REDIS_PORT
             value: "6379"
           - name: REDIS_DB
@@ -78,7 +78,7 @@ spec:
                 key: REDIS_PASSWORD
           {{- else }}
           - name: REDIS_HOST
-            value: "{{ .Values.config.redis.host }}.{{ .Values.namespace }}.svc.cluster.local"
+            value: "{{ .Values.config.redis.host }}.{{ include "sebastian.namespace" . }}.svc.cluster.local"
           - name: REDIS_PORT
             value: "{{ .Values.config.redis.port }}"
           - name: REDIS_DB
@@ -92,7 +92,7 @@ spec:
           - name: DB_TYPE
             value: "postgres"
           - name: DB_HOST
-            value: "db.{{ .Values.namespace }}.svc.cluster.local"
+            value: "db.{{ include "sebastian.namespace" . }}.svc.cluster.local"
           - name: DB_USER_SERVER
             value: "server_user"
           - name: DB_PORT
@@ -242,7 +242,7 @@ spec:
 
           # ----------- HOCUPOCUS ----------------
           - name: HOCUSPOCUS_URL
-            value: "ws://houcspocus.{{ .Values.namespace }}.svc.cluster.local:{{ .Values.hocuspocus.service.port }}"
+            value: "ws://houcspocus.{{ include "sebastian.namespace" . }}.svc.cluster.local:{{ .Values.hocuspocus.service.port }}"
 
           # ----------- EMAIL ----------------
           - name: EMAIL_ENABLE

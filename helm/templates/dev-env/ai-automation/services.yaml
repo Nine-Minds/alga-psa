@@ -1,0 +1,41 @@
+{{- if and .Values.devEnv.enabled .Values.devEnv.aiAutomation.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "sebastian.fullname" . }}-ai-api
+  namespace: {{ .Values.devEnv.namespace }}
+  labels:
+    {{- include "sebastian.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ai-automation-api
+spec:
+  type: {{ .Values.devEnv.aiAutomation.api.service.type }}
+  ports:
+    - port: {{ .Values.devEnv.aiAutomation.api.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "sebastian.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: ai-automation-api
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "sebastian.fullname" . }}-ai-web
+  namespace: {{ .Values.devEnv.namespace }}
+  labels:
+    {{- include "sebastian.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ai-automation-web
+spec:
+  type: {{ .Values.devEnv.aiAutomation.web.service.type }}
+  ports:
+    - port: {{ .Values.devEnv.aiAutomation.web.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "sebastian.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: ai-automation-web
+{{- end }}

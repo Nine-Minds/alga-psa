@@ -25,7 +25,7 @@ spec:
             - name: APP_ENV
               value: "production"            
             - name: DB_HOST
-              value: "db.{{ .Values.namespace }}.svc.cluster.local"
+              value: "db.{{ include "sebastian.namespace" . }}.svc.cluster.local"
             - name: DB_USER_ADMIN
               value: "postgres"
             - name: DB_USER_SERVER

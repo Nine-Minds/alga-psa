@@ -1,0 +1,77 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ .Release.Name }}-init-db"
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-weight": "4"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  template:
+    metadata:
+      name: {{ include "sebastian.fullname" . }}-init-db
+    spec:
+      restartPolicy: Never
+      {{- if .Values.server.image.is_private }}
+      imagePullSecrets:
+        - name: "{{ .Values.server.image.credentials }}"
+      {{- end }}
+      containers:
+        - name: init-db
+          image: "{{ .Values.server.image.name }}:{{ .Values.server.image.tag }}"
+          command: ['node', '/app/server/setup/create_database.js']
+          env:
+            {{- if .Values.db.enabled }}
+            - name: APP_ENV
+              value: "production"            
+            - name: DB_HOST
+              value: "db.{{ .Values.namespace }}.svc.cluster.local"
+            - name: DB_USER_ADMIN
+              value: "postgres"
+            - name: DB_USER_SERVER
+              value: "app_user"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME_SERVER
+              value: "server"
+            - name: DB_PASSWORD_ADMIN
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: DB_PASSWORD_SUPERUSER
+            {{- else }}
+            - name: APP_ENV
+              value: "production"
+            - name: DB_HOST
+              value: "{{ .Values.config.db.host }}"
+            - name: DB_USER_ADMIN
+              value: "postgres"
+            - name: DB_USER_SERVER
+              value: "{{ .Values.config.db.user }}"
+            - name: DB_PORT
+              value: "{{ .Values.config.db.port }}"
+            - name: DB_NAME_SERVER
+              value: "{{ .Values.config.db.server_database }}"
+            - name: DB_PASSWORD_ADMIN
+              {{- if and (hasKey .Values.config.db "server_password_admin_secret") .Values.config.db.server_password_admin_secret.name .Values.config.db.server_password_admin_secret.key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.db.server_password_admin_secret.name | quote }}
+                  key: {{ .Values.config.db.server_password_admin_secret.key | quote }}
+                  {{- if hasKey .Values.config.db.server_password_admin_secret "namespace" }}
+                  namespace: {{ .Values.config.db.server_password_admin_secret.namespace | quote }}
+                  {{- end }}
+              {{- else }}
+              value: {{ .Values.config.db.server_admin_password | quote }}
+              {{- end }}
+            {{- end }}
+            - name: DB_PASSWORD_SERVER
+              {{- if and (hasKey .Values.config.db "server_password_secret") .Values.config.db.server_password_secret.name .Values.config.db.server_password_secret.key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.db.server_password_secret.name | quote }}
+                  key: {{ .Values.config.db.server_password_secret.key | quote }}
+                  namespace: {{ .Values.config.db.server_password_admin_secret.namespace | quote }}
+              {{- else }}
+              value: {{ .Values.config.db.server_password | quote }}
+              {{- end }}

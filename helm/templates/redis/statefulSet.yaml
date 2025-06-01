@@ -3,7 +3,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: redis
-  namespace: {{ .Values.namespace }}
+  namespace: {{ include "sebastian.namespace" . }}
   labels:
     app: redis
 spec:

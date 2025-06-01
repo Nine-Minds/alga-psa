@@ -398,12 +398,426 @@ def dev-down [] {
     }
 }
 
+# Create development environment for PR
+def dev-env-create [
+    pr_number: int     # GitHub PR number
+    --branch: string   # Git branch (defaults to pr/pr_number)
+    --edition: string = "ce"  # Edition: ce or ee
+    --ai-enabled # Include AI automation
+] {
+    let project_root = find-project-root
+    
+    # Validate edition parameter
+    if not ($edition in ["ce", "ee"]) {
+        error make { msg: $"($color_red)Invalid edition '($edition)'. Must be 'ce' (community) or 'ee' (enterprise).($color_reset)" }
+    }
+    
+    # Default branch name
+    let git_branch = if ($branch | is-empty) { $"pr/($pr_number)" } else { $branch }
+    let namespace = $"alga-pr-($pr_number)"
+    
+    print $"($color_cyan)Creating development environment for PR ($pr_number)...($color_reset)"
+    print $"($color_cyan)Branch: ($git_branch)($color_reset)"
+    print $"($color_cyan)Edition: ($edition)($color_reset)"
+    print $"($color_cyan)AI Automation: ($ai_enabled)($color_reset)"
+    print $"($color_cyan)Namespace: ($namespace)($color_reset)"
+    
+    # Check if environment already exists
+    let existing_check = do {
+        kubectl get namespace $namespace | complete
+    }
+    
+    if $existing_check.exit_code == 0 {
+        print $"($color_yellow)Warning: Environment for PR ($pr_number) already exists in namespace ($namespace)($color_reset)"
+        print $"($color_yellow)Use 'dev-env-destroy ($pr_number)' to remove it first if you want to recreate it.($color_reset)"
+        return
+    }
+    
+    # Create temporary values file
+    let temp_values_file = $"($project_root)/temp-values-pr-($pr_number).yaml"
+    let edition_comment = if $edition == "ee" { "# Enterprise Edition settings" } else { "# Community Edition settings" }
+    let values_content = $"
+# Generated values for PR ($pr_number) development environment
+devEnv:
+  enabled: true
+  prNumber: \"($pr_number)\"
+  namespace: \"($namespace)\"
+  repository:
+    url: \"https://github.com/Nine-Minds/alga-psa.git\"
+    branch: \"($git_branch)\"
+  codeServer:
+    enabled: true
+  aiAutomation:
+    enabled: ($ai_enabled)
+
+($edition_comment)"
+    
+    # Write temporary values file
+    $values_content | save $temp_values_file
+    
+    try {
+        # Deploy using Helm
+        print $"($color_cyan)Deploying Helm chart...($color_reset)"
+        let helm_result = do {
+            cd $project_root
+            helm upgrade --install $"alga-pr-($pr_number)" ./helm -f helm/values-dev-env.yaml -f $temp_values_file --create-namespace | complete
+        }
+        
+        if $helm_result.exit_code != 0 {
+            print $"($color_red)Helm deployment failed:($color_reset)"
+            print $"($color_red)($helm_result.stderr)($color_reset)"
+            error make { msg: $"($color_red)Failed to deploy development environment($color_reset)", code: $helm_result.exit_code }
+        }
+        
+        print $helm_result.stdout
+        print $"($color_green)Helm deployment completed successfully.($color_reset)"
+        
+        # Wait for deployments to be ready
+        print $"($color_cyan)Waiting for deployments to be ready...($color_reset)"
+        let wait_result = do {
+            kubectl wait --for=condition=available --timeout=300s deployment -l app.kubernetes.io/instance=$"alga-pr-($pr_number)" -n $namespace | complete
+        }
+        
+        if $wait_result.exit_code == 0 {
+            print $"($color_green)All deployments are ready!($color_reset)"
+            
+            # Show environment status
+            dev-env-status $pr_number
+        } else {
+            print $"($color_yellow)Warning: Some deployments may still be starting. Use 'dev-env-status ($pr_number)' to check progress.($color_reset)"
+        }
+        
+    } catch { |err|
+        print $"($color_red)Error during deployment: ($err.msg)($color_reset)"
+    }
+    
+    # Clean up temporary files
+    if ($temp_values_file | path exists) {
+        rm $temp_values_file
+    }
+}
+
+# List active development environments
+def dev-env-list [] {
+    print $"($color_cyan)Active development environments:($color_reset)"
+    
+    let namespaces_result = do {
+        kubectl get namespaces -l type=dev-environment -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.pr-number}{"\n"}{end}' | complete
+    }
+    
+    if $namespaces_result.exit_code != 0 {
+        print $"($color_red)Failed to list environments: ($namespaces_result.stderr)($color_reset)"
+        return
+    }
+    
+    let environments = ($namespaces_result.stdout | lines | where ($it | str trim | str length) > 0)
+    
+    if ($environments | length) == 0 {
+        print $"($color_yellow)No active development environments found.($color_reset)"
+        return
+    }
+    
+    print "┌─────────────────────────────────────────────────────────────────┐"
+    print "│ Namespace                │ PR #  │ Status                       │"
+    print "├─────────────────────────────────────────────────────────────────┤"
+    
+    for env_line in $environments {
+        let parts = ($env_line | split column "\t")
+        let namespace = ($parts | get column1 | get 0)
+        let pr_num = ($parts | get column2 -i | get 0? | default "Unknown")
+        let status_result = do {
+            kubectl get deployments -n $namespace -o jsonpath='{range .items[*]}{.status.readyReplicas}{" "}{.status.replicas}{"\n"}{end}' | complete
+        }
+        
+        let status = if $status_result.exit_code == 0 {
+            let ready_total = ($status_result.stdout | lines | each { |line|
+                if ($line | str trim | str length) > 0 {
+                    let parts = ($line | split row " ")
+                    let ready = ($parts | get 0? | default "0" | if ($in == "") { "0" } else { $in } | into int)
+                    let total = ($parts | get 1? | default "0" | if ($in == "") { "0" } else { $in } | into int)
+                    { ready: $ready, total: $total }
+                }
+            } | compact)
+            
+            let total_ready = ($ready_total | each { |x| $x.ready } | math sum)
+            let total_deployments = ($ready_total | each { |x| $x.total } | math sum)
+            
+            if $total_ready == $total_deployments {
+                "Ready"
+            } else {
+                $"($total_ready)/($total_deployments) Ready"
+            }
+        } else {
+            "Error"
+        }
+        
+        print $"│ ($namespace | fill -w 24) │ ($pr_num | fill -w 5) │ ($status | fill -w 28) │"
+    }
+    
+    print "└─────────────────────────────────────────────────────────────────┘"
+}
+
+# Connect to development environment
+def dev-env-connect [
+    pr_number: int     # PR number to connect to
+    --port-forward     # Setup port forwarding
+    --code-server      # Open code server in browser
+] {
+    let namespace = $"alga-pr-($pr_number)"
+    
+    # Check if environment exists
+    let env_check = do {
+        kubectl get namespace $namespace | complete
+    }
+    
+    if $env_check.exit_code != 0 {
+        print $"($color_red)Environment for PR ($pr_number) not found.($color_reset)"
+        print $"($color_yellow)Use 'dev-env-list' to see available environments.($color_reset)"
+        return
+    }
+    
+    print $"($color_cyan)Connecting to development environment for PR ($pr_number)...($color_reset)"
+    
+    if $port_forward {
+        print $"($color_cyan)Setting up port forwarding...($color_reset)"
+        print $"($color_yellow)This will run in foreground. Press Ctrl+C to stop.($color_reset)"
+        
+        # Port forward multiple services
+        print $"($color_cyan)Port forwarding setup:($color_reset)"
+        print $"  Code Server: http://localhost:8080"
+        print $"    Password: alga-dev"
+        print $"  PSA App:     http://localhost:3001"
+        
+        # Start port forwarding in background and keep main process alive
+        print $"($color_cyan)Starting port forwarding processes...($color_reset)"
+        
+        # Start processes using bash for proper backgrounding
+        bash -c $"kubectl port-forward -n ($namespace) svc/dev-env-pr-($pr_number)-alga-dev-code-server 8080:8080 &"
+        bash -c $"kubectl port-forward -n ($namespace) svc/dev-env-pr-($pr_number)-alga-dev 3001:3000 &"
+        
+        # Give processes time to start
+        sleep 2sec
+        print $"($color_green)Port forwarding active!($color_reset)"
+        
+        # Wait for user to stop
+        input "Press Enter to stop port forwarding..."
+        
+        # Kill all kubectl port-forward processes
+        bash -c $"pkill -f 'kubectl port-forward.*dev-env-pr-($pr_number)'"
+        print $"($color_cyan)Port forwarding stopped.($color_reset)"
+    } else {
+        dev-env-status $pr_number
+    }
+    
+    if $code_server {
+        # Get ingress URL and open in browser
+        let ingress_result = do {
+            kubectl get ingress -n $namespace -o jsonpath='{.items[0].spec.rules[0].host}' | complete
+        }
+        
+        if $ingress_result.exit_code == 0 and ($ingress_result.stdout | str trim | str length) > 0 {
+            let url = $"https://($ingress_result.stdout)"
+            print $"($color_cyan)Opening code server: ($url)($color_reset)"
+            
+            # Try to open in browser (works on most systems)
+            try {
+                if (which open | length) > 0 {
+                    open $url
+                } else if (which xdg-open | length) > 0 {
+                    xdg-open $url
+                } else {
+                    print $"($color_yellow)Could not auto-open browser. Please visit: ($url)($color_reset)"
+                }
+            } catch {
+                print $"($color_yellow)Could not auto-open browser. Please visit: ($url)($color_reset)"
+            }
+        } else {
+            print $"($color_yellow)Could not determine ingress URL. Use 'dev-env-status ($pr_number)' to get connection details.($color_reset)"
+        }
+    }
+}
+
+# Destroy development environment
+def dev-env-destroy [
+    pr_number: int     # PR number to destroy
+    --force            # Force deletion without confirmation
+] {
+    let namespace = $"alga-pr-($pr_number)"
+    
+    # Check if environment exists
+    let env_check = do {
+        kubectl get namespace $namespace | complete
+    }
+    
+    if $env_check.exit_code != 0 {
+        print $"($color_yellow)Environment for PR ($pr_number) not found or already destroyed.($color_reset)"
+        return
+    }
+    
+    if not $force {
+        print $"($color_yellow)This will permanently destroy the development environment for PR ($pr_number).($color_reset)"
+        print $"($color_yellow)All data in the environment will be lost.($color_reset)"
+        let confirmation = (input $"Type 'yes' to confirm destruction: ")
+        
+        if $confirmation != "yes" {
+            print $"($color_cyan)Destruction cancelled.($color_reset)"
+            return
+        }
+    }
+    
+    print $"($color_cyan)Destroying development environment for PR ($pr_number)...($color_reset)"
+    
+    # Remove Helm release
+    let helm_result = do {
+        helm uninstall $"alga-pr-($pr_number)" -n $namespace | complete
+    }
+    
+    if $helm_result.exit_code != 0 {
+        print $"($color_yellow)Warning: Helm uninstall had issues: ($helm_result.stderr)($color_reset)"
+    } else {
+        print $"($color_green)Helm release removed successfully.($color_reset)"
+    }
+    
+    # Force delete namespace to ensure cleanup
+    print $"($color_cyan)Cleaning up namespace...($color_reset)"
+    let namespace_result = do {
+        kubectl delete namespace $namespace --timeout=60s | complete
+    }
+    
+    if $namespace_result.exit_code == 0 {
+        print $"($color_green)Development environment for PR ($pr_number) destroyed successfully.($color_reset)"
+    } else {
+        print $"($color_yellow)Warning: Namespace cleanup had issues. The environment may still be partially present.($color_reset)"
+        print $"($color_yellow)You may need to manually clean up resources in namespace ($namespace).($color_reset)"
+    }
+}
+
+# Get environment status and URLs
+def dev-env-status [
+    pr_number?: int    # Optional PR number, shows all if omitted
+] {
+    if ($pr_number | is-empty) {
+        dev-env-list
+        return
+    }
+    
+    let namespace = $"alga-pr-($pr_number)"
+    
+    # Check if environment exists
+    let env_check = do {
+        kubectl get namespace $namespace | complete
+    }
+    
+    if $env_check.exit_code != 0 {
+        print $"($color_red)Environment for PR ($pr_number) not found.($color_reset)"
+        print $"($color_yellow)Use 'dev-env-list' to see available environments.($color_reset)"
+        return
+    }
+    
+    print $"($color_cyan)Development Environment Status - PR ($pr_number)($color_reset)"
+    print "═══════════════════════════════════════════════════════"
+    
+    # Get deployment status
+    print $"($color_cyan)Deployments:($color_reset)"
+    let deployments_result = do {
+        kubectl get deployments -n $namespace -o custom-columns="NAME:.metadata.name,READY:.status.readyReplicas,TOTAL:.status.replicas,AGE:.metadata.creationTimestamp" --no-headers | complete
+    }
+    
+    if $deployments_result.exit_code == 0 {
+        ($deployments_result.stdout | lines | each { |line|
+            if ($line | str trim | str length) > 0 {
+                print $"  ($line)"
+            }
+        })
+    } else {
+        print $"  ($color_red)Error getting deployment status($color_reset)"
+    }
+    
+    print ""
+    
+    # Get service URLs
+    print $"($color_cyan)Service URLs:($color_reset)"
+    let ingress_result = do {
+        kubectl get ingress -n $namespace -o jsonpath='{range .items[*]}{.spec.rules[*].host}{"\n"}{end}' | complete
+    }
+    
+    if $ingress_result.exit_code == 0 {
+        let hosts = ($ingress_result.stdout | lines | each { |line| $line | str trim } | where { |x| ($x | str length) > 0 })
+        
+        for host in $hosts {
+            let url = $"https://($host)"
+            if ($host | str contains "code") {
+                print $"  Code Server:     ($url)"
+            } else if ($host | str contains "ai-api") {
+                print $"  AI API:          ($url)"
+            } else if ($host | str contains "ai") {
+                print $"  AI Web:          ($url)"
+            } else {
+                print $"  PSA App:         ($url)"
+            }
+        }
+    } else {
+        print $"  ($color_yellow)No ingress URLs found($color_reset)"
+    }
+    
+    print ""
+    
+    # Port forward instructions
+    print $"($color_cyan)Local Access \(Port Forward\):($color_reset)"
+    print $"  Run: dev-env-connect ($pr_number) --port-forward"
+    print $"  Then access:"
+    print $"    Code Server: http://localhost:8080 \(password: alga-dev\)"
+    print $"    PSA App:     http://localhost:3001"
+    
+    print ""
+    print $"($color_cyan)Management Commands:($color_reset)"
+    print $"  Connect:  dev-env-connect ($pr_number) [--port-forward] [--code-server]"
+    print $"  Destroy:  dev-env-destroy ($pr_number) [--force]"
+}
+
 # Alga Development CLI Entry Point
 # Handles command-line arguments to run migration or workflow actions.
 def --wrapped main [
    ...args: string   # All arguments and flags as strings
 ] {
    let command = ($args | get 0? | default null)
+   
+   # Handle help flags
+   if $command in ["--help", "-h", "help"] {
+       print $"($color_cyan)Alga Dev CLI($color_reset)"
+       print "Usage:"
+       print "  nu main.nu migrate <action>"
+       print "    Action: up, latest, down, status"
+       print "    Example: nu main.nu migrate latest"
+       print ""
+       print "  nu main.nu -- dev-up [--detached] [--edition ce|ee]  # Start development environment"
+       print "  nu main.nu dev-down               # Stop development environment"
+       print ""
+       print "  nu main.nu dev-env-create <pr_number> [--branch <branch>] [--edition ce|ee] [--ai-enabled]"
+       print "    Create on-demand development environment for PR"
+       print "  nu main.nu dev-env-list           # List active development environments"
+       print "  nu main.nu dev-env-connect <pr_number> [--port-forward] [--code-server]"
+       print "    Connect to development environment"
+       print "  nu main.nu dev-env-destroy <pr_number> [--force]"
+       print "    Destroy development environment"
+       print "  nu main.nu dev-env-status [<pr_number>]"
+       print "    Get environment status and URLs"
+       print ""
+       print "Note: Use '--' before dev-up when using flags to prevent Nu from parsing them:"
+       print "  nu main.nu -- dev-up --edition ee --detached"
+       print ""
+       print "  nu main.nu update-workflow <base_workflow_name> # Update latest version definition"
+       print "    Example: nu main.nu update-workflow invoice-sync"
+       print ""
+       print "  nu main.nu register-workflow <base_workflow_name> # Add new version (creates registration if needed)"
+       print "    Example: nu main.nu register-workflow customer-sync"
+       print ""
+       print "Alternatively, source the script ('source main.nu') and run commands directly:"
+       print "  dev-env-create 123 --branch my-feature"
+       print "  dev-env-list"
+       print "  dev-env-connect 123 --code-server"
+       return
+   }
    
    # Basic usage check
    if $command == null {
@@ -415,6 +829,16 @@ def --wrapped main [
        print ""
        print "  nu main.nu -- dev-up [--detached] [--edition ce|ee]  # Start development environment"
        print "  nu main.nu dev-down               # Stop development environment"
+       print ""
+       print "  nu main.nu dev-env-create <pr_number> [--branch <branch>] [--edition ce|ee] [--ai-enabled]"
+       print "    Create on-demand development environment for PR"
+       print "  nu main.nu dev-env-list           # List active development environments"
+       print "  nu main.nu dev-env-connect <pr_number> [--port-forward] [--code-server]"
+       print "    Connect to development environment"
+       print "  nu main.nu dev-env-destroy <pr_number> [--force]"
+       print "    Destroy development environment"
+       print "  nu main.nu dev-env-status [<pr_number>]"
+       print "    Get environment status and URLs"
        print ""
        print "Note: Use '--' before dev-up when using flags to prevent Nu from parsing them:"
        print "  nu main.nu -- dev-up --edition ee --detached"
@@ -430,6 +854,8 @@ def --wrapped main [
        print "  dev-down"
        print "  update-workflow <workflow_name>"
        print "  register-workflow <workflow_name>"
+       print "  dev-env-create <pr_number> [options]"
+       print "  dev-env-list, dev-env-connect, dev-env-destroy, dev-env-status"
        return # Exit if arguments are missing
    }
 
@@ -467,6 +893,87 @@ def --wrapped main [
        "dev-down" => {
            dev-down
        }
+       "dev-env-create" => {
+           let pr_number = ($args | get 1? | default null)
+           if $pr_number == null {
+               error make { msg: $"($color_red)dev-env-create command requires a PR number($color_reset)" }
+           }
+           
+           # Parse flags
+           let command_args = ($args | skip 2)
+           let branch_idx = ($command_args | enumerate | where {|item| $item.item == "--branch"} | get 0?.index | default null)
+           let branch = if $branch_idx != null { 
+               ($command_args | get ($branch_idx + 1) | default "")
+           } else { 
+               "" 
+           }
+           
+           let edition_idx = ($command_args | enumerate | where {|item| $item.item == "--edition"} | get 0?.index | default null)
+           let edition = if $edition_idx != null { 
+               ($command_args | get ($edition_idx + 1) | default "ce")
+           } else { 
+               "ce" 
+           }
+           
+           let ai_enabled = not ($command_args | any { |arg| $arg == "--no-ai" })
+           
+           # Call the dev-env-create command
+           if ($branch | str length) > 0 {
+               dev-env-create ($pr_number | into int) --branch $branch --edition $edition --ai-enabled=$ai_enabled
+           } else {
+               dev-env-create ($pr_number | into int) --edition $edition --ai-enabled=$ai_enabled
+           }
+       }
+       "dev-env-list" => {
+           dev-env-list
+       }
+       "dev-env-connect" => {
+           let pr_number = ($args | get 1? | default null)
+           if $pr_number == null {
+               error make { msg: $"($color_red)dev-env-connect command requires a PR number($color_reset)" }
+           }
+           
+           # Parse flags
+           let command_args = ($args | skip 2)
+           let port_forward = ($command_args | any { |arg| $arg == "--port-forward" })
+           let code_server = ($command_args | any { |arg| $arg == "--code-server" })
+           
+           # Call the dev-env-connect command
+           if $port_forward and $code_server {
+               dev-env-connect ($pr_number | into int) --port-forward --code-server
+           } else if $port_forward {
+               dev-env-connect ($pr_number | into int) --port-forward
+           } else if $code_server {
+               dev-env-connect ($pr_number | into int) --code-server
+           } else {
+               dev-env-connect ($pr_number | into int)
+           }
+       }
+       "dev-env-destroy" => {
+           let pr_number = ($args | get 1? | default null)
+           if $pr_number == null {
+               error make { msg: $"($color_red)dev-env-destroy command requires a PR number($color_reset)" }
+           }
+           
+           # Parse flags
+           let command_args = ($args | skip 2)
+           let force = ($command_args | any { |arg| $arg == "--force" })
+           
+           # Call the dev-env-destroy command
+           if $force {
+               dev-env-destroy ($pr_number | into int) --force
+           } else {
+               dev-env-destroy ($pr_number | into int)
+           }
+       }
+       "dev-env-status" => {
+           let pr_number = ($args | get 1? | default null)
+           if $pr_number != null {
+               dev-env-status ($pr_number | into int)
+           } else {
+               dev-env-status
+           }
+       }
        "update-workflow" => {
            let workflow_name = ($args | get 1? | default null)
            if $workflow_name == null {
@@ -484,7 +991,7 @@ def --wrapped main [
            register-workflow $workflow_name
        }
        _ => {
-           error make { msg: $"($color_red)Unknown command: '($command)'. Must be 'migrate', 'dev-up', 'dev-down', 'update-workflow', or 'register-workflow'.($color_reset)" }
+           error make { msg: $"($color_red)Unknown command: '($command)'. Must be 'migrate', 'dev-up', 'dev-down', 'dev-env-*', 'update-workflow', or 'register-workflow'.($color_reset)" }
        }
    }
 }

@@ -1,0 +1,14 @@
+{{- if .Values.devEnv.enabled }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.devEnv.namespace }}
+  labels:
+    name: {{ .Values.devEnv.namespace }}
+    type: dev-environment
+    pr-number: "{{ .Values.devEnv.prNumber }}"
+    {{- include "sebastian.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install
+    "helm.sh/hook-weight": "-20"  # Create namespace before everything else
+{{- end }}

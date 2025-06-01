@@ -1,0 +1,97 @@
+# Alga PSA Development Environment - Code Server
+# Based on the official code-server image with Node.js LTS and development tools
+
+FROM codercom/code-server:latest
+
+# Switch to root to install packages
+USER root
+
+# Install prerequisites and Node.js LTS
+RUN apt-get update && \
+    apt-get install -y \
+        curl \
+        ca-certificates \
+        wget \
+        gnupg \
+        lsb-release \
+        git \
+        build-essential \
+        python3 \
+        python3-pip \
+        jq \
+        vim \
+        nano \
+        htop \
+        tree \
+        unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Add NodeSource repository and install Node.js LTS (18.x)
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install global npm packages
+RUN npm install -g \
+    @anthropic-ai/claude-code \
+    npm-check-updates \
+    typescript \
+    ts-node \
+    nodemon \
+    prettier \
+    eslint
+
+# Install mirrord for remote development
+RUN curl -fsSL https://raw.githubusercontent.com/metalbear-co/mirrord/main/scripts/install.sh | bash
+
+# Install kubectl
+RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
+    install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && \
+    rm kubectl
+
+# Install helm
+RUN curl -fsSL https://get.helm.sh/helm-v3.12.0-linux-amd64.tar.gz | tar xz && \
+    mv linux-amd64/helm /usr/local/bin/ && \
+    rm -rf linux-amd64
+
+# Install Docker CLI (for building images from within the environment)
+RUN curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null && \
+    apt-get update && \
+    apt-get install -y docker-ce-cli && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install VS Code extensions that work well in the browser environment
+# Use || true to continue if an extension fails to install
+RUN code-server --install-extension ms-vscode.vscode-typescript-next || true && \
+    code-server --install-extension bradlc.vscode-tailwindcss || true && \
+    code-server --install-extension esbenp.prettier-vscode || true && \
+    code-server --install-extension redhat.vscode-yaml || true && \
+    code-server --install-extension ms-kubernetes-tools.vscode-kubernetes-tools || true && \
+    code-server --install-extension dbaeumer.vscode-eslint || true
+
+# Create necessary directories
+RUN mkdir -p /home/coder/.config/code-server && \
+    mkdir -p /home/coder/.local/share/code-server/User && \
+    mkdir -p /home/coder/.vscode-server/extensions && \
+    mkdir -p /home/coder/alga-psa
+
+# Copy configuration files (will be mounted from configmap)
+COPY --chown=coder:coder config/settings.json /home/coder/.local/share/code-server/User/settings.json
+COPY --chown=coder:coder config/extensions.json /home/coder/.vscode-server/extensions.json
+
+# Copy and setup startup script
+COPY start-dev-env.sh /usr/local/bin/start-dev-env.sh
+RUN chmod +x /usr/local/bin/start-dev-env.sh
+
+# Switch back to the 'coder' user
+USER coder
+
+# Set the default workspace
+WORKDIR /home/coder/alga-psa
+
+# Expose the code-server port
+EXPOSE 8080
+
+# Use our custom startup script
+ENTRYPOINT ["/usr/local/bin/start-dev-env.sh"]

@@ -24,7 +24,7 @@ spec:
           env:
             {{- if .Values.db.enabled }}
             - name: DB_HOST
-              value: "db.{{ .Values.namespace }}.svc.cluster.local"
+              value: "db.{{ include "sebastian.namespace" . }}.svc.cluster.local"
             - name: DB_USER_SERVER
               value: "app_user"
             - name: DB_USER_ADMIN

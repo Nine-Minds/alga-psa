@@ -1,0 +1,24 @@
+{
+  "recommendations": [
+    "ms-vscode.vscode-typescript-next",
+    "bradlc.vscode-tailwindcss",
+    "esbenp.prettier-vscode",
+    "ms-vscode.vscode-json",
+    "ms-vscode.vscode-yaml",
+    "ms-kubernetes-tools.vscode-kubernetes-tools",
+    "ms-vscode-remote.remote-containers",
+    "dbaeumer.vscode-eslint",
+    "christian-kohler.path-intellisense",
+    "christian-kohler.npm-intellisense",
+    "formulahendry.auto-rename-tag",
+    "ms-vscode.vscode-json",
+    "redhat.vscode-yaml",
+    "ms-vscode.vscode-markdown",
+    "shd101wyy.markdown-preview-enhanced",
+    "ms-vscode.vscode-todo-highlight",
+    "gruntfuggly.todo-tree",
+    "ms-vscode.hexeditor",
+    "ms-vscode.vscode-docker",
+    "ms-kubernetes-tools.vscode-kubernetes-tools"
+  ]
+}

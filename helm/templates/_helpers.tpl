@@ -50,3 +50,11 @@ app.kubernetes.io/name: {{ include "sebastian.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
+{{/*
+Resolve the correct namespace for the resource.
+For dev environments, use devEnv.namespace, otherwise use the global namespace.
+*/}}
+{{- define "sebastian.namespace" -}}
+{{- if .Values.devEnv.enabled }}{{ .Values.devEnv.namespace }}{{ else }}{{ .Values.namespace }}{{ end }}
+{{- end }}
+

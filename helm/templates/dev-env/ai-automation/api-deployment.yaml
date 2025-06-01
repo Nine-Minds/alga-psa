@@ -1,0 +1,89 @@
+{{- if and .Values.devEnv.enabled .Values.devEnv.aiAutomation.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sebastian.fullname" . }}-ai-api
+  namespace: {{ .Values.devEnv.namespace }}
+  labels:
+    {{- include "sebastian.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ai-automation-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "sebastian.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: ai-automation-api
+  template:
+    metadata:
+      labels:
+        {{- include "sebastian.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: ai-automation-api
+    spec:
+      {{- if .Values.devEnv.aiAutomation.api.image.is_private }}
+      imagePullSecrets:
+        - name: "{{ .Values.devEnv.aiAutomation.api.image.credentials }}"
+      {{- end }}
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: ai-automation-api
+          image: "{{ .Values.devEnv.aiAutomation.api.image.repository }}:{{ .Values.devEnv.aiAutomation.api.image.tag }}"
+          imagePullPolicy: {{ .Values.devEnv.aiAutomation.api.image.pullPolicy }}
+          env:
+            - name: NODE_ENV
+              value: "development"
+            - name: PORT
+              value: "4000"
+            - name: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
+              value: "true"
+            - name: PUPPETEER_EXECUTABLE_PATH
+              value: "/usr/bin/chromium"
+            - name: CHROME_PATH
+              value: "/usr/bin/chromium"
+            - name: DEBIAN_FRONTEND
+              value: "noninteractive"
+            - name: DISPLAY
+              value: ":99"
+            - name: NODE_OPTIONS
+              value: "--max-http-header-size=26214400"
+            - name: CHOKIDAR_USEPOLLING
+              value: "true"
+            - name: CHOKIDAR_INTERVAL
+              value: "300"
+            # Environment markers
+            - name: ALGA_DEV_ENV
+              value: "true"
+            - name: ALGA_PR_NUMBER
+              value: "{{ .Values.devEnv.prNumber }}"
+            # Target app URL for automation
+            - name: TARGET_APP_URL
+              value: "http://{{ include "sebastian.fullname" . }}.{{ .Values.devEnv.namespace }}.svc.cluster.local:{{ .Values.server.service.port }}"
+          ports:
+            - name: http
+              containerPort: 4000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /api/browser/status
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/browser/status
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.devEnv.aiAutomation.api.resources | nindent 12 }}
+      {{- with .Values.devEnv.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.devEnv.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

@@ -1,0 +1,73 @@
+{{- if and .Values.devEnv.enabled .Values.devEnv.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "sebastian.fullname" . }}-dev-env
+  namespace: {{ .Values.devEnv.namespace }}
+  labels:
+    {{- include "sebastian.labels" . | nindent 4 }}
+  {{- with .Values.devEnv.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.devEnv.ingress.className }}
+  ingressClassName: {{ .Values.devEnv.ingress.className }}
+  {{- end }}
+  {{- if .Values.devEnv.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ tpl .Values.devEnv.ingress.hosts.codeServer.host . }}
+        {{- if .Values.devEnv.aiAutomation.enabled }}
+        - {{ tpl .Values.devEnv.ingress.hosts.aiAutomationWeb.host . }}
+        - {{ tpl .Values.devEnv.ingress.hosts.aiAutomationApi.host . }}
+        {{- end }}
+      secretName: {{ .Values.devEnv.ingress.tls.secretName }}
+  {{- end }}
+  rules:
+    # Code Server
+    {{- if .Values.devEnv.codeServer.enabled }}
+    - host: {{ tpl .Values.devEnv.ingress.hosts.codeServer.host . }}
+      http:
+        paths:
+          {{- range .Values.devEnv.ingress.hosts.codeServer.paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "sebastian.fullname" $ }}-code-server
+                port:
+                  number: {{ $.Values.devEnv.codeServer.service.port }}
+          {{- end }}
+    {{- end }}
+    
+    # AI Automation Web
+    {{- if .Values.devEnv.aiAutomation.enabled }}
+    - host: {{ tpl .Values.devEnv.ingress.hosts.aiAutomationWeb.host . }}
+      http:
+        paths:
+          {{- range .Values.devEnv.ingress.hosts.aiAutomationWeb.paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "sebastian.fullname" $ }}-ai-web
+                port:
+                  number: {{ $.Values.devEnv.aiAutomation.web.service.port }}
+          {{- end }}
+    
+    # AI Automation API
+    - host: {{ tpl .Values.devEnv.ingress.hosts.aiAutomationApi.host . }}
+      http:
+        paths:
+          {{- range .Values.devEnv.ingress.hosts.aiAutomationApi.paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "sebastian.fullname" $ }}-ai-api
+                port:
+                  number: {{ $.Values.devEnv.aiAutomation.api.service.port }}
+          {{- end }}
+    {{- end }}
+{{- end }}

@@ -1,0 +1,72 @@
+{{- if and .Values.devEnv.enabled .Values.devEnv.aiAutomation.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sebastian.fullname" . }}-ai-web
+  namespace: {{ .Values.devEnv.namespace }}
+  labels:
+    {{- include "sebastian.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ai-automation-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "sebastian.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: ai-automation-web
+  template:
+    metadata:
+      labels:
+        {{- include "sebastian.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: ai-automation-web
+    spec:
+      {{- if .Values.devEnv.aiAutomation.web.image.is_private }}
+      imagePullSecrets:
+        - name: "{{ .Values.devEnv.aiAutomation.web.image.credentials }}"
+      {{- end }}
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: ai-automation-web
+          image: "{{ .Values.devEnv.aiAutomation.web.image.repository }}:{{ .Values.devEnv.aiAutomation.web.image.tag }}"
+          imagePullPolicy: {{ .Values.devEnv.aiAutomation.web.image.pullPolicy }}
+          env:
+            - name: NODE_ENV
+              value: "development"
+            - name: PORT
+              value: "3000"
+            - name: NEXT_PUBLIC_API_URL
+              value: "http://{{ include "sebastian.fullname" . }}-ai-api.{{ .Values.devEnv.namespace }}.svc.cluster.local:4000"
+            # Environment markers
+            - name: ALGA_DEV_ENV
+              value: "true"
+            - name: ALGA_PR_NUMBER
+              value: "{{ .Values.devEnv.prNumber }}"
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.devEnv.aiAutomation.web.resources | nindent 12 }}
+      {{- with .Values.devEnv.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.devEnv.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

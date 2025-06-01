@@ -3,7 +3,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: redis-volume-claim
-  namespace: {{ .Values.namespace }}
+  namespace: {{ include "sebastian.namespace" . }}
 spec:
   accessModes:
     - ReadWriteOnce
