@@ -2,6 +2,17 @@
 
 import { IChannel } from '../../../interfaces';
 import Channel from '../../models/channel';
+import { createTenantKnex } from 'server/src/lib/db';
+import { withTransaction } from '@shared/db';
+import { Knex } from 'knex';
+
+export interface FindChannelByNameOutput {
+  id: string;
+  name: string;
+  description: string;
+  is_default: boolean;
+  is_active: boolean;
+}
 
 export async function findChannelById(id: string): Promise<IChannel | undefined> {
   try {
@@ -68,4 +79,25 @@ export async function updateChannel(channelId: string, channelData: Partial<Omit
     // Fallback for non-Error types (though less likely here)
     throw new Error('Failed to update channel due to an unexpected error.');
   }
+}
+
+/**
+ * Find channel by name
+ * This action searches for existing channels by name
+ */
+export async function findChannelByName(name: string): Promise<FindChannelByNameOutput | null> {
+  const { knex: db, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  return await withTransaction(db, async (trx: Knex.Transaction) => {
+    const channel = await trx('channels')
+      .select('channel_id as id', 'channel_name as name', 'description', 'is_default', 'is_active')
+      .where('tenant', tenant)
+      .whereRaw('LOWER(channel_name) = LOWER(?)', [name])
+      .first();
+
+    return channel || null;
+  });
 }

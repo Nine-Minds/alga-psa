@@ -68,6 +68,8 @@ export function TimeSheetHeader({
                                 id="show-intervals-toggle"
                                 checked={showIntervals}
                                 onCheckedChange={onToggleIntervals}
+                                data-automation-id="show-intervals-toggle"
+                                data-automation-type="switch"
                             />
                             <Label htmlFor="show-intervals-toggle" className="flex items-center">
                                 <Clock className="h-4 w-4 mr-1" />

@@ -78,3 +78,32 @@ export async function updatePriority(priorityId: string, priorityData: Partial<I
     }
   });
 }
+
+export interface FindPriorityByNameOutput {
+  id: string;
+  name: string;
+  priority_level: number;
+  color?: string;
+}
+
+/**
+ * Find priority by name
+ * This action searches for existing priorities by name
+ */
+export async function findPriorityByName(name: string): Promise<FindPriorityByNameOutput | null> {
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
+      const priority = await trx('priorities')
+        .select('priority_id as id', 'priority_name as name', 'priority_level', 'color')
+        .where('tenant', tenant)
+        .whereRaw('LOWER(priority_name) = LOWER(?)', [name])
+        .first();
+
+      return priority || null;
+    } catch (error) {
+      console.error(`Error finding priority by name for tenant ${tenant}:`, error);
+      return null;
+    }
+  });
+}

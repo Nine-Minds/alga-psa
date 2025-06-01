@@ -2,103 +2,89 @@
 
 import React, { useState, useEffect } from 'react';
 import { IInteraction } from 'server/src/interfaces/interaction.interfaces';
-import { Calendar, Clock, User, Briefcase, FileText, ArrowLeft, Plus, Pen, Check, X } from 'lucide-react';
+import { Clock, FileText, ArrowLeft, Plus, Pen, Trash2 } from 'lucide-react';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { ButtonComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
 import { useDrawer } from "server/src/context/DrawerContext";
 import ContactDetailsView from '../contacts/ContactDetailsView';
 import CompanyDetails from '../companies/CompanyDetails';
+import AgentScheduleDrawer from '../tickets/ticket/AgentScheduleDrawer';
 import { Button } from 'server/src/components/ui/Button';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
+import { QuickAddInteraction } from './QuickAddInteraction';
 import { ITicket } from 'server/src/interfaces';
 import { getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
 import { getCompanyById, getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
-import { updateInteraction } from 'server/src/lib/actions/interactionActions';
+import { findUserById } from 'server/src/lib/actions/user-actions/userActions';
+import { deleteInteraction } from 'server/src/lib/actions/interactionActions';
 import { Text, Flex, Heading } from '@radix-ui/themes';
+import RichTextViewer from '../editor/RichTextViewer';
+import { ConfirmationDialog } from '../ui/ConfirmationDialog';
 
 interface InteractionDetailsProps {
   interaction: IInteraction;
+  onInteractionDeleted?: () => void; // Callback when interaction is deleted
+  onInteractionUpdated?: (updatedInteraction: IInteraction) => void; // Callback when interaction is updated
 }
 
-interface EditableFieldProps {
-  label: string;
-  value: string;
-  onSave: (value: string) => Promise<void>;
-  icon: React.ReactNode;
-}
 
-const EditableField: React.FC<EditableFieldProps> = ({ label, value, onSave, icon }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [localValue, setLocalValue] = useState(value);
-
-  useEffect(() => {
-    setLocalValue(value);
-  }, [value]);
-
-  const handleSave = async () => {
-    try {
-      await onSave(localValue);
-      setIsEditing(false);
-    } catch (error) {
-      console.error('Error saving field:', error);
-    }
-  };
-
-  const handleCancel = () => {
-    setLocalValue(value);
-    setIsEditing(false);
-  };
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <Text as="label" size="2" className="text-gray-700 font-medium">{label}</Text>
-        {!isEditing && (
-          <Button 
-            id={`edit-field-${label.toLowerCase().replace(/\s+/g, '-')}`}
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setIsEditing(true)}
-          >
-            <Pen className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
-      <div className="flex items-center">
-        {icon}
-        {isEditing ? (
-          <div className="flex-grow ml-2">
-            <input
-              type="text"
-              value={localValue}
-              onChange={(e) => setLocalValue(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-            />
-            <div className="flex justify-end mt-2">
-              <Button id='cancel-button' variant="outline" size="sm" onClick={handleCancel}>
-                <X className="h-4 w-4 mr-1" />
-                Cancel
-              </Button>
-              <Button id="save-button" variant="default" size="sm" onClick={handleSave}>
-                <Check className="h-4 w-4 mr-1" />
-                Save
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <span className="ml-2">{value}</span>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: initialInteraction }) => {
+const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: initialInteraction, onInteractionDeleted, onInteractionUpdated }) => {
   const [interaction, setInteraction] = useState<IInteraction>(initialInteraction);
-  const { openDrawer, goBack } = useDrawer();
+  const { openDrawer, goBack, closeDrawer } = useDrawer();
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
+  const [isEditInteractionOpen, setIsEditInteractionOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [userFullName, setUserFullName] = useState<string>('');
+
+  // UI Reflection System Integration
+  const { automationIdProps: editButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: 'interaction-details-edit-button',
+    type: 'button',
+    label: 'Edit Interaction',
+    helperText: 'Edit this interaction details'
+  });
+
+  const { automationIdProps: deleteButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: 'interaction-details-delete-button',
+    type: 'button',
+    label: 'Delete Interaction',
+    helperText: 'Delete this interaction permanently'
+  });
+
+  const { automationIdProps: backButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: 'interaction-details-back-button',
+    type: 'button',
+    label: 'Back',
+    helperText: 'Go back to previous view'
+  });
+
+  const { automationIdProps: addTicketButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: 'interaction-details-add-ticket-button',
+    type: 'button',
+    label: 'Add Ticket',
+    helperText: 'Create a new ticket related to this interaction'
+  });
 
   useEffect(() => {
     console.log('Initial interaction:', initialInteraction);
     setInteraction(initialInteraction);
+    
+    // Fetch user's full name
+    const fetchUserFullName = async () => {
+      if (initialInteraction.user_id) {
+        try {
+          const user = await findUserById(initialInteraction.user_id);
+          if (user) {
+            setUserFullName(`${user.first_name} ${user.last_name}`);
+          }
+        } catch (error) {
+          console.error('Error fetching user full name:', error);
+        }
+      }
+    };
+    
+    fetchUserFullName();
   }, [initialInteraction]);
 
   console.log('Current interaction state:', interaction);
@@ -113,15 +99,6 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
     });
   };
 
-  const handleSaveField = async (field: keyof IInteraction, value: string) => {
-    try {
-      const updatedInteraction = await updateInteraction(interaction.interaction_id!, { [field]: value });
-      setInteraction(updatedInteraction);
-    } catch (error) {
-      console.error(`Error updating ${field}:`, error);
-      throw error;
-    }
-  };
 
   const handleContactClick = async () => {
     if (interaction.contact_name_id) {
@@ -176,58 +153,136 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
     setIsQuickAddTicketOpen(false);
   };
 
-  return (
-    <div className="p-6 relative bg-white shadow rounded-lg">
-      <Button
-        id="back-button"
-        onClick={goBack}
-        variant="ghost"
-        size="sm"
-        className="absolute top-2 right-2"
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Back
-      </Button>
-      
-      <Heading size="6" className="mb-6">Interaction Details</Heading>
-      
-      <div className="space-y-4">
-        <EditableField 
-          label="Title" 
-          value={interaction.title || 'No title'}
-          onSave={(value) => handleSaveField('title', value)}
-          icon={<FileText className="w-5 h-5 text-gray-500" />}
+  const handleInteractionUpdated = async (updatedInteraction: IInteraction) => {
+    setInteraction(updatedInteraction);
+    setIsEditInteractionOpen(false);
+    
+    // Update user full name if user changed
+    if (updatedInteraction.user_id) {
+      try {
+        const user = await findUserById(updatedInteraction.user_id);
+        if (user) {
+          setUserFullName(`${user.first_name} ${user.last_name}`);
+        }
+      } catch (error) {
+        console.error('Error fetching updated user full name:', error);
+      }
+    }
+    
+    // Notify parent component of the update
+    if (onInteractionUpdated) {
+      onInteractionUpdated(updatedInteraction);
+    }
+  };
+
+  const handleUserClick = () => {
+    if (interaction.user_id) {
+      openDrawer(
+        <AgentScheduleDrawer
+          agentId={interaction.user_id}
         />
+      );
+    }
+  };
+
+  const handleDeleteInteraction = async () => {
+    try {
+      await deleteInteraction(interaction.interaction_id);
+      setIsDeleteDialogOpen(false);
+      
+      // Call the callback to notify parent that interaction was deleted
+      if (onInteractionDeleted) {
+        onInteractionDeleted();
+      }
+      
+      // Close the drawer completely
+      closeDrawer();
+    } catch (error) {
+      console.error('Error deleting interaction:', error);
+      // Handle error (e.g., show error message to user)
+    }
+  };
+
+  return (
+    <ReflectionContainer id="interaction-details" label="Interaction Details">
+      <div className="p-6 relative bg-white shadow rounded-lg">
+      <div className="flex justify-between items-center mb-6">
+        <Heading size="6">Interaction Details</Heading>
+        <div className="flex gap-2">
+          <Button
+            {...editButtonProps}
+            onClick={() => setIsEditInteractionOpen(true)}
+            variant="ghost"
+            size="sm"
+          >
+            <Pen className="mr-2 h-4 w-4" />
+            Edit
+          </Button>
+          <Button
+            {...deleteButtonProps}
+            onClick={() => setIsDeleteDialogOpen(true)}
+            variant="ghost"
+            size="sm"
+            className="text-red-600 hover:text-red-800 hover:bg-red-50"
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete
+          </Button>
+          <Button
+            {...backButtonProps}
+            onClick={goBack}
+            variant="ghost"
+            size="sm"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
+        </div>
+      </div>
+      
+      <div className="space-y-6">
+        <div className="flex items-center">
+          <span className="font-semibold">Title:</span>
+          <span className="ml-2 text-lg font-medium">{interaction.title || 'No title'}</span>
+        </div>
         
         {interaction.notes && (
           <div className="space-y-2">
-            <Text size="2" weight="bold" className="flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              Notes
-            </Text>
-            <div className="p-3 bg-gray-50 rounded-md">
-              <Text size="2">{interaction.notes}</Text>
+            <Text size="2" weight="bold">Notes</Text>
+            <div className="prose max-w-none">
+              <RichTextViewer content={(() => {
+                try {
+                  return JSON.parse(interaction.notes || '[]');
+                } catch (e) {
+                  // If parsing fails, return a simple paragraph with the text
+                  return [{
+                    type: "paragraph",
+                    props: {
+                      textAlignment: "left",
+                      backgroundColor: "default",
+                      textColor: "default"
+                    },
+                    content: [{
+                      type: "text",
+                      text: interaction.notes || '',
+                      styles: {}
+                    }]
+                  }];
+                }
+              })()} />
             </div>
           </div>
         )}
 
         {interaction.status_name && (
-          <div className="space-y-2">
-            <Text size="2" weight="bold">Status</Text>
-            <Text size="2" className="text-blue-600">{interaction.status_name}</Text>
+          <div className="flex items-center">
+            <span className="font-semibold">Status:</span>
+            <span className="ml-2">{interaction.status_name}</span>
           </div>
         )}
         
-        <EditableField 
-          label="Duration (minutes)" 
-          value={interaction.duration?.toString() || 'Not set'}
-          onSave={(value) => handleSaveField('duration', value)}
-          icon={<Clock className="w-5 h-5 text-gray-500" />}
-        />
-        
         {interaction.start_time && (
           <div className="flex items-center">
-            <Clock className="w-5 h-5 mr-2 text-gray-500" />
             <span className="font-semibold">Start Time:</span>
             <span className="ml-2">
               {formatDate(interaction.start_time)}
@@ -237,7 +292,6 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
         
         {interaction.end_time && (
           <div className="flex items-center">
-            <Clock className="w-5 h-5 mr-2 text-gray-500" />
             <span className="font-semibold">End Time:</span>
             <span className="ml-2">
               {formatDate(interaction.end_time)}
@@ -245,20 +299,26 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
           </div>
         )}
         
+        {interaction.duration && (
+          <div className="flex items-center">
+            <span className="font-semibold">Duration:</span>
+            <span className="ml-2">
+              {interaction.duration} minutes
+            </span>
+          </div>
+        )}
+        
         <div className="flex items-center">
-          <Calendar className="w-5 h-5 mr-2 text-gray-500" />
-          <span className="font-semibold">Date:</span>
-          <span className="ml-2">
-            {interaction.interaction_date ? formatDate(interaction.interaction_date) : 'Not set'}
-          </span>
-        </div>
-        <div className="flex items-center">
-          <User className="w-5 h-5 mr-2 text-gray-500" />
           <span className="font-semibold">User:</span>
-          <span className="ml-2">{interaction.user_name || 'Unknown'}</span>
+          <button
+            onClick={handleUserClick}
+            className="ml-2 text-blue-500 hover:underline"
+          >
+            {userFullName || interaction.user_name || 'Unknown'}
+          </button>
         </div>
+        
         <div className="flex items-center">
-          <User className="w-5 h-5 mr-2 text-gray-500" />
           <span className="font-semibold">Contact:</span>
           {interaction.contact_name ? (
             <button
@@ -271,8 +331,8 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
             <span className="ml-2">No contact associated</span>
           )}
         </div>
+        
         <div className="flex items-center">
-          <Briefcase className="w-5 h-5 mr-2 text-gray-500" />
           <span className="font-semibold">Company:</span>
           {interaction.company_name ? (
             <button
@@ -289,7 +349,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
 
       <Flex justify="end" align="center" className="mt-6">
         <Button
-          id="add-ticket-button"
+          {...addTicketButtonProps}
           onClick={() => setIsQuickAddTicketOpen(true)}
           variant="default"
         >
@@ -313,7 +373,30 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
         } : undefined}
         prefilledDescription={interaction.notes}
       />
-    </div>
+
+      <QuickAddInteraction
+        id="edit-interaction"
+        entityId={interaction.contact_name_id || interaction.company_id || ''}
+        entityType={interaction.contact_name_id ? 'contact' : 'company'}
+        companyId={interaction.company_id || undefined}
+        onInteractionAdded={handleInteractionUpdated}
+        isOpen={isEditInteractionOpen}
+        onClose={() => setIsEditInteractionOpen(false)}
+        editingInteraction={interaction}
+      />
+
+      <ConfirmationDialog
+        id="delete-interaction-dialog"
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={handleDeleteInteraction}
+        title="Delete Interaction"
+        message="Are you sure you want to delete this interaction? This action cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+      />
+      </div>
+    </ReflectionContainer>
   );
 };
 

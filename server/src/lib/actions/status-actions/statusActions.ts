@@ -440,3 +440,38 @@ export async function deleteStatus(statusId: string) {
     throw new Error('Failed to delete status');
   }
 }
+
+export interface FindStatusByNameInput {
+  name: string;
+  item_type: string; // 'ticket', 'project', etc.
+}
+
+export interface FindStatusByNameOutput {
+  id: string;
+  name: string;
+  item_type: string;
+  is_closed: boolean;
+  is_default: boolean;
+}
+
+/**
+ * Find status by name and item type
+ * This action searches for existing statuses by name and type
+ */
+export async function findStatusByName(input: FindStatusByNameInput): Promise<FindStatusByNameOutput | null> {
+  const { knex: db, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  return await withTransaction(db, async (trx: Knex.Transaction) => {
+    const status = await trx('statuses')
+      .select('status_id as id', 'name', 'item_type', 'is_closed', 'is_default')
+      .where('tenant', tenant)
+      .whereRaw('LOWER(name) = LOWER(?)', [input.name])
+      .where('item_type', input.item_type)
+      .first();
+
+    return status || null;
+  });
+}

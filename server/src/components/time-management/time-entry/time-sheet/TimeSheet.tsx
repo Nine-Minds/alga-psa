@@ -25,6 +25,10 @@ import { TimeSheetHeader } from './TimeSheetHeader';
 import { TimeSheetComments } from 'server/src/components/time-management/approvals/TimeSheetComments';
 import { WorkItemDrawer } from './WorkItemDrawer';
 import { IntervalSection } from 'server/src/components/time-management/interval-tracking/IntervalSection';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ContainerComponent } from 'server/src/types/ui-reflection/types';
+import { CommonActions } from 'server/src/types/ui-reflection/actionBuilders';
 
 interface TimeSheetProps {
     timeSheet: ITimeSheetView;
@@ -448,9 +452,27 @@ export function TimeSheet({
 
     const isEditable = timeSheet.approval_status === 'DRAFT' || timeSheet.approval_status === 'CHANGES_REQUESTED';
 
+    // Register the main TimeSheet container for UI automation
+    const { automationIdProps: timeSheetProps } = useAutomationIdAndRegister<ContainerComponent>({
+        type: 'container',
+        id: 'timesheet-main',
+        label: 'Time Sheet Management',
+    }, () => [
+        CommonActions.focus('Focus on time sheet'),
+        ...(isEditable ? [
+            {
+                type: 'click' as const,
+                available: true,
+                description: 'Add new work item to timesheet',
+                parameters: []
+            }
+        ] : [])
+    ]);
+
     return (
-        <div className="h-full overflow-y-auto">
-            <TimeSheetHeader
+        <ReflectionContainer id="timesheet-main" label="Time Sheet Management">
+            <div className="h-full overflow-y-auto" {...timeSheetProps}>
+                <TimeSheetHeader
                 status={timeSheet.approval_status}
                 isEditable={isEditable}
                 onSubmit={handleSubmitTimeSheet}
@@ -597,6 +619,7 @@ export function TimeSheet({
                     timePeriod={timeSheet.time_period}
                 />
             )}
-        </div>
+            </div>
+        </ReflectionContainer>
     );
 }

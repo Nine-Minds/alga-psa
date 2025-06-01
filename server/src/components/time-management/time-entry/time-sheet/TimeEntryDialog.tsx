@@ -402,7 +402,15 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       {inDrawer ? (
         content
       ) : (
-        <Dialog isOpen={isOpen} onClose={handleClose} title={title} hideCloseButton={false}>
+        <Dialog 
+          isOpen={isOpen} 
+          onClose={handleClose} 
+          title={title} 
+          hideCloseButton={false}
+          id={id}
+          data-automation-id={id}
+          data-automation-type="time-entry-dialog"
+        >
           <DialogContent className="w-full max-w-4xl">
             {content}
           </DialogContent>

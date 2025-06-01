@@ -44,11 +44,72 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
-  // // Register all components with UI reflection system
+  // UI Reflection System Integration
   const { automationIdProps: titleProps } = useAutomationIdAndRegister<ContainerComponent>({
     id: `${id}-title`,
     type: 'container',
-    label: 'Interactions Title'
+    label: 'Interactions Title',
+    helperText: 'Main heading for the interactions section'
+  });
+
+  const { automationIdProps: addButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: `${id}-add-button`,
+    type: 'button',
+    label: 'Add Interaction',
+    helperText: 'Opens dialog to create a new interaction'
+  });
+
+  const { automationIdProps: searchInputProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-search-input`,
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'Search Interactions',
+    helperText: 'Search interactions by title or type'
+  });
+
+  const { automationIdProps: filterButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: `${id}-filter-button`,
+    type: 'button',
+    label: 'Filter Interactions',
+    helperText: 'Opens filter dialog to narrow down interactions'
+  });
+
+  const { automationIdProps: typeFilterProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-type-filter`,
+    type: 'formField',
+    fieldType: 'select',
+    label: 'Filter by Type',
+    helperText: 'Filter interactions by their type'
+  });
+
+  const { automationIdProps: startDateProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-start-date`,
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'Start Date Filter',
+    helperText: 'Filter interactions from this date'
+  });
+
+  const { automationIdProps: endDateProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-end-date`,
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'End Date Filter',
+    helperText: 'Filter interactions until this date'
+  });
+
+  const { automationIdProps: resetButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: `${id}-reset-button`,
+    type: 'button',
+    label: 'Reset Filters',
+    helperText: 'Clear all applied filters'
+  });
+
+  const { automationIdProps: applyButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: `${id}-apply-button`,
+    type: 'button',
+    label: 'Apply Filters',
+    helperText: 'Apply the selected filters'
   });
 
   useEffect(() => {
@@ -106,11 +167,32 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
     setIsQuickAddOpen(false);
   };
 
+  const handleInteractionDeleted = useCallback((deletedInteractionId: string) => {
+    // Remove the deleted interaction from the list
+    setInteractions(prevInteractions => 
+      prevInteractions.filter(i => i.interaction_id !== deletedInteractionId)
+    );
+  }, [setInteractions]);
+
+  const handleInteractionUpdated = useCallback((updatedInteraction: IInteraction) => {
+    // Update the interaction in the list
+    setInteractions(prevInteractions => 
+      prevInteractions.map(i => 
+        i.interaction_id === updatedInteraction.interaction_id ? updatedInteraction : i
+      )
+    );
+  }, [setInteractions]);
+
   const handleInteractionClick = useCallback((interaction: IInteraction) => {
     openDrawer(
-      <InteractionDetails interaction={interaction} />,
+      <InteractionDetails 
+        interaction={interaction} 
+        onInteractionDeleted={() => handleInteractionDeleted(interaction.interaction_id)}
+        onInteractionUpdated={handleInteractionUpdated}
+      />,
       async () => {
         try {
+          // Check if interaction still exists (in case it was edited)
           const updatedInteraction = await getInteractionById(interaction.interaction_id);
           setInteractions(prevInteractions => 
             prevInteractions.map((i): IInteraction => 
@@ -118,11 +200,12 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
             )
           );
         } catch (error) {
-          console.error('Error fetching updated interaction:', error);
+          // If interaction doesn't exist (was deleted), don't treat it as an error
+          console.log('Interaction no longer exists (likely deleted)');
         }
       }
     );
-  }, [openDrawer, setInteractions]);
+  }, [openDrawer, setInteractions, handleInteractionDeleted, handleInteractionUpdated]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -147,7 +230,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               Interactions
             </h2>
             <Button 
-              id='add-interaction-button'
+              {...addButtonProps}
               onClick={() => setIsQuickAddOpen(true)} 
               size="default"
               variant="default"
@@ -158,7 +241,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
           </div>
           <div className="flex flex-wrap gap-4 mb-4">
             <Input
-              id='search-input'
+              {...searchInputProps}
               type="text"
               value={searchTerm}
               onChange={handleSearchChange}
@@ -166,7 +249,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               className="flex-grow"
             />
             <Button 
-              id="open-filter-button"
+              {...filterButtonProps}
               onClick={() => setIsFilterDialogOpen(true)} 
               variant="outline"
               size="default"
@@ -193,7 +276,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
                   <p className="font-semibold">{interaction.title}</p>
                   <p className="text-sm text-gray-500">{new Date(interaction.interaction_date).toLocaleString()}</p>
                   {interaction.status_name && (
-                    <p className="text-xs text-blue-600">{interaction.status_name}</p>
+                    <p className="text-xs text-gray-600">{interaction.status_name}</p>
                   )}
                 </div>
               </li>
@@ -209,7 +292,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
         <DialogContent>
           <div className="space-y-4">
             <CustomSelect
-              id='type-select'
+              {...typeFilterProps}
               options={[
                 { value: 'all', label: 'All Types' },
                 ...interactionTypes.map((type) => ({
@@ -222,14 +305,14 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               placeholder="Interaction Type"
             />
             <Input
-              id='start-date-input'
+              {...startDateProps}
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               placeholder="Start Date"
             />
             <Input
-              id='end-date-input'
+              {...endDateProps}
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
@@ -237,7 +320,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
             />
             <div className="flex justify-between">
               <Button 
-                id='reset-filters-button'
+                {...resetButtonProps}
                 onClick={resetFilters} 
                 variant="outline" 
                 className="flex items-center"
@@ -246,7 +329,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
                 Reset Filters
               </Button>
               <Button 
-                id='apply-filters-button'
+                {...applyButtonProps}
                 onClick={handleApplyFilters}
               >
                 Apply Filters
