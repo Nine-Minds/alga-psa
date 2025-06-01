@@ -29,6 +29,7 @@ COPY tsconfig.base.json ./
 
 WORKDIR /app
 COPY shared/ ./shared/
+COPY services/ ./services/
 
 # Copy EE features conditionally
 COPY ee/ ./ee/
@@ -43,6 +44,9 @@ WORKDIR /app/server
 
 # Copy server source code (changes frequently)
 COPY server/ ./
+
+# Build the Next.js application
+RUN npm run build
 
 # Copy and make entrypoint executable (rarely changes)
 COPY server/entrypoint.sh /app/entrypoint.sh
