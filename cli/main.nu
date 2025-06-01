@@ -403,7 +403,7 @@ def dev-env-create [
     pr_number: int     # GitHub PR number
     --branch: string   # Git branch (defaults to pr/pr_number)
     --edition: string = "ce"  # Edition: ce or ee
-    --ai-enabled # Include AI automation
+    --ai-enabled = false # Include AI automation
 ] {
     let project_root = find-project-root
     
@@ -436,6 +436,7 @@ def dev-env-create [
     # Create temporary values file
     let temp_values_file = $"($project_root)/temp-values-pr-($pr_number).yaml"
     let edition_comment = if $edition == "ee" { "# Enterprise Edition settings" } else { "# Community Edition settings" }
+    let image_name = $"harbor.nineminds.com/nineminds/alga-psa-($edition)"
     let values_content = $"
 # Generated values for PR ($pr_number) development environment
 devEnv:
@@ -450,10 +451,15 @@ devEnv:
   aiAutomation:
     enabled: ($ai_enabled)
 
+server:
+  image:
+    name: \"($image_name)\"
+    tag: \"latest\"
+
 ($edition_comment)"
     
     # Write temporary values file
-    $values_content | save $temp_values_file
+    $values_content | save -f $temp_values_file
     
     try {
         # Deploy using Helm
@@ -763,16 +769,94 @@ def dev-env-status [
     print ""
     
     # Port forward instructions
-    print $"($color_cyan)Local Access \(Port Forward\):($color_reset)"
+    print $"($color_cyan)Local Access - Port Forward:($color_reset)"
     print $"  Run: dev-env-connect ($pr_number) --port-forward"
     print $"  Then access:"
-    print $"    Code Server: http://localhost:8080 \(password: alga-dev\)"
+    print $"    Code Server: http://localhost:8080 - password: alga-dev"
     print $"    PSA App:     http://localhost:3001"
     
     print ""
     print $"($color_cyan)Management Commands:($color_reset)"
     print $"  Connect:  dev-env-connect ($pr_number) [--port-forward] [--code-server]"
     print $"  Destroy:  dev-env-destroy ($pr_number) [--force]"
+}
+
+# Build Docker image for specified edition
+def build-image [
+    edition: string,         # Edition to build (ce or ee) 
+    --tag: string = "latest" # Docker tag to use
+    --push                   # Push to registry after building
+] {
+    if not ($edition in ["ce", "ee"]) {
+        error make { msg: $"($color_red)Edition must be 'ce' or 'ee'($color_reset)" }
+    }
+    
+    print $"($color_cyan)Building ($edition | str upcase) Docker image...($color_reset)"
+    
+    let project_root = find-project-root
+    cd $project_root
+    
+    # Determine image name and build context
+    let image_name = $"harbor.nineminds.com/nineminds/alga-psa-($edition)"
+    let full_tag = $"($image_name):($tag)"
+    
+    # Build the image
+    print $"($color_yellow)Building: ($full_tag)($color_reset)"
+    
+    if $edition == "ee" {
+        # EE build includes everything
+        let result = (docker build --platform linux/amd64 -f server/Dockerfile -t $full_tag . | complete)
+        if $result.exit_code != 0 {
+            print $"($color_red)Build failed:($color_reset)"
+            print $result.stderr
+            error make { msg: "Docker build failed" }
+        }
+    } else {
+        # CE build excludes EE directory
+        let result = (docker build --platform linux/amd64 -f server/Dockerfile -t $full_tag --build-arg EXCLUDE_EE=true . | complete)
+        if $result.exit_code != 0 {
+            print $"($color_red)Build failed:($color_reset)"
+            print $result.stderr
+            error make { msg: "Docker build failed" }
+        }
+    }
+    
+    print $"($color_green)Successfully built: ($full_tag)($color_reset)"
+    
+    if $push {
+        print $"($color_yellow)Pushing: ($full_tag)($color_reset)"
+        let push_result = (docker push $full_tag | complete)
+        if $push_result.exit_code != 0 {
+            print $"($color_red)Push failed:($color_reset)"
+            print $push_result.stderr
+            error make { msg: "Docker push failed" }
+        }
+        print $"($color_green)Successfully pushed: ($full_tag)($color_reset)"
+    }
+}
+
+# Build Docker images for both CE and EE editions
+def build-all-images [
+    --tag: string = "latest" # Docker tag to use
+    --push                   # Push to registry after building
+] {
+    print $"($color_cyan)Building all edition Docker images...($color_reset)"
+    
+    # Build CE edition
+    if $push {
+        build-image "ce" --tag $tag --push
+    } else {
+        build-image "ce" --tag $tag
+    }
+    
+    # Build EE edition  
+    if $push {
+        build-image "ee" --tag $tag --push
+    } else {
+        build-image "ee" --tag $tag
+    }
+    
+    print $"($color_green)All builds completed successfully!($color_reset)"
 }
 
 # Alga Development CLI Entry Point
@@ -812,6 +896,13 @@ def --wrapped main [
        print "  nu main.nu register-workflow <base_workflow_name> # Add new version (creates registration if needed)"
        print "    Example: nu main.nu register-workflow customer-sync"
        print ""
+       print "  nu main.nu build-image <edition> [--tag <tag>] [--push]"
+       print "    Build Docker image for specified edition (ce|ee)"
+       print "    Example: nu main.nu build-image ce --tag latest --push"
+       print "  nu main.nu build-all-images [--tag <tag>] [--push]"
+       print "    Build Docker images for both CE and EE editions"
+       print "    Example: nu main.nu build-all-images --tag latest --push"
+       print ""
        print "Alternatively, source the script ('source main.nu') and run commands directly:"
        print "  dev-env-create 123 --branch my-feature"
        print "  dev-env-list"
@@ -848,6 +939,13 @@ def --wrapped main [
        print ""
        print "  nu main.nu register-workflow <base_workflow_name> # Add new version (creates registration if needed)"
        print "    Example: nu main.nu register-workflow customer-sync"
+       print ""
+       print "  nu main.nu build-image <edition> [--tag <tag>] [--push]"
+       print "    Build Docker image for specified edition (ce|ee)"
+       print "    Example: nu main.nu build-image ce --tag latest --push"
+       print "  nu main.nu build-all-images [--tag <tag>] [--push]"
+       print "    Build Docker images for both CE and EE editions"
+       print "    Example: nu main.nu build-all-images --tag latest --push"
        print "\nAlternatively, source the script ('source main.nu') and run commands directly:"
        print "  migrate <action>"
        print "  dev-up [--detached] [--edition ce|ee]"
@@ -990,8 +1088,41 @@ def --wrapped main [
            # Call the register-workflow command
            register-workflow $workflow_name
        }
+       "build-image" => {
+           let edition = ($args | get 1? | default null)
+           if $edition == null {
+               error make { msg: $"($color_red)build-image command requires an edition (ce|ee)($color_reset)" }
+           }
+           
+           # Parse flags
+           let command_args = ($args | skip 2)
+           let tag_idx = ($command_args | enumerate | where {|item| $item.item == "--tag"} | get 0?.index | default null)
+           let tag = if $tag_idx != null { ($command_args | get ($tag_idx + 1) | default "latest") } else { "latest" }
+           let push = ($command_args | any { |arg| $arg == "--push" })
+           
+           # Call the build-image command
+           if $push {
+               build-image $edition --tag $tag --push
+           } else {
+               build-image $edition --tag $tag
+           }
+       }
+       "build-all-images" => {
+           # Parse flags
+           let command_args = ($args | skip 1)
+           let tag_idx = ($command_args | enumerate | where {|item| $item.item == "--tag"} | get 0?.index | default null)
+           let tag = if $tag_idx != null { ($command_args | get ($tag_idx + 1) | default "latest") } else { "latest" }
+           let push = ($command_args | any { |arg| $arg == "--push" })
+           
+           # Call the build-all-images command
+           if $push {
+               build-all-images --tag $tag --push
+           } else {
+               build-all-images --tag $tag
+           }
+       }
        _ => {
-           error make { msg: $"($color_red)Unknown command: '($command)'. Must be 'migrate', 'dev-up', 'dev-down', 'dev-env-*', 'update-workflow', or 'register-workflow'.($color_reset)" }
+           error make { msg: $"($color_red)Unknown command: '($command)'. Must be 'migrate', 'dev-up', 'dev-down', 'dev-env-*', 'update-workflow', 'register-workflow', 'build-image', or 'build-all-images'.($color_reset)" }
        }
    }
 }

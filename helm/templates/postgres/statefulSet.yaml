@@ -51,7 +51,7 @@ spec:
           {{- if .Values.db.persistence.existingClaim }}
             claimName: {{ .Values.db.persistence.existingClaim }}
           {{- else }}
-            claimName: {{ .Values.db.persistence.claimName }}
+            claimName: {{ include "sebastian.fullname" . }}-postgres-data
           {{- end }}
       {{- end }}
 

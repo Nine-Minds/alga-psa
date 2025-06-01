@@ -46,7 +46,7 @@ spec:
           {{- if .Values.redis.persistence.existingClaim }}
             claimName: {{ .Values.redis.persistence.existingClaim }}
           {{- else }}
-            claimName: redis-volume-claim
+            claimName: {{ include "sebastian.fullname" . }}-redis-data
           {{- end }}
       {{- end }}
 

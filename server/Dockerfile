@@ -1,5 +1,8 @@
 FROM node:alpine AS server
 
+# Build argument to control edition
+ARG EXCLUDE_EE=false
+
 # Install required system dependencies (rarely changes)
 RUN apk add --no-cache \
     graphicsmagick \
@@ -26,6 +29,15 @@ COPY tsconfig.base.json ./
 
 WORKDIR /app
 COPY shared/ ./shared/
+
+# Copy EE features conditionally
+COPY ee/ ./ee/
+RUN if [ "$EXCLUDE_EE" = "true" ]; then \
+        echo "Building CE edition - excluding EE features..."; \
+        rm -rf ./ee; \
+    else \
+        echo "Including EE features..."; \
+    fi
 
 WORKDIR /app/server
 

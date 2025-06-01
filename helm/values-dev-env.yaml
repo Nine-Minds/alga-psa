@@ -84,7 +84,7 @@ devEnv:
   persistence:
     enabled: true
     size: "10Gi"
-    storageClass: "fast-ssd"
+    storageClass: "local-path"
     # Keep data when environment is destroyed for debugging
     keepOnDelete: false
   
@@ -124,7 +124,7 @@ devEnv:
 server:
   replicaCount: 1
   image:
-    name: harbor.nineminds.com/nineminds/sebastian_server
+    name: harbor.nineminds.com/nineminds/alga-psa-ee
     tag: "latest"
     is_private: true
     credentials: harbor-credentials
@@ -152,8 +152,7 @@ db:
   persistence:
     enabled: true
     size: 5Gi
-    storageClass: "fast-ssd"
-    claimName: "postgres-data"
+    storageClass: "local-path"
     existingClaim: ""
 
 redis:
@@ -164,7 +163,7 @@ redis:
   persistence:
     enabled: true
     size: 1Gi
-    storageClass: "fast-ssd"
+    storageClass: "local-path"
 
 hocuspocus:
   image:
@@ -219,6 +218,6 @@ resources:
 # Persistence settings
 persistence:
   enabled: true
-  storageClass: "fast-ssd"
+  storageClass: "local-path"
   size: "20Gi"
   keepPvcOnUninstall: false  # Clean up when environment is destroyed
