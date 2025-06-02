@@ -22,9 +22,9 @@ import { Text, Flex, Heading } from '@radix-ui/themes';
 import RichTextViewer from '../editor/RichTextViewer';
 import { ConfirmationDialog } from '../ui/ConfirmationDialog';
 import { IWorkItem, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
-import { ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
 import TimeEntryDialog from 'server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog';
 import { toast } from 'react-hot-toast';
+import { getCurrentTimePeriod } from 'server/src/lib/actions/timePeriodsActions';
 
 interface InteractionDetailsProps {
   interaction: IInteraction;
@@ -214,52 +214,50 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
     }
   };
 
-  const handleAddTimeEntry = () => {
+  const handleAddTimeEntry = async () => {
     if (!interaction.interaction_id) {
       toast.error('Invalid interaction');
       return;
     }
 
-    const workItem: Omit<IWorkItem, 'tenant'> & { 
-      interaction_type?: string; 
-      company_name?: string | null;
-    } = {
-      work_item_id: interaction.interaction_id,
-      type: 'interaction' as WorkItemType,
-      name: interaction.title || 'Interaction',
-      description: interaction.notes || '',
-      interaction_type: interaction.type_name, // Use type_name from IInteraction
-      company_name: interaction.company_name
-    };
+    try {
+      const currentTimePeriod = await getCurrentTimePeriod();
 
-    // Create a default time period for the current week
-    const today = new Date();
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6); // Saturday
+      if (!currentTimePeriod) {
+        toast.error('No active time period found. Please contact your administrator.');
+        return;
+      }
 
-    const timePeriod: ITimePeriodView = {
-      period_id: 'temp-period',
-      start_date: startOfWeek.toISOString().split('T')[0],
-      end_date: endOfWeek.toISOString().split('T')[0],
-      tenant: ''
-    };
+      const workItem: Omit<IWorkItem, 'tenant'> & { 
+        interaction_type?: string; 
+        company_name?: string | null;
+      } = {
+        work_item_id: interaction.interaction_id,
+        type: 'interaction' as WorkItemType,
+        name: interaction.title || 'Interaction',
+        description: interaction.notes || '',
+        interaction_type: interaction.type_name, // Use type_name from IInteraction
+        company_name: interaction.company_name
+      };
 
-    openDrawer(
-      <TimeEntryDialog
-        isOpen={true}
-        onClose={() => {}}
-        onSave={async () => {
-          toast.success('Time entry added successfully');
-        }}
-        workItem={workItem}
-        date={new Date()}
-        timePeriod={timePeriod}
-        isEditable={true}
-        inDrawer={true}
-      />
-    );
+      openDrawer(
+        <TimeEntryDialog
+          isOpen={true}
+          onClose={() => {}}
+          onSave={async () => {
+            toast.success('Time entry added successfully');
+          }}
+          workItem={workItem}
+          date={new Date()}
+          timePeriod={currentTimePeriod}
+          isEditable={true}
+          inDrawer={true}
+        />
+      );
+    } catch (error) {
+      console.error('Error fetching time period:', error);
+      toast.error('Failed to fetch time period. Please try again.');
+    }
   };
 
   return (

@@ -33,8 +33,8 @@ import TreeSelect, { TreeSelectOption, TreeSelectPath } from 'server/src/compone
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { useDrawer } from 'server/src/context/DrawerContext';
 import { IWorkItem, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
-import { ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
 import TimeEntryDialog from 'server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog';
+import { getCurrentTimePeriod } from 'server/src/lib/actions/timePeriodsActions';
 
 type ProjectTreeTypes = 'project' | 'phase' | 'status';
 
@@ -555,54 +555,52 @@ export default function TaskForm({
     setShowDeleteConfirm(false);
   };
 
-  const handleAddTimeEntry = () => {
+  const handleAddTimeEntry = async () => {
     if (!task?.task_id) {
       toast.error('Please save the task before adding time entries');
       return;
     }
 
-    const workItem: Omit<IWorkItem, 'tenant'> & {
-      project_name?: string;
-      phase_name?: string;
-      task_name?: string;
-    } = {
-      work_item_id: task.task_id,
-      type: 'project_task' as WorkItemType,
-      name: `${task.task_name}`,
-      description: task.description || '',
-      project_name: phase.phase_name, // Using phase name as a placeholder
-      phase_name: phase.phase_name,
-      task_name: task.task_name
-    };
+    try {
+      const currentTimePeriod = await getCurrentTimePeriod();
 
-    // Create a default time period for the current week
-    const today = new Date();
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6); // Saturday
+      if (!currentTimePeriod) {
+        toast.error('No active time period found. Please contact your administrator.');
+        return;
+      }
 
-    const timePeriod: ITimePeriodView = {
-      period_id: 'temp-period',
-      start_date: startOfWeek.toISOString().split('T')[0],
-      end_date: endOfWeek.toISOString().split('T')[0],
-      tenant: ''
-    };
+      const workItem: Omit<IWorkItem, 'tenant'> & {
+        project_name?: string;
+        phase_name?: string;
+        task_name?: string;
+      } = {
+        work_item_id: task.task_id,
+        type: 'project_task' as WorkItemType,
+        name: `${task.task_name}`,
+        description: task.description || '',
+        project_name: phase.phase_name, // Using phase name as a placeholder
+        phase_name: phase.phase_name,
+        task_name: task.task_name
+      };
 
-    openDrawer(
-      <TimeEntryDialog
-        isOpen={true}
-        onClose={() => {}}
-        onSave={async () => {
-          toast.success('Time entry added successfully');
-        }}
-        workItem={workItem}
-        date={new Date()}
-        timePeriod={timePeriod}
-        isEditable={true}
-        inDrawer={true}
-      />
-    );
+      openDrawer(
+        <TimeEntryDialog
+          isOpen={true}
+          onClose={() => {}}
+          onSave={async () => {
+            toast.success('Time entry added successfully');
+          }}
+          workItem={workItem}
+          date={new Date()}
+          timePeriod={currentTimePeriod}
+          isEditable={true}
+          inDrawer={true}
+        />
+      );
+    } catch (error) {
+      console.error('Error fetching time period:', error);
+      toast.error('Failed to fetch time period. Please try again.');
+    }
   };
 
   const handleAddAgent = async (userId: string) => {
