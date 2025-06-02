@@ -21,8 +21,7 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import * as Dialog from '@radix-ui/react-dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { TextArea } from 'server/src/components/ui/TextArea';
-import EditableText from 'server/src/components/ui/EditableText';
-import { ListChecks, UserPlus, Trash2 } from 'lucide-react';
+import { ListChecks, UserPlus, Trash2, Clock } from 'lucide-react';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
@@ -32,6 +31,10 @@ import { toast } from 'react-hot-toast';
 import TaskTicketLinks from './TaskTicketLinks';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from 'server/src/components/ui/TreeSelect';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
+import { useDrawer } from 'server/src/context/DrawerContext';
+import { IWorkItem, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
+import { ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
+import TimeEntryDialog from 'server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog';
 
 type ProjectTreeTypes = 'project' | 'phase' | 'status';
 
@@ -101,6 +104,8 @@ export default function TaskForm({
     additionalAssigneeCount: number;
     ticketLinkCount: number;
   } | null>(null);
+  
+  const { openDrawer } = useDrawer();
 
   const [selectedStatusId, setSelectedStatusId] = useState<string>(
     task?.project_status_mapping_id ||
@@ -550,6 +555,56 @@ export default function TaskForm({
     setShowDeleteConfirm(false);
   };
 
+  const handleAddTimeEntry = () => {
+    if (!task?.task_id) {
+      toast.error('Please save the task before adding time entries');
+      return;
+    }
+
+    const workItem: Omit<IWorkItem, 'tenant'> & {
+      project_name?: string;
+      phase_name?: string;
+      task_name?: string;
+    } = {
+      work_item_id: task.task_id,
+      type: 'project_task' as WorkItemType,
+      name: `${task.task_name}`,
+      description: task.description || '',
+      project_name: phase.phase_name, // Using phase name as a placeholder
+      phase_name: phase.phase_name,
+      task_name: task.task_name
+    };
+
+    // Create a default time period for the current week
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6); // Saturday
+
+    const timePeriod: ITimePeriodView = {
+      period_id: 'temp-period',
+      start_date: startOfWeek.toISOString().split('T')[0],
+      end_date: endOfWeek.toISOString().split('T')[0],
+      tenant: ''
+    };
+
+    openDrawer(
+      <TimeEntryDialog
+        isOpen={true}
+        onClose={() => {}}
+        onSave={async () => {
+          toast.success('Time entry added successfully');
+        }}
+        workItem={workItem}
+        date={new Date()}
+        timePeriod={timePeriod}
+        isEditable={true}
+        inDrawer={true}
+      />
+    );
+  };
+
   const handleAddAgent = async (userId: string) => {
     try {
       if (task?.task_id) {
@@ -876,32 +931,48 @@ export default function TaskForm({
             />
 
                 <div className="flex justify-between mt-6">
-                  {/* Only show Cancel button if not in drawer */}
-                  {!inDrawer && (
-                    <Button
-                      id='cancel-button'
-                      type="button"
-                      variant="ghost"
-                      onClick={handleCancelClick}
-                      disabled={isSubmitting}
-                    >
-                      Cancel
+                  <div className="flex gap-2">
+                    {/* Only show Cancel button if not in drawer */}
+                    {!inDrawer && (
+                      <Button
+                        id='cancel-button'
+                        type="button"
+                        variant="ghost"
+                        onClick={handleCancelClick}
+                        disabled={isSubmitting}
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                    {mode === 'edit' && !inDrawer && (
+                      <Button
+                        id='delete-button'
+                        type="button"
+                        variant="destructive"
+                        onClick={() => setShowDeleteConfirm(true)}
+                        disabled={isSubmitting}
+                      >
+                        Delete
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    {mode === 'edit' && (
+                      <Button
+                        id='add-time-entry-button'
+                        type="button"
+                        variant="outline"
+                        onClick={handleAddTimeEntry}
+                        disabled={isSubmitting || !task?.task_id}
+                      >
+                        <Clock className="h-4 w-4 mr-2" />
+                        Add Time Entry
+                      </Button>
+                    )}
+                    <Button id='save-button' type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? (mode === 'edit' ? 'Updating...' : 'Adding...') : (mode === 'edit' ? 'Update' : 'Save')}
                     </Button>
-                  )}
-                  {mode === 'edit' && !inDrawer && (
-                    <Button
-                      id='delete-button'
-                      type="button"
-                      variant="destructive"
-                      onClick={() => setShowDeleteConfirm(true)}
-                      disabled={isSubmitting}
-                    >
-                      Delete
-                    </Button>
-                  )}
-                  <Button id='save-button' type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? (mode === 'edit' ? 'Updating...' : 'Adding...') : (mode === 'edit' ? 'Update' : 'Save')}
-                  </Button>
+                  </div>
                 </div>
         </div>
       </form>

@@ -21,6 +21,10 @@ import { deleteInteraction } from 'server/src/lib/actions/interactionActions';
 import { Text, Flex, Heading } from '@radix-ui/themes';
 import RichTextViewer from '../editor/RichTextViewer';
 import { ConfirmationDialog } from '../ui/ConfirmationDialog';
+import { IWorkItem, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
+import { ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
+import TimeEntryDialog from 'server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog';
+import { toast } from 'react-hot-toast';
 
 interface InteractionDetailsProps {
   interaction: IInteraction;
@@ -64,6 +68,13 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
     type: 'button',
     label: 'Add Ticket',
     helperText: 'Create a new ticket related to this interaction'
+  });
+
+  const { automationIdProps: addTimeEntryButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: 'interaction-details-add-time-entry-button',
+    type: 'button',
+    label: 'Add Time Entry',
+    helperText: 'Add time entry for this interaction'
   });
 
   useEffect(() => {
@@ -203,12 +214,69 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
     }
   };
 
+  const handleAddTimeEntry = () => {
+    if (!interaction.interaction_id) {
+      toast.error('Invalid interaction');
+      return;
+    }
+
+    const workItem: Omit<IWorkItem, 'tenant'> & { 
+      interaction_type?: string; 
+      company_name?: string | null;
+    } = {
+      work_item_id: interaction.interaction_id,
+      type: 'interaction' as WorkItemType,
+      name: interaction.title || 'Interaction',
+      description: interaction.notes || '',
+      interaction_type: interaction.type_name, // Use type_name from IInteraction
+      company_name: interaction.company_name
+    };
+
+    // Create a default time period for the current week
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6); // Saturday
+
+    const timePeriod: ITimePeriodView = {
+      period_id: 'temp-period',
+      start_date: startOfWeek.toISOString().split('T')[0],
+      end_date: endOfWeek.toISOString().split('T')[0],
+      tenant: ''
+    };
+
+    openDrawer(
+      <TimeEntryDialog
+        isOpen={true}
+        onClose={() => {}}
+        onSave={async () => {
+          toast.success('Time entry added successfully');
+        }}
+        workItem={workItem}
+        date={new Date()}
+        timePeriod={timePeriod}
+        isEditable={true}
+        inDrawer={true}
+      />
+    );
+  };
+
   return (
     <ReflectionContainer id="interaction-details" label="Interaction Details">
       <div className="p-6 relative bg-white shadow rounded-lg">
       <div className="flex justify-between items-center mb-6">
         <Heading size="6">Interaction Details</Heading>
         <div className="flex gap-2">
+          <Button
+            {...addTimeEntryButtonProps}
+            onClick={handleAddTimeEntry}
+            variant="ghost"
+            size="sm"
+          >
+            <Clock className="mr-2 h-4 w-4" />
+            Add Time Entry
+          </Button>
           <Button
             {...editButtonProps}
             onClick={() => setIsEditInteractionOpen(true)}

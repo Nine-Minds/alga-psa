@@ -88,7 +88,7 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
       onClose={handleClose}
       title={editingType ? "Edit Interaction Type" : "Create Custom Interaction Type"}
       id={editingType ? "edit-interaction-type-dialog" : "add-interaction-type-dialog"}
-      className="max-w-lg"
+      className="max-w-xl"
     >
       <div className="space-y-6">
         {/* Error Alert */}

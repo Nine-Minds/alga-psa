@@ -94,6 +94,34 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
           type: 'ad_hoc',
         };
         break;
+      case 'interaction':
+        [workItem] = await db('interactions')
+          .where({
+            interaction_id: entry.work_item_id,
+            'interactions.tenant': tenant
+          })
+          .leftJoin('companies', function() {
+            this.on('interactions.entity_id', '=', 'companies.company_id')
+              .andOn('interactions.entity_type', '=', db.raw('?', ['company']))
+              .andOn('companies.tenant', '=', 'interactions.tenant');
+          })
+          .leftJoin('contacts', function() {
+            this.on('interactions.contact_id', '=', 'contacts.contact_id')
+              .andOn('contacts.tenant', '=', 'interactions.tenant');
+          })
+          .leftJoin('interaction_types', function() {
+            this.on('interactions.type_id', '=', 'interaction_types.type_id')
+              .andOn('interaction_types.tenant', '=', 'interactions.tenant');
+          })
+          .select(
+            'interaction_id as work_item_id',
+            'title as name',
+            'interactions.description',
+            'companies.company_name',
+            'contacts.full_name as contact_name',
+            'interaction_types.type_name as interaction_type'
+          );
+        break;
       default:
         throw new Error(`Unknown work item type: ${entry.work_item_type}`);
     }
@@ -239,7 +267,15 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
               (await db('tickets')
                 .where({ ticket_id: work_item_id, tenant })
                 .first('company_id')).company_id
-              : null,
+              : work_item_type === 'interaction' ?
+                (await db('interactions')
+                  .where({ 
+                    interaction_id: work_item_id, 
+                    tenant,
+                    entity_type: 'company'
+                  })
+                  .first('entity_id as company_id'))?.company_id
+                : null,
           service_id
         );
 

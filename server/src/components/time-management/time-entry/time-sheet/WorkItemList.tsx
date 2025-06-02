@@ -98,6 +98,32 @@ export function WorkItemList({
           </div>
         </>
       );
+    } else if (item.type === 'interaction') {
+      return (
+        <>
+          <div className="font-medium text-[rgb(var(--color-text-900))] text-lg mb-1">
+            {item.title || item.name}
+          </div>
+          <div className="text-sm text-[rgb(var(--color-text-600))]">
+            {item.interaction_type && `${item.interaction_type} • `}{item.company_name}
+          </div>
+          {item.contact_name && (
+            <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
+              Contact: {item.contact_name}
+            </div>
+          )}
+          <div className="flex items-center gap-2 mt-1">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-info-100))] text-[rgb(var(--color-info-900))]">
+              Interaction
+            </span>
+            {item.is_billable && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-accent-100))] text-[rgb(var(--color-accent-800))]">
+                Billable
+              </span>
+            )}
+          </div>
+        </>
+      );
     }
     return null;
   };

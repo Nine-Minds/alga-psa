@@ -558,6 +558,57 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
         );
     }
 
+    // Add interactions query
+    let interactionsQuery;
+    if (!options.type || options.type === 'all' || options.type === 'interaction') {
+      interactionsQuery = db('interactions as i')
+        .whereNotIn('i.interaction_id', options.availableWorkItemIds || [])
+        .where('i.tenant', tenant)
+        .leftJoin('companies as c', function() {
+          this.on('i.entity_id', '=', 'c.company_id')
+              .andOn('i.entity_type', '=', db.raw('?', ['company']))
+              .andOn('i.tenant', '=', 'c.tenant');
+        })
+        .leftJoin('interaction_types as it', function() {
+          this.on('i.type_id', '=', 'it.type_id')
+              .andOn('i.tenant', '=', 'it.tenant');
+        })
+        .whereILike('i.title', db.raw('?', [`%${searchTerm}%`]))
+        .select(
+          'i.interaction_id as work_item_id',
+          'i.title as name',
+          'i.description',
+          db.raw("'interaction' as type"),
+          db.raw('NULL::text as ticket_number'),
+          'i.title',
+          db.raw('NULL::text as project_name'),
+          db.raw('NULL::text as phase_name'),
+          db.raw('NULL::text as task_name'),
+          'i.entity_id as company_id',
+          'c.company_name',
+          db.raw('NULL::timestamp with time zone as scheduled_start'),
+          db.raw('NULL::timestamp with time zone as scheduled_end'),
+          db.raw('NULL::timestamp with time zone as due_date'),
+          db.raw('ARRAY[]::uuid[] as assigned_user_ids'),
+          db.raw('ARRAY[]::uuid[] as additional_user_ids'),
+          'it.type_name as interaction_type'
+        );
+
+      // Apply filters
+      if (options.companyId) {
+        interactionsQuery.where('c.company_id', options.companyId);
+      }
+      
+      if (options.dateRange?.start || options.dateRange?.end) {
+        if (options.dateRange.start) {
+          interactionsQuery.where('i.created_at', '>=', options.dateRange.start);
+        }
+        if (options.dateRange.end) {
+          interactionsQuery.where('i.created_at', '<=', options.dateRange.end);
+        }
+      }
+    }
+
     let queriesToUnion = [];
     if (!options.type || options.type === 'all' || options.type === 'ticket') {
         queriesToUnion.push(ticketsQuery);
@@ -567,6 +618,9 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
     }
     if (adHocQuery && (!options.type || options.type === 'all' || options.type === 'ad_hoc')) {
         queriesToUnion.push(adHocQuery);
+    }
+    if (interactionsQuery && (!options.type || options.type === 'all' || options.type === 'interaction')) {
+        queriesToUnion.push(interactionsQuery);
     }
 
     let query = db.union(queriesToUnion, true);
@@ -580,6 +634,9 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
     }
     if (adHocQuery && (!options.type || options.type === 'all' || options.type === 'ad_hoc')) {
         countPromises.push(adHocQuery.clone().clearSelect().clearOrder().count('* as count').first());
+    }
+    if (interactionsQuery && (!options.type || options.type === 'all' || options.type === 'interaction')) {
+        countPromises.push(interactionsQuery.clone().clearSelect().clearOrder().count('* as count').first());
     }
 
     const countResults = await Promise.all(countPromises);
@@ -616,7 +673,8 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
         additional_user_ids: item.additional_user_ids || [],
         assigned_user_ids: item.assigned_user_ids || [],
         scheduled_start: item.scheduled_start,
-        scheduled_end: item.scheduled_end
+        scheduled_end: item.scheduled_end,
+        interaction_type: item.interaction_type
       }));
 
     return {
