@@ -1,5 +1,6 @@
-// Overview.tsx
-import React from 'react';
+// Overview.tsx - Updated to use hierarchical report system
+'use client'
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from 'server/src/components/ui/Card';
 import { 
   FileSpreadsheet, 
@@ -9,9 +10,74 @@ import {
   Calendar,
   DollarSign,
   FileText,
-  AlertCircle
+  AlertCircle,
+  TrendingUp,
+  Users,
+  Loader2
 } from 'lucide-react';
 import { Button } from 'server/src/components/ui/Button';
+import { getBillingOverview } from 'server/src/lib/reports/actions';
+import { ReportResult, FormattedMetricValue } from 'server/src/lib/reports/core/types';
+
+interface MetricCardProps {
+  title: string;
+  value: any;
+  icon: React.ComponentType<{ className?: string }>;
+  loading?: boolean;
+  error?: boolean;
+  subtitle?: string;
+}
+
+const MetricCard: React.FC<MetricCardProps> = ({ 
+  title, 
+  value, 
+  icon: Icon, 
+  loading = false, 
+  error = false,
+  subtitle 
+}) => {
+  const getDisplayValue = () => {
+    if (loading) return '...';
+    if (error) return 'Error';
+    
+    // Handle formatted metric values
+    if (value && typeof value === 'object' && 'formatted' in value) {
+      return (value as FormattedMetricValue).formatted;
+    }
+    
+    // Handle raw values
+    if (typeof value === 'number') {
+      return value.toLocaleString();
+    }
+    
+    return value || '0';
+  };
+
+  return (
+    <Card className={error ? 'border-red-200' : ''}>
+      <CardHeader>
+        <h3 className="text-lg font-semibold">{title}</h3>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center space-x-4">
+          <div className="p-3 rounded-full" style={{ background: 'rgb(var(--color-primary-50))' }}>
+            {loading ? (
+              <Loader2 className="h-6 w-6 animate-spin text-[rgb(var(--color-primary-500))]" />
+            ) : (
+              <Icon className="h-6 w-6 text-[rgb(var(--color-primary-500))]" />
+            )}
+          </div>
+          <div>
+            <p className={`text-2xl font-bold ${error ? 'text-red-600' : ''}`}>
+              {getDisplayValue()}
+            </p>
+            <p className="text-sm text-gray-500">{subtitle || title}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 const FeatureCard = ({ icon: Icon, title, description }: { icon: any, title: string, description: string }) => (
   <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-white hover:shadow-lg transition-shadow p-4">
@@ -28,61 +94,131 @@ const FeatureCard = ({ icon: Icon, title, description }: { icon: any, title: str
 );
 
 const Overview = () => {
+  const [reportData, setReportData] = useState<ReportResult | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchBillingOverview() {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getBillingOverview();
+        setReportData(data);
+      } catch (err) {
+        console.error('Error fetching billing overview:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load billing data');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchBillingOverview();
+  }, []);
+
+  const metrics = reportData?.metrics || {};
+  const hasError = !!error;
+
   return (
     <div className="space-y-6">
-      {/* Billing Summary Section */}
+      {/* Error Alert */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          <div className="flex items-center space-x-2">
+            <AlertCircle className="h-5 w-5" />
+            <div>
+              <p className="font-medium">Unable to load billing data</p>
+              <p className="text-sm">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Primary Billing Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader>
-            <h3 className="text-lg font-semibold">Active Billing Plans</h3>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center space-x-4">
-              <div className="p-3 rounded-full" style={{ background: 'rgb(var(--color-primary-50))' }}>
-                <FileSpreadsheet className="h-6 w-6" style={{ color: 'rgb(var(--color-primary-500))' }} />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">15</p>
-                <p className="text-sm text-gray-500">Active Plans</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <h3 className="text-lg font-semibold">Billing Clients</h3>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center space-x-4">
-              <div className="p-3 rounded-full" style={{ background: 'rgb(var(--color-primary-50))' }}>
-                <Building2 className="h-6 w-6" style={{ color: 'rgb(var(--color-primary-500))' }} />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">87</p>
-                <p className="text-sm text-gray-500">Total Clients</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <h3 className="text-lg font-semibold">Monthly Revenue</h3>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center space-x-4">
-              <div className="p-3 rounded-full" style={{ background: 'rgb(var(--color-primary-50))' }}>
-                <DollarSign className="h-6 w-6" style={{ color: 'rgb(var(--color-primary-500))' }} />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">$123,456</p>
-                <p className="text-sm text-gray-500">Current Month</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <MetricCard
+          title="Active Billing Plans"
+          value={metrics.active_plans_count}
+          icon={FileSpreadsheet}
+          loading={loading}
+          error={hasError}
+          subtitle="Active Plans"
+        />
+        <MetricCard
+          title="Billing Clients"
+          value={metrics.active_clients_count}
+          icon={Building2}
+          loading={loading}
+          error={hasError}
+          subtitle="Total Clients"
+        />
+        <MetricCard
+          title="Monthly Revenue"
+          value={metrics.monthly_revenue}
+          icon={DollarSign}
+          loading={loading}
+          error={hasError}
+          subtitle="Current Month"
+        />
       </div>
+
+      {/* Secondary Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <MetricCard
+          title="Active Services"
+          value={metrics.active_services_count}
+          icon={FileText}
+          loading={loading}
+          error={hasError}
+          subtitle="In Catalog"
+        />
+        <MetricCard
+          title="Outstanding Amount"
+          value={metrics.outstanding_amount}
+          icon={TrendingUp}
+          loading={loading}
+          error={hasError}
+          subtitle="Unpaid Invoices"
+        />
+        <MetricCard
+          title="Credit Balance"
+          value={metrics.total_credit_balance}
+          icon={CreditCard}
+          loading={loading}
+          error={hasError}
+          subtitle="Total Credits"
+        />
+        <MetricCard
+          title="Pending Approvals"
+          value={metrics.pending_time_entries}
+          icon={Clock}
+          loading={loading}
+          error={hasError}
+          subtitle="Time Entries"
+        />
+      </div>
+
+      {/* Billable Hours Section */}
+      <Card>
+        <CardHeader>
+          <h3 className="text-lg font-semibold">Monthly Activity</h3>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center space-x-4">
+            <div className="p-3 rounded-full" style={{ background: 'rgb(var(--color-primary-50))' }}>
+              <Users className="h-6 w-6" style={{ color: 'rgb(var(--color-primary-500))' }} />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">
+                {loading ? '...' : hasError ? 'Error' : (
+                  metrics.monthly_billable_hours?.formatted || '0 hours'
+                )}
+              </p>
+              <p className="text-sm text-gray-500">Billable hours this month</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Billing Features Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -127,7 +263,15 @@ const Overview = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500 mb-2">Manage your service offerings, pricing, and billing configurations</p>
-              <p><span className="font-semibold">15</span> Active Services</p>
+              <p>
+                <span className="font-semibold">
+                  {loading ? '...' : hasError ? 'Error' : (
+                    metrics.active_services_count?.formatted || 
+                    metrics.active_services_count || 
+                    '0'
+                  )}
+                </span> Active Services
+              </p>
             </div>
             <Button
               id='manage-service-catalog-button'
@@ -139,6 +283,15 @@ const Overview = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Debug info in development */}
+      {reportData && process.env.NODE_ENV === 'development' && (
+        <div className="text-xs text-gray-400 p-4 bg-gray-50 rounded">
+          <p>Report executed: {reportData.executedAt}</p>
+          <p>Execution time: {reportData.metadata.executionTime}ms</p>
+          <p>Report version: {reportData.metadata.version}</p>
+        </div>
+      )}
     </div>
   );
 };
