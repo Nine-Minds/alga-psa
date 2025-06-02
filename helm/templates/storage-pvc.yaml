@@ -3,7 +3,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: {{ include "sebastian.fullname" . }}-storage
-  namespace: {{ .Values.namespace }}
+  namespace: {{ include "sebastian.namespace" . }}
   labels:
     {{- include "sebastian.labels" . | nindent 4 }}
   {{- with .Values.server.persistence.annotations }}

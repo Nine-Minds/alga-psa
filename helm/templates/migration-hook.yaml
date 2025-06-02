@@ -2,9 +2,10 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ include "sebastian.fullname" . }}-migration
+  namespace: {{ include "sebastian.namespace" . }}
   annotations:
     "helm.sh/hook": pre-upgrade, post-install
-    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-weight": "-5"
     "helm.sh/hook-delete-policy": hook-succeeded, before-hook-creation
 spec:
   template:
@@ -17,14 +18,30 @@ spec:
         - name: "{{ .Values.server.image.credentials }}"
       {{- end }}
       containers:
-        - name: migrate
+        - name: setup-and-migrate
           image: "{{ .Values.server.image.name }}:{{ .Values.server.image.tag }}"
           workingDir: /app
-          command: ["npx", "knex", "--knexfile", "/app/server/knexfile.cjs", "migrate:latest", "--env", "migration", "--debug"]
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              echo "Creating database and running setup..."
+              node /app/server/setup/create_database.js
+              echo "Running migrations..."
+              NODE_ENV=migration npx knex migrate:latest --knexfile /app/server/knexfile.cjs --env migration
+              echo "Migrations completed."
           env:
+            - name: APP_ENV
+              value: "production"
+            - name: NODE_ENV
+              value: "migration"
+            - name: KNEX_ENV
+              value: "migration"
+            - name: APP_EDITION
+              value: "{{ .Values.edition | default "ce" }}"
             {{- if .Values.db.enabled }}
             - name: DB_HOST
-              value: "db.{{ .Values.namespace }}.svc.cluster.local"
+              value: "db.{{ include "sebastian.namespace" . }}.svc.cluster.local"
             - name: DB_USER_SERVER
               value: "app_user"
             - name: DB_USER_ADMIN

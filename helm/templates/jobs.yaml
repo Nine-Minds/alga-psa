@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: job-initial-setup
-  namespace: {{ .Values.namespace }}
+  namespace: {{ include "sebastian.namespace" . }}
 spec:
   ttlSecondsAfterFinished: 60
   template:
@@ -36,7 +36,7 @@ spec:
             - name: DB_NAME
               value: "postgres"
             - name: DB_HOST
-              value: "db.{{ .Values.namespace }}.svc.cluster.local"
+              value: "db.{{ include "sebastian.namespace" . }}.svc.cluster.local"
             - name: DB_PORT
               value: "5432"
             - name: DB_USER
@@ -68,7 +68,7 @@ spec:
             - name: DB_TYPE
               value: "{{ .Values.config.db.type }}"
             - name: DB_HOST
-              value: "{{ .Values.config.db.host }}.{{ .Values.namespace }}.svc.cluster.local"
+              value: "{{ .Values.config.db.host }}.{{ include "sebastian.namespace" . }}.svc.cluster.local"
             - name: DB_PORT
               value: "{{ .Values.config.db.port }}"
             - name: DB_USER

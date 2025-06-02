@@ -1,0 +1,20 @@
+{{- if and .Values.db.enabled .Values.db.persistence.enabled (not .Values.db.persistence.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.db.persistence.claimName }}
+  namespace: {{ .Values.namespace }}
+  {{- if not .Values.persistence.keepPvcOnUninstall }}
+  annotations:
+    "helm.sh/resource-policy": keep
+  {{- end }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.db.persistence.size }}
+  {{- if .Values.db.persistence.storageClass }}
+  storageClassName: {{ .Values.db.persistence.storageClass }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,15 @@
+{{- if .Values.redis.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: redis
+  name: redis
+  namespace: {{ .Values.namespace }}
+spec:
+  clusterIP: None
+  ports:
+    - port: {{ .Values.redis.service.port }}
+  selector:
+    app: redis
+{{- end }}

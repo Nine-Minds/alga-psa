@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: hocuspocus
-  namespace: {{ .Values.namespace }}
+  namespace: {{ include "sebastian.namespace" . }}
   labels:
     {{- include "sebastian.labels" . | nindent 4 }}
 spec:
@@ -28,7 +28,7 @@ spec:
           env:
           {{- if .Values.redis.enabled }}
             - name: REDIS_HOST
-              value: "redis.{{ .Values.namespace }}.svc.cluster.local"
+              value: "redis.{{ include "sebastian.namespace" . }}.svc.cluster.local"
             - name: REDIS_PORT
               value: "6379"
             - name: REDIS_DB
@@ -40,7 +40,7 @@ spec:
                   key: REDIS_PASSWORD
             {{- else }}
             - name: REDIS_HOST
-              value: "{{ .Values.config.redis.host }}.{{ .Values.namespace }}.svc.cluster.local"
+              value: "{{ .Values.config.redis.host }}.{{ include "sebastian.namespace" . }}.svc.cluster.local"
             - name: REDIS_PORT
               value: "{{ .Values.config.redis.port }}"
             - name: REDIS_DB
@@ -57,7 +57,7 @@ spec:
           env:
           {{- if .Values.redis.enabled }}
           - name: REDIS_HOST
-            value: "redis.{{ .Values.namespace }}.svc.cluster.local"
+            value: "redis.{{ include "sebastian.namespace" . }}.svc.cluster.local"
           - name: REDIS_PORT
             value: "6379"
           - name: REDIS_DB
@@ -69,7 +69,7 @@ spec:
                 key: REDIS_PASSWORD
           {{- else }}
           - name: REDIS_HOST
-            value: "{{ .Values.config.redis.host }}.{{ .Values.namespace }}.svc.cluster.local"
+            value: "{{ .Values.config.redis.host }}.{{ include "sebastian.namespace" . }}.svc.cluster.local"
           - name: REDIS_PORT
             value: "{{ .Values.config.redis.port }}"
           - name: REDIS_DB
@@ -79,7 +79,7 @@ spec:
           {{- end }}
           {{- if .Values.db.enabled }}
           - name: DB_HOST
-            value: "db.{{ .Values.namespace }}.svc.cluster.local"
+            value: "db.{{ include "sebastian.namespace" . }}.svc.cluster.local"
           - name: DB_USER_HOCUSPOCUS
             value: "hocuspocus_user"
           - name: DB_PORT
@@ -93,7 +93,7 @@ spec:
                 key: DB_PASSWORD_HOCUSPOCUS
           {{- else }}
           - name: DB_HOST
-            value: "{{ .Values.config.db.host }}.{{ .Values.namespace }}.svc.cluster.local"
+            value: "{{ .Values.config.db.host }}.{{ include "sebastian.namespace" . }}.svc.cluster.local"
           - name: DB_USER_HOCUSPOCUS
             value: "{{ .Values.config.db.user }}"
           - name: DB_PORT

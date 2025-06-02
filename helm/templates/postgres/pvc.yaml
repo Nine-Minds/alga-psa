@@ -2,8 +2,8 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ .Values.db.persistence.claimName }}
-  namespace: {{ .Values.namespace }}
+  name: {{ include "sebastian.fullname" . }}-postgres-data
+  namespace: {{ include "sebastian.namespace" . }}
   {{- if not .Values.persistence.keepPvcOnUninstall }}
   annotations:
     "helm.sh/resource-policy": keep

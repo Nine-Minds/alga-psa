@@ -1,0 +1,54 @@
+{{- if .Values.redis.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: redis
+spec:
+  serviceName: redis
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+      annotations:
+        redis-password: "{{ .Values.config.redis.password }}"
+    spec:
+      containers:
+      - name: redis
+        image: "{{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}"
+        command: ["sh", "-c", "mkdir -p /etc/redis && printf \"requirepass ${REDIS_PASSWORD}\nsave ''\n\" > /etc/redis/redis.conf && redis-server /etc/redis/redis.conf"]
+        imagePullPolicy: Always
+        ports:
+        - containerPort: {{ .Values.redis.service.port }}
+          name: cql
+        env:
+          - name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: redis-credentials
+                key: REDIS_PASSWORD
+        {{- if .Values.redis.persistence.enabled }}
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+        {{- end }}
+      
+      {{- if .Values.redis.persistence.enabled }}
+      volumes:
+      - name: redis-data
+        persistentVolumeClaim:
+          {{- if .Values.redis.persistence.existingClaim }}
+            claimName: {{ .Values.redis.persistence.existingClaim }}
+          {{- else }}
+            claimName: redis-volume-claim
+          {{- end }}
+      {{- end }}
+
+  
+{{- end }}

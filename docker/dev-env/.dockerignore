@@ -1,0 +1,6 @@
+# Ignore everything except the files we need
+*
+!config/
+!config/settings.json
+!config/extensions.json
+!start-dev-env.sh

@@ -1,0 +1,20 @@
+{{- if and .Values.devEnv.enabled .Values.devEnv.codeServer.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "sebastian.fullname" . }}-code-server
+  namespace: {{ .Values.devEnv.namespace }}
+  labels:
+    {{- include "sebastian.labels" . | nindent 4 }}
+    app.kubernetes.io/component: code-server
+spec:
+  type: {{ .Values.devEnv.codeServer.service.type }}
+  ports:
+    - port: {{ .Values.devEnv.codeServer.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "sebastian.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: code-server
+{{- end }}

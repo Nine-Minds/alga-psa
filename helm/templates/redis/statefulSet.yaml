@@ -3,7 +3,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: redis
-  namespace: {{ .Values.namespace }}
+  namespace: {{ include "sebastian.namespace" . }}
   labels:
     app: redis
 spec:
@@ -46,7 +46,7 @@ spec:
           {{- if .Values.redis.persistence.existingClaim }}
             claimName: {{ .Values.redis.persistence.existingClaim }}
           {{- else }}
-            claimName: redis-volume-claim
+            claimName: {{ include "sebastian.fullname" . }}-redis-data
           {{- end }}
       {{- end }}
 

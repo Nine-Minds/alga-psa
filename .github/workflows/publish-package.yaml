@@ -104,26 +104,43 @@ jobs:
         id: docker_tags
         run: |
           if [[ "${{ github.event_name }}" == "push" && "${{ startsWith(github.ref, 'refs/tags/') }}" == "true" ]]; then
-            # This is a tag push event: use only the tag name
-            TAGS="ghcr.io/nine-minds/alga-psa:${{ github.ref_name }}"
+            # This is a tag push event: use only the tag name for both editions
+            CE_TAGS="ghcr.io/nine-minds/alga-psa-ce:${{ github.ref_name }}"
+            EE_TAGS="ghcr.io/nine-minds/alga-psa-ee:${{ github.ref_name }},ghcr.io/nine-minds/alga-psa:${{ github.ref_name }}"
           elif [[ "${{ github.event_name }}" == "create" && "${{ github.event.ref_type }}" == "tag" ]]; then
-            # This is a tag create event: use the tag name
-            TAGS="ghcr.io/nine-minds/alga-psa:${{ github.event.ref }}"
+            # This is a tag create event: use the tag name for both editions
+            CE_TAGS="ghcr.io/nine-minds/alga-psa-ce:${{ github.event.ref }}"
+            EE_TAGS="ghcr.io/nine-minds/alga-psa-ee:${{ github.event.ref }},ghcr.io/nine-minds/alga-psa:${{ github.event.ref }}"
           elif [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            # This is a workflow_run event (e.g., after PR merge to main): use latest and short SHA
-            TAGS="ghcr.io/nine-minds/alga-psa:latest,ghcr.io/nine-minds/alga-psa:${{ steps.sha.outputs.short_sha }}"
+            # This is a workflow_run event (e.g., after PR merge to main): use latest and short SHA for both editions
+            CE_TAGS="ghcr.io/nine-minds/alga-psa-ce:latest,ghcr.io/nine-minds/alga-psa-ce:${{ steps.sha.outputs.short_sha }}"
+            EE_TAGS="ghcr.io/nine-minds/alga-psa-ee:latest,ghcr.io/nine-minds/alga-psa-ee:${{ steps.sha.outputs.short_sha }},ghcr.io/nine-minds/alga-psa:latest,ghcr.io/nine-minds/alga-psa:${{ steps.sha.outputs.short_sha }}"
           else
             # Should not happen due to job's `if` condition, but good to have a fallback
             echo "::error:: Unknown event (${{ github.event_name }}) or condition for determining Docker tags."
             exit 1
           fi
-          echo "tags_list=$TAGS" >> $GITHUB_OUTPUT
-          echo "Determined tags: $TAGS"
+          echo "ce_tags=$CE_TAGS" >> $GITHUB_OUTPUT
+          echo "ee_tags=$EE_TAGS" >> $GITHUB_OUTPUT
+          echo "Determined CE tags: $CE_TAGS"
+          echo "Determined EE tags: $EE_TAGS"
 
-      - name: Build and push Docker image
+      - name: Build and push CE Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: Dockerfile.prod
+          file: server/Dockerfile
           push: true
-          tags: ${{ steps.docker_tags.outputs.tags_list }}
+          tags: ${{ steps.docker_tags.outputs.ce_tags }}
+          build-args: |
+            EXCLUDE_EE=true
+
+      - name: Build and push EE Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: server/Dockerfile
+          push: true
+          tags: ${{ steps.docker_tags.outputs.ee_tags }}
+          build-args: |
+            EXCLUDE_EE=false

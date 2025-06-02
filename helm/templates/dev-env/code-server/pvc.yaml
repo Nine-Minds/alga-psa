@@ -1,0 +1,19 @@
+{{- if and .Values.devEnv.enabled .Values.devEnv.codeServer.enabled .Values.devEnv.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "sebastian.fullname" . }}-code-server-workspace
+  namespace: {{ .Values.devEnv.namespace }}
+  labels:
+    {{- include "sebastian.labels" . | nindent 4 }}
+    app.kubernetes.io/component: code-server
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.devEnv.persistence.size }}
+  {{- if .Values.devEnv.persistence.storageClass }}
+  storageClassName: {{ .Values.devEnv.persistence.storageClass }}
+  {{- end }}
+{{- end }}

@@ -5,7 +5,7 @@ metadata:
   labels:
     app: redis
   name: redis
-  namespace: {{ .Values.namespace }}
+  namespace: {{ include "sebastian.namespace" . }}
 spec:
   clusterIP: None
   ports:

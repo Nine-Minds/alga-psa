@@ -1,0 +1,33 @@
+# Generated values for PR 999 development environment
+devEnv:
+  enabled: true
+  prNumber: "999"
+  namespace: "alga-pr-999"
+  repository:
+    url: "https://github.com/Nine-Minds/alga-psa.git"
+    branch: "test-deployment"
+  codeServer:
+    enabled: true
+    image:
+      tag: "latest-amd64"
+  aiAutomation:
+    enabled: false
+  persistence:
+    storageClass: "local-path"
+
+# Community Edition settings
+# Override storage class to use local-path
+# Disable main server for testing
+server:
+  replicaCount: 0
+db:
+  persistence:
+    storageClass: "local-path"
+redis:
+  persistence:
+    storageClass: "local-path"
+server:
+  persistence:
+    storageClass: "local-path"
+persistence:
+  storageClass: "local-path"

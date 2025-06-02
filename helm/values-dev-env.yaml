@@ -1,0 +1,223 @@
+# Development Environment Values for Alga PSA
+# This file extends the base values.yaml for dev environments
+
+# Override base configuration for dev environments
+nameOverride: "alga-dev"
+namespace: "alga-pr-{{ .Values.devEnv.prNumber }}"
+
+# Development Environment Configuration
+devEnv:
+  enabled: false  # Set to true when deploying dev environments
+  prNumber: ""    # PR number for this environment
+  namespace: ""   # Will be calculated as alga-pr-{prNumber}
+  
+  # Repository configuration
+  repository:
+    url: "https://github.com/Nine-Minds/alga-psa.git"
+    branch: "main"  # Override for specific PR branch
+  
+  # Git configuration for commits within the environment
+  git:
+    authorName: "Dev Environment"
+    authorEmail: "dev@alga.local"
+  
+  # Code Server Configuration
+  codeServer:
+    enabled: true
+    image:
+      repository: "harbor.nineminds.com/nineminds/alga-code-server"
+      tag: "latest"
+      pullPolicy: "Always"
+      is_private: true
+      credentials: "harbor-credentials"
+    service:
+      type: "ClusterIP"
+      port: 8080
+    password: "alga-dev"  # Default password for code-server
+    resources:
+      limits:
+        cpu: "2"
+        memory: "4Gi"
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+  
+  # AI Automation Configuration
+  aiAutomation:
+    enabled: true
+    web:
+      image:
+        repository: "harbor.nineminds.com/nineminds/alga-ai-web"
+        tag: "latest"
+        pullPolicy: "Always"
+        is_private: true
+        credentials: "harbor-credentials"
+      service:
+        type: "ClusterIP"
+        port: 3000
+      resources:
+        limits:
+          cpu: "1"
+          memory: "2Gi"
+        requests:
+          cpu: "250m"
+          memory: "512Mi"
+    api:
+      image:
+        repository: "harbor.nineminds.com/nineminds/alga-ai-api"
+        tag: "latest"
+        pullPolicy: "Always"
+        is_private: true
+        credentials: "harbor-credentials"
+      service:
+        type: "ClusterIP"
+        port: 4000
+      resources:
+        limits:
+          cpu: "1"
+          memory: "2Gi"
+        requests:
+          cpu: "250m"
+          memory: "512Mi"
+  
+  # Persistence for dev environments
+  persistence:
+    enabled: true
+    size: "10Gi"
+    storageClass: "local-path"
+    # Keep data when environment is destroyed for debugging
+    keepOnDelete: false
+  
+  # Ingress configuration for external access
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    hosts:
+      codeServer:
+        host: "{{ .Values.devEnv.prNumber }}.dev.alga.nineminds.com"
+        paths:
+          - path: /
+            pathType: Prefix
+      aiAutomationWeb:
+        host: "{{ .Values.devEnv.prNumber }}-ai.dev.alga.nineminds.com"
+        paths:
+          - path: /
+            pathType: Prefix
+      aiAutomationApi:
+        host: "{{ .Values.devEnv.prNumber }}-ai-api.dev.alga.nineminds.com"
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      enabled: true
+      secretName: "alga-dev-tls"
+  
+  # Node selector and tolerations for dev environments
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# Override base values for development
+server:
+  replicaCount: 1
+  image:
+    name: harbor.nineminds.com/nineminds/alga-psa-ee
+    tag: "latest"
+    is_private: true
+    credentials: harbor-credentials
+  verify_email: true
+  pullPolicy: Always
+  service:
+    type: "ClusterIP"
+    port: 3000
+  persistence:
+    enabled: true
+    size: "5Gi"
+    storageClass: "local-path"
+    accessModes:
+      - ReadWriteOnce
+    annotations: {}
+    existingClaim: ""
+    mountPath: "/data"
+
+# Use internal postgres and redis for dev environments
+db:
+  enabled: true
+  image:
+    repository: ankane/pgvector
+    tag: "latest"
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: "local-path"
+    existingClaim: ""
+
+redis:
+  enabled: true
+  image:
+    repository: redis
+    tag: latest
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: "local-path"
+
+hocuspocus:
+  image:
+    name: harbor.nineminds.com/nineminds/sebastian_hocuspocus
+    tag: "latest"
+    is_private: true
+    credentials: harbor-credentials
+  pullPolicy: Always
+
+# Development-specific configuration
+config:
+  llm:
+    openai: 'dev-key-here'
+    anthropic: 'dev-key-here'
+  
+  # Local storage for development
+  storage:
+    default_provider: 'local'
+    providers:
+      local:
+        enabled: true
+        base_path: '/data/files'
+        max_file_size: 104857600  # 100MB
+        allowed_mime_types:
+          - 'image/*'
+          - 'application/pdf'
+          - 'text/plain'
+          - 'application/msword'
+          - 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        retention_days: 7  # Shorter retention for dev
+
+# Development logging
+logging:
+  level: DEBUG
+  is_format_json: false
+  is_full_details: true
+  file:
+    enabled: true
+    path: './logs'
+  external:
+    enabled: false
+
+# Resource limits for development environment
+resources:
+  limits:
+    cpu: "4"
+    memory: "8Gi"
+  requests:
+    cpu: "1"
+    memory: "2Gi"
+
+# Persistence settings
+persistence:
+  enabled: true
+  storageClass: "local-path"
+  size: "20Gi"
+  keepPvcOnUninstall: false  # Clean up when environment is destroyed

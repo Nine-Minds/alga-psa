@@ -187,6 +187,13 @@ async function createDatabase(retryCount = 0) {
 
     await dbClient.connect();
 
+    // Create extensions (including vector for pgvector support)
+    await dbClient.query(`
+      CREATE EXTENSION IF NOT EXISTS "vector";
+    `);
+
+    console.log('Database extensions created successfully');
+
     // Check if app_user exists
     const userCheckResult = await dbClient.query(
       "SELECT 1 FROM pg_roles WHERE rolname = $1",

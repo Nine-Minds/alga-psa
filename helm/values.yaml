@@ -18,10 +18,10 @@ setup:
 
 server:
   image: 
-    name: harbor.nineminds.com/nineminds/sebastian_server
+    name: harbor.nineminds.com/nineminds/alga-psa
     is_private: true
     credentials: harbor-credentials
-    tag: "8f207e3cc"
+    tag: "4023e8f"
   verify_email: true
   pullPolicy: Always
   replicaCount: 1

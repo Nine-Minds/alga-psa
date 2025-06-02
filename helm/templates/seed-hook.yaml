@@ -3,6 +3,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ include "sebastian.fullname" . }}-seed
+  namespace: {{ include "sebastian.namespace" . }}
   annotations:
     "helm.sh/hook": post-install
     "helm.sh/hook-weight": "10"
@@ -20,11 +21,21 @@ spec:
       containers:
         - name: seed
           image: "{{ .Values.server.image.name }}:{{ .Values.server.image.tag }}"
-          command: ["npx", "knex", "seed:run", "--knexfile", "/app/server/knexfile.cjs", "--env", "development"]
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              echo "Running seeds for initial installation..."
+              KNEX_ENV=migration NODE_ENV=migration npx knex seed:run --knexfile /app/server/knexfile.cjs --env migration
+              echo "Seeds completed."
           env:
+            - name: NODE_ENV
+              value: "migration"
+            - name: KNEX_ENV
+              value: "migration"
             {{- if .Values.db.enabled }}
             - name: DB_HOST
-              value: "db.{{ .Values.namespace }}.svc.cluster.local"
+              value: "db.{{ include "sebastian.namespace" . }}.svc.cluster.local"
             - name: DB_USER_ADMIN
               value: "postgres"
             - name: DB_PORT

@@ -1,0 +1,115 @@
+{{- if and .Values.devEnv.enabled .Values.devEnv.codeServer.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sebastian.fullname" . }}-code-server
+  namespace: {{ .Values.devEnv.namespace }}
+  labels:
+    {{- include "sebastian.labels" . | nindent 4 }}
+    app.kubernetes.io/component: code-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "sebastian.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: code-server
+  template:
+    metadata:
+      labels:
+        {{- include "sebastian.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: code-server
+    spec:
+      {{- if .Values.devEnv.codeServer.image.is_private }}
+      imagePullSecrets:
+        - name: "{{ .Values.devEnv.codeServer.image.credentials }}"
+      {{- end }}
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      volumes:
+        - name: workspace-storage
+          {{- if .Values.devEnv.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "sebastian.fullname" . }}-code-server-workspace
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: project-source
+          emptyDir: {}
+      initContainers:
+        - name: git-clone
+          image: alpine/git:latest
+          command:
+            - sh
+            - -c
+            - |
+              echo "Cloning repository..."
+              git clone {{ .Values.devEnv.repository.url }} /workspace/alga-psa
+              cd /workspace/alga-psa
+              echo "Checking out branch: {{ .Values.devEnv.repository.branch }}"
+              git checkout {{ .Values.devEnv.repository.branch }}
+              echo "Repository cloned successfully"
+              ls -la /workspace/alga-psa
+          volumeMounts:
+            - name: project-source
+              mountPath: /workspace
+      containers:
+        - name: code-server
+          image: "{{ .Values.devEnv.codeServer.image.repository }}:{{ .Values.devEnv.codeServer.image.tag }}"
+          imagePullPolicy: {{ .Values.devEnv.codeServer.pullPolicy }}
+          env:
+            - name: PASSWORD
+              value: "{{ .Values.devEnv.codeServer.password | default "alga-dev" }}"
+            - name: SUDO_PASSWORD
+              value: "{{ .Values.devEnv.codeServer.password | default "alga-dev" }}"
+            - name: DEFAULT_WORKSPACE
+              value: "/home/coder/alga-psa"
+            # Git configuration
+            - name: GIT_AUTHOR_NAME
+              value: "{{ .Values.devEnv.git.authorName | default "Dev Environment" }}"
+            - name: GIT_AUTHOR_EMAIL
+              value: "{{ .Values.devEnv.git.authorEmail | default "dev@alga.local" }}"
+            - name: GIT_COMMITTER_NAME
+              value: "{{ .Values.devEnv.git.authorName | default "Dev Environment" }}"
+            - name: GIT_COMMITTER_EMAIL
+              value: "{{ .Values.devEnv.git.authorEmail | default "dev@alga.local" }}"
+            # Development environment markers
+            - name: ALGA_DEV_ENV
+              value: "true"
+            - name: ALGA_PR_NUMBER
+              value: "{{ .Values.devEnv.prNumber }}"
+            - name: ALGA_BRANCH
+              value: "{{ .Values.devEnv.repository.branch }}"
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          volumeMounts:
+            - name: workspace-storage
+              mountPath: /home/coder
+            - name: project-source
+              mountPath: /home/coder/alga-psa
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.devEnv.codeServer.resources | nindent 12 }}
+      {{- with .Values.devEnv.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.devEnv.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
