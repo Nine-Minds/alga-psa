@@ -81,12 +81,6 @@ exports.up = async function(knex) {
     category: 'Email Processing',
     version: '1.0.0',
     status: 'active',
-    definition: JSON.stringify({
-      name: 'system-email-processing',
-      type: 'typescript',
-      entryPoint: 'systemEmailProcessingWorkflow',
-      isSystemManaged: true
-    }),
     created_at: knex.fn.now(),
     updated_at: knex.fn.now()
   }).returning('registration_id');
@@ -99,89 +93,6 @@ exports.up = async function(knex) {
     registration_id: workflowRegistrationId,
     version: '1.0.0',
     is_current: true,
-    definition: JSON.stringify({
-      code: `
-/**
- * System Email Processing Workflow - TypeScript Code
- * This workflow processes inbound emails and creates tickets with email threading support
- */
-import { systemEmailProcessingWorkflow } from '../workflows/system-email-processing-workflow';
-
-export default systemEmailProcessingWorkflow;
-`.trim(),
-      schema: {
-      type: 'object',
-      properties: {
-        triggerEvent: {
-          type: 'object',
-          description: 'INBOUND_EMAIL_RECEIVED event that triggered this workflow',
-          properties: {
-            eventType: { 
-              type: 'string', 
-              enum: ['INBOUND_EMAIL_RECEIVED'],
-              description: 'Must be INBOUND_EMAIL_RECEIVED' 
-            },
-            payload: {
-              type: 'object',
-              properties: {
-                emailId: { type: 'string' },
-                providerId: { type: 'string', format: 'uuid' },
-                tenant: { type: 'string', format: 'uuid' },
-                emailData: {
-                  type: 'object',
-                  description: 'Complete email message data',
-                  properties: {
-                    id: { type: 'string' },
-                    provider: { type: 'string', enum: ['microsoft', 'google'] },
-                    receivedAt: { type: 'string', format: 'date-time' },
-                    from: {
-                      type: 'object',
-                      properties: {
-                        email: { type: 'string', format: 'email' },
-                        name: { type: 'string' }
-                      },
-                      required: ['email']
-                    },
-                    subject: { type: 'string' },
-                    body: {
-                      type: 'object',
-                      properties: {
-                        text: { type: 'string' },
-                        html: { type: 'string' }
-                      },
-                      required: ['text']
-                    },
-                    threadId: { type: 'string' },
-                    inReplyTo: { type: 'string' },
-                    references: {
-                      type: 'array',
-                      items: { type: 'string' }
-                    },
-                    attachments: {
-                      type: 'array',
-                      items: {
-                        type: 'object',
-                        properties: {
-                          id: { type: 'string' },
-                          name: { type: 'string' },
-                          contentType: { type: 'string' },
-                          size: { type: 'number' }
-                        }
-                      }
-                    }
-                  },
-                  required: ['id', 'provider', 'receivedAt', 'from', 'subject', 'body']
-                }
-              },
-              required: ['emailId', 'providerId', 'tenant', 'emailData']
-            }
-          },
-          required: ['eventType', 'payload']
-        }
-      },
-      required: ['triggerEvent']
-      }
-    }),
     created_at: knex.fn.now()
   });
 
