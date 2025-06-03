@@ -19,6 +19,8 @@ import KanbanBoard from './KanbanBoard';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from 'server/src/lib/utils/projectUtils';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { HelpCircle } from 'lucide-react';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
 
 interface ProjectDetailProps {
   project: IProject;
@@ -720,7 +722,14 @@ export default function ProjectDetail({
     if (!selectedPhase) {
       return (
         <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
-          <p className="text-xl text-gray-600">Please select a phase to view the Kanban board.</p>
+          <div className="text-center">
+            <p className="text-xl text-gray-600 flex items-center justify-center gap-2">
+              Please select or create a phase to view the Kanban board.
+              <Tooltip content="A phase is a distinct stage or milestone in your project timeline. Each phase can contain multiple tasks and helps organize work into manageable sections.">
+                <HelpCircle className="w-5 h-5 text-gray-500 cursor-help" />
+              </Tooltip>
+            </p>
+          </div>
         </div>
       );
     }

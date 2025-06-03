@@ -24,6 +24,7 @@ import { addDays, addWeeks, addMonths, startOfDay, subDays, subWeeks, subMonths,
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 import EntryPopup from 'server/src/components/schedule/EntryPopup';
+import Spinner from 'server/src/components/ui/Spinner';
 
 enableMapSet();
 
@@ -35,12 +36,6 @@ const calculateDateRange = (date: Date, viewMode: 'day' | 'week') => {
   }
 };
 
-function Spinner({ size = "lg" }: { size?: "sm" | "md" | "lg" }) {
-  const sizeClass = size === "sm" ? "h-6 w-6" : size === "md" ? "h-8 w-8" : "h-12 w-12";
-  return (
-    <div className={`animate-spin rounded-full border-4 border-gray-200 border-t-[rgb(var(--color-primary-600))] ${sizeClass}`}></div>
-  );
-}
 
 interface TechnicianDispatchDashboardProps {
   filterWorkItemId?: string;
@@ -775,7 +770,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   if (isLoadingPermissions) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <Spinner />
+        <Spinner size="lg" />
       </div>
     );
   }
