@@ -12,6 +12,8 @@ import TaskEdit from 'server/src/components/projects/TaskEdit';
 import EntryPopup from 'server/src/components/schedule/EntryPopup';
 import { useTenant } from 'server/src/components/TenantProvider';
 import Spinner from 'server/src/components/ui/Spinner';
+import InteractionDetails from 'server/src/components/interactions/InteractionDetails';
+import { getInteractionById } from 'server/src/lib/actions/interactionActions';
 
 interface WorkItemDrawerProps {
     workItem: IExtendedWorkItem;
@@ -28,6 +30,53 @@ interface ScheduleUpdateData {
     scheduled_end: Date;
     assigned_user_ids: string[];
     status: string;
+}
+
+// Separate component for Interaction drawer content
+function InteractionDrawerContent({ workItemId }: { workItemId: string }) {
+    const [interaction, setInteraction] = React.useState<any>(null);
+    const [loading, setLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        const fetchInteraction = async () => {
+            try {
+                const interactionData = await getInteractionById(workItemId);
+                setInteraction(interactionData);
+            } catch (error) {
+                console.error('Error fetching interaction:', error);
+                toast.error('Failed to load interaction details');
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchInteraction();
+    }, [workItemId]);
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <Spinner />
+            </div>
+        );
+    }
+
+    if (!interaction) {
+        return (
+            <div className="min-w-auto h-full bg-white p-6">
+                <p className="text-gray-500">Interaction not found</p>
+            </div>
+        );
+    }
+
+    return (
+        <InteractionDetails 
+            interaction={interaction} 
+            isInDrawer={true}
+            onInteractionUpdated={async (updated) => {
+                setInteraction(updated);
+            }}
+        />
+    );
 }
 
 export function WorkItemDrawer({
@@ -194,6 +243,9 @@ export function WorkItemDrawer({
                         </div>
                     );
                 }
+
+                case 'interaction':
+                    return <InteractionDrawerContent workItemId={workItem.work_item_id} />;
 
                 default:
                     return (

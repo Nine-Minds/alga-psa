@@ -9,10 +9,12 @@ import { getTaskWithDetails } from 'server/src/lib/actions/project-actions/proje
 import { getWorkItemById } from 'server/src/lib/actions/workItemActions';
 import { getCurrentUser, getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { getScheduleEntries } from 'server/src/lib/actions/scheduleActions';
+import { getInteractionById } from 'server/src/lib/actions/interactionActions';
 import { toast } from 'react-hot-toast';
 import TicketDetails from 'server/src/components/tickets/ticket/TicketDetails';
 import TaskEdit from 'server/src/components/projects/TaskEdit';
 import EntryPopup from 'server/src/components/schedule/EntryPopup';
+import InteractionDetails from 'server/src/components/interactions/InteractionDetails';
 import { useTenant } from 'server/src/components/TenantProvider';
 
 interface WorkItemDetailsDrawerProps {
@@ -197,6 +199,29 @@ export function WorkItemDetailsDrawer({
                                 canAssignOthers={true}
                             />
                             )}
+                        </div>
+                    );
+                }
+
+                case 'interaction': {
+                    console.log('Loading interaction with ID:', workItem.work_item_id);
+                    const interactionData = await getInteractionById(workItem.work_item_id);
+                    if (!interactionData) {
+                        toast.error('Failed to load interaction data');
+                        return null;
+                    }
+                    
+                    return (
+                        <div className="h-full">
+                            <InteractionDetails
+                                interaction={interactionData}
+                                isInDrawer={true}
+                                onInteractionDeleted={onClose}
+                                onInteractionUpdated={async () => {
+                                    // Optionally refresh the data in the parent
+                                    await onTaskUpdate(null);
+                                }}
+                            />
                         </div>
                     );
                 }

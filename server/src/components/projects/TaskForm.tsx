@@ -21,8 +21,7 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import * as Dialog from '@radix-ui/react-dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { TextArea } from 'server/src/components/ui/TextArea';
-import EditableText from 'server/src/components/ui/EditableText';
-import { ListChecks, UserPlus, Trash2 } from 'lucide-react';
+import { ListChecks, UserPlus, Trash2, Clock } from 'lucide-react';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
@@ -32,6 +31,11 @@ import { toast } from 'react-hot-toast';
 import TaskTicketLinks from './TaskTicketLinks';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from 'server/src/components/ui/TreeSelect';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
+import { useDrawer } from 'server/src/context/DrawerContext';
+import { IWorkItem, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
+import TimeEntryDialog from 'server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog';
+import { getCurrentTimePeriod } from 'server/src/lib/actions/timePeriodsActions';
+import { fetchOrCreateTimeSheet, saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
 
 type ProjectTreeTypes = 'project' | 'phase' | 'status';
 
@@ -101,6 +105,8 @@ export default function TaskForm({
     additionalAssigneeCount: number;
     ticketLinkCount: number;
   } | null>(null);
+  
+  const { openDrawer, closeDrawer } = useDrawer();
 
   const [selectedStatusId, setSelectedStatusId] = useState<string>(
     task?.project_status_mapping_id ||
@@ -550,6 +556,83 @@ export default function TaskForm({
     setShowDeleteConfirm(false);
   };
 
+  const handleAddTimeEntry = async () => {
+    if (!task?.task_id) {
+      toast.error('Please save the task before adding time entries');
+      return;
+    }
+
+    try {
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        toast.error('No user session found');
+        return;
+      }
+
+      const currentTimePeriod = await getCurrentTimePeriod();
+
+      if (!currentTimePeriod) {
+        toast.error('No active time period found. Please contact your administrator.');
+        return;
+      }
+
+      const timeSheet = await fetchOrCreateTimeSheet(currentUser.user_id, currentTimePeriod.period_id);
+      if (!timeSheet) {
+        toast.error('Unable to add time entry: Failed to create or fetch time sheet');
+        return;
+      }
+
+      const workItem: Omit<IWorkItem, 'tenant'> & {
+        project_name?: string;
+        phase_name?: string;
+        task_name?: string;
+      } = {
+        work_item_id: task.task_id,
+        type: 'project_task' as WorkItemType,
+        name: `${task.task_name}`,
+        description: '',  // Don't copy task description to time entry notes
+        project_name: phase.phase_name, // Using phase name as a placeholder
+        phase_name: phase.phase_name,
+        task_name: task.task_name
+      };
+
+      openDrawer(
+        <TimeEntryDialog
+          isOpen={true}
+          onClose={closeDrawer}
+          onSave={async (timeEntry) => {
+            try {
+              await saveTimeEntry({
+                ...timeEntry,
+                time_sheet_id: timeSheet.id,
+                user_id: currentUser.user_id,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                approval_status: 'DRAFT',
+                work_item_type: 'project_task',
+                work_item_id: task.task_id!
+              });
+              toast.success('Time entry saved successfully');
+              closeDrawer();
+            } catch (error) {
+              console.error('Error saving time entry:', error);
+              toast.error('Failed to save time entry');
+            }
+          }}
+          workItem={workItem}
+          date={new Date()}
+          timePeriod={currentTimePeriod}
+          timeSheetId={timeSheet.id}
+          isEditable={true}
+          inDrawer={true}
+        />
+      );
+    } catch (error) {
+      console.error('Error preparing time entry:', error);
+      toast.error('Failed to prepare time entry. Please try again.');
+    }
+  };
+
   const handleAddAgent = async (userId: string) => {
     try {
       if (task?.task_id) {
@@ -646,6 +729,20 @@ export default function TaskForm({
       <div className="text-lg font-medium mb-4">
         {mode === 'edit' ? 'Edit Task' : 'Add New Task'}
       </div>
+      {mode === 'edit' && (
+        <div className="flex justify-end mb-4">
+          <Button
+            id='add-time-entry-button'
+            type="button"
+            variant="default"
+            onClick={handleAddTimeEntry}
+            disabled={isSubmitting || !task?.task_id}
+          >
+            <Clock className="h-4 w-4 mr-2" />
+            Add Time Entry
+          </Button>
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="flex flex-col h-full">
         <div className="space-y-4">
           <TextArea
@@ -876,32 +973,36 @@ export default function TaskForm({
             />
 
                 <div className="flex justify-between mt-6">
-                  {/* Only show Cancel button if not in drawer */}
-                  {!inDrawer && (
-                    <Button
-                      id='cancel-button'
-                      type="button"
-                      variant="ghost"
-                      onClick={handleCancelClick}
-                      disabled={isSubmitting}
-                    >
-                      Cancel
+                  <div className="flex gap-2">
+                    {/* Only show Cancel button if not in drawer */}
+                    {!inDrawer && (
+                      <Button
+                        id='cancel-button'
+                        type="button"
+                        variant="ghost"
+                        onClick={handleCancelClick}
+                        disabled={isSubmitting}
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                    {mode === 'edit' && !inDrawer && (
+                      <Button
+                        id='delete-button'
+                        type="button"
+                        variant="destructive"
+                        onClick={() => setShowDeleteConfirm(true)}
+                        disabled={isSubmitting}
+                      >
+                        Delete
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button id='save-button' type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? (mode === 'edit' ? 'Updating...' : 'Adding...') : (mode === 'edit' ? 'Update' : 'Save')}
                     </Button>
-                  )}
-                  {mode === 'edit' && !inDrawer && (
-                    <Button
-                      id='delete-button'
-                      type="button"
-                      variant="destructive"
-                      onClick={() => setShowDeleteConfirm(true)}
-                      disabled={isSubmitting}
-                    >
-                      Delete
-                    </Button>
-                  )}
-                  <Button id='save-button' type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? (mode === 'edit' ? 'Updating...' : 'Adding...') : (mode === 'edit' ? 'Update' : 'Save')}
-                  </Button>
+                  </div>
                 </div>
         </div>
       </form>

@@ -87,7 +87,41 @@ export async function fetchWorkItemsForTimeSheet(timeSheetId: string): Promise<I
       db.raw("'ad_hoc' as type")
     );
 
-  return [...tickets, ...projectTasks, ...adHocEntries].map((item): IWorkItem => ({
+  // Get interactions
+  const interactions = await db('interactions')
+    .whereIn('interaction_id', function () {
+      this.select('work_item_id')
+        .from('time_entries')
+        .where({
+          'time_entries.work_item_type': 'interaction',
+          'time_entries.time_sheet_id': validatedParams.timeSheetId,
+          'time_entries.tenant': tenant
+        });
+    })
+    .leftJoin('companies', function() {
+      this.on('interactions.company_id', '=', 'companies.company_id')
+        .andOn('companies.tenant', '=', 'interactions.tenant');
+    })
+    .leftJoin('contacts', function() {
+      this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')
+        .andOn('contacts.tenant', '=', 'interactions.tenant');
+    })
+    .leftJoin('interaction_types', function() {
+      this.on('interactions.type_id', '=', 'interaction_types.type_id')
+        .andOn('interaction_types.tenant', '=', 'interactions.tenant');
+    })
+    .where('interactions.tenant', tenant)
+    .select(
+      'interactions.interaction_id as work_item_id',
+      'interactions.title as name',
+      db.raw("'' as description"), // Don't copy interaction notes to time entry
+      'companies.company_name',
+      'contacts.full_name as contact_name',
+      'interaction_types.type_name as interaction_type',
+      db.raw("'interaction' as type")
+    );
+
+  return [...tickets, ...projectTasks, ...adHocEntries, ...interactions].map((item): IWorkItem => ({
     ...item,
     is_billable: item.type !== 'non_billable_category',
     ticket_number: item.type === 'ticket' ? item.ticket_number : undefined

@@ -94,6 +94,44 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
           type: 'ad_hoc',
         };
         break;
+      case 'interaction':
+        [workItem] = await db('interactions')
+          .where({
+            'interactions.interaction_id': entry.work_item_id,
+            'interactions.tenant': tenant
+          })
+          .leftJoin('companies', function() {
+            this.on('interactions.company_id', '=', 'companies.company_id')
+              .andOn('companies.tenant', '=', 'interactions.tenant');
+          })
+          .leftJoin('contacts', function() {
+            this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')
+              .andOn('contacts.tenant', '=', 'interactions.tenant');
+          })
+          .leftJoin('interaction_types', function() {
+            this.on('interactions.type_id', '=', 'interaction_types.type_id')
+              .andOn('interaction_types.tenant', '=', 'interactions.tenant');
+          })
+          .select(
+            'interactions.interaction_id as work_item_id',
+            'interactions.title as name',
+            'interactions.notes as description',
+            'companies.company_name',
+            'contacts.full_name as contact_name',
+            'interaction_types.type_name as interaction_type'
+          );
+        
+        // If interaction not found, create a placeholder
+        if (!workItem) {
+          console.warn(`Interaction not found for time entry: ${entry.work_item_id}`);
+          workItem = {
+            work_item_id: entry.work_item_id,
+            name: 'Deleted Interaction',
+            description: '',
+            type: 'interaction'
+          };
+        }
+        break;
       default:
         throw new Error(`Unknown work item type: ${entry.work_item_type}`);
     }
@@ -239,7 +277,14 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
               (await db('tickets')
                 .where({ ticket_id: work_item_id, tenant })
                 .first('company_id')).company_id
-              : null,
+              : work_item_type === 'interaction' ?
+                (await db('interactions')
+                  .where({ 
+                    interaction_id: work_item_id, 
+                    tenant
+                  })
+                  .first('company_id'))?.company_id
+                : null,
           service_id
         );
 
@@ -604,6 +649,42 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
           is_billable: false
         };
         break;
+      case 'interaction': {
+        const [interaction] = await db('interactions')
+          .where({
+            'interactions.interaction_id': entry.work_item_id,
+            'interactions.tenant': tenant
+          })
+          .leftJoin('companies', function() {
+            this.on('interactions.company_id', '=', 'companies.company_id')
+              .andOn('companies.tenant', '=', 'interactions.tenant');
+          })
+          .leftJoin('contacts', function() {
+            this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')
+              .andOn('contacts.tenant', '=', 'interactions.tenant');
+          })
+          .leftJoin('interaction_types', function() {
+            this.on('interactions.type_id', '=', 'interaction_types.type_id')
+              .andOn('interaction_types.tenant', '=', 'interactions.tenant');
+          })
+          .select(
+            'interactions.interaction_id as work_item_id',
+            'interactions.title as name',
+            'interactions.notes as description',
+            'companies.company_name',
+            'contacts.full_name as contact_name',
+            'interaction_types.type_name as interaction_type'
+          );
+        workItemDetails = {
+          ...interaction,
+          type: 'interaction',
+          is_billable: entry.billable_duration > 0,
+          company_name: interaction.company_name,
+          contact_name: interaction.contact_name,
+          interaction_type: interaction.interaction_type
+        };
+        break;
+      }
       default:
         throw new Error(`Unknown work item type: ${entry.work_item_type}`);
     }
@@ -840,6 +921,42 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
             is_billable: false
           };
           break;
+        case 'interaction': {
+          const [interaction] = await db('interactions')
+            .where({
+              'interactions.interaction_id': entry.work_item_id,
+              'interactions.tenant': tenant
+            })
+            .leftJoin('companies', function() {
+              this.on('interactions.company_id', '=', 'companies.company_id')
+                .andOn('companies.tenant', '=', 'interactions.tenant');
+            })
+            .leftJoin('contacts', function() {
+              this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')
+                .andOn('contacts.tenant', '=', 'interactions.tenant');
+            })
+            .leftJoin('interaction_types', function() {
+              this.on('interactions.type_id', '=', 'interaction_types.type_id')
+                .andOn('interaction_types.tenant', '=', 'interactions.tenant');
+            })
+            .select(
+              'interactions.interaction_id as work_item_id',
+              'interactions.title as name',
+              'interactions.notes as description',
+              'companies.company_name',
+              'contacts.full_name as contact_name',
+              'interaction_types.type_name as interaction_type'
+            );
+          workItemDetails = {
+            ...interaction,
+            type: 'interaction',
+            is_billable: entry.billable_duration > 0,
+            company_name: interaction.company_name,
+            contact_name: interaction.contact_name,
+            interaction_type: interaction.interaction_type
+          };
+          break;
+        }
         default:
           throw new Error(`Unknown work item type: ${entry.work_item_type}`);
       }

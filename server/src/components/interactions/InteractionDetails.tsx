@@ -21,15 +21,22 @@ import { deleteInteraction } from 'server/src/lib/actions/interactionActions';
 import { Text, Flex, Heading } from '@radix-ui/themes';
 import RichTextViewer from '../editor/RichTextViewer';
 import { ConfirmationDialog } from '../ui/ConfirmationDialog';
+import { IWorkItem, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
+import TimeEntryDialog from 'server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog';
+import { toast } from 'react-hot-toast';
+import { getCurrentTimePeriod } from 'server/src/lib/actions/timePeriodsActions';
+import { fetchOrCreateTimeSheet, saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
 interface InteractionDetailsProps {
   interaction: IInteraction;
   onInteractionDeleted?: () => void; // Callback when interaction is deleted
   onInteractionUpdated?: (updatedInteraction: IInteraction) => void; // Callback when interaction is updated
+  isInDrawer?: boolean; // Whether this component is displayed in a drawer
 }
 
 
-const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: initialInteraction, onInteractionDeleted, onInteractionUpdated }) => {
+const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: initialInteraction, onInteractionDeleted, onInteractionUpdated, isInDrawer = false }) => {
   const [interaction, setInteraction] = useState<IInteraction>(initialInteraction);
   const { openDrawer, goBack, closeDrawer } = useDrawer();
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
@@ -64,6 +71,13 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
     type: 'button',
     label: 'Add Ticket',
     helperText: 'Create a new ticket related to this interaction'
+  });
+
+  const { automationIdProps: addTimeEntryButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: 'interaction-details-add-time-entry-button',
+    type: 'button',
+    label: 'Add Time Entry',
+    helperText: 'Add time entry for this interaction'
   });
 
   useEffect(() => {
@@ -200,6 +214,98 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
     } catch (error) {
       console.error('Error deleting interaction:', error);
       // Handle error (e.g., show error message to user)
+    }
+  };
+
+  const handleAddTimeEntry = async () => {
+    if (!interaction.interaction_id) {
+      toast.error('Invalid interaction');
+      return;
+    }
+
+    try {
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        toast.error('No user session found');
+        return;
+      }
+
+      const currentTimePeriod = await getCurrentTimePeriod();
+
+      if (!currentTimePeriod) {
+        toast.error('No active time period found. Please contact your administrator.');
+        return;
+      }
+
+      const timeSheet = await fetchOrCreateTimeSheet(currentUser.user_id, currentTimePeriod.period_id);
+      if (!timeSheet) {
+        toast.error('Unable to add time entry: Failed to create or fetch time sheet');
+        return;
+      }
+
+      const workItem: Omit<IWorkItem, 'tenant'> & { 
+        interaction_type?: string; 
+        company_name?: string | null;
+      } = {
+        work_item_id: interaction.interaction_id,
+        type: 'interaction' as WorkItemType,
+        name: interaction.title || 'Interaction',
+        description: '',  // Don't copy interaction notes to time entry notes
+        interaction_type: interaction.type_name, // Use type_name from IInteraction
+        company_name: interaction.company_name
+      };
+
+      // Calculate default times and duration from interaction
+      let defaultStartTime: Date | undefined;
+      let defaultEndTime: Date | undefined;
+      
+      if (interaction.start_time && interaction.end_time) {
+        // Use the interaction's start and end times
+        defaultStartTime = new Date(interaction.start_time);
+        defaultEndTime = new Date(interaction.end_time);
+      } else if (interaction.interaction_date && interaction.duration) {
+        // Calculate from interaction date and duration
+        defaultEndTime = new Date(interaction.interaction_date);
+        defaultStartTime = new Date(defaultEndTime);
+        defaultStartTime.setMinutes(defaultStartTime.getMinutes() - (interaction.duration || 0));
+      }
+
+      openDrawer(
+        <TimeEntryDialog
+          isOpen={true}
+          onClose={closeDrawer}
+          onSave={async (timeEntry) => {
+            try {
+              await saveTimeEntry({
+                ...timeEntry,
+                time_sheet_id: timeSheet.id,
+                user_id: currentUser.user_id,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                approval_status: 'DRAFT',
+                work_item_type: 'interaction',
+                work_item_id: interaction.interaction_id
+              });
+              toast.success('Time entry saved successfully');
+              closeDrawer();
+            } catch (error) {
+              console.error('Error saving time entry:', error);
+              toast.error('Failed to save time entry');
+            }
+          }}
+          workItem={workItem}
+          date={defaultEndTime || new Date()}
+          timePeriod={currentTimePeriod}
+          timeSheetId={timeSheet.id}
+          isEditable={true}
+          defaultStartTime={defaultStartTime}
+          defaultEndTime={defaultEndTime}
+          inDrawer={true}
+        />
+      );
+    } catch (error) {
+      console.error('Error preparing time entry:', error);
+      toast.error('Failed to prepare time entry. Please try again.');
     }
   };
 
@@ -347,7 +453,17 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
         </div>
       </div>
 
-      <Flex justify="end" align="center" className="mt-6">
+      <Flex justify="end" align="center" className="mt-6 gap-2">
+        {!isInDrawer && (
+          <Button
+            {...addTimeEntryButtonProps}
+            onClick={handleAddTimeEntry}
+            variant="default"
+          >
+            <Clock className="mr-2 h-4 w-4" />
+            Add Time Entry
+          </Button>
+        )}
         <Button
           {...addTicketButtonProps}
           onClick={() => setIsQuickAddTicketOpen(true)}
@@ -371,7 +487,21 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
           id: interaction.contact_name_id,
           name: interaction.contact_name || ''
         } : undefined}
-        prefilledDescription={interaction.notes}
+        prefilledDescription={(() => {
+          try {
+            const content = JSON.parse(interaction.notes || '[]');
+            // Simple extraction of text from paragraph nodes
+            return content.map((block: any) => {
+              if (block.type === 'paragraph' && block.content) {
+                return block.content.map((item: any) => item.text).join('');
+              }
+              return ''; // Ignore other block types for now
+            }).join('\n'); // Join paragraphs with newlines
+          } catch (e) {
+            // If parsing fails, return the raw text
+            return interaction.notes || '';
+          }
+        })()}
       />
 
       <QuickAddInteraction

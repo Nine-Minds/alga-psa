@@ -6,7 +6,7 @@ import {
   Calendar, Presentation, Coffee, Handshake, StickyNote, BookOpen,
   Clipboard, Edit, CheckSquare, Target, Flag, AlarmClock, Settings,
   Star, Heart, Zap, Award, Briefcase, Clock, MapPin, Tag,
-  Bell, Shield, Key, Search, Send
+  Bell, Shield, Key, Search, Send, Activity, Users2
 } from 'lucide-react';
 import { Button } from './Button';
 import { cn } from 'server/src/lib/utils';
@@ -24,7 +24,6 @@ const INTERACTION_ICONS: IconOption[] = [
   { value: 'mail', label: 'Email', icon: Mail, category: 'Communication' },
   { value: 'message-circle', label: 'Message', icon: MessageCircle, category: 'Communication' },
   { value: 'video', label: 'Video Call', icon: Video, category: 'Communication' },
-  { value: 'headphones', label: 'Support Call', icon: Headphones, category: 'Communication' },
   { value: 'send', label: 'Send', icon: Send, category: 'Communication' },
 
   // Meetings & Events  
@@ -37,19 +36,25 @@ const INTERACTION_ICONS: IconOption[] = [
   // Documents & Notes
   { value: 'file-text', label: 'Document', icon: FileText, category: 'Documents' },
   { value: 'sticky-note', label: 'Note', icon: StickyNote, category: 'Documents' },
-  { value: 'book-open', label: 'Documentation', icon: BookOpen, category: 'Documents' },
-  { value: 'clipboard', label: 'Report', icon: Clipboard, category: 'Documents' },
   { value: 'edit', label: 'Edit', icon: Edit, category: 'Documents' },
 
   // Tasks & Actions
-  { value: 'check-square', label: 'Task', icon: CheckSquare, category: 'Tasks' },
-  { value: 'target', label: 'Goal', icon: Target, category: 'Tasks' },
   { value: 'flag', label: 'Follow-up', icon: Flag, category: 'Tasks' },
   { value: 'alarm-clock', label: 'Reminder', icon: AlarmClock, category: 'Tasks' },
   { value: 'clock', label: 'Time Tracking', icon: Clock, category: 'Tasks' },
 
+  // Activities
+  { value: 'activity', label: 'General Activity', icon: Activity, category: 'Activities' },
+  { value: 'briefcase', label: 'Account Management', icon: Briefcase, category: 'Activities' },
+  { value: 'search', label: 'Research', icon: Search, category: 'Activities' },
+  { value: 'book-open', label: 'Training', icon: BookOpen, category: 'Activities' },
+  { value: 'headphones', label: 'Support', icon: Headphones, category: 'Activities' },
+  { value: 'check-square', label: 'Review', icon: CheckSquare, category: 'Activities' },
+  { value: 'clipboard', label: 'Documentation', icon: Clipboard, category: 'Activities' },
+  { value: 'users-2', label: 'Consultation', icon: Users2, category: 'Activities' },
+  { value: 'target', label: 'Planning', icon: Target, category: 'Activities' },
+
   // Business & General
-  { value: 'briefcase', label: 'Business', icon: Briefcase, category: 'Business' },
   { value: 'settings', label: 'Configuration', icon: Settings, category: 'Business' },
   { value: 'star', label: 'Important', icon: Star, category: 'Business' },
   { value: 'award', label: 'Achievement', icon: Award, category: 'Business' },
@@ -60,10 +65,9 @@ const INTERACTION_ICONS: IconOption[] = [
   { value: 'shield', label: 'Security', icon: Shield, category: 'Business' },
   { value: 'key', label: 'Access', icon: Key, category: 'Business' },
   { value: 'heart', label: 'Favorite', icon: Heart, category: 'Business' },
-  { value: 'search', label: 'Research', icon: Search, category: 'Business' },
 ];
 
-const ICON_CATEGORIES = ['Communication', 'Meetings', 'Documents', 'Tasks', 'Business'];
+const ICON_CATEGORIES = ['Communication', 'Meetings', 'Documents', 'Tasks', 'Activities', 'Business'];
 
 interface IconPickerProps {
   value?: string;

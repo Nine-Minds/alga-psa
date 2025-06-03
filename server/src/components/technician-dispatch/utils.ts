@@ -51,6 +51,11 @@ export const getEventColors = (
       hover = 'hover:bg-[rgb(var(--color-accent-200))]';
       text = 'text-[rgb(var(--color-text-900))]';
       break;
+    case 'interaction':
+      bg = 'bg-green-100';
+      hover = 'hover:bg-green-200';
+      text = 'text-green-900';
+      break;
   }
 
   return { bg, hover, text };

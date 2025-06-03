@@ -28,14 +28,16 @@ const workItemColors: Record<WorkItemType, string> = {
   ticket: 'rgb(var(--color-primary-200))',
   project_task: 'rgb(var(--color-secondary-100))',
   non_billable_category: 'rgb(var(--color-accent-100))',
-  ad_hoc: 'rgb(var(--color-border-200))'
+  ad_hoc: 'rgb(var(--color-border-200))',
+  interaction: 'rgb(220 252 231)' // Tailwind green-100
 };
 
 const workItemHoverColors: Record<WorkItemType, string> = {
   ticket: 'rgb(var(--color-primary-300))',
   project_task: 'rgb(var(--color-secondary-200))',
   non_billable_category: 'rgb(var(--color-accent-200))',
-  ad_hoc: 'rgb(var(--color-border-300))'
+  ad_hoc: 'rgb(var(--color-border-300))',
+  interaction: 'rgb(187 247 208)' // Tailwind green-200
 };
 
 

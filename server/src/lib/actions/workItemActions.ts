@@ -558,6 +558,55 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
         );
     }
 
+    // Add interactions query
+    let interactionsQuery;
+    if (!options.type || options.type === 'all' || options.type === 'interaction') {
+      interactionsQuery = db('interactions as i')
+        .whereNotIn('i.interaction_id', options.availableWorkItemIds || [])
+        .where('i.tenant', tenant)
+        .leftJoin('companies as c', function() {
+          this.on('i.company_id', '=', 'c.company_id')
+              .andOn('i.tenant', '=', 'c.tenant');
+        })
+        .leftJoin('interaction_types as it', function() {
+          this.on('i.type_id', '=', 'it.type_id')
+              .andOn('i.tenant', '=', 'it.tenant');
+        })
+        .whereILike('i.title', db.raw('?', [`%${searchTerm}%`]))
+        .select(
+          'i.interaction_id as work_item_id',
+          'i.title as name',
+          'i.notes as description',
+          db.raw("'interaction' as type"),
+          db.raw('NULL::text as ticket_number'),
+          'i.title',
+          db.raw('NULL::text as project_name'),
+          db.raw('NULL::text as phase_name'),
+          db.raw('NULL::text as task_name'),
+          'i.company_id',
+          'c.company_name',
+          db.raw('NULL::timestamp with time zone as scheduled_start'),
+          db.raw('NULL::timestamp with time zone as scheduled_end'),
+          db.raw('NULL::timestamp with time zone as due_date'),
+          db.raw('ARRAY[]::uuid[] as assigned_user_ids'),
+          db.raw('ARRAY[]::uuid[] as additional_user_ids')
+        );
+
+      // Apply filters
+      if (options.companyId) {
+        interactionsQuery.where('c.company_id', options.companyId);
+      }
+      
+      if (options.dateRange?.start || options.dateRange?.end) {
+        if (options.dateRange.start) {
+          interactionsQuery.where('i.interaction_date', '>=', options.dateRange.start);
+        }
+        if (options.dateRange.end) {
+          interactionsQuery.where('i.interaction_date', '<=', options.dateRange.end);
+        }
+      }
+    }
+
     let queriesToUnion = [];
     if (!options.type || options.type === 'all' || options.type === 'ticket') {
         queriesToUnion.push(ticketsQuery);
@@ -567,6 +616,9 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
     }
     if (adHocQuery && (!options.type || options.type === 'all' || options.type === 'ad_hoc')) {
         queriesToUnion.push(adHocQuery);
+    }
+    if (interactionsQuery && (!options.type || options.type === 'all' || options.type === 'interaction')) {
+        queriesToUnion.push(interactionsQuery);
     }
 
     let query = db.union(queriesToUnion, true);
@@ -580,6 +632,9 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
     }
     if (adHocQuery && (!options.type || options.type === 'all' || options.type === 'ad_hoc')) {
         countPromises.push(adHocQuery.clone().clearSelect().clearOrder().count('* as count').first());
+    }
+    if (interactionsQuery && (!options.type || options.type === 'all' || options.type === 'interaction')) {
+        countPromises.push(interactionsQuery.clone().clearSelect().clearOrder().count('* as count').first());
     }
 
     const countResults = await Promise.all(countPromises);
@@ -599,8 +654,30 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
     // Execute query for items
     const results = await query;
 
+    // Fetch interaction types for interactions
+    const interactionIds = results
+      .filter((item: any) => item.type === 'interaction')
+      .map((item: any) => item.work_item_id);
+    
+    let interactionTypesMap = new Map<string, string>();
+    if (interactionIds.length > 0) {
+      const interactionTypes = await db('interactions as i')
+        .whereIn('i.interaction_id', interactionIds)
+        .where('i.tenant', tenant)
+        .leftJoin('interaction_types as it', function() {
+          this.on('i.type_id', '=', 'it.type_id')
+              .andOn('i.tenant', '=', 'it.tenant');
+        })
+        .select('i.interaction_id', 'it.type_name');
+      
+      interactionTypes.forEach((item: any) => {
+        interactionTypesMap.set(item.interaction_id, item.type_name);
+      });
+    }
+
     // Format results
-    const workItems = results.map((item: any): Omit<IExtendedWorkItem, "tenant"> => ({
+    const workItems = results.map((item: any): Omit<IExtendedWorkItem, "tenant"> => {
+      const result: Omit<IExtendedWorkItem, "tenant"> = {
         work_item_id: item.work_item_id,
         type: item.type,
         name: item.name,
@@ -617,7 +694,15 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
         assigned_user_ids: item.assigned_user_ids || [],
         scheduled_start: item.scheduled_start,
         scheduled_end: item.scheduled_end
-      }));
+      };
+      
+      // Add interaction type if it's an interaction
+      if (item.type === 'interaction' && interactionTypesMap.has(item.work_item_id)) {
+        result.interaction_type = interactionTypesMap.get(item.work_item_id);
+      }
+      
+      return result;
+    });
 
     return {
       items: workItems,
@@ -814,6 +899,47 @@ export async function getWorkItemById(workItemId: string, workItemType: WorkItem
           db.raw('NULL::uuid[] as additional_user_ids')
         )
         .first();
+    } else if (workItemType === 'interaction') {
+      workItem = await db('interactions as i')
+        .where({
+          'i.interaction_id': workItemId,
+          'i.tenant': tenant
+        })
+        .leftJoin('companies as c', function() {
+          this.on('i.company_id', '=', 'c.company_id')
+              .andOn('i.tenant', '=', 'c.tenant');
+        })
+        .leftJoin('interaction_types as it', function() {
+          this.on('i.type_id', '=', 'it.type_id')
+              .andOn('i.tenant', '=', 'it.tenant');
+        })
+        .leftJoin('statuses as s', function() {
+          this.on('i.status_id', '=', 's.status_id')
+              .andOn('i.tenant', '=', 's.tenant');
+        })
+        .leftJoin('contacts as ct', function() {
+          this.on('i.contact_name_id', '=', 'ct.contact_name_id')
+              .andOn('i.tenant', '=', 'ct.tenant');
+        })
+        .select(
+          'i.interaction_id as work_item_id',
+          'i.title as name',
+          'i.notes as description',
+          db.raw("'interaction' as type"),
+          db.raw('NULL::text as ticket_number'),
+          'i.title',
+          db.raw('NULL::text as project_name'),
+          db.raw('NULL::text as phase_name'),
+          db.raw('NULL::text as task_name'),
+          'i.company_id',
+          'c.company_name',
+          's.name as status_name',
+          'it.type_name as interaction_type',
+          'ct.full_name as contact_name',
+          db.raw('ARRAY[]::uuid[] as assigned_user_ids'),
+          db.raw('ARRAY[]::uuid[] as additional_user_ids')
+        )
+        .first();
     }
 
     if (workItem) {
@@ -842,6 +968,11 @@ export async function getWorkItemById(workItemId: string, workItemType: WorkItem
       if (workItem.type === 'ad_hoc' && workItem.scheduled_start && workItem.scheduled_end) {
         result.scheduled_start = workItem.scheduled_start;
         result.scheduled_end = workItem.scheduled_end;
+      }
+
+      // Add interaction type for interactions
+      if (workItem.type === 'interaction' && workItem.interaction_type) {
+        result.interaction_type = workItem.interaction_type;
       }
 
       return result;

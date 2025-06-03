@@ -276,6 +276,12 @@ export async function getCompanyIdForWorkItem(
         .first('company_id');
       
       return result?.company_id || null;
+    } else if (workItemType === 'interaction') {
+      const result = await knex('interactions')
+        .where({ interaction_id: workItemId, tenant })
+        .first('company_id');
+      
+      return result?.company_id || null;
     }
     
     return null;

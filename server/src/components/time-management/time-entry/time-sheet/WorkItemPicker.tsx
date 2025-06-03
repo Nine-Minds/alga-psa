@@ -485,6 +485,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
                     { value: 'all', label: 'All Types' },
                     { value: 'ticket', label: 'Tickets' },
                     { value: 'project_task', label: 'Project Tasks' },
+                    { value: 'interaction', label: 'Interactions' },
                     { value: 'ad_hoc', label: 'Ad-hoc Entries' }
                   ]}
                 />
