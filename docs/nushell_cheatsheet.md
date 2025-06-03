@@ -143,12 +143,24 @@ Parentheses in strings need to be escaped when they're not part of variable inte
 # Escape parentheses that are meant to be literal
 print $"($color_cyan)Local Access \(Port Forward\):($color_reset)"
 print $"  Connect: dev-env-connect ($pr_number) [--port-forward] [--code-server]"
+
+# Or use different punctuation to avoid the issue entirely
+print $"($color_yellow)Helm completed with warnings - ignoring:($color_reset)"
+
+# Escape parentheses around words that could be commands
+print $"  PSA App \(in code\):  http://localhost:3002"
 ```
 
 #### ❌ Wrong Pattern
 ```nu
 # Unescaped parentheses may be interpreted as interpolation
 print $"($color_cyan)Local Access (Port Forward):($color_reset)"  # May cause issues
+
+# This will try to execute 'ignoring' as a command!
+print $"($color_yellow)Helm completed with warnings (ignoring):($color_reset)"  # ERROR!
+
+# This will try to execute 'in' as a command!
+print $"  PSA App (in code):  http://localhost:3002"  # ERROR!
 ```
 
 ## Function Parameter Handling
@@ -273,6 +285,55 @@ error make {
 }
 ```
 
+## Boolean Expression Issues
+
+### The Problem
+Complex boolean expressions with `and`, `or`, and `not` operators can cause "incomplete math expression" or "can't convert to cell-path" errors when combined with pipeline operations.
+
+### Solution: Break Down Complex Boolean Logic
+
+#### ✅ Correct Pattern
+```nu
+# Break complex boolean expressions into separate variables
+let has_warnings = ($stderr_content | str contains 'warning:')
+let has_errors = ($stderr_content | str contains 'error:')
+let is_warnings_only = ($has_warnings and not $has_errors)
+
+# Use separate conditions for or operations
+let has_terminating = ($stuck_pods.stdout | str contains 'Terminating')
+let has_pending = ($stuck_pods.stdout | str contains 'Pending')
+if $stuck_pods.exit_code == 0 and ($has_terminating or $has_pending) {
+    # Handle stuck pods
+}
+
+# Chain multiple where clauses instead of complex and conditions
+let filtered_stderr = ($helm_result.stderr | lines | where { |line| 
+    (not ($line | str contains 'Kubernetes configuration file is'))
+} | where { |line|
+    (not ($line | str contains 'deprecated since'))
+} | where { |line|
+    (($line | str trim | str length) > 0)
+})
+```
+
+#### ❌ Wrong Pattern
+```nu
+# Complex boolean expressions in single line cause errors
+let is_warnings_only = ($stderr_content | str contains 'warning:' and not ($stderr_content | str contains 'error:'))  # ERROR!
+
+# Multiple and/or operations in single where clause
+let filtered_stderr = ($helm_result.stderr | lines | where { |line| 
+    (not ($line | str contains 'Kubernetes configuration file is')) and 
+    (not ($line | str contains 'deprecated since')) and
+    (($line | str trim | str length) > 0)
+})  # ERROR!
+
+# Complex or operations with pipelines
+if $stuck_pods.exit_code == 0 and ($stuck_pods.stdout | str contains 'Terminating' or $stuck_pods.stdout | str contains 'Pending') {  # ERROR!
+    # This causes "incompatible path access" error
+}
+```
+
 ## General Syntax Differences
 
 ### Conditional Checks
@@ -349,5 +410,44 @@ match $action {
 3. **Pipeline debugging**: Add `| debug` to see data flowing through pipelines
 4. **Command testing**: Test commands with `| complete` to see full output structure
 5. **Scope issues**: If variables aren't accessible in closures, copy them to local variables first
+
+## Alga PSA CLI Commands
+
+### Common Commands
+```nu
+# Database migrations
+migrate up      # Run next pending migration
+migrate latest  # Run all pending migrations  
+migrate down    # Revert last migration
+migrate status  # Check migration status
+
+# Development environment
+dev-up --edition ce --detached  # Start local dev environment
+dev-down                        # Stop local dev environment
+
+# Branch-based development environments
+dev-env-create feature-branch --edition ee --build
+dev-env-list                    # List all dev environments
+dev-env-connect feature-branch --port-forward
+dev-env-destroy feature-branch --force
+dev-env-status feature-branch
+
+# Workflow management
+update-workflow invoice-sync    # Update workflow definition
+register-workflow customer-sync # Register new workflow
+
+# Build Docker images
+build-image ce --tag v1.0.0 --push
+build-image ee --use-latest --push
+build-all-images --tag latest --push
+
+# Build code-server image via CLI
+build-code-server --push
+build-code-server --tag v1.0.0 --push
+build-code-server --use-latest --push
+
+# Build code-server image (alternative from docker/dev-env directory)
+./build-code-server.sh [TAG]
+```
 
 This cheatsheet covers the main gotchas encountered while developing the Alga PSA CLI. When in doubt, check the [official Nushell documentation](https://www.nushell.sh/book/) for more detailed explanations.

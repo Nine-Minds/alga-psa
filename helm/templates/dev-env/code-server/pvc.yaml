@@ -7,6 +7,10 @@ metadata:
   labels:
     {{- include "sebastian.labels" . | nindent 4 }}
     app.kubernetes.io/component: code-server
+  annotations:
+    volume.beta.kubernetes.io/storage-class: {{ .Values.devEnv.persistence.storageClass }}
+    dev-environment: "true"
+    branch: "{{ .Values.devEnv.branch }}"
 spec:
   accessModes:
     - ReadWriteOnce

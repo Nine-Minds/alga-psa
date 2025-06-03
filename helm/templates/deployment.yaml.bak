@@ -94,7 +94,7 @@ spec:
           - name: DB_HOST
             value: "db.{{ .Values.namespace }}.svc.cluster.local"
           - name: DB_USER_SERVER
-            value: "server_user"
+            value: "app_user"
           - name: DB_PORT
             value: "5432"
           - name: DB_NAME_SERVER

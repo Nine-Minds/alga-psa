@@ -41,8 +41,8 @@ spec:
             # Environment markers
             - name: ALGA_DEV_ENV
               value: "true"
-            - name: ALGA_PR_NUMBER
-              value: "{{ .Values.devEnv.prNumber }}"
+            - name: ALGA_BRANCH_SANITIZED
+              value: "{{ .Values.devEnv.sanitizedBranch }}"
           ports:
             - name: http
               containerPort: 3000

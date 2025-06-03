@@ -24,7 +24,15 @@ RUN apt-get update && \
         htop \
         tree \
         unzip \
+        sudo \
     && rm -rf /var/lib/apt/lists/*
+
+# Give coder user sudo privileges for development tasks
+RUN echo 'coder ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+
+# Increase file watcher limits for development
+RUN echo 'fs.inotify.max_user_watches=524288' >> /etc/sysctl.conf && \
+    echo 'fs.inotify.max_user_instances=256' >> /etc/sysctl.conf
 
 # Add NodeSource repository and install Node.js LTS (18.x)
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
@@ -77,18 +85,40 @@ RUN mkdir -p /home/coder/.config/code-server && \
     mkdir -p /home/coder/alga-psa
 
 # Copy configuration files (will be mounted from configmap)
-COPY --chown=coder:coder config/settings.json /home/coder/.local/share/code-server/User/settings.json
-COPY --chown=coder:coder config/extensions.json /home/coder/.vscode-server/extensions.json
+COPY --chown=coder:coder docker/dev-env/config/settings.json /home/coder/.local/share/code-server/User/settings.json
+COPY --chown=coder:coder docker/dev-env/config/extensions.json /home/coder/.vscode-server/extensions.json
 
 # Copy and setup startup script
-COPY start-dev-env.sh /usr/local/bin/start-dev-env.sh
+COPY docker/dev-env/start-dev-env.sh /usr/local/bin/start-dev-env.sh
 RUN chmod +x /usr/local/bin/start-dev-env.sh
 
-# Switch back to the 'coder' user
+# Pre-install npm dependencies to speed up environment startup
+# Copy package files first for better Docker layer caching
+COPY --chown=coder:coder package*.json /home/coder/alga-psa/
+COPY --chown=coder:coder server/package*.json /home/coder/alga-psa/server/
+COPY --chown=coder:coder tools/ai-automation/package*.json /home/coder/alga-psa/tools/ai-automation/
+
+# Ensure coder owns the entire directory structure
+RUN chown -R coder:coder /home/coder/alga-psa
+
+# Switch to coder user for npm installs
 USER coder
 
 # Set the default workspace
 WORKDIR /home/coder/alga-psa
+
+# Install dependencies during build
+RUN echo "📦 Pre-installing root dependencies..." && \
+    npm ci --prefer-offline --no-audit && \
+    echo "📦 Pre-installing server dependencies..." && \
+    cd server && npm ci --prefer-offline --no-audit && \
+    cd .. && \
+    echo "🤖 Pre-installing AI automation dependencies..." && \
+    cd tools/ai-automation && npm ci --prefer-offline --no-audit && \
+    cd ..
+
+# Switch back to root for final setup
+USER root
 
 # Expose the code-server port
 EXPOSE 8080

@@ -86,14 +86,14 @@ const hocuspocusSchema = z.object({
 });
 
 // Email Schema
-const emailSchema = z.object({
-  EMAIL_ENABLE: z.preprocess(coerceBoolean, z.boolean()).default(true),
-  EMAIL_FROM: z.string().email().optional(),
-  EMAIL_HOST: z.string().optional(),
-  EMAIL_PORT: z.preprocess(coerceNumber, z.number().int().positive()).optional(),
-  EMAIL_USERNAME: z.string().email().optional(),
-  EMAIL_PASSWORD: z.string().optional(),
-});
+// const emailSchema = z.object({
+//   EMAIL_ENABLE: z.preprocess(coerceBoolean, z.boolean()).default(true),
+//   EMAIL_FROM: z.string().email().optional(),
+//   EMAIL_HOST: z.string().optional(),
+//   EMAIL_PORT: z.preprocess(coerceNumber, z.number().int().positive()).optional(),
+//   EMAIL_USERNAME: z.string().email().optional(),
+//   EMAIL_PASSWORD: z.string().optional(),
+// });
 
 // Crypto Schema
 const cryptoSchema = z.object({
@@ -136,7 +136,7 @@ const envSchema = z.object({
   ...storageSchema.shape,
   ...logSchema.shape,
   ...hocuspocusSchema.shape,
-  ...emailSchema.shape,
+  // ...emailSchema.shape,
   ...cryptoSchema.shape,
   ...tokenSchema.shape,
   ...authSchema.shape,

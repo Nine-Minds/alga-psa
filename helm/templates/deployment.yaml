@@ -94,7 +94,7 @@ spec:
           - name: DB_HOST
             value: "db.{{ include "sebastian.namespace" . }}.svc.cluster.local"
           - name: DB_USER_SERVER
-            value: "server_user"
+            value: "app_user"
           - name: DB_PORT
             value: "5432"
           - name: DB_NAME_SERVER
@@ -294,7 +294,11 @@ spec:
 
           # ----------- AUTH ----------------
           - name: NEXTAUTH_URL
+            {{- if and .Values.devEnv.enabled .Values.devEnv.externalPorts }}
+            value: "http://localhost:{{ .Values.devEnv.externalPorts.app }}"
+            {{- else }}
             value: "https://{{ .Values.host }}"
+            {{- end }}
           - name: NEXTAUTH_SECRET
             valueFrom:
               secretKeyRef:
@@ -309,6 +313,16 @@ spec:
             value: "{{ .Values.google_auth.client_id }}"
           - name: GOOGLE_OAUTH_CLIENT_SECRET
             value: "{{ .Values.google_auth.client_secret }}"
+          {{- end }}
+
+          # ----------- EXTERNAL PORTS (DEV ENV) ----------------
+          {{- if and .Values.devEnv.enabled .Values.devEnv.externalPorts }}
+          - name: EXTERNAL_APP_PORT
+            value: "{{ .Values.devEnv.externalPorts.app }}"
+          - name: EXTERNAL_CODE_SERVER_PORT
+            value: "{{ .Values.devEnv.externalPorts.codeServer }}"
+          - name: EXTERNAL_CODE_APP_PORT
+            value: "{{ .Values.devEnv.externalPorts.codeApp }}"
           {{- end }}
          {{- if .Values.server.persistence.enabled }}
           volumeMounts:

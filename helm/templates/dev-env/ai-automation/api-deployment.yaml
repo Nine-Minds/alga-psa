@@ -55,8 +55,8 @@ spec:
             # Environment markers
             - name: ALGA_DEV_ENV
               value: "true"
-            - name: ALGA_PR_NUMBER
-              value: "{{ .Values.devEnv.prNumber }}"
+            - name: ALGA_BRANCH_SANITIZED
+              value: "{{ .Values.devEnv.sanitizedBranch }}"
             # Target app URL for automation
             - name: TARGET_APP_URL
               value: "http://{{ include "sebastian.fullname" . }}.{{ .Values.devEnv.namespace }}.svc.cluster.local:{{ .Values.server.service.port }}"
