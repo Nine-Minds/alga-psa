@@ -25,6 +25,8 @@ import { IWorkItem, WorkItemType } from 'server/src/interfaces/workItem.interfac
 import TimeEntryDialog from 'server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog';
 import { toast } from 'react-hot-toast';
 import { getCurrentTimePeriod } from 'server/src/lib/actions/timePeriodsActions';
+import { fetchOrCreateTimeSheet, saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
 interface InteractionDetailsProps {
   interaction: IInteraction;
@@ -221,10 +223,22 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
     }
 
     try {
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        toast.error('No user session found');
+        return;
+      }
+
       const currentTimePeriod = await getCurrentTimePeriod();
 
       if (!currentTimePeriod) {
         toast.error('No active time period found. Please contact your administrator.');
+        return;
+      }
+
+      const timeSheet = await fetchOrCreateTimeSheet(currentUser.user_id, currentTimePeriod.period_id);
+      if (!timeSheet) {
+        toast.error('Unable to add time entry: Failed to create or fetch time sheet');
         return;
       }
 
@@ -235,28 +249,62 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
         work_item_id: interaction.interaction_id,
         type: 'interaction' as WorkItemType,
         name: interaction.title || 'Interaction',
-        description: interaction.notes || '',
+        description: '',  // Don't copy interaction notes to time entry notes
         interaction_type: interaction.type_name, // Use type_name from IInteraction
         company_name: interaction.company_name
       };
 
+      // Calculate default times and duration from interaction
+      let defaultStartTime: Date | undefined;
+      let defaultEndTime: Date | undefined;
+      
+      if (interaction.start_time && interaction.end_time) {
+        // Use the interaction's start and end times
+        defaultStartTime = new Date(interaction.start_time);
+        defaultEndTime = new Date(interaction.end_time);
+      } else if (interaction.interaction_date && interaction.duration) {
+        // Calculate from interaction date and duration
+        defaultEndTime = new Date(interaction.interaction_date);
+        defaultStartTime = new Date(defaultEndTime);
+        defaultStartTime.setMinutes(defaultStartTime.getMinutes() - (interaction.duration || 0));
+      }
+
       openDrawer(
         <TimeEntryDialog
           isOpen={true}
-          onClose={() => {}}
-          onSave={async () => {
-            toast.success('Time entry added successfully');
+          onClose={closeDrawer}
+          onSave={async (timeEntry) => {
+            try {
+              await saveTimeEntry({
+                ...timeEntry,
+                time_sheet_id: timeSheet.id,
+                user_id: currentUser.user_id,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                approval_status: 'DRAFT',
+                work_item_type: 'interaction',
+                work_item_id: interaction.interaction_id
+              });
+              toast.success('Time entry saved successfully');
+              closeDrawer();
+            } catch (error) {
+              console.error('Error saving time entry:', error);
+              toast.error('Failed to save time entry');
+            }
           }}
           workItem={workItem}
-          date={new Date()}
+          date={defaultEndTime || new Date()}
           timePeriod={currentTimePeriod}
+          timeSheetId={timeSheet.id}
           isEditable={true}
+          defaultStartTime={defaultStartTime}
+          defaultEndTime={defaultEndTime}
           inDrawer={true}
         />
       );
     } catch (error) {
-      console.error('Error fetching time period:', error);
-      toast.error('Failed to fetch time period. Please try again.');
+      console.error('Error preparing time entry:', error);
+      toast.error('Failed to prepare time entry. Please try again.');
     }
   };
 

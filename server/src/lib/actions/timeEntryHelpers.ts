@@ -29,8 +29,13 @@ export async function getCompanyIdForWorkItem(trx: Knex.Transaction, tenant: str
             .where({ 'project_tasks.task_id': workItemId, 'project_tasks.tenant': tenant })
             .first('projects.company_id');
         return task?.company_id || null;
+    } else if (workItemType === 'interaction') {
+        const interaction = await trx('interactions')
+            .where({ interaction_id: workItemId, tenant })
+            .first('company_id');
+        return interaction?.company_id || null;
     }
     // Add other work item types if they can be associated with companies and buckets (e.g., ad_hoc if linked to a company)
-    // For now, only tickets and project tasks are assumed to link to companies for billing plans.
+    // For now, tickets, project tasks, and interactions are assumed to link to companies for billing plans.
     return null;
 }

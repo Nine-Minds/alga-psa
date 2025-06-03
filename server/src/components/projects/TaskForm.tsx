@@ -35,6 +35,7 @@ import { useDrawer } from 'server/src/context/DrawerContext';
 import { IWorkItem, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
 import TimeEntryDialog from 'server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog';
 import { getCurrentTimePeriod } from 'server/src/lib/actions/timePeriodsActions';
+import { fetchOrCreateTimeSheet, saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
 
 type ProjectTreeTypes = 'project' | 'phase' | 'status';
 
@@ -105,7 +106,7 @@ export default function TaskForm({
     ticketLinkCount: number;
   } | null>(null);
   
-  const { openDrawer } = useDrawer();
+  const { openDrawer, closeDrawer } = useDrawer();
 
   const [selectedStatusId, setSelectedStatusId] = useState<string>(
     task?.project_status_mapping_id ||
@@ -562,10 +563,22 @@ export default function TaskForm({
     }
 
     try {
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        toast.error('No user session found');
+        return;
+      }
+
       const currentTimePeriod = await getCurrentTimePeriod();
 
       if (!currentTimePeriod) {
         toast.error('No active time period found. Please contact your administrator.');
+        return;
+      }
+
+      const timeSheet = await fetchOrCreateTimeSheet(currentUser.user_id, currentTimePeriod.period_id);
+      if (!timeSheet) {
+        toast.error('Unable to add time entry: Failed to create or fetch time sheet');
         return;
       }
 
@@ -577,7 +590,7 @@ export default function TaskForm({
         work_item_id: task.task_id,
         type: 'project_task' as WorkItemType,
         name: `${task.task_name}`,
-        description: task.description || '',
+        description: '',  // Don't copy task description to time entry notes
         project_name: phase.phase_name, // Using phase name as a placeholder
         phase_name: phase.phase_name,
         task_name: task.task_name
@@ -586,20 +599,37 @@ export default function TaskForm({
       openDrawer(
         <TimeEntryDialog
           isOpen={true}
-          onClose={() => {}}
-          onSave={async () => {
-            toast.success('Time entry added successfully');
+          onClose={closeDrawer}
+          onSave={async (timeEntry) => {
+            try {
+              await saveTimeEntry({
+                ...timeEntry,
+                time_sheet_id: timeSheet.id,
+                user_id: currentUser.user_id,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                approval_status: 'DRAFT',
+                work_item_type: 'project_task',
+                work_item_id: task.task_id!
+              });
+              toast.success('Time entry saved successfully');
+              closeDrawer();
+            } catch (error) {
+              console.error('Error saving time entry:', error);
+              toast.error('Failed to save time entry');
+            }
           }}
           workItem={workItem}
           date={new Date()}
           timePeriod={currentTimePeriod}
+          timeSheetId={timeSheet.id}
           isEditable={true}
           inDrawer={true}
         />
       );
     } catch (error) {
-      console.error('Error fetching time period:', error);
-      toast.error('Failed to fetch time period. Please try again.');
+      console.error('Error preparing time entry:', error);
+      toast.error('Failed to prepare time entry. Please try again.');
     }
   };
 

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { tenantSchema } from '../utils/validation';
 
-export const workItemTypeSchema = z.enum(['ticket', 'project_task', 'non_billable_category', 'ad_hoc']);
+export const workItemTypeSchema = z.enum(['ticket', 'project_task', 'non_billable_category', 'ad_hoc', 'interaction']);
 
 
 export const recurrencePatternSchema = z.object({
