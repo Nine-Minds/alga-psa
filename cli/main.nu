@@ -403,7 +403,6 @@ def dev-env-create [
     branch: string     # Git branch name
     --edition: string = "ce"  # Edition: ce or ee
     --use-latest = false # Use 'latest' tag instead of unique tag
-    --build = false    # Build image before deploying
     --checkout = true  # Checkout the branch locally
 ] {
     let project_root = find-project-root
@@ -414,7 +413,8 @@ def dev-env-create [
     }
     
     # Sanitize branch name for Kubernetes namespace (lowercase, alphanumeric and hyphens only)
-    let sanitized_branch = ($branch | str downcase | str replace -a "[^a-z0-9-]" "-" | str replace -r "^-+|-+$" "")
+    # First replace slashes with hyphens, then clean up any other special characters
+    let sanitized_branch = ($branch | str replace -a "/" "-" | str downcase | str replace -a "[^a-z0-9-]" "-" | str replace -r "^-+|-+$" "" | str replace -r "-+" "-")
     let namespace = $"alga-dev-($sanitized_branch)"
     
     # Checkout the branch if requested
@@ -507,14 +507,12 @@ def dev-env-create [
         }
     }
     
-    # Build image if requested
-    if $build {
-        print $"($color_cyan)Building image before deployment...($color_reset)"
-        if $use_latest {
-            build-image $edition --use-latest --push
-        } else {
-            build-image $edition --tag $image_tag --push
-        }
+    # Build image (always run to ensure deployed image matches current code)
+    print $"($color_cyan)Building image before deployment...($color_reset)"
+    if $use_latest {
+        build-image $edition --use-latest --push
+    } else {
+        build-image $edition --tag $image_tag --push
     }
     
     print $"($color_cyan)Creating development environment for branch: ($branch)($color_reset)"
@@ -559,8 +557,9 @@ def dev-env-create [
         }
     }
     
-    # Create temporary values file
-    let temp_values_file = $"($project_root)/temp-values-($sanitized_branch).yaml"
+    # Create temporary values file (replace slashes with dashes in filename)
+    let safe_filename = ($branch | str replace -a "/" "-")
+    let temp_values_file = $"($project_root)/temp-values-($safe_filename).yaml"
     let edition_comment = if $edition == "ee" { "# Enterprise Edition settings" } else { "# Community Edition settings" }
     let image_name = $"harbor.nineminds.com/nineminds/alga-psa-($edition)"
     let values_content = $"
@@ -743,7 +742,7 @@ def dev-env-connect [
     branch: string     # Branch name to connect to
 ] {
     # Sanitize branch name for namespace lookup
-    let sanitized_branch = ($branch | str downcase | str replace -a "[^a-z0-9-]" "-" | str replace -r "^-+|-+$" "")
+    let sanitized_branch = ($branch | str replace -a "/" "-" | str downcase | str replace -a "[^a-z0-9-]" "-" | str replace -r "^-+|-+$" "" | str replace -r "-+" "-")
     let namespace = $"alga-dev-($sanitized_branch)"
     
     # Check if environment exists
@@ -880,7 +879,7 @@ def dev-env-destroy [
     --force            # Force deletion without confirmation
 ] {
     # Sanitize branch name for namespace lookup
-    let sanitized_branch = ($branch | str downcase | str replace -a "[^a-z0-9-]" "-" | str replace -r "^-+|-+$" "")
+    let sanitized_branch = ($branch | str replace -a "/" "-" | str downcase | str replace -a "[^a-z0-9-]" "-" | str replace -r "^-+|-+$" "" | str replace -r "-+" "-")
     let namespace = $"alga-dev-($sanitized_branch)"
     
     # Check if environment exists
@@ -1078,7 +1077,7 @@ def dev-env-force-cleanup [
     branch: string     # Branch name to force cleanup
 ] {
     # Sanitize branch name for namespace lookup
-    let sanitized_branch = ($branch | str downcase | str replace -a "[^a-z0-9-]" "-" | str replace -r "^-+|-+$" "")
+    let sanitized_branch = ($branch | str replace -a "/" "-" | str downcase | str replace -a "[^a-z0-9-]" "-" | str replace -r "^-+|-+$" "" | str replace -r "-+" "-")
     let namespace = $"alga-dev-($sanitized_branch)"
     
     print $"($color_cyan)Force cleaning up development environment for branch: ($branch)...($color_reset)"
@@ -1144,7 +1143,7 @@ def dev-env-status [
     }
     
     # Sanitize branch name for namespace lookup
-    let sanitized_branch = ($branch | str downcase | str replace -a "[^a-z0-9-]" "-" | str replace -r "^-+|-+$" "")
+    let sanitized_branch = ($branch | str replace -a "/" "-" | str downcase | str replace -a "[^a-z0-9-]" "-" | str replace -r "^-+|-+$" "" | str replace -r "-+" "-")
     let namespace = $"alga-dev-($sanitized_branch)"
     
     # Check if environment exists
@@ -1427,10 +1426,9 @@ def --wrapped main [
        print "  nu main.nu -- dev-up [--detached] [--edition ce|ee]  # Start development environment"
        print "  nu main.nu dev-down               # Stop development environment"
        print ""
-       print "  nu main.nu dev-env-create <branch> [--edition ce|ee] [--use-latest] [--build] [--checkout]"
+       print "  nu main.nu dev-env-create <branch> [--edition ce|ee] [--use-latest] [--checkout]"
        print "    Create on-demand development environment for branch"
        print "    --use-latest: Use 'latest' tag instead of unique tag (avoids cache issues by default)"
-       print "    --build: Build and push image before deploying (ensures tag consistency)"
        print "    --checkout: Checkout the branch locally (default: true)"
        print "  nu main.nu dev-env-list           # List active development environments"
        print "  nu main.nu dev-env-connect <branch>"
@@ -1482,10 +1480,9 @@ def --wrapped main [
        print "  nu main.nu -- dev-up [--detached] [--edition ce|ee]  # Start development environment"
        print "  nu main.nu dev-down               # Stop development environment"
        print ""
-       print "  nu main.nu dev-env-create <branch> [--edition ce|ee] [--use-latest] [--build] [--checkout]"
+       print "  nu main.nu dev-env-create <branch> [--edition ce|ee] [--use-latest] [--checkout]"
        print "    Create on-demand development environment for branch"
        print "    --use-latest: Use 'latest' tag instead of unique tag (avoids cache issues by default)"
-       print "    --build: Build and push image before deploying (ensures tag consistency)"
        print "    --checkout: Checkout the branch locally (default: true)"
        print "  nu main.nu dev-env-list           # List active development environments"
        print "  nu main.nu dev-env-connect <branch>"
@@ -1580,11 +1577,10 @@ def --wrapped main [
            }
            
            let use_latest = ($command_args | any { |arg| $arg == "--use-latest" })
-           let build = ($command_args | any { |arg| $arg == "--build" })
            let checkout = not ($command_args | any { |arg| $arg == "--no-checkout" })
            
            # Call the dev-env-create command
-           dev-env-create $branch --edition $edition --use-latest=$use_latest --build=$build --checkout=$checkout
+           dev-env-create $branch --edition $edition --use-latest=$use_latest --checkout=$checkout
        }
        "dev-env-list" => {
            dev-env-list

@@ -6,6 +6,6 @@ metadata:
   labels:
     name: {{ .Values.devEnv.namespace }}
     type: dev-environment
-    branch: "{{ .Values.devEnv.branch }}"
+    branch: "{{ .Values.devEnv.sanitizedBranch }}"
     {{- include "sebastian.labels" . | nindent 4 }}
 {{- end }}

@@ -10,7 +10,7 @@ metadata:
   annotations:
     volume.beta.kubernetes.io/storage-class: {{ .Values.devEnv.persistence.storageClass }}
     dev-environment: "true"
-    branch: "{{ .Values.devEnv.branch }}"
+    branch: "{{ .Values.devEnv.sanitizedBranch }}"
 spec:
   accessModes:
     - ReadWriteOnce
