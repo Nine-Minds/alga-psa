@@ -404,12 +404,18 @@ def dev-env-create [
     --edition: string = "ce"  # Edition: ce or ee
     --use-latest = false # Use 'latest' tag instead of unique tag
     --checkout = true  # Checkout the branch locally
+    --from-tag: string = "" # Deploy from existing image tag instead of building
 ] {
     let project_root = find-project-root
     
     # Validate edition parameter
     if not ($edition in ["ce", "ee"]) {
         error make { msg: $"($color_red)Invalid edition '($edition)'. Must be 'ce' (community) or 'ee' (enterprise).($color_reset)" }
+    }
+    
+    # Check for mutually exclusive options
+    if ($from_tag | str length) > 0 and $use_latest {
+        error make { msg: $"($color_red)Cannot use both --from-tag and --use-latest. Choose one or the other.($color_reset)" }
     }
     
     # Sanitize branch name for Kubernetes namespace (lowercase, alphanumeric and hyphens only)
@@ -490,8 +496,13 @@ def dev-env-create [
     print $"  Code Server:  ($code_server_port)"
     print $"  Code App:     ($code_app_port)"
     
-    # Generate image tag (unique by default, latest if requested)
-    let image_tag = if $use_latest {
+    # Determine image tag based on options
+    let image_tag = if ($from_tag | str length) > 0 {
+        # Use the provided tag
+        print $"($color_cyan)Using existing image tag: ($from_tag)($color_reset)"
+        $from_tag
+    } else if $use_latest {
+        # Use latest tag
         "latest"
     } else {
         # Generate unique tag using git commit SHA only (consistent across calls)
@@ -507,12 +518,16 @@ def dev-env-create [
         }
     }
     
-    # Build image (always run to ensure deployed image matches current code)
-    print $"($color_cyan)Building image before deployment...($color_reset)"
-    if $use_latest {
-        build-image $edition --use-latest --push
+    # Build image only if --from-tag is not specified
+    if ($from_tag | str length) == 0 {
+        print $"($color_cyan)Building image before deployment...($color_reset)"
+        if $use_latest {
+            build-image $edition --use-latest --push
+        } else {
+            build-image $edition --tag $image_tag --push
+        }
     } else {
-        build-image $edition --tag $image_tag --push
+        print $"($color_cyan)Skipping build - using existing image with tag: ($from_tag)($color_reset)"
     }
     
     print $"($color_cyan)Creating development environment for branch: ($branch)($color_reset)"
@@ -765,7 +780,7 @@ def dev-env-connect [
         
         # Get ports from configmap
         let ports_result = do {
-            kubectl get configmap -n $namespace $"alga-dev-($sanitized_branch)-alga-dev-external-ports" -o json | complete
+            kubectl get configmap -n $namespace $"alga-dev-($sanitized_branch)-external-ports" -o json | complete
         }
         
         let use_random_ports = if $ports_result.exit_code != 0 {
@@ -780,9 +795,9 @@ def dev-env-connect [
             print $"($color_cyan)Starting port forwarding with random ports...($color_reset)"
             
             # Start processes with random port assignment
-            bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch)-alga-dev-code-server --address=127.0.0.1 0:8080 > /tmp/pf-code-server-($sanitized_branch).log 2>&1 &"
-            bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch)-alga-dev --address=127.0.0.1 0:3000 > /tmp/pf-main-app-($sanitized_branch).log 2>&1 &"
-            bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch)-alga-dev-code-server --address=127.0.0.1 0:3000 > /tmp/pf-code-app-($sanitized_branch).log 2>&1 &"
+            bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch)-code-server --address=127.0.0.1 0:8080 > /tmp/pf-code-server-($sanitized_branch).log 2>&1 &"
+            bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch) --address=127.0.0.1 0:3000 > /tmp/pf-main-app-($sanitized_branch).log 2>&1 &"
+            bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch)-code-server --address=127.0.0.1 0:3000 > /tmp/pf-code-app-($sanitized_branch).log 2>&1 &"
             
             # Give processes time to start
             sleep 3sec
@@ -841,9 +856,9 @@ def dev-env-connect [
             print $"($color_cyan)Starting port forwarding processes...($color_reset)"
             
             # Start processes using bash for proper backgrounding with specific ports
-            bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch)-alga-dev-code-server --address=127.0.0.1 ($code_server_port):8080 > /tmp/pf-code-server-($sanitized_branch).log 2>&1 &"
-            bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch)-alga-dev --address=127.0.0.1 ($app_port):3000 > /tmp/pf-main-app-($sanitized_branch).log 2>&1 &"
-            bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch)-alga-dev-code-server --address=127.0.0.1 ($code_app_port):3000 > /tmp/pf-code-app-($sanitized_branch).log 2>&1 &"
+            bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch)-code-server --address=127.0.0.1 ($code_server_port):8080 > /tmp/pf-code-server-($sanitized_branch).log 2>&1 &"
+            bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch) --address=127.0.0.1 ($app_port):3000 > /tmp/pf-main-app-($sanitized_branch).log 2>&1 &"
+            bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch)-code-server --address=127.0.0.1 ($code_app_port):3000 > /tmp/pf-code-app-($sanitized_branch).log 2>&1 &"
             
             # Give processes time to start
             sleep 2sec
@@ -1181,7 +1196,7 @@ def dev-env-status [
     # Get service URLs
     print $"($color_cyan)Service URLs:($color_reset)"
     let ingress_result = do {
-        kubectl get ingress -n $namespace -o jsonpath='{range .items[*]}{.spec.rules[*].host}{"\n"}{end}' | complete
+        kubectl get ingress -n $namespace -o jsonpath='{range .items[*]}{range .spec.rules[*]}{.host}{"\n"}{end}{end}' | complete
     }
     
     if $ingress_result.exit_code == 0 {
@@ -1207,7 +1222,7 @@ def dev-env-status [
     
     # Get external ports if available
     let ports_result = do {
-        kubectl get configmap -n $namespace $"alga-dev-($sanitized_branch)-alga-dev-external-ports" -o json | complete
+        kubectl get configmap -n $namespace $"alga-dev-($sanitized_branch)-external-ports" -o json | complete
     }
     
     if $ports_result.exit_code == 0 {
@@ -1253,9 +1268,7 @@ def build-image [
     let image_name = $"harbor.nineminds.com/nineminds/alga-psa-($edition)"
     
     # Generate unique tag if not provided and not using latest
-    let final_tag = if $use_latest {
-        "latest"
-    } else if ($tag | str length) > 0 {
+    let sha_tag = if ($tag | str length) > 0 {
         $tag
     } else {
         # Generate unique tag using git commit SHA only (consistent across calls)
@@ -1271,23 +1284,33 @@ def build-image [
         }
     }
     
-    let full_tag = $"($image_name):($final_tag)"
+    # Build list of tags to apply
+    let tags_to_apply = if $use_latest {
+        # When --use-latest is specified, tag with both SHA and latest
+        [$sha_tag, "latest"]
+    } else {
+        # Otherwise just use the single tag
+        [$sha_tag]
+    }
+    
+    # Build tag arguments for docker build
+    let tag_args = ($tags_to_apply | each { |t| ["-t", $"($image_name):($t)"] } | flatten)
     
     # Build the image
-    print $"($color_yellow)Building: ($full_tag)($color_reset)"
+    print $"($color_yellow)Building with tags: ($tags_to_apply | str join ', ')($color_reset)"
     print $"($color_cyan)Build output will be streamed to terminal...($color_reset)"
     
     if $edition == "ee" {
         # EE build includes everything
-        docker build --platform linux/amd64 -f server/Dockerfile -t $full_tag .
+        docker build --platform linux/amd64 -f server/Dockerfile ...$tag_args .
     } else {
         # CE build excludes EE directory
-        docker build --platform linux/amd64 -f server/Dockerfile -t $full_tag --build-arg EXCLUDE_EE=true .
+        docker build --platform linux/amd64 -f server/Dockerfile ...$tag_args --build-arg EXCLUDE_EE=true .
     }
     
     # Check if build succeeded by checking if image exists
     let image_check = do {
-        docker image inspect $full_tag | complete
+        docker image inspect $"($image_name):($sha_tag)" | complete
     }
     
     if $image_check.exit_code != 0 {
@@ -1295,25 +1318,29 @@ def build-image [
         error make { msg: "Docker build failed" }
     }
     
-    print $"($color_green)Successfully built: ($full_tag)($color_reset)"
+    print $"($color_green)Successfully built with tags: ($tags_to_apply | str join ', ')($color_reset)"
     
     if $push {
-        print $"($color_yellow)Pushing: ($full_tag)($color_reset)"
-        print $"($color_cyan)Push output will be streamed to terminal...($color_reset)"
-        
-        # Push the image - stream output directly
-        docker push $full_tag
-        
-        # Check if push succeeded
-        let push_check = do {
-            docker manifest inspect $full_tag | complete
-        }
-        
-        if $push_check.exit_code != 0 {
-            print $"($color_red)Push may have failed - unable to verify image in registry($color_reset)"
-            print $"($color_yellow)Note: This could also mean the registry doesn't support manifest inspection($color_reset)"
-        } else {
-            print $"($color_green)Successfully pushed: ($full_tag)($color_reset)"
+        # Push all tags
+        for tag in $tags_to_apply {
+            let full_tag = $"($image_name):($tag)"
+            print $"($color_yellow)Pushing: ($full_tag)($color_reset)"
+            print $"($color_cyan)Push output will be streamed to terminal...($color_reset)"
+            
+            # Push the image - stream output directly
+            docker push $full_tag
+            
+            # Check if push succeeded
+            let push_check = do {
+                docker manifest inspect $full_tag | complete
+            }
+            
+            if $push_check.exit_code != 0 {
+                print $"($color_red)Push may have failed for ($full_tag) - unable to verify image in registry($color_reset)"
+                print $"($color_yellow)Note: This could also mean the registry doesn't support manifest inspection($color_reset)"
+            } else {
+                print $"($color_green)Successfully pushed: ($full_tag)($color_reset)"
+            }
         }
     }
 }
@@ -1344,9 +1371,9 @@ def build-all-images [
 
 # Build code-server Docker image
 def build-code-server [
-    --tag: string = ""       # Docker tag to use (defaults to latest)
+    --tag: string = ""       # Docker tag to use (defaults to SHA)
     --push                   # Push to registry after building
-    --use-latest             # Use 'latest' tag
+    --use-latest             # Tag with both SHA and 'latest'
 ] {
     print $"($color_cyan)Building code-server Docker image...($color_reset)"
     
@@ -1357,27 +1384,46 @@ def build-code-server [
     let registry = "harbor.nineminds.com"
     let namespace = "nineminds"
     let image_name = "alga-code-server"
+    let base_image = $"($registry)/($namespace)/($image_name)"
     
-    # Determine tag
-    let final_tag = if $use_latest {
-        "latest"
-    } else if ($tag | str length) > 0 {
+    # Generate SHA tag
+    let sha_tag = if ($tag | str length) > 0 {
         $tag
     } else {
-        "latest"
+        # Generate unique tag using git commit SHA only (consistent across calls)
+        let git_sha = (git rev-parse --short HEAD | complete)
+        
+        if $git_sha.exit_code == 0 {
+            let sha = ($git_sha.stdout | str trim)
+            $sha
+        } else {
+            # Fallback if git is not available - use timestamp
+            let timestamp = (date now | format date '%Y%m%d-%H%M%S')
+            $"build-($timestamp)"
+        }
     }
     
-    let full_image = $"($registry)/($namespace)/($image_name):($final_tag)"
+    # Build list of tags to apply
+    let tags_to_apply = if $use_latest {
+        # When --use-latest is specified, tag with both SHA and latest
+        [$sha_tag, "latest"]
+    } else {
+        # Otherwise just use the single tag
+        [$sha_tag]
+    }
     
-    print $"($color_yellow)Building: ($full_image)($color_reset)"
+    # Build tag arguments for docker build
+    let tag_args = ($tags_to_apply | each { |t| ["-t", $"($base_image):($t)"] } | flatten)
+    
+    print $"($color_yellow)Building with tags: ($tags_to_apply | str join ', ')($color_reset)"
     print $"($color_cyan)Build output will be streamed to terminal...($color_reset)"
     
     # Build the image - stream output directly
-    docker build --platform linux/amd64 -f docker/dev-env/Dockerfile.code-server -t $full_image .
+    docker build --platform linux/amd64 -f docker/dev-env/Dockerfile.code-server ...$tag_args .
     
     # Check if build succeeded by checking if image exists
     let image_check = do {
-        docker image inspect $full_image | complete
+        docker image inspect $"($base_image):($sha_tag)" | complete
     }
     
     if $image_check.exit_code != 0 {
@@ -1385,25 +1431,29 @@ def build-code-server [
         error make { msg: "Docker build failed" }
     }
     
-    print $"($color_green)Successfully built: ($full_image)($color_reset)"
+    print $"($color_green)Successfully built with tags: ($tags_to_apply | str join ', ')($color_reset)"
     
     if $push {
-        print $"($color_yellow)Pushing: ($full_image)($color_reset)"
-        print $"($color_cyan)Push output will be streamed to terminal...($color_reset)"
-        
-        # Push the image - stream output directly
-        docker push $full_image
-        
-        # Check if push succeeded by trying to pull the image info from registry
-        let push_check = do {
-            docker manifest inspect $full_image | complete
-        }
-        
-        if $push_check.exit_code != 0 {
-            print $"($color_red)Push may have failed - unable to verify image in registry($color_reset)"
-            print $"($color_yellow)Note: This could also mean the registry doesn't support manifest inspection($color_reset)"
-        } else {
-            print $"($color_green)Successfully pushed: ($full_image)($color_reset)"
+        # Push all tags
+        for tag in $tags_to_apply {
+            let full_image = $"($base_image):($tag)"
+            print $"($color_yellow)Pushing: ($full_image)($color_reset)"
+            print $"($color_cyan)Push output will be streamed to terminal...($color_reset)"
+            
+            # Push the image - stream output directly
+            docker push $full_image
+            
+            # Check if push succeeded by trying to pull the image info from registry
+            let push_check = do {
+                docker manifest inspect $full_image | complete
+            }
+            
+            if $push_check.exit_code != 0 {
+                print $"($color_red)Push may have failed for ($full_image) - unable to verify image in registry($color_reset)"
+                print $"($color_yellow)Note: This could also mean the registry doesn't support manifest inspection($color_reset)"
+            } else {
+                print $"($color_green)Successfully pushed: ($full_image)($color_reset)"
+            }
         }
     }
 }
@@ -1426,10 +1476,13 @@ def --wrapped main [
        print "  nu main.nu -- dev-up [--detached] [--edition ce|ee]  # Start development environment"
        print "  nu main.nu dev-down               # Stop development environment"
        print ""
-       print "  nu main.nu dev-env-create <branch> [--edition ce|ee] [--use-latest] [--checkout]"
+       print "  nu main.nu dev-env-create <branch> [--edition ce|ee] [--use-latest] [--checkout] [--from-tag <tag>]"
        print "    Create on-demand development environment for branch"
        print "    --use-latest: Use 'latest' tag instead of unique tag (avoids cache issues by default)"
        print "    --checkout: Checkout the branch locally (default: true)"
+       print "    --from-tag: Deploy from existing image tag instead of building (mutually exclusive with --use-latest)"
+       print "    Example: nu main.nu dev-env-create my-feature --edition ee"
+       print "    Example: nu main.nu dev-env-create my-feature --from-tag v1.2.3"
        print "  nu main.nu dev-env-list           # List active development environments"
        print "  nu main.nu dev-env-connect <branch>"
        print "    Connect to development environment with port forwarding"
@@ -1451,7 +1504,7 @@ def --wrapped main [
        print ""
        print "  nu main.nu build-image <edition> [--tag <tag>] [--push] [--use-latest]"
        print "    Build Docker image for specified edition (ce|ee)"
-       print "    --use-latest: Use 'latest' tag instead of unique tag"
+       print "    --use-latest: Tag with both SHA and 'latest' (pushes both tags if --push is used)"
        print "    Example: nu main.nu build-image ce --tag v1.0.0 --push"
        print "    Example: nu main.nu build-image ee --use-latest --push"
        print "  nu main.nu build-all-images [--tag <tag>] [--push]"
@@ -1459,6 +1512,7 @@ def --wrapped main [
        print "    Example: nu main.nu build-all-images --tag latest --push"
        print "  nu main.nu build-code-server [--tag <tag>] [--push] [--use-latest]"
        print "    Build code-server Docker image"
+       print "    --use-latest: Tag with both SHA and 'latest' (pushes both tags if --push is used)"
        print "    Example: nu main.nu build-code-server --push"
        print "    Example: nu main.nu build-code-server --tag v1.0.0 --push"
        print ""
@@ -1480,10 +1534,13 @@ def --wrapped main [
        print "  nu main.nu -- dev-up [--detached] [--edition ce|ee]  # Start development environment"
        print "  nu main.nu dev-down               # Stop development environment"
        print ""
-       print "  nu main.nu dev-env-create <branch> [--edition ce|ee] [--use-latest] [--checkout]"
+       print "  nu main.nu dev-env-create <branch> [--edition ce|ee] [--use-latest] [--checkout] [--from-tag <tag>]"
        print "    Create on-demand development environment for branch"
        print "    --use-latest: Use 'latest' tag instead of unique tag (avoids cache issues by default)"
        print "    --checkout: Checkout the branch locally (default: true)"
+       print "    --from-tag: Deploy from existing image tag instead of building (mutually exclusive with --use-latest)"
+       print "    Example: nu main.nu dev-env-create my-feature --edition ee"
+       print "    Example: nu main.nu dev-env-create my-feature --from-tag v1.2.3"
        print "  nu main.nu dev-env-list           # List active development environments"
        print "  nu main.nu dev-env-connect <branch>"
        print "    Connect to development environment with port forwarding"
@@ -1505,7 +1562,7 @@ def --wrapped main [
        print ""
        print "  nu main.nu build-image <edition> [--tag <tag>] [--push] [--use-latest]"
        print "    Build Docker image for specified edition (ce|ee)"
-       print "    --use-latest: Use 'latest' tag instead of unique tag"
+       print "    --use-latest: Tag with both SHA and 'latest' (pushes both tags if --push is used)"
        print "    Example: nu main.nu build-image ce --tag v1.0.0 --push"
        print "    Example: nu main.nu build-image ee --use-latest --push"
        print "  nu main.nu build-all-images [--tag <tag>] [--push]"
@@ -1513,6 +1570,7 @@ def --wrapped main [
        print "    Example: nu main.nu build-all-images --tag latest --push"
        print "  nu main.nu build-code-server [--tag <tag>] [--push] [--use-latest]"
        print "    Build code-server Docker image"
+       print "    --use-latest: Tag with both SHA and 'latest' (pushes both tags if --push is used)"
        print "    Example: nu main.nu build-code-server --push"
        print "    Example: nu main.nu build-code-server --tag v1.0.0 --push"
        print "\nAlternatively, source the script ('source main.nu') and run commands directly:"
@@ -1576,11 +1634,18 @@ def --wrapped main [
                "ce" 
            }
            
+           let from_tag_idx = ($command_args | enumerate | where {|item| $item.item == "--from-tag"} | get 0?.index | default null)
+           let from_tag = if $from_tag_idx != null { 
+               ($command_args | get ($from_tag_idx + 1) | default "")
+           } else { 
+               "" 
+           }
+           
            let use_latest = ($command_args | any { |arg| $arg == "--use-latest" })
            let checkout = not ($command_args | any { |arg| $arg == "--no-checkout" })
            
            # Call the dev-env-create command
-           dev-env-create $branch --edition $edition --use-latest=$use_latest --checkout=$checkout
+           dev-env-create $branch --edition $edition --use-latest=$use_latest --checkout=$checkout --from-tag $from_tag
        }
        "dev-env-list" => {
            dev-env-list

@@ -1,0 +1,18 @@
+{{- if .Values.devEnv.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: app
+  namespace: {{ .Values.devEnv.namespace }}
+  labels:
+    {{- include "sebastian.labels" . | nindent 4 }}
+    app.kubernetes.io/component: app-alias
+spec:
+  type: ExternalName
+  externalName: {{ include "sebastian.fullname" . }}.{{ .Values.devEnv.namespace }}.svc.cluster.local
+  ports:
+    - port: {{ .Values.server.service.port }}
+      targetPort: {{ .Values.server.service.port }}
+      protocol: TCP
+      name: http
+{{- end }}

@@ -37,7 +37,7 @@ spec:
             - name: PORT
               value: "3000"
             - name: NEXT_PUBLIC_API_URL
-              value: "http://{{ include "sebastian.fullname" . }}-ai-api.{{ .Values.devEnv.namespace }}.svc.cluster.local:4000"
+              value: "http://ai-api:4000"
             # Environment markers
             - name: ALGA_DEV_ENV
               value: "true"

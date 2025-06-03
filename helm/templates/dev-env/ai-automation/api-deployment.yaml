@@ -59,7 +59,7 @@ spec:
               value: "{{ .Values.devEnv.sanitizedBranch }}"
             # Target app URL for automation
             - name: TARGET_APP_URL
-              value: "http://{{ include "sebastian.fullname" . }}.{{ .Values.devEnv.namespace }}.svc.cluster.local:{{ .Values.server.service.port }}"
+              value: "http://app:3000"
           ports:
             - name: http
               containerPort: 4000
