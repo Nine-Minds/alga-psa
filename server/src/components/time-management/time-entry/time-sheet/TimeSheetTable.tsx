@@ -188,12 +188,20 @@ export function TimeSheetTable({
                                                     {workItem.project_name} • {workItem.phase_name}
                                                 </div>
                                             )}
+                                            {workItem.type === 'interaction' && workItem.company_name && (
+                                                <div className="text-xs text-gray-600 mt-1">
+                                                    {workItem.company_name}
+                                                    {workItem.contact_name && ` • ${workItem.contact_name}`}
+                                                </div>
+                                            )}
                                             <span className={`inline-flex w-max items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                                                 workItem.type === 'ticket' 
                                                     ? 'bg-[rgb(var(--color-primary-200))] text-[rgb(var(--color-primary-900))]' 
                                                     : workItem.type === 'project_task' 
                                                         ? 'bg-[rgb(var(--color-secondary-100))] text-[rgb(var(--color-secondary-900))]' 
-                                                        : 'bg-[rgb(var(--color-border-200))] text-[rgb(var(--color-border-900))]'
+                                                        : workItem.type === 'interaction'
+                                                            ? 'bg-green-100 text-green-900'
+                                                            : 'bg-[rgb(var(--color-border-200))] text-[rgb(var(--color-border-900))]'
                                             }`}>
                                                 {formatWorkItemType(workItem.type)}
                                             </span>

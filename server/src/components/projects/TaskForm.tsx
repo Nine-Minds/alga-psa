@@ -729,6 +729,20 @@ export default function TaskForm({
       <div className="text-lg font-medium mb-4">
         {mode === 'edit' ? 'Edit Task' : 'Add New Task'}
       </div>
+      {mode === 'edit' && (
+        <div className="flex justify-end mb-4">
+          <Button
+            id='add-time-entry-button'
+            type="button"
+            variant="default"
+            onClick={handleAddTimeEntry}
+            disabled={isSubmitting || !task?.task_id}
+          >
+            <Clock className="h-4 w-4 mr-2" />
+            Add Time Entry
+          </Button>
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="flex flex-col h-full">
         <div className="space-y-4">
           <TextArea
@@ -985,18 +999,6 @@ export default function TaskForm({
                     )}
                   </div>
                   <div className="flex gap-2">
-                    {mode === 'edit' && (
-                      <Button
-                        id='add-time-entry-button'
-                        type="button"
-                        variant="outline"
-                        onClick={handleAddTimeEntry}
-                        disabled={isSubmitting || !task?.task_id}
-                      >
-                        <Clock className="h-4 w-4 mr-2" />
-                        Add Time Entry
-                      </Button>
-                    )}
                     <Button id='save-button' type="submit" disabled={isSubmitting}>
                       {isSubmitting ? (mode === 'edit' ? 'Updating...' : 'Adding...') : (mode === 'edit' ? 'Update' : 'Save')}
                     </Button>

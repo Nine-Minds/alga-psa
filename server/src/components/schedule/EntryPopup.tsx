@@ -399,7 +399,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
           {viewOnly ? 'View Entry' : (event ? 'Edit Entry' : 'New Entry')}
         </h2>
         <div className="flex gap-2">
-          {event && event.work_item_type && (event.work_item_type === 'ticket' || event.work_item_type === 'project_task') && event.work_item_id && (
+          {event && event.work_item_type && (event.work_item_type === 'ticket' || event.work_item_type === 'project_task' || event.work_item_type === 'interaction') && event.work_item_id && (
             <OpenDrawerButton event={event} />
           )}
           {/* Only show delete button if not a private event or user is creator */}

@@ -113,7 +113,7 @@ export function WorkItemList({
             </div>
           )}
           <div className="flex items-center gap-2 mt-1">
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-info-100))] text-[rgb(var(--color-info-900))]">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-900">
               Interaction
             </span>
             {item.is_billable && (

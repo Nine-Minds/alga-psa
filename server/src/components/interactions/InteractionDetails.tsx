@@ -32,10 +32,11 @@ interface InteractionDetailsProps {
   interaction: IInteraction;
   onInteractionDeleted?: () => void; // Callback when interaction is deleted
   onInteractionUpdated?: (updatedInteraction: IInteraction) => void; // Callback when interaction is updated
+  isInDrawer?: boolean; // Whether this component is displayed in a drawer
 }
 
 
-const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: initialInteraction, onInteractionDeleted, onInteractionUpdated }) => {
+const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: initialInteraction, onInteractionDeleted, onInteractionUpdated, isInDrawer = false }) => {
   const [interaction, setInteraction] = useState<IInteraction>(initialInteraction);
   const { openDrawer, goBack, closeDrawer } = useDrawer();
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
@@ -315,15 +316,6 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
         <Heading size="6">Interaction Details</Heading>
         <div className="flex gap-2">
           <Button
-            {...addTimeEntryButtonProps}
-            onClick={handleAddTimeEntry}
-            variant="ghost"
-            size="sm"
-          >
-            <Clock className="mr-2 h-4 w-4" />
-            Add Time Entry
-          </Button>
-          <Button
             {...editButtonProps}
             onClick={() => setIsEditInteractionOpen(true)}
             variant="ghost"
@@ -461,7 +453,17 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
         </div>
       </div>
 
-      <Flex justify="end" align="center" className="mt-6">
+      <Flex justify="end" align="center" className="mt-6 gap-2">
+        {!isInDrawer && (
+          <Button
+            {...addTimeEntryButtonProps}
+            onClick={handleAddTimeEntry}
+            variant="default"
+          >
+            <Clock className="mr-2 h-4 w-4" />
+            Add Time Entry
+          </Button>
+        )}
         <Button
           {...addTicketButtonProps}
           onClick={() => setIsQuickAddTicketOpen(true)}
@@ -485,7 +487,21 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
           id: interaction.contact_name_id,
           name: interaction.contact_name || ''
         } : undefined}
-        prefilledDescription={interaction.notes}
+        prefilledDescription={(() => {
+          try {
+            const content = JSON.parse(interaction.notes || '[]');
+            // Simple extraction of text from paragraph nodes
+            return content.map((block: any) => {
+              if (block.type === 'paragraph' && block.content) {
+                return block.content.map((item: any) => item.text).join('');
+              }
+              return ''; // Ignore other block types for now
+            }).join('\n'); // Join paragraphs with newlines
+          } catch (e) {
+            // If parsing fails, return the raw text
+            return interaction.notes || '';
+          }
+        })()}
       />
 
       <QuickAddInteraction
