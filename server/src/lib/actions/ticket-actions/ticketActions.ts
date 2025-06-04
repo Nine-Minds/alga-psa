@@ -8,7 +8,7 @@ import { revalidatePath } from 'next/cache';
 import { getTicketAttributes } from 'server/src/lib/actions/policyActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '../../../../../shared/db';
+import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { 
   ticketFormSchema, 

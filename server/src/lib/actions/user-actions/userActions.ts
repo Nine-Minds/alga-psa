@@ -7,14 +7,14 @@ import { options as authOptions } from 'server/src/app/api/auth/[...nextauth]/op
 import { revalidatePath } from 'next/cache';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getAdminConnection } from 'server/src/lib/db/admin';
-import { withTransaction } from '../../../../../shared/db';
+import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
 import Tenant from 'server/src/lib/models/tenant';
 import UserPreferences from 'server/src/lib/models/userPreferences';
 import { verifyEmailSuffix, getCompanyByEmailSuffix } from 'server/src/lib/actions/company-settings/emailSettings';
 import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
-import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/EntityImageService'; // Added import
+import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/EntityImageService';
 
 interface ActionResult {
   success: boolean;

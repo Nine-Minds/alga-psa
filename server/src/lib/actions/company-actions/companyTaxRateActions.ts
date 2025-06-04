@@ -1,6 +1,6 @@
 'use server'
 
-import { withTransaction } from '../../../../../shared/db';
+import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { createTenantKnex } from 'server/src/lib/db';
 import { ICompanyTaxRateAssociation, ITaxRate } from 'server/src/interfaces/tax.interfaces'; // Updated import

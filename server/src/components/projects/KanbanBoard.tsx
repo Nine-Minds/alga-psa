@@ -16,7 +16,7 @@ interface KanbanBoardProps {
   ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] };
   taskResources: { [taskId: string]: any[] };
   projectTreeData?: any[]; // Add projectTreeData prop
-  onDrop: (e: React.DragEvent, statusId: string, position: 'before' | 'after' | 'end', relativeTaskId: string | null) => void;
+  onDrop: (e: React.DragEvent, statusId: string, draggedTaskId: string, beforeTaskId: string | null, afterTaskId: string | null) => void;
   onDragOver: (e: React.DragEvent) => void;
   onAddCard: (status: ProjectStatus) => void;
   onTaskSelected: (task: IProjectTask) => void;

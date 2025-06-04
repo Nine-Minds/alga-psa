@@ -3,8 +3,8 @@
 import { IContact, MappableField, ImportContactResult } from 'server/src/interfaces/contact.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
-import { createTenantKnex } from 'server/src/lib/db'; // Revert to original import
-import { withTransaction } from '../../../../../shared/db';
+import { createTenantKnex } from 'server/src/lib/db';
+import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { unparseCSV } from 'server/src/lib/utils/csvParser';
 import { getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';

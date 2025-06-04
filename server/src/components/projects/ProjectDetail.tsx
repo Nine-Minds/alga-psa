@@ -8,7 +8,7 @@ import TaskQuickAdd from './TaskQuickAdd';
 import TaskEdit from './TaskEdit';
 import PhaseQuickAdd from './PhaseQuickAdd';
 import { getProjectTaskStatuses, updatePhase, deletePhase, getProjectTreeData } from 'server/src/lib/actions/project-actions/projectActions';
-import { updateTaskStatus, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction } from 'server/src/lib/actions/project-actions/projectTaskActions';
+import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import styles from './ProjectDetail.module.css';
 import { Toaster, toast } from 'react-hot-toast';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
@@ -19,6 +19,8 @@ import KanbanBoard from './KanbanBoard';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from 'server/src/lib/utils/projectUtils';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { HelpCircle } from 'lucide-react';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
 
 interface ProjectDetailProps {
   project: IProject;
@@ -163,10 +165,9 @@ export default function ProjectDetail({
     }
   };
 
-  const handleDrop = async (e: React.DragEvent, targetStatusId: string, position: 'before' | 'after' | 'end', relativeTaskId: string | null) => {
+  const handleDrop = async (e: React.DragEvent, targetStatusId: string, draggedTaskId: string, beforeTaskId: string | null, afterTaskId: string | null) => {
     e.preventDefault();
-    const taskId = e.dataTransfer.getData('text');
-    const task = projectTasks.find(t => t.task_id === taskId);
+    const task = projectTasks.find(t => t.task_id === draggedTaskId);
     
     if (!task) {
       console.error('Task not found');
@@ -176,56 +177,48 @@ export default function ProjectDetail({
     try {
       // Check if this is a status change or reorder
       if (task.project_status_mapping_id !== targetStatusId) {
-        // Get tasks in target status for position calculation
-        const tasksInTargetStatus = projectTasks.filter(t => 
-          t.project_status_mapping_id === targetStatusId &&
-          t.phase_id === task.phase_id
-        ).sort((a, b) => a.wbs_code.localeCompare(b.wbs_code));
-
-        // Calculate position index based on relative task and position
-        let positionIndex: number;
-        if (position === 'end' || !relativeTaskId) {
-          positionIndex = tasksInTargetStatus.length;
-        } else {
-          const relativeTaskIndex = tasksInTargetStatus.findIndex(t => t.task_id === relativeTaskId);
-          positionIndex = position === 'before' ? relativeTaskIndex : relativeTaskIndex + 1;
-        }
-
         // Status change with position
-        const updatedTask = await updateTaskStatus(taskId, targetStatusId, positionIndex);
-        const checklistItems = await getTaskChecklistItems(taskId);
+        const updatedTask = await updateTaskStatus(draggedTaskId, targetStatusId, beforeTaskId, afterTaskId);
+        const checklistItems = await getTaskChecklistItems(draggedTaskId);
         const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
         
         // Remove from current status and add to new status
         setProjectTasks(prevTasks => {
-          const newTasks = prevTasks.filter(t => t.task_id !== taskId);
+          const newTasks = prevTasks.filter(t => t.task_id !== draggedTaskId);
           return [...newTasks, taskWithChecklist];
         });
         
         toast.success(`Task moved to new status`);
       } else {
-        // Reorder within same status
-        const targetIndex = e.currentTarget.getAttribute('data-index');
-        if (targetIndex !== null) {
-          const newWbsCode = generateNewWbsCode(
-            filteredTasks,
-            parseInt(targetIndex, 10)
-          );
-          
-          if (newWbsCode) {
-            await reorderTasksInStatus([{
-              taskId,
-              newWbsCode
-            }]);
-            
-            // Update local state
-            setProjectTasks(prevTasks =>
-              prevTasks.map((t): IProjectTask =>
-                t.task_id === taskId ? { ...t, wbs_code: newWbsCode } : t
-              )
-            );
-          }
+        // Reorder within same status - use the new reorderTask function
+        await reorderTask(draggedTaskId, beforeTaskId, afterTaskId);
+        
+        // Update local state to reflect the new order immediately
+        // Generate a new order key for the moved task
+        const { generateKeyBetween } = await import('fractional-indexing');
+        
+        // Get the order keys from the before/after tasks
+        let beforeKey: string | null = null;
+        let afterKey: string | null = null;
+        
+        if (beforeTaskId) {
+          const beforeTask = projectTasks.find(t => t.task_id === beforeTaskId);
+          beforeKey = beforeTask?.order_key || null;
         }
+        
+        if (afterTaskId) {
+          const afterTask = projectTasks.find(t => t.task_id === afterTaskId);
+          afterKey = afterTask?.order_key || null;
+        }
+        
+        const newOrderKey = generateKeyBetween(beforeKey, afterKey);
+        
+        // Update the task with the new order key
+        setProjectTasks(prevTasks =>
+          prevTasks.map((t): IProjectTask =>
+            t.task_id === draggedTaskId ? { ...t, order_key: newOrderKey } : t
+          )
+        );
       }
     } catch (error) {
       console.error('Error handling drop:', error);
@@ -720,7 +713,14 @@ export default function ProjectDetail({
     if (!selectedPhase) {
       return (
         <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
-          <p className="text-xl text-gray-600">Please select a phase to view the Kanban board.</p>
+          <div className="text-center">
+            <p className="text-xl text-gray-600 flex items-center justify-center gap-2">
+              Please select or create a phase to view the Kanban board.
+              <Tooltip content="A phase is a distinct stage or milestone in your project timeline. Each phase can contain multiple tasks and helps organize work into manageable sections.">
+                <HelpCircle className="w-5 h-5 text-gray-500 cursor-help" />
+              </Tooltip>
+            </p>
+          </div>
         </div>
       );
     }

@@ -1,7 +1,7 @@
 'use server';
 
 import { createTenantKnex } from '../../db';
-import { withTransaction } from '../../../../../shared/db';
+import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { IDocumentContent, UpdateDocumentContentInput } from '../../../interfaces/document.interface';

@@ -22,7 +22,7 @@ interface StatusColumnProps {
   isAddingTask: boolean;
   selectedPhase: boolean;
   projectTreeData?: any[]; // Add projectTreeData prop
-  onDrop: (e: React.DragEvent, statusId: string, position: 'before' | 'after' | 'end', relativeTaskId: string | null) => void;
+  onDrop: (e: React.DragEvent, statusId: string, draggedTaskId: string, beforeTaskId: string | null, afterTaskId: string | null) => void;
   onDragOver: (e: React.DragEvent) => void;
   onAddCard: (status: ProjectStatus) => void;
   onTaskSelected: (task: IProjectTask) => void;
@@ -132,73 +132,65 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
       return;
     }
 
-    // If the task is from a different status, handle status change
-    if (draggedTask.project_status_mapping_id !== status.project_status_mapping_id) {
-      // Ensure we have the correct status mapping ID
-      const targetStatusId = status.project_status_mapping_id;
-      if (!targetStatusId) {
-        console.error('Invalid target status');
-        return;
-      }
-      
-      // Get position information
-      const taskElement = findClosestTask(e);
-      let position: 'before' | 'after' | 'end' = 'end';
-      let relativeTaskId: string | null = null;
+    // Filter out the dragged task from sortedTasks if it's being moved from another status
+    const tasksInThisStatus = sortedTasks.filter(t => t.task_id !== draggedTaskId);
 
-      if (taskElement) {
-        position = e.clientY < taskElement.getBoundingClientRect().top + taskElement.getBoundingClientRect().height / 2
-          ? 'before'
-          : 'after';
-        relativeTaskId = taskElement.getAttribute('data-task-id');
-      }
-      
-      // Call parent handler with task ID, new status, and position
-      onDrop(e, targetStatusId, position, relativeTaskId);
-      return;
-    }
-
-    // Only handle reordering if we have a valid target task
+    // Determine before/after task IDs based on drop position
+    let beforeTaskId: string | null = null;
+    let afterTaskId: string | null = null;
+    
     const taskElement = findClosestTask(e);
     if (taskElement) {
       const targetTaskId = taskElement.getAttribute('data-task-id');
       
       if (targetTaskId && targetTaskId !== draggedTaskId) {
-        const targetTask = tasks.find(t => t.task_id === targetTaskId);
-        if (!targetTask) return;
-
-        // Calculate new WBS codes for reordering
-        const orderedTasks = [...displayTasks].sort((a, b) =>
-          a.wbs_code.localeCompare(b.wbs_code)
-        );
-
-        const draggedIndex = orderedTasks.findIndex(t => t.task_id === draggedTaskId);
-        const targetIndex = orderedTasks.findIndex(t => t.task_id === targetTaskId);
+        // Find the target task in the already sorted list
+        const targetIndex = tasksInThisStatus.findIndex(t => t.task_id === targetTaskId);
         
-        // Remove dragged task
-        orderedTasks.splice(draggedIndex, 1);
-        
-        // Insert at new position
-        const insertIndex = e.clientY < taskElement.getBoundingClientRect().top + taskElement.getBoundingClientRect().height / 2
-          ? targetIndex
-          : targetIndex + 1;
-        
-        orderedTasks.splice(insertIndex, 0, draggedTask);
-
-        // Update WBS codes
-        const updates = orderedTasks.map((task, index): { taskId: string, newWbsCode: string } => ({
-          taskId: task.task_id,
-          newWbsCode: task.wbs_code.split('.').slice(0, -1).concat(String(index + 1)).join('.')
-        }));
-
-        // Call parent handler to update WBS codes
-        onReorderTasks(updates);
+        if (targetIndex !== -1) {
+          const rect = taskElement.getBoundingClientRect();
+          const isDropBefore = e.clientY < rect.top + rect.height / 2;
+          
+          if (isDropBefore) {
+            // Insert before target - the target becomes our "after" task
+            afterTaskId = targetTaskId;
+            if (targetIndex > 0) {
+              beforeTaskId = tasksInThisStatus[targetIndex - 1].task_id;
+            }
+          } else {
+            // Insert after target - the target becomes our "before" task
+            beforeTaskId = targetTaskId;
+            if (targetIndex < tasksInThisStatus.length - 1) {
+              afterTaskId = tasksInThisStatus[targetIndex + 1].task_id;
+            }
+          }
+        }
       }
+    } else if (tasksInThisStatus.length > 0) {
+      // Dropped at the end of the column
+      beforeTaskId = tasksInThisStatus[tasksInThisStatus.length - 1].task_id;
     }
+    
+    // Log the actual order keys for debugging
+    const beforeTask = beforeTaskId ? tasks.find(t => t.task_id === beforeTaskId) : null;
+    const afterTask = afterTaskId ? tasks.find(t => t.task_id === afterTaskId) : null;
+    console.log('Drop position:', { 
+      beforeTaskId, 
+      beforeKey: beforeTask?.order_key,
+      afterTaskId, 
+      afterKey: afterTask?.order_key,
+      draggedTaskId, 
+      targetStatusId: status.project_status_mapping_id 
+    });
+    
+    // Call parent handler with new parameters
+    onDrop(e, status.project_status_mapping_id, draggedTaskId, beforeTaskId, afterTaskId);
   };
 
-  // Sort display tasks by WBS code
-  const sortedTasks = [...displayTasks].sort((a, b) => a.wbs_code.localeCompare(b.wbs_code));
+  // Sort display tasks by order_key
+  const sortedTasks = [...displayTasks].sort((a, b) => 
+    (a.order_key || '').localeCompare(b.order_key || '')
+  );
 
   return (
     <div
