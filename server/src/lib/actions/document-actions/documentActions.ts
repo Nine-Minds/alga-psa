@@ -1162,7 +1162,10 @@ export async function uploadDocument(
     contactNameId?: string;
     assetId?: string;
   }
-) {
+): Promise<
+  | { success: true; document: IDocument }
+  | { success: false; error: string }
+> {
   try {
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
