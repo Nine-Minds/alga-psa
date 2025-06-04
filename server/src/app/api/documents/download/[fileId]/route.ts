@@ -10,6 +10,8 @@ import logger from '@shared/core/logger';
 import { downloadDocument } from 'server/src/lib/actions/document-actions/documentActions';
 import { createPDFGenerationService } from 'server/src/services/pdf-generation.service';
 import { StorageService } from 'server/src/lib/storage/StorageService';
+import { withTransaction } from '@shared/db';
+import { Knex } from 'knex';
 
 export async function GET(req: NextRequest, { params }: { params: { fileId: string } }) {
   const session = await getServerSession(options);
@@ -34,7 +36,10 @@ export async function GET(req: NextRequest, { params }: { params: { fileId: stri
     
     try {
       // Get document to verify it exists and belongs to the user's tenant
-      const document = await Document.get(documentId);
+      const { knex } = await createTenantKnex();
+      const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await Document.get(documentId, trx);
+      });
       
       if (!document || document.tenant !== session.user.tenant) {
         logger.warn(`Document not found or tenant mismatch for PDF generation. ID: ${documentId}, Tenant: ${session.user.tenant}`);
@@ -77,7 +82,10 @@ export async function GET(req: NextRequest, { params }: { params: { fileId: stri
     logger.info(`Standard file download requested for document ID: ${documentId}`);
     try {
       // First, get the document to find its file_id
-      const document = await Document.get(documentId);
+      const { knex } = await createTenantKnex();
+      const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await Document.get(documentId, trx);
+      });
       
       if (!document || document.tenant !== session.user.tenant) {
         logger.warn(`Document not found or tenant mismatch. ID: ${documentId}, Tenant: ${session.user.tenant}`);
