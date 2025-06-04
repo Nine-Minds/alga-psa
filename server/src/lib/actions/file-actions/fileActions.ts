@@ -1,6 +1,8 @@
 'use server'
 
 import { createTenantKnex } from '../../../lib/db';
+import { withTransaction } from '@shared/db';
+import { Knex } from 'knex';
 import { StorageService } from '../../../lib/storage/StorageService';
 import { FileStoreModel } from '../../../models/storage';
 import { FileStore } from '../../../types/storage';
@@ -36,6 +38,7 @@ export async function uploadFile(
         const buffer = Buffer.from(await file.arrayBuffer());
 
         // Upload file using StorageService
+        // Note: StorageService doesn't currently support transactions
         const fileRecord = await StorageService.uploadFile(tenant, buffer, file.name, {
             mime_type: file.type,
             uploaded_by_id,
@@ -76,11 +79,13 @@ export async function deleteFile(
     deleted_by_id: string
 ): Promise<{ success: boolean; error?: string }> {
     try {
-        const { tenant } = await createTenantKnex();
+        const { tenant, knex } = await createTenantKnex();
         if (!tenant) {
             throw new Error('No tenant found');
         }
 
+        // Delete file using StorageService
+        // Note: StorageService doesn't currently support transactions
         await StorageService.deleteFile(file_id, deleted_by_id);
         return { success: true };
     } catch (error) {

@@ -191,7 +191,7 @@ export class InvoiceZipJobHandler {
         companyId: defaultCompany.company_id
       });
 
-      if (!uploadResult.success || !uploadResult.document) {
+      if (!uploadResult.success) {
         throw new Error(uploadResult.error || 'Failed to upload zip document');
       }
 

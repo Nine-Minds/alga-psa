@@ -33,25 +33,51 @@ import { NextResponse } from 'next/server';
 import { deleteDocumentContent } from './documentContentActions';
 import { deleteBlockContent } from './documentBlockContentActions';
 import { DocumentHandlerRegistry } from 'server/src/lib/document-handlers/DocumentHandlerRegistry';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
 // Add new document
 export async function addDocument(data: DocumentInput) {
   try {
-    const { tenant } = await createTenantKnex();
+    const { tenant, knex } = await createTenantKnex();
     if (!tenant) {
       throw new Error('No tenant found');
     }
 
-    const documentId = uuidv4();
-    const new_document: IDocument = {
-      ...data,
-      document_id: documentId
-    };
+    // Get current user if not provided
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
 
-    console.log('Adding document:', new_document);
-    const document = await Document.insert(new_document);
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const documentId = uuidv4();
+      
+      // Clean up the data - replace empty strings with proper values
+      const cleanedData = {
+        ...data,
+        user_id: data.user_id || currentUser.user_id,
+        created_by: data.created_by || currentUser.user_id,
+        tenant: tenant
+      };
 
-    return { _id: document.document_id };
+      // Remove empty string values that should be null
+      if (cleanedData.user_id === '') {
+        cleanedData.user_id = currentUser.user_id;
+      }
+      if (cleanedData.created_by === '') {
+        cleanedData.created_by = currentUser.user_id;
+      }
+
+      const new_document: IDocument = {
+        ...cleanedData,
+        document_id: documentId
+      };
+
+      console.log('Adding document:', new_document);
+      const document = await Document.insert(new_document, trx);
+
+      return { _id: document.document_id };
+    });
   } catch (error) {
     console.error(error);
     throw error;
@@ -61,12 +87,14 @@ export async function addDocument(data: DocumentInput) {
 // Update document
 export async function updateDocument(documentId: string, data: Partial<IDocument>) {
   try {
-    const { tenant } = await createTenantKnex();
+    const { tenant, knex } = await createTenantKnex();
     if (!tenant) {
       throw new Error('No tenant found');
     }
 
-    await Document.update(documentId, data);
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await Document.update(documentId, data, trx);
+    });
   } catch (error) {
     console.error(error);
     throw new Error("Failed to update the document");
@@ -81,16 +109,17 @@ export async function deleteDocument(documentId: string, userId: string) {
       throw new Error('No tenant found');
     }
 
-    // Get the document first to get the file_id
-    const document = await Document.get(documentId);
-    if (!document) {
-      throw new Error('Document not found');
-    }
+    // Use a single transaction for all database operations
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Get the document first to get the file_id
+      const document = await Document.get(documentId, trx);
+      if (!document) {
+        throw new Error('Document not found');
+      }
 
-    // First, update any companies that reference this document as notes_document_id
-    // We need to do this manually because of the composite foreign key constraint
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('companies')
+      // First, update any companies that reference this document as notes_document_id
+      // We need to do this manually because of the composite foreign key constraint
+      await trx('companies')
         .where({
           notes_document_id: documentId,
           tenant
@@ -98,32 +127,34 @@ export async function deleteDocument(documentId: string, userId: string) {
         .update({
           notes_document_id: null
         });
+
+      // Delete all associations
+      await DocumentAssociation.deleteByDocument(document.document_id, trx);
+
+      // Delete the document record
+      await Document.delete(documentId, trx);
+
+      return document;
     });
 
-    // If there's an associated file, delete it from storage
-    if (document.file_id) {
+    // If there's an associated file, delete it from storage (outside transaction)
+    if (result.file_id) {
       // Delete file from storage and soft delete file record
-      const deleteResult = await deleteFile(document.file_id, userId);
+      const deleteResult = await deleteFile(result.file_id, userId);
       if (!deleteResult.success) {
         throw new Error(deleteResult.error || 'Failed to delete file from storage');
       }
 
       // Clear preview cache if it exists
       const cache = CacheFactory.getPreviewCache(tenant);
-      await cache.delete(document.file_id);
+      await cache.delete(result.file_id);
     }
 
-    // Delete document content and block content
+    // Delete document content and block content (outside transaction)
     await Promise.all([
       deleteDocumentContent(documentId),
       deleteBlockContent(documentId)
     ]);
-
-    // Delete all associations
-    await DocumentAssociation.deleteByDocument(document.document_id);
-
-    // Delete the document record
-    await Document.delete(documentId);
 
     return { success: true };
   } catch (error) {
@@ -205,8 +236,11 @@ export async function getDocument(documentId: string) {
 // Get documents by ticket
 export async function getDocumentByTicketId(ticketId: string) {
   try {
-    const documents = await Document.getByTicketId(ticketId);
-    return documents;
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const documents = await Document.getByTicketId(ticketId, trx);
+      return documents;
+    });
   } catch (error) {
     console.error(error);
     throw new Error("Failed to get the documents");
@@ -216,8 +250,11 @@ export async function getDocumentByTicketId(ticketId: string) {
 // Get documents by company
 export async function getDocumentByCompanyId(companyId: string) {
   try {
-    const documents = await Document.getByCompanyId(companyId);
-    return documents;
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const documents = await Document.getByCompanyId(companyId, trx);
+      return documents;
+    });
   } catch (error) {
     console.error(error);
     throw new Error("Failed to get the documents");
@@ -227,8 +264,11 @@ export async function getDocumentByCompanyId(companyId: string) {
 // Get documents by contact
 export async function getDocumentByContactNameId(contactNameId: string) {
   try {
-    const documents = await Document.getByContactNameId(contactNameId);
-    return documents;
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const documents = await Document.getByContactNameId(contactNameId, trx);
+      return documents;
+    });
   } catch (error) {
     console.error(error);
     throw new Error("Failed to get the documents");
@@ -297,7 +337,9 @@ export async function getDocumentPreview(
     }
 
     // Check if the identifier is a document ID
-    let document = await Document.get(identifier);
+    let document = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await Document.get(identifier, trx);
+    });
     console.log(`[getDocumentPreview] Document.get(${identifier}) result: ${document ? 'found' : 'not found'}`);
 
     // If document not found, try to treat identifier as a file ID
@@ -1063,11 +1105,13 @@ export async function createDocumentAssociations(
       tenant
     }));
 
-    await Promise.all(
-      associations.map((association): Promise<Pick<IDocumentAssociation, "association_id">> =>
-        DocumentAssociation.create(association)
-      )
-    );
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      await Promise.all(
+        associations.map((association): Promise<Pick<IDocumentAssociation, "association_id">> =>
+          DocumentAssociation.create(association, trx)
+        )
+      );
+    });
 
     return { success: true };
   } catch (error) {
@@ -1118,7 +1162,10 @@ export async function uploadDocument(
     contactNameId?: string;
     assetId?: string;
   }
-) {
+): Promise<
+  | { success: true; document: IDocument }
+  | { success: false; error: string }
+> {
   try {
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
@@ -1161,11 +1208,13 @@ export async function uploadDocument(
         file_size: fileData.size
       };
 
-      const result = await Document.insert(document);
-      const documentWithId = { ...document, document_id: result.document_id };
+      // Use transaction for document creation and associations
+      return await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const result = await Document.insert(document, trx);
+        const documentWithId = { ...document, document_id: result.document_id };
 
-    // Create associations if any entity IDs are provided
-    const associations: IDocumentAssociationInput[] = [];
+        // Create associations if any entity IDs are provided
+        const associations: IDocumentAssociationInput[] = [];
 
     if (options.ticketId) {
       associations.push({
@@ -1203,19 +1252,20 @@ export async function uploadDocument(
       });
     }
 
-    // Create all associations
-    if (associations.length > 0) {
-      await Promise.all(
-        associations.map((association): Promise<Pick<IDocumentAssociation, "association_id">> =>
-          DocumentAssociation.create(association)
-        )
-      );
-    }
+        // Create all associations
+        if (associations.length > 0) {
+          await Promise.all(
+            associations.map((association): Promise<Pick<IDocumentAssociation, "association_id">> =>
+              DocumentAssociation.create(association, trx)
+            )
+          );
+        }
 
-    return {
-      success: true,
-      document: documentWithId
-    };
+        return {
+          success: true,
+          document: documentWithId
+        };
+      });
   } catch (error) {
     console.error('Error uploading document:', error);
     return {

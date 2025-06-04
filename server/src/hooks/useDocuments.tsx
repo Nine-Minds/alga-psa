@@ -58,10 +58,12 @@ export function useDocuments(
     }
   }, [debouncedFilters, page, pageSize]);
   
-  // Fetch documents when filters or pagination changes
+  // Fetch documents when debounced filters or pagination changes
+  // Use the actual values as dependencies instead of the callback function
   useEffect(() => {
     fetchDocuments();
-  }, [fetchDocuments]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedFilters, page, pageSize]); // Direct dependencies instead of fetchDocuments
   
   return { 
     documents, 
@@ -73,14 +75,25 @@ export function useDocuments(
 }
 
 /**
- * Simple debounce hook for delaying value updates
+ * Debounce hook with deep comparison for objects
  */
 export function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
   
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedValue(value);
+      // For objects, do a deep comparison to avoid unnecessary updates
+      if (typeof value === 'object' && value !== null) {
+        setDebouncedValue((prevValue) => {
+          // Only update if the values are actually different
+          if (JSON.stringify(prevValue) !== JSON.stringify(value)) {
+            return value;
+          }
+          return prevValue;
+        });
+      } else {
+        setDebouncedValue(value);
+      }
     }, delay);
     
     return () => {

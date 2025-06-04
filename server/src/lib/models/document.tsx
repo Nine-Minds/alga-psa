@@ -1,6 +1,7 @@
 import logger from '../../utils/logger';
 import { IDocument } from '../../interfaces';
 import { createTenantKnex } from '../db';
+import { Knex } from 'knex';
 
 const Document = {
     getAll: async (): Promise<IDocument[]> => {
@@ -29,57 +30,38 @@ const Document = {
         }
     },
 
-    get: async (document_id: string): Promise<IDocument | undefined> => {
+    get: async (document_id: string, trx: Knex.Transaction): Promise<IDocument | undefined> => {
         try {
-            const {knex: db, tenant} = await createTenantKnex();
-            
-            if (!tenant) {
-                throw new Error('Tenant context is required for getting document');
-            }
-
-            return await db<IDocument>('documents')
-                .select(
-                    'documents.*',
-                    'users.first_name as created_by_first_name',
-                    'users.last_name as created_by_last_name',
-                    db.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
-                    db.raw("COALESCE(dt.type_name, sdt.type_name) as type_name"),
-                    db.raw("COALESCE(dt.icon, sdt.icon) as type_icon")
-                )
-                .leftJoin('users', function() {
-                    this.on('documents.created_by', '=', 'users.user_id')
-                        .andOn('users.tenant', '=', db.raw('?', [tenant]));
-                })
-                .leftJoin('document_types as dt', function() {
-                    this.on('documents.type_id', '=', 'dt.type_id')
-                        .andOn('documents.tenant', '=', 'dt.tenant');
-                })
-                .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
-                .where({
-                    'documents.document_id': document_id,
-                    'documents.tenant': tenant
-                })
-                .first();
+            return await trx<IDocument>('documents')
+                    .select(
+                        'documents.*',
+                        'users.first_name as created_by_first_name',
+                        'users.last_name as created_by_last_name',
+                        trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
+                        trx.raw("COALESCE(dt.type_name, sdt.type_name) as type_name"),
+                        trx.raw("COALESCE(dt.icon, sdt.icon) as type_icon")
+                    )
+                    .leftJoin('users', function() {
+                        this.on('documents.created_by', '=', 'users.user_id');
+                    })
+                    .leftJoin('document_types as dt', function() {
+                        this.on('documents.type_id', '=', 'dt.type_id')
+                            .andOn('documents.tenant', '=', 'dt.tenant');
+                    })
+                    .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
+                    .where('documents.document_id', document_id)
+                    .first();
         } catch (error) {
             logger.error(`Error getting document with id ${document_id}:`, error);
             throw error;
         }
     },
 
-    insert: async (document: IDocument): Promise<Pick<IDocument, "document_id">> => {
+    insert: async (document: IDocument, trx: Knex.Transaction): Promise<Pick<IDocument, "document_id">> => {
         try {
-            const {knex: db, tenant} = await createTenantKnex();
-            
-            if (!tenant) {
-                throw new Error('Tenant context is required for inserting document');
-            }
-
             const { tenant: _, ...documentData } = document;
-            const [document_id] = await db<IDocument>('documents')
-                .insert({
-                    ...documentData,
-                    tenant
-                })
+            const [document_id] = await trx<IDocument>('documents')
+                .insert(documentData)
                 .returning('document_id');
             return document_id;
         } catch (error) {
@@ -88,20 +70,11 @@ const Document = {
         }
     },
 
-    update: async (document_id: string, document: Partial<IDocument>): Promise<void> => {
+    update: async (document_id: string, document: Partial<IDocument>, trx: Knex.Transaction): Promise<void> => {
         try {
-            const {knex: db, tenant} = await createTenantKnex();
-            
-            if (!tenant) {
-                throw new Error('Tenant context is required for updating document');
-            }
-
             const { tenant: _, ...updateData } = document;
-            await db<IDocument>('documents')
-                .where({
-                    document_id,
-                    tenant
-                })
+            await trx<IDocument>('documents')
+                .where('document_id', document_id)
                 .update(updateData);
         } catch (error) {
             logger.error(`Error updating document with id ${document_id}:`, error);
@@ -109,19 +82,10 @@ const Document = {
         }
     },
 
-    delete: async (document_id: string): Promise<void> => {
+    delete: async (document_id: string, trx: Knex.Transaction): Promise<void> => {
         try {
-            const {knex: db, tenant} = await createTenantKnex();
-            
-            if (!tenant) {
-                throw new Error('Tenant context is required for deleting document');
-            }
-
-            await db<IDocument>('documents')
-                .where({
-                    document_id,
-                    tenant
-                })
+            await trx<IDocument>('documents')
+                .where('document_id', document_id)
                 .del();
         } catch (error) {
             logger.error(`Error deleting document with id ${document_id}:`, error);
@@ -129,102 +93,78 @@ const Document = {
         }
     },
 
-    getByTicketId: async (ticket_id: string): Promise<IDocument[]> => {
+    getByTicketId: async (ticket_id: string, trx: Knex.Transaction): Promise<IDocument[]> => {
         try {
-            const {knex: db, tenant} = await createTenantKnex();
-            
-            if (!tenant) {
-                throw new Error('Tenant context is required for getting documents by ticket');
-            }
-
-            return await db<IDocument>('documents')
-                .select(
-                    'documents.*',
-                    'users.first_name',
-                    'users.last_name',
-                    db.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
-                )
-                .join('document_associations', function() {
-                    this.on('documents.document_id', '=', 'document_associations.document_id')
-                        .andOn('documents.tenant', '=', 'document_associations.tenant');
-                })
-                .leftJoin('users', function() {
-                    this.on('documents.created_by', '=', 'users.user_id')
-                        .andOn('users.tenant', '=', db.raw('?', [tenant]));
-                })
-                .where({
-                    'documents.tenant': tenant,
-                    'document_associations.entity_id': ticket_id,
-                    'document_associations.entity_type': 'ticket'
-                });
+            return await trx<IDocument>('documents')
+                    .select(
+                        'documents.*',
+                        'users.first_name',
+                        'users.last_name',
+                        trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
+                    )
+                    .join('document_associations', function() {
+                        this.on('documents.document_id', '=', 'document_associations.document_id')
+                            .andOn('documents.tenant', '=', 'document_associations.tenant');
+                    })
+                    .leftJoin('users', function() {
+                        this.on('documents.created_by', '=', 'users.user_id');
+                    })
+                    .where({
+                        'document_associations.entity_id': ticket_id,
+                        'document_associations.entity_type': 'ticket'
+                    });
         } catch (error) {
             logger.error(`Error getting documents with ticket_id ${ticket_id}:`, error);
             throw error;
         }
     },
 
-    getByCompanyId: async (company_id: string): Promise<IDocument[]> => {
+    getByCompanyId: async (company_id: string, trx: Knex.Transaction): Promise<IDocument[]> => {
         try {
-            const {knex: db, tenant} = await createTenantKnex();
-            
-            if (!tenant) {
-                throw new Error('Tenant context is required for getting documents by company');
-            }
-
-            return await db<IDocument>('documents')
-                .select(
-                    'documents.*',
-                    'users.first_name',
-                    'users.last_name',
-                    db.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
-                )
-                .join('document_associations', function() {
-                    this.on('documents.document_id', '=', 'document_associations.document_id')
-                        .andOn('documents.tenant', '=', 'document_associations.tenant');
-                })
-                .leftJoin('users', function() {
-                    this.on('documents.created_by', '=', 'users.user_id')
-                        .andOn('users.tenant', '=', db.raw('?', [tenant]));
-                })
-                .where({
-                    'documents.tenant': tenant,
-                    'document_associations.entity_id': company_id,
-                    'document_associations.entity_type': 'company'
-                });
+            return await trx<IDocument>('documents')
+                    .select(
+                        'documents.*',
+                        'users.first_name',
+                        'users.last_name',
+                        trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
+                    )
+                    .join('document_associations', function() {
+                        this.on('documents.document_id', '=', 'document_associations.document_id')
+                            .andOn('documents.tenant', '=', 'document_associations.tenant');
+                    })
+                    .leftJoin('users', function() {
+                        this.on('documents.created_by', '=', 'users.user_id');
+                    })
+                    .where({
+                        'document_associations.entity_id': company_id,
+                        'document_associations.entity_type': 'company'
+                    });
         } catch (error) {
             logger.error(`Error getting documents with company_id ${company_id}:`, error);
             throw error;
         }
     },
 
-    getByContactNameId: async (contact_name_id: string): Promise<IDocument[]> => {
+    getByContactNameId: async (contact_name_id: string, trx: Knex.Transaction): Promise<IDocument[]> => {
         try {
-            const {knex: db, tenant} = await createTenantKnex();
-            
-            if (!tenant) {
-                throw new Error('Tenant context is required for getting documents by contact');
-            }
-
-            return await db<IDocument>('documents')
-                .select(
-                    'documents.*',
-                    'users.first_name',
-                    'users.last_name',
-                    db.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
-                )
-                .join('document_associations', function() {
-                    this.on('documents.document_id', '=', 'document_associations.document_id')
-                        .andOn('documents.tenant', '=', 'document_associations.tenant');
-                })
-                .leftJoin('users', function() {
-                    this.on('documents.created_by', '=', 'users.user_id')
-                        .andOn('users.tenant', '=', db.raw('?', [tenant]));
-                })
-                .where({
-                    'documents.tenant': tenant,
-                    'document_associations.entity_id': contact_name_id,
-                    'document_associations.entity_type': 'contact'
-                });
+            return await trx<IDocument>('documents')
+                    .select(
+                        'documents.*',
+                        'users.first_name',
+                        'users.last_name',
+                        trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
+                    )
+                    .join('document_associations', function() {
+                        this.on('documents.document_id', '=', 'document_associations.document_id')
+                            .andOn('documents.tenant', '=', 'document_associations.tenant');
+                    })
+                    .leftJoin('users', function() {
+                        this.on('documents.created_by', '=', 'users.user_id');
+                    })
+                    .where({
+                        'document_associations.entity_id': contact_name_id,
+                        'document_associations.entity_type': 'contact'
+                    });
         } catch (error) {
             logger.error(`Error getting documents with contact_name_id ${contact_name_id}:`, error);
             throw error;

@@ -9,6 +9,8 @@ import {
 } from '../../interfaces/documentBlockContent.interface';
 import { IDocument } from '../../interfaces';
 import { createTenantKnex } from '../db';
+import { withTransaction } from '@shared/db';
+import { Knex } from 'knex';
 import Document from './document';
 
 class DocumentBlockContent {
@@ -19,26 +21,28 @@ class DocumentBlockContent {
                 throw new Error('Tenant context is required for getting document block content');
             }
             
-            // Get document
-            const document = await Document.get(document_id);
-            if (!document) return undefined;
+            return await withTransaction(db, async (trx: Knex.Transaction) => {
+                // Get document
+                const document = await Document.get(document_id, trx);
+                if (!document) return undefined;
 
-            // Get block content
-            const blockContent = await db<IDocumentBlockContent>('document_block_content')
-                .select('*')
-                .where({
-                    document_id,
-                    tenant
-                })
-                .first();
+                // Get block content
+                const blockContent = await trx<IDocumentBlockContent>('document_block_content')
+                    .select('*')
+                    .where({
+                        document_id,
+                        tenant
+                    })
+                    .first();
 
-            // Create result with explicit non-null document
-            const result: DocumentWithBlockContent = {
-                document: document as NonNullable<IDocument>,
-                blockContent: blockContent ?? undefined
-            };
+                // Create result with explicit non-null document
+                const result: DocumentWithBlockContent = {
+                    document: document as NonNullable<IDocument>,
+                    blockContent: blockContent ?? undefined
+                };
 
-            return result;
+                return result;
+            });
         } catch (error) {
             logger.error(`Error getting document with block content ${document_id}:`, error);
             throw error;
@@ -85,39 +89,41 @@ class DocumentBlockContent {
                 throw new Error('Tenant context is required for getting versioned content');
             }
             
-            // Get document
-            const document = await Document.get(document_id);
-            if (!document) return undefined;
+            return await withTransaction(db, async (trx: Knex.Transaction) => {
+                // Get document
+                const document = await Document.get(document_id, trx);
+                if (!document) return undefined;
 
-            // Build query for block content
-            let query = db<IDocumentBlockContent>('document_block_content')
-                .select('document_block_content.*')
-                .where('document_block_content.document_id', document_id)
-                .andWhere('document_block_content.tenant', tenant);
-            
-            if (version_id) {
-                // Handle specific version
-                query = query.andWhere('document_block_content.version_id', version_id);
-            } else {
-                // If no version specified, get content for active version
-                query = query.leftJoin('document_versions', function() {
-                    this.on('document_block_content.version_id', '=', 'document_versions.version_id')
-                        .andOn('document_block_content.tenant', '=', 'document_versions.tenant');
-                })
-                .where(function() {
-                    this.where('document_versions.is_active', true)
-                        .orWhereNull('document_block_content.version_id');
-                });
-            }
+                // Build query for block content
+                let query = trx<IDocumentBlockContent>('document_block_content')
+                    .select('document_block_content.*')
+                    .where('document_block_content.document_id', document_id)
+                    .andWhere('document_block_content.tenant', tenant);
+                
+                if (version_id) {
+                    // Handle specific version
+                    query = query.andWhere('document_block_content.version_id', version_id);
+                } else {
+                    // If no version specified, get content for active version
+                    query = query.leftJoin('document_versions', function() {
+                        this.on('document_block_content.version_id', '=', 'document_versions.version_id')
+                            .andOn('document_block_content.tenant', '=', 'document_versions.tenant');
+                    })
+                    .where(function() {
+                        this.where('document_versions.is_active', true)
+                            .orWhereNull('document_block_content.version_id');
+                    });
+                }
 
-            const blockContent = await query.first();
+                const blockContent = await query.first();
 
-            const result: DocumentWithBlockContent = {
-                document: document as NonNullable<IDocument>,
-                blockContent: blockContent ?? undefined
-            };
+                const result: DocumentWithBlockContent = {
+                    document: document as NonNullable<IDocument>,
+                    blockContent: blockContent ?? undefined
+                };
 
-            return result;
+                return result;
+            });
         } catch (error) {
             logger.error(`Error getting versioned content for document ${document_id}:`, error);
             throw error;

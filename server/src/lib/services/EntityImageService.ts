@@ -4,6 +4,8 @@ import { getEntityImageUrl } from 'server/src/lib/utils/avatarUtils';
 import Document from 'server/src/lib/models/document';
 import DocumentAssociation from 'server/src/lib/models/document-association';
 import { createTenantKnex } from 'server/src/lib/db';
+import { withTransaction } from '@shared/db';
+import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
 export type EntityType = 'user' | 'contact' | 'company';
@@ -65,9 +67,39 @@ export async function uploadEntityImage(
       file_size: file.size,
     };
 
-    const createdDocument = await Document.insert({
-      ...documentData,
-      document_id: newDocumentId
+    const createdDocument = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Create the document
+      const document = await Document.insert({
+        ...documentData,
+        document_id: newDocumentId
+      }, trx);
+
+      if (!document?.document_id) {
+        throw new Error('Failed to create document record');
+      }
+
+      if (isLogoUpload) {
+        // Step 1: Unconditionally unmark any existing logo for this entity.
+        await trx('document_associations')
+          .where({
+            entity_id: entityId,
+            entity_type: entityType,
+            tenant: tenant,
+            is_entity_logo: true,
+          })
+          .update({ is_entity_logo: false });
+      }
+
+      // Step 2: Create the new association, marking it as the logo if applicable.
+      await DocumentAssociation.create({
+        document_id: document.document_id,
+        entity_id: entityId,
+        entity_type: entityType,
+        tenant,
+        is_entity_logo: isLogoUpload || false,
+      }, trx);
+
+      return document;
     });
 
     if (!createdDocument?.document_id) {
@@ -87,29 +119,6 @@ export async function uploadEntityImage(
       }
       throw new Error('Failed to create document record');
     }
-    
-    await knex.transaction(async (trx) => {
-      if (isLogoUpload) {
-        // Step 1: Unconditionally unmark any existing logo for this entity.
-        await trx('document_associations')
-          .where({
-            entity_id: entityId,
-            entity_type: entityType,
-            tenant: tenant,
-            is_entity_logo: true,
-          })
-          .update({ is_entity_logo: false });
-      }
-
-      // Step 2: Create the new association, marking it as the logo if applicable.
-      await trx('document_associations').insert({
-        document_id: createdDocument.document_id,
-        entity_id: entityId,
-        entity_type: entityType,
-        tenant,
-        is_entity_logo: isLogoUpload || false,
-      });
-    });
 
 
     const imageUrl = await getEntityImageUrl(entityType, entityId, tenant); 

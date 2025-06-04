@@ -99,7 +99,7 @@ export default function DocumentUpload({
 
             const result = await uploadDocument(formData, options);
 
-            if (result.success && result.document) {
+            if (result.success) {
                 console.log('Upload successful:', result.document); // Debug log
                 onUploadComplete({
                     success: true,
