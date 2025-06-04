@@ -37,7 +37,7 @@ spec:
             - name: PORT
               value: "3000"
             - name: NEXT_PUBLIC_API_URL
-              value: "http://ai-api:4000"
+              value: "http://ai-api.{{ .Values.devEnv.namespace }}:4000"
             - name: NODE_OPTIONS
               value: "--max-http-header-size=26214400"
             # Environment markers
