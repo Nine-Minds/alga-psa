@@ -11,6 +11,6 @@ export type WorkflowComponentType = typeof DndFlow;
 // Dynamic import will resolve to either the EE component or the CE empty component
 // based on the webpack alias configuration
 export const DynamicWorkflowComponent = dynamic<WorkflowProps>(
-  () => import('ee/server/src/components/flow/DnDFlow').then(mod => mod.default),
+  () => import('@ee/components/flow/DnDFlow').then(mod => mod.default),
   { ssr: false }
 );
