@@ -1,7 +1,7 @@
 'use server'
 
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '../../../../../shared/db';
+import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { validateData } from 'server/src/lib/utils/validation';
 import { ITicket, ITicketListItem } from 'server/src/interfaces/ticket.interfaces';

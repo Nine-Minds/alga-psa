@@ -1,5 +1,5 @@
 import { createTenantKnex } from "../../db";
-import { withTransaction } from '../../../../../shared/db';
+import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { 
   Activity, 

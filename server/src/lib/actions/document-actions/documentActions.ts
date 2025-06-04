@@ -3,7 +3,7 @@
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { StorageProviderFactory } from 'server/src/lib/storage/StorageProviderFactory';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '../../../../../shared/db';
+import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { marked } from 'marked';
 import { PDFDocument } from 'pdf-lib';

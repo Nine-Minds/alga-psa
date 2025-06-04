@@ -1,4 +1,4 @@
-import { withTransaction } from '../../../../shared/db';
+import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { createTenantKnex } from 'server/src/lib/db';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';

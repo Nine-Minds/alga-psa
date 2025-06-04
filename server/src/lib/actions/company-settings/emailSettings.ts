@@ -5,7 +5,7 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { v4 as uuid4 } from 'uuid';
 import { ICompanyEmailSettings } from 'server/src/interfaces/company.interfaces';
 import { getAdminConnection } from 'server/src/lib/db/admin';
-import { withTransaction } from '../../../../../shared/db';
+import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 
 export async function verifyEmailSuffix(email: string): Promise<boolean> {

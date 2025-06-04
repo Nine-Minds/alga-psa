@@ -1,7 +1,7 @@
 'use server';
 
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '../../../../../shared/db';
+import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { getCurrentUser, getUserCompanyId } from 'server/src/lib/actions/user-actions/userActions';
 import { IProject } from 'server/src/interfaces/project.interfaces';

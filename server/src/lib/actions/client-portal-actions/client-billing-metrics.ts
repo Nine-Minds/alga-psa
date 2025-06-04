@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { createTenantKnex } from '../../db';
-import { withTransaction } from '../../../../../shared/db';
+import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { getServerSession } from 'next-auth';
 import { options } from 'server/src/app/api/auth/[...nextauth]/options';

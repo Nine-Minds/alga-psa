@@ -7,7 +7,7 @@ import { getInvoiceForRendering } from '../invoiceQueries';
 import { getCompanyById } from '../company-actions/companyActions';
 import { JobStatus } from 'server/src/types/job.d';
 import logger from '@shared/core/logger';
-import { withTransaction } from '../../../../../shared/db';
+import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 
 export const scheduleInvoiceEmailAction = async (invoiceIds: string[]) => {

@@ -1,6 +1,6 @@
 'use server'
 import { createTenantKnex } from '../../../lib/db';
-import { withTransaction } from '../../../../../shared/db';
+import { withTransaction } from '@shared/db';
 import { ITimePeriod, ITimePeriodSettings } from '../../../interfaces/timeEntry.interfaces';
 import { set, getDaysInMonth } from 'date-fns';
 import { formatISO } from 'date-fns';

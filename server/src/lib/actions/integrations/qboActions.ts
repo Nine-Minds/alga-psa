@@ -6,7 +6,7 @@ import axios from 'axios'; // Import axios
 import { ISecretProvider } from '@shared/core'; 
 import { WorkflowEventAttachmentModel } from 'server/src/models/workflowEventAttachment';
 import { createTenantKnex } from '../../db';
-import { withTransaction } from '../../../../../shared/db';
+import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { getSecretProviderInstance } from '@shared/core';
 import { QboClientService } from '../../qbo/qboClientService';
