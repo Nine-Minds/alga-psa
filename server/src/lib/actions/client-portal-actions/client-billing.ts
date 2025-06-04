@@ -3,7 +3,7 @@
 import { getServerSession } from 'next-auth';
 import { options } from 'server/src/app/api/auth/[...nextauth]/options';
 import { getConnection } from 'server/src/lib/db/db';
-import { withTransaction } from '../../../../../shared/db';
+import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { getUserRolesWithPermissions } from 'server/src/lib/actions/user-actions/userActions';
 import {

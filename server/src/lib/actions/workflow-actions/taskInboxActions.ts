@@ -8,7 +8,7 @@ import { getActionRegistry } from '@shared/workflow/core/actionRegistry';
 import WorkflowTaskModel, { WorkflowTaskStatus } from '@shared/workflow/persistence/workflowTaskModel';
 import WorkflowEventModel from '@shared/workflow/persistence/workflowEventModel';
 import { TaskSubmissionParams, TaskDetails, TaskQueryParams, TaskQueryResult, TaskEventNames } from '@shared/workflow/persistence/taskInboxInterfaces';
-import { withTransaction } from '../../../../../shared/db';
+import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
 import { revalidatePath } from "next/cache";

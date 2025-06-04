@@ -10,7 +10,7 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { validateData, validateArray } from 'server/src/lib/utils/validation';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '../../../../../shared/db';
+import { withTransaction } from '@shared/db';
 import { omit } from 'lodash';
 import { 
     createTaskSchema, 
@@ -18,6 +18,7 @@ import {
     createChecklistItemSchema, 
     updateChecklistItemSchema
 } from 'server/src/lib/schemas/project.schemas';
+import { OrderingService } from '../../services/orderingService';
 
 async function checkPermission(user: IUser, resource: string, action: string): Promise<void> {
     const hasPermissionResult = await hasPermission(user, resource, action);
@@ -147,7 +148,8 @@ export async function addTaskToPhase(
 export async function updateTaskStatus(
     taskId: string, 
     projectStatusMappingId: string,
-    position?: number // Optional position to insert the task
+    beforeTaskId?: string | null,
+    afterTaskId?: string | null
 ): Promise<IProjectTask> {
     
     const {knex: db, tenant} = await createTenantKnex();
@@ -180,75 +182,54 @@ export async function updateTaskStatus(
                 throw new Error('Target status not found');
             }
 
-            // Get all tasks in the target status
-            const targetStatusTasks = await trx<IProjectTask>('project_tasks')
-                .where('project_status_mapping_id', projectStatusMappingId)
-                .andWhere('phase_id', task.phase_id)
-                .andWhere('tenant', tenant!)
-                .orderBy('wbs_code');
+            // Get order keys for positioning
+            let beforeKey: string | null = null;
+            let afterKey: string | null = null;
             
-        // Generate new WBS codes
-        const parentWbs = task.wbs_code.split('.').slice(0, -1).join('.');
-        const updates = [];
-
-        if (targetStatusTasks.length === 0) {
-            // If moving to empty status, just use .1
-            updates.push({
-                taskId: taskId,
-                newWbsCode: `${parentWbs}.1`
-            });
-        } else if (typeof position === 'number' && position >= 0 && position <= targetStatusTasks.length) {
-            // If position is specified, insert at that position and shift others
-            const before = targetStatusTasks.slice(0, position);
-            const after = targetStatusTasks.slice(position);
-
-            // Update tasks before insertion point
-            before.forEach((t, index) => {
-                updates.push({
-                    taskId: t.task_id,
-                    newWbsCode: `${parentWbs}.${index + 1}`
-                });
-            });
-
-            // Add moved task at specified position
-            updates.push({
-                taskId: taskId,
-                newWbsCode: `${parentWbs}.${position + 1}`
-            });
-
-            // Update tasks after insertion point
-            after.forEach((t, index) => {
-                updates.push({
-                    taskId: t.task_id,
-                    newWbsCode: `${parentWbs}.${position + index + 2}`
-                });
-            });
-        } else {
-            // Default behavior - add to end
-            targetStatusTasks.forEach((t, index) => {
-                updates.push({
-                    taskId: t.task_id,
-                    newWbsCode: `${parentWbs}.${index + 1}`
-                });
-            });
-
-            updates.push({
-                taskId: taskId,
-                newWbsCode: `${parentWbs}.${targetStatusTasks.length + 1}`
-            });
-        }
-
-            // Update all tasks
-            await Promise.all(updates.map(({taskId, newWbsCode}): Promise<number> =>
-                trx('project_tasks')
-                    .where('task_id', taskId)
-                    .andWhere('tenant', tenant!)
-                    .update({
-                        wbs_code: newWbsCode,
+            if (beforeTaskId) {
+                const beforeTask = await trx('project_tasks')
+                    .where({ task_id: beforeTaskId, tenant })
+                    .select('order_key')
+                    .first();
+                beforeKey = beforeTask?.order_key || null;
+                console.log('Before task:', beforeTaskId, 'key:', beforeKey);
+            }
+            
+            if (afterTaskId) {
+                const afterTask = await trx('project_tasks')
+                    .where({ task_id: afterTaskId, tenant })
+                    .select('order_key')
+                    .first();
+                afterKey = afterTask?.order_key || null;
+                console.log('After task:', afterTaskId, 'key:', afterKey);
+            }
+            
+            // If no position specified, add to end of target status
+            if (!beforeKey && !afterKey) {
+                const lastTask = await trx('project_tasks')
+                    .where({ 
+                        phase_id: task.phase_id,
                         project_status_mapping_id: projectStatusMappingId,
-                        updated_at: trx.fn.now()
+                        tenant 
                     })
-            ));
+                    .orderBy('order_key', 'desc')
+                    .first();
+                beforeKey = lastTask?.order_key || null;
+                console.log('No position specified, adding to end. Last task key:', beforeKey);
+            }
+            
+            const newOrderKey = OrderingService.generateKeyForPosition(beforeKey, afterKey);
+            console.log('Generated new order key:', newOrderKey, 'between:', beforeKey, 'and', afterKey);
+
+            // Update the task
+            await trx('project_tasks')
+                .where('task_id', taskId)
+                .andWhere('tenant', tenant!)
+                .update({
+                    project_status_mapping_id: projectStatusMappingId,
+                    order_key: newOrderKey,
+                    updated_at: trx.fn.now()
+                });
 
             const updatedTask = await trx<IProjectTask>('project_tasks')
                 .where('task_id', taskId)
@@ -486,7 +467,14 @@ export async function deleteTaskTicketLinkAction(linkId: string): Promise<void> 
     }
 }
 
-export async function moveTaskToPhase(taskId: string, newPhaseId: string, newStatusMappingId?: string): Promise<IProjectTask> {
+export async function moveTaskToPhase(
+    taskId: string, 
+    newPhaseId: string, 
+    newStatusMappingId?: string,
+    targetProjectId?: string,
+    beforeTaskId?: string | null,
+    afterTaskId?: string | null
+): Promise<IProjectTask> {
     try {
         const currentUser = await getCurrentUser();
         if (!currentUser) {
@@ -579,25 +567,67 @@ export async function moveTaskToPhase(taskId: string, newPhaseId: string, newSta
         // Generate new WBS code for the task
         const newWbsCode = await ProjectModel.generateNextWbsCode(newPhase.wbs_code);
 
-        // Update task with new phase, project, and WBS code
+        // Get order key for new position
         const {knex: db, tenant} = await createTenantKnex();
-        const updatedTask = await db.transaction(async (trx) => {
+        const updatedTask = await withTransaction(db, async (trx) => {
+            let beforeKey: string | null = null;
+            let afterKey: string | null = null;
+            
+            if (beforeTaskId) {
+                const beforeTask = await trx('project_tasks')
+                    .where({ task_id: beforeTaskId, tenant })
+                    .select('order_key')
+                    .first();
+                beforeKey = beforeTask?.order_key || null;
+            }
+            
+            if (afterTaskId) {
+                const afterTask = await trx('project_tasks')
+                    .where({ task_id: afterTaskId, tenant })
+                    .select('order_key')
+                    .first();
+                afterKey = afterTask?.order_key || null;
+            }
+            
+            // If no position specified, add to end of target status
+            if (!beforeKey && !afterKey) {
+                const lastTask = await trx('project_tasks')
+                    .where({ 
+                        phase_id: newPhaseId, 
+                        project_status_mapping_id: finalStatusMappingId,
+                        tenant 
+                    })
+                    .orderBy('order_key', 'desc')
+                    .first();
+                beforeKey = lastTask?.order_key || null;
+            }
+            
+            const newOrderKey = OrderingService.generateKeyForPosition(beforeKey, afterKey);
+
+            const updateData: any = {
+                phase_id: newPhaseId,
+                wbs_code: newWbsCode,
+                project_status_mapping_id: finalStatusMappingId,
+                order_key: newOrderKey,
+                // Preserve other important fields
+                task_name: existingTask.task_name,
+                description: existingTask.description,
+                assigned_to: existingTask.assigned_to,
+                estimated_hours: existingTask.estimated_hours,
+                actual_hours: existingTask.actual_hours,
+                due_date: existingTask.due_date,
+                updated_at: trx.fn.now()
+            };
+            
+            // If moving to different project, update project_id
+            if (targetProjectId && targetProjectId !== currentPhase.project_id) {
+                updateData.project_id = targetProjectId;
+            }
+            
             const [updatedTask] = await trx<IProjectTask>('project_tasks')
                 .where('task_id', taskId)
                 .andWhere('tenant', tenant!)
-                .update({
-                    phase_id: newPhaseId,
-                    wbs_code: newWbsCode,
-                    project_status_mapping_id: finalStatusMappingId,
-                    // Preserve other important fields
-                    task_name: existingTask.task_name,
-                    description: existingTask.description,
-                    assigned_to: existingTask.assigned_to,
-                    estimated_hours: existingTask.estimated_hours,
-                    actual_hours: existingTask.actual_hours,
-                    due_date: existingTask.due_date,
-                    updated_at: db.fn.now()
-                })
+                .update(updateData)
                 .returning('*');
             
             // Update all ticket links to point to new project and phase
@@ -754,19 +784,37 @@ export async function duplicateTaskToPhase(
         }
         // If options.newStatusMappingId is provided, it's already set as finalStatusMappingId
 
-        // 3. Prepare new task data
+        // 3. Get order key for end of target status
+        const {knex: db, tenant} = await createTenantKnex();
+        
+        const lastTask = await db('project_tasks')
+            .where({ 
+                phase_id: newPhaseId, 
+                project_status_mapping_id: finalStatusMappingId,
+                tenant 
+            })
+            .orderBy('order_key', 'desc')
+            .first();
+            
+        const orderKey = OrderingService.generateKeyForPosition(
+            lastTask?.order_key || null,
+            null
+        );
+
+        // 4. Prepare new task data
         const newTaskData: Omit<IProjectTask, 'task_id' | 'phase_id' | 'wbs_code' | 'created_at' | 'updated_at' | 'tenant'> = {
-            task_name: originalTask.task_name, // Keep original title
+            task_name: originalTask.task_name + ' (Copy)', // Add (Copy) suffix
             description: originalTask.description,
             due_date: originalTask.due_date,
             estimated_hours: originalTask.estimated_hours,
             actual_hours: 0, // Reset actual hours for the new task
             assigned_to: options?.duplicatePrimaryAssignee ? originalTask.assigned_to : null,
             project_status_mapping_id: finalStatusMappingId,
+            order_key: orderKey,
             // Fields omitted: task_id, phase_id, wbs_code, created_at, updated_at, tenant (handled by model)
         };
 
-        // 4. Create the new task
+        // 5. Create the new task
         const newTask = await ProjectTaskModel.addTask(newPhaseId, newTaskData);
 
         // 5. Optionally duplicate related data
@@ -892,6 +940,53 @@ export async function getTaskWithDetails(taskId: string, user: IUser) {
     }
 }
 
+export async function reorderTask(
+    taskId: string,
+    beforeTaskId?: string | null,
+    afterTaskId?: string | null
+): Promise<void> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error("user not found");
+    }
+
+    await checkPermission(currentUser, 'project', 'update');
+    
+    const {knex: db, tenant} = await createTenantKnex();
+    
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+        // Get order keys for positioning
+        let beforeKey: string | null = null;
+        let afterKey: string | null = null;
+        
+        if (beforeTaskId) {
+            const beforeTask = await trx('project_tasks')
+                .where({ task_id: beforeTaskId, tenant })
+                .select('order_key')
+                .first();
+            beforeKey = beforeTask?.order_key || null;
+        }
+        
+        if (afterTaskId) {
+            const afterTask = await trx('project_tasks')
+                .where({ task_id: afterTaskId, tenant })
+                .select('order_key')
+                .first();
+            afterKey = afterTask?.order_key || null;
+        }
+        
+        const newOrderKey = OrderingService.generateKeyForPosition(beforeKey, afterKey);
+        
+        await trx('project_tasks')
+            .where({ task_id: taskId, tenant })
+            .update({
+                order_key: newOrderKey,
+                updated_at: trx.fn.now()
+            });
+    });
+}
+
+// Keep the old function for backward compatibility but update it to use order_key
 export async function reorderTasksInStatus(tasks: { taskId: string, newWbsCode: string }[]): Promise<void> {
     try {
         const currentUser = await getCurrentUser();
@@ -902,7 +997,7 @@ export async function reorderTasksInStatus(tasks: { taskId: string, newWbsCode: 
         await checkPermission(currentUser, 'project', 'update');
 
         const {knex: db, tenant} = await createTenantKnex();
-        await db.transaction(async (trx: Knex.Transaction) => {
+        await withTransaction(db, async (trx: Knex.Transaction) => {
             const taskRecords = await trx('project_tasks')
                 .whereIn('task_id', tasks.map((t): string => t.taskId))
                 .andWhere('tenant', tenant!)

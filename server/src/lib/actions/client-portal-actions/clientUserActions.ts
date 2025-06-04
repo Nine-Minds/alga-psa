@@ -1,7 +1,7 @@
 'use server';
 
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '../../../../../shared/db';
+import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
 import { IUser } from 'server/src/interfaces/auth.interfaces';;

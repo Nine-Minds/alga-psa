@@ -12,7 +12,7 @@ import {
 import ProjectModel from './project'
 
 const ProjectTaskModel = {
-  addTask: async (phaseId: string, taskData: Omit<IProjectTask, 'task_id' | 'phase_id' | 'created_at' | 'updated_at' | 'tenant' | 'wbs_code'>): Promise<IProjectTask> => {
+  addTask: async (phaseId: string, taskData: Omit<IProjectTask, 'task_id' | 'phase_id' | 'created_at' | 'updated_at' | 'tenant' | 'wbs_code'> & { order_key?: string }): Promise<IProjectTask> => {
     try {
       const {knex: db, tenant} = await createTenantKnex();
       const phase = await ProjectModel.getPhaseById(phaseId);
@@ -23,6 +23,21 @@ const ProjectTaskModel = {
   
       const newWbsCode = await ProjectModel.generateNextWbsCode(phase.wbs_code);
   
+      // If no order_key provided, generate one at the end
+      let orderKey = taskData.order_key;
+      if (!orderKey) {
+        const { generateKeyBetween } = await import('fractional-indexing');
+        const lastTask = await db('project_tasks')
+          .where({ 
+            phase_id: phaseId, 
+            project_status_mapping_id: taskData.project_status_mapping_id,
+            tenant 
+          })
+          .orderBy('order_key', 'desc')
+          .first();
+        orderKey = generateKeyBetween(lastTask?.order_key || null, null);
+      }
+  
       const [newTask] = await db<IProjectTask>('project_tasks')
         .insert({
           ...taskData,
@@ -31,6 +46,7 @@ const ProjectTaskModel = {
           phase_id: phaseId,
           project_status_mapping_id: taskData.project_status_mapping_id,
           wbs_code: newWbsCode,
+          order_key: orderKey,
           tenant: tenant!,
         })
         .returning('*');
@@ -55,7 +71,8 @@ const ProjectTaskModel = {
         'due_date',
         'actual_hours',
         'wbs_code',
-        'project_status_mapping_id'
+        'project_status_mapping_id',
+        'order_key'
       ];
       
       const finalTaskData: Partial<IProjectTask> = {
@@ -75,6 +92,7 @@ const ProjectTaskModel = {
             case 'description':
             case 'wbs_code':
             case 'project_status_mapping_id':
+            case 'order_key':
               if (typeof value === 'string') {
                 finalTaskData[typedKey] = value;
               }

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '../../../../../shared/db';
+import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { IDocumentAssociation, IDocumentAssociationInput } from 'server/src/interfaces/document-association.interface';

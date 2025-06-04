@@ -78,6 +78,10 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
       <ul className="space-y-2">
         {phases
           .sort((a, b) => {
+            // Sort by order_key if available, otherwise fall back to end_date
+            if (a.order_key && b.order_key) {
+              return a.order_key.localeCompare(b.order_key);
+            }
             const aDate = a.end_date ? new Date(a.end_date).getTime() : Infinity;
             const bDate = b.end_date ? new Date(b.end_date).getTime() : Infinity;
             return aDate - bDate;

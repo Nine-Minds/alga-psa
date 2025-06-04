@@ -1,7 +1,7 @@
 'use server';
 
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '../../../../../shared/db';
+import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 
 interface UpdateNumberResponse {

@@ -3,7 +3,7 @@
 import Comment from 'server/src/lib/models/comment';
 import { IComment } from 'server/src/interfaces/comment.interface';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '../../../../../shared/db';
+import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from 'server/src/lib/utils/blocknoteUtils';
 

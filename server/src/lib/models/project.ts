@@ -648,10 +648,20 @@ const ProjectModel = {
   addPhase: async (phaseData: Omit<IProjectPhase, 'phase_id' | 'created_at' | 'updated_at' | 'tenant'>): Promise<IProjectPhase> => {
     try {
       const {knex: db, tenant} = await createTenantKnex();
+      
+      // Generate order_key for the new phase
+      const { generateKeyBetween } = await import('fractional-indexing');
+      const lastPhase = await db('project_phases')
+        .where({ project_id: phaseData.project_id, tenant })
+        .orderBy('order_key', 'desc')
+        .first();
+      const orderKey = generateKeyBetween(lastPhase?.order_key || null, null);
+      
       const [newPhase] = await db<IProjectPhase>('project_phases')
         .insert({
           ...phaseData,
           phase_id: uuidv4(),
+          order_key: orderKey,
           tenant: tenant!,
           created_at: db.fn.now(),
           updated_at: db.fn.now()

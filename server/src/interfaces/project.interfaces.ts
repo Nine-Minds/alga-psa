@@ -46,6 +46,7 @@ export interface IProjectPhase extends TenantEntity {
   end_date: Date | null;
   status: string;
   order_number: number;
+  order_key?: string;
   created_at: Date;
   updated_at: Date;
   wbs_code: string;  
@@ -63,6 +64,7 @@ export interface IProjectTask extends TenantEntity {
   created_at: Date;
   updated_at: Date;
   wbs_code: string;  
+  order_key?: string;
   due_date: Date | null;
   checklist_items?: ITaskChecklistItem[];
   ticket_links?: IProjectTicketLinkWithDetails[];

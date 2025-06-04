@@ -3,7 +3,7 @@
 import { getCurrentUser } from '../user-actions/userActions';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getAdminConnection } from 'server/src/lib/db/admin';
-import { withTransaction } from '../../../../../shared/db';
+import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 
 import { JobStatus } from 'server/src/types/job.d';
