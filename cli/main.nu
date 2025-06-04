@@ -486,8 +486,9 @@ def dev-env-create [
     let app_port = find-free-port 30000
     let code_server_port = find-free-port ($app_port + 1)
     let code_app_port = find-free-port ($code_server_port + 1)
+    let ai_web_port = find-free-port ($code_app_port + 1)
     
-    if $app_port == 0 or $code_server_port == 0 or $code_app_port == 0 {
+    if $app_port == 0 or $code_server_port == 0 or $code_app_port == 0 or $ai_web_port == 0 {
         error make { msg: $"($color_red)Could not find available ports for services($color_reset)" }
     }
     
@@ -495,6 +496,7 @@ def dev-env-create [
     print $"  Main App:     ($app_port)"
     print $"  Code Server:  ($code_server_port)"
     print $"  Code App:     ($code_app_port)"
+    print $"  AI Web:       ($ai_web_port)"
     
     # Determine image tag based on options
     let image_tag = if ($from_tag | str length) > 0 {
@@ -596,6 +598,7 @@ devEnv:
     app: ($app_port)
     codeServer: ($code_server_port)
     codeApp: ($code_app_port)
+    aiWeb: ($ai_web_port)
 
 server:
   image:
@@ -846,11 +849,13 @@ def dev-env-connect [
             let app_port = ($ports_data.app | into int)
             let code_server_port = ($ports_data.codeServer | into int)
             let code_app_port = ($ports_data.codeApp | into int)
+            let ai_web_port = ($ports_data.aiWeb | into int)
             
             print $"($color_green)Using assigned ports:($color_reset)"
             print $"  Main App:     ($app_port)"
             print $"  Code Server:  ($code_server_port)"
             print $"  Code App:     ($code_app_port)"
+            print $"  AI Web:       ($ai_web_port)"
             
             # Start port forwarding processes with assigned ports
             print $"($color_cyan)Starting port forwarding processes...($color_reset)"
@@ -859,6 +864,7 @@ def dev-env-connect [
             bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch)-code-server --address=127.0.0.1 ($code_server_port):8080 > /tmp/pf-code-server-($sanitized_branch).log 2>&1 &"
             bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch) --address=127.0.0.1 ($app_port):3000 > /tmp/pf-main-app-($sanitized_branch).log 2>&1 &"
             bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch)-code-server --address=127.0.0.1 ($code_app_port):3000 > /tmp/pf-code-app-($sanitized_branch).log 2>&1 &"
+            bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch)-ai-web --address=127.0.0.1 ($ai_web_port):3000 > /tmp/pf-ai-web-($sanitized_branch).log 2>&1 &"
             
             # Give processes time to start
             sleep 2sec
@@ -869,6 +875,7 @@ def dev-env-connect [
             print $"    Password: alga-dev"
             print $"  PSA App \(main\):     http://localhost:($app_port)"
             print $"  PSA App \(in code\):  http://localhost:($code_app_port)"
+            print $"  AI Web:             http://localhost:($ai_web_port)"
         }
         
         
@@ -884,6 +891,7 @@ def dev-env-connect [
         rm -f $"/tmp/pf-code-server-($sanitized_branch).log"
         rm -f $"/tmp/pf-main-app-($sanitized_branch).log" 
         rm -f $"/tmp/pf-code-app-($sanitized_branch).log"
+        rm -f $"/tmp/pf-ai-web-($sanitized_branch).log"
         
         print $"($color_cyan)Port forwarding stopped.($color_reset)"
 }
@@ -1234,6 +1242,7 @@ def dev-env-status [
         print $"  Main App:        localhost:($ports_data.app)"
         print $"  Code Server:     localhost:($ports_data.codeServer)"
         print $"  Code App:        localhost:($ports_data.codeApp)"
+        print $"  AI Web:          localhost:($ports_data.aiWeb)"
         print ""
     }
     
@@ -1458,6 +1467,219 @@ def build-code-server [
     }
 }
 
+# Build AI API Docker image
+def build-ai-api [
+    --tag: string = ""       # Docker tag to use (defaults to SHA)
+    --push                   # Push to registry after building
+    --use-latest             # Tag with both SHA and 'latest'
+] {
+    print $"($color_cyan)Building AI API Docker image...($color_reset)"
+    
+    let project_root = find-project-root
+    cd $project_root
+    
+    # Determine image name
+    let registry = "harbor.nineminds.com"
+    let namespace = "nineminds"
+    let image_name = "alga-ai-api"
+    let base_image = $"($registry)/($namespace)/($image_name)"
+    
+    # Generate SHA tag
+    let sha_tag = if ($tag | str length) > 0 {
+        $tag
+    } else {
+        # Generate unique tag using git commit SHA only (consistent across calls)
+        let git_sha = (git rev-parse --short HEAD | complete)
+        
+        if $git_sha.exit_code == 0 {
+            let sha = ($git_sha.stdout | str trim)
+            $sha
+        } else {
+            # Fallback if git is not available - use timestamp
+            let timestamp = (date now | format date '%Y%m%d-%H%M%S')
+            $"build-($timestamp)"
+        }
+    }
+    
+    # Build list of tags to apply
+    let tags_to_apply = if $use_latest {
+        # When --use-latest is specified, tag with both SHA and latest
+        [$sha_tag, "latest"]
+    } else {
+        # Otherwise just use the single tag
+        [$sha_tag]
+    }
+    
+    # Build tag arguments for docker build
+    let tag_args = ($tags_to_apply | each { |t| ["-t", $"($base_image):($t)"] } | flatten)
+    
+    print $"($color_yellow)Building with tags: ($tags_to_apply | str join ', ')($color_reset)"
+    print $"($color_cyan)Build output will be streamed to terminal...($color_reset)"
+    
+    # Build the image from the ai-automation directory
+    cd ($project_root | path join "tools" "ai-automation")
+    docker build --platform linux/amd64 -f Dockerfile ...$tag_args .
+    
+    # Check if build succeeded by checking if image exists
+    let image_check = do {
+        docker image inspect $"($base_image):($sha_tag)" | complete
+    }
+    
+    if $image_check.exit_code != 0 {
+        print $"($color_red)Build failed - image not created($color_reset)"
+        error make { msg: "Docker build failed" }
+    }
+    
+    print $"($color_green)Successfully built with tags: ($tags_to_apply | str join ', ')($color_reset)"
+    
+    if $push {
+        # Push all tags
+        for tag in $tags_to_apply {
+            let full_image = $"($base_image):($tag)"
+            print $"($color_yellow)Pushing: ($full_image)($color_reset)"
+            print $"($color_cyan)Push output will be streamed to terminal...($color_reset)"
+            
+            # Push the image - stream output directly
+            docker push $full_image
+            
+            # Check if push succeeded by trying to pull the image info from registry
+            let push_check = do {
+                docker manifest inspect $full_image | complete
+            }
+            
+            if $push_check.exit_code != 0 {
+                print $"($color_red)Push may have failed for ($full_image) - unable to verify image in registry($color_reset)"
+                print $"($color_yellow)Note: This could also mean the registry doesn't support manifest inspection($color_reset)"
+            } else {
+                print $"($color_green)Successfully pushed: ($full_image)($color_reset)"
+            }
+        }
+    }
+}
+
+# Build AI Web Docker image
+def build-ai-web [
+    --tag: string = ""       # Docker tag to use (defaults to SHA)
+    --push                   # Push to registry after building
+    --use-latest             # Tag with both SHA and 'latest'
+] {
+    print $"($color_cyan)Building AI Web Docker image...($color_reset)"
+    
+    let project_root = find-project-root
+    cd $project_root
+    
+    # Determine image name
+    let registry = "harbor.nineminds.com"
+    let namespace = "nineminds"
+    let image_name = "alga-ai-web"
+    let base_image = $"($registry)/($namespace)/($image_name)"
+    
+    # Generate SHA tag
+    let sha_tag = if ($tag | str length) > 0 {
+        $tag
+    } else {
+        # Generate unique tag using git commit SHA only (consistent across calls)
+        let git_sha = (git rev-parse --short HEAD | complete)
+        
+        if $git_sha.exit_code == 0 {
+            let sha = ($git_sha.stdout | str trim)
+            $sha
+        } else {
+            # Fallback if git is not available - use timestamp
+            let timestamp = (date now | format date '%Y%m%d-%H%M%S')
+            $"build-($timestamp)"
+        }
+    }
+    
+    # Build list of tags to apply
+    let tags_to_apply = if $use_latest {
+        # When --use-latest is specified, tag with both SHA and latest
+        [$sha_tag, "latest"]
+    } else {
+        # Otherwise just use the single tag
+        [$sha_tag]
+    }
+    
+    # Build tag arguments for docker build
+    let tag_args = ($tags_to_apply | each { |t| ["-t", $"($base_image):($t)"] } | flatten)
+    
+    print $"($color_yellow)Building with tags: ($tags_to_apply | str join ', ')($color_reset)"
+    print $"($color_cyan)Build output will be streamed to terminal...($color_reset)"
+    
+    # Build the image from the ai-automation/web directory
+    cd ($project_root | path join "tools" "ai-automation" "web")
+    docker build --platform linux/amd64 -f Dockerfile ...$tag_args .
+    
+    # Check if build succeeded by checking if image exists
+    let image_check = do {
+        docker image inspect $"($base_image):($sha_tag)" | complete
+    }
+    
+    if $image_check.exit_code != 0 {
+        print $"($color_red)Build failed - image not created($color_reset)"
+        error make { msg: "Docker build failed" }
+    }
+    
+    print $"($color_green)Successfully built with tags: ($tags_to_apply | str join ', ')($color_reset)"
+    
+    if $push {
+        # Push all tags
+        for tag in $tags_to_apply {
+            let full_image = $"($base_image):($tag)"
+            print $"($color_yellow)Pushing: ($full_image)($color_reset)"
+            print $"($color_cyan)Push output will be streamed to terminal...($color_reset)"
+            
+            # Push the image - stream output directly
+            docker push $full_image
+            
+            # Check if push succeeded by trying to pull the image info from registry
+            let push_check = do {
+                docker manifest inspect $full_image | complete
+            }
+            
+            if $push_check.exit_code != 0 {
+                print $"($color_red)Push may have failed for ($full_image) - unable to verify image in registry($color_reset)"
+                print $"($color_yellow)Note: This could also mean the registry doesn't support manifest inspection($color_reset)"
+            } else {
+                print $"($color_green)Successfully pushed: ($full_image)($color_reset)"
+            }
+        }
+    }
+}
+
+# Build all AI Docker images (API and Web)
+def build-ai-all [
+    --tag: string = ""       # Docker tag to use (defaults to SHA)
+    --push                   # Push to registry after building
+    --use-latest             # Tag with both SHA and 'latest'
+] {
+    print $"($color_cyan)Building all AI Docker images...($color_reset)"
+    
+    # Build AI API
+    if $push and $use_latest {
+        build-ai-api --tag $tag --push --use-latest
+    } else if $push {
+        build-ai-api --tag $tag --push
+    } else if $use_latest {
+        build-ai-api --tag $tag --use-latest
+    } else {
+        build-ai-api --tag $tag
+    }
+    
+    # Build AI Web
+    if $push and $use_latest {
+        build-ai-web --tag $tag --push --use-latest
+    } else if $push {
+        build-ai-web --tag $tag --push
+    } else if $use_latest {
+        build-ai-web --tag $tag --use-latest
+    } else {
+        build-ai-web --tag $tag
+    }
+    
+    print $"($color_green)All AI images built successfully!($color_reset)"
+}
+
 # Alga Development CLI Entry Point
 # Handles command-line arguments to run migration or workflow actions.
 def --wrapped main [
@@ -1515,6 +1737,18 @@ def --wrapped main [
        print "    --use-latest: Tag with both SHA and 'latest' (pushes both tags if --push is used)"
        print "    Example: nu main.nu build-code-server --push"
        print "    Example: nu main.nu build-code-server --tag v1.0.0 --push"
+       print "  nu main.nu build-ai-api [--tag <tag>] [--push] [--use-latest]"
+       print "    Build AI API Docker image"
+       print "    Example: nu main.nu build-ai-api --push"
+       print "    Example: nu main.nu build-ai-api --use-latest --push"
+       print "  nu main.nu build-ai-web [--tag <tag>] [--push] [--use-latest]"
+       print "    Build AI Web Docker image"
+       print "    Example: nu main.nu build-ai-web --push"
+       print "    Example: nu main.nu build-ai-web --tag v1.0.0 --push"
+       print "  nu main.nu build-ai-all [--tag <tag>] [--push] [--use-latest]"
+       print "    Build all AI Docker images (API and Web)"
+       print "    Example: nu main.nu build-ai-all --push"
+       print "    Example: nu main.nu build-ai-all --use-latest --push"
        print ""
        print "Alternatively, source the script ('source main.nu') and run commands directly:"
        print "  dev-env-create my-feature"
@@ -1573,6 +1807,18 @@ def --wrapped main [
        print "    --use-latest: Tag with both SHA and 'latest' (pushes both tags if --push is used)"
        print "    Example: nu main.nu build-code-server --push"
        print "    Example: nu main.nu build-code-server --tag v1.0.0 --push"
+       print "  nu main.nu build-ai-api [--tag <tag>] [--push] [--use-latest]"
+       print "    Build AI API Docker image"
+       print "    Example: nu main.nu build-ai-api --push"
+       print "    Example: nu main.nu build-ai-api --use-latest --push"
+       print "  nu main.nu build-ai-web [--tag <tag>] [--push] [--use-latest]"
+       print "    Build AI Web Docker image"
+       print "    Example: nu main.nu build-ai-web --push"
+       print "    Example: nu main.nu build-ai-web --tag v1.0.0 --push"
+       print "  nu main.nu build-ai-all [--tag <tag>] [--push] [--use-latest]"
+       print "    Build all AI Docker images (API and Web)"
+       print "    Example: nu main.nu build-ai-all --push"
+       print "    Example: nu main.nu build-ai-all --use-latest --push"
        print "\nAlternatively, source the script ('source main.nu') and run commands directly:"
        print "  migrate <action>"
        print "  dev-up [--detached] [--edition ce|ee]"
@@ -1765,8 +2011,65 @@ def --wrapped main [
                build-code-server --tag $tag
            }
        }
+       "build-ai-api" => {
+           # Parse flags
+           let command_args = ($args | skip 1)
+           let tag_idx = ($command_args | enumerate | where {|item| $item.item == "--tag"} | get 0?.index | default null)
+           let tag = if $tag_idx != null { ($command_args | get ($tag_idx + 1) | default "") } else { "" }
+           let push = ($command_args | any { |arg| $arg == "--push" })
+           let use_latest = ($command_args | any { |arg| $arg == "--use-latest" })
+           
+           # Call the build-ai-api command
+           if $push and $use_latest {
+               build-ai-api --tag $tag --push --use-latest
+           } else if $push {
+               build-ai-api --tag $tag --push
+           } else if $use_latest {
+               build-ai-api --tag $tag --use-latest
+           } else {
+               build-ai-api --tag $tag
+           }
+       }
+       "build-ai-web" => {
+           # Parse flags
+           let command_args = ($args | skip 1)
+           let tag_idx = ($command_args | enumerate | where {|item| $item.item == "--tag"} | get 0?.index | default null)
+           let tag = if $tag_idx != null { ($command_args | get ($tag_idx + 1) | default "") } else { "" }
+           let push = ($command_args | any { |arg| $arg == "--push" })
+           let use_latest = ($command_args | any { |arg| $arg == "--use-latest" })
+           
+           # Call the build-ai-web command
+           if $push and $use_latest {
+               build-ai-web --tag $tag --push --use-latest
+           } else if $push {
+               build-ai-web --tag $tag --push
+           } else if $use_latest {
+               build-ai-web --tag $tag --use-latest
+           } else {
+               build-ai-web --tag $tag
+           }
+       }
+       "build-ai-all" => {
+           # Parse flags
+           let command_args = ($args | skip 1)
+           let tag_idx = ($command_args | enumerate | where {|item| $item.item == "--tag"} | get 0?.index | default null)
+           let tag = if $tag_idx != null { ($command_args | get ($tag_idx + 1) | default "") } else { "" }
+           let push = ($command_args | any { |arg| $arg == "--push" })
+           let use_latest = ($command_args | any { |arg| $arg == "--use-latest" })
+           
+           # Call the build-ai-all command
+           if $push and $use_latest {
+               build-ai-all --tag $tag --push --use-latest
+           } else if $push {
+               build-ai-all --tag $tag --push
+           } else if $use_latest {
+               build-ai-all --tag $tag --use-latest
+           } else {
+               build-ai-all --tag $tag
+           }
+       }
        _ => {
-           error make { msg: $"($color_red)Unknown command: '($command)'. Must be 'migrate', 'dev-up', 'dev-down', 'dev-env-*', 'dev-env-force-cleanup', 'update-workflow', 'register-workflow', 'build-image', 'build-all-images', or 'build-code-server'.($color_reset)" }
+           error make { msg: $"($color_red)Unknown command: '($command)'. Must be 'migrate', 'dev-up', 'dev-down', 'dev-env-*', 'dev-env-force-cleanup', 'update-workflow', 'register-workflow', 'build-image', 'build-all-images', 'build-code-server', 'build-ai-api', 'build-ai-web', or 'build-ai-all'.($color_reset)" }
        }
    }
 }

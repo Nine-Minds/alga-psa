@@ -10,4 +10,5 @@ data:
   app: "{{ .Values.devEnv.externalPorts.app }}"
   codeServer: "{{ .Values.devEnv.externalPorts.codeServer }}"
   codeApp: "{{ .Values.devEnv.externalPorts.codeApp }}"
+  aiWeb: "{{ .Values.devEnv.externalPorts.aiWeb }}"
 {{- end }}
