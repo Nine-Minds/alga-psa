@@ -9,7 +9,13 @@ export interface ToolExecutionResult {
   };
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/api` : 'http://localhost:4000/api';
+// Use relative URLs - Next.js API routes will proxy to the backend
+const API_BASE = '/api';
+
+// Log configuration on load
+console.log('%c[INVOKE-TOOL] 🚀 Tool API Configuration', 'color: #3498db; font-weight: bold');
+console.log('%c[INVOKE-TOOL] API_BASE:', 'color: #3498db', API_BASE);
+console.log('%c[INVOKE-TOOL] Environment:', 'color: #3498db', process.env.NODE_ENV);
 
 // Get UI State
 export async function getUIState(jsonpath?: string): Promise<ToolExecutionResult> {

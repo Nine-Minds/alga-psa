@@ -33,11 +33,13 @@ spec:
           imagePullPolicy: {{ .Values.devEnv.aiAutomation.web.image.pullPolicy }}
           env:
             - name: NODE_ENV
-              value: "development"
+              value: "production"
             - name: PORT
               value: "3000"
             - name: NEXT_PUBLIC_API_URL
               value: "http://ai-api:4000"
+            - name: NODE_OPTIONS
+              value: "--max-http-header-size=26214400"
             # Environment markers
             - name: ALGA_DEV_ENV
               value: "true"

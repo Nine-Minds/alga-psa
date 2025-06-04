@@ -265,13 +265,56 @@ export default function ControlPanel() {
   }, [url, username, password]);
 
   useEffect(() => {
-    const socket = io('http://localhost:4000');
-    socket.on('connect', () => console.log('WS connected'));
+    console.log('=== Socket.IO Configuration ===');
+    console.log('Origin:', window.location.origin);
+    console.log('Environment:', process.env.NODE_ENV);
+    console.log('================================');
+    
+    // Connect to Socket.IO through the same origin (proxied by Next.js)
+    const socket = io({
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
+    
+    socket.on('connect', () => {
+      console.log('✅ WebSocket connected');
+      console.log('Socket ID:', socket.id);
+      console.log('Transport:', socket.io.engine.transport.name);
+    });
+    
+    socket.on('connect_error', (error) => {
+      console.error('❌ WebSocket connection error:', error.message);
+      console.error('Error type:', error.type);
+      console.error('Error details:', error);
+    });
+    
     socket.on('screenshot', (data: string) => {
+      console.log('📸 Screenshot received, size:', data.length);
       setImgSrc(`data:image/png;base64,${data}`);
     });
-    socket.on('disconnect', () => console.log('WS disconnected'));
-    return () => { socket.disconnect(); };
+    
+    socket.on('disconnect', (reason) => {
+      console.log('🔌 WebSocket disconnected:', reason);
+      if (reason === 'io server disconnect') {
+        console.log('Server initiated disconnect, attempting reconnect...');
+        socket.connect();
+      }
+    });
+    
+    socket.on('reconnect', (attemptNumber) => {
+      console.log('🔄 WebSocket reconnected after', attemptNumber, 'attempts');
+    });
+    
+    socket.on('reconnect_error', (error) => {
+      console.error('❌ WebSocket reconnection error:', error);
+    });
+    
+    return () => { 
+      console.log('🧹 Cleaning up WebSocket connection');
+      socket.disconnect(); 
+    };
   }, []);
 
   // Fetch browser status on component mount and periodically
@@ -329,28 +372,34 @@ export default function ControlPanel() {
 
   const fetchBrowserStatus = async () => {
     try {
-      const response = await fetch('http://localhost:4000/api/browser/status');
+      console.log('[CLIENT] Fetching browser status from /api/browser/status (proxy to backend)');
+      const response = await fetch('/api/browser/status');
+      console.log('[CLIENT] Browser status response:', response.status, response.statusText);
       if (response.ok) {
         const status = await response.json();
+        console.log('[CLIENT] Browser status data:', status);
         setBrowserStatus(status);
         // Determine if we're in pop out mode based on current session
         const currentSession = status.sessions.find((s: { id: string; mode: 'headless' | 'headed' }) => s.id === status.currentSessionId);
         setIsPopOutMode(currentSession?.mode === 'headed');
       }
     } catch (error) {
-      console.error('Error fetching browser status:', error);
+      console.error('[CLIENT] Error fetching browser status:', error);
     }
   };
 
   const handlePopOut = async () => {
     try {
-      const response = await fetch('http://localhost:4000/api/browser/pop-out', {
+      console.log('[CLIENT] Calling /api/browser/pop-out (proxy to backend)');
+      const response = await fetch('/api/browser/pop-out', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
+      console.log('[CLIENT] Pop-out response:', response.status, response.statusText);
       
       if (response.ok) {
         const result = await response.json();
+        console.log('[CLIENT] Pop-out result:', result);
         setLog(prev => [...prev, {
           type: 'navigation',
           title: 'Browser Popped Out',
@@ -363,6 +412,7 @@ export default function ControlPanel() {
         throw new Error('Failed to pop out browser');
       }
     } catch (error) {
+      console.error('[CLIENT] Pop-out error:', error);
       setLog(prev => [...prev, {
         type: 'error',
         title: 'Pop Out Error',
@@ -374,13 +424,16 @@ export default function ControlPanel() {
 
   const handlePopIn = async () => {
     try {
-      const response = await fetch('http://localhost:4000/api/browser/pop-in', {
+      console.log('[CLIENT] Calling /api/browser/pop-in (proxy to backend)');
+      const response = await fetch('/api/browser/pop-in', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
+      console.log('[CLIENT] Pop-in response:', response.status, response.statusText);
       
       if (response.ok) {
         const result = await response.json();
+        console.log('[CLIENT] Pop-in result:', result);
         setLog(prev => [...prev, {
           type: 'navigation',
           title: 'Browser Popped In',
@@ -393,6 +446,7 @@ export default function ControlPanel() {
         throw new Error('Failed to pop in browser');
       }
     } catch (error) {
+      console.error('[CLIENT] Pop-in error:', error);
       setLog(prev => [...prev, {
         type: 'error',
         title: 'Pop In Error',
@@ -448,12 +502,18 @@ export default function ControlPanel() {
         return msg;
       });
 
+    // TODO: This should be refactored to use POST requests to avoid 431 errors
+    // when message history gets long. EventSource only supports GET, so we'd need
+    // to switch to fetch() with manual streaming or use WebSockets
     const queryParams = new URLSearchParams({
       messages: JSON.stringify(filteredMessages)
     });
 
-    console.log('Starting new SSE session');
+    console.log('[CLIENT] Starting new SSE session to /api/ai (proxy to backend)');
+    console.log('[CLIENT] Message count:', filteredMessages.length);
+    console.log('[CLIENT] Query params size:', queryParams.toString().length, 'bytes');
     eventSourceRef.current = new EventSource(`/api/ai?${queryParams.toString()}`);
+    console.log('[CLIENT] SSE connection created');
     return eventSourceRef.current;
   };
 
@@ -719,14 +779,18 @@ export default function ControlPanel() {
                         variant="ghost"
                         onClick={async () => {
                           try {
-                            const response = await fetch('http://localhost:4000/api/ui-state');
+                            console.log('[CLIENT] Fetching UI state from /api/ui-state (proxy to backend)');
+                            const response = await fetch('/api/ui-state');
+                            console.log('[CLIENT] UI state response:', response.status, response.statusText);
                             if (!response.ok) {
                               throw new Error('Failed to fetch UI state');
                             }
                             const data = await response.json();
+                            console.log('[CLIENT] UI state data:', data);
                             setUIStateData(data);
                             setShowUIState(true);
                           } catch (error) {
+                            console.error('[CLIENT] UI state error:', error);
                             setLog(prev => [...prev, {
                               type: 'error',
                               title: 'UI State Error',
@@ -759,16 +823,21 @@ export default function ControlPanel() {
                         style={{ padding: '0 8px', height: '37px' }}
                         onClick={async () => {
                           try {
-                            const response = await fetch('http://localhost:4000/api/puppeteer', {
+                            console.log('[CLIENT] Navigating via /api/puppeteer (proxy to backend)');
+                            console.log('[CLIENT] Navigation URL:', url);
+                            const response = await fetch('/api/puppeteer', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({
-                                script: `(async () => { await helper.navigate('http://server:3000'); })();`
+                                script: `(async () => { await helper.navigate('${url}'); })();`
                               })
                             });
+                            console.log('[CLIENT] Navigation response:', response.status, response.statusText);
                             if (!response.ok) {
                               throw new Error('Navigation failed');
                             }
+                            const result = await response.json();
+                            console.log('[CLIENT] Navigation result:', result);
                             setLog(prev => [...prev, {
                               type: 'navigation',
                               title: 'Navigation',
@@ -776,6 +845,7 @@ export default function ControlPanel() {
                               timestamp: new Date().toISOString()
                             }]);
                           } catch (error: unknown) {
+                            console.error('[CLIENT] Navigation error:', error);
                             const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
                             setLog(prev => [...prev, {
                               type: 'error',
@@ -1156,16 +1226,21 @@ export default function ControlPanel() {
                   <Button 
                     onClick={async () => {
                       try {
-                        const response = await fetch('http://localhost:4000/api/puppeteer', {
+                        console.log('[CLIENT] Executing code via /api/puppeteer (proxy to backend)');
+                        console.log('[CLIENT] Code to execute:', codeToExecute);
+                        const response = await fetch('/api/puppeteer', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({
                             script: codeToExecute
                           })
                         });
+                        console.log('[CLIENT] Code execution response:', response.status, response.statusText);
                         if (!response.ok) {
                           throw new Error('Code execution failed');
                         }
+                        const result = await response.json();
+                        console.log('[CLIENT] Code execution result:', result);
                         setLog(prev => [...prev, {
                           type: 'tool_use',
                           title: 'Code Execution',
@@ -1174,6 +1249,7 @@ export default function ControlPanel() {
                         }]);
                         setShowCodeExecution(false);
                       } catch (error: unknown) {
+                        console.error('[CLIENT] Code execution error:', error);
                         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
                         setLog(prev => [...prev, {
                           type: 'error',

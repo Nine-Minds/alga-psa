@@ -869,6 +869,32 @@ def dev-env-connect [
             # Give processes time to start
             sleep 2sec
             
+            # Check if port forwarding started successfully
+            let pf_check = do {
+                bash -c $"ps aux | grep -E 'kubectl port-forward.*alga-dev-($sanitized_branch)' | grep -v grep | wc -l" | complete
+            }
+            
+            if ($pf_check.stdout | str trim | into int) < 4 {
+                print $"($color_yellow)Warning: Some port forwarding processes may not have started properly($color_reset)"
+                print "Checking logs..."
+                
+                # Show any errors from log files
+                for log_file in [
+                    $"/tmp/pf-code-server-($sanitized_branch).log"
+                    $"/tmp/pf-main-app-($sanitized_branch).log"
+                    $"/tmp/pf-code-app-($sanitized_branch).log"
+                    $"/tmp/pf-ai-web-($sanitized_branch).log"
+                ] {
+                    if ($log_file | path exists) {
+                        let content = (open $log_file)
+                        if ($content | str contains "error") {
+                            print $"($color_red)Errors in ($log_file):($color_reset)"
+                            print $content
+                        }
+                    }
+                }
+            }
+            
             # Display the URLs
             print $"($color_cyan)Port forwarding setup:($color_reset)"
             print $"  Code Server:        http://localhost:($code_server_port)"
@@ -1562,8 +1588,26 @@ def build-ai-web [
     --tag: string = ""       # Docker tag to use (defaults to SHA)
     --push                   # Push to registry after building
     --use-latest             # Tag with both SHA and 'latest'
+    --local                  # Build locally instead of in Kubernetes
+    --cpu: string = "4"      # CPU cores to allocate for Kubernetes builds
+    --memory: string = "4Gi" # Memory to allocate for Kubernetes builds
 ] {
-    print $"($color_cyan)Building AI Web Docker image...($color_reset)"
+    # If --local flag is NOT set, use Kubernetes build (default)
+    if not $local {
+        if $push and $use_latest {
+            build-ai-web-k8s --tag $tag --push --use-latest --cpu $cpu --memory $memory
+        } else if $push {
+            build-ai-web-k8s --tag $tag --push --cpu $cpu --memory $memory
+        } else if $use_latest {
+            build-ai-web-k8s --tag $tag --use-latest --cpu $cpu --memory $memory
+        } else {
+            build-ai-web-k8s --tag $tag --cpu $cpu --memory $memory
+        }
+        return
+    }
+    
+    # Local build logic
+    print $"($color_cyan)Building AI Web Docker image locally...($color_reset)"
     
     let project_root = find-project-root
     cd $project_root
@@ -1643,6 +1687,397 @@ def build-ai-web [
             } else {
                 print $"($color_green)Successfully pushed: ($full_image)($color_reset)"
             }
+        }
+    }
+}
+
+# Build AI Web Docker image using Kubernetes job
+def build-ai-web-k8s [
+    --tag: string = ""       # Docker tag to use (defaults to SHA)
+    --push                   # Push to registry after building
+    --use-latest             # Tag with both SHA and 'latest'
+    --namespace: string = "default"  # Kubernetes namespace to run the job in
+    --cpu: string = "4"      # CPU cores to allocate
+    --memory: string = "4Gi" # Memory to allocate
+] {
+    print $"($color_cyan)Building AI Web Docker image using Kubernetes job...($color_reset)"
+    
+    let project_root = find-project-root
+    cd $project_root
+    
+    # Determine image name
+    let registry = "harbor.nineminds.com"
+    let namespace_img = "nineminds"
+    let image_name = "alga-ai-web"
+    let base_image = $"($registry)/($namespace_img)/($image_name)"
+    
+    # Generate SHA tag
+    let sha_tag = if ($tag | str length) > 0 {
+        $tag
+    } else {
+        # Generate unique tag using git commit SHA only (consistent across calls)
+        let git_sha = (git rev-parse --short HEAD | complete)
+        
+        if $git_sha.exit_code == 0 {
+            let sha = ($git_sha.stdout | str trim)
+            $sha
+        } else {
+            # Fallback if git is not available - use timestamp
+            let timestamp = (date now | format date '%Y%m%d-%H%M%S')
+            $"build-($timestamp)"
+        }
+    }
+    
+    # Get current git branch/ref
+    let git_ref = (git rev-parse HEAD | complete)
+    let current_ref = if $git_ref.exit_code == 0 {
+        ($git_ref.stdout | str trim)
+    } else {
+        "main"
+    }
+    
+    # Build list of tags to apply
+    let tags_to_apply = if $use_latest {
+        # When --use-latest is specified, tag with both SHA and latest
+        [$sha_tag, "latest"]
+    } else {
+        # Otherwise just use the single tag
+        [$sha_tag]
+    }
+    
+    # Generate unique job name
+    let timestamp = (date now | format date '%Y%m%d-%H%M%S')
+    let job_name = $"ai-web-build-($timestamp)"
+    
+    print $"($color_yellow)Building with tags: ($tags_to_apply | str join ', ')($color_reset)"
+    print $"($color_yellow)Using Kubernetes job: ($job_name)($color_reset)"
+    print $"($color_cyan)Using existing harbor-credentials secret for registry authentication($color_reset)"
+    
+    # Create values file for the Helm job
+    let values_content = {
+        buildJob: {
+            name: $job_name,
+            namespace: $namespace,
+            type: "ai-web",
+            timeout: 1800,
+            ttl: 300,
+            gitRepo: "https://github.com/nine-minds/alga-psa.git",
+            gitRef: $current_ref,
+            buildPath: "tools/ai-automation/web",
+            dockerfile: "Dockerfile",
+            context: ".",
+            registry: $registry,
+            push: $push,
+            tags: ($tags_to_apply | each { |t| $"($base_image):($t)" }),
+            resources: {
+                cpu: $cpu,
+                memory: $memory,
+                cpuLimit: $cpu,
+                memoryLimit: $memory
+            }
+        }
+    }
+    
+    print $"($color_cyan)Creating build job in Kubernetes...($color_reset)"
+    
+    # Ensure harbor-credentials exists in the namespace
+    let secret_check = do {
+        kubectl get secret harbor-credentials -n $namespace | complete
+    }
+    
+    if $secret_check.exit_code != 0 {
+        print $"($color_yellow)Copying harbor-credentials to namespace ($namespace)...($color_reset)"
+        let copy_result = do {
+            kubectl get secret harbor-credentials -n nineminds -o yaml | sed $"s/namespace: nineminds/namespace: ($namespace)/" | kubectl apply -f - | complete
+        }
+        
+        if $copy_result.exit_code != 0 {
+            print $"($color_red)Failed to copy harbor-credentials to namespace($color_reset)"
+            error make { msg: "Harbor credentials not available in target namespace" }
+        }
+    }
+    
+    # Build docker tags arguments
+    let docker_tags = ($tags_to_apply | each { |t| $"-t ($base_image):($t)" } | str join ' ')
+    
+    # Build push commands if needed
+    let push_commands = if $push {
+        let push_cmds = ($tags_to_apply | each { |t| $"docker push ($base_image):($t)" } | str join "\n")
+        $"echo 'Pushing Docker images...'\n($push_cmds)"
+    } else {
+        ""
+    }
+    
+    # Create the shell script content
+    let build_script = '#!/bin/sh
+set -e
+echo "Starting build process..."
+
+# Wait for Docker daemon to be ready
+timeout=60
+until docker info >/dev/null 2>&1; do
+  if [ $timeout -le 0 ]; then
+    echo "Docker daemon did not start in time"
+    exit 1
+  fi
+  echo "Waiting for Docker daemon..."
+  timeout=$((timeout - 5))
+  sleep 5
+done
+
+echo "Docker daemon is ready"
+
+# Configure Docker to use the registry from harbor-credentials secret
+echo "Configuring Docker registry authentication..."
+mkdir -p /root/.docker
+cp /harbor-creds/.dockerconfigjson /root/.docker/config.json
+echo "Docker registry authentication configured"
+
+# Clone the repository
+echo "Cloning repository..."
+git clone https://github.com/nine-minds/alga-psa.git /workspace
+cd /workspace
+
+# Checkout the specified branch/commit
+echo "Checking out ' + $current_ref + '..."
+git checkout ' + $current_ref + '
+
+# Navigate to the build directory
+cd tools/ai-automation/web
+
+# Build the Docker image
+echo "Building Docker image..."
+docker build --platform linux/amd64 -f Dockerfile ' + $docker_tags + ' .
+
+# Push the images if requested
+' + $push_commands + '
+
+echo "Build completed successfully!"
+
+# Signal the docker daemon to shut down
+echo "Signaling Docker daemon to shut down..."
+touch /tmp/build-complete'
+    
+    # Create job manifest
+    let job_manifest = {
+        apiVersion: "batch/v1",
+        kind: "Job",
+        metadata: {
+            name: $job_name,
+            namespace: $namespace,
+            labels: {
+                app: "alga-build-job",
+                "build-type": "ai-web"
+            }
+        },
+        spec: {
+            activeDeadlineSeconds: 1800,
+            ttlSecondsAfterFinished: 300,
+            template: {
+                metadata: {
+                    labels: {
+                        app: "alga-build-job",
+                        "build-type": "ai-web"
+                    }
+                },
+                spec: {
+                    restartPolicy: "Never",
+                    containers: [{
+                        name: "build",
+                        image: "docker:24-dind",
+                        command: ["/bin/sh"],
+                        args: ["-c", $build_script],
+                        env: [{
+                            name: "DOCKER_HOST",
+                            value: "tcp://localhost:2375"
+                        }],
+                        resources: {
+                            requests: {
+                                memory: $memory,
+                                cpu: $cpu
+                            },
+                            limits: {
+                                memory: $memory,
+                                cpu: $cpu
+                            }
+                        },
+                        volumeMounts: [{
+                            name: "workspace",
+                            mountPath: "/workspace"
+                        }, {
+                            name: "harbor-creds",
+                            mountPath: "/harbor-creds",
+                            readOnly: true
+                        }, {
+                            name: "shared",
+                            mountPath: "/tmp"
+                        }]
+                    }, {
+                        name: "docker-daemon",
+                        image: "docker:24-dind",
+                        command: ["/bin/sh"],
+                        args: ["-c", "dockerd-entrypoint.sh & while [ ! -f /tmp/build-complete ]; do sleep 5; done; echo 'Build complete signal received, shutting down...'; sleep 10"],
+                        securityContext: {
+                            privileged: true
+                        },
+                        env: [{
+                            name: "DOCKER_TLS_CERTDIR",
+                            value: ""
+                        }],
+                        resources: {
+                            requests: {
+                                memory: "1Gi",
+                                cpu: "1"
+                            },
+                            limits: {
+                                memory: "2Gi",
+                                cpu: "2"
+                            }
+                        },
+                        volumeMounts: [{
+                            name: "docker-storage",
+                            mountPath: "/var/lib/docker"
+                        }, {
+                            name: "shared",
+                            mountPath: "/tmp"
+                        }]
+                    }],
+                    volumes: [{
+                        name: "workspace",
+                        emptyDir: {}
+                    }, {
+                        name: "docker-storage",
+                        emptyDir: {}
+                    }, {
+                        name: "shared",
+                        emptyDir: {}
+                    }, {
+                        name: "harbor-creds",
+                        secret: {
+                            secretName: "harbor-credentials",
+                            items: [{
+                                key: ".dockerconfigjson",
+                                path: ".dockerconfigjson"
+                            }]
+                        }
+                    }]
+                }
+            }
+        }
+    }
+    
+    # Write job manifest to file
+    let job_file = $"/tmp/build-job-($timestamp).yaml"
+    $job_manifest | to yaml | save -f $job_file
+    
+    # Create the job
+    let helm_result = do {
+        kubectl apply -f $job_file -n $namespace | complete
+    }
+    
+    if $helm_result.exit_code != 0 {
+        print $"($color_red)Failed to create build job($color_reset)"
+        rm -f $job_file
+        error make { msg: "Failed to create Kubernetes job" }
+    }
+    
+    print $"($color_green)Build job created successfully($color_reset)"
+    print $"($color_cyan)Monitoring job progress...($color_reset)"
+    
+    # Monitor the job
+    let start_time = (date now | format date '%s' | into int)
+    let timeout_seconds = 1800  # 30 minutes
+    
+    loop {
+        # Check job status
+        let job_status = do {
+            kubectl get job $job_name -n $namespace -o json | complete
+        }
+        
+        if $job_status.exit_code != 0 {
+            print $"($color_red)Failed to get job status($color_reset)"
+            break
+        }
+        
+        let status = ($job_status.stdout | from json)
+        
+        # Check if job completed
+        if ("succeeded" in $status.status) and ($status.status.succeeded? | default 0) > 0 {
+            print $"($color_green)Build completed successfully!($color_reset)"
+            break
+        }
+        
+        # Check if job failed
+        if ("failed" in $status.status) and ($status.status.failed? | default 0) > 0 {
+            print $"($color_red)Build failed!($color_reset)"
+            
+            # Get pod logs
+            let pods = do {
+                kubectl get pods -n $namespace -l job-name=$job_name -o json | complete
+            }
+            
+            if $pods.exit_code == 0 {
+                let pod_list = ($pods.stdout | from json)
+                if ($pod_list.items | length) > 0 {
+                    let pod_name = $pod_list.items.0.metadata.name
+                    print $"($color_yellow)Fetching logs from pod: ($pod_name)($color_reset)"
+                    kubectl logs $pod_name -n $namespace -c build --tail=100
+                }
+            }
+            
+            # Clean up job
+            kubectl delete job $job_name -n $namespace --ignore-not-found | complete
+            rm -f $job_file
+            error make { msg: "Build job failed" }
+        }
+        
+        # Check timeout
+        let current_time = (date now | format date '%s' | into int)
+        let elapsed = ($current_time - $start_time)
+        
+        if $elapsed > $timeout_seconds {
+            print $"($color_red)Build timed out after ($elapsed) seconds($color_reset)"
+            kubectl delete job $job_name -n $namespace --ignore-not-found | complete
+            rm -f $job_file
+            error make { msg: "Build job timed out" }
+        }
+        
+        # Get current pod status
+        let pods = do {
+            kubectl get pods -n $namespace -l job-name=$job_name --no-headers | complete
+        }
+        
+        if $pods.exit_code == 0 and ($pods.stdout | str trim | str length) > 0 {
+            print -n $"\r($color_cyan)Job status: ($pods.stdout | str trim | split column -c '\\s+' | get column2.0)/Running - Elapsed: ($elapsed)s($color_reset)"
+        }
+        
+        sleep 5sec
+    }
+    
+    # Stream logs from the completed job
+    print $"\n($color_cyan)Build logs:($color_reset)"
+    let pods = do {
+        kubectl get pods -n $namespace -l job-name=$job_name -o json | complete
+    }
+    
+    if $pods.exit_code == 0 {
+        let pod_list = ($pods.stdout | from json)
+        if ($pod_list.items | length) > 0 {
+            let pod_name = $pod_list.items.0.metadata.name
+            kubectl logs $pod_name -n $namespace -c build
+        }
+    }
+    
+    # Clean up
+    print $"($color_cyan)Cleaning up...($color_reset)"
+    kubectl delete job $job_name -n $namespace --ignore-not-found | complete
+    rm -f $job_file
+    
+    print $"($color_green)Build process completed!($color_reset)"
+    
+    if $push {
+        for tag in $tags_to_apply {
+            print $"($color_green)Image pushed: ($base_image):($tag)($color_reset)"
         }
     }
 }
@@ -1741,10 +2176,21 @@ def --wrapped main [
        print "    Build AI API Docker image"
        print "    Example: nu main.nu build-ai-api --push"
        print "    Example: nu main.nu build-ai-api --use-latest --push"
-       print "  nu main.nu build-ai-web [--tag <tag>] [--push] [--use-latest]"
-       print "    Build AI Web Docker image"
+       print "  nu main.nu build-ai-web [--tag <tag>] [--push] [--use-latest] [--local] [--cpu <cores>] [--memory <size>]"
+       print "    Build AI Web Docker image (in Kubernetes by default)"
+       print "    --local: Build locally instead of in Kubernetes"
+       print "    --cpu: CPU cores to allocate for Kubernetes builds (default: 4)"
+       print "    --memory: Memory to allocate for Kubernetes builds (default: 4Gi)"
        print "    Example: nu main.nu build-ai-web --push"
-       print "    Example: nu main.nu build-ai-web --tag v1.0.0 --push"
+       print "    Example: nu main.nu build-ai-web --push --cpu 8 --memory 8Gi"
+       print "    Example: nu main.nu build-ai-web --local --push  # for local build"
+       print "  nu main.nu build-ai-web-k8s [--tag <tag>] [--push] [--use-latest] [--namespace <ns>] [--cpu <cores>] [--memory <size>]"
+       print "    Build AI Web Docker image using Kubernetes job (faster, uses server resources)"
+       print "    --namespace: Kubernetes namespace (default: default)"
+       print "    --cpu: CPU cores to allocate (default: 4)"
+       print "    --memory: Memory to allocate (default: 4Gi)"
+       print "    Example: nu main.nu build-ai-web-k8s --push"
+       print "    Example: nu main.nu build-ai-web-k8s --tag v1.0.0 --push --cpu 8 --memory 8Gi"
        print "  nu main.nu build-ai-all [--tag <tag>] [--push] [--use-latest]"
        print "    Build all AI Docker images (API and Web)"
        print "    Example: nu main.nu build-ai-all --push"
@@ -1811,10 +2257,21 @@ def --wrapped main [
        print "    Build AI API Docker image"
        print "    Example: nu main.nu build-ai-api --push"
        print "    Example: nu main.nu build-ai-api --use-latest --push"
-       print "  nu main.nu build-ai-web [--tag <tag>] [--push] [--use-latest]"
-       print "    Build AI Web Docker image"
+       print "  nu main.nu build-ai-web [--tag <tag>] [--push] [--use-latest] [--local] [--cpu <cores>] [--memory <size>]"
+       print "    Build AI Web Docker image (in Kubernetes by default)"
+       print "    --local: Build locally instead of in Kubernetes"
+       print "    --cpu: CPU cores to allocate for Kubernetes builds (default: 4)"
+       print "    --memory: Memory to allocate for Kubernetes builds (default: 4Gi)"
        print "    Example: nu main.nu build-ai-web --push"
-       print "    Example: nu main.nu build-ai-web --tag v1.0.0 --push"
+       print "    Example: nu main.nu build-ai-web --push --cpu 8 --memory 8Gi"
+       print "    Example: nu main.nu build-ai-web --local --push  # for local build"
+       print "  nu main.nu build-ai-web-k8s [--tag <tag>] [--push] [--use-latest] [--namespace <ns>] [--cpu <cores>] [--memory <size>]"
+       print "    Build AI Web Docker image using Kubernetes job (faster, uses server resources)"
+       print "    --namespace: Kubernetes namespace (default: default)"
+       print "    --cpu: CPU cores to allocate (default: 4)"
+       print "    --memory: Memory to allocate (default: 4Gi)"
+       print "    Example: nu main.nu build-ai-web-k8s --push"
+       print "    Example: nu main.nu build-ai-web-k8s --tag v1.0.0 --push --cpu 8 --memory 8Gi"
        print "  nu main.nu build-ai-all [--tag <tag>] [--push] [--use-latest]"
        print "    Build all AI Docker images (API and Web)"
        print "    Example: nu main.nu build-ai-all --push"
@@ -2037,16 +2494,56 @@ def --wrapped main [
            let tag = if $tag_idx != null { ($command_args | get ($tag_idx + 1) | default "") } else { "" }
            let push = ($command_args | any { |arg| $arg == "--push" })
            let use_latest = ($command_args | any { |arg| $arg == "--use-latest" })
+           let local = ($command_args | any { |arg| $arg == "--local" })
+           let cpu_idx = ($command_args | enumerate | where {|item| $item.item == "--cpu"} | get 0?.index | default null)
+           let cpu = if $cpu_idx != null { ($command_args | get ($cpu_idx + 1) | default "4") } else { "4" }
+           let memory_idx = ($command_args | enumerate | where {|item| $item.item == "--memory"} | get 0?.index | default null)
+           let memory = if $memory_idx != null { ($command_args | get ($memory_idx + 1) | default "4Gi") } else { "4Gi" }
            
            # Call the build-ai-web command
-           if $push and $use_latest {
-               build-ai-web --tag $tag --push --use-latest
+           if $local {
+               if $push and $use_latest {
+                   build-ai-web --tag $tag --push --use-latest --local
+               } else if $push {
+                   build-ai-web --tag $tag --push --local
+               } else if $use_latest {
+                   build-ai-web --tag $tag --use-latest --local
+               } else {
+                   build-ai-web --tag $tag --local
+               }
+           } else if $push and $use_latest {
+               build-ai-web --tag $tag --push --use-latest --cpu $cpu --memory $memory
            } else if $push {
-               build-ai-web --tag $tag --push
+               build-ai-web --tag $tag --push --cpu $cpu --memory $memory
            } else if $use_latest {
-               build-ai-web --tag $tag --use-latest
+               build-ai-web --tag $tag --use-latest --cpu $cpu --memory $memory
            } else {
-               build-ai-web --tag $tag
+               build-ai-web --tag $tag --cpu $cpu --memory $memory
+           }
+       }
+       "build-ai-web-k8s" => {
+           # Parse flags
+           let command_args = ($args | skip 1)
+           let tag_idx = ($command_args | enumerate | where {|item| $item.item == "--tag"} | get 0?.index | default null)
+           let tag = if $tag_idx != null { ($command_args | get ($tag_idx + 1) | default "") } else { "" }
+           let push = ($command_args | any { |arg| $arg == "--push" })
+           let use_latest = ($command_args | any { |arg| $arg == "--use-latest" })
+           let namespace_idx = ($command_args | enumerate | where {|item| $item.item == "--namespace"} | get 0?.index | default null)
+           let namespace = if $namespace_idx != null { ($command_args | get ($namespace_idx + 1) | default "default") } else { "default" }
+           let cpu_idx = ($command_args | enumerate | where {|item| $item.item == "--cpu"} | get 0?.index | default null)
+           let cpu = if $cpu_idx != null { ($command_args | get ($cpu_idx + 1) | default "4") } else { "4" }
+           let memory_idx = ($command_args | enumerate | where {|item| $item.item == "--memory"} | get 0?.index | default null)
+           let memory = if $memory_idx != null { ($command_args | get ($memory_idx + 1) | default "4Gi") } else { "4Gi" }
+           
+           # Call the build-ai-web-k8s command
+           if $push and $use_latest {
+               build-ai-web-k8s --tag $tag --push --use-latest --namespace $namespace --cpu $cpu --memory $memory
+           } else if $push {
+               build-ai-web-k8s --tag $tag --push --namespace $namespace --cpu $cpu --memory $memory
+           } else if $use_latest {
+               build-ai-web-k8s --tag $tag --use-latest --namespace $namespace --cpu $cpu --memory $memory
+           } else {
+               build-ai-web-k8s --tag $tag --namespace $namespace --cpu $cpu --memory $memory
            }
        }
        "build-ai-all" => {
@@ -2069,7 +2566,7 @@ def --wrapped main [
            }
        }
        _ => {
-           error make { msg: $"($color_red)Unknown command: '($command)'. Must be 'migrate', 'dev-up', 'dev-down', 'dev-env-*', 'dev-env-force-cleanup', 'update-workflow', 'register-workflow', 'build-image', 'build-all-images', 'build-code-server', 'build-ai-api', 'build-ai-web', or 'build-ai-all'.($color_reset)" }
+           error make { msg: $"($color_red)Unknown command: '($command)'. Must be 'migrate', 'dev-up', 'dev-down', 'dev-env-*', 'dev-env-force-cleanup', 'update-workflow', 'register-workflow', 'build-image', 'build-all-images', 'build-code-server', 'build-ai-api', 'build-ai-web', 'build-ai-web-k8s', or 'build-ai-all'.($color_reset)" }
        }
    }
 }
