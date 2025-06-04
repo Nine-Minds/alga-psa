@@ -43,15 +43,10 @@ spec:
         {{- end }}
       
       {{- if .Values.devEnv.enabled }}
-      affinity:
-        podAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            podAffinityTerm:
-              labelSelector:
-                matchLabels:
-                  alga.dev/environment: "true"
-              topologyKey: kubernetes.io/hostname
+      {{- with .Values.devEnv.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- end }}
       {{- if .Values.redis.persistence.enabled }}
       volumes:

@@ -23,26 +23,6 @@ If release name contains chart name it will be used as a full name.
 {{- end }}
 {{- end }}
 
-{{/*
-Dev environment pod affinity to ensure all pods are scheduled on the same node
-*/}}
-{{- define "sebastian.devEnvAffinity" -}}
-{{- if .Values.devEnv.enabled }}
-affinity:
-  podAffinity:
-    preferredDuringSchedulingIgnoredDuringExecution:
-    - weight: 100
-      podAffinityTerm:
-        labelSelector:
-          matchLabels:
-            app.kubernetes.io/instance: {{ .Release.Name }}
-            alga.dev/environment: "true"
-        topologyKey: kubernetes.io/hostname
-{{- else if .Values.devEnv.affinity }}
-affinity:
-  {{- toYaml .Values.devEnv.affinity | nindent 2 }}
-{{- end }}
-{{- end }}
 
 {{/*
 Create chart name and version as used by the chart label.

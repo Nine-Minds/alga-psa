@@ -122,7 +122,8 @@ devEnv:
       secretName: "alga-dev-tls"
   
   # Node selector and tolerations for dev environments
-  nodeSelector: {}
+  nodeSelector: 
+    kubernetes.io/hostname: cloudlab-26
   tolerations: []
   affinity: {}
 

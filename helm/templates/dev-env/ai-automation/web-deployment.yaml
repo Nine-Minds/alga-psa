@@ -18,7 +18,6 @@ spec:
       labels:
         {{- include "sebastian.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: ai-automation-web
-        alga.dev/environment: "true"
     spec:
       {{- if .Values.devEnv.aiAutomation.web.image.is_private }}
       imagePullSecrets:
@@ -64,7 +63,6 @@ spec:
             periodSeconds: 10
           resources:
             {{- toYaml .Values.devEnv.aiAutomation.web.resources | nindent 12 }}
-      {{- include "sebastian.devEnvAffinity" . | nindent 6 }}
       {{- with .Values.devEnv.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

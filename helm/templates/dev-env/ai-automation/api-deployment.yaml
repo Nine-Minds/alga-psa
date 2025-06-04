@@ -79,7 +79,6 @@ spec:
             periodSeconds: 10
           resources:
             {{- toYaml .Values.devEnv.aiAutomation.api.resources | nindent 12 }}
-      {{- include "sebastian.devEnvAffinity" . | nindent 6 }}
       {{- with .Values.devEnv.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
