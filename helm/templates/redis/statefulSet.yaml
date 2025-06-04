@@ -16,6 +16,9 @@ spec:
     metadata:
       labels:
         app: redis
+        {{- if .Values.devEnv.enabled }}
+        alga.dev/environment: "true"
+        {{- end }}
       annotations:
         redis-password: "{{ .Values.config.redis.password }}"
     spec:
@@ -39,6 +42,17 @@ spec:
           mountPath: /data
         {{- end }}
       
+      {{- if .Values.devEnv.enabled }}
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  alga.dev/environment: "true"
+              topologyKey: kubernetes.io/hostname
+      {{- end }}
       {{- if .Values.redis.persistence.enabled }}
       volumes:
       - name: redis-data

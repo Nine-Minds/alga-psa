@@ -18,6 +18,7 @@ spec:
       labels:
         {{- include "sebastian.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: code-server
+        alga.dev/environment: "true"
     spec:
       {{- if .Values.devEnv.codeServer.image.is_private }}
       imagePullSecrets:
@@ -392,6 +393,7 @@ spec:
             periodSeconds: 10
           resources:
             {{- toYaml .Values.devEnv.codeServer.resources | nindent 12 }}
+      {{- include "sebastian.devEnvAffinity" . | nindent 6 }}
       {{- with .Values.devEnv.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

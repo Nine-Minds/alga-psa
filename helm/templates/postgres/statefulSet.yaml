@@ -16,6 +16,9 @@ spec:
     metadata:
       labels:
         app: db
+        {{- if .Values.devEnv.enabled }}
+        alga.dev/environment: "true"
+        {{- end }}
     spec:
       initContainers:
         - name: volume-prep
@@ -44,6 +47,17 @@ spec:
           subPath: data
         {{- end }}
       
+      {{- if .Values.devEnv.enabled }}
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  alga.dev/environment: "true"
+              topologyKey: kubernetes.io/hostname
+      {{- end }}
       {{- if .Values.db.persistence.enabled }}
       volumes:
       - name: db-data
