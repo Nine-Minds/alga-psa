@@ -37,7 +37,7 @@ export async function initializeApp() {
 
     // Initialize policy engine
     if (isEnterprise) {
-      // const { PolicyEngine } = await import('ee/lib/auth');
+      // const { PolicyEngine } = await import('@ee/lib/auth');
       // const policyEngine = new PolicyEngine();
 
       // const policies = [
