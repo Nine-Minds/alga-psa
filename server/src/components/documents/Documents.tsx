@@ -310,7 +310,7 @@ const Documents = ({
             <Button
               id={`${id}-new-document-btn`}
               onClick={handleCreateDocument}
-              className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"
+              variant="default"
             >
               <Plus className="w-4 h-4 mr-2" />
               New Document
@@ -324,7 +324,7 @@ const Documents = ({
                   uploadFormRef?.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }, 0);
               }}
-              className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"
+              variant="default"
             >
               <Plus className="w-4 h-4 mr-2" />
               Upload File
@@ -333,7 +333,7 @@ const Documents = ({
               <Button
                 id={`${id}-link-documents-btn`}
                 onClick={() => setShowSelector(true)}
-                className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"
+                variant="default"
                 data-testid="link-documents-button"
               >
                 <Link className="w-4 h-4 mr-2" />
@@ -557,7 +557,7 @@ const Documents = ({
                     id={`${id}-save-btn`}
                     onClick={isCreatingNew ? handleSaveNewDocument : handleSaveChanges}
                     disabled={isSaving || (!hasContentChanged && !isCreatingNew && documentName === selectedDocument?.document_name)}
-                    className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"
+                    variant="default"
                   >
                     {isSaving ? 'Saving...' : 'Save'}
                   </Button>

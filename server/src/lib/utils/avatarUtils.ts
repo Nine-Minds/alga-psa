@@ -2,7 +2,7 @@
 
 import { createTenantKnex } from 'server/src/lib/db';
 import { getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
-import { withTransaction } from '../../../../shared/db';
+import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 
 /**
@@ -26,47 +26,56 @@ export async function getEntityImageUrl(
   try {
     const { knex } = await createTenantKnex();
 
-    // Query for document association without wrapping in transaction
-    // to avoid nested transaction issue with getImageUrl
-    let query = knex('document_associations')
-      .where({
-        entity_id: entityId,
-        entity_type: entityType,
-        tenant
-      });
+    // Wrap database queries in a transaction for consistency
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Query for document association
+      let query = trx('document_associations')
+        .where({
+          entity_id: entityId,
+          entity_type: entityType,
+          tenant
+        });
 
-    query = query.andWhere('is_entity_logo', true);
+      query = query.andWhere('is_entity_logo', true);
 
-    const association = await query.first();
-    
-    // If no association found, return null
-    if (!association?.document_id) {
-      console.log(`[getEntityImageUrl] No document association found for ${entityType} ${entityId} with is_entity_logo=true`);
+      const association = await query.first();
+      
+      // If no association found, return null
+      if (!association?.document_id) {
+        console.log(`[getEntityImageUrl] No document association found for ${entityType} ${entityId} with is_entity_logo=true`);
+        return null;
+      }
+      
+      console.log(`[getEntityImageUrl] Found document association for ${entityType} ${entityId}:`, association);
+      
+      // Get the file_id from the documents table within the same transaction
+      const documentRecord = await trx('documents')
+        .select('file_id')
+        .where({
+          document_id: association.document_id,
+          tenant
+        })
+        .first();
+      
+      // If no document record or no file_id, return null
+      if (!documentRecord?.file_id) {
+        console.log(`[getEntityImageUrl] No file_id found for document ${association.document_id} (document may have been deleted)`);
+        return null;
+      }
+      
+      console.log(`[getEntityImageUrl] Found file_id ${documentRecord.file_id} for document ${association.document_id}`);
+      
+      return documentRecord.file_id;
+    });
+
+    // If no file_id was found, return null
+    if (!result) {
       return null;
     }
-    
-    console.log(`[getEntityImageUrl] Found document association for ${entityType} ${entityId}:`, association);
-    
-    // Get the file_id from the documents table
-    const documentRecord = await knex('documents')
-      .select('file_id')
-      .where({
-        document_id: association.document_id,
-        tenant
-      })
-      .first();
-    
-    // If no document record or no file_id, return null
-    if (!documentRecord?.file_id) {
-      console.log(`[getEntityImageUrl] No file_id found for document ${association.document_id} (document may have been deleted)`);
-      return null;
-    }
-    
-    console.log(`[getEntityImageUrl] Found file_id ${documentRecord.file_id} for document ${association.document_id}`);
-    
+
     // Use the existing getImageUrl function to get the URL
     // This function manages its own transaction internally
-    const imageUrl = await getImageUrl(documentRecord.file_id);
+    const imageUrl = await getImageUrl(result);
     
     if (imageUrl) {
       const timestamp = Date.now();

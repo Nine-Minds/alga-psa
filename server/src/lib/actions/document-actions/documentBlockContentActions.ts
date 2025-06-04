@@ -4,7 +4,9 @@ import { createTenantKnex } from '../../db';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { addDocument } from './documentActions';
+import Document from '../../models/document';
+import DocumentAssociation from '../../models/document-association';
+import { getCurrentUser } from '../user-actions/userActions';
 
 interface BlockContentInput {
   block_data: any; // JSON data from block editor
@@ -28,24 +30,35 @@ export async function createBlockDocument(
     throw new Error('No tenant found');
   }
 
+  // Get current user
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
   try {
     // Start transaction to ensure both document and block content are created atomically
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Create the document first
-      const documentResult = await addDocument({
+      const documentId = uuidv4();
+      
+      // Create the document directly in the transaction
+      const documentData = {
+        document_id: documentId,
         document_name: input.document_name,
-        user_id: input.user_id,
-        created_by: input.user_id,
+        user_id: input.user_id || currentUser.user_id,
+        created_by: input.user_id || currentUser.user_id,
         tenant,
         type_id: input.type_id || null,
         order_number: 0
-      });
+      };
+
+      const documentResult = await Document.insert(documentData, trx);
 
       // Create the block content
       const [blockContent] = await trx('document_block_content')
         .insert({
           content_id: uuidv4(),
-          document_id: documentResult._id,
+          document_id: documentResult.document_id,
           block_data: typeof input.block_data === 'string' ? input.block_data : JSON.stringify(input.block_data),
           version_id: input.version_id,
           tenant,
@@ -56,17 +69,16 @@ export async function createBlockDocument(
 
       // If entity information is provided, create association
       if (input.entityId && input.entityType) {
-        await trx('document_associations').insert({
-          association_id: uuidv4(),
-          document_id: documentResult._id,
+        await DocumentAssociation.create({
+          document_id: documentResult.document_id,
           entity_id: input.entityId,
           entity_type: input.entityType,
           tenant
-        });
+        }, trx);
       }
 
       return {
-        document_id: documentResult._id,
+        document_id: documentResult.document_id,
         content_id: blockContent.content_id
       };
     });

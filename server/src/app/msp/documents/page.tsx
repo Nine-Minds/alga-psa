@@ -12,7 +12,6 @@ import { toast } from 'react-hot-toast';
 import DocumentsPagination from 'server/src/components/documents/DocumentsPagination';
 import DocumentFilters from 'server/src/components/documents/DocumentFilters';
 import DocumentsPageSkeleton from 'server/src/components/documents/DocumentsPageSkeleton';
-import { usePagination } from 'server/src/hooks/usePagination';
 import { useDocuments } from 'server/src/hooks/useDocuments';
 
 export default function DocumentsPage() {
@@ -21,6 +20,7 @@ export default function DocumentsPage() {
   const [allUsersData, setAllUsersData] = useState<IUserWithRoles[]>([]);
   const [entityTypeOptions, setEntityTypeOptions] = useState<SelectOption[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   
   const [filterInputs, setFilterInputs] = useState<DocumentFilterType>({
     entityType: '',
@@ -34,8 +34,6 @@ export default function DocumentsPage() {
 
   const pageSize = 15;
   
-  const [currentPageState, setCurrentPageState] = useState(1);
-  
   const {
     documents,
     totalCount,
@@ -44,26 +42,23 @@ export default function DocumentsPage() {
     refetch: refetchDocuments
   } = useDocuments(
     initialized ? filterInputs : {},
-    initialized ? currentPageState : 1,
+    currentPage,
     pageSize
   );
   
-  const {
-    currentPage,
-    totalPages,
-    handlePageChange
-  } = usePagination(totalCount, pageSize);
-  
-  useEffect(() => {
-    setCurrentPageState(currentPage);
-  }, [currentPage]);
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   const capitalizeFirstLetter = (string: string) => {
     return string.charAt(0).toUpperCase() + string.slice(1);
   };
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
   const handleFiltersChange = (newFilters: DocumentFilterType) => {
     setFilterInputs(newFilters);
+    setCurrentPage(1); // Reset to first page when filters change
   };
 
   const handleClearFilters = () => {
@@ -77,6 +72,7 @@ export default function DocumentsPage() {
       sortOrder: 'desc'
     };
     setFilterInputs(clearedFilters);
+    setCurrentPage(1); // Reset to first page when filters are cleared
   };
 
   const handleDocumentUpdate = async () => {
