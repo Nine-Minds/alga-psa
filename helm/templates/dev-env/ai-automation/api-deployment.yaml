@@ -61,9 +61,15 @@ spec:
             # Target app URL for automation
             - name: TARGET_APP_URL
               value: "http://app:3000"
+            # VNC support
+            - name: VNC_ENABLED
+              value: "true"
           ports:
             - name: http
               containerPort: 4000
+              protocol: TCP
+            - name: vnc
+              containerPort: 5900
               protocol: TCP
           livenessProbe:
             httpGet:

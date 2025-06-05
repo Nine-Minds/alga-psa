@@ -401,14 +401,26 @@ export default function ControlPanel() {
       if (response.ok) {
         const result = await response.json();
         console.log('[CLIENT] Pop-out result:', result);
-        setLog(prev => [...prev, {
-          type: 'navigation',
-          title: 'Browser Popped Out',
-          content: `Browser is now running in headed mode. Session: ${result.sessionId}`,
-          timestamp: new Date().toISOString()
-        }]);
-        setIsPopOutMode(true);
-        await fetchBrowserStatus();
+        
+        if (result.status === 'vnc') {
+          // Open VNC viewer in new tab
+          setLog(prev => [...prev, {
+            type: 'navigation',
+            title: 'Opening VNC Viewer',
+            content: result.message,
+            timestamp: new Date().toISOString()
+          }]);
+          window.open('/vnc', '_blank');
+        } else {
+          setLog(prev => [...prev, {
+            type: 'navigation',
+            title: 'Browser Popped Out',
+            content: `Browser is now running in headed mode. Session: ${result.sessionId}`,
+            timestamp: new Date().toISOString()
+          }]);
+          setIsPopOutMode(true);
+          await fetchBrowserStatus();
+        }
       } else if (response.status === 501) {
         // Not implemented in Kubernetes
         const errorData = await response.json();

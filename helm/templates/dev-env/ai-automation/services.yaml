@@ -15,6 +15,10 @@ spec:
       targetPort: http
       protocol: TCP
       name: http
+    - port: 5900
+      targetPort: 5900
+      protocol: TCP
+      name: vnc
   selector:
     {{- include "sebastian.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: ai-automation-api

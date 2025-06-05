@@ -27,11 +27,14 @@ RUN apt-get install -qq -y --no-install-recommends \
       chromium \
       chromium-sandbox \
       xvfb \
+      x11vnc \
+      fluxbox \
       fonts-ipafont-gothic \
       fonts-wqy-zenhei \
       curl \
       vim \
-      nano && \
+      nano \
+      procps && \
     rm -rf /var/lib/apt/lists/*
 
 # Create and switch to non-root user
@@ -45,8 +48,30 @@ RUN npm install
 # Copy application files
 COPY --chown=appuser:appuser . .
 
+# Create startup script
+RUN echo '#!/bin/bash\n\
+# Start Xvfb\n\
+Xvfb :99 -screen 0 1920x1080x24 -ac +extension GLX +render -noreset > /dev/null 2>&1 &\n\
+export DISPLAY=:99\n\
+sleep 2\n\
+\n\
+# Start window manager\n\
+fluxbox > /dev/null 2>&1 &\n\
+\n\
+# Start VNC server if VNC_ENABLED is set\n\
+if [ "$VNC_ENABLED" = "true" ]; then\n\
+  echo "Starting VNC server on port 5900..."\n\
+  x11vnc -display :99 -nopw -listen 0.0.0.0 -xkb -ncache 10 -ncache_cr -forever -shared &\n\
+fi\n\
+\n\
+# Start the application\n\
+exec npm run dev\n\
+' > /home/appuser/start.sh && chmod +x /home/appuser/start.sh && chown appuser:appuser /home/appuser/start.sh
+
 USER appuser
 
-# Start Xvfb and run the app
-CMD Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 & \
-    npm run dev
+# Expose VNC port
+EXPOSE 4000 5900
+
+# Start the app
+CMD ["/bin/bash", "/home/appuser/start.sh"]

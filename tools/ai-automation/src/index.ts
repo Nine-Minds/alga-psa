@@ -416,11 +416,12 @@ function setupExpress(app: express.Application) {
 
     // Check if we're in a Kubernetes environment
     if (process.env.KUBERNETES_SERVICE_HOST || process.env.ALGA_DEV_ENV === 'true') {
-      console.log('\x1b[43m[BACKEND] ⚠️ Pop-out not available in Kubernetes environment\x1b[0m');
-      res.status(501).json({
-        error: 'Pop-out feature is not available in the Kubernetes dev environment',
-        message: 'The browser is running in a containerized environment and cannot open windows on your local machine.',
-        suggestion: 'Use the screenshot feed to see what the browser is doing.'
+      console.log('\x1b[43m[BACKEND] ⚠️ Redirecting to VNC viewer for Kubernetes environment\x1b[0m');
+      res.json({
+        status: 'vnc',
+        message: 'Opening VNC viewer for browser control',
+        vncUrl: '/vnc',
+        suggestion: 'The browser will open in a VNC viewer where you can see and control it.'
       });
       return;
     }
