@@ -22,6 +22,7 @@ interface StatusColumnProps {
   isAddingTask: boolean;
   selectedPhase: boolean;
   projectTreeData?: any[]; // Add projectTreeData prop
+  animatingTasks: Set<string>;
   onDrop: (e: React.DragEvent, statusId: string, draggedTaskId: string, beforeTaskId: string | null, afterTaskId: string | null) => void;
   onDragOver: (e: React.DragEvent) => void;
   onAddCard: (status: ProjectStatus) => void;
@@ -50,6 +51,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   isAddingTask,
   selectedPhase,
   projectTreeData,
+  animatingTasks,
   onDrop,
   onDragOver,
   onAddCard,
@@ -132,9 +134,9 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
       return;
     }
 
-    // Filter out the dragged task from sortedTasks if it's being moved from another status
-    const tasksInThisStatus = sortedTasks.filter(t => t.task_id !== draggedTaskId);
-
+    // Use sortedTasks directly without filtering - we need the actual positions
+    // The task being dragged is still in its original position in sortedTasks
+    
     // Determine before/after task IDs based on drop position
     let beforeTaskId: string | null = null;
     let afterTaskId: string | null = null;
@@ -144,31 +146,77 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
       const targetTaskId = taskElement.getAttribute('data-task-id');
       
       if (targetTaskId && targetTaskId !== draggedTaskId) {
-        // Find the target task in the already sorted list
-        const targetIndex = tasksInThisStatus.findIndex(t => t.task_id === targetTaskId);
+        // Find the target task in the sorted list (includes all tasks)
+        const targetIndex = sortedTasks.findIndex(t => t.task_id === targetTaskId);
         
         if (targetIndex !== -1) {
           const rect = taskElement.getBoundingClientRect();
           const isDropBefore = e.clientY < rect.top + rect.height / 2;
           
           if (isDropBefore) {
-            // Insert before target - the target becomes our "after" task
-            afterTaskId = targetTaskId;
-            if (targetIndex > 0) {
-              beforeTaskId = tasksInThisStatus[targetIndex - 1].task_id;
+            // Dropping before the target task
+            // Find the task that will be before our dropped task
+            let searchIndex = targetIndex - 1;
+            while (searchIndex >= 0) {
+              if (sortedTasks[searchIndex].task_id !== draggedTaskId) {
+                beforeTaskId = sortedTasks[searchIndex].task_id;
+                break;
+              }
+              searchIndex--;
+            }
+            
+            // The target task will be after our dropped task (unless it's the dragged task itself)
+            if (targetTaskId !== draggedTaskId) {
+              afterTaskId = targetTaskId;
+            } else {
+              // If dropping on itself, find the next task
+              let nextIndex = targetIndex + 1;
+              while (nextIndex < sortedTasks.length) {
+                if (sortedTasks[nextIndex].task_id !== draggedTaskId) {
+                  afterTaskId = sortedTasks[nextIndex].task_id;
+                  break;
+                }
+                nextIndex++;
+              }
             }
           } else {
-            // Insert after target - the target becomes our "before" task
-            beforeTaskId = targetTaskId;
-            if (targetIndex < tasksInThisStatus.length - 1) {
-              afterTaskId = tasksInThisStatus[targetIndex + 1].task_id;
+            // Dropping after the target task
+            // The target task will be before our dropped task (unless it's the dragged task itself)
+            if (targetTaskId !== draggedTaskId) {
+              beforeTaskId = targetTaskId;
+            } else {
+              // If dropping on itself, find the previous task
+              let prevIndex = targetIndex - 1;
+              while (prevIndex >= 0) {
+                if (sortedTasks[prevIndex].task_id !== draggedTaskId) {
+                  beforeTaskId = sortedTasks[prevIndex].task_id;
+                  break;
+                }
+                prevIndex--;
+              }
+            }
+            
+            // Find the task that will be after our dropped task
+            let searchIndex = targetIndex + 1;
+            while (searchIndex < sortedTasks.length) {
+              if (sortedTasks[searchIndex].task_id !== draggedTaskId) {
+                afterTaskId = sortedTasks[searchIndex].task_id;
+                break;
+              }
+              searchIndex++;
             }
           }
         }
       }
-    } else if (tasksInThisStatus.length > 0) {
+    } else if (sortedTasks.length > 0) {
       // Dropped at the end of the column
-      beforeTaskId = tasksInThisStatus[tasksInThisStatus.length - 1].task_id;
+      // Find the last task that isn't the dragged task
+      for (let i = sortedTasks.length - 1; i >= 0; i--) {
+        if (sortedTasks[i].task_id !== draggedTaskId) {
+          beforeTaskId = sortedTasks[i].task_id;
+          break;
+        }
+      }
     }
     
     // Log the actual order keys for debugging
@@ -179,23 +227,43 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
       beforeKey: beforeTask?.order_key,
       afterTaskId, 
       afterKey: afterTask?.order_key,
-      draggedTaskId, 
-      targetStatusId: status.project_status_mapping_id 
+      draggedTaskId,
+      draggedTaskKey: draggedTask?.order_key,
+      targetStatusId: status.project_status_mapping_id,
+      isDraggedTaskInSameStatus: sortedTasks.some(t => t.task_id === draggedTaskId),
+      sortedTasksCount: sortedTasks.length,
+      dropTargetElement: taskElement?.getAttribute('data-task-id')
     });
+    
+    // Validate that we don't have the same key for before and after
+    if (beforeTask && afterTask && beforeTask.order_key === afterTask.order_key) {
+      console.error('Invalid drop position: before and after keys are the same');
+      return;
+    }
+    
+    // Validate order: beforeKey should be less than afterKey when both exist
+    if (beforeTask && afterTask && beforeTask.order_key && afterTask.order_key && 
+        beforeTask.order_key >= afterTask.order_key) {
+      console.error('Invalid drop position: before key is not less than after key');
+      return;
+    }
     
     // Call parent handler with new parameters
     onDrop(e, status.project_status_mapping_id, draggedTaskId, beforeTaskId, afterTaskId);
   };
 
-  // Sort display tasks by order_key
-  const sortedTasks = [...displayTasks].sort((a, b) => 
-    (a.order_key || '').localeCompare(b.order_key || '')
-  );
+  // Sort display tasks by order_key using standard string comparison
+  // This ensures fractional-indexing keys are sorted correctly (e.g., 'Zz' < 'a0')
+  const sortedTasks = [...displayTasks].sort((a, b) => {
+    const keyA = a.order_key || '';
+    const keyB = b.order_key || '';
+    return keyA < keyB ? -1 : keyA > keyB ? 1 : 0;
+  });
 
   return (
     <div
       className={`${styles.kanbanColumn} ${backgroundColor} rounded-lg border-2 border-solid transition-all duration-200 ${
-        isDraggedOver ? 'border-purple-500' : 'border-gray-200'
+        isDraggedOver ? 'border-purple-500 ' + styles.dragOver : 'border-gray-200'
       }`}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
@@ -225,17 +293,19 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
           </div>
         </div>
       </div>
-      <div className={styles.kanbanTasks} ref={tasksRef}>
+      <div className={`${styles.kanbanTasks} ${styles.taskList}`} ref={tasksRef}>
         {sortedTasks.map((task): JSX.Element => (
           <div key={task.task_id} data-task-id={task.task_id} className="relative">
+            {/* Animated drop placeholder before task */}
             {dragOverTaskId === task.task_id && dropPosition === 'before' && (
-              <div className="absolute -top-1 left-0 right-0 h-0.5 bg-purple-500 rounded-full" />
+              <div className={`${styles.dropPlaceholder} ${styles.visible}`} />
             )}
             <TaskCard
               task={task}
               users={users}
               ticketLinks={ticketLinks[task.task_id]}
               taskResources={taskResources[task.task_id]}
+              isAnimating={animatingTasks.has(task.task_id)}
               onTaskSelected={onTaskSelected}
               onAssigneeChange={onAssigneeChange}
               onDragStart={onDragStart}
@@ -246,8 +316,9 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
               onEditTaskClick={onEditTaskClick}
               onDeleteTaskClick={onDeleteTaskClick}
             />
+            {/* Animated drop placeholder after task */}
             {dragOverTaskId === task.task_id && dropPosition === 'after' && (
-              <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-purple-500 rounded-full" />
+              <div className={`${styles.dropPlaceholder} ${styles.visible}`} />
             )}
           </div>
         ))}

@@ -16,6 +16,7 @@ interface KanbanBoardProps {
   ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] };
   taskResources: { [taskId: string]: any[] };
   projectTreeData?: any[]; // Add projectTreeData prop
+  animatingTasks: Set<string>;
   onDrop: (e: React.DragEvent, statusId: string, draggedTaskId: string, beforeTaskId: string | null, afterTaskId: string | null) => void;
   onDragOver: (e: React.DragEvent) => void;
   onAddCard: (status: ProjectStatus) => void;
@@ -52,6 +53,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   ticketLinks,
   taskResources,
   projectTreeData,
+  animatingTasks,
   onDrop,
   onDragOver,
   onAddCard,
@@ -132,6 +134,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             onDragEnd={onDragEnd}
             onReorderTasks={onReorderTasks}
             projectTreeData={projectTreeData}
+            animatingTasks={animatingTasks}
             onMoveTaskClick={onMoveTaskClick}
             onDuplicateTaskClick={onDuplicateTaskClick}
             onEditTaskClick={onEditTaskClick}

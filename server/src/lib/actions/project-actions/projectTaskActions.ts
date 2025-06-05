@@ -19,6 +19,7 @@ import {
     updateChecklistItemSchema
 } from 'server/src/lib/schemas/project.schemas';
 import { OrderingService } from '../../services/orderingService';
+import { validateAndFixOrderKeys } from './regenerateOrderKeys';
 
 async function checkPermission(user: IUser, resource: string, action: string): Promise<void> {
     const hasPermissionResult = await hasPermission(user, resource, action);
@@ -204,8 +205,8 @@ export async function updateTaskStatus(
                 console.log('After task:', afterTaskId, 'key:', afterKey);
             }
             
-            // If no position specified, add to end of target status
-            if (!beforeKey && !afterKey) {
+            // If no position specified (checking for both null and undefined), add to end of target status
+            if ((beforeKey === null || beforeKey === undefined) && (afterKey === null || afterKey === undefined)) {
                 const lastTask = await trx('project_tasks')
                     .where({ 
                         phase_id: task.phase_id,
@@ -955,6 +956,16 @@ export async function reorderTask(
     const {knex: db, tenant} = await createTenantKnex();
     
     await withTransaction(db, async (trx: Knex.Transaction) => {
+        // Get the task being moved
+        const task = await trx('project_tasks')
+            .where({ task_id: taskId, tenant })
+            .select('phase_id', 'project_status_mapping_id')
+            .first();
+            
+        if (!task) {
+            throw new Error('Task not found');
+        }
+        
         // Get order keys for positioning
         let beforeKey: string | null = null;
         let afterKey: string | null = null;
@@ -975,14 +986,31 @@ export async function reorderTask(
             afterKey = afterTask?.order_key || null;
         }
         
-        const newOrderKey = OrderingService.generateKeyForPosition(beforeKey, afterKey);
-        
-        await trx('project_tasks')
-            .where({ task_id: taskId, tenant })
-            .update({
-                order_key: newOrderKey,
-                updated_at: trx.fn.now()
-            });
+        try {
+            const newOrderKey = OrderingService.generateKeyForPosition(beforeKey, afterKey);
+            
+            await trx('project_tasks')
+                .where({ task_id: taskId, tenant })
+                .update({
+                    order_key: newOrderKey,
+                    updated_at: trx.fn.now()
+                });
+        } catch (error) {
+            console.error('Error generating order key, attempting to fix order keys for status', error);
+            
+            // If order key generation fails, try to fix the order keys for this status
+            const wasFixed = await validateAndFixOrderKeys(
+                task.phase_id,
+                task.project_status_mapping_id
+            );
+            
+            if (wasFixed) {
+                // Retry the reorder after fixing
+                await reorderTask(taskId, beforeTaskId, afterTaskId);
+            } else {
+                throw error;
+            }
+        }
     });
 }
 
@@ -1025,5 +1053,38 @@ export async function reorderTasksInStatus(tasks: { taskId: string, newWbsCode: 
     } catch (error) {
         console.error('Error reordering tasks:', error);
         throw error;
+    }
+}
+
+export async function cleanupOrderKeysForStatus(
+    phaseId: string,
+    statusId: string
+): Promise<{ success: boolean; message: string }> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error("user not found");
+    }
+    await checkPermission(currentUser, 'project', 'update');
+    
+    try {
+        const wasFixed = await validateAndFixOrderKeys(phaseId, statusId);
+        
+        if (wasFixed) {
+            return {
+                success: true,
+                message: 'Order keys were regenerated successfully'
+            };
+        } else {
+            return {
+                success: true,
+                message: 'Order keys are already valid, no changes needed'
+            };
+        }
+    } catch (error) {
+        console.error('Error cleaning up order keys:', error);
+        return {
+            success: false,
+            message: 'Failed to clean up order keys'
+        };
     }
 }

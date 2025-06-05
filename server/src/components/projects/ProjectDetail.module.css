@@ -161,3 +161,196 @@ body.dragging-task .mainContent::after {
   opacity: 1;
   pointer-events: auto;
 }
+
+/* Task movement animations */
+
+/* Task card transitions */
+.taskCard {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.taskCard.dragging {
+  opacity: 0.4;
+  transform: scale(0.95);
+  transition: all 0.2s ease-out;
+}
+
+/* Drop placeholder that appears between tasks */
+.dropPlaceholder {
+  height: 0;
+  margin: 0;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 2px dashed transparent;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: transparent;
+}
+
+.dropPlaceholder.visible {
+  height: 80px;
+  margin: 8px 0;
+  opacity: 1;
+  border-color: rgb(147, 51, 234);
+  background-color: rgba(147, 51, 234, 0.05);
+}
+
+/* Phase drop placeholder - styled like task drop placeholder */
+.phaseDropPlaceholder {
+  height: 0;
+  margin: 0;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 2px dashed transparent;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: transparent;
+  position: relative; /* Keep position relative if needed for other interactions, or remove if not */
+}
+
+.phaseDropPlaceholder.visible {
+  height: 50px; /* Adjusted height for phases */
+  margin: 8px 0;
+  opacity: 1;
+  border-color: rgb(147, 51, 234); /* purple */
+  background-color: rgba(147, 51, 234, 0.05); /* light purple */
+  /* transform: scaleY(1); Remove or ensure it doesn't conflict */
+}
+
+/* Task list container for smooth reordering */
+.taskList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+}
+
+/* Entry animation for newly dropped tasks */
+@keyframes taskEntry {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(-10px);
+  }
+  50% {
+    transform: scale(1.02) translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.taskCard.entering {
+  animation: taskEntry 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Subtle bounce for nearby tasks when dropping */
+@keyframes subtleBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(-2px);
+  }
+  75% {
+    transform: translateY(2px);
+  }
+}
+
+.taskCard.bounce {
+  animation: subtleBounce 0.5s ease-out;
+}
+
+/* Hover lift effect */
+.taskCard:hover:not(.dragging) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  cursor: grab;
+}
+
+/* Status column highlight during drag */
+.kanbanColumn.dragOver {
+  transform: scale(1.01);
+  box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.3);
+  transition: all 0.3s ease-out;
+}
+
+/* Loading state for async operations */
+.taskCard.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.taskCard.loading::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Phase drag and drop animations */
+.phaseItem {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: grab;
+  position: relative;
+}
+
+.phaseItem:active {
+  cursor: grabbing;
+}
+
+.phaseItem.dragging {
+  opacity: 0.4;
+  transform: scale(0.95);
+  transition: all 0.2s ease-out;
+}
+
+.phaseItem.dragOver {
+  transform: scale(1.01);
+  box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.3);
+}
+
+/* When dragging a task over a phase (not reordering) */
+.phaseItem.taskDragOver {
+  background-color: rgba(147, 51, 234, 0.1);
+  box-shadow: inset 0 0 0 2px rgba(147, 51, 234, 0.3);
+  transform: none;
+}
+
+/* Phase entry animation - same as tasks */
+@keyframes phaseEntry {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(-10px);
+  }
+  50% {
+    transform: scale(1.02) translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.phaseItem.entering {
+  animation: phaseEntry 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}

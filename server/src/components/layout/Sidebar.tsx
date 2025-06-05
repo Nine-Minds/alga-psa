@@ -9,6 +9,7 @@ import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionCo
 import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSubMenuItem from './SidebarSubMenuItem';
 import SidebarBottomMenuItem from './SidebarBottomMenuItem';
+import { Button } from 'server/src/components/ui/Button';
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -170,12 +171,16 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }): JSX.E
         </ul>
       </div>
 
-      <button
+      <Button
+        id="sidebar-toggle-button"
+        variant="default"
+        size="icon"
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="absolute -right-3 top-12 transform w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center text-white"
+        className="absolute -right-3 top-12 transform w-6 h-6 rounded-full flex items-center justify-center"
+        aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
       >
         <ChevronRightIcon className={`w-4 h-4 transition-transform duration-300 ${sidebarOpen ? 'transform rotate-180' : ''}`} />
-      </button>
+      </Button>
       </aside>
     </ReflectionContainer>
   );

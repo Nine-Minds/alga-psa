@@ -7,7 +7,7 @@ import { useDrawer } from "server/src/context/DrawerContext";
 import TaskQuickAdd from './TaskQuickAdd';
 import TaskEdit from './TaskEdit';
 import PhaseQuickAdd from './PhaseQuickAdd';
-import { getProjectTaskStatuses, updatePhase, deletePhase, getProjectTreeData } from 'server/src/lib/actions/project-actions/projectActions';
+import { getProjectTaskStatuses, updatePhase, deletePhase, getProjectTreeData, reorderPhase } from 'server/src/lib/actions/project-actions/projectActions';
 import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import styles from './ProjectDetail.module.css';
 import { Toaster, toast } from 'react-hot-toast';
@@ -21,6 +21,7 @@ import { calculateProjectCompletion } from 'server/src/lib/utils/projectUtils';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { HelpCircle } from 'lucide-react';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
+import { generateKeyBetween } from 'fractional-indexing';
 
 interface ProjectDetailProps {
   project: IProject;
@@ -61,7 +62,10 @@ export default function ProjectDetail({
   const [editingStartDate, setEditingStartDate] = useState<Date | undefined>(undefined);
   const [editingEndDate, setEditingEndDate] = useState<Date | undefined>(undefined);
   const [editingPhaseDescription, setEditingPhaseDescription] = useState<string | null>(null);
-  const [dragOverPhaseId, setDragOverPhaseId] = useState<string | null>(null);
+  const [phaseDropTarget, setPhaseDropTarget] = useState<{
+    phaseId: string;
+    position: 'before' | 'after';
+  } | null>(null);
   const [moveConfirmation, setMoveConfirmation] = useState<{
     taskId: string;
     taskName: string;
@@ -87,6 +91,9 @@ export default function ProjectDetail({
   const [taskToMove, setTaskToMove] = useState<IProjectTask | null>(null);
   const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
   const [taskToDuplicate, setTaskToDuplicate] = useState<IProjectTask | null>(null);
+  const [animatingTasks, setAnimatingTasks] = useState<Set<string>>(new Set());
+  const [animatingPhases, setAnimatingPhases] = useState<Set<string>>(new Set());
+  const [taskDraggingOverPhaseId, setTaskDraggingOverPhaseId] = useState<string | null>(null); // Added state
   const [duplicateTaskToggleDetails, setDuplicateTaskToggleDetails] = useState<{
       hasChecklist: boolean;
       hasPrimaryAssignee: boolean;
@@ -157,7 +164,8 @@ export default function ProjectDetail({
       e.target.classList.remove('opacity-50');
     }
     document.body.classList.remove('dragging-task');
-    setDragOverPhaseId(null);
+    setPhaseDropTarget(null);
+    setTaskDraggingOverPhaseId(null); // Clear task dragging over phase
     
     if (scrollInterval) {
       clearInterval(scrollInterval);
@@ -188,6 +196,18 @@ export default function ProjectDetail({
           return [...newTasks, taskWithChecklist];
         });
         
+        // Add animation state
+        setAnimatingTasks(prev => new Set(prev).add(draggedTaskId));
+        
+        // Remove the entering animation after a delay
+        setTimeout(() => {
+          setAnimatingTasks(prev => {
+            const next = new Set(prev);
+            next.delete(draggedTaskId);
+            return next;
+          });
+        }, 500);
+        
         toast.success(`Task moved to new status`);
       } else {
         // Reorder within same status - use the new reorderTask function
@@ -195,7 +215,6 @@ export default function ProjectDetail({
         
         // Update local state to reflect the new order immediately
         // Generate a new order key for the moved task
-        const { generateKeyBetween } = await import('fractional-indexing');
         
         // Get the order keys from the before/after tasks
         let beforeKey: string | null = null;
@@ -219,6 +238,18 @@ export default function ProjectDetail({
             t.task_id === draggedTaskId ? { ...t, order_key: newOrderKey } : t
           )
         );
+        
+        // Add animation state
+        setAnimatingTasks(prev => new Set(prev).add(draggedTaskId));
+        
+        // Remove the entering animation after a delay
+        setTimeout(() => {
+          setAnimatingTasks(prev => {
+            const next = new Set(prev);
+            next.delete(draggedTaskId);
+            return next;
+          });
+        }, 500);
       }
     } catch (error) {
       console.error('Error handling drop:', error);
@@ -226,62 +257,6 @@ export default function ProjectDetail({
     }
   };
 
-  const generateNewWbsCode = (tasks: IProjectTask[], targetIndex: number): string | null => {
-    if (tasks.length === 0) return null;
-    
-    // Get the tasks in the same status
-    const statusTasks = tasks.filter(t => 
-      t.project_status_mapping_id === tasks[0].project_status_mapping_id
-    ).sort((a, b) => a.wbs_code.localeCompare(b.wbs_code));
-    
-    if (targetIndex === 0) {
-      // Insert at beginning
-      const nextCode = incrementWbsCode(statusTasks[0].wbs_code, -1);
-      return nextCode;
-    } else if (targetIndex >= statusTasks.length) {
-      // Insert at end
-      const prevCode = statusTasks[statusTasks.length - 1].wbs_code;
-      return incrementWbsCode(prevCode, 1);
-    } else {
-      // Insert between two tasks
-      const prevCode = statusTasks[targetIndex - 1].wbs_code;
-      const nextCode = statusTasks[targetIndex].wbs_code;
-      return calculateMiddleWbsCode(prevCode, nextCode);
-    }
-  };
-
-  const incrementWbsCode = (wbsCode: string, increment: number): string => {
-    const parts = wbsCode.split('.');
-    const lastPart = parts[parts.length - 1];
-    const newLastPart = String(Number(lastPart) + increment).padStart(lastPart.length, '0');
-    return [...parts.slice(0, -1), newLastPart].join('.');
-  };
-
-  const calculateMiddleWbsCode = (prevCode: string, nextCode: string): string => {
-    const prevParts = prevCode.split('.');
-    const nextParts = nextCode.split('.');
-    
-    // Find the first differing part
-    let diffIndex = 0;
-    while (diffIndex < prevParts.length && 
-           diffIndex < nextParts.length &&
-           prevParts[diffIndex] === nextParts[diffIndex]) {
-      diffIndex++;
-    }
-    
-    // Calculate middle value
-    const prevValue = Number(prevParts[diffIndex]);
-    const nextValue = Number(nextParts[diffIndex]);
-    const middleValue = Math.floor((prevValue + nextValue) / 2);
-    
-    // If middle value equals prevValue, we need to add another level
-    if (middleValue === prevValue) {
-      return [...prevParts.slice(0, diffIndex + 1), '1'].join('.');
-    }
-    
-    // Otherwise use the middle value
-    return [...prevParts.slice(0, diffIndex), String(middleValue)].join('.');
-  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -324,21 +299,143 @@ export default function ProjectDetail({
     }
   };
 
-  const handlePhaseDragOver = (e: React.DragEvent, phaseId: string) => {
+  const handlePhaseDragOver = (e: React.DragEvent, phaseId: string, dropPosition: 'before' | 'after' | '', isOverPhaseItemBody: boolean = false) => {
     e.preventDefault();
-    setDragOverPhaseId(phaseId);
-    handleDragOver(e);
+    const isPhaseBeingDragged = e.dataTransfer.types.includes('application/json');
+
+    if (isPhaseBeingDragged) {
+      // Only show phase drop target (dotted line) if a phase is being dragged over a 'before'/'after' zone
+      if (!isOverPhaseItemBody && (dropPosition === 'before' || dropPosition === 'after')) {
+        setPhaseDropTarget({ phaseId, position: dropPosition });
+      } else {
+        setPhaseDropTarget(null); // Don't show dotted line when dragging phase over another phase's body or if dropPosition is ""
+      }
+      setTaskDraggingOverPhaseId(null);
+    } else {
+      // Task is being dragged
+      setPhaseDropTarget(null); // Don't show dotted line for phase reorder
+      if (isOverPhaseItemBody) {
+        setTaskDraggingOverPhaseId(phaseId); // Highlight the phase item itself
+      } else {
+        // Task is over a 'before'/'after' zone, do nothing or clear highlight
+        setTaskDraggingOverPhaseId(null);
+      }
+    }
+    handleDragOver(e); // Generic scroll handler
   };
 
   const handlePhaseDragLeave = () => {
-    setDragOverPhaseId(null);
+    setPhaseDropTarget(null);
+    setTaskDraggingOverPhaseId(null); // Clear task dragging over phase
   };
 
-  const handlePhaseDropZone = async (e: React.DragEvent, targetPhase: IProjectPhase) => {
-    e.preventDefault();
-    setDragOverPhaseId(null);
+  const handlePhaseDragStart = (_e: React.DragEvent, _phaseId: string) => {
+    // Phase drag start logic - phases handle their own data transfer
+    document.body.classList.add('dragging-phase');
+  };
+
+  const handlePhaseDragEnd = (_e: React.DragEvent) => {
+    // Phase drag end cleanup
+    document.body.classList.remove('dragging-phase');
+    setPhaseDropTarget(null);
+    setTaskDraggingOverPhaseId(null); // Clear task dragging over phase
+  };
+
+  const handlePhaseReorder = async (draggedPhaseId: string, beforePhaseId: string | null, afterPhaseId: string | null) => {
+    if (!draggedPhaseId) return;
     
-    const taskId = e.dataTransfer.getData('text/plain');
+    try {
+      const draggedPhase = projectPhases.find(p => p.phase_id === draggedPhaseId);
+      if (!draggedPhase) return;
+      
+      await reorderPhase(draggedPhaseId, beforePhaseId, afterPhaseId);
+      
+      // Calculate the new order key locally for immediate UI update
+      
+      // Get the order keys for before and after phases
+      let beforeKey: string | null = null;
+      let afterKey: string | null = null;
+      
+      if (beforePhaseId) {
+        const beforePhase = projectPhases.find(p => p.phase_id === beforePhaseId);
+        beforeKey = beforePhase?.order_key || null;
+      }
+      
+      if (afterPhaseId) {
+        const afterPhase = projectPhases.find(p => p.phase_id === afterPhaseId);
+        afterKey = afterPhase?.order_key || null;
+      }
+      
+      const newOrderKey = generateKeyBetween(
+        beforeKey === undefined ? null : beforeKey,
+        afterKey === undefined ? null : afterKey
+      );
+      
+      // Update the phases with the new order key
+      const updatedPhases = projectPhases.map(p => {
+        if (p.phase_id === draggedPhaseId) {
+          return { ...p, order_key: newOrderKey };
+        }
+        return p;
+      });
+      setProjectPhases(updatedPhases);
+      
+      // Add animation state
+      setAnimatingPhases(prev => new Set(prev).add(draggedPhaseId));
+      
+      // Remove the entering animation after a delay
+      setTimeout(() => {
+        setAnimatingPhases(prev => {
+          const next = new Set(prev);
+          next.delete(draggedPhaseId);
+          return next;
+        });
+      }, 500);
+      
+      toast.success('Phase reordered successfully');
+    } catch (error) {
+      console.error('Error reordering phase:', error);
+      toast.error('Failed to reorder phase');
+    }
+  };
+
+  const handlePhaseDropZone = async (e: React.DragEvent, targetPhase: IProjectPhase, beforePhaseId: string | null, afterPhaseId: string | null) => {
+    e.preventDefault();
+    setPhaseDropTarget(null);
+    setTaskDraggingOverPhaseId(null); // Clear highlight on drop
+    
+    // Debug logging
+    console.log('handlePhaseDropZone called:', {
+      targetPhase: targetPhase.phase_name,
+      beforePhaseId,
+      afterPhaseId,
+      dataTransferTypes: e.dataTransfer.types
+    });
+    
+    // Check if it's a phase being dropped
+    const dropData = e.dataTransfer.getData('application/json');
+    const plainData = e.dataTransfer.getData('text/plain');
+    
+    console.log('Drop data:', { dropData, plainData });
+    
+    if (dropData) {
+      try {
+        const parsed = JSON.parse(dropData);
+        console.log('Parsed drop data:', parsed);
+        if (parsed.type === 'phase' && parsed.phaseId) {
+          // Handle phase reordering with the provided before/after IDs
+          console.log('Calling handlePhaseReorder with:', { draggedId: parsed.phaseId, beforePhaseId, afterPhaseId });
+          await handlePhaseReorder(parsed.phaseId, beforePhaseId, afterPhaseId);
+          return;
+        }
+      } catch (err) {
+        console.log('Error parsing drop data:', err);
+        // Not JSON data, continue with task drop logic
+      }
+    }
+    
+    // Original task drop logic
+    const taskId = plainData;
     const task = projectTasks.find(t => t.task_id === taskId);
     const sourcePhase = projectPhases.find(p => p.phase_id === task?.phase_id);
     
@@ -645,8 +742,7 @@ export default function ProjectDetail({
         toast.error("Could not find a target phase to duplicate to.");
         return;
     }
-    const targetPhaseId = placeholderTargetPhase.phase_id;
-    const targetPhaseName = placeholderTargetPhase.phase_name;
+    // Using placeholderTargetPhase directly in the dialog
 
     try {
         // Fetch necessary details for the dialog toggles
@@ -772,6 +868,7 @@ export default function ProjectDetail({
               return acc;
             }, {} as { [taskId: string]: any[] })}
             projectTreeData={projectTreeData} // Pass project tree data
+            animatingTasks={animatingTasks}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onAddCard={handleAddCard}
@@ -808,7 +905,9 @@ export default function ProjectDetail({
               editingPhaseDescription={editingPhaseDescription}
               editingStartDate={editingStartDate}
               editingEndDate={editingEndDate}
-              dragOverPhaseId={dragOverPhaseId}
+              phaseDropTarget={phaseDropTarget}
+              taskDraggingOverPhaseId={taskDraggingOverPhaseId} // Pass new state
+              animatingPhases={animatingPhases}
               onPhaseSelect={handlePhaseSelect}
               onAddTask={() => {
                 if (!selectedPhase) {
@@ -830,6 +929,8 @@ export default function ProjectDetail({
               onDragOver={handlePhaseDragOver}
               onDragLeave={handlePhaseDragLeave}
               onDrop={handlePhaseDropZone}
+              onDragStart={handlePhaseDragStart}
+              onDragEnd={handlePhaseDragEnd}
             />
           </div>
           <div className={styles.kanbanContainer}>
