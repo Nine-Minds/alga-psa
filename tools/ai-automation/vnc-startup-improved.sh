@@ -210,6 +210,7 @@ start_vnc_server() {
                -ncache_cr \
                -forever \
                -shared \
+               -many \
                -rfbport ${VNC_PORT} \
                -timeout 0 \
                -ping 30 \

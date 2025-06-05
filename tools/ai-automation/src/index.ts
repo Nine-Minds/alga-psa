@@ -60,20 +60,28 @@ function setupSocketHandlers(io: Server) {
   io.on('connection', (socket) => {
     console.log('\x1b[47m\x1b[30m[WEBSOCKET] 🔌 Client connected\x1b[0m');
 
-    // Handle screenshot streaming
-    const screenshotInterval = setInterval(async () => {
-      try {
-        const page = puppeteerManager.getPage();
-        const buf = await page.screenshot();
-        const base64img = Buffer.from(buf).toString('base64');
-        socket.emit('screenshot', base64img);
-      } catch (error) {
-        console.error('\x1b[41m[WEBSOCKET] ❌ Error taking screenshot\x1b[0m', error);
-      }
-    }, 2000);
+    // Handle screenshot streaming (disabled when VNC is enabled to avoid display conflicts)
+    let screenshotInterval: NodeJS.Timeout | null = null;
+    
+    if (process.env.VNC_ENABLED !== 'true') {
+      screenshotInterval = setInterval(async () => {
+        try {
+          const page = puppeteerManager.getPage();
+          const buf = await page.screenshot();
+          const base64img = Buffer.from(buf).toString('base64');
+          socket.emit('screenshot', base64img);
+        } catch (error) {
+          console.error('\x1b[41m[WEBSOCKET] ❌ Error taking screenshot\x1b[0m', error);
+        }
+      }, 2000);
+    } else {
+      console.log('\x1b[43m[WEBSOCKET] 📺 Screenshot streaming disabled - VNC mode active\x1b[0m');
+    }
     
     // Track interval for cleanup
-    activeIntervals.push(screenshotInterval);
+    if (screenshotInterval) {
+      activeIntervals.push(screenshotInterval);
+    }
 
     // Track previous UI state for comparison
     let previousState: any = null;
@@ -118,10 +126,12 @@ function setupSocketHandlers(io: Server) {
     });
 
     socket.on('disconnect', () => {
-      const index = activeIntervals.indexOf(screenshotInterval);
-      if (index > -1) {
-        clearInterval(screenshotInterval);
-        activeIntervals.splice(index, 1);
+      if (screenshotInterval) {
+        const index = activeIntervals.indexOf(screenshotInterval);
+        if (index > -1) {
+          clearInterval(screenshotInterval);
+          activeIntervals.splice(index, 1);
+        }
       }
       console.log('\x1b[101m[WEBSOCKET] 🔌 Client disconnected\x1b[0m');
     });
