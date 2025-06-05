@@ -414,6 +414,17 @@ function setupExpress(app: express.Application) {
     console.log('\x1b[105m\x1b[30m[BACKEND] 🪟 POST /api/browser/pop-out received\x1b[0m');
     const startTime = Date.now();
 
+    // Check if we're in a Kubernetes environment
+    if (process.env.KUBERNETES_SERVICE_HOST || process.env.ALGA_DEV_ENV === 'true') {
+      console.log('\x1b[43m[BACKEND] ⚠️ Pop-out not available in Kubernetes environment\x1b[0m');
+      res.status(501).json({
+        error: 'Pop-out feature is not available in the Kubernetes dev environment',
+        message: 'The browser is running in a containerized environment and cannot open windows on your local machine.',
+        suggestion: 'Use the screenshot feed to see what the browser is doing.'
+      });
+      return;
+    }
+
     try {
       const result = await puppeteerManager.popOut();
       console.log(`\x1b[32m[BACKEND] ✅ Browser popped out successfully in ${Date.now() - startTime}ms\x1b[0m`);

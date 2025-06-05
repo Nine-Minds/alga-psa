@@ -409,6 +409,18 @@ export default function ControlPanel() {
         }]);
         setIsPopOutMode(true);
         await fetchBrowserStatus();
+      } else if (response.status === 501) {
+        // Not implemented in Kubernetes
+        const errorData = await response.json();
+        console.log('[CLIENT] Pop-out not available:', errorData);
+        setLog(prev => [...prev, {
+          type: 'navigation',
+          title: 'Pop-out Not Available',
+          content: errorData.message || 'Pop-out feature is not available in this environment',
+          timestamp: new Date().toISOString()
+        }]);
+        // Show a user-friendly alert
+        alert(errorData.message + '\n\n' + errorData.suggestion);
       } else {
         throw new Error('Failed to pop out browser');
       }
