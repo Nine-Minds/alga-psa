@@ -15,12 +15,14 @@ export default function VNCViewer() {
     const vncHost = window.location.hostname;
     const vncPort = 5900; // We'll proxy this through nginx
 
-    const url = `ws://${vncHost}:${window.location.port}/vnc`;
+    // Use WebSocket with proper protocol
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const url = `${protocol}//${vncHost}:${window.location.port}/vnc`;
     
     console.log('Connecting to VNC:', url);
 
     rfbRef.current = new window.RFB(canvasRef.current, url, {
-      credentials: { password: '' },
+      shared: true,
       scaleViewport: true,
       resizeSession: false,
     });
