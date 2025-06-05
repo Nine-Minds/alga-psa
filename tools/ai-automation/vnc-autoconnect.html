@@ -31,6 +31,8 @@
             compression: '2',
             show_dot: 'false',
             view_only: 'false',
+            // WebSocket keepalive settings
+            ping_interval: '30000',
             // Set the correct WebSocket path for our nginx routing
             path: '/vnc/websockify',
             encrypt: window.location.protocol === 'https:' ? 'true' : 'false'

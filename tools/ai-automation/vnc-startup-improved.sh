@@ -211,6 +211,9 @@ start_vnc_server() {
                -forever \
                -shared \
                -rfbport ${VNC_PORT} \
+               -timeout 0 \
+               -ping 30 \
+               -defer 1 \
                -o /tmp/xvfb/x11vnc.log \
                > /tmp/xvfb/x11vnc_stdout.log 2>&1 &
         
@@ -254,12 +257,12 @@ start_websocket_proxy() {
         fi
         # Start websockify with NoVNC web files
         cd "$novnc_path"
-        # Add verbose logging to debug WebSocket issues
-        python3 -m websockify -v --web . 0.0.0.0:${WEBSOCKET_PORT} localhost:${VNC_PORT} > /tmp/xvfb/websockify.log 2>&1 &
+        # Add verbose logging and timeout settings to prevent disconnections
+        python3 -m websockify -v --web . --timeout=0 --idle-timeout=0 --heartbeat=30 0.0.0.0:${WEBSOCKET_PORT} localhost:${VNC_PORT} > /tmp/xvfb/websockify.log 2>&1 &
         cd - > /dev/null
     else
         log_warn "NoVNC not found, starting websockify without web interface"
-        python3 -m websockify 0.0.0.0:${WEBSOCKET_PORT} localhost:${VNC_PORT} > /tmp/xvfb/websockify.log 2>&1 &
+        python3 -m websockify -v --timeout=0 --idle-timeout=0 --heartbeat=30 0.0.0.0:${WEBSOCKET_PORT} localhost:${VNC_PORT} > /tmp/xvfb/websockify.log 2>&1 &
     fi
     
     sleep 3
