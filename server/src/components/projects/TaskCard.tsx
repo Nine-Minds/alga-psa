@@ -15,12 +15,14 @@ import {
   DropdownMenuSeparator,
 } from "server/src/components/ui/DropdownMenu";
 import { ta } from 'date-fns/locale';
+import styles from 'server/src/components/projects/ProjectDetail.module.css';
 
 interface TaskCardProps {
   task: IProjectTask;
   users: IUserWithRoles[];
   ticketLinks?: IProjectTicketLinkWithDetails[];
   taskResources?: any[];
+  isAnimating?: boolean;
   onTaskSelected: (task: IProjectTask) => void;
   onAssigneeChange: (taskId: string, newAssigneeId: string, newTaskName?: string) => void;
   onDragStart: (e: React.DragEvent, taskId: string) => void;
@@ -38,6 +40,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   users,
   ticketLinks,
   taskResources: providedTaskResources,
+  isAnimating = false,
   onTaskSelected,
   onAssigneeChange,
   onDragStart,
@@ -184,9 +187,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         console.log('Using cached project tree data when selecting task for editing');
         onTaskSelected(task);
       }}
-      className={`relative bg-white p-3 mb-2 rounded shadow-sm cursor-pointer hover:shadow-md transition-all duration-200 border border-gray-200 flex flex-col gap-1 ${
-        isDragging ? 'opacity-50 ring-2 ring-purple-500 shadow-lg scale-105' : ''
-      }`}
+      className={`${styles.taskCard} relative bg-white p-3 mb-2 rounded shadow-sm cursor-pointer hover:shadow-md transition-all duration-200 border border-gray-200 flex flex-col gap-1 ${
+        isDragging ? styles.dragging : ''
+      } ${isAnimating ? styles.entering : ''}`}
       aria-grabbed={isDragging}
       aria-label={`Task: ${task.task_name}. Drag to reorder or use menu for actions.`}
     >

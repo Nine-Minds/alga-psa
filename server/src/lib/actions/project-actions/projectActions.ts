@@ -21,6 +21,7 @@ import {
     updateProjectSchema, 
     projectPhaseSchema
 } from '../../schemas/project.schemas';
+import { OrderingService } from 'server/src/lib/services/orderingService';
 
 const extendedCreateProjectSchema = createProjectSchema.extend({
   assigned_to: z.string().nullable().optional(),
@@ -270,11 +271,31 @@ export async function addProjectPhase(phaseData: Omit<IProjectPhase, 'phase_id' 
 
         const maxPhaseNumber = phaseNumbers.length > 0 ? Math.max(...phaseNumbers) : 0;
         const newWbsCode = `${project.wbs_code}.${maxPhaseNumber + 1}`;
+        
+        // Generate order key for the new phase
+        const { generateKeyBetween } = await import('fractional-indexing');
+        let orderKey: string;
+        
+        if (phases.length === 0) {
+            // First phase
+            orderKey = generateKeyBetween(null, null);
+        } else {
+            // Add after the last phase
+            const sortedPhases = [...phases].sort((a, b) => {
+                if (a.order_key && b.order_key) {
+                    return a.order_key < b.order_key ? -1 : a.order_key > b.order_key ? 1 : 0;
+                }
+                return 0;
+            });
+            const lastPhase = sortedPhases[sortedPhases.length - 1];
+            orderKey = generateKeyBetween(lastPhase.order_key || null, null);
+        }
 
         const phaseWithDefaults = {
             ...validatedData,
             order_number: nextOrderNumber,
             wbs_code: newWbsCode,
+            order_key: orderKey,
         };
 
         return await ProjectModel.addPhase(phaseWithDefaults);
@@ -282,6 +303,105 @@ export async function addProjectPhase(phaseData: Omit<IProjectPhase, 'phase_id' 
         console.error('Error adding project phase:', error);
         throw error;
     }
+}
+
+export async function reorderPhase(
+    phaseId: string,
+    beforePhaseId?: string | null,
+    afterPhaseId?: string | null
+): Promise<void> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error("user not found");
+    }
+
+    await checkPermission(currentUser, 'project', 'update');
+    
+    const {knex: db, tenant} = await createTenantKnex();
+    
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+        // Get the phase being moved
+        const phase = await trx('project_phases')
+            .where({ phase_id: phaseId, tenant })
+            .select('project_id')
+            .first();
+            
+        if (!phase) {
+            throw new Error('Phase not found');
+        }
+        
+        // Get order keys for positioning
+        let beforeKey: string | null = null;
+        let afterKey: string | null = null;
+        
+        if (beforePhaseId) {
+            const beforePhase = await trx('project_phases')
+                .where({ phase_id: beforePhaseId, tenant })
+                .select('order_key')
+                .first();
+            beforeKey = beforePhase?.order_key || null;
+        }
+        
+        if (afterPhaseId) {
+            const afterPhase = await trx('project_phases')
+                .where({ phase_id: afterPhaseId, tenant })
+                .select('order_key')
+                .first();
+            afterKey = afterPhase?.order_key || null;
+        }
+        
+        try {
+            // Use OrderingService for key generation
+            const newOrderKey = OrderingService.generateKeyForPosition(beforeKey, afterKey);
+            
+            await trx('project_phases')
+                .where({ phase_id: phaseId, tenant })
+                .update({
+                    order_key: newOrderKey,
+                    updated_at: trx.fn.now()
+                });
+                
+            console.log('Phase reordered successfully:', {
+                phaseId,
+                newOrderKey,
+                beforeKey,
+                afterKey
+            });
+        } catch (error) {
+            console.error('Error generating order key for phase:', error);
+            
+            // Try to recover by regenerating all order keys for the project
+            const { regenerateOrderKeysForPhases } = await import('./regenerateOrderKeys');
+            await regenerateOrderKeysForPhases(phase.project_id);
+            
+            // Try again with fresh order keys
+            const freshBeforePhase = beforePhaseId ? await trx('project_phases')
+                .where({ phase_id: beforePhaseId, tenant })
+                .select('order_key')
+                .first() : null;
+            const freshAfterPhase = afterPhaseId ? await trx('project_phases')
+                .where({ phase_id: afterPhaseId, tenant })
+                .select('order_key')
+                .first() : null;
+                
+            const freshBeforeKey = freshBeforePhase?.order_key || null;
+            const freshAfterKey = freshAfterPhase?.order_key || null;
+            
+            const newOrderKey = OrderingService.generateKeyForPosition(freshBeforeKey, freshAfterKey);
+            
+            await trx('project_phases')
+                .where({ phase_id: phaseId, tenant })
+                .update({
+                    order_key: newOrderKey,
+                    updated_at: trx.fn.now()
+                });
+                
+            console.log('Phase reordered successfully after recovery:', {
+                phaseId,
+                newOrderKey
+            });
+        }
+    });
 }
 
 export async function getProject(projectId: string): Promise<IProject | null> {
