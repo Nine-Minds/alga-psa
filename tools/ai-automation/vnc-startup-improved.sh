@@ -108,14 +108,16 @@ start_xvfb() {
             ;;
         "reduced")
             local configs=(
-                "-screen 0 1024x768x16 -ac -nolisten tcp -extension GLX"
-                "-screen 0 800x600x16 -ac -extension GLX"
+                "-screen 0 1920x1024x16 -ac -nolisten tcp -extension GLX"
+                "-screen 0 1280x1024x16 -ac -extension GLX"
+                "-screen 0 1024x768x16 -ac -extension GLX"
                 "-screen 0 800x600x8 -ac"
             )
             ;;
         *)
             local configs=(
-                "-screen 0 1280x1024x16 -ac -nolisten tcp -extension GLX +extension RANDR"
+                "-screen 0 1920x1024x16 -ac -nolisten tcp -extension GLX +extension RANDR"
+                "-screen 0 1280x1024x16 -ac -extension GLX"
                 "-screen 0 1024x768x16 -ac -extension GLX"
                 "-screen 0 800x600x16 -ac"
                 "-screen 0 640x480x8 -ac"

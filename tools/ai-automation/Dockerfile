@@ -10,7 +10,7 @@ ENV NODE_OPTIONS="--max-http-header-size=26214400"
 ENV CHOKIDAR_USEPOLLING=true
 ENV CHOKIDAR_INTERVAL=300
 # Add Xvfb environment variables for better compatibility
-ENV XVFB_WHD=1280x1024x16
+ENV XVFB_WHD=1920x1024x16
 ENV XVFB_COLORDEPTH=16
 ENV XVFB_ARGS="-ac -nolisten tcp -dpi 96 +extension RANDR"
 # Force software rendering to avoid DRI driver issues
