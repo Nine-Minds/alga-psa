@@ -124,7 +124,7 @@ exports.up = async function(knex) {
       end_time = interaction_date,
       start_time = CASE 
         WHEN duration IS NOT NULL AND interaction_date IS NOT NULL 
-        THEN interaction_date - (duration || ' minutes')::INTERVAL
+        THEN interaction_date - INTERVAL '1 minute' * duration
         ELSE interaction_date
       END
     WHERE interaction_date IS NOT NULL
