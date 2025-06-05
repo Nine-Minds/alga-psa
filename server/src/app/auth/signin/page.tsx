@@ -170,32 +170,21 @@ export default function SignIn() {
         </span>
       </div>
 
-      {/* Left side with testimonial - only show for MSP login */}
+      {/* Left side with logo - only show for MSP login */}
       {!isClientPortal && (
         <div className="hidden lg:flex lg:w-1/2 bg-white p-12 flex-col justify-center items-center">
-          <div className="max-w-md text-center">
-            <h2 className="text-3xl font-bold mb-6">
-              We&apos;ve been using Alga to give us suggestions of every ticket and can&apos;t imagine working without it.
-            </h2>
-            <div className="flex flex-col items-center mt-8">
-              <Image
-                src="/images/music.png"
-                alt="Pippa Wilkinson"
-                width={64}
-                height={64}
-                className="rounded-full"
-              />
-              <p className="mt-4 font-semibold">Pippa Wilkinson</p>
-              <p className="text-sm text-gray-500">Head of Technician, Layers</p>
-              <div className="flex mt-2">
-                {[...Array(5)].map((_, i): JSX.Element => (
-                  <svg key={i} className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
-                ))}
-              </div>
-            </div>
-          </div>
+          <Image
+            src="/images/avatar-purple-big.png"
+            alt="Company Logo"
+            width={200}
+            height={200}
+            className="rounded-full"
+          />
+          <p className="mt-4 text-center text-2xl font-bold text-gray-700">
+            An open source PSA, <br />
+            empowering the future of MSPs <br />
+            with AI-driven insights and automation.
+          </p>
         </div>
       )}
 

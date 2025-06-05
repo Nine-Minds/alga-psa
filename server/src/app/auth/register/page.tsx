@@ -146,31 +146,20 @@ export default function Register() {
           <span className="text-lg font-semibold text-gray-800">AI-Enhanced PSA Platform for MSPs</span>
         </div>
 
-      {/* Left side with testimonial */}
+      {/* Left side with logo */}
       <div className="hidden lg:flex lg:w-1/2 bg-white p-12 flex-col justify-center items-center">
-        <div className="max-w-md text-center">
-          <div className="flex justify-center">
-            {[...Array(5)].map((_, i):JSX.Element => (
-              <svg key={i} className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-            ))}
-          </div>
-          <h2 className="text-3xl font-bold mt-6 mb-6">
-            Alga has saved us thousands of hours of work. We&apos;re able to spin up projects and features much faster.
-          </h2>
-          <div className="flex flex-col items-center mt-8">
-            <Image
-              src="/images/music.png"
-              alt="Lori Bryson"
-              width={64}
-              height={64}
-              className="rounded-full"
-            />
-            <p className="mt-4 font-semibold">Lori Bryson</p>
-            <p className="text-sm text-gray-500">Technician, Sisyphus</p>
-          </div>
-        </div>
+        <Image
+          src="/images/avatar-purple-big.png"
+          alt="Company Logo"
+          width={200}
+          height={200}
+          className="rounded-full"
+        />
+        <p className="mt-4 text-center text-2xl font-bold text-gray-700">
+          An open source PSA, <br />
+          empowering the future of MSPs <br />
+          with AI-driven insights and automation.
+        </p>
       </div>
 
       {/* Right side with sign up form */}
@@ -178,7 +167,7 @@ export default function Register() {
         <div className="max-w-md w-full space-y-8 p-8">
           <div>
             <h2 className="mt-6 text-3xl font-extrabold text-gray-900 text-center">Sign up</h2>
-            <p className="mt-2 text-sm text-gray-600 text-center">Start to use sebastian MSP and alga IA.</p>
+            <p className="mt-2 text-sm text-gray-600 text-center">Start to use Alga MSP.</p>
           </div>
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">
             <div className="space-y-4">
