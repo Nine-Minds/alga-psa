@@ -63,11 +63,11 @@ RUN apt-get install -qq -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 # Install websockify via pip to avoid debian package issues
-RUN pip3 install --no-cache-dir websockify==0.10.0
+RUN pip3 install --no-cache-dir websockify==0.13.0
 
 # Download NoVNC manually to avoid package dependencies
 RUN mkdir -p /usr/share/novnc && \
-    curl -fsSL https://github.com/novnc/noVNC/archive/v1.3.0.tar.gz | \
+    curl -fsSL https://github.com/novnc/noVNC/archive/v1.4.0.tar.gz | \
     tar -xz --strip-components=1 -C /usr/share/novnc
 
 # Create and switch to non-root user
