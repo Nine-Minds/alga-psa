@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-app
+  namespace: vnc-final-test
+data:
+  package.json: |
+    {
+      "name": "test-app",
+      "version": "1.0.0",
+      "scripts": {
+        "dev": "node -e \"console.log('Application running successfully!'); setInterval(() => console.log('Still running...'), 30000);\""
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-vnc-final
+  namespace: vnc-final-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-vnc-final
+  template:
+    metadata:
+      labels:
+        app: ai-vnc-final
+    spec:
+      containers:
+      - name: ai-automation
+        image: harbor.nineminds.com/library/ai-automation:vnc-final-test-amd64
+        imagePullPolicy: Always
+        env:
+        - name: VNC_ENABLED
+          value: "true"
+        - name: NODE_ENV
+          value: "development"
+        - name: DISPLAY
+          value: ":99"
+        ports:
+        - containerPort: 4000
+          name: api
+        - containerPort: 5900
+          name: vnc
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1"
+        volumeMounts:
+        - name: shm
+          mountPath: /dev/shm
+        - name: app
+          mountPath: /usr/src/app/package.json
+          subPath: package.json
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+      imagePullSecrets:
+      - name: harbor-credentials
+      volumes:
+      - name: shm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 256Mi
+      - name: app
+        configMap:
+          name: test-app
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-vnc-final
+  namespace: vnc-final-test
+spec:
+  selector:
+    app: ai-vnc-final
+  ports:
+  - name: api
+    port: 4000
+    targetPort: 4000
+  - name: vnc
+    port: 5900
+    targetPort: 5900
+  type: NodePort

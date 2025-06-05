@@ -1,0 +1,141 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vnc-startup-wrapper
+  namespace: vnc-final-test
+data:
+  startup-wrapper.sh: |
+    #!/bin/bash
+    
+    echo "=== VNC + Application Wrapper Script ==="
+    
+    # First start VNC services using the improved script
+    if [ -f "./vnc-startup-improved.sh" ]; then
+      echo "Starting VNC services..."
+      # Run VNC startup in background and capture its PID
+      ./vnc-startup-improved.sh &
+      VNC_PID=$!
+      
+      # Wait for VNC to indicate it's ready
+      timeout=30
+      while [ $timeout -gt 0 ]; do
+        if grep -q "Starting main application..." /proc/$VNC_PID/fd/1 2>/dev/null || \
+           grep -q "VNC setup complete!" /proc/$VNC_PID/fd/1 2>/dev/null; then
+          echo "VNC setup detected as complete"
+          break
+        fi
+        sleep 1
+        ((timeout--))
+      done
+      
+      # Give VNC services a moment to stabilize
+      sleep 5
+      
+      # Check if all VNC services are running
+      if pgrep -f "Xvfb :99" && pgrep -f "x11vnc" && pgrep -f "websockify"; then
+        echo "✓ All VNC services are running"
+      else
+        echo "⚠️  Some VNC services may not be running properly"
+      fi
+    fi
+    
+    echo ""
+    echo "=== Starting Application Server ==="
+    
+    # Now start the actual application
+    # The VNC script would normally exec npm run dev, but we'll do it here
+    # to ensure proper process management
+    cd /usr/src/app
+    exec npm run dev
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-vnc-working
+  namespace: vnc-final-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-vnc-working
+  template:
+    metadata:
+      labels:
+        app: ai-vnc-working
+    spec:
+      containers:
+      - name: ai-automation
+        image: harbor.nineminds.com/library/ai-automation:vnc-final-test-amd64
+        imagePullPolicy: Always
+        command: ["/bin/bash", "/scripts/startup-wrapper.sh"]
+        env:
+        - name: VNC_ENABLED
+          value: "true"
+        - name: NODE_ENV
+          value: "development"
+        - name: DISPLAY
+          value: ":99"
+        - name: PORT
+          value: "4000"
+        ports:
+        - containerPort: 4000
+          name: api
+        - containerPort: 5900
+          name: vnc
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1"
+        volumeMounts:
+        - name: shm
+          mountPath: /dev/shm
+        - name: scripts
+          mountPath: /scripts
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 4000
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          tcpSocket:
+            port: 4000
+          initialDelaySeconds: 30
+          periodSeconds: 5
+      imagePullSecrets:
+      - name: harbor-credentials
+      volumes:
+      - name: shm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 256Mi
+      - name: scripts
+        configMap:
+          name: vnc-startup-wrapper
+          defaultMode: 0755
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-vnc-working
+  namespace: vnc-final-test
+spec:
+  selector:
+    app: ai-vnc-working
+  ports:
+  - name: api
+    port: 4000
+    targetPort: 4000
+    nodePort: 31401
+  - name: vnc
+    port: 5900
+    targetPort: 5900
+    nodePort: 31592
+  type: NodePort

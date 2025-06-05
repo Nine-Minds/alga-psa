@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Minimal VNC Test</title>
+</head>
+<body>
+    <h1>Minimal NoVNC Connection Test</h1>
+    <div id="status"></div>
+    
+    <h2>Test these URLs in order:</h2>
+    <ol id="urls"></ol>
+    
+    <script>
+        // Generate all possible connection variations
+        const host = window.location.hostname;
+        const port = window.location.port || '80';
+        const configs = [
+            // Most likely to work based on test-ws.html success
+            { desc: "Empty path (proven to work with test-ws.html)", 
+              url: `vnc.html?autoconnect=true&host=${host}&port=${port}&path=&encrypt=false` },
+            
+            // NoVNC lite version (simpler, fewer features)
+            { desc: "VNC Lite with empty path", 
+              url: `vnc_lite.html?host=${host}&port=${port}&path=&encrypt=false` },
+            
+            // Without host/port (let NoVNC figure it out)
+            { desc: "Minimal params", 
+              url: `vnc.html?autoconnect=true` },
+            
+            // Direct WebSocket URL
+            { desc: "Direct WebSocket URL", 
+              url: `vnc.html?autoconnect=true&path=ws://${host}:${port}/vnc/` },
+        ];
+        
+        const urlList = document.getElementById('urls');
+        configs.forEach((config, i) => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <p>${config.desc}</p>
+                <a href="${config.url}" target="_blank">${config.url}</a>
+            `;
+            urlList.appendChild(li);
+        });
+        
+        // Also log what we know works
+        document.getElementById('status').innerHTML = `
+            <p><strong>What we know:</strong></p>
+            <ul>
+                <li>✓ WebSocket connects successfully to: ws://${host}:${port}/vnc/</li>
+                <li>✓ Binary subprotocol works</li>
+                <li>✓ RFB handshake completes</li>
+                <li>? NoVNC needs correct parameters to construct this URL</li>
+            </ul>
+        `;
+    </script>
+</body>
+</html>

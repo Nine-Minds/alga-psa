@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>VNC WebSocket Test</title>
+    <meta charset="utf-8">
+    <style>
+        body { 
+            margin: 20px; 
+            font-family: monospace; 
+            background: #f0f0f0; 
+        }
+        .info { 
+            background: white; 
+            padding: 10px; 
+            margin: 10px 0; 
+            border: 1px solid #ccc; 
+        }
+        #log {
+            background: black;
+            color: green;
+            padding: 10px;
+            height: 400px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>VNC WebSocket Protocol Test</h1>
+    
+    <div class="info">
+        <button onclick="testWebSocket()">Test WebSocket with Binary Protocol</button>
+        <button onclick="viewLogs()">View Container Logs</button>
+    </div>
+    
+    <div class="info">
+        <strong>Test Results:</strong>
+        <div id="log"></div>
+    </div>
+    
+    <script>
+        const log = (msg, color = 'lightgreen') => {
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.style.color = color;
+            entry.textContent = new Date().toISOString() + ': ' + msg;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        };
+        
+        function testWebSocket() {
+            // Test with the binary subprotocol that NoVNC uses
+            const wsUrl = 'ws://localhost:30003/vnc/';
+            log('Testing WebSocket with binary subprotocol to: ' + wsUrl);
+            
+            try {
+                // NoVNC uses 'binary' subprotocol
+                const ws = new WebSocket(wsUrl, ['binary']);
+                
+                ws.onopen = () => {
+                    log('✓ WebSocket opened successfully!', 'lime');
+                    log('Protocol: ' + ws.protocol, 'cyan');
+                    log('Ready state: ' + ws.readyState, 'cyan');
+                    
+                    // Send RFB protocol version like NoVNC does
+                    log('Sending RFB protocol version...', 'yellow');
+                    const rfbVersion = new TextEncoder().encode('RFB 003.008\n');
+                    ws.send(rfbVersion);
+                };
+                
+                ws.onmessage = (event) => {
+                    log('Received message: ' + event.data, 'lime');
+                    if (event.data instanceof Blob) {
+                        event.data.text().then(text => {
+                            log('Message content: ' + text, 'cyan');
+                        });
+                    }
+                };
+                
+                ws.onerror = (e) => {
+                    log('✗ WebSocket error: ' + e.type, 'red');
+                };
+                
+                ws.onclose = (e) => {
+                    log('WebSocket closed: code=' + e.code + ', reason=' + e.reason, 'orange');
+                    if (e.code === 1006) {
+                        log('Code 1006 indicates abnormal closure - check server logs', 'red');
+                    }
+                };
+                
+            } catch (e) {
+                log('✗ Exception: ' + e.message, 'red');
+            }
+        }
+        
+        function viewLogs() {
+            log('To view container logs, run:', 'yellow');
+            log('kubectl logs -n <namespace> <pod-name> -c ai-automation', 'white');
+            log('Or check websockify logs at: /tmp/xvfb/websockify.log', 'white');
+        }
+        
+        // Also test what NoVNC would construct
+        log('NoVNC would connect to: ws://' + window.location.host + '/vnc/', 'gray');
+        log('With subprotocol: binary', 'gray');
+    </script>
+</body>
+</html>

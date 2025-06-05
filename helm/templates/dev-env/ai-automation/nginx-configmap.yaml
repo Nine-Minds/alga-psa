@@ -45,7 +45,7 @@ data:
         }
         
         # API calls to AI API
-        location /api/browser/ {
+        location /api/ {
           proxy_pass http://ai_api;
           proxy_set_header Host $host;
           proxy_set_header X-Real-IP $remote_addr;
@@ -53,25 +53,42 @@ data:
           proxy_set_header X-Forwarded-Proto $scheme;
         }
         
-        # VNC WebSocket proxy
-        location /vnc {
-          proxy_pass http://{{ include "sebastian.fullname" . }}-ai-api:5900/;
+        # Handle /vnc without trailing slash
+        location = /vnc {
+          return 301 /vnc/;
+        }
+        
+        # Handle WebSocket connections specifically
+        location /vnc/websockify {
+          proxy_pass http://{{ include "sebastian.fullname" . }}-ai-api:5900/websockify;
           proxy_http_version 1.1;
+          
+          # WebSocket headers
           proxy_set_header Upgrade $http_upgrade;
           proxy_set_header Connection $connection_upgrade;
           proxy_set_header Host $host;
           proxy_set_header X-Real-IP $remote_addr;
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
           
-          # VNC specific settings
+          # Disable buffering for WebSocket
           proxy_buffering off;
+          proxy_request_buffering off;
           tcp_nodelay on;
-          access_log off;
+          
+          # Long timeouts for persistent connections
+          proxy_connect_timeout 3600s;
+          proxy_send_timeout 3600s;
+          proxy_read_timeout 3600s;
         }
         
-        location /api/puppeteer {
-          proxy_pass http://ai_api;
-          proxy_set_header Host $host;
+        # VNC NoVNC interface - serve static files
+        location /vnc/ {
+          # Serve NoVNC files
+          proxy_pass http://{{ include "sebastian.fullname" . }}-ai-api:5900/;
+          proxy_http_version 1.1;
+          
+          # Standard proxy headers
+          proxy_set_header Host $http_host;
           proxy_set_header X-Real-IP $remote_addr;
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
           proxy_set_header X-Forwarded-Proto $scheme;

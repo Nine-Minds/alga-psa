@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Automation VNC Access</title>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .status {
+            background: #e8f5e9;
+            border: 1px solid #4caf50;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #2e7d32;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #2196f3;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #1976d2;
+        }
+        .btn-primary {
+            background: #4caf50;
+        }
+        .btn-primary:hover {
+            background: #45a049;
+        }
+        .info {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        .debug {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+        }
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖥️ AI Automation VNC Access</h1>
+        
+        <div class="status">
+            ✅ VNC service is running and ready for connections
+        </div>
+        
+        <h2>Quick Access</h2>
+        <div class="button-group">
+            <a href="./autoconnect.html" class="btn btn-primary">🚀 Auto-Connect (Recommended)</a>
+            <a href="./working.html" class="btn btn-primary">✨ Working Config</a>
+            <a href="./vnc.html" class="btn">📺 Manual Connect</a>
+        </div>
+        
+        <div class="info">
+            <h3>Connection Information</h3>
+            <p>The VNC session provides access to the AI automation browser interface. You can:</p>
+            <ul>
+                <li>View the automated browser in real-time</li>
+                <li>Interact with the browser when needed</li>
+                <li>Debug automation scripts visually</li>
+            </ul>
+            <p><strong>Note:</strong> The browser is running in a virtual display (Xvfb) inside the container.</p>
+        </div>
+        
+        <div class="debug">
+            <h3>🔧 Debug & Testing Tools</h3>
+            <div class="button-group">
+                <a href="./test-ws.html" class="btn">WebSocket Test</a>
+                <a href="./debug.html" class="btn">Connection Debug</a>
+                <a href="/api/vnc/status" class="btn">VNC Status API</a>
+            </div>
+            
+            <h4>Troubleshooting</h4>
+            <ul>
+                <li>If the connection fails, try the <code>Auto-Connect</code> button</li>
+                <li>Check the <code>VNC Status API</code> for service health</li>
+                <li>The WebSocket connects through <code>/vnc/</code> with binary subprotocol</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        // Check if we can connect to the API
+        fetch('/api/vnc/status')
+            .then(response => response.json())
+            .then(data => {
+                console.log('VNC Status:', data);
+            })
+            .catch(error => {
+                console.error('Failed to fetch VNC status:', error);
+            });
+    </script>
+</body>
+</html>

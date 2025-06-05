@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Automation VNC - Working Configuration</title>
+    <meta charset="utf-8">
+    <script>
+        // This configuration works based on the test-ws.html results
+        // NoVNC needs the 'path' parameter to be empty or set to the WebSocket endpoint
+        
+        // Get the current host and port from the URL
+        const currentHost = window.location.hostname;
+        const currentPort = window.location.port || '80';
+        
+        // Build the connection parameters
+        const params = new URLSearchParams({
+            // Connection settings
+            autoconnect: 'true',
+            reconnect: 'true',
+            reconnect_delay: '2000',
+            
+            // IMPORTANT: Empty path tells NoVNC to use the current base URL
+            // This is what makes it work with our nginx proxy at /vnc/
+            path: '',
+            
+            // Display settings
+            resize: 'scale',
+            quality: '6',
+            compression: '2',
+            show_dot: 'false',
+            view_only: 'false',
+            
+            // Host and port (NoVNC will construct ws://${host}:${port}${path} internally)
+            host: currentHost,
+            port: currentPort,
+            
+            // Don't use encryption since we're proxying through nginx
+            encrypt: 'false'
+        });
+        
+        // Redirect to vnc.html with the correct parameters
+        window.location.href = 'vnc.html?' + params.toString();
+    </script>
+</head>
+<body>
+    <p>Connecting to VNC with working configuration...</p>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Automation VNC</title>
+    <meta charset="utf-8">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #noVNC_container {
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <div id="noVNC_container">
+        <iframe src="/vnc.html?autoconnect=true&reconnect=true&reconnect_delay=1000&resize=scale&quality=6&compression=2&show_dot=false" 
+                style="width: 100%; height: 100%; border: none;">
+        </iframe>
+    </div>
+</body>
+</html>

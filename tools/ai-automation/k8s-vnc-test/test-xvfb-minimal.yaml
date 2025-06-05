@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: xvfb-test-minimal
+  namespace: vnc-test
+  labels:
+    app: xvfb-test-minimal
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: xvfb-test-minimal
+  template:
+    metadata:
+      labels:
+        app: xvfb-test-minimal
+    spec:
+      containers:
+      - name: xvfb-test
+        image: node:18-bullseye-slim
+        command: ["/bin/bash", "-c"]
+        args:
+          - |
+            set -e
+            echo "=== Minimal Xvfb Test ==="
+            echo "Installing minimal dependencies..."
+            apt-get update -qq
+            apt-get install -qq -y --no-install-recommends xvfb x11-utils procps
+            
+            echo "Creating X11 directory..."
+            mkdir -p /tmp/.X11-unix
+            chmod 1777 /tmp/.X11-unix
+            
+            echo "System info:"
+            cat /proc/meminfo | grep -E "MemTotal|MemFree|MemAvailable"
+            echo ""
+            
+            echo "Starting Xvfb with minimal settings..."
+            Xvfb :99 -screen 0 640x480x8 -ac > /tmp/xvfb.log 2>&1 &
+            XVFB_PID=$!
+            sleep 5
+            
+            if ps -p $XVFB_PID > /dev/null; then
+              echo "✓ Xvfb process is running (PID: $XVFB_PID)"
+              export DISPLAY=:99
+              if xdpyinfo > /tmp/xdpyinfo.log 2>&1; then
+                echo "✓ Display test passed"
+                echo "Display info:"
+                xdpyinfo | head -20
+              else
+                echo "✗ Display test failed"
+                cat /tmp/xdpyinfo.log
+              fi
+            else
+              echo "✗ Xvfb failed to start"
+              cat /tmp/xvfb.log
+              exit 1
+            fi
+            
+            echo "Test completed successfully, keeping container alive..."
+            while true; do sleep 60; done
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 0
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: xvfb-test-minimal-svc
+  namespace: vnc-test
+spec:
+  selector:
+    app: xvfb-test-minimal
+  ports:
+  - name: debug
+    port: 8080
+    targetPort: 8080

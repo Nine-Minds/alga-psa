@@ -1,0 +1,140 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vnc-test-full
+  namespace: vnc-test
+  labels:
+    app: vnc-test-full
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vnc-test-full
+  template:
+    metadata:
+      labels:
+        app: vnc-test-full
+    spec:
+      containers:
+      - name: vnc-test
+        image: ai-automation:test
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: VNC_ENABLED
+          value: "true"
+        - name: XVFB_WHD
+          value: "1280x1024x16"
+        - name: XVFB_COLORDEPTH
+          value: "16"
+        - name: XVFB_ARGS
+          value: "-ac -nolisten tcp -dpi 96 +extension RANDR"
+        - name: NODE_ENV
+          value: "development"
+        - name: DEBUG
+          value: "xvfb,vnc,*"
+        command: ["/bin/bash", "-c"]
+        args:
+          - |
+            # Override the startup to add more debugging
+            echo "=== Full VNC Test with Debugging ==="
+            echo "Container started at: $(date)"
+            echo "User: $(whoami)"
+            echo "Home: $HOME"
+            echo ""
+            
+            # System info
+            echo "=== System Information ==="
+            echo "Memory:"
+            cat /proc/meminfo | grep -E "MemTotal|MemFree|MemAvailable"
+            echo ""
+            echo "CPU:"
+            nproc
+            echo ""
+            echo "Kernel:"
+            uname -a
+            echo ""
+            
+            # Check installed packages
+            echo "=== Checking installed packages ==="
+            which Xvfb || echo "Xvfb not found"
+            which x11vnc || echo "x11vnc not found"
+            which websockify || echo "websockify not found"
+            which fluxbox || echo "fluxbox not found"
+            echo ""
+            
+            # Create required directories
+            echo "=== Creating directories ==="
+            mkdir -p /tmp/.X11-unix /tmp/.ICE-unix
+            chmod 1777 /tmp/.X11-unix /tmp/.ICE-unix
+            ls -la /tmp/
+            echo ""
+            
+            # Try the Kubernetes-optimized startup script
+            if [ -f "./vnc-startup-k8s.sh" ]; then
+              echo "Using Kubernetes-optimized VNC startup script..."
+              chmod +x ./vnc-startup-k8s.sh
+              exec ./vnc-startup-k8s.sh
+            elif [ -f "./vnc-startup.sh" ]; then
+              echo "Using standard VNC startup script..."
+              chmod +x ./vnc-startup.sh
+              exec ./vnc-startup.sh
+            else
+              echo "ERROR: No VNC startup script found!"
+              echo "Files in current directory:"
+              ls -la
+              exit 1
+            fi
+        ports:
+        - name: app
+          containerPort: 4000
+        - name: vnc
+          containerPort: 5900
+        - name: vnc-direct
+          containerPort: 5901
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+        volumeMounts:
+        - name: shm
+          mountPath: /dev/shm
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: shm
+        emptyDir:
+          medium: Memory
+          sizeLimit: "512Mi"
+      - name: tmp
+        emptyDir:
+          sizeLimit: "1Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vnc-test-full-svc
+  namespace: vnc-test
+spec:
+  type: NodePort
+  selector:
+    app: vnc-test-full
+  ports:
+  - name: app
+    port: 4000
+    targetPort: 4000
+    nodePort: 30400
+  - name: vnc-web
+    port: 5900
+    targetPort: 5900
+    nodePort: 30590
+  - name: vnc-direct
+    port: 5901
+    targetPort: 5901
+    nodePort: 30591

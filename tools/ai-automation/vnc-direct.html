@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>VNC Direct Connect</title>
+    <meta charset="utf-8">
+    <script>
+        // Direct connection with explicit WebSocket URL
+        // Tell NoVNC to connect to the base path without appending 'websockify'
+        const params = new URLSearchParams({
+            autoconnect: 'true',
+            reconnect: 'true',
+            reconnect_delay: '2000',
+            resize: 'scale',
+            quality: '6',
+            compression: '2',
+            show_dot: 'false',
+            view_only: 'false',
+            // Empty path means use the same base URL
+            path: '',
+            // Explicitly set host and port
+            host: window.location.hostname,
+            port: window.location.port || '80',
+            encrypt: 'false'
+        });
+        
+        window.location.href = 'vnc.html?' + params.toString();
+    </script>
+</head>
+<body>
+    <p>Connecting to VNC...</p>
+</body>
+</html>

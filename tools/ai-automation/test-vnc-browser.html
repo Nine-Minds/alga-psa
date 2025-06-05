@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>VNC Test</title>
+</head>
+<body>
+    <h1>VNC Connection Test</h1>
+    <p>Testing WebSocket connection to VNC server...</p>
+    <div id="status">Connecting...</div>
+    
+    <script>
+        const ws = new WebSocket('ws://localhost:5900/');
+        
+        ws.onopen = function() {
+            document.getElementById('status').innerHTML = '✅ WebSocket connected! VNC server is accessible.';
+            console.log('Connected to VNC WebSocket');
+            ws.close();
+        };
+        
+        ws.onerror = function(error) {
+            document.getElementById('status').innerHTML = '❌ WebSocket connection failed: ' + error;
+            console.error('WebSocket error:', error);
+        };
+        
+        ws.onclose = function() {
+            console.log('WebSocket closed');
+        };
+    </script>
+    
+    <hr>
+    <p>If the WebSocket connects successfully, try accessing the VNC viewer at:</p>
+    <a href="http://localhost:5900/vnc.html" target="_blank">http://localhost:5900/vnc.html</a>
+</body>
+</html>

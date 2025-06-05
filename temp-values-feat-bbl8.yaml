@@ -1,13 +1,13 @@
 
-# Generated values for branch feat/bbl5 development environment
+# Generated values for branch feat/bbl8 development environment
 devEnv:
   enabled: true
-  branch: "feat/bbl5"
-  sanitizedBranch: "feat-bbl5"
-  namespace: "alga-dev-feat-bbl5"
+  branch: "feat/bbl8"
+  sanitizedBranch: "feat-bbl8"
+  namespace: "alga-dev-feat-bbl8"
   repository:
     url: "https://github.com/Nine-Minds/alga-psa.git"
-    branch: "feat/bbl5"
+    branch: "feat/bbl8"
   codeServer:
     enabled: true
   aiAutomation:

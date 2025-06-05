@@ -464,6 +464,22 @@ function setupExpress(app: express.Application) {
     }
   }) as RequestHandler);
 
+  // Simple health check endpoint
+  app.get('/health', (req: Request, res: Response) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  // VNC debug routes
+  app.use('/api/vnc', (async (req: Request, res: Response, next: any) => {
+    try {
+      const vncDebug = await import('./routes/vnc-debug.js');
+      vncDebug.default(req, res, next);
+    } catch (error) {
+      console.error('Error loading VNC debug routes:', error);
+      res.status(500).json({ error: 'VNC debug routes not available' });
+    }
+  }) as RequestHandler);
+
   app.get('/api/browser/status', (async (req: Request, res: Response) => {
     console.log('\x1b[104m\x1b[30m[BACKEND] 📊 GET /api/browser/status received\x1b[0m');
     const startTime = Date.now();

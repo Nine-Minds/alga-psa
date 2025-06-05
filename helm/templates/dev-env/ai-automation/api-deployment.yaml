@@ -64,6 +64,13 @@ spec:
             # VNC support
             - name: VNC_ENABLED
               value: "true"
+            # Xvfb environment variables for better compatibility
+            - name: XVFB_WHD
+              value: "1280x1024x16"
+            - name: XVFB_COLORDEPTH
+              value: "16"
+            - name: XVFB_ARGS
+              value: "-ac -nolisten tcp -dpi 96 +extension RANDR"
           ports:
             - name: http
               containerPort: 4000
@@ -73,18 +80,28 @@ spec:
               protocol: TCP
           livenessProbe:
             httpGet:
-              path: /api/browser/status
+              path: /health
               port: http
-            initialDelaySeconds: 30
+            initialDelaySeconds: 60
             periodSeconds: 30
+            failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /api/browser/status
+              path: /health
               port: http
-            initialDelaySeconds: 10
+            initialDelaySeconds: 30
             periodSeconds: 10
+            failureThreshold: 3
           resources:
             {{- toYaml .Values.devEnv.aiAutomation.api.resources | nindent 12 }}
+          volumeMounts:
+            - name: shm
+              mountPath: /dev/shm
+      volumes:
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi
       {{- with .Values.devEnv.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

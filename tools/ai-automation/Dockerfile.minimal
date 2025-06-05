@@ -24,26 +24,12 @@ ENV LIBGL_ALWAYS_INDIRECT=1
 RUN apt-get update -qq && \
     apt-get install -qq -y --no-install-recommends \
       ca-certificates \
-      gnupg2 \
-      apt-transport-https \
-      software-properties-common && \
+      curl \
+      gnupg2 && \
     apt-get update -qq
 
-# Install Chromium and dependencies (split to avoid Python package conflicts)
+# Install minimal Chromium dependencies
 RUN apt-get install -qq -y --no-install-recommends \
-      libgconf-2-4 \
-      libxss1 \
-      libxtst6 \
-      libxext6 \
-      libxrender1 \
-      libxrandr2 \
-      libxinerama1 \
-      libxi6 \
-      libxcursor1 \
-      libxcomposite1 \
-      libxdamage1 \
-      libxfixes3 \
-      libxft2 \
       chromium \
       chromium-sandbox \
       xvfb \
@@ -51,34 +37,30 @@ RUN apt-get install -qq -y --no-install-recommends \
       fluxbox \
       x11-utils \
       xauth \
-      fonts-ipafont-gothic \
-      fonts-wqy-zenhei \
-      curl \
-      vim \
-      nano \
       procps \
-      python3 \
+      python3-minimal \
       python3-pip \
-      dbus-x11 && \
+      libxcomposite1 \
+      libxdamage1 \
+      libxrandr2 \
+      libxss1 \
+      libxtst6 \
+      libgtk-3-0 \
+      libnss3 \
+      libatk-bridge2.0-0 \
+      libdrm2 \
+      libxkbcommon0 \
+      libgbm1 && \
     rm -rf /var/lib/apt/lists/*
 
-# Install websockify via pip to avoid debian package issues
-RUN pip3 install --no-cache-dir websockify==0.10.0
+# Install websockify via pip
+RUN python3 -m pip install --no-cache-dir websockify==0.10.0
 
-# Download NoVNC manually to avoid package dependencies
+# Download NoVNC manually
 RUN mkdir -p /usr/share/novnc && \
     curl -fsSL https://github.com/novnc/noVNC/archive/v1.3.0.tar.gz | \
-    tar -xz --strip-components=1 -C /usr/share/novnc
-
-# Copy VNC helper pages and set custom index
-COPY vnc-index.html /usr/share/novnc/index.html
-COPY vnc-autoconnect.html /usr/share/novnc/autoconnect.html
-COPY vnc-debug.html /usr/share/novnc/debug.html
-COPY vnc-launcher.html /usr/share/novnc/launcher.html
-COPY vnc-simple.html /usr/share/novnc/simple.html
-COPY vnc-test-ws.html /usr/share/novnc/test-ws.html
-COPY vnc-direct.html /usr/share/novnc/direct.html
-COPY vnc-working.html /usr/share/novnc/working.html
+    tar -xz --strip-components=1 -C /usr/share/novnc && \
+    ln -s /usr/share/novnc/vnc.html /usr/share/novnc/index.html
 
 # Create and switch to non-root user
 RUN useradd -m appuser
@@ -94,19 +76,21 @@ COPY --chown=appuser:appuser . .
 # Make startup scripts executable
 RUN chmod +x vnc-startup.sh || true && \
     chmod +x vnc-startup-improved.sh || true && \
-    chmod +x vnc-startup-k8s-fix.sh || true && \
-    chmod +x vnc-startup-websocket-fix.sh || true
+    chmod +x vnc-startup-k8s-fix.sh || true
 
 USER appuser
 
 # Expose VNC port
 EXPOSE 4000 5900
 
-# Use improved startup script for VNC or direct Xvfb for headless
+# Use the k8s-fix startup script for maximum compatibility
 CMD if [ "$VNC_ENABLED" = "true" ]; then \
-      if [ -f "./vnc-startup-improved.sh" ]; then \
+      if [ -f "./vnc-startup-k8s-fix.sh" ]; then \
+        echo "Using K8s-fix VNC startup script..." && \
+        ./vnc-startup-k8s-fix.sh; \
+      elif [ -f "./vnc-startup-improved.sh" ]; then \
         echo "Using improved VNC startup script..." && \
-        ./vnc-startup-improved.sh npm run dev; \
+        ./vnc-startup-improved.sh; \
       else \
         echo "Using standard VNC startup script..." && \
         ./vnc-startup.sh; \

@@ -83,8 +83,8 @@ devEnv:
           cpu: "1"
           memory: "2Gi"
         requests:
-          cpu: "250m"
-          memory: "512Mi"
+          cpu: "500m"
+          memory: "1Gi"
   
   # Persistence for dev environments
   persistence:

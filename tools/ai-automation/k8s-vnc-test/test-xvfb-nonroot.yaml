@@ -1,0 +1,108 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: xvfb-test-nonroot
+  namespace: vnc-test
+  labels:
+    app: xvfb-test-nonroot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: xvfb-test-nonroot
+  template:
+    metadata:
+      labels:
+        app: xvfb-test-nonroot
+    spec:
+      initContainers:
+      - name: setup-permissions
+        image: busybox
+        command: ['sh', '-c']
+        args:
+          - |
+            echo "Setting up directories with proper permissions..."
+            mkdir -p /tmp/.X11-unix /tmp/.ICE-unix /tmp/xvfb-run
+            chmod 1777 /tmp/.X11-unix /tmp/.ICE-unix
+            chmod 777 /tmp/xvfb-run
+            chown -R 1000:1000 /tmp/xvfb-run
+            echo "Permissions set"
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        securityContext:
+          runAsUser: 0
+          runAsNonRoot: false
+      containers:
+      - name: xvfb-test
+        image: node:18-bullseye-slim
+        command: ["/bin/bash", "-c"]
+        args:
+          - |
+            set -e
+            echo "=== Non-root Xvfb Test ==="
+            echo "Running as user: $(id)"
+            echo "Home directory: $HOME"
+            
+            # Install dependencies as root in a temporary step would be done in Dockerfile
+            # For testing, we'll use a modified approach
+            
+            # Create user-writable directories
+            export XDG_RUNTIME_DIR=/tmp/xvfb-run
+            export XAUTHORITY=/tmp/xvfb-run/.Xauthority
+            
+            echo "Environment setup:"
+            echo "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR"
+            echo "XAUTHORITY=$XAUTHORITY"
+            echo ""
+            
+            # Check if we can write to required directories
+            echo "Directory permissions:"
+            ls -la /tmp/ | grep -E "X11-unix|ICE-unix|xvfb-run"
+            echo ""
+            
+            # Test creating files in tmp
+            touch /tmp/test-write && echo "✓ Can write to /tmp" || echo "✗ Cannot write to /tmp"
+            touch $XDG_RUNTIME_DIR/test-write && echo "✓ Can write to XDG_RUNTIME_DIR" || echo "✗ Cannot write to XDG_RUNTIME_DIR"
+            echo ""
+            
+            # For this test, we'll simulate what would happen with pre-installed packages
+            echo "Simulating Xvfb startup (would need packages pre-installed in image)..."
+            echo "In production, Xvfb would be started with:"
+            echo "  Xvfb :99 -screen 0 1024x768x16 -ac -nolisten unix"
+            echo ""
+            echo "Key findings:"
+            echo "- Non-root user can write to /tmp with proper init container setup"
+            echo "- XDG_RUNTIME_DIR should be set to a writable location"
+            echo "- XAUTHORITY should be in a writable location"
+            echo "- /tmp/.X11-unix needs 1777 permissions (sticky bit)"
+            
+            echo ""
+            echo "Test completed. Keeping container alive..."
+            while true; do
+              echo "[$(date)] Container is running as $(id -un)"
+              sleep 60
+            done
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        env:
+        - name: HOME
+          value: "/tmp/xvfb-run"
+      volumes:
+      - name: tmp
+        emptyDir:
+          sizeLimit: "1Gi"
