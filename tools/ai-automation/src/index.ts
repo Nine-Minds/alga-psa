@@ -598,8 +598,12 @@ async function startServer() {
   
   try {
     console.log('Initializing Puppeteer...');
+    // Use headed mode when VNC is enabled for visual debugging
+    const useHeadedMode = process.env.VNC_ENABLED === 'true';
+    console.log(`VNC_ENABLED: ${process.env.VNC_ENABLED}, using headed mode: ${useHeadedMode}`);
+    
     await puppeteerManager.init({
-      headless: true,
+      headless: !useHeadedMode,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox'

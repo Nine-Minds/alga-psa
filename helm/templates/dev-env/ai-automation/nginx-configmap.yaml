@@ -81,9 +81,9 @@ data:
           proxy_read_timeout 3600s;
         }
         
-        # VNC NoVNC interface - serve static files
+        # VNC NoVNC interface - serve static files and handle WebSocket
         location /vnc/ {
-          # Serve NoVNC files
+          # Serve NoVNC files and handle WebSocket connections
           proxy_pass http://{{ include "sebastian.fullname" . }}-ai-api:5900/;
           proxy_http_version 1.1;
           
@@ -92,6 +92,20 @@ data:
           proxy_set_header X-Real-IP $remote_addr;
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
           proxy_set_header X-Forwarded-Proto $scheme;
+          
+          # WebSocket support for NoVNC connections
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection $connection_upgrade;
+          
+          # Disable buffering for WebSocket
+          proxy_buffering off;
+          proxy_request_buffering off;
+          tcp_nodelay on;
+          
+          # Long timeouts for persistent connections
+          proxy_connect_timeout 3600s;
+          proxy_send_timeout 3600s;
+          proxy_read_timeout 3600s;
         }
         
         # Everything else to AI Web

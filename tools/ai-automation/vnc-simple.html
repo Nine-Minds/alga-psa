@@ -5,8 +5,8 @@
     <meta charset="utf-8">
     <script>
         // Simple redirect to NoVNC with correct WebSocket path
-        // NoVNC needs to connect to the same base path (not append 'websockify')
-        window.location.href = 'vnc.html?autoconnect=true&path=';
+        // Use /vnc/websockify path to match our nginx routing
+        window.location.href = 'vnc.html?autoconnect=true&path=/vnc/websockify';
     </script>
 </head>
 <body>

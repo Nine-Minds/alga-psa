@@ -161,6 +161,26 @@ start_window_manager() {
     
     # Try fluxbox first, then fallback to simpler options
     if command -v fluxbox >/dev/null 2>&1; then
+        # Create a simple fluxbox menu if it doesn't exist
+        mkdir -p ~/.fluxbox
+        if [ ! -f ~/.fluxbox/menu ]; then
+            cat > ~/.fluxbox/menu << 'EOF'
+[begin] (Fluxbox)
+[exec] (Terminal) {x-terminal-emulator}
+[exec] (File Manager) {thunar}
+[submenu] (Applications)
+    [exec] (Web Browser) {chromium}
+    [exec] (Text Editor) {nano}
+[end]
+[submenu] (System)
+    [exec] (Reload Config) {fluxbox-remote reload}
+    [restart] (Restart)
+    [exit] (Exit)
+[end]
+[end]
+EOF
+        fi
+        
         fluxbox > /tmp/xvfb/fluxbox.log 2>&1 &
         sleep 2
         check_process "fluxbox" || log_warn "Fluxbox not running, but continuing..."
@@ -226,8 +246,8 @@ start_websocket_proxy() {
     
     if [ -n "$novnc_path" ]; then
         log_info "Using NoVNC from: $novnc_path"
-        # Copy custom index if exists
-        if [ -f "/usr/src/app/novnc-index.html" ]; then
+        # Copy custom index if exists (skip if no write permission)
+        if [ -f "/usr/src/app/novnc-index.html" ] && [ -w "$novnc_path" ]; then
             cp /usr/src/app/novnc-index.html "$novnc_path/index.html"
         fi
         # Start websockify with NoVNC web files

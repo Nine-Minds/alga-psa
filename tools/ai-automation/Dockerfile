@@ -70,6 +70,9 @@ RUN mkdir -p /usr/share/novnc && \
     curl -fsSL https://github.com/novnc/noVNC/archive/v1.3.0.tar.gz | \
     tar -xz --strip-components=1 -C /usr/share/novnc
 
+# Create and switch to non-root user
+RUN useradd -m appuser
+
 # Copy VNC helper pages and set custom index
 COPY vnc-index.html /usr/share/novnc/index.html
 COPY vnc-autoconnect.html /usr/share/novnc/autoconnect.html
@@ -80,8 +83,8 @@ COPY vnc-test-ws.html /usr/share/novnc/test-ws.html
 COPY vnc-direct.html /usr/share/novnc/direct.html
 COPY vnc-working.html /usr/share/novnc/working.html
 
-# Create and switch to non-root user
-RUN useradd -m appuser
+# Make novnc directory writable by appuser
+RUN chown -R appuser:appuser /usr/share/novnc
 WORKDIR /usr/src/app
 
 # Copy package files and install dependencies
