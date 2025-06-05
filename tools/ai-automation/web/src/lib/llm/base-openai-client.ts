@@ -74,6 +74,11 @@ export abstract class BaseOpenAIClient implements LLMClient {
   protected openai: OpenAI;
 
   constructor(config: ConstructorParameters<typeof OpenAI>[0]) {
+    console.log('BaseOpenAIClient constructor called with config:', {
+      hasApiKey: !!config?.apiKey,
+      apiKeyPrefix: config?.apiKey?.substring(0, 10) + '...',
+      baseURL: config?.baseURL
+    });
     this.openai = new OpenAI(config);
   }
 

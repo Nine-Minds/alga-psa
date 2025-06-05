@@ -49,6 +49,15 @@ spec:
               value: "true"
             - name: NEXT_PUBLIC_ALGA_BRANCH_SANITIZED
               value: "{{ .Values.devEnv.sanitizedBranch }}"
+            # LLM Configuration
+            - name: LLM_PROVIDER
+              value: "custom-openai"
+            - name: CUSTOM_OPENAI_API_KEY
+              value: {{ .Values.config.llm.customOpenaiApiKey | quote }}
+            - name: CUSTOM_OPENAI_BASE_URL
+              value: {{ .Values.config.llm.customOpenaiBaseUrl | default "https://openrouter.ai/api/v1" | quote }}
+            - name: CUSTOM_OPENAI_MODEL
+              value: {{ .Values.config.llm.customOpenaiModel | default "google/gemini-2.5-flash-preview-05-20" | quote }}
           ports:
             - name: http
               containerPort: 3000

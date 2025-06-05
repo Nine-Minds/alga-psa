@@ -399,6 +399,12 @@ def dev-down [] {
 }
 
 # Create development environment for branch
+# 
+# Environment variables for AI automation (read from .env file or shell environment):
+#   CUSTOM_OPENAI_API_KEY: Required - API key for LLM provider (e.g., OpenRouter key)
+#   CUSTOM_OPENAI_BASE_URL: Optional - API endpoint (default: https://openrouter.ai/api/v1)
+#   CUSTOM_OPENAI_MODEL: Optional - Model name (default: google/gemini-2.5-flash-preview-05-20)
+#
 def dev-env-create [
     branch: string     # Git branch name
     --edition: string = "ce"  # Edition: ce or ee
@@ -579,6 +585,38 @@ def dev-env-create [
     let temp_values_file = $"($project_root)/temp-values-($safe_filename).yaml"
     let edition_comment = if $edition == "ee" { "# Enterprise Edition settings" } else { "# Community Edition settings" }
     let image_name = $"harbor.nineminds.com/nineminds/alga-psa-($edition)"
+    
+    # Load environment variables from user's home .env file if it exists
+    let home_env_file = ($nu.home-path | path join ".env")
+    if ($home_env_file | path exists) {
+        print $"($color_cyan)Loading environment variables from ($home_env_file)...($color_reset)"
+        let env_vars = (open $home_env_file 
+            | lines 
+            | each { |line| $line | str trim } 
+            | where { |line| not ($line | str starts-with '#') and ($line | str length) > 0 and ($line | str contains '=') }
+            | split column "=" -n 2 
+            | rename key value
+            | reduce -f {} { |item, acc| $acc | upsert $item.key $item.value })
+        
+        # Set environment variables from .env file if they're not already set
+        $env_vars | items { |key, value|
+            if ($env | get -i $key | is-empty) {
+                load-env { ($key): $value }
+            }
+        }
+    }
+
+    # Get LLM configuration from environment variables
+    let custom_openai_api_key = ($env.CUSTOM_OPENAI_API_KEY? | default "")
+    let custom_openai_base_url = ($env.CUSTOM_OPENAI_BASE_URL? | default "https://openrouter.ai/api/v1")
+    let custom_openai_model = ($env.CUSTOM_OPENAI_MODEL? | default "google/gemini-2.5-flash-preview-05-20")
+    
+    # Show warning if API key is not set
+    if ($custom_openai_api_key | str length) == 0 {
+        print $"($color_yellow)Warning: CUSTOM_OPENAI_API_KEY environment variable not set. AI automation may not work.($color_reset)"
+        print $"($color_yellow)Set the environment variable in your .env file or export CUSTOM_OPENAI_API_KEY=your-key-here($color_reset)"
+    }
+    
     let values_content = $"
 # Generated values for branch ($branch) development environment
 devEnv:
@@ -605,6 +643,13 @@ server:
     name: \"($image_name)\"
     tag: \"($image_tag)\"
   pullPolicy: Always  # Force pull to avoid cache issues
+
+# LLM Configuration
+config:
+  llm:
+    customOpenaiApiKey: \"($custom_openai_api_key)\"
+    customOpenaiBaseUrl: \"($custom_openai_base_url)\"
+    customOpenaiModel: \"($custom_openai_model)\"
 
 ($edition_comment)"
     
