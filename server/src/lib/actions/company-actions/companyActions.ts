@@ -6,7 +6,7 @@ import { unparseCSV } from 'server/src/lib/utils/csvParser';
 import { createDefaultTaxSettings } from '../taxSettingsActions';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { getCompanyLogoUrl } from 'server/src/lib/utils/avatarUtils';
+import { getCompanyLogoUrl, getCompanyLogoUrlsBatch } from 'server/src/lib/utils/avatarUtils';
 import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/EntityImageService';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
@@ -226,6 +226,120 @@ export async function createCompany(company: Omit<ICompany, 'company_id' | 'crea
   }
 }
 
+// Pagination interface
+export interface CompanyPaginationParams {
+  page?: number;
+  pageSize?: number;
+  includeInactive?: boolean;
+  searchTerm?: string;
+  clientTypeFilter?: 'all' | 'company' | 'individual';
+  loadLogos?: boolean; // Option to load logos or not
+}
+
+export interface PaginatedCompaniesResponse {
+  companies: ICompany[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export async function getAllCompaniesPaginated(params: CompanyPaginationParams = {}): Promise<PaginatedCompaniesResponse> {
+  const {
+    page = 1,
+    pageSize = 10,
+    includeInactive = true,
+    searchTerm,
+    clientTypeFilter = 'all',
+    loadLogos = true
+  } = params;
+
+  const {knex: db, tenant} = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  try {
+    const offset = (page - 1) * pageSize;
+
+    // Use a transaction to get paginated company data
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Build the base query
+      let baseQuery = trx('companies as c')
+        .leftJoin('users as u', function() {
+          this.on('c.account_manager_id', '=', 'u.user_id')
+              .andOn('c.tenant', '=', 'u.tenant');
+        })
+        .where({ 'c.tenant': tenant });
+
+      if (!includeInactive) {
+        baseQuery = baseQuery.andWhere('c.is_inactive', false);
+      }
+
+      // Apply filters
+      if (searchTerm) {
+        baseQuery = baseQuery.where(function() {
+          this.where('c.company_name', 'ilike', `%${searchTerm}%`)
+              .orWhere('c.phone_no', 'ilike', `%${searchTerm}%`)
+              .orWhere('c.address', 'ilike', `%${searchTerm}%`);
+        });
+      }
+
+      if (clientTypeFilter !== 'all') {
+        baseQuery = baseQuery.where('c.client_type', clientTypeFilter);
+      }
+
+      // Get total count
+      const countResult = await baseQuery.clone().count('* as count').first();
+      const totalCount = parseInt(countResult?.count as string || '0', 10);
+
+      // Get paginated companies
+      const companies = await baseQuery
+        .select(
+          'c.*',
+          trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`)
+        )
+        .orderBy('c.company_name', 'asc')
+        .limit(pageSize)
+        .offset(offset);
+
+      return { companies, totalCount };
+    });
+
+    // Process companies to add logoUrl if requested
+    let companiesWithLogos = result.companies;
+    
+    if (loadLogos && companiesWithLogos.length > 0) {
+      const companyIds = companiesWithLogos.map(c => c.company_id);
+      const logoUrlsMap = await getCompanyLogoUrlsBatch(companyIds, tenant);
+      
+      companiesWithLogos = companiesWithLogos.map((company) => ({
+        ...company,
+        properties: company.properties || {},
+        logoUrl: logoUrlsMap.get(company.company_id) || null,
+      }));
+    } else {
+      // If not loading logos, ensure logoUrl is null
+      companiesWithLogos = companiesWithLogos.map((company) => ({
+        ...company,
+        properties: company.properties || {},
+        logoUrl: null,
+      }));
+    }
+
+    return {
+      companies: companiesWithLogos as ICompany[],
+      totalCount: result.totalCount,
+      page,
+      pageSize,
+      totalPages: Math.ceil(result.totalCount / pageSize)
+    };
+  } catch (error) {
+    console.error('Error fetching paginated companies:', error);
+    throw error;
+  }
+}
+
 export async function getAllCompanies(includeInactive: boolean = true): Promise<ICompany[]> {
   const {knex: db, tenant} = await createTenantKnex();
   if (!tenant) {
@@ -284,9 +398,12 @@ export async function getAllCompanies(includeInactive: boolean = true): Promise<
       return { companiesData: companies, fileIdMap: fileIds };
     });
 
-    // Process companies to add logoUrl
-    const companiesWithLogos = await Promise.all(companiesData.map(async (companyData) => {
-      const logoUrl = await getCompanyLogoUrl(companyData.company_id, tenant);
+    // Process companies to add logoUrl using batch loading
+    const companyIds = companiesData.map(c => c.company_id);
+    const logoUrlsMap = await getCompanyLogoUrlsBatch(companyIds, tenant);
+    
+    const companiesWithLogos = companiesData.map((companyData) => {
+      const logoUrl = logoUrlsMap.get(companyData.company_id) || null;
       
       // Remove the temporary document_id before returning
       const { document_id, ...company } = companyData;
@@ -295,7 +412,7 @@ export async function getAllCompanies(includeInactive: boolean = true): Promise<
         properties: company.properties || {},
         logoUrl,
       };
-    }));
+    });
 
     return companiesWithLogos as ICompany[];
   } catch (error) {

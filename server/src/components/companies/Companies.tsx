@@ -4,7 +4,15 @@ import { ICompany } from 'server/src/interfaces/company.interfaces';
 import GenericDialog from '../ui/GenericDialog';
 import { Button } from '../ui/Button';
 import QuickAddCompany from './QuickAddCompany';
-import { createCompany, getAllCompanies, deleteCompany, importCompaniesFromCSV, exportCompaniesToCSV } from 'server/src/lib/actions/company-actions/companyActions';
+import { 
+  createCompany, 
+  getAllCompanies, 
+  getAllCompaniesPaginated,
+  deleteCompany, 
+  importCompaniesFromCSV, 
+  exportCompaniesToCSV,
+  type PaginatedCompaniesResponse 
+} from 'server/src/lib/actions/company-actions/companyActions';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 import CompaniesGrid from './CompaniesGrid';
@@ -85,28 +93,58 @@ const Companies: React.FC = () => {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [multiDeleteError, setMultiDeleteError] = useState<string | null>(null);
   
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10); // Default to 10 for list view
+  const [totalCount, setTotalCount] = useState(0);
+  
+  // Load companies with pagination
+  const loadCompanies = async () => {
+    try {
+      setIsLoading(true);
+      const response = await getAllCompaniesPaginated({
+        page: currentPage,
+        pageSize,
+        includeInactive: filterStatus !== 'active',
+        searchTerm: searchTerm || undefined,
+        clientTypeFilter,
+        loadLogos: true // Load logos for displayed companies only
+      });
+
+      setCompanies(response.companies);
+      setTotalCount(response.totalCount);
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Error loading companies:', error);
+      setIsLoading(false);
+    }
+  };
+
+  // Load companies when filters or pagination changes
+  useEffect(() => {
+    loadCompanies();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, pageSize, filterStatus, searchTerm, clientTypeFilter]);
+
   useEffect(() => {
     const initializeComponent = async () => {
       try {
-        // Load both companies and user preferences
-        const [allCompanies, currentUser] = await Promise.all([
-          getAllCompanies(true),
-          getCurrentUser()
-        ]);
-
-        setCompanies(allCompanies);
+        // Load user preferences
+        const currentUser = await getCurrentUser();
 
         if (currentUser) {
           const savedViewMode = await getUserPreference(currentUser.user_id, COMPANY_VIEW_MODE_SETTING);
-          setViewMode(savedViewMode === 'grid' || savedViewMode === 'list' ? savedViewMode : 'grid');
+          const mode = savedViewMode === 'grid' || savedViewMode === 'list' ? savedViewMode : 'grid';
+          setViewMode(mode);
+          // Set appropriate page size based on view mode
+          setPageSize(mode === 'grid' ? 9 : 10);
         } else {
           setViewMode('grid'); // Default if no user or preference
+          setPageSize(9); // Default page size for grid view
         }
       } catch (error) {
         console.error('Error initializing component:', error);
         setViewMode('grid'); // Default on error
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -123,6 +161,15 @@ const Companies: React.FC = () => {
 
   const handleViewModeChange = async (newMode: CompanyViewMode) => {
     setViewMode(newMode);
+    
+    // Adjust page size based on view mode
+    if (newMode === 'grid') {
+      setPageSize(9); // Grid view uses 9 cards by default
+    } else {
+      setPageSize(10); // List view uses 10 rows by default
+    }
+    setCurrentPage(1); // Reset to first page when changing view
+    
     try {
       const currentUser = await getCurrentUser();
       if (currentUser) {
@@ -149,15 +196,8 @@ const Companies: React.FC = () => {
     });
   };
   
-  const filteredCompanies = companies.filter(company =>
-    company.company_name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-    (filterStatus === 'all' || 
-     (filterStatus === 'active' && !company.is_inactive) ||
-     (filterStatus === 'inactive' && company.is_inactive)) &&
-    (clientTypeFilter === 'all' ||
-     (clientTypeFilter === 'company' && company.client_type === 'company') ||
-     (clientTypeFilter === 'individual' && company.client_type === 'individual'))
-  );
+  // No need for client-side filtering anymore since we're filtering on the server
+  const filteredCompanies = companies;
 
   const handleEditCompany = (companyId: string) => {
     router.push(`/msp/companies/${companyId}`);
@@ -198,8 +238,7 @@ const Companies: React.FC = () => {
 
   const refreshCompanies = async () => {
     try {
-      const updatedCompanies = await getAllCompanies(true);
-      setCompanies(updatedCompanies);
+      await loadCompanies();
       router.refresh();
     } catch (error) {
       console.error('Error refreshing companies:', error);
@@ -394,7 +433,10 @@ const Companies: React.FC = () => {
                 placeholder="Search clients"
                 className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1); // Reset to first page when searching
+                }}
               />
               <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             </div>
@@ -404,7 +446,10 @@ const Companies: React.FC = () => {
               <CustomSelect
                 id="status-filter"
                 value={filterStatus}
-                onValueChange={(value) => setFilterStatus(value as 'all' | 'active' | 'inactive')}
+                onValueChange={(value) => {
+                  setFilterStatus(value as 'all' | 'active' | 'inactive');
+                  setCurrentPage(1); // Reset to first page when changing filter
+                }}
                 options={[
                   { value: 'active', label: 'Active Clients' },
                   { value: 'inactive', label: 'Inactive Clients' },
@@ -420,7 +465,10 @@ const Companies: React.FC = () => {
               <CustomSelect
                 id="client-type-filter"
                 value={clientTypeFilter}
-                onValueChange={(value) => setClientTypeFilter(value as 'all' | 'company' | 'individual')}
+                onValueChange={(value) => {
+                  setClientTypeFilter(value as 'all' | 'company' | 'individual');
+                  setCurrentPage(1); // Reset to first page when changing filter
+                }}
                 options={[
                   { value: 'all', label: 'All Types' },
                   { value: 'company', label: 'Companies' },
@@ -512,6 +560,14 @@ const Companies: React.FC = () => {
             handleCheckboxChange={handleCheckboxChange}
             handleEditCompany={handleEditCompany}
             handleDeleteCompany={handleDeleteCompany}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalCount={totalCount}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1); // Reset to first page when changing page size
+            }}
           />
         ) : (
           <CompaniesList
@@ -521,6 +577,10 @@ const Companies: React.FC = () => {
             handleCheckboxChange={handleCheckboxChange}
             handleEditCompany={handleEditCompany}
             handleDeleteCompany={handleDeleteCompany}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalCount={totalCount}
+            onPageChange={setCurrentPage}
           />
         )}
       </div>

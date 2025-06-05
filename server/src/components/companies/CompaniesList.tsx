@@ -17,6 +17,10 @@ interface CompaniesListProps {
     handleCheckboxChange: (companyId: string) => void;
     handleEditCompany: (companyId: string) => void;
     handleDeleteCompany: (company: ICompany) => void;
+    currentPage?: number;
+    pageSize?: number;
+    totalCount?: number;
+    onPageChange?: (page: number) => void;
 }
 
 // Component for company selection checkbox
@@ -77,7 +81,18 @@ const CompanyLink: React.FC<CompanyLinkProps> = ({ company, onClick }) => {
   );
 };
 
-const CompaniesList = ({ selectedCompanies, filteredCompanies, setSelectedCompanies, handleCheckboxChange, handleEditCompany, handleDeleteCompany }: CompaniesListProps) => {
+const CompaniesList = ({ 
+  selectedCompanies, 
+  filteredCompanies, 
+  setSelectedCompanies, 
+  handleCheckboxChange, 
+  handleEditCompany, 
+  handleDeleteCompany,
+  currentPage,
+  pageSize,
+  totalCount,
+  onPageChange
+}: CompaniesListProps) => {
   const router = useRouter(); // Get router instance
 
   const handleRowClick = (company: ICompany) => {
@@ -213,6 +228,11 @@ const CompaniesList = ({ selectedCompanies, filteredCompanies, setSelectedCompan
                 }))}
                 columns={columns}
                 onRowClick={handleRowClick} // Use the original onRowClick signature
+                pagination={true}
+                currentPage={currentPage}
+                pageSize={pageSize}
+                totalItems={totalCount}
+                onPageChange={onPageChange}
             />
         </div>
     );
