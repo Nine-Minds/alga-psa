@@ -388,8 +388,15 @@ export default function ControlPanel() {
               
               try {
                 const parsedEvent = JSON.parse(eventDataJson);
-                // The data is already parsed - no need for double JSON.parse
-                const actualData = parsedEvent.data; 
+                // For token events, data is a string. For tool_use events, data is a JSON string that needs parsing
+                let actualData = parsedEvent.data;
+                if (eventType === 'tool_use' && typeof actualData === 'string') {
+                  try {
+                    actualData = JSON.parse(actualData);
+                  } catch (e) {
+                    console.warn('[CLIENT] Failed to parse tool_use data as JSON:', actualData);
+                  }
+                } 
 
                 if (parsedEvent.type !== eventType) {
                   console.warn(`[CLIENT] Mismatched event types: SSE event says '${eventType}', JSON says '${parsedEvent.type}'`);
