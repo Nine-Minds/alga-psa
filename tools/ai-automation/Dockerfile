@@ -30,6 +30,7 @@ RUN apt-get install -qq -y --no-install-recommends \
       x11vnc \
       fluxbox \
       x11-utils \
+      xauth \
       websockify \
       fonts-ipafont-gothic \
       fonts-wqy-zenhei \
