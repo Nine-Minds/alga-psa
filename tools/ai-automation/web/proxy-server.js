@@ -23,15 +23,25 @@ try {
   console.log('Running without WebSocket proxy support');
 }
 
-// Import the Next.js standalone server handler
-let nextHandler;
-try {
-  nextHandler = require('./server.js');
-  console.log('✓ Next.js standalone server loaded');
-} catch (err) {
-  console.error('✗ Failed to load Next.js server:', err.message);
-  throw err;
-}
+// Start Next.js server on a different port
+const { spawn } = require('child_process');
+const NEXT_PORT = 3001;
+
+// Start the Next.js server on port 3001
+const nextProcess = spawn('node', ['server.js'], {
+  env: { ...process.env, PORT: NEXT_PORT.toString() },
+  stdio: 'inherit'
+});
+
+nextProcess.on('error', (err) => {
+  console.error('Failed to start Next.js server:', err);
+  process.exit(1);
+});
+
+// Give Next.js time to start
+setTimeout(() => {
+  console.log('✓ Next.js server should be running on port', NEXT_PORT);
+}, 2000);
 
 // Create WebSocket proxy if middleware is available
 let wsProxy;
@@ -62,21 +72,33 @@ if (createProxyMiddleware) {
   console.log('✓ WebSocket proxy configured');
 }
 
-// Create a custom server that wraps the Next.js handler
+// Create proxy for Next.js app
+const nextProxy = createProxyMiddleware && createProxyMiddleware({
+  target: `http://localhost:${NEXT_PORT}`,
+  changeOrigin: true,
+  ws: false, // Don't proxy WebSocket for Next.js routes
+  logLevel: 'warn'
+});
+
+// Create a custom server that routes requests appropriately
 const server = http.createServer((req, res) => {
   const parsedUrl = parse(req.url, true);
   
   // Log all requests for debugging
   console.log(`[REQUEST] ${req.method} ${req.url}`);
   
-  // Handle Socket.IO requests with proxy
+  // Handle Socket.IO requests with WebSocket proxy
   if (wsProxy && parsedUrl.pathname.startsWith('/socket.io')) {
     console.log('[REQUEST] Routing to WebSocket proxy');
     wsProxy(req, res);
-  } else {
-    // Let Next.js handle everything else
+  } else if (nextProxy) {
+    // Proxy everything else to Next.js
     console.log('[REQUEST] Routing to Next.js');
-    nextHandler(req, res);
+    nextProxy(req, res);
+  } else {
+    // Fallback if proxy middleware is not available
+    res.writeHead(503, { 'Content-Type': 'text/plain' });
+    res.end('Service temporarily unavailable');
   }
 });
 
