@@ -19,7 +19,7 @@ import { validateData } from 'server/src/lib/utils/validation';
 import { getEventBus } from '../../../lib/eventBus';
 import { convertBlockNoteToMarkdown } from 'server/src/lib/utils/blocknoteUtils';
 import { getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
-import { getCompanyLogoUrl, getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { getCompanyLogoUrl, getUserAvatarUrl, getCompanyLogoUrlsBatch } from 'server/src/lib/utils/avatarUtils';
 import {
   ticketFormSchema,
   ticketSchema,
@@ -202,22 +202,19 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       }, {} as Record<string, string>);
     }
 
-    // Process the full companies list to add logoUrl using getCompanyLogoUrl
-    const companiesWithLogos = await Promise.all(companiesData.map(async (companyData) => {
-      let logoUrl: string | null = null;
-      try {
-        logoUrl = await getCompanyLogoUrl(companyData.company_id, tenant);
-      } catch (imgError) {
-        console.error(`Error fetching logo URL for company ${companyData.company_id} in list (in getConsolidatedTicketData):`, imgError);
-        logoUrl = null; 
-      }
+    // Process the full companies list to add logoUrl using batch loading
+    const companyIds = companiesData.map(c => c.company_id);
+    const logoUrlsMap = await getCompanyLogoUrlsBatch(companyIds, tenant);
+    
+    const companiesWithLogos = companiesData.map((companyData) => {
+      const logoUrl = logoUrlsMap.get(companyData.company_id) || null;
       const { document_id, ...companyResult } = companyData;
       return {
         ...companyResult,
         properties: companyData.properties || {},
         logoUrl,
       };
-    }));
+    });
     // --- End Logo URL Processing for 'companies' list ---
 
 
@@ -727,22 +724,18 @@ export async function getTicketFormOptions(user: IUser) {
     // --- Add Logo URL Processing ---
     const companiesData = companies; 
 
-    // Process companies to add logoUrl using getCompanyLogoUrl
-    const companiesWithLogos = await Promise.all(companiesData.map(async (companyData) => {
-      let logoUrl: string | null = null;
-      try {
-        logoUrl = await getCompanyLogoUrl(companyData.company_id, tenant);
-      } catch (imgError) {
-        console.error(`Error fetching logo URL for company ${companyData.company_id} in list:`, imgError);
-        logoUrl = null; 
-      }
-      
+    // Process companies to add logoUrl using batch loading
+    const companyIds = companiesData.map(c => c.company_id);
+    const logoUrlsMap = await getCompanyLogoUrlsBatch(companyIds, tenant);
+    
+    const companiesWithLogos = companiesData.map((companyData) => {
+      const logoUrl = logoUrlsMap.get(companyData.company_id) || null;
       return {
         ...companyData,
         properties: companyData.properties || {}, 
         logoUrl,
       };
-    }));
+    });
     // --- End Logo URL Processing ---
 
     return {

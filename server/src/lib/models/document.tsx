@@ -59,9 +59,8 @@ const Document = {
 
     insert: async (document: IDocument, trx: Knex.Transaction): Promise<Pick<IDocument, "document_id">> => {
         try {
-            const { tenant: _, ...documentData } = document;
             const [document_id] = await trx<IDocument>('documents')
-                .insert(documentData)
+                .insert(document)
                 .returning('document_id');
             return document_id;
         } catch (error) {
@@ -95,24 +94,54 @@ const Document = {
 
     getByTicketId: async (ticket_id: string, trx: Knex.Transaction): Promise<IDocument[]> => {
         try {
-            return await trx<IDocument>('documents')
-                    .select(
-                        'documents.*',
-                        'users.first_name',
-                        'users.last_name',
-                        trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
-                    )
-                    .join('document_associations', function() {
-                        this.on('documents.document_id', '=', 'document_associations.document_id')
-                            .andOn('documents.tenant', '=', 'document_associations.tenant');
-                    })
-                    .leftJoin('users', function() {
-                        this.on('documents.created_by', '=', 'users.user_id');
-                    })
-                    .where({
-                        'document_associations.entity_id': ticket_id,
-                        'document_associations.entity_type': 'ticket'
-                    });
+            // First, get document IDs from associations
+            const associations = await trx('document_associations')
+                .select('document_id', 'tenant')
+                .where({
+                    entity_id: ticket_id,
+                    entity_type: 'ticket'
+                });
+
+            if (associations.length === 0) {
+                return [];
+            }
+
+            // Extract document IDs and tenant
+            const documentIds = associations.map(a => a.document_id);
+            const tenant = associations[0].tenant;
+
+            // Get documents
+            const documents = await trx<IDocument>('documents')
+                .select('documents.*')
+                .whereIn('document_id', documentIds)
+                .andWhere({ tenant });
+
+            // Get user information separately
+            const userIds = [...new Set(documents.map(d => d.created_by).filter(Boolean))];
+            let usersMap: Record<string, any> = {};
+            
+            if (userIds.length > 0) {
+                const users = await trx('users')
+                    .select('user_id', 'first_name', 'last_name')
+                    .whereIn('user_id', userIds)
+                    .andWhere({ tenant });
+                
+                usersMap = users.reduce((acc, user) => {
+                    acc[user.user_id] = user;
+                    return acc;
+                }, {} as Record<string, any>);
+            }
+
+            // Combine the data
+            return documents.map(doc => {
+                const user = usersMap[doc.created_by];
+                return {
+                    ...doc,
+                    first_name: user?.first_name,
+                    last_name: user?.last_name,
+                    created_by_full_name: user ? `${user.first_name} ${user.last_name}` : null
+                };
+            });
         } catch (error) {
             logger.error(`Error getting documents with ticket_id ${ticket_id}:`, error);
             throw error;
@@ -121,24 +150,54 @@ const Document = {
 
     getByCompanyId: async (company_id: string, trx: Knex.Transaction): Promise<IDocument[]> => {
         try {
-            return await trx<IDocument>('documents')
-                    .select(
-                        'documents.*',
-                        'users.first_name',
-                        'users.last_name',
-                        trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
-                    )
-                    .join('document_associations', function() {
-                        this.on('documents.document_id', '=', 'document_associations.document_id')
-                            .andOn('documents.tenant', '=', 'document_associations.tenant');
-                    })
-                    .leftJoin('users', function() {
-                        this.on('documents.created_by', '=', 'users.user_id');
-                    })
-                    .where({
-                        'document_associations.entity_id': company_id,
-                        'document_associations.entity_type': 'company'
-                    });
+            // First, get document IDs from associations
+            const associations = await trx('document_associations')
+                .select('document_id', 'tenant')
+                .where({
+                    entity_id: company_id,
+                    entity_type: 'company'
+                });
+
+            if (associations.length === 0) {
+                return [];
+            }
+
+            // Extract document IDs and tenant
+            const documentIds = associations.map(a => a.document_id);
+            const tenant = associations[0].tenant;
+
+            // Get documents
+            const documents = await trx<IDocument>('documents')
+                .select('documents.*')
+                .whereIn('document_id', documentIds)
+                .andWhere({ tenant });
+
+            // Get user information separately
+            const userIds = [...new Set(documents.map(d => d.created_by).filter(Boolean))];
+            let usersMap: Record<string, any> = {};
+            
+            if (userIds.length > 0) {
+                const users = await trx('users')
+                    .select('user_id', 'first_name', 'last_name')
+                    .whereIn('user_id', userIds)
+                    .andWhere({ tenant });
+                
+                usersMap = users.reduce((acc, user) => {
+                    acc[user.user_id] = user;
+                    return acc;
+                }, {} as Record<string, any>);
+            }
+
+            // Combine the data
+            return documents.map(doc => {
+                const user = usersMap[doc.created_by];
+                return {
+                    ...doc,
+                    first_name: user?.first_name,
+                    last_name: user?.last_name,
+                    created_by_full_name: user ? `${user.first_name} ${user.last_name}` : null
+                };
+            });
         } catch (error) {
             logger.error(`Error getting documents with company_id ${company_id}:`, error);
             throw error;
@@ -147,24 +206,54 @@ const Document = {
 
     getByContactNameId: async (contact_name_id: string, trx: Knex.Transaction): Promise<IDocument[]> => {
         try {
-            return await trx<IDocument>('documents')
-                    .select(
-                        'documents.*',
-                        'users.first_name',
-                        'users.last_name',
-                        trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
-                    )
-                    .join('document_associations', function() {
-                        this.on('documents.document_id', '=', 'document_associations.document_id')
-                            .andOn('documents.tenant', '=', 'document_associations.tenant');
-                    })
-                    .leftJoin('users', function() {
-                        this.on('documents.created_by', '=', 'users.user_id');
-                    })
-                    .where({
-                        'document_associations.entity_id': contact_name_id,
-                        'document_associations.entity_type': 'contact'
-                    });
+            // First, get document IDs from associations
+            const associations = await trx('document_associations')
+                .select('document_id', 'tenant')
+                .where({
+                    entity_id: contact_name_id,
+                    entity_type: 'contact'
+                });
+
+            if (associations.length === 0) {
+                return [];
+            }
+
+            // Extract document IDs and tenant
+            const documentIds = associations.map(a => a.document_id);
+            const tenant = associations[0].tenant;
+
+            // Get documents
+            const documents = await trx<IDocument>('documents')
+                .select('documents.*')
+                .whereIn('document_id', documentIds)
+                .andWhere({ tenant });
+
+            // Get user information separately
+            const userIds = [...new Set(documents.map(d => d.created_by).filter(Boolean))];
+            let usersMap: Record<string, any> = {};
+            
+            if (userIds.length > 0) {
+                const users = await trx('users')
+                    .select('user_id', 'first_name', 'last_name')
+                    .whereIn('user_id', userIds)
+                    .andWhere({ tenant });
+                
+                usersMap = users.reduce((acc, user) => {
+                    acc[user.user_id] = user;
+                    return acc;
+                }, {} as Record<string, any>);
+            }
+
+            // Combine the data
+            return documents.map(doc => {
+                const user = usersMap[doc.created_by];
+                return {
+                    ...doc,
+                    first_name: user?.first_name,
+                    last_name: user?.last_name,
+                    created_by_full_name: user ? `${user.first_name} ${user.last_name}` : null
+                };
+            });
         } catch (error) {
             logger.error(`Error getting documents with contact_name_id ${contact_name_id}:`, error);
             throw error;
