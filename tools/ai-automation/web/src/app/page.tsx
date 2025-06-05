@@ -9,6 +9,7 @@ import { ChevronRight, ChevronDown } from 'lucide-react';
 import { prompts } from '../tools/prompts';
 import { invokeTool } from '../tools/invokeTool';
 import { ChatMessage } from '../types/messages';
+import { resolveDevServiceUrl } from '../lib/resolveDevServiceUrl';
 
 type JsonValue = 
   | string
@@ -825,11 +826,19 @@ export default function ControlPanel() {
                           try {
                             console.log('[CLIENT] Navigating via /api/puppeteer (proxy to backend)');
                             console.log('[CLIENT] Navigation URL:', url);
+                            
+                            // In dev environments, resolve service names to fully qualified names
+                            const resolvedUrl = process.env.NEXT_PUBLIC_ALGA_DEV_ENV === 'true' 
+                              ? resolveDevServiceUrl(url) 
+                              : url;
+                            
+                            console.log('[CLIENT] Resolved URL:', resolvedUrl);
+                            
                             const response = await fetch('/api/puppeteer', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({
-                                script: `(async () => { await helper.navigate('${url}'); })();`
+                                script: `(async () => { await helper.navigate('${resolvedUrl}'); })();`
                               })
                             });
                             console.log('[CLIENT] Navigation response:', response.status, response.statusText);

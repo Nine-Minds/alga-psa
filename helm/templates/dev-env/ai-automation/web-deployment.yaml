@@ -45,6 +45,10 @@ spec:
               value: "true"
             - name: ALGA_BRANCH_SANITIZED
               value: "{{ .Values.devEnv.sanitizedBranch }}"
+            - name: NEXT_PUBLIC_ALGA_DEV_ENV
+              value: "true"
+            - name: NEXT_PUBLIC_ALGA_BRANCH_SANITIZED
+              value: "{{ .Values.devEnv.sanitizedBranch }}"
           ports:
             - name: http
               containerPort: 3000

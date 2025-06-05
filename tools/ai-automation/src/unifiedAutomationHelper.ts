@@ -27,6 +27,11 @@ export class UnifiedAutomationHelper {
     console.log(`[UnifiedHelper] Executing action: ${actionType} on element: ${elementId}`);
     
     try {
+      // Special case for navigation - doesn't need an element
+      if (actionType === 'navigate') {
+        return await this.executeNavigate(params.url || '');
+      }
+
       // Find the element using both modern and legacy attributes
       const element = await this.findElement(elementId);
       if (!element) {
