@@ -53,13 +53,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copy build info file for version tracking
 COPY --from=builder --chown=nextjs:nodejs /app/build-info.txt ./build-info.txt
 
-# Copy package.json and install proxy middleware
-COPY --from=builder /app/package.json ./package.json
-RUN npm install http-proxy-middleware
-
-# Copy our proxy server
-COPY --from=builder /app/proxy-server.js ./proxy-server.js
-
 USER nextjs
 
 EXPOSE 3000
@@ -67,5 +60,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Run our proxy server that wraps the Next.js standalone server
-CMD ["node", "proxy-server.js"]
+# Run the Next.js standalone server directly
+CMD ["node", "server.js"]

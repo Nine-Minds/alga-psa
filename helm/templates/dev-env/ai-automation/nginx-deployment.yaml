@@ -1,0 +1,63 @@
+{{- if and .Values.devEnv.enabled .Values.devEnv.aiAutomation.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sebastian.fullname" . }}-ai-nginx
+  namespace: {{ .Values.devEnv.namespace }}
+  labels:
+    {{- include "sebastian.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ai-automation-nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "sebastian.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: ai-automation-nginx
+  template:
+    metadata:
+      labels:
+        {{- include "sebastian.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: ai-automation-nginx
+        {{- if .Values.devEnv.enabled }}
+        alga.dev/environment: "true"
+        {{- end }}
+    spec:
+      {{- with .Values.devEnv.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: {{ include "sebastian.fullname" . }}-ai-nginx-config
+{{- end }}

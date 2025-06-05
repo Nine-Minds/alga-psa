@@ -1,0 +1,74 @@
+{{- if and .Values.devEnv.enabled .Values.devEnv.aiAutomation.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sebastian.fullname" . }}-ai-nginx-config
+  namespace: {{ .Values.devEnv.namespace }}
+data:
+  nginx.conf: |
+    events {
+      worker_connections 1024;
+    }
+    
+    http {
+      upstream ai_web {
+        server {{ include "sebastian.fullname" . }}-ai-web:3000;
+      }
+      
+      upstream ai_api {
+        server {{ include "sebastian.fullname" . }}-ai-api:4000;
+      }
+      
+      map $http_upgrade $connection_upgrade {
+        default upgrade;
+        '' close;
+      }
+      
+      server {
+        listen 8080;
+        
+        # WebSocket connections to AI API
+        location /socket.io/ {
+          proxy_pass http://ai_api;
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection $connection_upgrade;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+          
+          # WebSocket specific timeouts
+          proxy_connect_timeout 7d;
+          proxy_send_timeout 7d;
+          proxy_read_timeout 7d;
+        }
+        
+        # API calls to AI API
+        location /api/browser/ {
+          proxy_pass http://ai_api;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+        }
+        
+        location /api/puppeteer {
+          proxy_pass http://ai_api;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+        }
+        
+        # Everything else to AI Web
+        location / {
+          proxy_pass http://ai_web;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+        }
+      }
+    }
+{{- end }}

@@ -1,0 +1,35 @@
+{{- if and .Values.devEnv.enabled .Values.devEnv.aiAutomation.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "sebastian.fullname" . }}-ai-nginx
+  namespace: {{ .Values.devEnv.namespace }}
+  labels:
+    {{- include "sebastian.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ai-automation-nginx
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "sebastian.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: ai-automation-nginx
+---
+# Service alias for simpler access
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-proxy
+  namespace: {{ .Values.devEnv.namespace }}
+spec:
+  type: ExternalName
+  externalName: {{ include "sebastian.fullname" . }}-ai-nginx.{{ .Values.devEnv.namespace }}.svc.cluster.local
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: http
+{{- end }}

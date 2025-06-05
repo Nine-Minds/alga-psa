@@ -864,7 +864,7 @@ def dev-env-connect [
             bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch)-code-server --address=127.0.0.1 ($code_server_port):8080 > /tmp/pf-code-server-($sanitized_branch).log 2>&1 &"
             bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch) --address=127.0.0.1 ($app_port):3000 > /tmp/pf-main-app-($sanitized_branch).log 2>&1 &"
             bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch)-code-server --address=127.0.0.1 ($code_app_port):3000 > /tmp/pf-code-app-($sanitized_branch).log 2>&1 &"
-            bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch)-ai-web --address=127.0.0.1 ($ai_web_port):3000 > /tmp/pf-ai-web-($sanitized_branch).log 2>&1 &"
+            bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch)-ai-nginx --address=127.0.0.1 ($ai_web_port):8080 > /tmp/pf-ai-web-($sanitized_branch).log 2>&1 &"
             
             # Give processes time to start
             sleep 2sec
