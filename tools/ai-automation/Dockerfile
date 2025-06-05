@@ -52,29 +52,20 @@ COPY --chown=appuser:appuser . .
 
 # Create startup script as root
 RUN echo '#!/bin/bash\n\
-# Start Xvfb first\n\
+# Start D-Bus session bus (not system bus)\n\
+eval $(dbus-launch --sh-syntax)\n\
+\n\
+# Start Xvfb\n\
 Xvfb :99 -screen 0 1920x1080x24 -ac > /dev/null 2>&1 &\n\
 sleep 2\n\
 \n\
-# Export display\n\
-export DISPLAY=:99\n\
-\n\
-# Start D-Bus session bus and export variables\n\
-eval `dbus-launch --sh-syntax`\n\
-export DBUS_SESSION_BUS_ADDRESS\n\
-export DBUS_SESSION_BUS_PID\n\
-\n\
 # Start window manager\n\
-fluxbox > /dev/null 2>&1 &\n\
+DISPLAY=:99 fluxbox > /dev/null 2>&1 &\n\
 \n\
 # Optional: Start VNC server for debugging (uncomment if needed)\n\
-# x11vnc -display :99 -nopw -forever -shared -rfbport 5900 > /dev/null 2>&1 &\n\
+# DISPLAY=:99 x11vnc -nopw -forever -shared -rfbport 5900 > /dev/null 2>&1 &\n\
 \n\
-# Debug: Show environment\n\
-echo "DISPLAY=$DISPLAY"\n\
-echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS"\n\
-\n\
-# Start the application with environment variables\n\
+# Start the application\n\
 exec npm run dev\n\
 ' > /home/appuser/start.sh && chmod +x /home/appuser/start.sh && chown appuser:appuser /home/appuser/start.sh
 

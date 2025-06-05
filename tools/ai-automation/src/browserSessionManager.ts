@@ -39,15 +39,13 @@ export class BrowserSessionManager {
   public async createSession(sessionId: string, mode: 'headless' | 'headed' = 'headless'): Promise<BrowserSession> {
     console.log(`[SESSION] Creating new ${mode} browser session: ${sessionId}`);
 
-    const launchOptions: any = {
+    const launchOptions = {
       headless: mode === 'headless',
       args: mode === 'headed' 
         ? [
             '--window-size=1900,1200',
             '--disable-web-security',
-            '--disable-features=VizDisplayCompositor',
-            '--no-sandbox',
-            '--disable-setuid-sandbox'
+            '--disable-features=VizDisplayCompositor'
           ]
         : [
             '--no-sandbox',
@@ -58,14 +56,6 @@ export class BrowserSessionManager {
       dumpio: false,
       slowMo: mode === 'headed' ? 50 : 100
     };
-
-    // For headed mode, ensure we have proper display environment
-    if (mode === 'headed') {
-      launchOptions.env = {
-        ...process.env,
-        DISPLAY: process.env.DISPLAY || ':99'
-      };
-    }
 
     const browser = await puppeteer.launch(launchOptions);
     const page = await browser.newPage();
