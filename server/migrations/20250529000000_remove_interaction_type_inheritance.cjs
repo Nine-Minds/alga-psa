@@ -5,8 +5,13 @@
 exports.up = function(knex) {
   return knex.transaction(async (trx) => {
     // Remove the foreign key constraint and system_type_id column
+    // Use raw SQL to handle the case where the constraint might not exist
+    await trx.raw(`
+      ALTER TABLE interaction_types 
+      DROP CONSTRAINT IF EXISTS interaction_types_system_type_id_foreign
+    `);
+    
     await trx.schema.alterTable('interaction_types', (table) => {
-      table.dropForeign('system_type_id');
       table.dropColumn('system_type_id');
     });
   });

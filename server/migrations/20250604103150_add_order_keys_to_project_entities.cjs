@@ -12,7 +12,7 @@ exports.up = async function(knex) {
     });
     
     // Populate initial order_keys based on existing order
-    const { generateKeyBetween } = require('fractional-indexing');
+    const { generateKeyBetween } = await import('fractional-indexing');
     
     // Get all tenants
     const tenants = await knex('tenants').select('tenant');
