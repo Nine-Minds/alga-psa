@@ -388,8 +388,8 @@ export default function ControlPanel() {
               
               try {
                 const parsedEvent = JSON.parse(eventDataJson);
-                // The actual data is nested inside parsedEvent.data and needs another parse
-                const actualData = JSON.parse(parsedEvent.data); 
+                // The data is already parsed - no need for double JSON.parse
+                const actualData = parsedEvent.data; 
 
                 if (parsedEvent.type !== eventType) {
                   console.warn(`[CLIENT] Mismatched event types: SSE event says '${eventType}', JSON says '${parsedEvent.type}'`);
