@@ -116,29 +116,13 @@ exports.up = async function(knex) {
   }
 
   // 7. Populate start_time and end_time from existing data where possible
-  // If interaction_date exists, set end_time to interaction_date
-  // First, set end_time to interaction_date for all records
+  // Set both start_time and end_time to interaction_date (duration will be 0)
   await knex.raw(`
     UPDATE interactions 
-    SET end_time = interaction_date
+    SET 
+      start_time = interaction_date,
+      end_time = interaction_date
     WHERE interaction_date IS NOT NULL
-  `);
-  
-  // Then set start_time to interaction_date for records without duration
-  await knex.raw(`
-    UPDATE interactions 
-    SET start_time = interaction_date
-    WHERE interaction_date IS NOT NULL 
-      AND (duration IS NULL OR duration = 0)
-  `);
-  
-  // Finally, calculate start_time for records with duration
-  await knex.raw(`
-    UPDATE interactions 
-    SET start_time = interaction_date - (duration * INTERVAL '1 minute')
-    WHERE interaction_date IS NOT NULL 
-      AND duration IS NOT NULL 
-      AND duration > 0
   `);
 };
 
