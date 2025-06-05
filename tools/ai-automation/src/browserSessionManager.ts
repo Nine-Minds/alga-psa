@@ -40,30 +40,29 @@ export class BrowserSessionManager {
     console.log(`[SESSION] Creating new ${mode} browser session: ${sessionId}`);
 
     const launchOptions: any = {
-      headless: mode === 'headless',
-      args: mode === 'headed' 
-        ? [
-            '--window-size=1900,1200',
-            '--disable-web-security',
-            '--disable-features=VizDisplayCompositor',
-            '--no-sandbox',
-            '--disable-setuid-sandbox'
-          ]
-        : [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--window-size=1900,1200'
-          ],
+      headless: mode === 'headless' ? 'new' : false,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--window-size=1900,1200',
+        ...(mode === 'headed' ? [
+          '--start-maximized',
+          '--remote-debugging-port=9222',
+          '--remote-debugging-address=0.0.0.0'
+        ] : [])
+      ],
       protocolTimeout: 60000,
-      dumpio: false,
+      dumpio: true, // Enable for debugging
       slowMo: mode === 'headed' ? 50 : 100
     };
 
-    // For headed mode, ensure we have proper display environment
-    if (mode === 'headed') {
+    // For container environment, always use virtual display
+    if (process.env.DISPLAY) {
       launchOptions.env = {
         ...process.env,
-        DISPLAY: process.env.DISPLAY || ':99'
+        DISPLAY: process.env.DISPLAY
       };
     }
 
