@@ -972,8 +972,45 @@ def dev-env-destroy [
         print $"  No stuck jobs found"
     }
     
-    # Step 2: Check for specific stuck resources and handle them
-    print $"($color_cyan)2. Checking for stuck resources...($color_reset)"
+    # Step 2: Force stop ai-api pods specifically (known to cause stuck namespaces)
+    print $"($color_cyan)2. Force stopping ai-api pods...($color_reset)"
+    let ai_api_pods = do {
+        kubectl get pods -n $namespace -l 'app.kubernetes.io/component=ai-automation-api' -o jsonpath='{.items[*].metadata.name}' | complete
+    }
+    
+    if $ai_api_pods.exit_code == 0 and ($ai_api_pods.stdout | str trim | str length) > 0 {
+        let pod_names = ($ai_api_pods.stdout | str trim | split row ' ')
+        for pod in $pod_names {
+            if ($pod | str trim | str length) > 0 {
+                print $"  Force deleting ai-api pod: ($pod)"
+                kubectl delete pod $pod -n $namespace --force --grace-period=0 | complete
+            }
+        }
+    } else {
+        print $"  No ai-api pods found by component label"
+        # Try alternative approach - look for any pods with "ai-api" in the name
+        let ai_api_pods_by_name = do {
+            kubectl get pods -n $namespace -o jsonpath='{.items[*].metadata.name}' | complete
+        }
+        
+        if $ai_api_pods_by_name.exit_code == 0 and ($ai_api_pods_by_name.stdout | str trim | str length) > 0 {
+            let all_pod_names = ($ai_api_pods_by_name.stdout | str trim | split row ' ')
+            let ai_api_names = ($all_pod_names | where { |pod| ($pod | str contains "ai-api") })
+            
+            if ($ai_api_names | length) > 0 {
+                print $"  Found ai-api pods by name pattern:"
+                for pod in $ai_api_names {
+                    print $"    Force deleting ai-api pod: ($pod)"
+                    kubectl delete pod $pod -n $namespace --force --grace-period=0 | complete
+                }
+            } else {
+                print $"  No ai-api pods found by name pattern either"
+            }
+        }
+    }
+    
+    # Step 3: Check for other stuck resources and handle them
+    print $"($color_cyan)3. Checking for other stuck resources...($color_reset)"
     
     # Check for stuck pods
     let stuck_pods = do {
@@ -986,8 +1023,8 @@ def dev-env-destroy [
         kubectl delete pods --all -n $namespace --force --grace-period=0 | complete
     }
     
-    # Step 3: Remove PV finalizers if stuck
-    print $"($color_cyan)3. Checking for stuck persistent volumes...($color_reset)"
+    # Step 4: Remove PV finalizers if stuck
+    print $"($color_cyan)4. Checking for stuck persistent volumes...($color_reset)"
     let stuck_pvs = do {
         kubectl get pv | grep $namespace | awk '{print $1}' | complete
     }
@@ -1003,8 +1040,8 @@ def dev-env-destroy [
         print $"  No stuck persistent volumes found"
     }
     
-    # Step 4: Find and remove Helm release - check where it actually exists
-    print $"($color_cyan)4. Locating and removing Helm release...($color_reset)"
+    # Step 5: Find and remove Helm release - check where it actually exists
+    print $"($color_cyan)5. Locating and removing Helm release...($color_reset)"
     let release_name = $"alga-dev-($sanitized_branch)"
     
     # Check if release exists in the environment namespace
@@ -1047,8 +1084,8 @@ def dev-env-destroy [
         print $"  No Helm release found for ($release_name) in either namespace."
     }
     
-    # Step 5: Clean up remaining resources systematically  
-    print $"($color_cyan)5. Cleaning up remaining resources...($color_reset)"
+    # Step 6: Clean up remaining resources systematically  
+    print $"($color_cyan)6. Cleaning up remaining resources...($color_reset)"
     
     # Delete all resources in the namespace first
     print $"  Deleting all workload resources..."
@@ -1063,8 +1100,8 @@ def dev-env-destroy [
     print $"  Deleting ingress resources..."
     kubectl delete ingress --all -n $namespace --timeout=30s | complete
     
-    # Step 6: Force cleanup any remaining persistent volumes
-    print $"($color_cyan)6. Force cleaning up persistent volumes...($color_reset)"
+    # Step 7: Force cleanup any remaining persistent volumes
+    print $"($color_cyan)7. Force cleaning up persistent volumes...($color_reset)"
     let remaining_pv_list = do {
         kubectl get pv | grep $namespace | awk '{print $1}' | complete
     }
@@ -1081,10 +1118,16 @@ def dev-env-destroy [
         print $"  No remaining persistent volumes found"
     }
     
-    # Step 7: Delete the namespace
-    print $"($color_cyan)7. Deleting namespace...($color_reset)"
+    # Step 8: Delete the namespace
+    print $"($color_cyan)8. Deleting namespace...($color_reset)"
+    
+    # First try to patch out any finalizers on the namespace itself
+    print $"  Removing namespace finalizers..."
+    kubectl patch namespace $namespace -p '{\"metadata\":{\"finalizers\":null}}' --type=merge | complete
+    
+    # Short timeout for initial deletion attempt
     let namespace_result = do {
-        kubectl delete namespace $namespace --timeout=60s | complete
+        kubectl delete namespace $namespace --timeout=30s | complete
     }
     
     if $namespace_result.exit_code == 0 {
@@ -1092,21 +1135,47 @@ def dev-env-destroy [
     } else {
         print $"  ($color_yellow)Warning: Standard namespace deletion had issues. Attempting force cleanup...($color_reset)"
         
-        # Final attempt to delete namespace with grace period 0
-        let force_namespace_result = do {
-            kubectl delete namespace $namespace --grace-period=0 --force | complete
+        # Wait a moment for any pending deletions to complete
+        sleep 2sec
+        
+        # Check if namespace still exists
+        let ns_check = do {
+            kubectl get namespace $namespace | complete
         }
         
-        if $force_namespace_result.exit_code == 0 {
-            print $"  ($color_green)Namespace force deleted successfully.($color_reset)"
+        if $ns_check.exit_code != 0 {
+            print $"  ($color_green)Namespace was deleted during wait period.($color_reset)"
         } else {
-            print $"  ($color_red)Failed to force delete namespace. Manual cleanup may be required.($color_reset)"
-            print $"  ($color_yellow)Try running: kubectl delete namespace ($namespace) --grace-period=0 --force($color_reset)"
+            print $"  Namespace still exists, forcing deletion..."
+            # Final attempt to delete namespace with grace period 0 and shorter timeout
+            let force_namespace_result = do {
+                kubectl delete namespace $namespace --grace-period=0 --force --timeout=20s | complete
+            }
+            
+            if $force_namespace_result.exit_code == 0 {
+                print $"  ($color_green)Namespace force deleted successfully.($color_reset)"
+            } else {
+                print $"  ($color_yellow)Force delete timed out or failed. Checking if deletion is in progress...($color_reset)"
+                
+                # Check final status
+                let final_ns_check = do {
+                    kubectl get namespace $namespace | complete
+                }
+                
+                if $final_ns_check.exit_code != 0 {
+                    print $"  ($color_green)Namespace deletion completed.($color_reset)"
+                } else {
+                    print $"  ($color_red)Namespace still exists. May require manual cleanup.($color_reset)"
+                    print $"  ($color_yellow)The namespace may be stuck due to remaining finalizers.($color_reset)"
+                    print $"  ($color_yellow)Try: kubectl patch namespace ($namespace) -p '{\\\"metadata\\\":{\\\"finalizers\\\":null}}' --type=merge($color_reset)"
+                    print $"  ($color_yellow)Then: kubectl delete namespace ($namespace) --grace-period=0 --force($color_reset)"
+                }
+            }
         }
     }
     
-    # Step 8: Final verification and cleanup
-    print $"($color_cyan)8. Final verification...($color_reset)"
+    # Step 9: Final verification and cleanup
+    print $"($color_cyan)9. Final verification...($color_reset)"
     let final_check = do {
         kubectl get namespace $namespace | complete
     }
@@ -1150,6 +1219,43 @@ def dev-env-force-cleanup [
         helm uninstall $release_name -n default | complete
     }
     
+    # Force stop ai-api pods first (known to cause stuck namespaces)
+    print $"($color_cyan)Force stopping ai-api pods...($color_reset)"
+    let ai_api_pods = do {
+        kubectl get pods -n $namespace -l 'app.kubernetes.io/component=ai-automation-api' -o jsonpath='{.items[*].metadata.name}' | complete
+    }
+    
+    if $ai_api_pods.exit_code == 0 and ($ai_api_pods.stdout | str trim | str length) > 0 {
+        let pod_names = ($ai_api_pods.stdout | str trim | split row ' ')
+        for pod in $pod_names {
+            if ($pod | str trim | str length) > 0 {
+                print $"  Force deleting ai-api pod: ($pod)"
+                kubectl delete pod $pod -n $namespace --force --grace-period=0 | complete
+            }
+        }
+    } else {
+        print $"  No ai-api pods found by component label"
+        # Try alternative approach - look for any pods with "ai-api" in the name
+        let ai_api_pods_by_name = do {
+            kubectl get pods -n $namespace -o jsonpath='{.items[*].metadata.name}' | complete
+        }
+        
+        if $ai_api_pods_by_name.exit_code == 0 and ($ai_api_pods_by_name.stdout | str trim | str length) > 0 {
+            let all_pod_names = ($ai_api_pods_by_name.stdout | str trim | split row ' ')
+            let ai_api_names = ($all_pod_names | where { |pod| ($pod | str contains "ai-api") })
+            
+            if ($ai_api_names | length) > 0 {
+                print $"  Found ai-api pods by name pattern:"
+                for pod in $ai_api_names {
+                    print $"    Force deleting ai-api pod: ($pod)"
+                    kubectl delete pod $pod -n $namespace --force --grace-period=0 | complete
+                }
+            } else {
+                print $"  No ai-api pods found by name pattern either"
+            }
+        }
+    }
+
     # Delete all resources in the namespace
     print $"($color_cyan)Deleting all namespace resources...($color_reset)"
     kubectl delete all --all -n $namespace --timeout=30s | complete
@@ -1170,15 +1276,33 @@ def dev-env-force-cleanup [
     
     # Force delete the namespace
     print $"($color_cyan)Force deleting namespace...($color_reset)"
+    
+    # Remove namespace finalizers first
+    print $"  Removing namespace finalizers..."
+    kubectl patch namespace $namespace -p '{\"metadata\":{\"finalizers\":null}}' --type=merge | complete
+    
     let namespace_result = do {
-        kubectl delete namespace $namespace --grace-period=0 --force | complete
+        kubectl delete namespace $namespace --grace-period=0 --force --timeout=30s | complete
     }
     
     if $namespace_result.exit_code == 0 {
         print $"($color_green)Force cleanup completed successfully.($color_reset)"
     } else {
-        print $"($color_yellow)Some resources may still need manual cleanup.($color_reset)"
-        print $"($color_yellow)Check with: kubectl get all -A | grep ($sanitized_branch)($color_reset)"
+        # Wait and check if deletion completed
+        print $"  Waiting for namespace deletion to complete..."
+        sleep 3sec
+        
+        let final_check = do {
+            kubectl get namespace $namespace | complete
+        }
+        
+        if $final_check.exit_code != 0 {
+            print $"($color_green)Namespace deletion completed after wait.($color_reset)"
+        } else {
+            print $"($color_yellow)Some resources may still need manual cleanup.($color_reset)"
+            print $"($color_yellow)Check with: kubectl get all -A | grep ($sanitized_branch)($color_reset)"
+            print $"($color_yellow)Or try: kubectl patch namespace ($namespace) -p '{\\\"metadata\\\":{\\\"finalizers\\\":null}}' --type=merge($color_reset)"
+        }
     }
 }
 
