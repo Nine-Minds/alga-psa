@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>AI Automation VNC</title>
+    <title>AI Automation VNC - No Scaling</title>
     <meta charset="utf-8">
     <style>
-        body { margin: 0; padding: 0; background: #333; }
+        body { margin: 0; padding: 0; background: #333; overflow: auto; }
         #status { 
-            position: absolute; 
+            position: fixed; 
             top: 10px; 
             right: 10px; 
             color: white; 
@@ -15,18 +15,19 @@
             border-radius: 3px;
             font-family: Arial, sans-serif;
             font-size: 14px;
+            z-index: 1000;
         }
     </style>
 </head>
 <body>
-    <div id="status">Connecting to VNC...</div>
+    <div id="status">Connecting to VNC (No Scaling)...</div>
     <script>
-        // Auto-redirect to NoVNC with connection parameters
+        // Auto-redirect to NoVNC with no scaling parameters for true resolution
         const params = new URLSearchParams({
             autoconnect: 'true',
             reconnect: 'true',
             reconnect_delay: '1000',
-            resize: 'remote',
+            resize: 'off',
             quality: '6',
             compression: '2',
             show_dot: 'false',
