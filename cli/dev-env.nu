@@ -482,122 +482,88 @@ export def dev-env-connect [
     print $"($env.ALGA_COLOR_CYAN)Setting up port forwarding...($env.ALGA_COLOR_RESET)"
     print $"($env.ALGA_COLOR_YELLOW)This will run in foreground. Press Ctrl+C to stop.($env.ALGA_COLOR_RESET)"
         
-        # Get the external ports from the deployment
-        print $"($env.ALGA_COLOR_CYAN)Retrieving assigned external ports...($env.ALGA_COLOR_RESET)"
+        # Find available ports dynamically at connect time
+        print $"($env.ALGA_COLOR_CYAN)Finding available ports for port forwarding...($env.ALGA_COLOR_RESET)"
         
-        # Get ports from configmap
-        let ports_result = do {
-            kubectl get configmap -n $namespace $"alga-dev-($sanitized_branch)-external-ports" -o json | complete
+        # Function to find a free port (same as in dev-env-create)
+        def find-free-port [start_port: int] {
+            mut port = $start_port
+            mut found = false
+            
+            while not $found and $port < 65535 {
+                # Copy mutable variable to avoid capture issue
+                let current_port = $port
+                
+                # Check if port is in use
+                let check_result = do { 
+                    bash -c $"nc -z localhost ($current_port) 2>/dev/null" | complete
+                }
+                
+                if $check_result.exit_code != 0 {
+                    # Port is free
+                    $found = true
+                } else {
+                    $port = $port + 1
+                }
+            }
+            
+            if $found { $port } else { 0 }
         }
         
-        let use_random_ports = if $ports_result.exit_code != 0 {
-            print $"($env.ALGA_COLOR_YELLOW)Warning: Could not retrieve external ports from ConfigMap($env.ALGA_COLOR_RESET)"
-            print $"($env.ALGA_COLOR_YELLOW)This environment was created before external port assignment was added.($env.ALGA_COLOR_RESET)"
-            print $"($env.ALGA_COLOR_YELLOW)Using random port assignment for backward compatibility.($env.ALGA_COLOR_RESET)"
-            true
-        } else { false }
+        # Find ports for each service
+        let app_port = find-free-port 30000
+        let code_server_port = find-free-port ($app_port + 1)
+        let code_app_port = find-free-port ($code_server_port + 1)
+        let ai_web_port = find-free-port ($code_app_port + 1)
         
-        if $use_random_ports {
-            # Fallback to random ports for older environments
-            print $"($env.ALGA_COLOR_CYAN)Starting port forwarding with random ports...($env.ALGA_COLOR_RESET)"
+        if $app_port == 0 or $code_server_port == 0 or $code_app_port == 0 or $ai_web_port == 0 {
+            print $"($env.ALGA_COLOR_RED)Could not find available ports for services($env.ALGA_COLOR_RESET)"
+            return
+        }
+        
+        print $"($env.ALGA_COLOR_GREEN)Found available ports:($env.ALGA_COLOR_RESET)"
+        print $"  Main App:     ($app_port)"
+        print $"  Code Server:  ($code_server_port)"
+        print $"  Code App:     ($code_app_port)"
+        print $"  AI Web:       ($ai_web_port)"
+        
+        # Start port forwarding processes with found ports
+        print $"($env.ALGA_COLOR_CYAN)Starting port forwarding processes...($env.ALGA_COLOR_RESET)"
+        
+        # Start processes using bash for proper backgrounding with specific ports
+        bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch)-code-server --address=127.0.0.1 ($code_server_port):8080 > /tmp/pf-code-server-($sanitized_branch).log 2>&1 &"
+        bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch) --address=127.0.0.1 ($app_port):3000 > /tmp/pf-main-app-($sanitized_branch).log 2>&1 &"
+        bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch)-code-server --address=127.0.0.1 ($code_app_port):3000 > /tmp/pf-code-app-($sanitized_branch).log 2>&1 &"
+        bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch)-ai-nginx --address=127.0.0.1 ($ai_web_port):8080 > /tmp/pf-ai-web-($sanitized_branch).log 2>&1 &"
+        
+        # Give processes time to start
+        sleep 2sec
+        
+        # Check if port forwarding started successfully
+        let pf_check = do {
+            bash -c $"ps aux | grep -E 'kubectl port-forward.*alga-dev-($sanitized_branch)' | grep -v grep | wc -l" | complete
+        }
+        
+        if ($pf_check.stdout | str trim | into int) < 4 {
+            print $"($env.ALGA_COLOR_YELLOW)Warning: Some port forwarding processes may not have started properly($env.ALGA_COLOR_RESET)"
+            print "Checking logs..."
             
-            # Start processes with random port assignment
-            bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch)-code-server --address=127.0.0.1 0:8080 > /tmp/pf-code-server-($sanitized_branch).log 2>&1 &"
-            bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch) --address=127.0.0.1 0:3000 > /tmp/pf-main-app-($sanitized_branch).log 2>&1 &"
-            bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch)-code-server --address=127.0.0.1 0:3000 > /tmp/pf-code-app-($sanitized_branch).log 2>&1 &"
-            
-            # Give processes time to start
-            sleep 3sec
-            
-            # Parse port assignments from logs
-            let code_server_port = do {
-                let log = (cat $"/tmp/pf-code-server-($sanitized_branch).log" | complete)
-                if $log.exit_code == 0 {
-                    let lines = ($log.stdout | lines | where { |line| $line | str contains "Forwarding from" })
-                    if ($lines | length) > 0 {
-                        ($lines | first | parse "Forwarding from 127.0.0.1:{port} -> 8080" | get 0?.port | default "unknown")
-                    } else { "pending" }
-                } else { "error" }
-            }
-            
-            let app_port = do {
-                let log = (cat $"/tmp/pf-main-app-($sanitized_branch).log" | complete)
-                if $log.exit_code == 0 {
-                    let lines = ($log.stdout | lines | where { |line| $line | str contains "Forwarding from" })
-                    if ($lines | length) > 0 {
-                        ($lines | first | parse "Forwarding from 127.0.0.1:{port} -> 3000" | get 0?.port | default "unknown")
-                    } else { "pending" }
-                } else { "error" }
-            }
-            
-            let code_app_port = do {
-                let log = (cat $"/tmp/pf-code-app-($sanitized_branch).log" | complete)
-                if $log.exit_code == 0 {
-                    let lines = ($log.stdout | lines | where { |line| $line | str contains "Forwarding from" })
-                    if ($lines | length) > 0 {
-                        ($lines | first | parse "Forwarding from 127.0.0.1:{port} -> 3000" | get 0?.port | default "unknown")
-                    } else { "pending" }
-                } else { "error" }
-            }
-            
-            print $"($env.ALGA_COLOR_CYAN)Port forwarding setup:($env.ALGA_COLOR_RESET)"
-            print $"  Code Server:        http://localhost:($code_server_port)"
-            print $"    Password: alga-dev"
-            print $"  PSA App \(main\):     http://localhost:($app_port)"
-            print $"  PSA App \(in code\):  http://localhost:($code_app_port)"
-        } else {
-            # Parse the ConfigMap data
-            let configmap_data = ($ports_result.stdout | from json)
-            let ports_data = $configmap_data.data
-            
-            let app_port = ($ports_data.app | into int)
-            let code_server_port = ($ports_data.codeServer | into int)
-            let code_app_port = ($ports_data.codeApp | into int)
-            let ai_web_port = ($ports_data.aiWeb | into int)
-            
-            print $"($env.ALGA_COLOR_GREEN)Using assigned ports:($env.ALGA_COLOR_RESET)"
-            print $"  Main App:     ($app_port)"
-            print $"  Code Server:  ($code_server_port)"
-            print $"  Code App:     ($code_app_port)"
-            print $"  AI Web:       ($ai_web_port)"
-            
-            # Start port forwarding processes with assigned ports
-            print $"($env.ALGA_COLOR_CYAN)Starting port forwarding processes...($env.ALGA_COLOR_RESET)"
-            
-            # Start processes using bash for proper backgrounding with specific ports
-            bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch)-code-server --address=127.0.0.1 ($code_server_port):8080 > /tmp/pf-code-server-($sanitized_branch).log 2>&1 &"
-            bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch) --address=127.0.0.1 ($app_port):3000 > /tmp/pf-main-app-($sanitized_branch).log 2>&1 &"
-            bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch)-code-server --address=127.0.0.1 ($code_app_port):3000 > /tmp/pf-code-app-($sanitized_branch).log 2>&1 &"
-            bash -c $"kubectl port-forward -n ($namespace) svc/alga-dev-($sanitized_branch)-ai-nginx --address=127.0.0.1 ($ai_web_port):8080 > /tmp/pf-ai-web-($sanitized_branch).log 2>&1 &"
-            
-            # Give processes time to start
-            sleep 2sec
-            
-            # Check if port forwarding started successfully
-            let pf_check = do {
-                bash -c $"ps aux | grep -E 'kubectl port-forward.*alga-dev-($sanitized_branch)' | grep -v grep | wc -l" | complete
-            }
-            
-            if ($pf_check.stdout | str trim | into int) < 4 {
-                print $"($env.ALGA_COLOR_YELLOW)Warning: Some port forwarding processes may not have started properly($env.ALGA_COLOR_RESET)"
-                print "Checking logs..."
-                
-                # Show any errors from log files
-                for log_file in [
-                    $"/tmp/pf-code-server-($sanitized_branch).log"
-                    $"/tmp/pf-main-app-($sanitized_branch).log"
-                    $"/tmp/pf-code-app-($sanitized_branch).log"
-                    $"/tmp/pf-ai-web-($sanitized_branch).log"
-                ] {
-                    if ($log_file | path exists) {
-                        let content = (open $log_file)
-                        if ($content | str contains "error") {
-                            print $"($env.ALGA_COLOR_RED)Errors in ($log_file):($env.ALGA_COLOR_RESET)"
-                            print $content
-                        }
+            # Show any errors from log files
+            for log_file in [
+                $"/tmp/pf-code-server-($sanitized_branch).log"
+                $"/tmp/pf-main-app-($sanitized_branch).log"
+                $"/tmp/pf-code-app-($sanitized_branch).log"
+                $"/tmp/pf-ai-web-($sanitized_branch).log"
+            ] {
+                if ($log_file | path exists) {
+                    let content = (open $log_file)
+                    if ($content | str contains "error") {
+                        print $"($env.ALGA_COLOR_RED)Errors in ($log_file):($env.ALGA_COLOR_RESET)"
+                        print $content
                     }
                 }
             }
+        }
             
             # Display the URLs
             print $"($env.ALGA_COLOR_CYAN)Port forwarding setup:($env.ALGA_COLOR_RESET)"
@@ -606,8 +572,70 @@ export def dev-env-connect [
             print $"  PSA App \(main\):     http://localhost:($app_port)"
             print $"  PSA App \(in code\):  http://localhost:($code_app_port)"
             print $"  AI Web:             http://localhost:($ai_web_port)"
-        }
-        
+            
+            # Update NEXTAUTH_URL in .env files for proper authentication
+            print $"($env.ALGA_COLOR_CYAN)Configuring NEXTAUTH_URL in .env files...($env.ALGA_COLOR_RESET)"
+            
+            # Helper function to update .env file
+            def update-env-file [pod_name: string, nextauth_url: string, description: string] {
+                print $"  Updating ($description): ($pod_name)"
+                
+                # Check if NEXTAUTH_URL already exists in .env file
+                let env_check = do {
+                    kubectl exec -n $namespace $pod_name -- grep -E "^NEXTAUTH_URL=" .env 2>/dev/null | complete
+                }
+                
+                if $env_check.exit_code == 0 and ($env_check.stdout | str trim | str length) > 0 {
+                    # NEXTAUTH_URL exists, check if it's different
+                    let current_url = ($env_check.stdout | str trim | split column "=" | get column2.0)
+                    
+                    if $current_url != $nextauth_url {
+                        print $"    ($env.ALGA_COLOR_YELLOW)Warning: .env already contains NEXTAUTH_URL=($current_url)($env.ALGA_COLOR_RESET)"
+                        print $"    ($env.ALGA_COLOR_YELLOW)This may indicate another developer is using this environment.($env.ALGA_COLOR_RESET)"
+                        print $"    ($env.ALGA_COLOR_YELLOW)Updating to your port configuration: ($nextauth_url)($env.ALGA_COLOR_RESET)"
+                        
+                        # Update existing entry
+                        kubectl exec -n $namespace $pod_name -- sed -i "s|^NEXTAUTH_URL=.*|NEXTAUTH_URL=($nextauth_url)|" .env | complete
+                    } else {
+                        print $"    ($env.ALGA_COLOR_GREEN)NEXTAUTH_URL already correctly set to ($nextauth_url)($env.ALGA_COLOR_RESET)"
+                    }
+                } else {
+                    # NEXTAUTH_URL doesn't exist, add it
+                    print $"    ($env.ALGA_COLOR_CYAN)Adding NEXTAUTH_URL=($nextauth_url) to .env file($env.ALGA_COLOR_RESET)"
+                    kubectl exec -n $namespace $pod_name -- sh -c $"echo 'NEXTAUTH_URL=($nextauth_url)' >> .env" | complete
+                }
+            }
+            
+            # Get pod names and update their .env files
+            let main_app_pods = do {
+                kubectl get pods -n $namespace -l "app.kubernetes.io/component!=code-server,app.kubernetes.io/component!=ai-automation-api,app.kubernetes.io/component!=ai-automation-web" -o jsonpath='{.items[*].metadata.name}' --ignore-not-found | complete
+            }
+            
+            let code_server_pods = do {
+                kubectl get pods -n $namespace -l "app.kubernetes.io/component=code-server" -o jsonpath='{.items[*].metadata.name}' --ignore-not-found | complete
+            }
+            
+            # Update main app pods
+            if $main_app_pods.exit_code == 0 and not ($main_app_pods.stdout | is-empty) {
+                let main_pods = ($main_app_pods.stdout | str trim | split row ' ')
+                for pod in $main_pods {
+                    if ($pod | str trim | str length) > 0 {
+                        update-env-file $pod $"http://localhost:($app_port)" "main app"
+                    }
+                }
+            }
+            
+            # Update code server pods
+            if $code_server_pods.exit_code == 0 and not ($code_server_pods.stdout | is-empty) {
+                let code_pods = ($code_server_pods.stdout | str trim | split row ' ')
+                for pod in $code_pods {
+                    if ($pod | str trim | str length) > 0 {
+                        update-env-file $pod $"http://localhost:($code_app_port)" "code server"
+                    }
+                }
+            }
+            
+            print $"($env.ALGA_COLOR_GREEN)NEXTAUTH_URL configuration completed.($env.ALGA_COLOR_RESET)"
         
         print $"($env.ALGA_COLOR_GREEN)Port forwarding active!($env.ALGA_COLOR_RESET)"
         

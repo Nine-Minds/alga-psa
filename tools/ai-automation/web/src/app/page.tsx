@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState, useRef } from 'react';
-import { ArrowRight, Eye, Code, ExternalLink, Monitor } from 'lucide-react';
+import { ArrowRight, Eye, Code, ExternalLink } from 'lucide-react';
 import io from 'socket.io-client';
 import Image from 'next/image';
 import { Box, Flex, Grid, Text, TextArea, Button, Card, ScrollArea, Dialog } from '@radix-ui/themes';
@@ -175,13 +175,6 @@ export default function ControlPanel() {
   const [url, setUrl] = useState('http://server:3000');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [browserStatus, setBrowserStatus] = useState<{
-    currentSessionId: string;
-    activeSessionId: string | null;
-    sessionCount: number;
-    sessions: Array<{ id: string; mode: 'headless' | 'headed'; url: string; wsEndpoint?: string }>;
-  } | null>(null);
-  const [isPopOutMode, setIsPopOutMode] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null); // For fetch cancellation
@@ -255,11 +248,6 @@ export default function ControlPanel() {
     return () => { socket.disconnect(); };
   }, []);
 
-  useEffect(() => {
-    fetchBrowserStatus();
-    const interval = setInterval(fetchBrowserStatus, 5000);
-    return () => clearInterval(interval);
-  }, []);
 
   const cancelGeneration = () => {
     console.log('Cancelling generation');
@@ -292,52 +280,19 @@ export default function ControlPanel() {
     setLog([]);
   };
 
-  const fetchBrowserStatus = async () => {
-    try {
-      const response = await fetch('/api/browser/status');
-      if (response.ok) {
-        const status = await response.json();
-        setBrowserStatus(status);
-        const currentSession = status.sessions.find((s: { id: string; }) => s.id === status.currentSessionId);
-        setIsPopOutMode(currentSession?.mode === 'headed');
-      }
-    } catch (error) { console.error('[CLIENT] Error fetching browser status:', error); }
-  };
 
   const handlePopOut = async () => {
     try {
-      const response = await fetch('/api/browser/pop-out', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-      if (response.ok) {
-        const result = await response.json();
-        if (result.status === 'vnc') {
-          setLog(prev => [...prev, { type: 'navigation', title: 'Opening VNC Viewer', content: result.message, timestamp: new Date().toISOString() }]);
-          window.open('/vnc', '_blank');
-        } else {
-          setLog(prev => [...prev, { type: 'navigation', title: 'Browser Popped Out', content: `Browser is now running in headed mode. Session: ${result.sessionId}`, timestamp: new Date().toISOString() }]);
-          setIsPopOutMode(true);
-          await fetchBrowserStatus();
-        }
-      } else if (response.status === 501) {
-        const errorData = await response.json();
-        setLog(prev => [...prev, { type: 'navigation', title: 'Pop-out Not Available', content: errorData.message || 'Pop-out feature is not available in this environment', timestamp: new Date().toISOString() }]);
-        alert(errorData.message + '\n\n' + errorData.suggestion);
-      } else { throw new Error('Failed to pop out browser'); }
+      // Use the current window location to determine the correct external port
+      const currentPort = window.location.port;
+      const currentProtocol = window.location.protocol;
+      const currentHostname = window.location.hostname;
+      const vncUrl = `${currentProtocol}//${currentHostname}:${currentPort}/vnc/`;
+      
+      window.open(vncUrl, '_blank');
+      setLog(prev => [...prev, { type: 'navigation', title: 'Opening Browser Control', content: `Browser control window opened at ${vncUrl}`, timestamp: new Date().toISOString() }]);
     } catch (error) {
       setLog(prev => [...prev, { type: 'error', title: 'Pop Out Error', content: error instanceof Error ? error.message : String(error), timestamp: new Date().toISOString() }]);
-    }
-  };
-
-  const handlePopIn = async () => {
-    try {
-      const response = await fetch('/api/browser/pop-in', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-      if (response.ok) {
-        const result = await response.json();
-        setLog(prev => [...prev, { type: 'navigation', title: 'Browser Popped In', content: `Browser is now running in headless mode. Session: ${result.sessionId}`, timestamp: new Date().toISOString() }]);
-        setIsPopOutMode(false);
-        await fetchBrowserStatus();
-      } else { throw new Error('Failed to pop in browser'); }
-    } catch (error) {
-      setLog(prev => [...prev, { type: 'error', title: 'Pop In Error', content: error instanceof Error ? error.message : String(error), timestamp: new Date().toISOString() }]);
     }
   };
 
@@ -720,28 +675,15 @@ export default function ControlPanel() {
                       </Button>
                     </Flex>
                     
-                    {/* Browser Mode Controls */}
+                    {/* Browser Control */}
                     <Flex gap="2" align="center">
                       <Text size="2" style={{ color: 'var(--gray-11)' }}>
-                        Browser Mode:
+                        Browser Control:
                       </Text>
-                      <Flex gap="1" align="center">
-                        <Box 
-                          style={{ 
-                            width: '8px', 
-                            height: '8px', 
-                            borderRadius: '50%', 
-                            backgroundColor: isPopOutMode ? '#00d084' : '#ff4757' 
-                          }} 
-                        />
-                        <Text size="2" style={{ color: 'var(--gray-12)', minWidth: '60px' }}>
-                          {isPopOutMode ? 'Headed' : 'Headless'}
-                        </Text>
-                      </Flex>
                       <Button
                         size="1"
-                        variant={isPopOutMode ? 'soft' : 'solid'}
-                        onClick={isPopOutMode ? handlePopIn : handlePopOut}
+                        variant="solid"
+                        onClick={handlePopOut}
                         style={{ 
                           padding: '4px 8px',
                           display: 'flex',
@@ -749,23 +691,9 @@ export default function ControlPanel() {
                           gap: '4px'
                         }}
                       >
-                        {isPopOutMode ? (
-                          <>
-                            <Monitor size={12} />
-                            Pop In
-                          </>
-                        ) : (
-                          <>
-                            <ExternalLink size={12} />
-                            Pop Out
-                          </>
-                        )}
+                        <ExternalLink size={12} />
+                        Pop Out
                       </Button>
-                      {browserStatus && (
-                        <Text size="1" style={{ color: 'var(--gray-9)' }}>
-                          {browserStatus.sessionCount} session{browserStatus.sessionCount !== 1 ? 's' : ''}
-                        </Text>
-                      )}
                     </Flex>
                     <Flex gap="4">
                       <Box style={{ flex: 1 }}>

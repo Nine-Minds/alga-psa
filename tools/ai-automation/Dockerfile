@@ -73,15 +73,7 @@ RUN mkdir -p /usr/share/novnc && \
 # Create and switch to non-root user
 RUN useradd -m appuser
 
-# Copy VNC helper pages and set custom index
-COPY vnc-index.html /usr/share/novnc/index.html
-COPY vnc-autoconnect.html /usr/share/novnc/autoconnect.html
-COPY vnc-debug.html /usr/share/novnc/debug.html
-COPY vnc-launcher.html /usr/share/novnc/launcher.html
-COPY vnc-simple.html /usr/share/novnc/simple.html
-COPY vnc-test-ws.html /usr/share/novnc/test-ws.html
-COPY vnc-direct.html /usr/share/novnc/direct.html
-COPY vnc-working.html /usr/share/novnc/working.html
+# VNC uses the default noVNC interface
 
 # Make novnc directory writable by appuser
 RUN chown -R appuser:appuser /usr/share/novnc
