@@ -24,6 +24,16 @@ data:
         '' close;
       }
       
+      map $http_x_forwarded_host $best_host {
+        default $http_host;
+        "~.+" $http_x_forwarded_host;
+      }
+
+      map $http_x_forwarded_proto $proxy_scheme {
+        default $scheme;
+        "~.+" $http_x_forwarded_proto;
+      }
+      
       server {
         listen 8080;
         
@@ -71,7 +81,7 @@ data:
         
         # Handle /vnc without trailing slash
         location = /vnc {
-          return 301 /vnc/;
+          return 301 "$proxy_scheme://$best_host/vnc/";
         }
         
         # Handle WebSocket connections specifically
