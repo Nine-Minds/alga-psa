@@ -8,6 +8,9 @@ const Comment = {
   getAllbyTicketId: async (knexOrTrx: Knex | Knex.Transaction, ticket_id: string): Promise<IComment[]> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required for getting comments by ticket ID');
+      }
       const comments = await knexOrTrx<IComment>('comments')
         .select('comments.*')
         .where('comments.ticket_id', ticket_id)
@@ -23,6 +26,9 @@ const Comment = {
   get: async (knexOrTrx: Knex | Knex.Transaction, id: string): Promise<IComment | undefined> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required for getting comment');
+      }
       const comment = await knexOrTrx<IComment>('comments')
         .select('comments.*')
         .where('comments.comment_id', id)
@@ -39,6 +45,9 @@ const Comment = {
     try {      
       logger.info('Inserting comment:', comment);
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required for inserting comment');
+      }
       
       // Ensure author_type is valid
       if (!['internal', 'client', 'unknown'].includes(comment.author_type)) {
@@ -89,6 +98,9 @@ const Comment = {
   update: async (knexOrTrx: Knex | Knex.Transaction, id: string, comment: Partial<IComment>): Promise<void> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required for updating comment');
+      }
 
       // Get existing comment first
       const existingComment = await knexOrTrx<IComment>('comments')
@@ -155,6 +167,9 @@ const Comment = {
   delete: async (knexOrTrx: Knex | Knex.Transaction, id: string): Promise<void> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required for deleting comment');
+      }
       await knexOrTrx<IComment>('comments')
         .where('comment_id', id)
         .andWhere('tenant', tenant)
