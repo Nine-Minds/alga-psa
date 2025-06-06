@@ -782,8 +782,8 @@ def dev-env-list [] {
                 }
             } | compact)
             
-            let total_ready = ($ready_total | each { |x| $x.ready } | math sum)
-            let total_deployments = ($ready_total | each { |x| $x.total } | math sum)
+            let total_ready = if ($ready_total | is-empty) { 0 } else { ($ready_total | get ready | math sum) }
+            let total_deployments = if ($ready_total | is-empty) { 0 } else { ($ready_total | get total | math sum) }
             
             if $total_ready == $total_deployments {
                 "Ready"
@@ -975,6 +975,31 @@ def dev-env-destroy [
     # Sanitize branch name for namespace lookup
     let sanitized_branch = ($branch | str replace -a "/" "-" | str downcase | str replace -a "[^a-z0-9-]" "-" | str replace -r "^-+|-+$" "" | str replace -r "-+" "-")
     let namespace = $"alga-dev-($sanitized_branch)"
+
+    # Helper to get all ai-api pods in the namespace
+    def get-ai-pods [] {
+        let pods_by_label = do {
+            kubectl get pods -n $namespace -l 'app.kubernetes.io/component=ai-automation-api' -o jsonpath='{.items[*].metadata.name}' --ignore-not-found | complete
+        }
+
+        let pods_by_name = do {
+            kubectl get pods -n $namespace -o jsonpath='{.items[*].metadata.name}' --ignore-not-found | complete
+        }
+
+        let pods1 = if $pods_by_label.exit_code == 0 and not ($pods_by_label.stdout | is-empty) {
+            $pods_by_label.stdout | str trim | split row ' '
+        } else {
+            []
+        }
+
+        let pods2 = if $pods_by_name.exit_code == 0 and not ($pods_by_name.stdout | is-empty) {
+            $pods_by_name.stdout | str trim | split row ' ' | where {|it| $it | str contains "ai-api"}
+        } else {
+            []
+        }
+
+        $pods1 | append $pods2 | uniq
+    }
     
     # Check if environment exists
     let env_check = do {
@@ -1018,39 +1043,50 @@ def dev-env-destroy [
     }
     
     # Step 2: Force stop ai-api pods specifically (known to cause stuck namespaces)
-    print $"($color_cyan)2. Force stopping ai-api pods...($color_reset)"
-    let ai_api_pods = do {
-        kubectl get pods -n $namespace -l 'app.kubernetes.io/component=ai-automation-api' -o jsonpath='{.items[*].metadata.name}' | complete
+    # Step 2: Scale down and remove ai-api resources to prevent them from getting stuck
+    print $"($color_cyan)2. Scaling down ai-api deployment...($color_reset)"
+    let ai_api_deployments = do {
+        kubectl get deployment -n $namespace -l 'app.kubernetes.io/component=ai-automation-api' -o jsonpath='{.items[*].metadata.name}' --ignore-not-found | complete
     }
-    
-    if $ai_api_pods.exit_code == 0 and ($ai_api_pods.stdout | str trim | str length) > 0 {
-        let pod_names = ($ai_api_pods.stdout | str trim | split row ' ')
-        for pod in $pod_names {
-            if ($pod | str trim | str length) > 0 {
-                print $"  Force deleting ai-api pod: ($pod)"
-                kubectl delete pod $pod -n $namespace --force --grace-period=0 | complete
+
+    if $ai_api_deployments.exit_code == 0 and not ($ai_api_deployments.stdout | is-empty) {
+        let deployment_names = ($ai_api_deployments.stdout | str trim | split row ' ')
+        for deployment in $deployment_names {
+            if ($deployment | str trim | str length) > 0 {
+                print $"  Scaling down deployment: ($deployment)"
+                kubectl scale deployment $deployment --replicas=0 -n $namespace --timeout=30s | complete
             }
         }
     } else {
-        print $"  No ai-api pods found by component label"
-        # Try alternative approach - look for any pods with "ai-api" in the name
-        let ai_api_pods_by_name = do {
-            kubectl get pods -n $namespace -o jsonpath='{.items[*].metadata.name}' | complete
+        print $"  No ai-api deployment found to scale down."
+    }
+
+    # Now, wait for the pods to terminate
+    print $"($color_cyan)Waiting for ai-api pods to terminate...($color_reset)"
+    mut wait_retries = 0
+    while $wait_retries < 30 { # Wait for up to 60 seconds
+        let remaining_pods = (get-ai-pods)
+        if ($remaining_pods | is-empty) {
+            print $"\n($color_green)All targeted ai-api pods have been terminated.($color_reset)"
+            break
+        } else {
+            let remaining_str = ($remaining_pods | str join ", ")
+            print -n $"\r  Waiting... remaining: ($remaining_str)"
+            sleep 2sec
+            $wait_retries = $wait_retries + 1
         }
-        
-        if $ai_api_pods_by_name.exit_code == 0 and ($ai_api_pods_by_name.stdout | str trim | str length) > 0 {
-            let all_pod_names = ($ai_api_pods_by_name.stdout | str trim | split row ' ')
-            let ai_api_names = ($all_pod_names | where { |pod| ($pod | str contains "ai-api") })
-            
-            if ($ai_api_names | length) > 0 {
-                print $"  Found ai-api pods by name pattern:"
-                for pod in $ai_api_names {
-                    print $"    Force deleting ai-api pod: ($pod)"
+    }
+    if $wait_retries >= 30 {
+        print $"\n($color_yellow)Warning: Pods did not terminate gracefully. Forcing deletion...($color_reset)"
+        let remaining_pods = (get-ai-pods)
+        if not ($remaining_pods | is-empty) {
+            for pod in $remaining_pods {
+                if ($pod | str trim | str length) > 0 {
+                    print $"    Force deleting pod: ($pod)"
                     kubectl delete pod $pod -n $namespace --force --grace-period=0 | complete
                 }
-            } else {
-                print $"  No ai-api pods found by name pattern either"
             }
+            sleep 5sec # Give it a moment after force deletion
         }
     }
     
@@ -1129,7 +1165,7 @@ def dev-env-destroy [
         print $"  No Helm release found for ($release_name) in either namespace."
     }
     
-    # Step 6: Clean up remaining resources systematically  
+    # Step 6: Clean up remaining resources systematically
     print $"($color_cyan)6. Cleaning up remaining resources...($color_reset)"
     
     # Delete all resources in the namespace first
@@ -1242,6 +1278,31 @@ def dev-env-force-cleanup [
     # Sanitize branch name for namespace lookup
     let sanitized_branch = ($branch | str replace -a "/" "-" | str downcase | str replace -a "[^a-z0-9-]" "-" | str replace -r "^-+|-+$" "" | str replace -r "-+" "-")
     let namespace = $"alga-dev-($sanitized_branch)"
+
+    # Helper to get all ai-api pods in the namespace
+    def get-ai-pods [] {
+        let pods_by_label = do {
+            kubectl get pods -n $namespace -l 'app.kubernetes.io/component=ai-automation-api' -o jsonpath='{.items[*].metadata.name}' --ignore-not-found | complete
+        }
+
+        let pods_by_name = do {
+            kubectl get pods -n $namespace -o jsonpath='{.items[*].metadata.name}' --ignore-not-found | complete
+        }
+
+        let pods1 = if $pods_by_label.exit_code == 0 and not ($pods_by_label.stdout | is-empty) {
+            $pods_by_label.stdout | str trim | split row ' '
+        } else {
+            []
+        }
+
+        let pods2 = if $pods_by_name.exit_code == 0 and not ($pods_by_name.stdout | is-empty) {
+            $pods_by_name.stdout | str trim | split row ' ' | where {|it| $it | str contains "ai-api"}
+        } else {
+            []
+        }
+
+        $pods1 | append $pods2 | uniq
+    }
     
     print $"($color_cyan)Force cleaning up development environment for branch: ($branch)...($color_reset)"
     print $"($color_yellow)This will aggressively remove all resources and may take some time.($color_reset)"
@@ -1266,38 +1327,35 @@ def dev-env-force-cleanup [
     
     # Force stop ai-api pods first (known to cause stuck namespaces)
     print $"($color_cyan)Force stopping ai-api pods...($color_reset)"
-    let ai_api_pods = do {
-        kubectl get pods -n $namespace -l 'app.kubernetes.io/component=ai-automation-api' -o jsonpath='{.items[*].metadata.name}' | complete
-    }
-    
-    if $ai_api_pods.exit_code == 0 and ($ai_api_pods.stdout | str trim | str length) > 0 {
-        let pod_names = ($ai_api_pods.stdout | str trim | split row ' ')
-        for pod in $pod_names {
+    let pod_names_to_delete = (get-ai-pods)
+
+    if ($pod_names_to_delete | is-empty) {
+        print $"  No ai-api pods found."
+    } else {
+        print $"  Found pods to delete: ($pod_names_to_delete | str join ', ')"
+        for pod in $pod_names_to_delete {
             if ($pod | str trim | str length) > 0 {
-                print $"  Force deleting ai-api pod: ($pod)"
+                print $"    Force deleting ai-api pod: ($pod)"
                 kubectl delete pod $pod -n $namespace --force --grace-period=0 | complete
             }
         }
-    } else {
-        print $"  No ai-api pods found by component label"
-        # Try alternative approach - look for any pods with "ai-api" in the name
-        let ai_api_pods_by_name = do {
-            kubectl get pods -n $namespace -o jsonpath='{.items[*].metadata.name}' | complete
-        }
-        
-        if $ai_api_pods_by_name.exit_code == 0 and ($ai_api_pods_by_name.stdout | str trim | str length) > 0 {
-            let all_pod_names = ($ai_api_pods_by_name.stdout | str trim | split row ' ')
-            let ai_api_names = ($all_pod_names | where { |pod| ($pod | str contains "ai-api") })
-            
-            if ($ai_api_names | length) > 0 {
-                print $"  Found ai-api pods by name pattern:"
-                for pod in $ai_api_names {
-                    print $"    Force deleting ai-api pod: ($pod)"
-                    kubectl delete pod $pod -n $namespace --force --grace-period=0 | complete
-                }
+
+        # Wait for ai-api pods to be fully terminated
+        print $"($color_cyan)Waiting for ai-api pods to terminate...($color_reset)"
+        mut wait_retries = 0
+        while $wait_retries < 15 { # Wait for up to 30 seconds
+            let remaining_pods = (get-ai-pods)
+            if ($remaining_pods | is-empty) {
+                print $"\n($color_green)All targeted ai-api pods have been terminated.($color_reset)"
+                break
             } else {
-                print $"  No ai-api pods found by name pattern either"
+                print -n $"\r  Waiting... (remaining: ($remaining_pods | str join ', '))"
+                sleep 2sec
+                $wait_retries = $wait_retries + 1
             }
+        }
+        if $wait_retries >= 15 {
+            print $"\n($color_yellow)Warning: Some ai-api pods may not have terminated correctly. Continuing...($color_reset)"
         }
     }
 
