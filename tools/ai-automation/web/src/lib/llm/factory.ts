@@ -11,6 +11,15 @@ export function getLLMClient(): LLMClient {
   const customOpenaiBaseURL = process.env.CUSTOM_OPENAI_BASE_URL;
   const customOpenaiModel = process.env.CUSTOM_OPENAI_MODEL;
 
+  console.log('LLM Factory - Environment variables:', {
+    provider,
+    hasOpenaiApiKey: !!openaiApiKey,
+    hasCustomOpenaiApiKey: !!customOpenaiApiKey,
+    customOpenaiApiKeyPrefix: customOpenaiApiKey ? customOpenaiApiKey.substring(0, 10) + '...' : 'not set',
+    customOpenaiBaseURL,
+    customOpenaiModel
+  });
+
   switch (provider) {
     case 'openai':
       if (!openaiApiKey) {

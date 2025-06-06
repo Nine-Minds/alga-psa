@@ -23,6 +23,9 @@ spec:
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
+        {{- if .Values.devEnv.enabled }}
+        alga.dev/environment: "true"
+        {{- end }}
     spec:    
       {{- if .Values.server.image.is_private }}
       imagePullSecrets:
@@ -94,7 +97,7 @@ spec:
           - name: DB_HOST
             value: "db.{{ include "sebastian.namespace" . }}.svc.cluster.local"
           - name: DB_USER_SERVER
-            value: "server_user"
+            value: "app_user"
           - name: DB_PORT
             value: "5432"
           - name: DB_NAME_SERVER
@@ -294,7 +297,11 @@ spec:
 
           # ----------- AUTH ----------------
           - name: NEXTAUTH_URL
+            {{- if and .Values.devEnv.enabled .Values.devEnv.externalPorts }}
+            value: "http://localhost:{{ .Values.devEnv.externalPorts.app }}"
+            {{- else }}
             value: "https://{{ .Values.host }}"
+            {{- end }}
           - name: NEXTAUTH_SECRET
             valueFrom:
               secretKeyRef:
@@ -310,6 +317,16 @@ spec:
           - name: GOOGLE_OAUTH_CLIENT_SECRET
             value: "{{ .Values.google_auth.client_secret }}"
           {{- end }}
+
+          # ----------- EXTERNAL PORTS (DEV ENV) ----------------
+          {{- if and .Values.devEnv.enabled .Values.devEnv.externalPorts }}
+          - name: EXTERNAL_APP_PORT
+            value: "{{ .Values.devEnv.externalPorts.app }}"
+          - name: EXTERNAL_CODE_SERVER_PORT
+            value: "{{ .Values.devEnv.externalPorts.codeServer }}"
+          - name: EXTERNAL_CODE_APP_PORT
+            value: "{{ .Values.devEnv.externalPorts.codeApp }}"
+          {{- end }}
          {{- if .Values.server.persistence.enabled }}
           volumeMounts:
             - name: storage-volume
@@ -321,6 +338,12 @@ spec:
               protocol: TCP
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      {{- if .Values.devEnv.enabled }}
+      {{- with .Values.devEnv.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- else }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -328,6 +351,7 @@ spec:
       {{- with .Values.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- end }}
       {{- with .Values.tolerations }}
       tolerations:

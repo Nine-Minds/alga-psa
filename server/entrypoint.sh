@@ -171,15 +171,15 @@ validate_environment() {
     fi
 
     # Validate email format
-    local email_regex="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-    if ! [[ "$EMAIL_FROM" =~ $email_regex ]]; then
-        log "Error: EMAIL_FROM must be a valid email address"
-        return 1
-    fi
-    if ! [[ "$EMAIL_USERNAME" =~ $email_regex ]]; then
-        log "Error: EMAIL_USERNAME must be a valid email address"
-        return 1
-    fi
+    # local email_regex="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+    # if ! [[ "$EMAIL_FROM" =~ $email_regex ]]; then
+    #     log "Error: EMAIL_FROM must be a valid email address"
+    #     return 1
+    # fi
+    # if ! [[ "$EMAIL_USERNAME" =~ $email_regex ]]; then
+    #     log "Error: EMAIL_USERNAME must be a valid email address"
+    #     return 1
+    # fi
 
     # Validate URL format
     if ! [[ "$NEXTAUTH_URL" =~ ^https?:// ]]; then

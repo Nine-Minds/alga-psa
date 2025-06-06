@@ -1,0 +1,14 @@
+{{- if .Values.devEnv.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sebastian.fullname" . }}-external-ports
+  namespace: {{ .Values.devEnv.namespace }}
+  labels:
+    {{- include "sebastian.labels" . | nindent 4 }}
+data:
+  app: "{{ .Values.devEnv.externalPorts.app }}"
+  codeServer: "{{ .Values.devEnv.externalPorts.codeServer }}"
+  codeApp: "{{ .Values.devEnv.externalPorts.codeApp }}"
+  aiWeb: "{{ .Values.devEnv.externalPorts.aiWeb }}"
+{{- end }}

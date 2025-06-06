@@ -1,3 +1,0 @@
-{
-  "code": "({ url: window.location.href, title: document.title, hasUIState: !!window.__UI_STATE__, uiStateKeys: window.__UI_STATE__ ? Object.keys(window.__UI_STATE__) : [] })"
-}

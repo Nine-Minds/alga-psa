@@ -16,6 +16,9 @@ spec:
     metadata:
       labels:
         app: db
+        {{- if .Values.devEnv.enabled }}
+        alga.dev/environment: "true"
+        {{- end }}
     spec:
       initContainers:
         - name: volume-prep
@@ -44,6 +47,12 @@ spec:
           subPath: data
         {{- end }}
       
+      {{- if .Values.devEnv.enabled }}
+      {{- with .Values.devEnv.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- end }}
       {{- if .Values.db.persistence.enabled }}
       volumes:
       - name: db-data

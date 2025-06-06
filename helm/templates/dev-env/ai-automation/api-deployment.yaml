@@ -18,6 +18,7 @@ spec:
       labels:
         {{- include "sebastian.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: ai-automation-api
+        alga.dev/environment: "true"
     spec:
       {{- if .Values.devEnv.aiAutomation.api.image.is_private }}
       imagePullSecrets:
@@ -55,29 +56,52 @@ spec:
             # Environment markers
             - name: ALGA_DEV_ENV
               value: "true"
-            - name: ALGA_PR_NUMBER
-              value: "{{ .Values.devEnv.prNumber }}"
+            - name: ALGA_BRANCH_SANITIZED
+              value: "{{ .Values.devEnv.sanitizedBranch }}"
             # Target app URL for automation
             - name: TARGET_APP_URL
-              value: "http://{{ include "sebastian.fullname" . }}.{{ .Values.devEnv.namespace }}.svc.cluster.local:{{ .Values.server.service.port }}"
+              value: "http://app:3000"
+            # VNC support
+            - name: VNC_ENABLED
+              value: "true"
+            # Xvfb environment variables for better compatibility
+            - name: XVFB_WHD
+              value: "1280x1024x16"
+            - name: XVFB_COLORDEPTH
+              value: "16"
+            - name: XVFB_ARGS
+              value: "-ac -nolisten tcp -dpi 96 +extension RANDR"
           ports:
             - name: http
               containerPort: 4000
               protocol: TCP
+            - name: vnc
+              containerPort: 5900
+              protocol: TCP
           livenessProbe:
             httpGet:
-              path: /api/browser/status
+              path: /health
               port: http
-            initialDelaySeconds: 30
+            initialDelaySeconds: 60
             periodSeconds: 30
+            failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /api/browser/status
+              path: /health
               port: http
-            initialDelaySeconds: 10
+            initialDelaySeconds: 30
             periodSeconds: 10
+            failureThreshold: 3
           resources:
             {{- toYaml .Values.devEnv.aiAutomation.api.resources | nindent 12 }}
+          volumeMounts:
+            - name: shm
+              mountPath: /dev/shm
+      volumes:
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi
       {{- with .Values.devEnv.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

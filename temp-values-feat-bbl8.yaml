@@ -1,0 +1,28 @@
+
+# Generated values for branch feat/bbl8 development environment
+devEnv:
+  enabled: true
+  branch: "feat/bbl8"
+  sanitizedBranch: "feat-bbl8"
+  namespace: "alga-dev-feat-bbl8"
+  repository:
+    url: "https://github.com/Nine-Minds/alga-psa.git"
+    branch: "feat/bbl8"
+  codeServer:
+    enabled: true
+  aiAutomation:
+    enabled: true
+  # External port configuration
+  externalPorts:
+    app: 30000
+    codeServer: 30001
+    codeApp: 30002
+    aiWeb: 30003
+
+server:
+  image:
+    name: "harbor.nineminds.com/nineminds/alga-psa-ee"
+    tag: "latest"
+  pullPolicy: Always  # Force pull to avoid cache issues
+
+# Enterprise Edition settings

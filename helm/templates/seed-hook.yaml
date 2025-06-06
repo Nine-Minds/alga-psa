@@ -1,11 +1,15 @@
-{{- if .Release.IsInstall }}
+{{- if or .Release.IsInstall .Values.devEnv.enabled }}
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ include "sebastian.fullname" . }}-seed
   namespace: {{ include "sebastian.namespace" . }}
   annotations:
+    {{- if .Values.devEnv.enabled }}
+    "helm.sh/hook": post-install, post-upgrade
+    {{- else }}
     "helm.sh/hook": post-install
+    {{- end }}
     "helm.sh/hook-weight": "10"
     "helm.sh/hook-delete-policy": hook-succeeded, before-hook-creation
 spec:
@@ -21,6 +25,7 @@ spec:
       containers:
         - name: seed
           image: "{{ .Values.server.image.name }}:{{ .Values.server.image.tag }}"
+          workingDir: /app
           command: ["/bin/sh", "-c"]
           args:
             - |

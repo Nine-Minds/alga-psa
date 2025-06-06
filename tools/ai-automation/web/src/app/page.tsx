@@ -9,6 +9,7 @@ import { ChevronRight, ChevronDown } from 'lucide-react';
 import { prompts } from '../tools/prompts';
 import { invokeTool } from '../tools/invokeTool';
 import { ChatMessage } from '../types/messages';
+import { resolveDevServiceUrl } from '../lib/resolveDevServiceUrl';
 
 type JsonValue = 
   | string
@@ -18,13 +19,19 @@ type JsonValue =
   | { [key: string]: JsonValue }
   | JsonValue[];
 
+interface ToolData {
+  name: string;
+  input: Record<string, JsonValue>;
+  tool_use_id: string;
+}
+
 interface UIStateResponse {
-  [key: string]: JsonValue;
   page: {
     title: string;
     url: string;
   };
-  result: JsonValue;
+  result?: JsonValue;
+  [key: string]: JsonValue | undefined;
 }
 
 interface ExpandedState {
@@ -114,16 +121,42 @@ function JsonViewer({ data, level = 0, path = '', expandedState, setExpandedStat
 export default function ControlPanel() {
   interface ToolContent {
     name: string;
-    input?: unknown;
+    input?: Record<string, JsonValue>;
   }
 
-  interface LogEntry {
-    type: 'tool_use' | 'tool_result' | 'navigation' | 'error';
+  // Define a more specific type for results from invokeTool
+  interface MyToolExecutionResult {
+    success?: boolean;
+    result?: JsonValue;
+    error?: string;
+    [key: string]: JsonValue | undefined;
+  }
+
+  // Base interface for all log entries
+  interface BaseLogEntry {
     title: string;
-    content: string | ToolContent | unknown;
     timestamp: string;
     toolCallId?: string;
   }
+
+  // Specific log entry types for the discriminated union
+  interface StringLogEntry extends BaseLogEntry {
+    type: 'navigation' | 'error'; // Generic errors or navigation messages
+    content: string;
+  }
+
+  interface ToolUseLogEntry extends BaseLogEntry {
+    type: 'tool_use';
+    content: ToolContent;
+  }
+
+  interface ToolResultLogEntry extends BaseLogEntry {
+    type: 'tool_result';
+    content: MyToolExecutionResult; // Content is the result from invokeTool
+  }
+
+  // Discriminated union type for LogEntry
+  type LogEntry = StringLogEntry | ToolUseLogEntry | ToolResultLogEntry;
 
   const [imgSrc, setImgSrc] = useState('');
   const [log, setLog] = useState<LogEntry[]>([]);
@@ -151,7 +184,7 @@ export default function ControlPanel() {
   const [isPopOutMode, setIsPopOutMode] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null); // For fetch cancellation
   const logEntryRefs = useRef<{[key: string]: HTMLDivElement | null}>({});
   const currentAssistantMessageRef = useRef<string>('');
   const isCancelledRef = useRef<boolean>(false);
@@ -159,138 +192,83 @@ export default function ControlPanel() {
   const scrollToLogEntry = (toolCallId: string) => {
     const ref = logEntryRefs.current[toolCallId];
     if (ref) {
-      // Get the ScrollArea container
       const scrollContainer = ref.closest('[data-radix-scroll-area-viewport]');
-      
       if (scrollContainer) {
-        // Calculate the position to scroll to (top of the element with some offset)
         const containerRect = scrollContainer.getBoundingClientRect();
         const elementRect = ref.getBoundingClientRect();
         const scrollTop = scrollContainer.scrollTop;
-        
-        // Calculate the target scroll position (element top - container top + current scroll - offset)
         const targetScrollTop = scrollTop + (elementRect.top - containerRect.top) - 20;
-        
-        // Smooth scroll to the calculated position
-        scrollContainer.scrollTo({
-          top: Math.max(0, targetScrollTop),
-          behavior: 'smooth'
-        });
+        scrollContainer.scrollTo({ top: Math.max(0, targetScrollTop), behavior: 'smooth' });
       } else {
-        // Fallback to original method
         ref.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-      
-      // Add visual highlight effect
       ref.style.backgroundColor = 'var(--accent-3)';
       ref.style.transition = 'background-color 0.3s ease';
-      
-      // Remove highlight after 2 seconds
-      setTimeout(() => {
-        ref.style.backgroundColor = '';
-      }, 2000);
+      setTimeout(() => { ref.style.backgroundColor = ''; }, 2000);
     }
   };
 
-  const scrollMessagesToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const scrollMessagesToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollLogToBottom = () => logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
 
-  // Auto-scroll when messages update
-  const scrollLogToBottom = () => {
-    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  useEffect(scrollMessagesToBottom, [messages]);
+  useEffect(scrollLogToBottom, [log]);
 
-  useEffect(() => {
-    scrollMessagesToBottom();
-  }, [messages]);
-
-  useEffect(() => {
-    scrollLogToBottom();
-  }, [log]);
-
-  // Set tool responses to be collapsed by default
   useEffect(() => {
     const filteredMessages = messages.filter(msg => msg.role !== 'system');
     const newCollapsedState: CollapsedToolState = {};
-    
     filteredMessages.forEach((msg, idx) => {
-      const isToolResult = msg.role === 'user' && msg.content && 
-        (msg.content.startsWith('{') || msg.content.startsWith('['));
+      const isToolResult = msg.role === 'user' && msg.content && (msg.content.startsWith('{') || msg.content.startsWith('['));
       const isToolMessage = msg.role === 'tool';
-      
       if ((isToolResult || isToolMessage) && !(idx in collapsedToolState)) {
-        newCollapsedState[idx] = true; // Collapsed by default
+        newCollapsedState[idx] = true;
       }
     });
-    
     if (Object.keys(newCollapsedState).length > 0) {
       setCollapsedToolState(prev => ({ ...prev, ...newCollapsedState }));
     }
   }, [messages, collapsedToolState]);
 
-  // Styles for message formatting
-  const preStyle: React.CSSProperties = {
-    whiteSpace: 'pre-wrap',
-    overflowWrap: 'break-word',
-    background: 'var(--color-panel)',
-    padding: '8px',
-    borderRadius: '4px',
-    margin: '4px 0'
-  };
-
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '8px',
-    backgroundColor: 'var(--color-panel)',
-    border: 'none',
-    borderRadius: '4px',
-    color: 'inherit',
-    fontSize: 'inherit',
-    outline: 'none'
-  };
+  const preStyle: React.CSSProperties = { whiteSpace: 'pre-wrap', overflowWrap: 'break-word', background: 'var(--color-panel)', padding: '8px', borderRadius: '4px', margin: '4px 0' };
+  const inputStyle: React.CSSProperties = { width: '100%', padding: '8px', backgroundColor: 'var(--color-panel)', border: 'none', borderRadius: '4px', color: 'inherit', fontSize: 'inherit', outline: 'none' };
 
   useEffect(() => {
-    const systemPrompt = prompts.systemMessage
-      .replace('{url}', url)
-      .replace('{username}', username || '[Not provided]')
-      .replace('{password}', password || '[Not provided]');
-    
-    setMessages([
-      {
-        role: 'system',
-        content: systemPrompt
-      }
-    ]);
+    const systemPrompt = prompts.systemMessage.replace('{url}', url).replace('{username}', username || '[Not provided]').replace('{password}', password || '[Not provided]');
+    setMessages([{ role: 'system', content: systemPrompt }]);
   }, [url, username, password]);
 
   useEffect(() => {
-    const socket = io('http://localhost:4000');
-    socket.on('connect', () => console.log('WS connected'));
-    socket.on('screenshot', (data: string) => {
-      setImgSrc(`data:image/png;base64,${data}`);
+    const socket = io({ transports: ['websocket', 'polling'], reconnection: true, reconnectionAttempts: 5, reconnectionDelay: 1000 });
+    socket.on('connect', () => {
+      console.log('✅ WebSocket connected', socket.id);
+      // @ts-expect-error - engine might not be directly on Manager type in some strict typings
+      console.log('Transport:', socket.io.engine.transport.name);
     });
-    socket.on('disconnect', () => console.log('WS disconnected'));
+    socket.on('connect_error', (error: Error) => console.error('❌ WebSocket connection error:', error.message, error));
+    socket.on('screenshot', (data: string) => setImgSrc(`data:image/png;base64,${data}`));
+    socket.on('disconnect', (reason: string) => {
+      console.log('🔌 WebSocket disconnected:', reason);
+      if (reason === 'io server disconnect') socket.connect();
+    });
+    socket.on('reconnect', (attemptNumber: number) => console.log('🔄 WebSocket reconnected after', attemptNumber, 'attempts'));
+    socket.on('reconnect_error', (error: Error) => console.error('❌ WebSocket reconnection error:', error));
     return () => { socket.disconnect(); };
   }, []);
 
-  // Fetch browser status on component mount and periodically
   useEffect(() => {
     fetchBrowserStatus();
-    const interval = setInterval(fetchBrowserStatus, 5000); // Check every 5 seconds
+    const interval = setInterval(fetchBrowserStatus, 5000);
     return () => clearInterval(interval);
   }, []);
 
   const cancelGeneration = () => {
     console.log('Cancelling generation');
     isCancelledRef.current = true;
-    if (eventSourceRef.current) {
-      console.log('Closing SSE connection for cancellation');
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
     }
     setIsGenerating(false);
-    // Reset current assistant message if it's empty
     setMessages(prev => {
       const lastMessage = prev[prev.length - 1];
       if (lastMessage && lastMessage.role === 'assistant' && (!lastMessage.content || !lastMessage.content.trim())) {
@@ -302,384 +280,319 @@ export default function ControlPanel() {
 
   const clearConversation = () => {
     console.log('Clearing conversation');
-    isCancelledRef.current = false; // Reset cancellation flag
-    // Close any existing SSE connection
-    if (eventSourceRef.current) {
-      console.log('Closing SSE connection for conversation clear');
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
+    isCancelledRef.current = false;
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
     }
-    
-    const systemPrompt = prompts.systemMessage
-      .replace('{url}', url)
-      .replace('{username}', username || '[Not provided]')
-      .replace('{password}', password || '[Not provided]');
-    
-    setMessages([
-      {
-        role: 'system',
-        content: systemPrompt
-      }
-    ]);
+    const systemPrompt = prompts.systemMessage.replace('{url}', url).replace('{username}', username || '[Not provided]').replace('{password}', password || '[Not provided]');
+    setMessages([{ role: 'system', content: systemPrompt }]);
     setIsGenerating(false);
     setUserMessage('');
-    // Clear the log as well since we're starting fresh
     setLog([]);
   };
 
   const fetchBrowserStatus = async () => {
     try {
-      const response = await fetch('http://localhost:4000/api/browser/status');
+      const response = await fetch('/api/browser/status');
       if (response.ok) {
         const status = await response.json();
         setBrowserStatus(status);
-        // Determine if we're in pop out mode based on current session
-        const currentSession = status.sessions.find((s: { id: string; mode: 'headless' | 'headed' }) => s.id === status.currentSessionId);
+        const currentSession = status.sessions.find((s: { id: string; }) => s.id === status.currentSessionId);
         setIsPopOutMode(currentSession?.mode === 'headed');
       }
-    } catch (error) {
-      console.error('Error fetching browser status:', error);
-    }
+    } catch (error) { console.error('[CLIENT] Error fetching browser status:', error); }
   };
 
   const handlePopOut = async () => {
     try {
-      const response = await fetch('http://localhost:4000/api/browser/pop-out', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
+      const response = await fetch('/api/browser/pop-out', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
       if (response.ok) {
         const result = await response.json();
-        setLog(prev => [...prev, {
-          type: 'navigation',
-          title: 'Browser Popped Out',
-          content: `Browser is now running in headed mode. Session: ${result.sessionId}`,
-          timestamp: new Date().toISOString()
-        }]);
-        setIsPopOutMode(true);
-        await fetchBrowserStatus();
-      } else {
-        throw new Error('Failed to pop out browser');
-      }
+        if (result.status === 'vnc') {
+          setLog(prev => [...prev, { type: 'navigation', title: 'Opening VNC Viewer', content: result.message, timestamp: new Date().toISOString() }]);
+          window.open('/vnc', '_blank');
+        } else {
+          setLog(prev => [...prev, { type: 'navigation', title: 'Browser Popped Out', content: `Browser is now running in headed mode. Session: ${result.sessionId}`, timestamp: new Date().toISOString() }]);
+          setIsPopOutMode(true);
+          await fetchBrowserStatus();
+        }
+      } else if (response.status === 501) {
+        const errorData = await response.json();
+        setLog(prev => [...prev, { type: 'navigation', title: 'Pop-out Not Available', content: errorData.message || 'Pop-out feature is not available in this environment', timestamp: new Date().toISOString() }]);
+        alert(errorData.message + '\n\n' + errorData.suggestion);
+      } else { throw new Error('Failed to pop out browser'); }
     } catch (error) {
-      setLog(prev => [...prev, {
-        type: 'error',
-        title: 'Pop Out Error',
-        content: error instanceof Error ? error.message : String(error),
-        timestamp: new Date().toISOString()
-      }]);
+      setLog(prev => [...prev, { type: 'error', title: 'Pop Out Error', content: error instanceof Error ? error.message : String(error), timestamp: new Date().toISOString() }]);
     }
   };
 
   const handlePopIn = async () => {
     try {
-      const response = await fetch('http://localhost:4000/api/browser/pop-in', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
+      const response = await fetch('/api/browser/pop-in', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
       if (response.ok) {
         const result = await response.json();
-        setLog(prev => [...prev, {
-          type: 'navigation',
-          title: 'Browser Popped In',
-          content: `Browser is now running in headless mode. Session: ${result.sessionId}`,
-          timestamp: new Date().toISOString()
-        }]);
+        setLog(prev => [...prev, { type: 'navigation', title: 'Browser Popped In', content: `Browser is now running in headless mode. Session: ${result.sessionId}`, timestamp: new Date().toISOString() }]);
         setIsPopOutMode(false);
         await fetchBrowserStatus();
-      } else {
-        throw new Error('Failed to pop in browser');
-      }
+      } else { throw new Error('Failed to pop in browser'); }
     } catch (error) {
-      setLog(prev => [...prev, {
-        type: 'error',
-        title: 'Pop In Error',
-        content: error instanceof Error ? error.message : String(error),
-        timestamp: new Date().toISOString()
-      }]);
+      setLog(prev => [...prev, { type: 'error', title: 'Pop In Error', content: error instanceof Error ? error.message : String(error), timestamp: new Date().toISOString() }]);
     }
   };
 
   const cleanAssistantMessage = (message: string) => {
-    // Remove function call blocks
     const withoutFuncCalls = message.replace(/<func-call[^>]*>[\s\S]*?<\/func-call>/g, '');
-    
-    // Remove duplicate content that follows function calls
     const withoutDuplicates = withoutFuncCalls.replace(/(<func-call[^>]*>[\s\S]*?<\/func-call>)\s*\1+/g, '$1');
-    
-    // Trim whitespace and newlines
     return withoutDuplicates.trim();
   };
 
-  const startNewSseSession = (messages: ChatMessage[]) => {
-    // Check if cancelled before starting new session
+  const processStream = async (
+    reader: ReadableStreamDefaultReader<Uint8Array>, 
+    decoder: TextDecoder,
+    onToken: (data: string) => void,
+    onToolUse: (toolData: ToolData) => void, 
+    onDone: () => void,
+    onError: (error: Error) => void
+  ) => {
+    let buffer = '';
+    try {
+      while (true) {
+        if (isCancelledRef.current) {
+          console.log('[CLIENT] Stream reading cancelled by user in processStream.');
+          // Don't call onError here as cancelGeneration handles UI
+          return; 
+        }
+        const { done, value } = await reader.read();
+        if (done) {
+          console.log('[CLIENT] Stream finished.');
+          onDone();
+          break;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        
+        let eventEndIndex;
+        while ((eventEndIndex = buffer.indexOf('\n\n')) !== -1) {
+          const eventString = buffer.substring(0, eventEndIndex);
+          buffer = buffer.substring(eventEndIndex + 2); // Consume the event and the trailing \n\n
+
+          if (eventString.startsWith('event: ')) {
+            const lines = eventString.split('\n');
+            const eventTypeLine = lines.find(line => line.startsWith('event: '));
+            const eventDataLine = lines.find(line => line.startsWith('data: '));
+            
+            if (eventTypeLine && eventDataLine) {
+              const eventType = eventTypeLine.substring('event: '.length).trim();
+              const eventDataJson = eventDataLine.substring('data: '.length);
+              
+              try {
+                const parsedEvent = JSON.parse(eventDataJson);
+                // For token events, data is a string. For tool_use events, data is a JSON string that needs parsing
+                let actualData = parsedEvent.data;
+                if (eventType === 'tool_use' && typeof actualData === 'string') {
+                  try {
+                    actualData = JSON.parse(actualData);
+                  } catch (e) {
+                    console.warn('[CLIENT] Failed to parse tool_use data as JSON:', actualData);
+                  }
+                } 
+
+                if (parsedEvent.type !== eventType) {
+                  console.warn(`[CLIENT] Mismatched event types: SSE event says '${eventType}', JSON says '${parsedEvent.type}'`);
+                }
+                
+                if (isCancelledRef.current) return; // Check cancellation before processing
+
+                if (eventType === 'token') {
+                  onToken(actualData);
+                } else if (eventType === 'tool_use') {
+                  onToolUse(actualData);
+                  return; 
+                } else if (eventType === 'done') {
+                  onDone();
+                  return; 
+                } else if (eventType === 'error') {
+                  onError(new Error(actualData));
+                  return;
+                }
+              } catch (e) {
+                console.error('[CLIENT] Error parsing SSE event data JSON:', e, eventDataJson);
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      if ((error as Error).name === 'AbortError') {
+        console.log('[CLIENT] Stream reading aborted.');
+        if (!isCancelledRef.current) {
+            onError(new Error("Stream aborted unexpectedly"));
+        }
+      } else {
+        console.error('[CLIENT] Error reading stream:', error);
+        onError(error as Error);
+      }
+    } finally {
+      // Reader lock is automatically released when the stream is closed or errors.
+    }
+  };
+
+  const startNewSseSession = async (
+    filteredMessages: ChatMessage[],
+    onToken: (data: string) => void,
+    onToolUse: (toolData: ToolData) => void,
+    onDone: () => void,
+    onError: (error: Error) => void
+  ) => {
     if (isCancelledRef.current) {
-      console.log('Session cancelled, not starting new SSE connection');
-      return null;
+      console.log('Session cancelled, not starting new fetch connection');
+      onError(new Error('Cancelled by user'));
+      return;
     }
-    
-    // Close any existing SSE connection first
-    if (eventSourceRef.current) {
-      console.log('Closing existing SSE connection before starting new one');
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
     }
-    
-    // Reset the current assistant message
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+
     currentAssistantMessageRef.current = '';
 
-    // Filter out empty messages and clean assistant messages
-    const filteredMessages = messages
-      .filter(msg => {
-        if (msg.role === 'system') return true;
-        if (msg.role === 'assistant' && !msg.content && !msg.tool_calls) return false;
-        if (!msg.content && !msg.tool_calls) return false;
-        return true;
-      })
-      .map(msg => {
-        if (msg.role === 'assistant' && msg.content) {
-          return {
-            ...msg,
-            content: msg.content
-          };
-        }
-        return msg;
+    console.log('[CLIENT] Starting new fetch session to /api/ai (POST)');
+    console.log('[CLIENT] Message count:', filteredMessages.length);
+
+    try {
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: filteredMessages }),
+        signal,
       });
 
-    const queryParams = new URLSearchParams({
-      messages: JSON.stringify(filteredMessages)
-    });
+      if (!response.ok) {
+        const errorText = await response.text();
+        onError(new Error(`HTTP error! status: ${response.status}, text: ${errorText}`));
+        return;
+      }
+      if (!response.body) {
+        onError(new Error('Response body is null'));
+        return;
+      }
 
-    console.log('Starting new SSE session');
-    eventSourceRef.current = new EventSource(`/api/ai?${queryParams.toString()}`);
-    return eventSourceRef.current;
+      console.log('[CLIENT] Fetch request successful, stream ready for processing.');
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      
+      processStream(reader, decoder, onToken, onToolUse, onDone, onError).catch(streamError => {
+        console.error("[CLIENT] Unhandled error in processStream:", streamError);
+        onError(streamError instanceof Error ? streamError : new Error(String(streamError)));
+      });
+
+    } catch (error) {
+      if ((error as Error).name === 'AbortError') {
+        console.log('[CLIENT] Fetch setup aborted');
+        if (!isCancelledRef.current) {
+            onError(new Error("Fetch aborted unexpectedly during setup"));
+        }
+      } else {
+        console.error('[CLIENT] Fetch error in startNewSseSession:', error);
+        onError(error as Error);
+      }
+    }
   };
 
   const sendMessagesToAI = async (messages: ChatMessage[]) => {
     setIsGenerating(true);
     setUserMessage('');
-    isCancelledRef.current = false; // Reset cancellation flag when starting new generation
+    isCancelledRef.current = false; 
     
-    let hasToolCalls = false;
+    let hasToolCallsThisSegment = false;
 
-    // Filter messages and add empty assistant slot
     const filteredMessages = messages.filter(msg => {
-      // Always keep system messages
       if (msg.role === 'system') return true;
-      // Keep assistant messages that have content or tool calls
-      if (msg.role === 'assistant') {
-        return !!(msg.content || msg.tool_calls);
-      }
-      // Keep user messages even if they don't have content (like error responses)
-      if (msg.role === 'user') return true;
+      if (msg.role === 'assistant') return !!(msg.content || msg.tool_calls);
+      if (msg.role === 'user') return true; 
       return false;
     });
     setMessages([...filteredMessages, { role: 'assistant', content: '' }]);
 
     try {
-      const eventSource = startNewSseSession(filteredMessages);
-      
-      // If session was cancelled, don't proceed
-      if (!eventSource) {
-        setIsGenerating(false);
-        return;
-      }
-
-      // Handle incoming events
-      eventSource.onmessage = (event) => {
-        console.log('Received SSE message:', event);
-      };
-
-      let tokenBuffer = '';
-
-      eventSource.addEventListener('token', (event) => {
-        try {
-          // Add new data to the buffer
-          tokenBuffer += event.data;
-          
-          // Try to extract complete token objects
-          let match;
-          const tokenRegex = /\{"type":"token","data":"((?:[^"\\]|\\.)*)"\}/g;
-          
-          while ((match = tokenRegex.exec(tokenBuffer)) !== null) {
-            try {
-              const token = match[0];
-              const parsed = JSON.parse(token);
-              
-              if (parsed.data) {
-                currentAssistantMessageRef.current += parsed.data;
-                setMessages(prev => {
-                  const updated = [...prev];
-                  const lastMessage = updated[updated.length - 1];
-                  if (lastMessage && lastMessage.role === 'assistant') {
-                    lastMessage.content = currentAssistantMessageRef.current;
-                  }
-                  return updated;
-                });
-              }
-              
-              // Remove the processed token from the buffer
-              tokenBuffer = tokenBuffer.slice(match.index + token.length);
-            } catch (error) {
-              // Skip malformed tokens
-              console.warn('Skipping malformed token:', match[0], error);
-            }
-          }
-        } catch (error) {
-          console.error('Error processing token event:', error);
-        }
-      });
-
-      const cleanAndParseJSON = (str: string) => {
-        try {
-          // Remove control characters and escape sequences
-          const cleaned = str
-            .replace(/[\x00-\x1F\x7F-\x9F]/g, '')
-            .replace(/\\[^"\\\/bfnrtu]/g, '');
-          return JSON.parse(cleaned);
-        } catch (error) {
-          console.warn('JSON parse error:', error);
-          return null;
-        }
-      };
-
-      eventSource.addEventListener('tool_use', async (event) => {
-        try {
-          hasToolCalls = true; // Mark that we have tool calls in this session
-          console.log('%c[FRONTEND] 🎯 Received tool use event', 'color: #ff6b6b; font-weight: bold', event);
-          const toolEvent = JSON.parse(event.data);
-          if (!toolEvent) {
-            console.error('%c[FRONTEND] ❌ Invalid tool use event data', 'color: #ff4757');
-            return;
-          }
-          console.log('%c[FRONTEND] 📋 Tool use requested', 'color: #5f27cd; font-weight: bold', toolEvent);
-
-          const toolData = JSON.parse(toolEvent.data);
-          if (!toolData) {
-            throw new Error('Invalid tool data');
-          }
-
-          const toolContent = {
-            name: toolData.name,
-            input: toolData.input
-          };
-          const toolCallId = toolData.tool_use_id;
-          console.log(`%c[FRONTEND] 🔧 Executing tool: ${toolContent.name}`, 'color: #00d2d3; font-weight: bold', toolContent.input);
-
-          // Log the tool use
-          setLog(prev => [...prev, {
-            type: 'tool_use',
-            title: 'Tool Use Requested',
-            content: toolContent,
-            timestamp: new Date().toISOString(),
-            toolCallId: toolCallId
-          }]);
-
-          // Execute the tool
-          console.log(`%c[FRONTEND] 🚀 Invoking tool: ${toolContent.name}`, 'color: #ff9ff3; font-weight: bold');
-          const result = await invokeTool(toolContent.name, toolContent.input);
-          console.log(`%c[FRONTEND] ✅ Tool execution result`, 'color: #54a0ff; font-weight: bold', result);
-          
-          // Check if cancelled before processing result
-          if (isCancelledRef.current) {
-            console.log('%c[FRONTEND] ⚠️ Tool execution cancelled, ignoring result', 'color: #ffa502; font-weight: bold');
-            setLog(prev => [...prev, {
-              type: 'tool_result',
-              title: 'Tool Cancelled',
-              content: 'Tool execution was cancelled before result could be processed',
-              timestamp: new Date().toISOString(),
-              toolCallId: toolCallId
-            }]);
-            return;
-          }
-          
-          // Create tool result message
-          const toolResult: ChatMessage = {
-            role: 'user',
-            content: JSON.stringify(result.success ? result.result : result)
-          };
-
-          // Log the result
-          setLog(prev => [...prev, {
-            type: 'tool_result',
-            title: result.success ? 'Tool Result' : 'Tool Error',
-            content: result,
-            timestamp: new Date().toISOString(),
-            toolCallId: toolCallId
-          }]);
-
-          // Add tool result to messages and start new SSE session
+      await startNewSseSession(
+        filteredMessages,
+        // onToken
+        (tokenData: string) => {
+          if (isCancelledRef.current) return;
+          currentAssistantMessageRef.current += tokenData;
           setMessages(prev => {
-            const updatedMessages = [...prev, toolResult];
+            const updated = [...prev];
+            const lastMessage = updated[updated.length - 1];
+            if (lastMessage && lastMessage.role === 'assistant') {
+              lastMessage.content = currentAssistantMessageRef.current;
+            }
+            return updated;
+          });
+        },
+        // onToolUse
+        async (toolData: ToolData) => {
+          if (isCancelledRef.current) return;
+          hasToolCallsThisSegment = true;
+          console.log('%c[FRONTEND] 🎯 Received tool use event', 'color: #ff6b6b; font-weight: bold', toolData);
+
+          const toolContent = { name: toolData.name, input: toolData.input };
+          const toolCallId = toolData.tool_use_id;
+          
+          setLog(prev => [...prev, { type: 'tool_use', title: 'Tool Use Requested', content: toolContent, timestamp: new Date().toISOString(), toolCallId }]);
+          
+          const result = await invokeTool(toolContent.name, toolContent.input);
+          
+          if (isCancelledRef.current) {
+            setLog(prev => [...prev, { type: 'error', title: 'Tool Cancelled', content: 'Tool execution was cancelled by user.', timestamp: new Date().toISOString(), toolCallId }]);
+            return;
+          }
+
+          const toolResultMsg: ChatMessage = { role: 'user', content: JSON.stringify(result.success ? result.result : result) };
+          setLog(prev => [...prev, { type: 'tool_result', title: result.success ? 'Tool Result' : 'Tool Error', content: result as MyToolExecutionResult, timestamp: new Date().toISOString(), toolCallId }]);
+
+          setMessages(prev => {
+            const updatedMessages = [...prev];
+            const lastMsg = updatedMessages[updatedMessages.length -1];
+            if(lastMsg.role === 'assistant' && !lastMsg.content && !lastMsg.tool_calls) {
+               updatedMessages.push(toolResultMsg);
+            } else {
+               updatedMessages.push(toolResultMsg);
+            }
+
+            const toolResultIndex = updatedMessages.filter(m => m.role !== 'system').length - 1;
+            setToolCallTracker(t => ({ ...t, [toolResultIndex]: toolCallId }));
+            setToolNameTracker(t => ({ ...t, [toolResultIndex]: toolContent.name }));
             
-            // Track the tool call ID and tool name for the new tool result message
-            const toolResultIndex = updatedMessages.filter(msg => msg.role !== 'system').length - 1;
-            setToolCallTracker(prevTracker => ({
-              ...prevTracker,
-              [toolResultIndex]: toolCallId
-            }));
-            setToolNameTracker(prevTracker => ({
-              ...prevTracker,
-              [toolResultIndex]: toolContent.name
-            }));
-            
-            sendMessagesToAI(updatedMessages);
+            sendMessagesToAI(updatedMessages); 
             return updatedMessages;
           });
-        } catch (error) {
-          console.error('Error handling tool use event:', error);
-          setLog(prev => [...prev, {
-            type: 'error',
-            title: 'Tool Use Error',
-            content: String(error),
-            timestamp: new Date().toISOString()
-          }]);
-        }
-      });
-
-      // Handle errors
-      eventSource.onerror = (error) => {
-        console.error('SSE connection error:', error);
-        // Only log and cleanup if we haven't received a done event
-        if (eventSource.readyState !== EventSource.CLOSED) {
-          if (eventSourceRef.current === eventSource) {
-            console.log('Closing SSE connection due to error');
-            eventSource.close();
-            eventSourceRef.current = null;
+        },
+        // onDone
+        () => {
+          if (isCancelledRef.current) return;
+          console.log('Received done event from stream.');
+          if (!hasToolCallsThisSegment) {
             setIsGenerating(false);
           }
+        },
+        // onError
+        (error: Error) => {
+          if (isCancelledRef.current && error.message === "Cancelled by user") {
+            console.log("Generation cancelled by user, error callback suppressed.");
+            return;
+          }
+          console.error('Streaming error callback:', error);
+          setLog(prev => [...prev, { type: 'error', title: 'Streaming Error', content: error.message, timestamp: new Date().toISOString() }]);
+          setIsGenerating(false);
         }
-      };
-
-      // Wait for the response to complete
-      await new Promise((resolve) => {
-        eventSource.addEventListener('done', () => {
-          console.log('Received done event, closing connection');
-          if (eventSourceRef.current === eventSource) {
-            eventSource.close();
-            eventSourceRef.current = null;
-          }
-          // Only set isGenerating to false if there were no tool calls in this session
-          // If there were tool calls, they will trigger new SSE sessions
-          if (!hasToolCalls) {
-            console.log('No tool calls detected, ending generation state');
-            setIsGenerating(false);
-          } else {
-            console.log('Tool calls detected, staying in generation state');
-          }
-          resolve(null);
-        });
-      });
+      );
     } catch (error) {
-      console.error('Error in AI processing:', error);
-      setLog(prev => [...prev, {
-        type: 'error',
-        title: 'Error',
-        content: error instanceof Error ? error.message : String(error),
-        timestamp: new Date().toISOString()
-      }]);
+      console.error('Error in sendMessagesToAI (outer try-catch):', error);
+      setLog(prev => [...prev, { type: 'error', title: 'Error', content: error instanceof Error ? error.message : String(error), timestamp: new Date().toISOString() }]);
       setIsGenerating(false);
     }
   };
@@ -719,14 +632,18 @@ export default function ControlPanel() {
                         variant="ghost"
                         onClick={async () => {
                           try {
-                            const response = await fetch('http://localhost:4000/api/ui-state');
+                            console.log('[CLIENT] Fetching UI state from /api/ui-state (proxy to backend)');
+                            const response = await fetch('/api/ui-state');
+                            console.log('[CLIENT] UI state response:', response.status, response.statusText);
                             if (!response.ok) {
                               throw new Error('Failed to fetch UI state');
                             }
                             const data = await response.json();
+                            console.log('[CLIENT] UI state data:', data);
                             setUIStateData(data);
                             setShowUIState(true);
                           } catch (error) {
+                            console.error('[CLIENT] UI state error:', error);
                             setLog(prev => [...prev, {
                               type: 'error',
                               title: 'UI State Error',
@@ -759,16 +676,28 @@ export default function ControlPanel() {
                         style={{ padding: '0 8px', height: '37px' }}
                         onClick={async () => {
                           try {
-                            const response = await fetch('http://localhost:4000/api/puppeteer', {
+                            console.log('[CLIENT] Navigating via /api/puppeteer (proxy to backend)');
+                            console.log('[CLIENT] Navigation URL:', url);
+                            
+                            const resolvedUrl = process.env.NEXT_PUBLIC_ALGA_DEV_ENV === 'true' 
+                              ? resolveDevServiceUrl(url) 
+                              : url;
+                            
+                            console.log('[CLIENT] Resolved URL:', resolvedUrl);
+                            
+                            const response = await fetch('/api/puppeteer', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({
-                                script: `(async () => { await helper.navigate('http://server:3000'); })();`
+                                script: `(async () => { await helper.navigate('${resolvedUrl}'); })();`
                               })
                             });
+                            console.log('[CLIENT] Navigation response:', response.status, response.statusText);
                             if (!response.ok) {
                               throw new Error('Navigation failed');
                             }
+                            const result = await response.json();
+                            console.log('[CLIENT] Navigation result:', result);
                             setLog(prev => [...prev, {
                               type: 'navigation',
                               title: 'Navigation',
@@ -776,6 +705,7 @@ export default function ControlPanel() {
                               timestamp: new Date().toISOString()
                             }]);
                           } catch (error: unknown) {
+                            console.error('[CLIENT] Navigation error:', error);
                             const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
                             setLog(prev => [...prev, {
                               type: 'error',
@@ -1076,7 +1006,7 @@ export default function ControlPanel() {
                     }}>
                       {uiStateData ? (
                         <JsonViewer 
-                          data={uiStateData}
+                          data={uiStateData as JsonValue}
                           expandedState={expandedState}
                           setExpandedState={setExpandedState}
                         />
@@ -1102,7 +1032,7 @@ export default function ControlPanel() {
                         }, []);
                       };
                       
-                      const allPaths = getAllPaths(uiStateData);
+                      const allPaths = getAllPaths(uiStateData as JsonValue);
                       const newState = allPaths.reduce((acc, path) => ({
                         ...acc,
                         [path]: true
@@ -1156,24 +1086,30 @@ export default function ControlPanel() {
                   <Button 
                     onClick={async () => {
                       try {
-                        const response = await fetch('http://localhost:4000/api/puppeteer', {
+                        console.log('[CLIENT] Executing code via /api/puppeteer (proxy to backend)');
+                        console.log('[CLIENT] Code to execute:', codeToExecute);
+                        const response = await fetch('/api/puppeteer', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({
                             script: codeToExecute
                           })
                         });
+                        console.log('[CLIENT] Code execution response:', response.status, response.statusText);
                         if (!response.ok) {
                           throw new Error('Code execution failed');
                         }
+                        const result = await response.json();
+                        console.log('[CLIENT] Code execution result:', result);
                         setLog(prev => [...prev, {
-                          type: 'tool_use',
+                          type: 'navigation',
                           title: 'Code Execution',
                           content: `Executed code:\n${codeToExecute}`,
                           timestamp: new Date().toISOString()
                         }]);
                         setShowCodeExecution(false);
                       } catch (error: unknown) {
+                        console.error('[CLIENT] Code execution error:', error);
                         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
                         setLog(prev => [...prev, {
                           type: 'error',
@@ -1414,30 +1350,41 @@ export default function ControlPanel() {
                               fontFamily: 'monospace',
                               fontSize: '12px'
                             }}>
-                              {entry.type === 'tool_use' && typeof entry.content === 'object' && entry.content !== null && 'name' in entry.content ? (
-                                <>
-                                  <Text>🔧 Using: {(entry.content as ToolContent).name}</Text>
-                                  <Box mt="2">
-                                    <Text>Input:</Text>
-                                    <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-                                      {JSON.stringify((entry.content as ToolContent).input, null, 2)}
-                                    </pre>
-                                  </Box>
-                                </>
-                              ) : entry.type === 'tool_result' && typeof entry.content === 'object' && entry.content !== null && 'name' in entry.content ? (
-                                <>
-                                  <Text>🔧 Result from: {(entry.content as ToolContent).name}</Text>
-                                  <Box mt="2">
-                                    <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-                                      {JSON.stringify(entry.content, null, 2)}
-                                    </pre>
-                                  </Box>
-                                </>
-                              ) : (
-                                <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-                                  {typeof entry.content === 'string' ? entry.content : JSON.stringify(entry.content, null, 2)}
-                                </pre>
-                              )}
+                              {(() => {
+                                switch (entry.type) {
+                                  case 'tool_use':
+                                    return (
+                                      <>
+                                        <Text>🔧 Using: {entry.content.name}</Text>
+                                        <Box mt="2">
+                                          <Text>Input:</Text>
+                                          <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+                                            {JSON.stringify(entry.content.input, null, 2)}
+                                          </pre>
+                                        </Box>
+                                      </>
+                                    );
+                                  case 'tool_result':
+                                    // Title already indicates "Tool Result" or "Tool Error"
+                                    // entry.content is MyToolExecutionResult
+                                    return (
+                                      <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+                                        {JSON.stringify(entry.content, null, 2)}
+                                      </pre>
+                                    );
+                                  case 'navigation':
+                                  case 'error':
+                                    // entry.content is string
+                                    return (
+                                      <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+                                        {entry.content}
+                                      </pre>
+                                    );
+                                  default:
+                                    // Should not happen with a discriminated union
+                                    return <pre>Invalid log entry content</pre>;
+                                }
+                              })()}
                             </Box>
                           </Flex>
                         </Box>

@@ -3,13 +3,19 @@
 
 # Override base configuration for dev environments
 nameOverride: "alga-dev"
-namespace: "alga-pr-{{ .Values.devEnv.prNumber }}"
+namespace: "alga-dev-{{ .Values.devEnv.sanitizedBranch }}"
+
+# Application configuration
+version: "dev"
+env: "development"
+host: "http://localhost:3000"
 
 # Development Environment Configuration
 devEnv:
   enabled: false  # Set to true when deploying dev environments
-  prNumber: ""    # PR number for this environment
-  namespace: ""   # Will be calculated as alga-pr-{prNumber}
+  branch: ""      # Branch name for this environment
+  sanitizedBranch: ""  # Sanitized branch name for kubernetes naming
+  namespace: ""   # Will be calculated as alga-dev-{sanitizedBranch}
   
   # Repository configuration
   repository:
@@ -27,7 +33,7 @@ devEnv:
     image:
       repository: "harbor.nineminds.com/nineminds/alga-code-server"
       tag: "latest"
-      pullPolicy: "Always"
+      pullPolicy: "Always"  # Always pull to avoid cache issues
       is_private: true
       credentials: "harbor-credentials"
     service:
@@ -77,8 +83,8 @@ devEnv:
           cpu: "1"
           memory: "2Gi"
         requests:
-          cpu: "250m"
-          memory: "512Mi"
+          cpu: "500m"
+          memory: "1Gi"
   
   # Persistence for dev environments
   persistence:
@@ -97,17 +103,17 @@ devEnv:
       nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     hosts:
       codeServer:
-        host: "{{ .Values.devEnv.prNumber }}.dev.alga.nineminds.com"
+        host: "{{ .Values.devEnv.sanitizedBranch }}.dev.alga.nineminds.com"
         paths:
           - path: /
             pathType: Prefix
       aiAutomationWeb:
-        host: "{{ .Values.devEnv.prNumber }}-ai.dev.alga.nineminds.com"
+        host: "{{ .Values.devEnv.sanitizedBranch }}-ai.dev.alga.nineminds.com"
         paths:
           - path: /
             pathType: Prefix
       aiAutomationApi:
-        host: "{{ .Values.devEnv.prNumber }}-ai-api.dev.alga.nineminds.com"
+        host: "{{ .Values.devEnv.sanitizedBranch }}-ai-api.dev.alga.nineminds.com"
         paths:
           - path: /
             pathType: Prefix
@@ -116,9 +122,19 @@ devEnv:
       secretName: "alga-dev-tls"
   
   # Node selector and tolerations for dev environments
-  nodeSelector: {}
+  nodeSelector: 
+    kubernetes.io/hostname: cloudlab-26
   tolerations: []
   affinity: {}
+
+# Setup job configuration for database initialization
+setup:
+  image:
+    name: harbor.nineminds.com/nineminds/sebastian_setup
+    tag: "latest"
+    is_private: true
+    credentials: harbor-credentials
+  pullPolicy: Always
 
 # Override base values for development
 server:
@@ -179,12 +195,12 @@ config:
     openai: 'dev-key-here'
     anthropic: 'dev-key-here'
   
-  # Local storage for development
+  # Local storage for development (disabled to avoid PVC issues)
   storage:
     default_provider: 'local'
     providers:
       local:
-        enabled: true
+        enabled: false
         base_path: '/data/files'
         max_file_size: 104857600  # 100MB
         allowed_mime_types:
@@ -205,6 +221,37 @@ logging:
     path: './logs'
   external:
     enabled: false
+
+# Authentication configuration for dev environments
+auth:
+  nextauth_session_expires: "30"
+
+# Cryptography configuration for dev environments  
+crypto:
+  salt_bytes: 12
+  iteration: 10000
+  key_length: 64
+  algorithm: sha512
+  alga_auth_key: defaultKey
+
+# Token configuration for dev environments
+token:
+  expire: "7d"
+
+# Email configuration for dev environments
+email:
+  enabled: false
+  from: "dev@alga.local"
+  host: "localhost"
+  port: "587"
+  user: "admin@alga.local"
+  password: ""
+
+# Google OAuth for dev environments (disabled by default)
+google_auth:
+  enabled: false
+  client_id: ""
+  client_secret: ""
 
 # Resource limits for development environment
 resources:

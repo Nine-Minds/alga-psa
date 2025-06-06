@@ -1,3 +1,0 @@
-{
-  "code": "(async () => { const uiState = await helper.query(); const getAllIds = (components) => { let ids = []; for (const component of components) { ids.push(component.id); if (component.children) { ids.push(...getAllIds(component.children)); } } return ids; }; const allIds = getAllIds(uiState?.components || []); return { totalComponents: allIds.length, menuComponents: allIds.filter(id => id.startsWith('menu-')), allIds: allIds.slice(0, 10) }; })()"
-}

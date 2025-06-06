@@ -1,3 +1,0 @@
-{
-  "code": "(async () => { try { const result = await helper.execute('menu-clients', 'click'); return { success: true, result }; } catch (error) { return { success: false, error: error.message }; } })()"
-}

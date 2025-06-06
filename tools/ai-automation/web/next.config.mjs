@@ -2,6 +2,7 @@
 const nextConfig = {
   serverExternalPackages: ['puppeteer-core'],
   output: 'standalone',
+  productionBrowserSourceMaps: true,
   eslint: {
     // Warning: This allows production builds to successfully complete even if
     // your project has ESLint errors.

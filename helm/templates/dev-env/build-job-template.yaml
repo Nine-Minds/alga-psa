@@ -1,0 +1,136 @@
+{{- if .Values.buildJob }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Values.buildJob.name | quote }}
+  namespace: {{ .Values.buildJob.namespace | default "default" | quote }}
+  labels:
+    app: "alga-build-job"
+    build-type: {{ .Values.buildJob.type | quote }}
+spec:
+  activeDeadlineSeconds: {{ .Values.buildJob.timeout | default 1800 }}
+  ttlSecondsAfterFinished: {{ .Values.buildJob.ttl | default 300 }}
+  template:
+    metadata:
+      labels:
+        app: "alga-build-job"
+        build-type: {{ .Values.buildJob.type | quote }}
+    spec:
+      restartPolicy: Never
+      {{- if .Values.buildJob.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.buildJob.nodeSelector | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: build
+        image: "docker:24-dind"
+        command: ["/bin/sh"]
+        args:
+          - -c
+          - |
+            set -e
+            echo "Starting build process..."
+            
+            # Wait for Docker daemon to be ready
+            timeout=60
+            until docker info >/dev/null 2>&1; do
+              if [ $timeout -le 0 ]; then
+                echo "Docker daemon did not start in time"
+                exit 1
+              fi
+              echo "Waiting for Docker daemon..."
+              timeout=$((timeout - 5))
+              sleep 5
+            done
+            
+            echo "Docker daemon is ready"
+            
+            # Configure Docker to use the registry from harbor-credentials secret
+            echo "Configuring Docker registry authentication..."
+            mkdir -p /root/.docker
+            # Copy the dockerconfigjson from the mounted secret
+            cp /harbor-creds/.dockerconfigjson /root/.docker/config.json
+            echo "Docker registry authentication configured"
+            
+            # Clone the repository
+            echo "Cloning repository..."
+            git clone {{ .Values.buildJob.gitRepo }} /workspace
+            cd /workspace
+            
+            # Checkout the specified branch/commit
+            echo "Checking out {{ .Values.buildJob.gitRef }}..."
+            git checkout {{ .Values.buildJob.gitRef }}
+            
+            # Navigate to the build directory
+            cd {{ .Values.buildJob.buildPath }}
+            
+            # Build the Docker image
+            echo "Building Docker image..."
+            docker build \
+              --platform linux/amd64 \
+              -f {{ .Values.buildJob.dockerfile }} \
+              {{- range .Values.buildJob.buildArgs }}
+              --build-arg {{ . }} \
+              {{- end }}
+              {{- range .Values.buildJob.tags }}
+              -t {{ . }} \
+              {{- end }}
+              {{ .Values.buildJob.context }}
+            
+            # Push the images
+            {{- if .Values.buildJob.push }}
+            echo "Pushing Docker images..."
+            {{- range .Values.buildJob.tags }}
+            docker push {{ . }}
+            {{- end }}
+            {{- end }}
+            
+            echo "Build completed successfully!"
+        env:
+        - name: DOCKER_HOST
+          value: tcp://localhost:2375
+        resources:
+          requests:
+            memory: {{ .Values.buildJob.resources.memory | default "2Gi" }}
+            cpu: {{ .Values.buildJob.resources.cpu | default "2" }}
+          limits:
+            memory: {{ .Values.buildJob.resources.memoryLimit | default "4Gi" }}
+            cpu: {{ .Values.buildJob.resources.cpuLimit | default "4" }}
+        volumeMounts:
+        - name: workspace
+          mountPath: /workspace
+        - name: harbor-creds
+          mountPath: /harbor-creds
+          readOnly: true
+      
+      # Docker daemon sidecar
+      - name: docker-daemon
+        image: "docker:24-dind"
+        securityContext:
+          privileged: true
+        env:
+        - name: DOCKER_TLS_CERTDIR
+          value: ""
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "1"
+          limits:
+            memory: "2Gi"
+            cpu: "2"
+        volumeMounts:
+        - name: docker-storage
+          mountPath: /var/lib/docker
+      
+      volumes:
+      - name: workspace
+        emptyDir: {}
+      - name: docker-storage
+        emptyDir: {}
+      - name: harbor-creds
+        secret:
+          secretName: harbor-credentials
+          items:
+          - key: .dockerconfigjson
+            path: .dockerconfigjson
+{{- end }}

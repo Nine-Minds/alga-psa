@@ -60,20 +60,28 @@ function setupSocketHandlers(io: Server) {
   io.on('connection', (socket) => {
     console.log('\x1b[47m\x1b[30m[WEBSOCKET] 🔌 Client connected\x1b[0m');
 
-    // Handle screenshot streaming
-    const screenshotInterval = setInterval(async () => {
-      try {
-        const page = puppeteerManager.getPage();
-        const buf = await page.screenshot();
-        const base64img = Buffer.from(buf).toString('base64');
-        socket.emit('screenshot', base64img);
-      } catch (error) {
-        console.error('\x1b[41m[WEBSOCKET] ❌ Error taking screenshot\x1b[0m', error);
-      }
-    }, 2000);
+    // Handle screenshot streaming (disabled when VNC is enabled to avoid display conflicts)
+    let screenshotInterval: NodeJS.Timeout | null = null;
+    
+    if (process.env.VNC_ENABLED !== 'true') {
+      screenshotInterval = setInterval(async () => {
+        try {
+          const page = puppeteerManager.getPage();
+          const buf = await page.screenshot();
+          const base64img = Buffer.from(buf).toString('base64');
+          socket.emit('screenshot', base64img);
+        } catch (error) {
+          console.error('\x1b[41m[WEBSOCKET] ❌ Error taking screenshot\x1b[0m', error);
+        }
+      }, 2000);
+    } else {
+      console.log('\x1b[43m[WEBSOCKET] 📺 Screenshot streaming disabled - VNC mode active\x1b[0m');
+    }
     
     // Track interval for cleanup
-    activeIntervals.push(screenshotInterval);
+    if (screenshotInterval) {
+      activeIntervals.push(screenshotInterval);
+    }
 
     // Track previous UI state for comparison
     let previousState: any = null;
@@ -118,10 +126,12 @@ function setupSocketHandlers(io: Server) {
     });
 
     socket.on('disconnect', () => {
-      const index = activeIntervals.indexOf(screenshotInterval);
-      if (index > -1) {
-        clearInterval(screenshotInterval);
-        activeIntervals.splice(index, 1);
+      if (screenshotInterval) {
+        const index = activeIntervals.indexOf(screenshotInterval);
+        if (index > -1) {
+          clearInterval(screenshotInterval);
+          activeIntervals.splice(index, 1);
+        }
       }
       console.log('\x1b[101m[WEBSOCKET] 🔌 Client disconnected\x1b[0m');
     });
@@ -414,6 +424,18 @@ function setupExpress(app: express.Application) {
     console.log('\x1b[105m\x1b[30m[BACKEND] 🪟 POST /api/browser/pop-out received\x1b[0m');
     const startTime = Date.now();
 
+    // Check if we're in a Kubernetes environment
+    if (process.env.KUBERNETES_SERVICE_HOST || process.env.ALGA_DEV_ENV === 'true') {
+      console.log('\x1b[43m[BACKEND] ⚠️ Redirecting to VNC viewer for Kubernetes environment\x1b[0m');
+      res.json({
+        status: 'vnc',
+        message: 'Opening VNC viewer for browser control',
+        vncUrl: '/vnc',
+        suggestion: 'The browser will open in a VNC viewer where you can see and control it.'
+      });
+      return;
+    }
+
     try {
       const result = await puppeteerManager.popOut();
       console.log(`\x1b[32m[BACKEND] ✅ Browser popped out successfully in ${Date.now() - startTime}ms\x1b[0m`);
@@ -449,6 +471,22 @@ function setupExpress(app: express.Application) {
       res.status(500).json(JSON.parse(JSON.stringify({
         error: error instanceof Error ? error.message : String(error)
       }, null, 0)));
+    }
+  }) as RequestHandler);
+
+  // Simple health check endpoint
+  app.get('/health', (req: Request, res: Response) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  // VNC debug routes
+  app.use('/api/vnc', (async (req: Request, res: Response, next: any) => {
+    try {
+      const vncDebug = await import('./routes/vnc-debug.js');
+      vncDebug.default(req, res, next);
+    } catch (error) {
+      console.error('Error loading VNC debug routes:', error);
+      res.status(500).json({ error: 'VNC debug routes not available' });
     }
   }) as RequestHandler);
 
@@ -570,8 +608,12 @@ async function startServer() {
   
   try {
     console.log('Initializing Puppeteer...');
+    // Use headed mode when VNC is enabled for visual debugging
+    const useHeadedMode = process.env.VNC_ENABLED === 'true';
+    console.log(`VNC_ENABLED: ${process.env.VNC_ENABLED}, using headed mode: ${useHeadedMode}`);
+    
     await puppeteerManager.init({
-      headless: true,
+      headless: !useHeadedMode,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox'

@@ -6,10 +6,6 @@ metadata:
   labels:
     name: {{ .Values.devEnv.namespace }}
     type: dev-environment
-    pr-number: "{{ .Values.devEnv.prNumber }}"
+    branch: "{{ .Values.devEnv.sanitizedBranch }}"
     {{- include "sebastian.labels" . | nindent 4 }}
-  annotations:
-    "helm.sh/hook": pre-install
-    "helm.sh/hook-weight": "-20"  # Create namespace before everything else
-    "helm.sh/hook-delete-policy": before-hook-creation
 {{- end }}

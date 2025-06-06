@@ -1,0 +1,137 @@
+{{- if and .Values.devEnv.enabled .Values.devEnv.aiAutomation.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sebastian.fullname" . }}-ai-nginx-config
+  namespace: {{ .Values.devEnv.namespace }}
+data:
+  nginx.conf: |
+    events {
+      worker_connections 1024;
+    }
+    
+    http {
+      upstream ai_web {
+        server {{ include "sebastian.fullname" . }}-ai-web:3000;
+      }
+      
+      upstream ai_api {
+        server {{ include "sebastian.fullname" . }}-ai-api:4000;
+      }
+      
+      map $http_upgrade $connection_upgrade {
+        default upgrade;
+        '' close;
+      }
+      
+      server {
+        listen 8080;
+        
+        # WebSocket connections to AI API
+        location /socket.io/ {
+          proxy_pass http://ai_api;
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection $connection_upgrade;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+          
+          # WebSocket specific timeouts
+          proxy_connect_timeout 7d;
+          proxy_send_timeout 7d;
+          proxy_read_timeout 7d;
+        }
+        
+        # AI LLM endpoint - route to AI Web service (Next.js app)
+        location /api/ai {
+          proxy_pass http://ai_web;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+          
+          # Support for streaming responses
+          proxy_buffering off;
+          proxy_cache off;
+          proxy_set_header Connection '';
+          proxy_http_version 1.1;
+          chunked_transfer_encoding off;
+        }
+        
+        # Other API calls to AI API (browser automation, tools, etc.)
+        location /api/ {
+          proxy_pass http://ai_api;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+        }
+        
+        # Handle /vnc without trailing slash
+        location = /vnc {
+          return 301 /vnc/;
+        }
+        
+        # Handle WebSocket connections specifically
+        location /vnc/websockify {
+          proxy_pass http://{{ include "sebastian.fullname" . }}-ai-api:5900/websockify;
+          proxy_http_version 1.1;
+          
+          # WebSocket headers
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection $connection_upgrade;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          
+          # Disable buffering for WebSocket
+          proxy_buffering off;
+          proxy_request_buffering off;
+          tcp_nodelay on;
+          
+          # Long timeouts for persistent connections
+          proxy_connect_timeout 3600s;
+          proxy_send_timeout 3600s;
+          proxy_read_timeout 3600s;
+        }
+        
+        # VNC NoVNC interface - serve static files and handle WebSocket
+        location /vnc/ {
+          # Serve NoVNC files and handle WebSocket connections
+          proxy_pass http://{{ include "sebastian.fullname" . }}-ai-api:5900/;
+          proxy_http_version 1.1;
+          
+          # Standard proxy headers
+          proxy_set_header Host $http_host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+          
+          # WebSocket support for NoVNC connections
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection $connection_upgrade;
+          
+          # Disable buffering for WebSocket
+          proxy_buffering off;
+          proxy_request_buffering off;
+          tcp_nodelay on;
+          
+          # Long timeouts for persistent connections
+          proxy_connect_timeout 3600s;
+          proxy_send_timeout 3600s;
+          proxy_read_timeout 3600s;
+        }
+        
+        # Everything else to AI Web
+        location / {
+          proxy_pass http://ai_web;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+        }
+      }
+    }
+{{- end }}

@@ -33,16 +33,31 @@ spec:
           imagePullPolicy: {{ .Values.devEnv.aiAutomation.web.image.pullPolicy }}
           env:
             - name: NODE_ENV
-              value: "development"
+              value: "production"
             - name: PORT
               value: "3000"
             - name: NEXT_PUBLIC_API_URL
-              value: "http://{{ include "sebastian.fullname" . }}-ai-api.{{ .Values.devEnv.namespace }}.svc.cluster.local:4000"
+              value: "http://ai-api.{{ .Values.devEnv.namespace }}:4000"
+            - name: NODE_OPTIONS
+              value: "--max-http-header-size=26214400"
             # Environment markers
             - name: ALGA_DEV_ENV
               value: "true"
-            - name: ALGA_PR_NUMBER
-              value: "{{ .Values.devEnv.prNumber }}"
+            - name: ALGA_BRANCH_SANITIZED
+              value: "{{ .Values.devEnv.sanitizedBranch }}"
+            - name: NEXT_PUBLIC_ALGA_DEV_ENV
+              value: "true"
+            - name: NEXT_PUBLIC_ALGA_BRANCH_SANITIZED
+              value: "{{ .Values.devEnv.sanitizedBranch }}"
+            # LLM Configuration
+            - name: LLM_PROVIDER
+              value: "custom-openai"
+            - name: CUSTOM_OPENAI_API_KEY
+              value: {{ .Values.config.llm.customOpenaiApiKey | quote }}
+            - name: CUSTOM_OPENAI_BASE_URL
+              value: {{ .Values.config.llm.customOpenaiBaseUrl | default "https://openrouter.ai/api/v1" | quote }}
+            - name: CUSTOM_OPENAI_MODEL
+              value: {{ .Values.config.llm.customOpenaiModel | default "google/gemini-2.5-flash-preview-05-20" | quote }}
           ports:
             - name: http
               containerPort: 3000

@@ -23,6 +23,7 @@ ee/server/.env
 server/.env
 server/.env.localtest
 host.values.yaml
+helm/values-dev-env.yaml
 
 # Logs
 logs

@@ -1,3 +1,0 @@
-{
-  "code": "(async () => { try { const result = await helper.query(); return { success: true, hasResult: !!result, type: typeof result }; } catch (error) { return { success: false, error: error.message }; } })()"
-}

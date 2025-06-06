@@ -1,0 +1,35 @@
+
+# Generated values for branch feat/connect-11 development environment
+devEnv:
+  enabled: true
+  branch: "feat/connect-11"
+  sanitizedBranch: "feat-connect-11"
+  namespace: "alga-dev-feat-connect-11"
+  repository:
+    url: "https://github.com/Nine-Minds/alga-psa.git"
+    branch: "feat/connect-11"
+  codeServer:
+    enabled: true
+  aiAutomation:
+    enabled: true
+  # External port configuration
+  externalPorts:
+    app: 30000
+    codeServer: 30001
+    codeApp: 30002
+    aiWeb: 30003
+
+server:
+  image:
+    name: "harbor.nineminds.com/nineminds/alga-psa-ee"
+    tag: "latest"
+  pullPolicy: Always  # Force pull to avoid cache issues
+
+# LLM Configuration
+config:
+  llm:
+    customOpenaiApiKey: ""
+    customOpenaiBaseUrl: "https://openrouter.ai/api/v1"
+    customOpenaiModel: "google/gemini-2.5-flash-preview-05-20"
+
+# Enterprise Edition settings

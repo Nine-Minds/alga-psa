@@ -1,3 +1,0 @@
-{
-  "code": "({ helperExists: !!helper, executeExists: !!(helper && helper.execute), timestamp: Date.now() })"
-}

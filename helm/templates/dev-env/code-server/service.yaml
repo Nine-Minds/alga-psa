@@ -14,6 +14,10 @@ spec:
       targetPort: http
       protocol: TCP
       name: http
+    - port: 3000
+      targetPort: alga-http
+      protocol: TCP
+      name: alga-http
   selector:
     {{- include "sebastian.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: code-server

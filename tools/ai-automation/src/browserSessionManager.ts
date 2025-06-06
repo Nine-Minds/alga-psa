@@ -43,14 +43,14 @@ export class BrowserSessionManager {
       headless: mode === 'headless',
       args: mode === 'headed' 
         ? [
-            '--window-size=1900,1200',
+            '--window-size=1800,950',
             '--disable-web-security',
             '--disable-features=VizDisplayCompositor'
           ]
         : [
             '--no-sandbox',
             '--disable-setuid-sandbox',
-            '--window-size=1900,1200'
+            '--window-size=1800,950'
           ],
       protocolTimeout: 60000,
       dumpio: false,
@@ -59,7 +59,7 @@ export class BrowserSessionManager {
 
     const browser = await puppeteer.launch(launchOptions);
     const page = await browser.newPage();
-    await page.setViewport({ width: 1900, height: 1200 });
+    await page.setViewport({ width: 1800, height: 950 });
 
     // Setup page event listeners
     page.on('console', (msg) => {
