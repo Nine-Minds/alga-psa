@@ -66,7 +66,10 @@ export interface IProjectTask extends TenantEntity {
   wbs_code: string;  
   order_key?: string;
   due_date: Date | null;
-  priority_id?: string | null;
+  task_type_key: string;
+  task_type?: ITaskType;
+  dependencies?: IProjectTaskDependency[];
+  dependents?: IProjectTaskDependency[];
   checklist_items?: ITaskChecklistItem[];
   ticket_links?: IProjectTicketLinkWithDetails[];
   resources?: any[];
@@ -118,3 +121,61 @@ export type ProjectStatus = {
   item_type?: ItemType;
   status_type?: ItemType;
 };
+
+export interface IStandardTaskType {
+  type_id: string;
+  type_key: string;
+  type_name: string;
+  icon?: string;
+  color?: string;
+  display_order: number;
+  is_active: boolean;
+  created_at: Date;
+}
+
+export interface ICustomTaskType extends TenantEntity {
+  type_id: string;
+  type_key: string;
+  type_name: string;
+  icon?: string;
+  color?: string;
+  display_order: number;
+  is_active: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export type ITaskType = IStandardTaskType | ICustomTaskType;
+
+export type DependencyType = 
+  | 'finish_to_start'
+  | 'start_to_start'
+  | 'finish_to_finish'
+  | 'start_to_finish'
+  | 'blocks'
+  | 'relates_to'
+  | 'duplicates';
+
+export interface IProjectTaskDependency extends TenantEntity {
+  dependency_id: string;
+  predecessor_task_id: string;
+  successor_task_id: string;
+  dependency_type: DependencyType;
+  lead_lag_days: number;
+  notes?: string;
+  created_at: Date;
+  updated_at: Date;
+  
+  predecessor_task?: {
+    task_id: string;
+    task_name: string;
+    wbs_code: string;
+    task_type_key: string;
+  };
+  successor_task?: {
+    task_id: string;
+    task_name: string;
+    wbs_code: string;
+    task_type_key: string;
+  };
+}
