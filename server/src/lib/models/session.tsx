@@ -1,17 +1,18 @@
-import { createTenantKnex } from '../db';
+import { getCurrentTenantId } from '../db';
 import { ISession } from '../../interfaces/session.interfaces';
 import logger from '../../utils/logger';
+import { Knex } from 'knex';
 
 const Session = {
-  get: async (session_id: string): Promise<ISession | undefined> => {
+  get: async (knexOrTrx: Knex | Knex.Transaction, session_id: string): Promise<ISession | undefined> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
+      const tenant = await getCurrentTenantId();
       
       if (!tenant) {
         throw new Error('Tenant context is required for session operations');
       }
 
-      const user = await db<ISession>('session')
+      const user = await knexOrTrx<ISession>('session')
         .select('*')
         .where('session_id', session_id)
         .andWhere('tenant', tenant)
@@ -23,15 +24,15 @@ const Session = {
     }
   },
 
-  getByToken: async (token: string): Promise<ISession | undefined> => {
+  getByToken: async (knexOrTrx: Knex | Knex.Transaction, token: string): Promise<ISession | undefined> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
+      const tenant = await getCurrentTenantId();
       
       if (!tenant) {
         throw new Error('Tenant context is required for session operations');
       }
 
-      const user = await db<ISession>('session')
+      const user = await knexOrTrx<ISession>('session')
         .select('*')
         .where('token', token)
         .andWhere('tenant', tenant)
@@ -43,16 +44,16 @@ const Session = {
     }
   },
 
-  insert: async (user: Omit<ISession, 'tenant'>): Promise<Pick<ISession, "session_id">> => {
+  insert: async (knexOrTrx: Knex | Knex.Transaction, user: Omit<ISession, 'tenant'>): Promise<Pick<ISession, "session_id">> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
+      const tenant = await getCurrentTenantId();
       
       if (!tenant) {
         throw new Error('Tenant context is required for session operations');
       }
 
       logger.info(`Inserting user in tenant ${tenant}:`, user);
-      const [session_id] = await db<ISession>('session')
+      const [session_id] = await knexOrTrx<ISession>('session')
         .insert({
           ...user,
           tenant
@@ -65,16 +66,16 @@ const Session = {
     }
   },
 
-  update: async (session_id: string, user: Partial<ISession>): Promise<void> => {
+  update: async (knexOrTrx: Knex | Knex.Transaction, session_id: string, user: Partial<ISession>): Promise<void> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
+      const tenant = await getCurrentTenantId();
       
       if (!tenant) {
         throw new Error('Tenant context is required for session operations');
       }
 
       logger.info(`Updating session ${session_id} in tenant ${tenant}`);
-      await db<ISession>('session')
+      await knexOrTrx<ISession>('session')
         .where('session_id', session_id)
         .andWhere('tenant', tenant)
         .update(user);
@@ -84,16 +85,16 @@ const Session = {
     }
   },
 
-  delete: async (session_id: string): Promise<void> => {
+  delete: async (knexOrTrx: Knex | Knex.Transaction, session_id: string): Promise<void> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
+      const tenant = await getCurrentTenantId();
       
       if (!tenant) {
         throw new Error('Tenant context is required for session operations');
       }
 
       logger.info(`Deleting session ${session_id} in tenant ${tenant}`);
-      await db<ISession>('session')
+      await knexOrTrx<ISession>('session')
         .where('session_id', session_id)
         .andWhere('tenant', tenant)
         .del();
@@ -103,16 +104,16 @@ const Session = {
     }
   },
 
-  deleteByToken: async (token: string): Promise<number | null> => {
+  deleteByToken: async (knexOrTrx: Knex | Knex.Transaction, token: string): Promise<number | null> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
+      const tenant = await getCurrentTenantId();
       
       if (!tenant) {
         throw new Error('Tenant context is required for session operations');
       }
 
       logger.info(`Attempting to delete session with token in tenant ${tenant}`);
-      const session = await db<ISession>('session')
+      const session = await knexOrTrx<ISession>('session')
         .where('token', token)
         .andWhere('tenant', tenant)
         .first('usersession_id');
@@ -122,7 +123,7 @@ const Session = {
         return null;
       }
       
-      await db<ISession>('session')
+      await knexOrTrx<ISession>('session')
         .where('token', token)
         .andWhere('tenant', tenant)
         .del();

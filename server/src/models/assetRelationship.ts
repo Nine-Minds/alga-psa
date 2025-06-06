@@ -1,6 +1,6 @@
-import { createTenantKnex } from '../lib/db';
+import { BaseModel } from './BaseModel';
 import { AssetRelationship } from '../interfaces/asset.interfaces';
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
 
 interface RelationshipRow {
     parent_asset_id: string;
@@ -38,7 +38,7 @@ function convertDatesToISOString<T>(obj: T): T {
     return obj;
 }
 
-export class AssetRelationshipModel {
+export class AssetRelationshipModel extends BaseModel {
     private static async checkForCircularRelationship(
         knex: Knex,
         tenant: string,
@@ -84,12 +84,15 @@ export class AssetRelationshipModel {
     }
 
     static async create(
-        tenant: string,
+        knexOrTrx: Knex | Knex.Transaction,
         parent_asset_id: string,
         child_asset_id: string,
         relationship_type: string
     ): Promise<AssetRelationship> {
-        const { knex } = await createTenantKnex();
+        const tenant = await this.getTenant();
+        if (!tenant) {
+            throw new Error('Tenant context is required');
+        }
 
         // Check for self-referential relationship
         if (parent_asset_id === child_asset_id) {
@@ -98,7 +101,7 @@ export class AssetRelationshipModel {
 
         // Check for circular relationships
         const wouldCreateCycle = await this.checkForCircularRelationship(
-            knex,
+            knexOrTrx,
             tenant,
             parent_asset_id,
             child_asset_id
@@ -108,7 +111,7 @@ export class AssetRelationshipModel {
             throw new Error('This relationship would create a circular dependency');
         }
 
-        const [relationship] = await knex('asset_relationships')
+        const [relationship] = await knexOrTrx('asset_relationships')
             .insert({
                 tenant,
                 parent_asset_id,
@@ -120,11 +123,14 @@ export class AssetRelationshipModel {
         return convertDatesToISOString(relationship);
     }
 
-    static async findByAsset(asset_id: string): Promise<AssetRelationship[]> {
-        const { knex } = await createTenantKnex();
+    static async findByAsset(knexOrTrx: Knex | Knex.Transaction, asset_id: string): Promise<AssetRelationship[]> {
+        const tenant = await this.getTenant();
+        if (!tenant) {
+            throw new Error('Tenant context is required');
+        }
         
         // Get both parent and child relationships
-        const relationships = await knex('asset_relationships as ar')
+        const relationships = await knexOrTrx('asset_relationships as ar')
             .select(
                 'ar.*',
                 'parent.name as parent_name',
@@ -150,12 +156,15 @@ export class AssetRelationshipModel {
     }
 
     static async delete(
-        tenant: string,
+        knexOrTrx: Knex | Knex.Transaction,
         parent_asset_id: string,
         child_asset_id: string
     ): Promise<void> {
-        const { knex } = await createTenantKnex();
-        await knex('asset_relationships')
+        const tenant = await this.getTenant();
+        if (!tenant) {
+            throw new Error('Tenant context is required');
+        }
+        await knexOrTrx('asset_relationships')
             .where({
                 tenant,
                 parent_asset_id,
@@ -164,11 +173,14 @@ export class AssetRelationshipModel {
             .delete();
     }
 
-    static async getFullHierarchy(asset_id: string): Promise<AssetRelationship[]> {
-        const { knex } = await createTenantKnex();
+    static async getFullHierarchy(knexOrTrx: Knex | Knex.Transaction, asset_id: string): Promise<AssetRelationship[]> {
+        const tenant = await this.getTenant();
+        if (!tenant) {
+            throw new Error('Tenant context is required');
+        }
         
         // Use a recursive CTE to get the full hierarchy (both up and down)
-        const result = await knex.raw(`
+        const result = await knexOrTrx.raw(`
             WITH RECURSIVE full_hierarchy AS (
                 -- Base case: direct relationships
                 SELECT 

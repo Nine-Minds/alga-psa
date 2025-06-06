@@ -29,11 +29,20 @@ export class PlanServiceConfigurationService {
   constructor(knex?: Knex, tenant?: string) {
     this.knex = knex as Knex;
     this.tenant = tenant as string;
-    this.planServiceConfigModel = new PlanServiceConfiguration(knex, tenant);
-    this.fixedConfigModel = new PlanServiceFixedConfig(knex, tenant);
-    this.hourlyConfigModel = new PlanServiceHourlyConfig(knex, tenant);
-    this.usageConfigModel = new PlanServiceUsageConfig(knex, tenant);
-    this.bucketConfigModel = new PlanServiceBucketConfig(knex, tenant);
+    if (knex) {
+      this.planServiceConfigModel = new PlanServiceConfiguration(knex, tenant);
+      this.fixedConfigModel = new PlanServiceFixedConfig(knex);
+      this.hourlyConfigModel = new PlanServiceHourlyConfig(knex);
+      this.usageConfigModel = new PlanServiceUsageConfig(knex);
+      this.bucketConfigModel = new PlanServiceBucketConfig(knex);
+    } else {
+      // These will be initialized in initKnex
+      this.planServiceConfigModel = {} as PlanServiceConfiguration;
+      this.fixedConfigModel = {} as PlanServiceFixedConfig;
+      this.hourlyConfigModel = {} as PlanServiceHourlyConfig;
+      this.usageConfigModel = {} as PlanServiceUsageConfig;
+      this.bucketConfigModel = {} as PlanServiceBucketConfig;
+    }
     // Removed billingPlanModel initialization
   }
 
@@ -51,10 +60,10 @@ export class PlanServiceConfigurationService {
       
       // Initialize models with knex connection
       this.planServiceConfigModel = new PlanServiceConfiguration(knex, tenant);
-      this.fixedConfigModel = new PlanServiceFixedConfig(knex, tenant);
-      this.hourlyConfigModel = new PlanServiceHourlyConfig(knex, tenant);
-      this.usageConfigModel = new PlanServiceUsageConfig(knex, tenant);
-      this.bucketConfigModel = new PlanServiceBucketConfig(knex, tenant);
+      this.fixedConfigModel = new PlanServiceFixedConfig(knex);
+      this.hourlyConfigModel = new PlanServiceHourlyConfig(knex);
+      this.usageConfigModel = new PlanServiceUsageConfig(knex);
+      this.bucketConfigModel = new PlanServiceBucketConfig(knex);
       // Removed billingPlanModel initialization
     }
   }
@@ -76,7 +85,7 @@ export class PlanServiceConfigurationService {
     }
 
     // Fetch the associated plan to check its type
-    const plan = await BillingPlan.findById(baseConfig.plan_id);
+    const plan = await BillingPlan.findById(this.knex, baseConfig.plan_id);
     if (!plan) {
       // This case should ideally not happen if baseConfig exists, but handle defensively
       console.warn(`Plan with ID ${baseConfig.plan_id} not found for config ${configId}`);
@@ -144,10 +153,10 @@ export class PlanServiceConfigurationService {
     return await this.knex.transaction(async (trx) => {
       // Create models with transaction
       const planServiceConfigModel = new PlanServiceConfiguration(trx, this.tenant);
-      const fixedConfigModel = new PlanServiceFixedConfig(trx, this.tenant);
-      const hourlyConfigModel = new PlanServiceHourlyConfig(trx, this.tenant);
-      const usageConfigModel = new PlanServiceUsageConfig(trx, this.tenant);
-      const bucketConfigModel = new PlanServiceBucketConfig(trx, this.tenant);
+      const fixedConfigModel = new PlanServiceFixedConfig(trx);
+      const hourlyConfigModel = new PlanServiceHourlyConfig(trx);
+      const usageConfigModel = new PlanServiceUsageConfig(trx);
+      const bucketConfigModel = new PlanServiceBucketConfig(trx);
       
       // Create base configuration
       const configId = await planServiceConfigModel.create(baseConfig);
@@ -173,9 +182,8 @@ export class PlanServiceConfigurationService {
             config_id: configId,
             hourly_rate: hourlyData.hourly_rate, // Use new field
             minimum_billable_time: hourlyData.minimum_billable_time ?? 15, // Use new field
-            round_up_to_nearest: hourlyData.round_up_to_nearest ?? 15, // Use new field
+            round_up_to_nearest: hourlyData.round_up_to_nearest ?? 15 // Use new field
             // Removed plan-wide fields: enable_overtime, overtime_rate, etc.
-            tenant: this.tenant
           });
           
           // User type rates are plan-wide, not handled here anymore
@@ -187,8 +195,7 @@ export class PlanServiceConfigurationService {
             config_id: configId,
             unit_of_measure: (typeConfig as IPlanServiceUsageConfig)?.unit_of_measure ?? 'Unit',
             enable_tiered_pricing: (typeConfig as IPlanServiceUsageConfig)?.enable_tiered_pricing ?? false,
-            minimum_usage: (typeConfig as IPlanServiceUsageConfig)?.minimum_usage ?? 0,
-            tenant: this.tenant
+            minimum_usage: (typeConfig as IPlanServiceUsageConfig)?.minimum_usage ?? 0
           });
           
           // Add rate tiers if provided
@@ -198,8 +205,7 @@ export class PlanServiceConfigurationService {
                 config_id: configId,
                 min_quantity: tierData.min_quantity,
                 max_quantity: tierData.max_quantity,
-                rate: tierData.rate,
-                tenant: this.tenant
+                rate: tierData.rate
               });
             }
           }
@@ -251,10 +257,10 @@ export class PlanServiceConfigurationService {
     return await this.knex.transaction(async (trx) => {
       // Create models with transaction
       const planServiceConfigModel = new PlanServiceConfiguration(trx, this.tenant);
-      const fixedConfigModel = new PlanServiceFixedConfig(trx, this.tenant);
-      const hourlyConfigModel = new PlanServiceHourlyConfig(trx, this.tenant);
-      const usageConfigModel = new PlanServiceUsageConfig(trx, this.tenant);
-      const bucketConfigModel = new PlanServiceBucketConfig(trx, this.tenant);
+      const fixedConfigModel = new PlanServiceFixedConfig(trx);
+      const hourlyConfigModel = new PlanServiceHourlyConfig(trx);
+      const usageConfigModel = new PlanServiceUsageConfig(trx);
+      const bucketConfigModel = new PlanServiceBucketConfig(trx);
       
       // Update base configuration if provided
       if (baseConfig) {
@@ -316,8 +322,7 @@ export class PlanServiceConfigurationService {
             config_id: configId,
             min_quantity: tierData.min_quantity,
             max_quantity: tierData.max_quantity,
-            rate: tierData.rate,
-            tenant: this.tenant // Ensure tenant is passed
+            rate: tierData.rate
           });
         }
       }
@@ -343,10 +348,10 @@ export class PlanServiceConfigurationService {
     return await this.knex.transaction(async (trx) => {
       // Create models with transaction
       const planServiceConfigModel = new PlanServiceConfiguration(trx, this.tenant);
-      const fixedConfigModel = new PlanServiceFixedConfig(trx, this.tenant);
-      const hourlyConfigModel = new PlanServiceHourlyConfig(trx, this.tenant);
-      const usageConfigModel = new PlanServiceUsageConfig(trx, this.tenant);
-      const bucketConfigModel = new PlanServiceBucketConfig(trx, this.tenant);
+      const fixedConfigModel = new PlanServiceFixedConfig(trx);
+      const hourlyConfigModel = new PlanServiceHourlyConfig(trx);
+      const usageConfigModel = new PlanServiceUsageConfig(trx);
+      const bucketConfigModel = new PlanServiceBucketConfig(trx);
 
       // Explicitly delete type-specific configuration first (no CASCADE)
       switch (currentConfig.configuration_type) {
@@ -406,7 +411,7 @@ export class PlanServiceConfigurationService {
     return await this.knex.transaction(async (trx) => {
       // Create models with transaction
       const planServiceConfigModel = new PlanServiceConfiguration(trx, this.tenant);
-      const bucketConfigModel = new PlanServiceBucketConfig(trx, this.tenant);
+      const bucketConfigModel = new PlanServiceBucketConfig(trx);
 
       // 1. Find existing base configuration
       let baseConfig = await planServiceConfigModel.getByPlanAndServiceId(planId, serviceId);
@@ -479,7 +484,7 @@ export class PlanServiceConfigurationService {
     return await this.knex.transaction(async (trx) => {
       // Create models with transaction
       const planServiceConfigModel = new PlanServiceConfiguration(trx, this.tenant);
-      const hourlyConfigModel = new PlanServiceHourlyConfig(trx, this.tenant);
+      const hourlyConfigModel = new PlanServiceHourlyConfig(trx);
 
       // 1. Find existing base configuration
       let baseConfig = await planServiceConfigModel.getByPlanAndServiceId(planId, serviceId);
@@ -559,7 +564,7 @@ export class PlanServiceConfigurationService {
 
     await this.knex.transaction(async (trx) => {
       // Create model with transaction
-      const hourlyConfigModel = new PlanServiceHourlyConfig(trx, this.tenant);
+      const hourlyConfigModel = new PlanServiceHourlyConfig(trx);
 
       // 1. Delete existing rates for this config_id
       await hourlyConfigModel.deleteUserTypeRatesByConfigId(configId); // Assuming this method exists or will be added

@@ -45,10 +45,11 @@ export async function getInvoiceTemplate(templateId: string): Promise<IInvoiceTe
 }
 
 export async function getInvoiceTemplates(): Promise<IInvoiceTemplate[]> {
+    const { knex } = await createTenantKnex();
     // Assuming Invoice model has a static method getAllTemplates that now fetches
     // assemblyScriptSource and wasmPath instead of dsl.
     // It should return all standard templates and the templates for the current tenant.
-    const templates: IInvoiceTemplate[] = await Invoice.getAllTemplates();
+    const templates: IInvoiceTemplate[] = await Invoice.getAllTemplates(knex);
 
     // No parsing needed here anymore as we are moving away from DSL
     return templates;
@@ -111,6 +112,7 @@ export async function setCompanyTemplate(companyId: string, templateId: string |
 export async function saveInvoiceTemplate(
     template: Omit<IInvoiceTemplate, 'tenant'> & { isClone?: boolean }
 ): Promise<{ success: boolean; template?: IInvoiceTemplate; compilationError?: { error: string; details?: string } }> {
+    const { knex } = await createTenantKnex();
     // The original function had `isStandard` check, assuming it's handled before calling or within Invoice.saveTemplate
     // if (template.isStandard) {
     //   throw new Error('Cannot modify standard templates');
@@ -199,7 +201,7 @@ export async function saveInvoiceTemplate(
         console.log('No compilation needed, saving template metadata directly...');
         try {
             // Pass the template to saveTemplate
-            const savedTemplate = await Invoice.saveTemplate(templateToSaveWithoutFlags);
+            const savedTemplate = await Invoice.saveTemplate(knex, templateToSaveWithoutFlags);
 
             console.log('Template metadata saved successfully (no compilation):', {
                 id: savedTemplate.template_id,

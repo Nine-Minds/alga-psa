@@ -1,5 +1,4 @@
 import { Knex } from 'knex';
-import { createTenantKnex } from '../db'; // Correct import path and function
 import { IStandardServiceType } from '../../interfaces/billing.interfaces';
 
 const TABLE_NAME = 'standard_service_types';
@@ -8,39 +7,33 @@ const TABLE_NAME = 'standard_service_types';
 // Queries here do not need tenant filtering.
 
 export const StandardServiceTypeModel = {
-  async findAll(): Promise<IStandardServiceType[]> {
-    const { knex } = await createTenantKnex(); // Get Knex instance
-    return knex(TABLE_NAME).select('*');
+  async findAll(knexOrTrx: Knex | Knex.Transaction): Promise<IStandardServiceType[]> {
+    return knexOrTrx(TABLE_NAME).select('*');
   },
 
-  async findById(id: string): Promise<IStandardServiceType | undefined> {
-    const { knex } = await createTenantKnex();
-    return knex(TABLE_NAME).where({ id }).first();
+  async findById(knexOrTrx: Knex | Knex.Transaction, id: string): Promise<IStandardServiceType | undefined> {
+    return knexOrTrx(TABLE_NAME).where({ id }).first();
   },
 
-  async findByName(name: string): Promise<IStandardServiceType | undefined> {
-    const { knex } = await createTenantKnex();
-    return knex(TABLE_NAME).where({ name }).first();
+  async findByName(knexOrTrx: Knex | Knex.Transaction, name: string): Promise<IStandardServiceType | undefined> {
+    return knexOrTrx(TABLE_NAME).where({ name }).first();
   },
 
-  async create(data: Omit<IStandardServiceType, 'id' | 'created_at' | 'updated_at'>): Promise<IStandardServiceType> {
-    const { knex } = await createTenantKnex();
-    const [newRecord] = await knex(TABLE_NAME).insert(data).returning('*');
+  async create(knexOrTrx: Knex | Knex.Transaction, data: Omit<IStandardServiceType, 'id' | 'created_at' | 'updated_at'>): Promise<IStandardServiceType> {
+    const [newRecord] = await knexOrTrx(TABLE_NAME).insert(data).returning('*');
     return newRecord;
   },
 
-  async update(id: string, data: Partial<Omit<IStandardServiceType, 'id' | 'created_at' | 'updated_at'>>): Promise<IStandardServiceType | undefined> {
-    const { knex } = await createTenantKnex();
-    const [updatedRecord] = await knex(TABLE_NAME)
+  async update(knexOrTrx: Knex | Knex.Transaction, id: string, data: Partial<Omit<IStandardServiceType, 'id' | 'created_at' | 'updated_at'>>): Promise<IStandardServiceType | undefined> {
+    const [updatedRecord] = await knexOrTrx(TABLE_NAME)
       .where({ id })
       .update({ ...data, updated_at: new Date() }) // Manually update updated_at
       .returning('*');
     return updatedRecord;
   },
 
-  async delete(id: string): Promise<boolean> {
-    const { knex } = await createTenantKnex();
-    const deletedCount = await knex(TABLE_NAME).where({ id }).del();
+  async delete(knexOrTrx: Knex | Knex.Transaction, id: string): Promise<boolean> {
+    const deletedCount = await knexOrTrx(TABLE_NAME).where({ id }).del();
     return deletedCount > 0;
   },
 };

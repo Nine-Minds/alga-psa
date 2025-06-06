@@ -15,9 +15,12 @@ export interface FindChannelByNameOutput {
 }
 
 export async function findChannelById(id: string): Promise<IChannel | undefined> {
+  const { knex: db } = await createTenantKnex();
   try {
-    const channel = await Channel.get(id);
-    return channel;
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const channel = await Channel.get(trx, id);
+      return channel;
+    });
   } catch (error) {
     console.error(error);
     throw new Error('Failed to find channel');
@@ -25,9 +28,12 @@ export async function findChannelById(id: string): Promise<IChannel | undefined>
 }
 
 export async function getAllChannels(includeAll: boolean = true): Promise<IChannel[]> {
+  const { knex: db } = await createTenantKnex();
   try {
-    const channels = await Channel.getAll(includeAll);
-    return channels;
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const channels = await Channel.getAll(trx, includeAll);
+      return channels;
+    });
   } catch (error) {
     console.error('Failed to fetch channels:', error);
     return [];
@@ -35,11 +41,14 @@ export async function getAllChannels(includeAll: boolean = true): Promise<IChann
 }
 
 export async function createChannel(channelData: Omit<IChannel, 'channel_id' | 'tenant'>): Promise<IChannel> {
+  const { knex: db } = await createTenantKnex();
   try {
-    channelData.is_inactive = false;
-    channelData.is_default = false;
-    const newChannel = await Channel.insert(channelData);
-    return newChannel;
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      channelData.is_inactive = false;
+      channelData.is_default = false;
+      const newChannel = await Channel.insert(trx, channelData);
+      return newChannel;
+    });
   } catch (error) {
     console.error('Error creating new channel:', error);
     throw new Error('Failed to create new channel');
@@ -47,9 +56,12 @@ export async function createChannel(channelData: Omit<IChannel, 'channel_id' | '
 }
 
 export async function deleteChannel(channelId: string): Promise<boolean> {
+  const { knex: db } = await createTenantKnex();
   try {
-    await Channel.delete(channelId);
-    return true;
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      await Channel.delete(trx, channelId);
+      return true;
+    });
   } catch (error) {
     console.error('Error deleting channel:', error);
     if (error instanceof Error) {
@@ -63,13 +75,16 @@ export async function deleteChannel(channelId: string): Promise<boolean> {
 }
 
 export async function updateChannel(channelId: string, channelData: Partial<Omit<IChannel, 'tenant'>>): Promise<IChannel> {
+  const { knex: db } = await createTenantKnex();
   try {
-    const updatedChannel = await Channel.update(channelId, channelData);
-    if (!updatedChannel) {
-      throw new Error('Channel not found');
-    }
-    
-    return updatedChannel;
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const updatedChannel = await Channel.update(trx, channelId, channelData);
+      if (!updatedChannel) {
+        throw new Error('Channel not found');
+      }
+      
+      return updatedChannel;
+    });
   } catch (error) {
     console.error('Error updating channel:', error);
     // Re-throw the original error to provide specific feedback to the frontend

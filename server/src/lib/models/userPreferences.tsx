@@ -1,5 +1,6 @@
 import logger from '../../utils/logger';
-import { createTenantKnex } from '../db';
+import { getCurrentTenantId } from '../tenant';
+import { Knex } from 'knex';
 
 interface IUserPreference {
     tenant: string;
@@ -10,20 +11,12 @@ interface IUserPreference {
 }
 
 const UserPreferences = {
-    get: async (tenant: string, user_id: string, setting_name: string): Promise<IUserPreference | undefined> => {
+    get: async (knexOrTrx: Knex | Knex.Transaction, user_id: string, setting_name: string): Promise<IUserPreference | undefined> => {
         try {
-            const { knex: db, tenant: contextTenant } = await createTenantKnex();
-            if (!contextTenant) {
-                throw new Error('Tenant context is required for getting user preferences');
-            }
-
-            // Verify tenant matches context
-            if (tenant !== contextTenant) {
-                throw new Error(`Tenant mismatch: expected ${contextTenant}, got ${tenant}`);
-            }
+            const tenant = await getCurrentTenantId();
 
             // Verify user exists in the tenant
-            const user = await db('users')
+            const user = await knexOrTrx('users')
                 .where({
                     user_id,
                     tenant
@@ -34,7 +27,7 @@ const UserPreferences = {
                 throw new Error(`User with id ${user_id} not found in tenant ${tenant}`);
             }
 
-            const preference = await db<IUserPreference>('user_preferences')
+            const preference = await knexOrTrx<IUserPreference>('user_preferences')
                 .where({
                     tenant,
                     user_id,
@@ -49,20 +42,12 @@ const UserPreferences = {
         }
     },
 
-    getAllForUser: async (tenant: string, user_id: string): Promise<IUserPreference[]> => {
+    getAllForUser: async (knexOrTrx: Knex | Knex.Transaction, user_id: string): Promise<IUserPreference[]> => {
         try {
-            const { knex: db, tenant: contextTenant } = await createTenantKnex();
-            if (!contextTenant) {
-                throw new Error('Tenant context is required for getting user preferences');
-            }
-
-            // Verify tenant matches context
-            if (tenant !== contextTenant) {
-                throw new Error(`Tenant mismatch: expected ${contextTenant}, got ${tenant}`);
-            }
+            const tenant = await getCurrentTenantId();
 
             // Verify user exists in the tenant
-            const user = await db('users')
+            const user = await knexOrTrx('users')
                 .where({
                     user_id,
                     tenant
@@ -73,7 +58,7 @@ const UserPreferences = {
                 throw new Error(`User with id ${user_id} not found in tenant ${tenant}`);
             }
 
-            const preferences = await db<IUserPreference>('user_preferences')
+            const preferences = await knexOrTrx<IUserPreference>('user_preferences')
                 .where({
                     tenant,
                     user_id
@@ -86,38 +71,30 @@ const UserPreferences = {
         }
     },
 
-    upsert: async (preference: IUserPreference): Promise<void> => {
+    upsert: async (knexOrTrx: Knex | Knex.Transaction, preference: Omit<IUserPreference, 'tenant'>): Promise<void> => {
         try {
-            const { knex: db, tenant: contextTenant } = await createTenantKnex();
-            if (!contextTenant) {
-                throw new Error('Tenant context is required for upserting user preferences');
-            }
-
-            // Verify tenant matches context
-            if (preference.tenant !== contextTenant) {
-                throw new Error(`Tenant mismatch: expected ${contextTenant}, got ${preference.tenant}`);
-            }
+            const tenant = await getCurrentTenantId();
 
             // Verify user exists in the tenant
-            const user = await db('users')
+            const user = await knexOrTrx('users')
                 .where({
                     user_id: preference.user_id,
-                    tenant: contextTenant
+                    tenant
                 })
                 .first();
 
             if (!user) {
-                throw new Error(`User with id ${preference.user_id} not found in tenant ${contextTenant}`);
+                throw new Error(`User with id ${preference.user_id} not found in tenant ${tenant}`);
             }
 
             // Ensure tenant cannot be modified and is set to context tenant
             const preferenceData = {
                 ...preference,
-                tenant: contextTenant,
+                tenant,
                 updated_at: new Date()
             };
 
-            await db<IUserPreference>('user_preferences')
+            await knexOrTrx<IUserPreference>('user_preferences')
                 .insert(preferenceData)
                 .onConflict(['tenant', 'user_id', 'setting_name'])
                 .merge({
@@ -125,25 +102,17 @@ const UserPreferences = {
                     updated_at: preferenceData.updated_at
                 });
         } catch (error) {
-            logger.error(`Error upserting user preference for user ${preference.user_id}, setting ${preference.setting_name} in tenant ${preference.tenant}:`, error);
+            logger.error(`Error upserting user preference for user ${preference.user_id}, setting ${preference.setting_name} in tenant ${tenant}:`, error);
             throw error;
         }
     },
 
-    delete: async (tenant: string, user_id: string, setting_name: string): Promise<void> => {
+    delete: async (knexOrTrx: Knex | Knex.Transaction, user_id: string, setting_name: string): Promise<void> => {
         try {
-            const { knex: db, tenant: contextTenant } = await createTenantKnex();
-            if (!contextTenant) {
-                throw new Error('Tenant context is required for deleting user preferences');
-            }
-
-            // Verify tenant matches context
-            if (tenant !== contextTenant) {
-                throw new Error(`Tenant mismatch: expected ${contextTenant}, got ${tenant}`);
-            }
+            const tenant = await getCurrentTenantId();
 
             // Verify user exists in the tenant
-            const user = await db('users')
+            const user = await knexOrTrx('users')
                 .where({
                     user_id,
                     tenant
@@ -155,7 +124,7 @@ const UserPreferences = {
             }
 
             // Verify preference exists before deletion
-            const preference = await db<IUserPreference>('user_preferences')
+            const preference = await knexOrTrx<IUserPreference>('user_preferences')
                 .where({
                     tenant,
                     user_id,
@@ -167,7 +136,7 @@ const UserPreferences = {
                 throw new Error(`Preference '${setting_name}' not found for user ${user_id} in tenant ${tenant}`);
             }
 
-            const deletedCount = await db<IUserPreference>('user_preferences')
+            const deletedCount = await knexOrTrx<IUserPreference>('user_preferences')
                 .where({
                     tenant,
                     user_id,
@@ -184,20 +153,12 @@ const UserPreferences = {
         }
     },
 
-    deleteAllForUser: async (tenant: string, user_id: string): Promise<void> => {
+    deleteAllForUser: async (knexOrTrx: Knex | Knex.Transaction, user_id: string): Promise<void> => {
         try {
-            const { knex: db, tenant: contextTenant } = await createTenantKnex();
-            if (!contextTenant) {
-                throw new Error('Tenant context is required for deleting user preferences');
-            }
-
-            // Verify tenant matches context
-            if (tenant !== contextTenant) {
-                throw new Error(`Tenant mismatch: expected ${contextTenant}, got ${tenant}`);
-            }
+            const tenant = await getCurrentTenantId();
 
             // Verify user exists in the tenant
-            const user = await db('users')
+            const user = await knexOrTrx('users')
                 .where({
                     user_id,
                     tenant
@@ -208,7 +169,7 @@ const UserPreferences = {
                 throw new Error(`User with id ${user_id} not found in tenant ${tenant}`);
             }
 
-            const deletedCount = await db<IUserPreference>('user_preferences')
+            const deletedCount = await knexOrTrx<IUserPreference>('user_preferences')
                 .where({
                     tenant,
                     user_id
@@ -223,26 +184,16 @@ const UserPreferences = {
         }
     },
 
-    bulkUpsert: async (preferences: IUserPreference[]): Promise<void> => {
+    bulkUpsert: async (knexOrTrx: Knex | Knex.Transaction, preferences: Omit<IUserPreference, 'tenant'>[]): Promise<void> => {
         try {
-            const { knex: db, tenant: contextTenant } = await createTenantKnex();
-            if (!contextTenant) {
-                throw new Error('Tenant context is required for bulk upserting user preferences');
-            }
-
-            // Verify all preferences have matching tenant
-            for (const preference of preferences) {
-                if (preference.tenant !== contextTenant) {
-                    throw new Error(`Tenant mismatch: expected ${contextTenant}, got ${preference.tenant}`);
-                }
-            }
+            const tenant = await getCurrentTenantId();
 
             // Get unique user IDs from preferences
             const userIds = [...new Set(preferences.map(p => p.user_id))];
 
             // Verify all users exist in the tenant
-            const users = await db('users')
-                .where('tenant', contextTenant)
+            const users = await knexOrTrx('users')
+                .where('tenant', tenant)
                 .whereIn('user_id', userIds)
                 .select('user_id');
 
@@ -250,16 +201,18 @@ const UserPreferences = {
             const missingUserIds = userIds.filter(id => !foundUserIds.has(id));
 
             if (missingUserIds.length > 0) {
-                throw new Error(`Users with ids [${missingUserIds.join(', ')}] not found in tenant ${contextTenant}`);
+                throw new Error(`Users with ids [${missingUserIds.join(', ')}] not found in tenant ${tenant}`);
             }
 
-            await db.transaction(async (trx) => {
+            const trx = knexOrTrx.isTransaction ? knexOrTrx : await knexOrTrx.transaction();
+            
+            try {
                 for (const preference of preferences) {
                     // Ensure tenant cannot be modified and is set to context tenant
                     const preferenceData = {
                         ...preference,
-                        tenant: contextTenant,
-                        updated_at: db.fn.now()
+                        tenant,
+                        updated_at: knexOrTrx.fn.now()
                     };
 
                     await trx<IUserPreference>('user_preferences')
@@ -270,9 +223,18 @@ const UserPreferences = {
                             updated_at: preferenceData.updated_at
                         });
                 }
-            });
+                
+                if (!knexOrTrx.isTransaction) {
+                    await trx.commit();
+                }
+            } catch (error) {
+                if (!knexOrTrx.isTransaction) {
+                    await trx.rollback();
+                }
+                throw error;
+            }
 
-            logger.info(`Successfully bulk upserted ${preferences.length} preferences in tenant ${contextTenant}`);
+            logger.info(`Successfully bulk upserted ${preferences.length} preferences in tenant ${tenant}`);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             logger.error(`Error bulk upserting user preferences: ${errorMessage}`);

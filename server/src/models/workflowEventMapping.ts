@@ -1,4 +1,5 @@
-import { Knex } from 'knex';
+import { BaseModel } from './BaseModel';
+import type { Knex } from 'knex';
 import { 
   IWorkflowEventMapping, 
   ICreateWorkflowEventMapping, 
@@ -8,7 +9,7 @@ import {
 /**
  * Model for workflow event mappings
  */
-export class WorkflowEventMappingModel {
+export class WorkflowEventMappingModel extends BaseModel {
   /**
    * Create a new workflow event mapping
    * 
@@ -17,10 +18,10 @@ export class WorkflowEventMappingModel {
    * @returns The created workflow event mapping
    */
   static async create(
-    knex: Knex,
+    knexOrTrx: Knex | Knex.Transaction,
     data: ICreateWorkflowEventMapping
   ): Promise<IWorkflowEventMapping> {
-    const [mapping] = await knex('workflow_event_mappings')
+    const [mapping] = await knexOrTrx('workflow_event_mappings')
       .insert({
         ...data,
         created_at: new Date().toISOString(),
@@ -39,10 +40,10 @@ export class WorkflowEventMappingModel {
    * @returns The workflow event mapping or null if not found
    */
   static async getById(
-    knex: Knex,
+    knexOrTrx: Knex | Knex.Transaction,
     mappingId: string
   ): Promise<IWorkflowEventMapping | null> {
-    const mapping = await knex('workflow_event_mappings')
+    const mapping = await knexOrTrx('workflow_event_mappings')
       .where('mapping_id', mappingId)
       .first();
     
@@ -57,10 +58,10 @@ export class WorkflowEventMappingModel {
    * @returns Array of workflow event mappings
    */
   static async getAllForTrigger(
-    knex: Knex,
+    knexOrTrx: Knex | Knex.Transaction,
     triggerId: string
   ): Promise<IWorkflowEventMapping[]> {
-    const mappings = await knex('workflow_event_mappings')
+    const mappings = await knexOrTrx('workflow_event_mappings')
       .where('trigger_id', triggerId)
       .orderBy('created_at', 'asc');
     
@@ -76,11 +77,11 @@ export class WorkflowEventMappingModel {
    * @returns The updated workflow event mapping
    */
   static async update(
-    knex: Knex,
+    knexOrTrx: Knex | Knex.Transaction,
     mappingId: string,
     data: IUpdateWorkflowEventMapping
   ): Promise<IWorkflowEventMapping | null> {
-    const [mapping] = await knex('workflow_event_mappings')
+    const [mapping] = await knexOrTrx('workflow_event_mappings')
       .where('mapping_id', mappingId)
       .update({
         ...data,
@@ -99,10 +100,10 @@ export class WorkflowEventMappingModel {
    * @returns True if the mapping was deleted, false otherwise
    */
   static async delete(
-    knex: Knex,
+    knexOrTrx: Knex | Knex.Transaction,
     mappingId: string
   ): Promise<boolean> {
-    const result = await knex('workflow_event_mappings')
+    const result = await knexOrTrx('workflow_event_mappings')
       .where('mapping_id', mappingId)
       .delete();
     
@@ -117,10 +118,10 @@ export class WorkflowEventMappingModel {
    * @returns Number of mappings deleted
    */
   static async deleteAllForTrigger(
-    knex: Knex,
+    knexOrTrx: Knex | Knex.Transaction,
     triggerId: string
   ): Promise<number> {
-    const result = await knex('workflow_event_mappings')
+    const result = await knexOrTrx('workflow_event_mappings')
       .where('trigger_id', triggerId)
       .delete();
     
@@ -135,14 +136,14 @@ export class WorkflowEventMappingModel {
    * @returns Array of created workflow event mappings
    */
   static async createMany(
-    knex: Knex,
+    knexOrTrx: Knex | Knex.Transaction,
     mappings: ICreateWorkflowEventMapping[]
   ): Promise<IWorkflowEventMapping[]> {
     if (mappings.length === 0) {
       return [];
     }
 
-    const createdMappings = await knex.transaction(async (trx) => {
+    const createdMappings = await knexOrTrx.transaction(async (trx) => {
       const results = [];
       const now = new Date().toISOString();
       

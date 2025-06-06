@@ -36,7 +36,8 @@ function changeFileExtension(filename: string, newExtension: string): string {
  
 export class StorageService {
   async getFileReadStream(fileId: string): Promise<Readable> {
-    const file = await FileStoreModel.findById(fileId);
+    const { knex } = await createTenantKnex();
+    const file = await FileStoreModel.findById(knex, fileId);
     if (!file) {
       throw new Error('File not found');
     }
@@ -137,7 +138,8 @@ export class StorageService {
         mime_type: processedMimeType,
       });
 
-      const fileRecord = await FileStoreModel.create({
+      const { knex } = await createTenantKnex();
+      const fileRecord = await FileStoreModel.create(knex, {
         fileId: uuidv4(),
         file_name: storagePath.split('/').pop()!,
         original_name: processedOriginalName,
@@ -179,7 +181,8 @@ export class StorageService {
     }> {
         try {
             // Get file record
-            const fileRecord = await FileStoreModel.findById(file_id);
+            const { knex } = await createTenantKnex();
+            const fileRecord = await FileStoreModel.findById(knex, file_id);
             if (!fileRecord) {
                 throw new Error('File not found');
             }
@@ -209,7 +212,8 @@ export class StorageService {
     static async deleteFile(file_id: string, deleted_by_id: string): Promise<void> {
         try {
             // Get file record
-            const fileRecord = await FileStoreModel.findById(file_id);
+            const { knex } = await createTenantKnex();
+            const fileRecord = await FileStoreModel.findById(knex, file_id);
             if (!fileRecord) {
                 throw new Error('File not found');
             }
@@ -224,7 +228,7 @@ export class StorageService {
             await provider.delete(fileRecord.storage_path);
 
             // Soft delete file record
-            await FileStoreModel.softDelete(file_id, deleted_by_id);
+            await FileStoreModel.softDelete(knex, file_id, deleted_by_id);
         } catch (error) {
             if (error instanceof StorageError) {
                 throw error;
@@ -247,7 +251,8 @@ export class StorageService {
       metadata: Record<string, unknown>;
     }): Promise<void> {
       try {
-        await FileStoreModel.createDocumentSystemEntry(options);
+        const { knex } = await createTenantKnex();
+        await FileStoreModel.createDocumentSystemEntry(knex, options);
       } catch (error) {
         throw new Error('Failed to create document system entry: ' + (error as Error).message);
       }
@@ -255,7 +260,8 @@ export class StorageService {
   
     static async getFileMetadata(fileId: string): Promise<FileStore> {
       try {
-        return await FileStoreModel.findById(fileId);
+        const { knex } = await createTenantKnex();
+        return await FileStoreModel.findById(knex, fileId);
       } catch (error) {
         throw new Error('Failed to get file metadata: ' + (error as Error).message);
       }
@@ -263,7 +269,8 @@ export class StorageService {
   
     static async updateFileMetadata(fileId: string, metadata: Record<string, unknown>): Promise<void> {
       try {
-        await FileStoreModel.updateMetadata(fileId, metadata);
+        const { knex } = await createTenantKnex();
+        await FileStoreModel.updateMetadata(knex, fileId, metadata);
       } catch (error) {
         throw new Error('Failed to update file metadata: ' + (error as Error).message);
       }

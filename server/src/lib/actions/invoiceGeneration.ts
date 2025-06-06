@@ -493,7 +493,7 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
     }
 
 console.log(`[generateInvoice] Zero-dollar invoice created (${createdInvoice.invoice_id}). Fetching full ViewModel before returning.`);
-    return await Invoice.getFullInvoiceById(createdInvoice.invoice_id);
+    return await Invoice.getFullInvoiceById(knex, createdInvoice.invoice_id);
   }
 
   if (billingResult.charges.length === 0) {
@@ -526,7 +526,7 @@ console.log(`[generateInvoice] Zero-dollar invoice created (${createdInvoice.inv
   await billingEngine.rolloverUnapprovedTime(company_id, cycleEnd, nextBillingTimestamp);
 
 console.log(`[generateInvoice] Regular invoice created (${createdInvoice.invoice_id}). Fetching full ViewModel before returning.`);
-  return await Invoice.getFullInvoiceById(createdInvoice.invoice_id);
+  return await Invoice.getFullInvoiceById(knex, createdInvoice.invoice_id);
 }
 
 export async function generateInvoiceNumber(_trx?: Knex.Transaction): Promise<string> {

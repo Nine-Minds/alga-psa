@@ -11,7 +11,7 @@ export async function getAllPriorities() {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const priorities = await Priority.getAll();
+      const priorities = await Priority.getAll(trx);
       return priorities;
     } catch (error) {
       console.error(`Error fetching priorities for tenant ${tenant}:`, error);
@@ -24,7 +24,7 @@ export async function findPriorityById(id: string) {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const priority = await Priority.get(id);
+      const priority = await Priority.get(trx, id);
       if (!priority) {
         throw new Error(`Priority ${id} not found for tenant ${tenant}`);
       }
@@ -40,7 +40,7 @@ export async function createPriority(priorityData: Omit<IPriority, 'priority_id'
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const newPriority = await Priority.insert(priorityData);
+      const newPriority = await Priority.insert(trx, priorityData);
       return newPriority;
     } catch (error) {
       console.error(`Error creating priority for tenant ${tenant}:`, error);
@@ -54,7 +54,7 @@ export async function deletePriority(priorityId: string) {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      await Priority.delete(priorityId);
+      await Priority.delete(trx, priorityId);
       return true;
     } catch (error) {
       console.error(`Error deleting priority ${priorityId} for tenant ${tenant}:`, error);
@@ -67,7 +67,7 @@ export async function updatePriority(priorityId: string, priorityData: Partial<I
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const updatedPriority = await Priority.update(priorityId, priorityData);
+      const updatedPriority = await Priority.update(trx, priorityId, priorityData);
       if (!updatedPriority) {
         throw new Error(`Priority ${priorityId} not found for tenant ${tenant}`);
       }

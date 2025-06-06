@@ -23,7 +23,7 @@ class DocumentBlockContent {
             
             return await withTransaction(db, async (trx: Knex.Transaction) => {
                 // Get document
-                const document = await Document.get(document_id, trx);
+                const document = await Document.get(trx, document_id);
                 if (!document) return undefined;
 
                 // Get block content
@@ -91,7 +91,7 @@ class DocumentBlockContent {
             
             return await withTransaction(db, async (trx: Knex.Transaction) => {
                 // Get document
-                const document = await Document.get(document_id, trx);
+                const document = await Document.get(trx, document_id);
                 if (!document) return undefined;
 
                 // Build query for block content

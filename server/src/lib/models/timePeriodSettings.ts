@@ -1,18 +1,19 @@
 import { ITimePeriodSettings } from 'server/src/interfaces/timeEntry.interfaces';
-import { createTenantKnex } from 'server/src/lib/db';
+import { getCurrentTenantId } from 'server/src/lib/db';
 import { ISO8601String } from 'server/src/types/types.d';
 import { format, fromZonedTime, toZonedTime,  } from 'date-fns-tz';
+import { Knex } from 'knex';
 
 export class TimePeriodSettings {
-  static async getActiveSettings(): Promise<ITimePeriodSettings[]> {
+  static async getActiveSettings(knexOrTrx: Knex | Knex.Transaction): Promise<ITimePeriodSettings[]> {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
+      const tenant = await getCurrentTenantId();
 
       if (!tenant) {
         throw new Error('Tenant context is required for time period settings operations');
       }
 
-      const settings = await db<ITimePeriodSettings>('time_period_settings')
+      const settings = await knexOrTrx<ITimePeriodSettings>('time_period_settings')
         .where('is_active', true)
         .andWhere('tenant', tenant)
         .orderBy('effective_from', 'desc');

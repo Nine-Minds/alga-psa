@@ -4,13 +4,16 @@ import { revalidatePath } from 'next/cache'
 import ServiceRateTier from 'server/src/lib/models/serviceRateTier'
 import { IServiceRateTier, ICreateServiceRateTier, IUpdateServiceRateTier } from 'server/src/interfaces/serviceTier.interfaces'
 import { withTransaction } from 'shared/db'
+import { createTenantKnex } from '../db'
+import { Knex } from 'knex'
 
 /**
  * Get all rate tiers for a specific service
  */
 export async function getServiceRateTiers(serviceId: string): Promise<IServiceRateTier[]> {
   try {
-    const tiers = await ServiceRateTier.getByServiceId(serviceId)
+    const { knex } = await createTenantKnex()
+    const tiers = await ServiceRateTier.getByServiceId(knex, serviceId)
     return tiers
   } catch (error) {
     console.error(`Error fetching rate tiers for service ${serviceId}:`, error)
@@ -23,7 +26,8 @@ export async function getServiceRateTiers(serviceId: string): Promise<IServiceRa
  */
 export async function getServiceRateTierById(tierId: string): Promise<IServiceRateTier | null> {
   try {
-    const tier = await ServiceRateTier.getById(tierId)
+    const { knex } = await createTenantKnex()
+    const tier = await ServiceRateTier.getById(knex, tierId)
     return tier
   } catch (error) {
     console.error(`Error fetching rate tier with id ${tierId}:`, error)
@@ -37,16 +41,19 @@ export async function getServiceRateTierById(tierId: string): Promise<IServiceRa
 export async function createServiceRateTier(
   tierData: ICreateServiceRateTier
 ): Promise<IServiceRateTier> {
-  try {
-    console.log('[serviceRateTierActions] createServiceRateTier called with data:', tierData)
-    const tier = await ServiceRateTier.create(tierData)
-    console.log('[serviceRateTierActions] Rate tier created successfully:', tier)
-    revalidatePath('/msp/billing') // Revalidate the billing page
-    return tier
-  } catch (error) {
-    console.error('[serviceRateTierActions] Error creating rate tier:', error)
-    throw error
-  }
+  const { knex: db } = await createTenantKnex()
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
+      console.log('[serviceRateTierActions] createServiceRateTier called with data:', tierData)
+      const tier = await ServiceRateTier.create(trx, tierData)
+      console.log('[serviceRateTierActions] Rate tier created successfully:', tier)
+      revalidatePath('/msp/billing') // Revalidate the billing page
+      return tier
+    } catch (error) {
+      console.error('[serviceRateTierActions] Error creating rate tier:', error)
+      throw error
+    }
+  })
 }
 
 /**
@@ -56,49 +63,58 @@ export async function updateServiceRateTier(
   tierId: string,
   tierData: IUpdateServiceRateTier
 ): Promise<IServiceRateTier | null> {
-  try {
-    const updatedTier = await ServiceRateTier.update(tierId, tierData)
-    revalidatePath('/msp/billing') // Revalidate the billing page
+  const { knex: db } = await createTenantKnex()
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
+      const updatedTier = await ServiceRateTier.update(trx, tierId, tierData)
+      revalidatePath('/msp/billing') // Revalidate the billing page
 
-    if (updatedTier === null) {
-      throw new Error(`Rate tier with id ${tierId} not found or couldn't be updated`)
+      if (updatedTier === null) {
+        throw new Error(`Rate tier with id ${tierId} not found or couldn't be updated`)
+      }
+
+      return updatedTier
+    } catch (error) {
+      console.error(`Error updating rate tier with id ${tierId}:`, error)
+      throw error
     }
-
-    return updatedTier
-  } catch (error) {
-    console.error(`Error updating rate tier with id ${tierId}:`, error)
-    throw error
-  }
+  })
 }
 
 /**
  * Delete a rate tier
  */
 export async function deleteServiceRateTier(tierId: string): Promise<void> {
-  try {
-    const success = await ServiceRateTier.delete(tierId)
-    revalidatePath('/msp/billing') // Revalidate the billing page
-    
-    if (!success) {
-      throw new Error(`Rate tier with id ${tierId} not found or couldn't be deleted`)
+  const { knex: db } = await createTenantKnex()
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
+      const success = await ServiceRateTier.delete(trx, tierId)
+      revalidatePath('/msp/billing') // Revalidate the billing page
+      
+      if (!success) {
+        throw new Error(`Rate tier with id ${tierId} not found or couldn't be deleted`)
+      }
+    } catch (error) {
+      console.error(`Error deleting rate tier with id ${tierId}:`, error)
+      throw error
     }
-  } catch (error) {
-    console.error(`Error deleting rate tier with id ${tierId}:`, error)
-    throw error
-  }
+  })
 }
 
 /**
  * Delete all rate tiers for a service
  */
 export async function deleteServiceRateTiersByServiceId(serviceId: string): Promise<void> {
-  try {
-    await ServiceRateTier.deleteByServiceId(serviceId)
-    revalidatePath('/msp/billing') // Revalidate the billing page
-  } catch (error) {
-    console.error(`Error deleting rate tiers for service ${serviceId}:`, error)
-    throw error
-  }
+  const { knex: db } = await createTenantKnex()
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
+      await ServiceRateTier.deleteByServiceId(trx, serviceId)
+      revalidatePath('/msp/billing') // Revalidate the billing page
+    } catch (error) {
+      console.error(`Error deleting rate tiers for service ${serviceId}:`, error)
+      throw error
+    }
+  })
 }
 
 /**
@@ -109,24 +125,27 @@ export async function updateServiceRateTiers(
   serviceId: string,
   tiers: Omit<ICreateServiceRateTier, 'service_id'>[]
 ): Promise<IServiceRateTier[]> {
-  try {
-    // Delete all existing tiers for this service
-    await ServiceRateTier.deleteByServiceId(serviceId)
-    
-    // Create new tiers
-    const createdTiers: IServiceRateTier[] = []
-    for (const tier of tiers) {
-      const newTier = await ServiceRateTier.create({
-        ...tier,
-        service_id: serviceId
-      })
-      createdTiers.push(newTier)
+  const { knex: db } = await createTenantKnex()
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
+      // Delete all existing tiers for this service
+      await ServiceRateTier.deleteByServiceId(trx, serviceId)
+      
+      // Create new tiers
+      const createdTiers: IServiceRateTier[] = []
+      for (const tier of tiers) {
+        const newTier = await ServiceRateTier.create(trx, {
+          ...tier,
+          service_id: serviceId
+        })
+        createdTiers.push(newTier)
+      }
+      
+      revalidatePath('/msp/billing') // Revalidate the billing page
+      return createdTiers
+    } catch (error) {
+      console.error(`Error updating rate tiers for service ${serviceId}:`, error)
+      throw error
     }
-    
-    revalidatePath('/msp/billing') // Revalidate the billing page
-    return createdTiers
-  } catch (error) {
-    console.error(`Error updating rate tiers for service ${serviceId}:`, error)
-    throw error
-  }
+  })
 }

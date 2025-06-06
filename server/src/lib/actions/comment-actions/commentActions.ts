@@ -8,9 +8,12 @@ import { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from 'server/src/lib/utils/blocknoteUtils';
 
 export async function findCommentsByTicketId(ticketId: string) {
+  const { knex: db, tenant } = await createTenantKnex();
   try {
-    const comments = await Comment.getAllbyTicketId(ticketId);
-    return comments;
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const comments = await Comment.getAllbyTicketId(trx, ticketId);
+      return comments;
+    });
   } catch (error) {
     console.error(error);
     throw new Error(`Failed to find comments for ticket id: ${ticketId}`);
@@ -18,9 +21,12 @@ export async function findCommentsByTicketId(ticketId: string) {
 }
 
 export async function findCommentById(commentId: string) {
+  const { knex: db, tenant } = await createTenantKnex();
   try {
-    const comment = await Comment.get(commentId);
-    return comment;
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const comment = await Comment.get(trx, commentId);
+      return comment;
+    });
   } catch (error) {
     console.error(error);
     throw new Error(`Failed to find comment with id: ${commentId}`);
@@ -97,20 +103,23 @@ export async function createComment(comment: Omit<IComment, 'tenant'>): Promise<
     });
     
     // Use the Comment model to insert the comment
-    const commentId = await Comment.insert(commentToInsert);
-    console.log(`[createComment] Comment inserted with ID:`, commentId);
-    
-    // Verify the comment was inserted correctly
-    const insertedComment = await Comment.get(commentId);
-    if (insertedComment) {
+    const { knex: db, tenant: commentTenant } = await createTenantKnex();
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const commentId = await Comment.insert(trx, commentToInsert);
+      console.log(`[createComment] Comment inserted with ID:`, commentId);
+      
+      // Verify the comment was inserted correctly
+      const insertedComment = await Comment.get(trx, commentId);
+      if (insertedComment) {
       console.log(`[createComment] Verification - inserted comment:`, {
         comment_id: insertedComment.comment_id,
         has_markdown: !!insertedComment.markdown_content,
         markdown_length: insertedComment.markdown_content ? insertedComment.markdown_content.length : 0
       });
-    }
-    
-    return commentId;
+      }
+      
+      return commentId;
+    });
   } catch (error) {
     console.error(`Failed to create comment:`, error);
     throw new Error(`Failed to create comment`);
@@ -125,26 +134,25 @@ export async function updateComment(id: string, comment: Partial<IComment>) {
     }
   });
   
+  const { knex: db, tenant: commentTenant } = await createTenantKnex();
   try {
-    // Fetch existing comment to verify it exists
-    const existingComment = await Comment.get(id);
-    if (!existingComment) {
-      console.error(`[updateComment] Comment with ID ${id} not found`);
-      throw new Error(`Comment with id ${id} not found`);
-    }
-    console.log(`[updateComment] Found existing comment:`, existingComment);
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Fetch existing comment to verify it exists
+      const existingComment = await Comment.get(trx, id);
+      if (!existingComment) {
+        console.error(`[updateComment] Comment with ID ${id} not found`);
+        throw new Error(`Comment with id ${id} not found`);
+      }
+      console.log(`[updateComment] Found existing comment:`, existingComment);
     
-    // Verify user permissions - only allow users to edit their own comments
-    // or internal users to edit any comment
-    if (comment.user_id && comment.user_id !== existingComment.user_id) {
-      const { knex: db, tenant } = await createTenantKnex();
-      const user = await withTransaction(db, async (trx: Knex.Transaction) => {
-        return await trx('users')
+      // Verify user permissions - only allow users to edit their own comments
+      // or internal users to edit any comment
+      if (comment.user_id && comment.user_id !== existingComment.user_id) {
+        const user = await trx('users')
           .select('user_type')
           .where('user_id', comment.user_id)
-          .andWhere('tenant', tenant!)
+          .andWhere('tenant', commentTenant!)
           .first();
-      });
       
       // Only internal users can edit other users' comments
       if (!user || user.user_type !== 'internal') {
@@ -208,20 +216,21 @@ export async function updateComment(id: string, comment: Partial<IComment>) {
       hasMarkdownContent: commentToUpdate.markdown_content !== undefined,
       markdownContentLength: commentToUpdate.markdown_content ? commentToUpdate.markdown_content.length : 0
     });
-    
-    // Use the Comment model to update the comment
-    await Comment.update(id, commentToUpdate);
-    console.log(`[updateComment] Successfully updated comment with ID: ${id}`);
-    
-    // Verify the comment was updated correctly
-    const updatedComment = await Comment.get(id);
-    if (updatedComment) {
-      console.log(`[updateComment] Verification - updated comment:`, {
-        comment_id: updatedComment.comment_id,
-        has_markdown: !!updatedComment.markdown_content,
-        markdown_length: updatedComment.markdown_content ? updatedComment.markdown_content.length : 0
-      });
-    }
+      
+      // Use the Comment model to update the comment
+      await Comment.update(trx, id, commentToUpdate);
+      console.log(`[updateComment] Successfully updated comment with ID: ${id}`);
+      
+      // Verify the comment was updated correctly
+      const updatedComment = await Comment.get(trx, id);
+      if (updatedComment) {
+        console.log(`[updateComment] Verification - updated comment:`, {
+          comment_id: updatedComment.comment_id,
+          has_markdown: !!updatedComment.markdown_content,
+          markdown_length: updatedComment.markdown_content ? updatedComment.markdown_content.length : 0
+        });
+      }
+    });
   } catch (error) {
     console.error(`[updateComment] Failed to update comment with ID ${id}:`, error);
     console.error(`[updateComment] Stack trace:`, error instanceof Error ? error.stack : 'No stack trace available');
@@ -230,8 +239,11 @@ export async function updateComment(id: string, comment: Partial<IComment>) {
 }
 
 export async function deleteComment(id: string) {
+  const { knex: db, tenant } = await createTenantKnex();
   try {
-    await Comment.delete(id);
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      await Comment.delete(trx, id);
+    });
   } catch (error) {
     console.error(`Failed to delete comment with id ${id}:`, error);
     throw new Error(`Failed to delete comment with id ${id}`);

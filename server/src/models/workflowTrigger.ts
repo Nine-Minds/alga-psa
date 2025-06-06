@@ -1,4 +1,5 @@
-import { Knex } from 'knex';
+import { BaseModel } from './BaseModel';
+import type { Knex } from 'knex';
 import { 
   IWorkflowTrigger, 
   ICreateWorkflowTrigger, 
@@ -8,7 +9,7 @@ import {
 /**
  * Model for workflow triggers
  */
-export class WorkflowTriggerModel {
+export class WorkflowTriggerModel extends BaseModel {
   /**
    * Create a new workflow trigger
    * 
@@ -17,10 +18,10 @@ export class WorkflowTriggerModel {
    * @returns The created workflow trigger
    */
   static async create(
-    knex: Knex,
+    knexOrTrx: Knex | Knex.Transaction,
     data: ICreateWorkflowTrigger
   ): Promise<IWorkflowTrigger> {
-    const [trigger] = await knex('workflow_triggers')
+    const [trigger] = await knexOrTrx('workflow_triggers')
       .insert({
         ...data,
         created_at: new Date().toISOString(),
@@ -40,11 +41,11 @@ export class WorkflowTriggerModel {
    * @returns The workflow trigger or null if not found
    */
   static async getById(
-    knex: Knex,
+    knexOrTrx: Knex | Knex.Transaction,
     triggerId: string,
     tenantId: string
   ): Promise<IWorkflowTrigger | null> {
-    const trigger = await knex('workflow_triggers')
+    const trigger = await knexOrTrx('workflow_triggers')
       .where({
         trigger_id: triggerId,
         tenant: tenantId
@@ -63,7 +64,7 @@ export class WorkflowTriggerModel {
    * @returns Array of workflow triggers
    */
   static async getAll(
-    knex: Knex,
+    knexOrTrx: Knex | Knex.Transaction,
     tenantId: string,
     options: {
       eventType?: string;
@@ -73,7 +74,7 @@ export class WorkflowTriggerModel {
   ): Promise<IWorkflowTrigger[]> {
     const { eventType, limit = 100, offset = 0 } = options;
     
-    const query = knex('workflow_triggers')
+    const query = knexOrTrx('workflow_triggers')
       .where('tenant', tenantId);
     
     if (eventType !== undefined) {
@@ -98,12 +99,12 @@ export class WorkflowTriggerModel {
    * @returns The updated workflow trigger
    */
   static async update(
-    knex: Knex,
+    knexOrTrx: Knex | Knex.Transaction,
     triggerId: string,
     tenantId: string,
     data: IUpdateWorkflowTrigger
   ): Promise<IWorkflowTrigger | null> {
-    const [trigger] = await knex('workflow_triggers')
+    const [trigger] = await knexOrTrx('workflow_triggers')
       .where({
         trigger_id: triggerId,
         tenant: tenantId
@@ -126,11 +127,11 @@ export class WorkflowTriggerModel {
    * @returns True if the trigger was deleted, false otherwise
    */
   static async delete(
-    knex: Knex,
+    knexOrTrx: Knex | Knex.Transaction,
     triggerId: string,
     tenantId: string
   ): Promise<boolean> {
-    const result = await knex('workflow_triggers')
+    const result = await knexOrTrx('workflow_triggers')
       .where({
         trigger_id: triggerId,
         tenant: tenantId

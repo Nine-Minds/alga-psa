@@ -1,4 +1,5 @@
-import { Knex } from 'knex';
+import { BaseModel } from './BaseModel';
+import type { Knex } from 'knex';
 import { 
   IEventCatalogEntry, 
   ICreateEventCatalogEntry, 
@@ -8,7 +9,7 @@ import {
 /**
  * Model for event catalog entries
  */
-export class EventCatalogModel {
+export class EventCatalogModel extends BaseModel {
   /**
    * Create a new event catalog entry
    * 
@@ -17,10 +18,10 @@ export class EventCatalogModel {
    * @returns The created event catalog entry
    */
   static async create(
-    knex: Knex,
+    knexOrTrx: Knex | Knex.Transaction,
     data: ICreateEventCatalogEntry
   ): Promise<IEventCatalogEntry> {
-    const [entry] = await knex('event_catalog')
+    const [entry] = await knexOrTrx('event_catalog')
       .insert(data)
       .returning('*');
     
@@ -36,11 +37,11 @@ export class EventCatalogModel {
    * @returns The event catalog entry or null if not found
    */
   static async getById(
-    knex: Knex,
+    knexOrTrx: Knex | Knex.Transaction,
     eventId: string,
     tenantId: string
   ): Promise<IEventCatalogEntry | null> {
-    const entry = await knex('event_catalog')
+    const entry = await knexOrTrx('event_catalog')
       .where({
         event_id: eventId,
         tenant: tenantId
@@ -59,11 +60,11 @@ export class EventCatalogModel {
    * @returns The event catalog entry or null if not found
    */
   static async getByEventType(
-    knex: Knex,
+    knexOrTrx: Knex | Knex.Transaction,
     eventType: string,
     tenantId: string
   ): Promise<IEventCatalogEntry | null> {
-    const entry = await knex('event_catalog')
+    const entry = await knexOrTrx('event_catalog')
       .where({
         event_type: eventType,
         tenant: tenantId
@@ -82,7 +83,7 @@ export class EventCatalogModel {
    * @returns Array of event catalog entries
    */
   static async getAll(
-    knex: Knex,
+    knexOrTrx: Knex | Knex.Transaction,
     tenantId: string,
     options: {
       category?: string;
@@ -95,19 +96,19 @@ export class EventCatalogModel {
     
     let query;
     if (isSystemEvent === true) {
-      query = knex('system_event_catalog');
+      query = knexOrTrx('system_event_catalog');
     } else if (isSystemEvent === false) {
-      query = knex('event_catalog').where('tenant', tenantId);
+      query = knexOrTrx('event_catalog').where('tenant', tenantId);
     } else {
       // If isSystemEvent is undefined, query both tables and combine
-      const tenantEventsQuery = knex('event_catalog')
+      const tenantEventsQuery = knexOrTrx('event_catalog')
         .where('tenant', tenantId);
       
       if (category !== undefined) {
         tenantEventsQuery.where('category', category);
       }
 
-      const systemEventsQuery = knex('system_event_catalog');
+      const systemEventsQuery = knexOrTrx('system_event_catalog');
 
       if (category !== undefined) {
         systemEventsQuery.where('category', category);
@@ -143,12 +144,12 @@ export class EventCatalogModel {
    * @returns The updated event catalog entry
    */
   static async update(
-    knex: Knex,
+    knexOrTrx: Knex | Knex.Transaction,
     eventId: string,
     tenantId: string,
     data: IUpdateEventCatalogEntry
   ): Promise<IEventCatalogEntry | null> {
-    const [entry] = await knex('event_catalog')
+    const [entry] = await knexOrTrx('event_catalog')
       .where({
         event_id: eventId,
         tenant: tenantId
@@ -171,11 +172,11 @@ export class EventCatalogModel {
    * @returns True if the entry was deleted, false otherwise
    */
   static async delete(
-    knex: Knex,
+    knexOrTrx: Knex | Knex.Transaction,
     eventId: string,
     tenantId: string
   ): Promise<boolean> {
-    const result = await knex('event_catalog')
+    const result = await knexOrTrx('event_catalog')
       .where({
         event_id: eventId,
         tenant: tenantId
@@ -192,12 +193,12 @@ export class EventCatalogModel {
    * @param tenantId Tenant ID
    */
   static async initializeSystemEvents(
-    knex: Knex,
+    knexOrTrx: Knex | Knex.Transaction,
     tenantId: string
   ): Promise<void> {
     // Check if system events already exist for this tenant
     // Check if system events already exist
-    const existingEvents = await knex('system_event_catalog')
+    const existingEvents = await knexOrTrx('system_event_catalog')
       .count('* as count')
       .first();
     
@@ -323,6 +324,6 @@ export class EventCatalogModel {
 
     // Insert system events
     // Insert system events
-    await knex('system_event_catalog').insert(systemEvents);
+    await knexOrTrx('system_event_catalog').insert(systemEvents);
   }
 }

@@ -1,6 +1,6 @@
 import { AssetRelationshipModel } from './assetRelationship';
-
-import { createTenantKnex } from '../lib/db';
+import { BaseModel } from './BaseModel';
+import type { Knex } from 'knex';
 import { 
     Asset, 
     AssetHistory, 
@@ -19,7 +19,6 @@ import {
     PrinterAsset
 } from '../interfaces/asset.interfaces';
 import { ICompany } from '../interfaces/company.interfaces';
-import { Knex } from 'knex';
 
 function convertDatesToISOString<T>(obj: T): T {
     if (obj === null || obj === undefined) {
@@ -102,14 +101,14 @@ async function upsertExtensionData(
     }
 }
 
-export class AssetModel {
-    static async create(data: CreateAssetRequest): Promise<Asset> {
-        const { knex, tenant } = await createTenantKnex();
+export class AssetModel extends BaseModel {
+    static async create(knexOrTrx: Knex | Knex.Transaction, data: CreateAssetRequest): Promise<Asset> {
+        const tenant = await this.getTenant();
         if (!tenant) {
             throw new Error('No tenant found');
         }
 
-        return knex.transaction(async (trx) => {
+        return knexOrTrx.transaction(async (trx) => {
             // Verify company exists and get full company details
             const company = await trx('companies')
                 .select('*')
@@ -175,13 +174,13 @@ export class AssetModel {
         });
     }
 
-    static async findById(asset_id: string): Promise<Asset | null> {
-        const { knex, tenant } = await createTenantKnex();
+    static async findById(knexOrTrx: Knex | Knex.Transaction, asset_id: string): Promise<Asset | null> {
+        const tenant = await this.getTenant();
         if (!tenant) {
             throw new Error('No tenant found');
         }
 
-        const asset = await knex('assets')
+        const asset = await knexOrTrx('assets')
             .select(
                 'assets.*',
                 'companies.company_name',
@@ -208,7 +207,7 @@ export class AssetModel {
             )
             .leftJoin('companies', function() {
                 this.on('assets.company_id', '=', 'companies.company_id')
-                    .andOn('companies.tenant', '=', knex.raw('?', [tenant]));
+                    .andOn('companies.tenant', '=', knexOrTrx.raw('?', [tenant]));
             })
             .where({ 'assets.tenant': tenant, 'assets.asset_id': asset_id })
             .first();
@@ -216,10 +215,10 @@ export class AssetModel {
         if (!asset) return null;
 
         // Get extension data if applicable
-        const extensionData = await getExtensionData(knex, tenant, asset_id, asset.asset_type);
+        const extensionData = await getExtensionData(knexOrTrx, tenant, asset_id, asset.asset_type);
 
         // Get relationships
-        const relationships = await AssetRelationshipModel.findByAsset(asset_id);
+        const relationships = await AssetRelationshipModel.findByAsset(knexOrTrx, asset_id);
 
         // Transform the result
         const transformedAsset = {
@@ -233,8 +232,8 @@ export class AssetModel {
         return convertDatesToISOString(transformedAsset);
     }
 
-    static async list(params: AssetQueryParams): Promise<AssetListResponse> {
-        const { knex, tenant } = await createTenantKnex();
+    static async list(knexOrTrx: Knex | Knex.Transaction, params: AssetQueryParams): Promise<AssetListResponse> {
+        const tenant = await this.getTenant();
         if (!tenant) {
             throw new Error('No tenant found');
         }
@@ -253,7 +252,7 @@ export class AssetModel {
             include_extension_data = false
         } = params;
 
-        let baseQuery = knex('assets')
+        let baseQuery = knexOrTrx('assets')
             .select(
                 'assets.*',
                 'companies.company_name',
@@ -309,7 +308,7 @@ export class AssetModel {
             const now = new Date().toISOString();
             baseQuery = baseQuery.leftJoin('asset_maintenance_schedules', function() {
                 this.on('assets.asset_id', '=', 'asset_maintenance_schedules.asset_id')
-                    .andOn('asset_maintenance_schedules.tenant', '=', knex.raw('?', [tenant]));
+                    .andOn('asset_maintenance_schedules.tenant', '=', knexOrTrx.raw('?', [tenant]));
             });
 
             switch (maintenance_status) {
@@ -374,7 +373,7 @@ export class AssetModel {
             // Get extension data if requested
             let extensionData = null;
             if (include_extension_data) {
-                extensionData = await getExtensionData(knex, tenant, asset.asset_id, asset.asset_type);
+                extensionData = await getExtensionData(knexOrTrx, tenant, asset.asset_id, asset.asset_type);
             }
 
             return convertDatesToISOString({
@@ -412,7 +411,7 @@ export class AssetModel {
 
         let company_summary;
         if (include_company_details) {
-            const assetsByCompany = await knex('assets')
+            const assetsByCompany = await knexOrTrx('assets')
                 .select('company_id')
                 .count('* as count')
                 .where({ tenant })
@@ -436,18 +435,18 @@ export class AssetModel {
         };
     }
 
-    static async delete(asset_id: string): Promise<void> {
-        const { knex, tenant } = await createTenantKnex();
-        await knex('assets')
+    static async delete(knexOrTrx: Knex | Knex.Transaction, asset_id: string): Promise<void> {
+        const tenant = await this.getTenant();
+        await knexOrTrx('assets')
             .where({ tenant, asset_id })
             .delete();
     }
 
-    static async getCompanyAssetReport(company_id: string): Promise<ClientMaintenanceSummary> {
-        const { knex, tenant } = await createTenantKnex();
+    static async getCompanyAssetReport(knexOrTrx: Knex | Knex.Transaction, company_id: string): Promise<ClientMaintenanceSummary> {
+        const tenant = await this.getTenant();
 
         // Get company details
-        const company = await knex('companies')
+        const company = await knexOrTrx('companies')
             .where({ tenant, company_id })
             .first();
 
@@ -456,11 +455,11 @@ export class AssetModel {
         }
 
         // Get asset statistics
-        const assetStats = await knex('assets')
+        const assetStats = await knexOrTrx('assets')
             .where({ tenant, company_id })
             .select(
-                knex.raw('COUNT(DISTINCT assets.asset_id) as total_assets'),
-                knex.raw(`
+                knexOrTrx.raw('COUNT(DISTINCT assets.asset_id) as total_assets'),
+                knexOrTrx.raw(`
                     COUNT(DISTINCT CASE 
                         WHEN asset_maintenance_schedules.asset_id IS NOT NULL 
                         THEN assets.asset_id 
@@ -469,23 +468,23 @@ export class AssetModel {
             )
             .leftJoin('asset_maintenance_schedules', function() {
                 this.on('assets.asset_id', '=', 'asset_maintenance_schedules.asset_id')
-                    .andOn('asset_maintenance_schedules.tenant', '=', knex.raw('?', [tenant]));
+                    .andOn('asset_maintenance_schedules.tenant', '=', knexOrTrx.raw('?', [tenant]));
             })
             .first();
 
         // Get maintenance statistics
-        const maintenanceStats = await knex('asset_maintenance_schedules')
+        const maintenanceStats = await knexOrTrx('asset_maintenance_schedules')
             .where({ tenant })
-            .whereIn('asset_id', knex('assets').where({ tenant, company_id }).select('asset_id'))
+            .whereIn('asset_id', knexOrTrx('assets').where({ tenant, company_id }).select('asset_id'))
             .select(
-                knex.raw('COUNT(*) as total_schedules'),
-                knex.raw(`
+                knexOrTrx.raw('COUNT(*) as total_schedules'),
+                knexOrTrx.raw(`
                     COUNT(CASE 
                         WHEN next_maintenance < NOW() AND is_active 
                         THEN 1 
                     END) as overdue_maintenances
                 `),
-                knex.raw(`
+                knexOrTrx.raw(`
                     COUNT(CASE 
                         WHEN next_maintenance > NOW() AND is_active 
                         THEN 1 
@@ -495,9 +494,9 @@ export class AssetModel {
             .first();
 
         // Get maintenance type breakdown
-        const typeBreakdown = await knex('asset_maintenance_schedules')
+        const typeBreakdown = await knexOrTrx('asset_maintenance_schedules')
             .where({ tenant })
-            .whereIn('asset_id', knex('assets').where({ tenant, company_id }).select('asset_id'))
+            .whereIn('asset_id', knexOrTrx('assets').where({ tenant, company_id }).select('asset_id'))
             .select('maintenance_type')
             .count('* as count')
             .groupBy('maintenance_type')
@@ -517,15 +516,15 @@ export class AssetModel {
             });
 
         // Calculate compliance rate
-        const completed = await knex('asset_maintenance_history')
+        const completed = await knexOrTrx('asset_maintenance_history')
             .where({ tenant })
-            .whereIn('asset_id', knex('assets').where({ tenant, company_id }).select('asset_id'))
+            .whereIn('asset_id', knexOrTrx('assets').where({ tenant, company_id }).select('asset_id'))
             .count('* as count')
             .first();
 
-        const scheduled = await knex('asset_maintenance_schedules')
+        const scheduled = await knexOrTrx('asset_maintenance_schedules')
             .where({ tenant })
-            .whereIn('asset_id', knex('assets').where({ tenant, company_id }).select('asset_id'))
+            .whereIn('asset_id', knexOrTrx('assets').where({ tenant, company_id }).select('asset_id'))
             .sum('frequency_interval as sum')
             .first();
 
@@ -547,15 +546,16 @@ export class AssetModel {
     }
 }
 
-export class AssetHistoryModel {
+export class AssetHistoryModel extends BaseModel {
     static async create(
+        knexOrTrx: Knex | Knex.Transaction,
         asset_id: string, 
         changed_by: string, 
         change_type: string, 
         changes: Record<string, unknown>
     ): Promise<AssetHistory> {
-        const { knex, tenant } = await createTenantKnex();
-        const [history] = await knex('asset_history')
+        const tenant = await this.getTenant();
+        const [history] = await knexOrTrx('asset_history')
             .insert({
                 tenant,
                 asset_id,
@@ -567,19 +567,19 @@ export class AssetHistoryModel {
         return convertDatesToISOString(history);
     }
 
-    static async listByAsset(asset_id: string): Promise<AssetHistory[]> {
-        const { knex, tenant } = await createTenantKnex();
-        const history = await knex('asset_history')
+    static async listByAsset(knexOrTrx: Knex | Knex.Transaction, asset_id: string): Promise<AssetHistory[]> {
+        const tenant = await this.getTenant();
+        const history = await knexOrTrx('asset_history')
             .where({ tenant, asset_id })
             .orderBy('changed_at', 'desc');
         return convertDatesToISOString(history);
     }
 }
 
-export class AssetAssociationModel {
-    static async create(data: CreateAssetAssociationRequest, created_by: string): Promise<AssetAssociation> {
-        const { knex, tenant } = await createTenantKnex();
-        const [association] = await knex('asset_associations')
+export class AssetAssociationModel extends BaseModel {
+    static async create(knexOrTrx: Knex | Knex.Transaction, data: CreateAssetAssociationRequest, created_by: string): Promise<AssetAssociation> {
+        const tenant = await this.getTenant();
+        const [association] = await knexOrTrx('asset_associations')
             .insert({
                 ...data,
                 tenant,
@@ -591,12 +591,13 @@ export class AssetAssociationModel {
     }
 
     static async findByAssetAndEntity(
+        knexOrTrx: Knex | Knex.Transaction,
         asset_id: string,
         entity_id: string,
         entity_type: string
     ): Promise<AssetAssociation | null> {
-        const { knex, tenant } = await createTenantKnex();
-        const association = await knex('asset_associations')
+        const tenant = await this.getTenant();
+        const association = await knexOrTrx('asset_associations')
             .where({
                 tenant,
                 asset_id,
@@ -607,25 +608,25 @@ export class AssetAssociationModel {
         return association ? convertDatesToISOString(association) : null;
     }
 
-    static async listByAsset(asset_id: string): Promise<AssetAssociation[]> {
-        const { knex, tenant } = await createTenantKnex();
-        const associations = await knex('asset_associations')
+    static async listByAsset(knexOrTrx: Knex | Knex.Transaction, asset_id: string): Promise<AssetAssociation[]> {
+        const tenant = await this.getTenant();
+        const associations = await knexOrTrx('asset_associations')
             .where({ tenant, asset_id })
             .orderBy('created_at', 'desc');
         return convertDatesToISOString(associations);
     }
 
-    static async listByEntity(entity_id: string, entity_type: string): Promise<AssetAssociation[]> {
-        const { knex, tenant } = await createTenantKnex();
-        const associations = await knex('asset_associations')
+    static async listByEntity(knexOrTrx: Knex | Knex.Transaction, entity_id: string, entity_type: string): Promise<AssetAssociation[]> {
+        const tenant = await this.getTenant();
+        const associations = await knexOrTrx('asset_associations')
             .where({ tenant, entity_id, entity_type })
             .orderBy('created_at', 'desc');
         return convertDatesToISOString(associations);
     }
 
-    static async delete(asset_id: string, entity_id: string, entity_type: string): Promise<void> {
-        const { knex, tenant } = await createTenantKnex();
-        await knex('asset_associations')
+    static async delete(knexOrTrx: Knex | Knex.Transaction, asset_id: string, entity_id: string, entity_type: string): Promise<void> {
+        const tenant = await this.getTenant();
+        await knexOrTrx('asset_associations')
             .where({
                 tenant,
                 asset_id,

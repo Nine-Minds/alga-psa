@@ -172,7 +172,7 @@ export async function getInvoiceForRendering(invoiceId: string): Promise<Invoice
       throw new Error('Tenant not found');
     }
 
-    return Invoice.getFullInvoiceById(invoiceId);
+    return Invoice.getFullInvoiceById(knex, invoiceId);
   } catch (error) {
     console.error('Error fetching invoice for rendering:', error);
     throw new Error('Error fetching invoice for rendering');
@@ -182,8 +182,9 @@ export async function getInvoiceForRendering(invoiceId: string): Promise<Invoice
 // New function to get invoice items on demand
 export async function getInvoiceLineItems(invoiceId: string): Promise<IInvoiceItem[]> {
   try {
+    const { knex } = await createTenantKnex();
     console.log('Fetching line items for invoice:', invoiceId);
-    const items = await Invoice.getInvoiceItems(invoiceId);
+    const items = await Invoice.getInvoiceItems(knex, invoiceId);
     console.log(`Got ${items.length} line items`);
     return items;
   } catch (error) {
