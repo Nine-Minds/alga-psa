@@ -62,15 +62,37 @@ function setupSocketHandlers(io: Server) {
 
     // Handle screenshot streaming (now enabled alongside VNC for live feed)
     let screenshotInterval: NodeJS.Timeout | null = null;
+    let consecutiveFailures = 0;
     
     screenshotInterval = setInterval(async () => {
       try {
         const page = puppeteerManager.getPage();
-        const buf = await page.screenshot();
+        // Add timeout and optimize screenshot options for reliability
+        const buf = await page.screenshot({
+          timeout: 10000, // 10 second timeout for complex pages
+          captureBeyondViewport: false, // Don't capture off-screen content
+          optimizeForSpeed: true, // Prioritize speed over quality
+          fullPage: false // Only capture viewport to reduce processing time
+        });
         const base64img = Buffer.from(buf).toString('base64');
         socket.emit('screenshot', base64img);
+        consecutiveFailures = 0; // Reset failure counter on success
       } catch (error) {
-        console.error('\x1b[41m[WEBSOCKET] ❌ Error taking screenshot\x1b[0m', error);
+        consecutiveFailures++;
+        // Log different error types differently
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes('timeout')) {
+          console.error(`\x1b[43m[WEBSOCKET] ⏰ Screenshot timeout (${consecutiveFailures} consecutive) - page too complex, skipping this frame\x1b[0m`);
+        } else if (errorMessage.includes('Target closed')) {
+          console.error('\x1b[41m[WEBSOCKET] ❌ Browser session closed, screenshots stopped\x1b[0m');
+        } else {
+          console.error(`\x1b[41m[WEBSOCKET] ❌ Error taking screenshot (${consecutiveFailures} consecutive)\x1b[0m`, error);
+        }
+        // Log warning if failures are getting excessive
+        if (consecutiveFailures >= 5) {
+          console.error('\x1b[43m[WEBSOCKET] ⚠️  Many consecutive screenshot failures - page may be permanently problematic\x1b[0m');
+        }
+        // Don't crash the interval, just skip this screenshot and try again in 2 seconds
       }
     }, 2000);
     
