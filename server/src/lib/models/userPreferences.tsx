@@ -14,6 +14,9 @@ const UserPreferences = {
     get: async (knexOrTrx: Knex | Knex.Transaction, user_id: string, setting_name: string): Promise<IUserPreference | undefined> => {
         try {
             const tenant = await getCurrentTenantId();
+            if (!tenant) {
+                throw new Error('No tenant context available');
+            }
 
             // Verify user exists in the tenant
             const user = await knexOrTrx('users')
@@ -45,6 +48,9 @@ const UserPreferences = {
     getAllForUser: async (knexOrTrx: Knex | Knex.Transaction, user_id: string): Promise<IUserPreference[]> => {
         try {
             const tenant = await getCurrentTenantId();
+            if (!tenant) {
+                throw new Error('No tenant context available');
+            }
 
             // Verify user exists in the tenant
             const user = await knexOrTrx('users')
@@ -75,6 +81,9 @@ const UserPreferences = {
     upsert: async (knexOrTrx: Knex | Knex.Transaction, preference: Omit<IUserPreference, 'tenant'>): Promise<void> => {
         try {
             const tenant = await getCurrentTenantId();
+            if (!tenant) {
+                throw new Error('No tenant context available');
+            }
 
             // Verify user exists in the tenant
             const user = await knexOrTrx('users')
@@ -112,6 +121,9 @@ const UserPreferences = {
     delete: async (knexOrTrx: Knex | Knex.Transaction, user_id: string, setting_name: string): Promise<void> => {
         try {
             const tenant = await getCurrentTenantId();
+            if (!tenant) {
+                throw new Error('No tenant context available');
+            }
 
             // Verify user exists in the tenant
             const user = await knexOrTrx('users')
@@ -159,6 +171,9 @@ const UserPreferences = {
     deleteAllForUser: async (knexOrTrx: Knex | Knex.Transaction, user_id: string): Promise<void> => {
         try {
             const tenant = await getCurrentTenantId();
+            if (!tenant) {
+                throw new Error('No tenant context available');
+            }
 
             // Verify user exists in the tenant
             const user = await knexOrTrx('users')
@@ -191,6 +206,9 @@ const UserPreferences = {
     bulkUpsert: async (knexOrTrx: Knex | Knex.Transaction, preferences: Omit<IUserPreference, 'tenant'>[]): Promise<void> => {
         try {
             const tenant = await getCurrentTenantId();
+            if (!tenant) {
+                throw new Error('No tenant context available');
+            }
 
             // Get unique user IDs from preferences
             const userIds = [...new Set(preferences.map(p => p.user_id))];

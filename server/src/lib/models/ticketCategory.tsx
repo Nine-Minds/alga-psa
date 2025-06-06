@@ -6,6 +6,9 @@ const TicketCategory = {
   getAll: async (knexOrTrx: Knex | Knex.Transaction): Promise<ITicketCategory[]> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('No tenant context available');
+      }
       // Add explicit tenant filtering in addition to RLS
       const categories = await knexOrTrx<ITicketCategory>('categories')
         .where({ tenant })
@@ -20,6 +23,9 @@ const TicketCategory = {
   get: async (knexOrTrx: Knex | Knex.Transaction, id: string): Promise<ITicketCategory> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('No tenant context available');
+      }
       // Add explicit tenant filtering in addition to RLS
       const [category] = await knexOrTrx<ITicketCategory>('categories')
         .where({
@@ -41,6 +47,9 @@ const TicketCategory = {
   getByChannel: async (knexOrTrx: Knex | Knex.Transaction, channelId: string): Promise<ITicketCategory[]> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('No tenant context available');
+      }
 
       // Verify channel exists in the current tenant
       const channel = await knexOrTrx('channels')
@@ -69,6 +78,9 @@ const TicketCategory = {
   insert: async (knexOrTrx: Knex | Knex.Transaction, category: Partial<ITicketCategory>): Promise<ITicketCategory> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('No tenant context available');
+      }
 
       if (!category.category_name) {
         throw new Error('Category name is required');
@@ -128,6 +140,9 @@ const TicketCategory = {
   update: async (knexOrTrx: Knex | Knex.Transaction, id: string, category: Partial<ITicketCategory>): Promise<ITicketCategory> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('No tenant context available');
+      }
 
       // Verify category exists in the current tenant
       const existingCategory = await knexOrTrx('categories')
@@ -197,6 +212,9 @@ const TicketCategory = {
   delete: async (knexOrTrx: Knex | Knex.Transaction, id: string): Promise<void> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('No tenant context available');
+      }
 
       // Verify category exists in the current tenant
       const category = await knexOrTrx('categories')
