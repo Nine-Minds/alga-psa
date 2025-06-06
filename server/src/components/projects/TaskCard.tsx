@@ -5,6 +5,7 @@ import { IProjectTask, IProjectTicketLinkWithDetails, ITaskType, IProjectTaskDep
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { CheckSquare, Square, Ticket, Users, MoreVertical, Move, Copy, Edit, Trash2, ArrowRight, Lock, GitBranch, Bug, Sparkles, TrendingUp, Flag, BookOpen } from 'lucide-react';
 import UserPicker from 'server/src/components/ui/UserPicker';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { getTaskTicketLinksAction, getTaskResourcesAction, getTaskDependencies } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import { Button } from 'server/src/components/ui/Button';
 import {
@@ -222,30 +223,22 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       aria-grabbed={isDragging}
       aria-label={`Task: ${task.task_name}. Drag to reorder or use menu for actions.`}
     >
-      {/* Task type indicator */}
-      <div className="absolute top-2 left-2" title={taskType?.type_name || 'Task'}>
-        <Icon 
-          className="w-4 h-4" 
-          style={{ color: taskType?.color || '#6B7280' }}
-        />
-      </div>
-      
       {/* Dependency indicators */}
-      <div className="absolute top-2 left-8 flex space-x-1">
+      <div className="absolute top-2 left-2 flex space-x-1">
         {hasBlockingDependencies && (
-          <span title="Blocked by dependencies">
+          <Tooltip content="Blocked by dependencies">
             <Lock className="w-3 h-3 text-red-500" />
-          </span>
+          </Tooltip>
         )}
         {dependencies && dependencies.predecessors.length > 0 && (
-          <span title={`${dependencies.predecessors.length} dependencies`}>
+          <Tooltip content={`${dependencies.predecessors.length} dependencies`}>
             <ArrowRight className="w-3 h-3 text-blue-500" />
-          </span>
+          </Tooltip>
         )}
         {dependencies && dependencies.successors.length > 0 && (
-          <span title={`${dependencies.successors.length} dependent tasks`}>
+          <Tooltip content={`${dependencies.successors.length} dependent tasks`}>
             <GitBranch className="w-3 h-3 text-green-500 transform -rotate-90" />
-          </span>
+          </Tooltip>
         )}
       </div>
 
@@ -279,8 +272,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         </DropdownMenu>
       </div>
 
-      <div className="font-semibold text-2xl mb-1 w-full px-1 mt-6">
-        {task.task_name}
+      <div className="font-semibold text-2xl mb-1 w-full px-1 flex items-center gap-2">
+        <Tooltip content={taskType?.type_name || 'Task'}>
+          <Icon 
+            className="w-5 h-5 flex-shrink-0" 
+            style={{ color: taskType?.color || '#6B7280' }}
+          />
+        </Tooltip>
+        <span className="truncate">{task.task_name}</span>
       </div>
       {task.description && (
         <p className="text-sm text-gray-600 mb-2 line-clamp-2">

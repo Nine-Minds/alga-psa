@@ -814,6 +814,7 @@ export async function duplicateTaskToPhase(
             assigned_to: options?.duplicatePrimaryAssignee ? originalTask.assigned_to : null,
             project_status_mapping_id: finalStatusMappingId,
             order_key: orderKey,
+            task_type_key: originalTask.task_type_key || 'task', // Preserve task type or default to 'task'
             // Fields omitted: task_id, phase_id, wbs_code, created_at, updated_at, tenant (handled by model)
         };
 

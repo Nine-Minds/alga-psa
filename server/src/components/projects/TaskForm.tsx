@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { IProjectPhase, IProjectTask, ITaskChecklistItem, ProjectStatus, IProjectTicketLinkWithDetails } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import AvatarIcon from 'server/src/components/ui/AvatarIcon';
-import { getProjectTreeData } from 'server/src/lib/actions/project-actions/projectActions';
+import { getProjectTreeData, getProjectDetails } from 'server/src/lib/actions/project-actions/projectActions';
 import {
   updateTaskWithChecklist,
   addTaskToPhase,
@@ -28,7 +28,11 @@ import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog'
 import DuplicateTaskDialog, { DuplicateOptions } from './DuplicateTaskDialog';
 import { Input } from 'server/src/components/ui/Input';
 import { toast } from 'react-hot-toast';
+import { TaskTypeSelector } from './TaskTypeSelector';
+import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTaskActions';
+import { ITaskType } from 'server/src/interfaces/project.interfaces';
 import TaskTicketLinks from './TaskTicketLinks';
+import { TaskDependencies } from './TaskDependencies';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from 'server/src/components/ui/TreeSelect';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { useDrawer } from 'server/src/context/DrawerContext';
@@ -94,6 +98,9 @@ export default function TaskForm({
   const [isCrossProjectMove, setIsCrossProjectMove] = useState<boolean>(false);
   const [selectedDuplicatePhaseId, setSelectedDuplicatePhaseId] = useState<string | null>(null);
   const [showDuplicateConfirm, setShowDuplicateConfirm] = useState(false); // State for duplicate dialog
+  const [taskTypes, setTaskTypes] = useState<ITaskType[]>([]);
+  const [selectedTaskType, setSelectedTaskType] = useState<string>(task?.task_type_key || 'task');
+  const [allProjectTasks, setAllProjectTasks] = useState<IProjectTask[]>([]);
   const [duplicateTaskDetails, setDuplicateTaskDetails] = useState<{
     originalTaskId: string;
     originalTaskName: string;
@@ -120,6 +127,20 @@ export default function TaskForm({
         const user = await getCurrentUser();
         if (user) {
           setCurrentUserId(user.user_id);
+        }
+        
+        // Fetch task types
+        const types = await getTaskTypes();
+        setTaskTypes(types);
+        
+        // Fetch all tasks in the project
+        if (phase.project_id) {
+          try {
+            const { tasks } = await getProjectDetails(phase.project_id);
+            setAllProjectTasks(tasks);
+          } catch (error) {
+            console.error('Error fetching project tasks:', error);
+          }
         }
 
         if (task?.task_id) {
@@ -308,7 +329,8 @@ export default function TaskForm({
           due_date: dueDate || null,
           checklist_items: checklistItems,
           phase_id: selectedPhaseId,
-          project_status_mapping_id: movedTask.project_status_mapping_id // Always use the mapping from moveTaskToPhase
+          project_status_mapping_id: movedTask.project_status_mapping_id, // Always use the mapping from moveTaskToPhase
+          task_type_key: selectedTaskType
         };
         const updatedTask = await updateTaskWithChecklist(movedTask.task_id, taskData);
         onSubmit(updatedTask);
@@ -360,7 +382,8 @@ export default function TaskForm({
             actual_hours: Math.round(actualHours * 60), // Convert hours to minutes for storage
             due_date: dueDate || null,
             checklist_items: checklistItems,
-            project_status_mapping_id: movedTask.project_status_mapping_id // Always use the mapping from moveTaskToPhase
+            project_status_mapping_id: movedTask.project_status_mapping_id, // Always use the mapping from moveTaskToPhase
+            task_type_key: selectedTaskType
           };
           resultTask = await updateTaskWithChecklist(movedTask.task_id, taskData);
         }
@@ -377,7 +400,8 @@ export default function TaskForm({
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
           actual_hours: Math.round(actualHours * 60), // Convert hours to minutes for storage
           due_date: dueDate || null, // Use selected due date or null
-          phase_id: phase.phase_id
+          phase_id: phase.phase_id,
+          task_type_key: selectedTaskType
         };
 
         // Create the task first
@@ -753,6 +777,16 @@ export default function TaskForm({
                   rows={1}
                 />
 
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Task Type</label>
+                  <TaskTypeSelector
+                    value={selectedTaskType}
+                    taskTypes={taskTypes}
+                    onChange={setSelectedTaskType}
+                    disabled={isSubmitting}
+                  />
+                </div>
+
                 {mode === 'edit' && (
                   <div className="flex gap-4 w-full"> {/* Container for side-by-side dropdowns */}
                     {/* Move To Dropdown */}
@@ -962,6 +996,16 @@ export default function TaskForm({
                     Add an item
                   </Button>
                 )}
+
+            {mode === 'edit' && task && (
+              <TaskDependencies
+                task={task}
+                allTasksInProject={allProjectTasks}
+                taskTypes={taskTypes}
+                initialPredecessors={task.dependencies || []}
+                initialSuccessors={task.dependents || []}
+              />
+            )}
 
             <TaskTicketLinks
               taskId={task?.task_id || undefined}

@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { IProjectTask, IProjectTaskDependency, ITaskType, DependencyType } from '@/interfaces/project.interfaces';
-import { Button } from '@/components/ui/Button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select';
-import { Input } from '@/components/ui/Input';
+import { IProjectTask, IProjectTaskDependency, ITaskType, DependencyType } from 'server/src/interfaces/project.interfaces';
+import { Button } from 'server/src/components/ui/Button';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Input } from 'server/src/components/ui/Input';
 import { ArrowRight, ArrowRightLeft, GitMerge, GitPullRequest, Lock, Link as LinkIcon, Copy, X, Calendar } from 'lucide-react';
-import { addTaskDependency, removeTaskDependency } from '@/lib/actions/project-actions/projectTaskActions';
+import { addTaskDependency, removeTaskDependency } from 'server/src/lib/actions/project-actions/projectTaskActions';
 
 interface TaskDependenciesProps {
   task: IProjectTask;
@@ -18,13 +18,13 @@ interface TaskDependenciesProps {
 }
 
 const dependencyIcons: Record<DependencyType, React.ReactNode> = {
-  finish_to_start: <ArrowRight className="w-4 h-4 text-blue-500" title="Finish to Start" />,
-  start_to_start: <ArrowRightLeft className="w-4 h-4 text-green-500" title="Start to Start" />,
-  finish_to_finish: <GitMerge className="w-4 h-4 text-purple-500" title="Finish to Finish" />,
-  start_to_finish: <GitPullRequest className="w-4 h-4 text-orange-500" title="Start to Finish" />,
-  blocks: <Lock className="w-4 h-4 text-red-500" title="Blocks" />,
-  relates_to: <LinkIcon className="w-4 h-4 text-gray-500" title="Relates to" />,
-  duplicates: <Copy className="w-4 h-4 text-purple-500" title="Duplicates" />
+  finish_to_start: <span title="Finish to Start"><ArrowRight className="w-4 h-4 text-blue-500" /></span>,
+  start_to_start: <span title="Start to Start"><ArrowRightLeft className="w-4 h-4 text-green-500" /></span>,
+  finish_to_finish: <span title="Finish to Finish"><GitMerge className="w-4 h-4 text-purple-500" /></span>,
+  start_to_finish: <span title="Start to Finish"><GitPullRequest className="w-4 h-4 text-orange-500" /></span>,
+  blocks: <span title="Blocks"><Lock className="w-4 h-4 text-red-500" /></span>,
+  relates_to: <span title="Relates to"><LinkIcon className="w-4 h-4 text-gray-500" /></span>,
+  duplicates: <span title="Duplicates"><Copy className="w-4 h-4 text-purple-500" /></span>
 };
 
 const dependencyLabels: Record<DependencyType, string> = {
@@ -159,7 +159,8 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
                 )}
                 {dep.notes && <span className="text-gray-400 text-xs">({dep.notes})</span>}
                 <Button
-                  size="xs"
+                  id={`remove-dep-${dep.dependency_id}`}
+                  size="sm"
                   variant="ghost"
                   onClick={() => handleRemove(dep.dependency_id)}
                   className="ml-auto p-1 h-auto"
@@ -201,45 +202,31 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
           <p className="text-xs font-medium">Add predecessor for: {task.task_name}</p>
           
           <div className="grid grid-cols-2 gap-2">
-            <Select value={selectedPredecessorId} onValueChange={handlePredecessorSelect} disabled={isLoading}>
-              <SelectTrigger className="text-xs h-8">
-                <SelectValue placeholder="Select predecessor task" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableTasks.length === 0 && <p className="text-xs p-2 text-gray-500">No available tasks.</p>}
-                {availableTasks.map(t => {
-                  const typeInfo = getTaskTypeInfo(t.task_type_key);
-                  return (
-                    <SelectItem key={t.task_id} value={t.task_id} className="text-xs">
-                      <span className="flex items-center gap-2">
-                        {typeInfo && (
-                          <span 
-                            className="w-2 h-2 rounded-full" 
-                            style={{ backgroundColor: typeInfo.color || '#6B7280' }}
-                          />
-                        )}
-                        {t.task_name} ({t.wbs_code || t.task_id.substring(0,8)})
-                      </span>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
+            <CustomSelect
+              value={selectedPredecessorId}
+              onValueChange={handlePredecessorSelect}
+              disabled={isLoading}
+              placeholder="Select predecessor task"
+              options={availableTasks.map(t => ({
+                value: t.task_id,
+                label: `${t.task_name} (${t.wbs_code || t.task_id.substring(0,8)})`
+              }))}
+            />
             
-            <Select value={selectedType} onValueChange={(v: any) => setSelectedType(v)} disabled={isLoading}>
-              <SelectTrigger className="text-xs h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="finish_to_start" className="text-xs">Finish to Start (FS)</SelectItem>
-                <SelectItem value="start_to_start" className="text-xs">Start to Start (SS)</SelectItem>
-                <SelectItem value="finish_to_finish" className="text-xs">Finish to Finish (FF)</SelectItem>
-                <SelectItem value="start_to_finish" className="text-xs">Start to Finish (SF)</SelectItem>
-                <SelectItem value="blocks" className="text-xs">Blocks</SelectItem>
-                <SelectItem value="relates_to" className="text-xs">Related To</SelectItem>
-                <SelectItem value="duplicates" className="text-xs">Duplicates</SelectItem>
-              </SelectContent>
-            </Select>
+            <CustomSelect
+              value={selectedType}
+              onValueChange={(v: string) => setSelectedType(v as DependencyType)}
+              disabled={isLoading}
+              options={[
+                { value: 'finish_to_start', label: 'Finish to Start (FS)' },
+                { value: 'start_to_start', label: 'Start to Start (SS)' },
+                { value: 'finish_to_finish', label: 'Finish to Finish (FF)' },
+                { value: 'start_to_finish', label: 'Start to Finish (SF)' },
+                { value: 'blocks', label: 'Blocks' },
+                { value: 'relates_to', label: 'Related To' },
+                { value: 'duplicates', label: 'Duplicates' }
+              ]}
+            />
           </div>
           
           <div className="grid grid-cols-2 gap-2">
@@ -268,16 +255,32 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
           </div>
           
           <div className="flex gap-2">
-            <Button size="sm" onClick={handleAdd} disabled={!selectedPredecessorId || isLoading} className="text-xs h-8">
+            <Button 
+              id="add-dependency" 
+              size="sm" 
+              onClick={handleAdd} 
+              disabled={!selectedPredecessorId || isLoading} 
+              className="text-xs h-8">
               Add Dependency
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => { setShowAddForm(false); setError(null);}} className="text-xs h-8" disabled={isLoading}>
+            <Button
+             id="cancel-add-dependency"
+             size="sm" 
+             variant="ghost" 
+             onClick={() => 
+             { setShowAddForm(false); setError(null);}} 
+             className="text-xs h-8" disabled={isLoading}>
               Cancel
             </Button>
           </div>
         </div>
       ) : (
-        <Button size="sm" variant="outline" onClick={() => setShowAddForm(true)} className="text-xs h-8 mt-2" disabled={isLoading}>
+        <Button 
+          id="show-add-dependency-form" 
+          size="sm" 
+          variant="outline" 
+          onClick={() => setShowAddForm(true)} 
+          className="text-xs h-8 mt-2" disabled={isLoading}>
           + Add Dependency
         </Button>
       )}
