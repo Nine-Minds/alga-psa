@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { IProjectPhase, IProjectTask, ITaskChecklistItem, ProjectStatus, IProjectTicketLinkWithDetails } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
 import AvatarIcon from 'server/src/components/ui/AvatarIcon';
 import { getProjectTreeData } from 'server/src/lib/actions/project-actions/projectActions';
+import { getAllPrioritiesWithStandard } from 'server/src/lib/actions/priorityActions';
 import {
   updateTaskWithChecklist,
   addTaskToPhase,
@@ -29,6 +31,7 @@ import DuplicateTaskDialog, { DuplicateOptions } from './DuplicateTaskDialog';
 import { Input } from 'server/src/components/ui/Input';
 import { toast } from 'react-hot-toast';
 import TaskTicketLinks from './TaskTicketLinks';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from 'server/src/components/ui/TreeSelect';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { useDrawer } from 'server/src/context/DrawerContext';
@@ -105,6 +108,8 @@ export default function TaskForm({
     additionalAssigneeCount: number;
     ticketLinkCount: number;
   } | null>(null);
+  const [priorities, setPriorities] = useState<(IPriority | IStandardPriority)[]>([]);
+  const [selectedPriorityId, setSelectedPriorityId] = useState<string | null>(task?.priority_id ?? null);
   
   const { openDrawer, closeDrawer } = useDrawer();
 
@@ -121,6 +126,10 @@ export default function TaskForm({
         if (user) {
           setCurrentUserId(user.user_id);
         }
+
+        // Fetch priorities for project tasks
+        const allPriorities = await getAllPrioritiesWithStandard('project_task');
+        setPriorities(allPriorities);
 
         if (task?.task_id) {
           // Use checklist items and resources from the task object if they exist
@@ -359,6 +368,7 @@ export default function TaskForm({
             estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
             actual_hours: Math.round(actualHours * 60), // Convert hours to minutes for storage
             due_date: dueDate || null,
+            priority_id: selectedPriorityId,
             checklist_items: checklistItems,
             project_status_mapping_id: movedTask.project_status_mapping_id // Always use the mapping from moveTaskToPhase
           };
@@ -377,6 +387,7 @@ export default function TaskForm({
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
           actual_hours: Math.round(actualHours * 60), // Convert hours to minutes for storage
           due_date: dueDate || null, // Use selected due date or null
+          priority_id: selectedPriorityId,
           phase_id: phase.phase_id
         };
 
@@ -438,6 +449,7 @@ export default function TaskForm({
     if (estimatedHours !== Number(task.estimated_hours) / 60) return true;
     if (actualHours !== Number(task.actual_hours) / 60) return true;
     if (assignedUser !== task.assigned_to) return true;
+    if (selectedPriorityId !== task.priority_id) return true;
 
     // Compare checklist items
     if (checklistItems.length !== task.checklist_items?.length) return true;
@@ -858,6 +870,21 @@ export default function TaskForm({
                         .some(r => r.additional_user_id === u.user_id)
                     )}
                   />
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                    <CustomSelect
+                      value={selectedPriorityId || ''}
+                      options={priorities.map(p => ({
+                        value: p.priority_id,
+                        label: p.priority_name,
+                        color: p.color
+                      }))}
+                      onValueChange={(value) => setSelectedPriorityId(value || null)}
+                      placeholder="Select priority"
+                      className="w-full"
+                    />
+                  </div>
 
                   <div>
                     <div className="flex justify-between items-center mb-2">

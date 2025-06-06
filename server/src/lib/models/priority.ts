@@ -1,14 +1,42 @@
-import { IPriority } from '../../interfaces/ticket.interfaces';
+import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
 import { getCurrentTenantId } from '../db';
 import { Knex } from 'knex';
 
 class Priority {
-  static async getAll(knexOrTrx: Knex | Knex.Transaction): Promise<IPriority[]> {
+  static async getAll(knexOrTrx: Knex | Knex.Transaction, itemType?: 'ticket' | 'project_task'): Promise<IPriority[]> {
     const tenant = await getCurrentTenantId();
     if (!tenant) {
       throw new Error('Tenant context is required for priority operations');
     }
-    return knexOrTrx('priorities').select('*').where({ tenant });
+    const query = knexOrTrx('priorities').select('*').where({ tenant });
+    if (itemType) {
+      query.where({ item_type: itemType });
+    }
+    return query;
+  }
+
+  static async getAllWithStandard(knexOrTrx: Knex | Knex.Transaction, itemType?: 'ticket' | 'project_task'): Promise<(IPriority | IStandardPriority)[]> {
+    const tenant = await getCurrentTenantId();
+    if (!tenant) {
+      throw new Error('Tenant context is required for priority operations');
+    }
+    
+    // Get standard priorities
+    const standardQuery = knexOrTrx('standard_priorities').select('*');
+    if (itemType) {
+      standardQuery.where({ item_type: itemType });
+    }
+    const standardPriorities = await standardQuery;
+    
+    // Get tenant-specific priorities
+    const tenantQuery = knexOrTrx('priorities').select('*').where({ tenant });
+    if (itemType) {
+      tenantQuery.where({ item_type: itemType });
+    }
+    const tenantPriorities = await tenantQuery;
+    
+    // Combine both, standard first
+    return [...standardPriorities, ...tenantPriorities];
   }
 
   static async get(knexOrTrx: Knex | Knex.Transaction, id: string): Promise<IPriority | null> {

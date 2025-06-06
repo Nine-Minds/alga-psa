@@ -3,7 +3,10 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { IProject, IProjectPhase, IProjectTask, IProjectTicketLink, IProjectTicketLinkWithDetails, ProjectStatus } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
 import { useDrawer } from "server/src/context/DrawerContext";
+import { getAllPrioritiesWithStandard } from 'server/src/lib/actions/priorityActions';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 import TaskQuickAdd from './TaskQuickAdd';
 import TaskEdit from './TaskEdit';
 import PhaseQuickAdd from './PhaseQuickAdd';
@@ -102,11 +105,20 @@ export default function ProjectDetail({
   } | null>(null);
 
   const [taskToDelete, setTaskToDelete] = useState<IProjectTask | null>(null);
+  const [priorities, setPriorities] = useState<(IPriority | IStandardPriority)[]>([]);
+  const [selectedPriorityFilter, setSelectedPriorityFilter] = useState<string>('all');
 
   const filteredTasks = useMemo(() => {
     if (!selectedPhase) return [];
-    return projectTasks.filter(task => task.wbs_code.startsWith(selectedPhase.wbs_code + '.'));
-  }, [projectTasks, selectedPhase]);
+    let tasks = projectTasks.filter(task => task.wbs_code.startsWith(selectedPhase.wbs_code + '.'));
+    
+    // Apply priority filter
+    if (selectedPriorityFilter !== 'all') {
+      tasks = tasks.filter(task => task.priority_id === selectedPriorityFilter);
+    }
+    
+    return tasks;
+  }, [projectTasks, selectedPhase, selectedPriorityFilter]);
 
   const completedTasksCount = useMemo(() => {
     return filteredTasks.filter(task =>
@@ -142,6 +154,10 @@ export default function ProjectDetail({
         // Fetch project tree data once
         const treeData = await getProjectTreeData();
         setProjectTreeData(treeData);
+        
+        // Fetch priorities for project tasks
+        const allPriorities = await getAllPrioritiesWithStandard('project_task');
+        setPriorities(allPriorities);
       } catch (error) {
         console.error('Error fetching initial data:', error);
         toast.error('Failed to load initial data');
@@ -835,15 +851,37 @@ export default function ProjectDetail({
               )}
             </div>
             
-            {/* Section 2: Donut Chart */}
-            <div className="flex items-center justify-end space-x-2">
-              <DonutChart 
-                percentage={completionPercentage} 
-                tooltipContent={`Shows the percentage of completed tasks for the selected phase "${selectedPhase.phase_name}" only`}
-              />
-              <span className="text-sm font-semibold text-gray-600">
-                {completedTasksCount} / {filteredTasks.length} Done
-              </span>
+            {/* Section 2: Priority Filter and Donut Chart */}
+            <div className="flex items-center gap-4">
+              {/* Priority Filter */}
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">Filter by Priority:</label>
+                <CustomSelect
+                  value={selectedPriorityFilter}
+                  onValueChange={setSelectedPriorityFilter}
+                  options={[
+                    { value: 'all', label: 'All Priorities' },
+                    ...priorities.map(p => ({
+                      value: p.priority_id,
+                      label: p.priority_name,
+                      color: p.color
+                    }))
+                  ]}
+                  className="w-48"
+                  placeholder="Select priority"
+                />
+              </div>
+              
+              {/* Donut Chart */}
+              <div className="flex items-center justify-end space-x-2">
+                <DonutChart 
+                  percentage={completionPercentage} 
+                  tooltipContent={`Shows the percentage of completed tasks for the selected phase "${selectedPhase.phase_name}" only`}
+                />
+                <span className="text-sm font-semibold text-gray-600">
+                  {completedTasksCount} / {filteredTasks.length} Done
+                </span>
+              </div>
             </div>
           </div>
         </div>

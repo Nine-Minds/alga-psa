@@ -7,14 +7,27 @@ import { withTransaction } from '@shared/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 
-export async function getAllPriorities() {
+export async function getAllPriorities(itemType?: 'ticket' | 'project_task') {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const priorities = await Priority.getAll(trx);
+      const priorities = await Priority.getAll(trx, itemType);
       return priorities;
     } catch (error) {
       console.error(`Error fetching priorities for tenant ${tenant}:`, error);
+      throw new Error(`Failed to fetch priorities for tenant ${tenant}`);
+    }
+  });
+}
+
+export async function getAllPrioritiesWithStandard(itemType?: 'ticket' | 'project_task') {
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
+      const priorities = await Priority.getAllWithStandard(trx, itemType);
+      return priorities;
+    } catch (error) {
+      console.error(`Error fetching priorities with standard for tenant ${tenant}:`, error);
       throw new Error(`Failed to fetch priorities for tenant ${tenant}`);
     }
   });
@@ -24,11 +37,22 @@ export async function findPriorityById(id: string) {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+      // First try to find in tenant priorities
       const priority = await Priority.get(trx, id);
-      if (!priority) {
-        throw new Error(`Priority ${id} not found for tenant ${tenant}`);
+      if (priority) {
+        return priority;
       }
-      return priority;
+      
+      // If not found, check standard priorities
+      const [standardPriority] = await trx('standard_priorities')
+        .where({ priority_id: id })
+        .select('*');
+      
+      if (!standardPriority) {
+        throw new Error(`Priority ${id} not found`);
+      }
+      
+      return standardPriority;
     } catch (error) {
       console.error(`Error finding priority for tenant ${tenant}:`, error);
       throw new Error(`Failed to find priority for tenant ${tenant}`);
