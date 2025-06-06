@@ -90,8 +90,8 @@ export def dev-env-create [
     }
     
     # Sanitize branch name for Kubernetes namespace (lowercase, alphanumeric and hyphens only)
-    # First replace slashes with hyphens, then clean up any other special characters
-    let sanitized_branch = ($branch | str replace -a "/" "-" | str downcase | str replace -a "[^a-z0-9-]" "-" | str replace -r "^-+|-+$" "" | str replace -r "-+" "-")
+    # First replace slashes and underscores with hyphens, then clean up any other special characters
+    let sanitized_branch = ($branch | str replace -a "/" "-" | str replace -a "_" "-" | str downcase | str replace -a "[^a-z0-9-]" "-" | str replace -r "^-+|-+$" "" | str replace -r "-+" "-")
     let namespace = $"alga-dev-($sanitized_branch)"
     
     # Checkout the branch if requested
@@ -338,7 +338,8 @@ config:
         if $has_real_error {
             print $"($env.ALGA_COLOR_RED)Helm deployment failed:($env.ALGA_COLOR_RESET)"
             print $"($env.ALGA_COLOR_RED)($helm_result.stderr)($env.ALGA_COLOR_RESET)"
-            error make { msg: $"($env.ALGA_COLOR_RED)Failed to deploy development environment($env.ALGA_COLOR_RESET)", code: $helm_result.exit_code }
+            let error_msg = $"Failed to deploy development environment: ($helm_result.stderr)"
+            error make { msg: $"($env.ALGA_COLOR_RED)($error_msg)($env.ALGA_COLOR_RESET)", code: $helm_result.exit_code }
         } else if $helm_result.exit_code != 0 {
             # Helm deployment had issues but resources are deployed - try upgrade to trigger hooks
             print $"($env.ALGA_COLOR_YELLOW)Initial deployment had issues, attempting upgrade to ensure hooks run...($env.ALGA_COLOR_RESET)"
