@@ -238,7 +238,11 @@ const ProjectModel = {
   delete: async (knexOrTrx: Knex | Knex.Transaction, projectId: string): Promise<void> => {
     try {
       const tenant = await getCurrentTenantId();
-      const trx = knexOrTrx.isTransaction ? knexOrTrx : await knexOrTrx.transaction();
+      if (!tenant) {
+        throw new Error('No tenant found');
+      }
+      const isTransaction = (knexOrTrx as any).isTransaction || false;
+      const trx = isTransaction ? knexOrTrx as Knex.Transaction : await knexOrTrx.transaction();
       
       try {
         // First, get all phases for this project
@@ -294,11 +298,11 @@ const ProjectModel = {
           .andWhere('tenant', tenant)
           .del();
         
-        if (!knexOrTrx.isTransaction) {
+        if (!isTransaction) {
           await trx.commit();
         }
       } catch (error) {
-        if (!knexOrTrx.isTransaction) {
+        if (!isTransaction) {
           await trx.rollback();
         }
         throw error;
@@ -326,6 +330,9 @@ const ProjectModel = {
   addProjectStatusMapping: async (knexOrTrx: Knex | Knex.Transaction, projectId: string, mappingData: Omit<IProjectStatusMapping, 'project_id' | 'project_status_mapping_id' | 'tenant'>): Promise<IProjectStatusMapping> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('No tenant found');
+      }
       const [newMapping] = await knexOrTrx<IProjectStatusMapping>('project_status_mappings')
         .insert({
           ...mappingData,
@@ -422,7 +429,11 @@ const ProjectModel = {
   addStatusToProject: async (knexOrTrx: Knex | Knex.Transaction, projectId: string, statusData: Omit<IStatus, 'status_id' | 'created_at' | 'updated_at' | 'tenant'>): Promise<IStatus> => {
     try {
       const tenant = await getCurrentTenantId();
-      const trx = knexOrTrx.isTransaction ? knexOrTrx : await knexOrTrx.transaction();
+      if (!tenant) {
+        throw new Error('No tenant found');
+      }
+      const isTransaction = (knexOrTrx as any).isTransaction || false;
+      const trx = isTransaction ? knexOrTrx as Knex.Transaction : await knexOrTrx.transaction();
       
       try {
         const [newStatus] = await trx<IStatus>('statuses')
@@ -445,13 +456,13 @@ const ProjectModel = {
             tenant: tenant
           });
 
-        if (!knexOrTrx.isTransaction) {
+        if (!isTransaction) {
           await trx.commit();
         }
         
         return newStatus;
       } catch (error) {
-        if (!knexOrTrx.isTransaction) {
+        if (!isTransaction) {
           await trx.rollback();
         }
         throw error;
@@ -465,7 +476,11 @@ const ProjectModel = {
   updateProjectStatus: async (knexOrTrx: Knex | Knex.Transaction, statusId: string, statusData: Partial<IStatus>, mappingData: Partial<IProjectStatusMapping>): Promise<IStatus> => {
     try {
       const tenant = await getCurrentTenantId();
-      const trx = knexOrTrx.isTransaction ? knexOrTrx : await knexOrTrx.transaction();
+      if (!tenant) {
+        throw new Error('No tenant found');
+      }
+      const isTransaction = (knexOrTrx as any).isTransaction || false;
+      const trx = isTransaction ? knexOrTrx as Knex.Transaction : await knexOrTrx.transaction();
       
       try {
         const [updatedStatus] = await trx<IStatus>('statuses')
@@ -483,13 +498,13 @@ const ProjectModel = {
             .update(mappingData);
         }
 
-        if (!knexOrTrx.isTransaction) {
+        if (!isTransaction) {
           await trx.commit();
         }
         
         return updatedStatus;
       } catch (error) {
-        if (!knexOrTrx.isTransaction) {
+        if (!isTransaction) {
           await trx.rollback();
         }
         throw error;
@@ -503,7 +518,11 @@ const ProjectModel = {
   deleteProjectStatus: async (knexOrTrx: Knex | Knex.Transaction, statusId: string): Promise<void> => {
     try {
       const tenant = await getCurrentTenantId();
-      const trx = knexOrTrx.isTransaction ? knexOrTrx : await knexOrTrx.transaction();
+      if (!tenant) {
+        throw new Error('No tenant found');
+      }
+      const isTransaction = (knexOrTrx as any).isTransaction || false;
+      const trx = isTransaction ? knexOrTrx as Knex.Transaction : await knexOrTrx.transaction();
       
       try {
         // First, check if the status is being used by any tasks
@@ -525,11 +544,11 @@ const ProjectModel = {
           .andWhere('tenant', tenant)
           .del();
         
-        if (!knexOrTrx.isTransaction) {
+        if (!isTransaction) {
           await trx.commit();
         }
       } catch (error) {
-        if (!knexOrTrx.isTransaction) {
+        if (!isTransaction) {
           await trx.rollback();
         }
         throw error;
@@ -585,7 +604,11 @@ const ProjectModel = {
   updateStructure: async (knexOrTrx: Knex | Knex.Transaction, projectId: string, updates: { phases: Partial<IProjectPhase>[]; tasks: Partial<IProjectTask>[] }): Promise<void> => {
     try {
       const tenant = await getCurrentTenantId();
-      const trx = knexOrTrx.isTransaction ? knexOrTrx : await knexOrTrx.transaction();
+      if (!tenant) {
+        throw new Error('No tenant found');
+      }
+      const isTransaction = (knexOrTrx as any).isTransaction || false;
+      const trx = isTransaction ? knexOrTrx as Knex.Transaction : await knexOrTrx.transaction();
       
       try {
         for (const phase of updates.phases) {
@@ -617,11 +640,11 @@ const ProjectModel = {
             });
         }
         
-        if (!knexOrTrx.isTransaction) {
+        if (!isTransaction) {
           await trx.commit();
         }
       } catch (error) {
-        if (!knexOrTrx.isTransaction) {
+        if (!isTransaction) {
           await trx.rollback();
         }
         throw error;
@@ -703,6 +726,9 @@ const ProjectModel = {
   addPhase: async (knexOrTrx: Knex | Knex.Transaction, phaseData: Omit<IProjectPhase, 'phase_id' | 'created_at' | 'updated_at' | 'tenant'>): Promise<IProjectPhase> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('No tenant found');
+      }
       
       // Generate order_key for the new phase
       const { generateKeyBetween } = await import('fractional-indexing');
@@ -733,7 +759,11 @@ const ProjectModel = {
   deletePhase: async (knexOrTrx: Knex | Knex.Transaction, phaseId: string): Promise<void> => {
     try {
       const tenant = await getCurrentTenantId();
-      const trx = knexOrTrx.isTransaction ? knexOrTrx : await knexOrTrx.transaction();
+      if (!tenant) {
+        throw new Error('No tenant found');
+      }
+      const isTransaction = (knexOrTrx as any).isTransaction || false;
+      const trx = isTransaction ? knexOrTrx as Knex.Transaction : await knexOrTrx.transaction();
       
       try {
         // First, delete all checklist items for tasks in this phase
@@ -758,11 +788,11 @@ const ProjectModel = {
           .andWhere('tenant', tenant)
           .del();
         
-        if (!knexOrTrx.isTransaction) {
+        if (!isTransaction) {
           await trx.commit();
         }
       } catch (error) {
-        if (!knexOrTrx.isTransaction) {
+        if (!isTransaction) {
           await trx.rollback();
         }
         throw error;
