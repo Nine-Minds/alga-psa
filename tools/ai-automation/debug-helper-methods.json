@@ -1,3 +1,0 @@
-{
-  "code": "console.log('Helper methods:', Object.keys(helper)); console.log('Execute method exists:', typeof helper.execute); try { const result = await helper.execute('menu-clients', 'click'); console.log('Execute completed:', result); return result; } catch (error) { console.error('Execute failed:', error.message); return { error: error.message }; }"
-}
