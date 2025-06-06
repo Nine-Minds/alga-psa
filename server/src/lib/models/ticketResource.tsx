@@ -9,6 +9,9 @@ const TicketResource = {
   create: async (knexOrTrx: Knex | Knex.Transaction, resourceData: Omit<ITicketResource, 'assignment_id' | 'tenant'>): Promise<ITicketResource> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('No tenant context available');
+      }
 
       // Verify ticket exists in the current tenant
       const ticket = await knexOrTrx('tickets')
@@ -71,6 +74,9 @@ const TicketResource = {
   getByTicketId: async (knexOrTrx: Knex | Knex.Transaction, ticket_id: string): Promise<ITicketResource[]> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('No tenant context available');
+      }
 
       // Verify ticket exists in the current tenant
       const ticket = await knexOrTrx('tickets')
@@ -101,6 +107,9 @@ const TicketResource = {
   remove: async (knexOrTrx: Knex | Knex.Transaction, assignment_id: string): Promise<void> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('No tenant context available');
+      }
 
       // Verify resource exists in the current tenant
       const resource = await knexOrTrx<ITicketResource>('ticket_resources')
@@ -133,6 +142,9 @@ const TicketResource = {
   update: async (knexOrTrx: Knex | Knex.Transaction, assignment_id: string, data: Partial<ITicketResource>): Promise<void> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('No tenant context available');
+      }
 
       // Verify resource exists in the current tenant
       const resource = await knexOrTrx<ITicketResource>('ticket_resources')

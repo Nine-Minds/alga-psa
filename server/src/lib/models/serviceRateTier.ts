@@ -45,6 +45,9 @@ const ServiceRateTier = {
    */
   getByServiceId: async (knexOrTrx: Knex | Knex.Transaction, serviceId: string): Promise<IServiceRateTier[]> => {
     const tenant = await getCurrentTenantId();
+    if (!tenant) {
+      throw new Error('No tenant context available');
+    }
 
     log.info(`[ServiceRateTier.getByServiceId] Fetching rate tiers for service: ${serviceId} in tenant: ${tenant}`);
 
@@ -84,6 +87,9 @@ const ServiceRateTier = {
    */
   getById: async (knexOrTrx: Knex | Knex.Transaction, tierId: string): Promise<IServiceRateTier | null> => {
     const tenant = await getCurrentTenantId();
+    if (!tenant) {
+      throw new Error('No tenant context available');
+    }
 
     log.info(`[ServiceRateTier.getById] Fetching rate tier with ID: ${tierId} for tenant: ${tenant}`);
 
@@ -122,6 +128,9 @@ const ServiceRateTier = {
    */
   create: async (knexOrTrx: Knex | Knex.Transaction, tierData: ICreateServiceRateTier): Promise<IServiceRateTier> => {
     const tenant = await getCurrentTenantId();
+    if (!tenant) {
+      throw new Error('No tenant context available');
+    }
 
     // Validate the input data
     validateData(createServiceRateTierSchema, tierData);
@@ -161,6 +170,9 @@ const ServiceRateTier = {
    */
   update: async (knexOrTrx: Knex | Knex.Transaction, tierId: string, tierData: IUpdateServiceRateTier): Promise<IServiceRateTier | null> => {
     const tenant = await getCurrentTenantId();
+    if (!tenant) {
+      throw new Error('No tenant context available');
+    }
 
     try {
       // Get the current tier to check service_id
@@ -218,6 +230,9 @@ const ServiceRateTier = {
    */
   delete: async (knexOrTrx: Knex | Knex.Transaction, tierId: string): Promise<boolean> => {
     const tenant = await getCurrentTenantId();
+    if (!tenant) {
+      throw new Error('No tenant context available');
+    }
 
     try {
       const deletedCount = await knexOrTrx<IServiceRateTier>('service_rate_tiers')
@@ -240,6 +255,9 @@ const ServiceRateTier = {
    */
   deleteByServiceId: async (knexOrTrx: Knex | Knex.Transaction, serviceId: string): Promise<number> => {
     const tenant = await getCurrentTenantId();
+    if (!tenant) {
+      throw new Error('No tenant context available');
+    }
 
     try {
       const deletedCount = await knexOrTrx<IServiceRateTier>('service_rate_tiers')
@@ -268,6 +286,9 @@ const ServiceRateTier = {
     excludeTierId: string | null = null
   ): Promise<void> => {
     const tenant = await getCurrentTenantId();
+    if (!tenant) {
+      throw new Error('No tenant context available');
+    }
 
     try {
       // Build a query to find overlapping tiers
