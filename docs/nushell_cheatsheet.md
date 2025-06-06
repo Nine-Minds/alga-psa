@@ -426,7 +426,7 @@ dev-up --edition ce --detached  # Start local dev environment
 dev-down                        # Stop local dev environment
 
 # Branch-based development environments
-dev-env-create feature-branch --edition ee --build
+dev-env-create feature-branch --use-latest
 dev-env-list                    # List all dev environments
 dev-env-connect feature-branch --port-forward
 dev-env-destroy feature-branch --force
