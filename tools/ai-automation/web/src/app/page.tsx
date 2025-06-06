@@ -287,7 +287,7 @@ export default function ControlPanel() {
       const currentPort = window.location.port;
       const currentProtocol = window.location.protocol;
       const currentHostname = window.location.hostname;
-      const vncUrl = `${currentProtocol}//${currentHostname}:${currentPort}/vnc`;
+      const vncUrl = `${currentProtocol}//${currentHostname}:${currentPort}/vnc/`;
       
       window.open(vncUrl, '_blank');
       setLog(prev => [...prev, { type: 'navigation', title: 'Opening Browser Control', content: `Browser control window opened at ${vncUrl}`, timestamp: new Date().toISOString() }]);
