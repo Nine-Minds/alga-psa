@@ -7,14 +7,27 @@ import { withTransaction } from '@shared/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 
-export async function getAllPriorities() {
+export async function getAllPriorities(itemType?: 'ticket' | 'project_task') {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const priorities = await Priority.getAll();
+      const priorities = await Priority.getAll(itemType, trx);
       return priorities;
     } catch (error) {
       console.error(`Error fetching priorities for tenant ${tenant}:`, error);
+      throw new Error(`Failed to fetch priorities for tenant ${tenant}`);
+    }
+  });
+}
+
+export async function getAllPrioritiesWithStandard(itemType?: 'ticket' | 'project_task') {
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
+      const priorities = await Priority.getAllWithStandard(itemType, trx);
+      return priorities;
+    } catch (error) {
+      console.error(`Error fetching priorities with standard for tenant ${tenant}:`, error);
       throw new Error(`Failed to fetch priorities for tenant ${tenant}`);
     }
   });
@@ -24,11 +37,22 @@ export async function findPriorityById(id: string) {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const priority = await Priority.get(id);
-      if (!priority) {
-        throw new Error(`Priority ${id} not found for tenant ${tenant}`);
+      // First try to find in tenant priorities
+      const priority = await Priority.get(id, trx);
+      if (priority) {
+        return priority;
       }
-      return priority;
+      
+      // If not found, check standard priorities
+      const [standardPriority] = await trx('standard_priorities')
+        .where({ priority_id: id })
+        .select('*');
+      
+      if (!standardPriority) {
+        throw new Error(`Priority ${id} not found`);
+      }
+      
+      return standardPriority;
     } catch (error) {
       console.error(`Error finding priority for tenant ${tenant}:`, error);
       throw new Error(`Failed to find priority for tenant ${tenant}`);
@@ -40,7 +64,7 @@ export async function createPriority(priorityData: Omit<IPriority, 'priority_id'
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const newPriority = await Priority.insert(priorityData);
+      const newPriority = await Priority.insert(priorityData, trx);
       return newPriority;
     } catch (error) {
       console.error(`Error creating priority for tenant ${tenant}:`, error);
@@ -54,7 +78,7 @@ export async function deletePriority(priorityId: string) {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      await Priority.delete(priorityId);
+      await Priority.delete(priorityId, trx);
       return true;
     } catch (error) {
       console.error(`Error deleting priority ${priorityId} for tenant ${tenant}:`, error);
@@ -67,7 +91,7 @@ export async function updatePriority(priorityId: string, priorityData: Partial<I
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const updatedPriority = await Priority.update(priorityId, priorityData);
+      const updatedPriority = await Priority.update(priorityId, priorityData, trx);
       if (!updatedPriority) {
         throw new Error(`Priority ${priorityId} not found for tenant ${tenant}`);
       }
