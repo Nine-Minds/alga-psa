@@ -1,7 +1,7 @@
 // server/src/lib/models/ticket-resource.tsx
 import logger from '../../utils/logger';
 import { ITicketResource } from '../../interfaces/ticketResource.interfaces';
-import { getCurrentTenantId } from '../tenant';
+import { getCurrentTenantId } from '../db';
 import { v4 as uuid4 } from 'uuid';
 import { Knex } from 'knex';
 

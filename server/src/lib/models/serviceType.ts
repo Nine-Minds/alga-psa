@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { getCurrentTenantId } from '../tenant';
+import { getCurrentTenantId } from '../db';
 import { IServiceType, IStandardServiceType } from '../../interfaces/billing.interfaces'; // Ensure IStandardServiceType is imported
 import { TenantEntity } from '../../interfaces'; 
 

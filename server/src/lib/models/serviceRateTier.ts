@@ -1,4 +1,4 @@
-import { getCurrentTenantId } from '../tenant';
+import { getCurrentTenantId } from '../db';
 import { IServiceRateTier, ICreateServiceRateTier, IUpdateServiceRateTier } from '../../interfaces/serviceTier.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
