@@ -23,12 +23,12 @@ export async function createTeam(teamData: Omit<ITeam, 'members'> & { members?: 
     
     const createdTeam = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Create the team first
-      const team = await Team.create(teamDataWithoutMembers);
+      const team = await Team.create(trx, teamDataWithoutMembers);
       
       // If members were provided, add them to the team
       if (members && members.length > 0) {
         await Promise.all(
-          members.map((member): Promise<void> => Team.addMember(team.team_id, member.user_id))
+          members.map((member): Promise<void> => Team.addMember(trx, team.team_id, member.user_id))
         );
       }
       
@@ -45,7 +45,8 @@ export async function createTeam(teamData: Omit<ITeam, 'members'> & { members?: 
 
 export async function updateTeam(teamId: string, teamData: Partial<ITeam>): Promise<ITeam> {
   try {
-    await Team.update(teamId, teamData);
+    const {knex} = await createTenantKnex();
+    await Team.update(knex, teamId, teamData);
     return await getTeamById(teamId);
   } catch (error) {
     console.error(error);
@@ -55,7 +56,8 @@ export async function updateTeam(teamId: string, teamData: Partial<ITeam>): Prom
 
 export async function deleteTeam(teamId: string): Promise<{ success: boolean }> {
   try {
-    await Team.delete(teamId);
+    const {knex} = await createTenantKnex();
+    await Team.delete(knex, teamId);
     return { success: true };
   } catch (error) {
     console.error(error);
@@ -65,7 +67,8 @@ export async function deleteTeam(teamId: string): Promise<{ success: boolean }> 
 
 export const addUserToTeam = async (teamId: string, userId: string): Promise<ITeam> => {
   try {
-    await Team.addMember(teamId, userId);
+    const {knex} = await createTenantKnex();
+    await Team.addMember(knex, teamId, userId);
     return await getTeamById(teamId);
   } catch (error) {
     console.error(error);
@@ -75,7 +78,8 @@ export const addUserToTeam = async (teamId: string, userId: string): Promise<ITe
 
 export const removeUserFromTeam = async (teamId: string, userId: string): Promise<ITeam> => {
   try {
-    await Team.removeMember(teamId, userId);
+    const {knex} = await createTenantKnex();
+    await Team.removeMember(knex, teamId, userId);
     return await getTeamById(teamId);
   } catch (error) {
     console.error(error);
@@ -85,11 +89,12 @@ export const removeUserFromTeam = async (teamId: string, userId: string): Promis
 
 export const getTeamById = async (teamId: string): Promise<ITeam> => {
   try {
-    const team = await Team.get(teamId);
+    const {knex} = await createTenantKnex();
+    const team = await Team.get(knex, teamId);
     if (!team) {
       throw new Error('Team not found');
     }
-    const memberIds = await Team.getMembers(teamId);
+    const memberIds = await Team.getMembers(knex, teamId);
     const members = await getMultipleUsersWithRoles(memberIds);
     
     return { ...team, members };
@@ -101,9 +106,10 @@ export const getTeamById = async (teamId: string): Promise<ITeam> => {
 
 export async function getTeams(): Promise<ITeam[]> {
   try {
-    const teams = await Team.getAll();
+    const {knex} = await createTenantKnex();
+    const teams = await Team.getAll(knex);
     const teamsWithMembers = await Promise.all(teams.map(async (team): Promise<ITeam> => {
-      const memberIds = await Team.getMembers(team.team_id);
+      const memberIds = await Team.getMembers(knex, team.team_id);
       const members = await getMultipleUsersWithRoles(memberIds);
       return { ...team, members };
     }));
@@ -116,7 +122,8 @@ export async function getTeams(): Promise<ITeam[]> {
 
 export const assignManagerToTeam = async (teamId: string, userId: string): Promise<ITeam> => {
   try {
-    await Team.update(teamId, { manager_id: userId });
+    const {knex} = await createTenantKnex();
+    await Team.update(knex, teamId, { manager_id: userId });
     return await getTeamById(teamId);
   } catch (error) {
     console.error(error);

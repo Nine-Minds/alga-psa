@@ -78,9 +78,12 @@ export async function getServices(page: number = 1, pageSize: number = 999): Pro
 }
 
 export async function getServiceById(serviceId: string): Promise<IService | null> {
+    const { knex: db } = await createTenantKnex();
     try {
-        const service = await Service.getById(serviceId)
-        return service
+        return await withTransaction(db, async (trx: Knex.Transaction) => {
+            const service = await Service.getById(trx, serviceId)
+            return service
+        });
     } catch (error) {
         console.error(`Error fetching service with id ${serviceId}:`, error)
         throw new Error('Failed to fetch service')
@@ -165,7 +168,7 @@ export async function createService(
 
             // 4. Create the service using the model
             // Assuming Service.create accepts the IService structure (or relevant parts)
-            const service = await Service.create(finalServiceData as Omit<IService, 'service_id' | 'tenant'>); // Cast might be needed depending on model input type
+            const service = await Service.create(trx, finalServiceData as Omit<IService, 'service_id' | 'tenant'>); // Cast might be needed depending on model input type
             console.log('[serviceActions] Service created successfully:', service);
             revalidatePath('/msp/billing'); // Revalidate the billing page
             return service; // Assuming Service.create returns the full IService object
@@ -180,15 +183,18 @@ export async function updateService(
     serviceId: string,
     serviceData: Partial<IService>
 ): Promise<IService> {
+    const { knex: db } = await createTenantKnex();
     try {
-        const updatedService = await Service.update(serviceId, serviceData);
-        revalidatePath('/msp/billing'); // Revalidate the billing page
+        return await withTransaction(db, async (trx: Knex.Transaction) => {
+            const updatedService = await Service.update(trx, serviceId, serviceData);
+            revalidatePath('/msp/billing'); // Revalidate the billing page
 
-        if (updatedService === null) {
-            throw new Error(`Service with id ${serviceId} not found or couldn't be updated`);
-        }
+            if (updatedService === null) {
+                throw new Error(`Service with id ${serviceId} not found or couldn't be updated`);
+            }
 
-        return updatedService as IService;
+            return updatedService as IService;
+        });
     } catch (error) {
         console.error(`Error updating service with id ${serviceId}:`, error);
         throw error; // Re-throw the error to be handled by the caller
@@ -196,9 +202,12 @@ export async function updateService(
 }
 
 export async function deleteService(serviceId: string): Promise<void> {
+    const { knex: db } = await createTenantKnex();
     try {
-        await Service.delete(serviceId)
-        revalidatePath('/msp/billing') // Revalidate the billing page
+        await withTransaction(db, async (trx: Knex.Transaction) => {
+            await Service.delete(trx, serviceId)
+            revalidatePath('/msp/billing') // Revalidate the billing page
+        });
     } catch (error) {
         console.error(`Error deleting service with id ${serviceId}:`, error)
         throw new Error('Failed to delete service')
@@ -206,9 +215,12 @@ export async function deleteService(serviceId: string): Promise<void> {
 }
 
 export async function getServicesByCategory(categoryId: string): Promise<IService[]> {
+    const { knex: db } = await createTenantKnex();
     try {
-        const services = await Service.getByCategoryId(categoryId)
-        return services
+        return await withTransaction(db, async (trx: Knex.Transaction) => {
+            const services = await Service.getByCategoryId(trx, categoryId)
+            return services
+        });
     } catch (error) {
         console.error(`Error fetching services for category ${categoryId}:`, error)
         throw new Error('Failed to fetch services by category')
@@ -221,7 +233,10 @@ export async function getServiceTypesForSelection(): Promise<{ id: string; name:
        // Assuming ServiceTypeModel is imported or available
        // Need to import ServiceTypeModel from '../models/serviceType'
        const { ServiceTypeModel } = await import('../models/serviceType');
-       const serviceTypes = await ServiceTypeModel.findAllIncludingStandard();
+       const { knex: db } = await createTenantKnex();
+       const serviceTypes = await withTransaction(db, async (trx: Knex.Transaction) => {
+           return await ServiceTypeModel.findAllIncludingStandard(trx);
+       });
        // No validation needed here as it's directly from the model method designed for this
        return serviceTypes;
    } catch (error) {
@@ -239,7 +254,10 @@ export async function createServiceType(
       // Assuming ServiceTypeModel is imported or available
       const { ServiceTypeModel } = await import('../models/serviceType');
       // Tenant context is handled within the model method
-      const newServiceType = await ServiceTypeModel.create(data);
+      const { knex: db } = await createTenantKnex();
+      const newServiceType = await withTransaction(db, async (trx: Knex.Transaction) => {
+          return await ServiceTypeModel.create(trx, data);
+      });
       // Optionally revalidate paths if there's a UI for managing these
       // revalidatePath('/path/to/service/type/management');
       return newServiceType;
@@ -257,7 +275,10 @@ export async function updateServiceType(
       // Assuming ServiceTypeModel is imported or available
       const { ServiceTypeModel } = await import('../models/serviceType');
       // Tenant context is handled within the model method
-      const updatedServiceType = await ServiceTypeModel.update(id, data);
+      const { knex: db } = await createTenantKnex();
+      const updatedServiceType = await withTransaction(db, async (trx: Knex.Transaction) => {
+          return await ServiceTypeModel.update(trx, id, data);
+      });
       if (!updatedServiceType) {
           throw new Error(`Service type with id ${id} not found or could not be updated.`);
       }
@@ -290,7 +311,7 @@ export async function deleteServiceType(id: string): Promise<void> {
       }
       
       // Tenant context is handled within the model method
-      const deleted = await ServiceTypeModel.delete(id);
+      const deleted = await ServiceTypeModel.delete(trx, id);
       if (!deleted) {
           // Handle the case where the type wasn't found
           throw new Error(`Service type with ID ${id} not found.`);

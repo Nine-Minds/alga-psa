@@ -74,7 +74,8 @@ export class InvoiceEmailHandler {
           let recipientName = company.company_name;
 
           if (company.billing_contact_id) {
-            const contact = await ContactModel.get(company.billing_contact_id);
+            const knex = await createTenantKnex();
+            const contact = await ContactModel.get(knex.knex, company.billing_contact_id);
             if (contact) {
               recipientEmail = contact.email;
               recipientName = contact.full_name;

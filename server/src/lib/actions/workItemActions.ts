@@ -235,7 +235,7 @@ export async function searchDispatchWorkItems(options: DispatchSearchOptions): P
 
     const userDetailsMap = new Map<string, { first_name: string | null; last_name: string | null }>();
     if (agentIdsNeedingDetails.size > 0) {
-      const users = await User.getMultiple(Array.from(agentIdsNeedingDetails));
+      const users = await User.getMultiple(db, Array.from(agentIdsNeedingDetails));
 
       users.forEach((user: IUser) => {
         userDetailsMap.set(user.user_id, { first_name: user.first_name ?? null, last_name: user.last_name ?? null });
@@ -716,7 +716,7 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
 
 export async function createWorkItem(item: Omit<IWorkItem, "work_item_id">): Promise<Omit<IExtendedWorkItem, "tenant">> {
   try {
-    const {tenant} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     const currentUser = await getCurrentUser();
 
     if (!currentUser) {
@@ -728,7 +728,7 @@ export async function createWorkItem(item: Omit<IWorkItem, "work_item_id">): Pro
     }
 
     // Create schedule entry with current user assigned
-    const scheduleEntry = await ScheduleEntry.create({
+    const scheduleEntry = await ScheduleEntry.create(db, {
       title: item.title || 'Ad-hoc Entry',
       notes: item.description,
       scheduled_start: item.startTime,

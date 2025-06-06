@@ -1,12 +1,13 @@
-import { createTenantKnex } from 'server/src/lib/db';
+import { Knex } from 'knex';
+import { getCurrentTenantId } from 'server/src/lib/db';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { te } from 'date-fns/locale';
 
 const ContactModel = {
-  getAll: async (includeInactive: boolean = false): Promise<IContact[]> => {
+  getAll: async (knexOrTrx: Knex | Knex.Transaction, includeInactive: boolean = false): Promise<IContact[]> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
-      let query = db<IContact>('contacts').where('tenant', tenant).select('*');
+      const tenant = await getCurrentTenantId();
+      let query = knexOrTrx<IContact>('contacts').where('tenant', tenant).select('*');
       if (!includeInactive) {
         query = query.where({ is_inactive: false });
       }
@@ -18,10 +19,10 @@ const ContactModel = {
     }
   },
 
-  get: async (contact_name_id: string): Promise<IContact | undefined> => {
+  get: async (knexOrTrx: Knex | Knex.Transaction, contact_name_id: string): Promise<IContact | undefined> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
-      const contact = await db<IContact>('contacts')
+      const tenant = await getCurrentTenantId();
+      const contact = await knexOrTrx<IContact>('contacts')
         .select('*')
         .where('contact_name_id', contact_name_id)
         .where('tenant', tenant)
@@ -33,10 +34,10 @@ const ContactModel = {
     }
   },
 
-  updateMany: async (companyId: string, updateData: Partial<IContact>): Promise<void> => {
+  updateMany: async (knexOrTrx: Knex | Knex.Transaction, companyId: string, updateData: Partial<IContact>): Promise<void> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
-      await db<IContact>('contacts')
+      const tenant = await getCurrentTenantId();
+      await knexOrTrx<IContact>('contacts')
         .where({ company_id: companyId })
         .where('tenant', tenant)
         .update(updateData);

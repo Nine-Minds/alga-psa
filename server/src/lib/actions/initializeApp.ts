@@ -193,11 +193,11 @@ export async function initializeApp() {
                         const tenantKnex = await getConnection(tenant);
 
                         // Get active time period settings for this tenant
-                        const settings = await TimePeriodSettings.getActiveSettings();
+                        const settings = await TimePeriodSettings.getActiveSettings(tenantKnex);
 
                         // Create next time period using all active settings
                         try {
-                            const result = await createNextTimePeriod(settings);
+                            const result = await createNextTimePeriod(tenantKnex, settings);
                             if (result) {
                                 logger.info(`Created new time period for tenant ${tenant}: ${result.start_date} to ${result.end_date}`);
                             }

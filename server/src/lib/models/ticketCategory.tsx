@@ -1,15 +1,13 @@
-import { createTenantKnex } from 'server/src/lib/db';
-import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
+import { getCurrentTenantId } from '../tenant';
+import { ITicketCategory } from '../../interfaces/ticket.interfaces';
+import { Knex } from 'knex';
 
 const TicketCategory = {
-  getAll: async (): Promise<ITicketCategory[]> => {
+  getAll: async (knexOrTrx: Knex | Knex.Transaction): Promise<ITicketCategory[]> => {
     try {
-      const { knex: db, tenant } = await createTenantKnex();
-      if (!tenant) {
-        throw new Error('Tenant context is required for getting ticket categories');
-      }
+      const tenant = await getCurrentTenantId();
       // Add explicit tenant filtering in addition to RLS
-      const categories = await db<ITicketCategory>('categories')
+      const categories = await knexOrTrx<ITicketCategory>('categories')
         .where({ tenant })
         .select('*');
       return categories;
@@ -19,14 +17,11 @@ const TicketCategory = {
     }
   },
 
-  get: async (id: string): Promise<ITicketCategory> => {
+  get: async (knexOrTrx: Knex | Knex.Transaction, id: string): Promise<ITicketCategory> => {
     try {
-      const { knex: db, tenant } = await createTenantKnex();
-      if (!tenant) {
-        throw new Error('Tenant context is required for getting ticket category');
-      }
+      const tenant = await getCurrentTenantId();
       // Add explicit tenant filtering in addition to RLS
-      const [category] = await db<ITicketCategory>('categories')
+      const [category] = await knexOrTrx<ITicketCategory>('categories')
         .where({
           category_id: id,
           tenant
@@ -43,15 +38,12 @@ const TicketCategory = {
     }
   },
 
-  getByChannel: async (channelId: string): Promise<ITicketCategory[]> => {
+  getByChannel: async (knexOrTrx: Knex | Knex.Transaction, channelId: string): Promise<ITicketCategory[]> => {
     try {
-      const { knex: db, tenant } = await createTenantKnex();
-      if (!tenant) {
-        throw new Error('Tenant context is required for getting channel categories');
-      }
+      const tenant = await getCurrentTenantId();
 
       // Verify channel exists in the current tenant
-      const channel = await db('channels')
+      const channel = await knexOrTrx('channels')
         .where({
           channel_id: channelId,
           tenant
@@ -62,7 +54,7 @@ const TicketCategory = {
         throw new Error(`Channel with id ${channelId} not found in tenant ${tenant}`);
       }
 
-      const categories = await db<ITicketCategory>('categories')
+      const categories = await knexOrTrx<ITicketCategory>('categories')
         .where({
           channel_id: channelId,
           tenant
@@ -74,12 +66,9 @@ const TicketCategory = {
     }
   },
 
-  insert: async (category: Partial<ITicketCategory>): Promise<ITicketCategory> => {
+  insert: async (knexOrTrx: Knex | Knex.Transaction, category: Partial<ITicketCategory>): Promise<ITicketCategory> => {
     try {
-      const { knex: db, tenant } = await createTenantKnex();
-      if (!tenant) {
-        throw new Error('Tenant context is required for creating ticket category');
-      }
+      const tenant = await getCurrentTenantId();
 
       if (!category.category_name) {
         throw new Error('Category name is required');
@@ -90,7 +79,7 @@ const TicketCategory = {
       }
 
       // Verify channel exists in the current tenant
-      const channel = await db('channels')
+      const channel = await knexOrTrx('channels')
         .where({
           channel_id: category.channel_id,
           tenant
@@ -102,7 +91,7 @@ const TicketCategory = {
       }
 
       // Check if category with same name exists in the channel
-      const existingCategory = await db('categories')
+      const existingCategory = await knexOrTrx('categories')
         .where({
           tenant,
           category_name: category.category_name,
@@ -121,7 +110,7 @@ const TicketCategory = {
       };
 
       // Insert with explicit tenant
-      const [insertedCategory] = await db<ITicketCategory>('categories')
+      const [insertedCategory] = await knexOrTrx<ITicketCategory>('categories')
         .insert(categoryData)
         .returning('*');
 
@@ -136,15 +125,12 @@ const TicketCategory = {
     }
   },
 
-  update: async (id: string, category: Partial<ITicketCategory>): Promise<ITicketCategory> => {
+  update: async (knexOrTrx: Knex | Knex.Transaction, id: string, category: Partial<ITicketCategory>): Promise<ITicketCategory> => {
     try {
-      const { knex: db, tenant } = await createTenantKnex();
-      if (!tenant) {
-        throw new Error('Tenant context is required for updating ticket category');
-      }
+      const tenant = await getCurrentTenantId();
 
       // Verify category exists in the current tenant
-      const existingCategory = await db('categories')
+      const existingCategory = await knexOrTrx('categories')
         .where({
           category_id: id,
           tenant
@@ -157,7 +143,7 @@ const TicketCategory = {
 
       // If channel_id is being updated, verify the new channel exists in the current tenant
       if (category.channel_id && category.channel_id !== existingCategory.channel_id) {
-        const newChannel = await db('channels')
+        const newChannel = await knexOrTrx('channels')
           .where({
             channel_id: category.channel_id,
             tenant
@@ -171,7 +157,7 @@ const TicketCategory = {
 
       // If name is being updated, check for duplicates in the same channel
       if (category.category_name) {
-        const duplicateCategory = await db('categories')
+        const duplicateCategory = await knexOrTrx('categories')
           .where({
             tenant,
             category_name: category.category_name,
@@ -189,7 +175,7 @@ const TicketCategory = {
       delete category.tenant;
 
       // Update with explicit tenant check
-      const [updatedCategory] = await db<ITicketCategory>('categories')
+      const [updatedCategory] = await knexOrTrx<ITicketCategory>('categories')
         .where({
           category_id: id,
           tenant
@@ -208,15 +194,12 @@ const TicketCategory = {
     }
   },
 
-  delete: async (id: string): Promise<void> => {
+  delete: async (knexOrTrx: Knex | Knex.Transaction, id: string): Promise<void> => {
     try {
-      const { knex: db, tenant } = await createTenantKnex();
-      if (!tenant) {
-        throw new Error('Tenant context is required for deleting ticket category');
-      }
+      const tenant = await getCurrentTenantId();
 
       // Verify category exists in the current tenant
-      const category = await db('categories')
+      const category = await knexOrTrx('categories')
         .where({
           category_id: id,
           tenant
@@ -228,7 +211,7 @@ const TicketCategory = {
       }
 
       // Check if category has subcategories
-      const hasSubcategories = await db('categories')
+      const hasSubcategories = await knexOrTrx('categories')
         .where({
           tenant,
           parent_category: id
@@ -240,7 +223,7 @@ const TicketCategory = {
       }
 
       // Check if category is in use by tickets using a proper tenant-aware query
-      const inUseCount = await db('tickets')
+      const inUseCount = await knexOrTrx('tickets')
         .where(function() {
           this.where({
             tenant,
@@ -258,7 +241,7 @@ const TicketCategory = {
       }
 
       // Add explicit tenant check in deletion
-      const deletedCount = await db<ITicketCategory>('categories')
+      const deletedCount = await knexOrTrx<ITicketCategory>('categories')
         .where({
           category_id: id,
           tenant

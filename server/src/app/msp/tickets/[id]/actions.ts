@@ -3,6 +3,7 @@
 import { getTenantForCurrentRequest } from 'server/src/lib/tenant';
 import Ticket from 'server/src/lib/models/ticket';
 import { ITicket } from 'server/src/interfaces/ticket.interfaces';
+import { getConnection } from 'server/src/lib/db/db';
 
 /**
  * Server action to fetch ticket data with tenant information
@@ -15,8 +16,11 @@ export async function getTicketData(id: string) {
     const tenantResult = await getTenantForCurrentRequest();
     const tenant = tenantResult || undefined;
     
+    // Get knex connection
+    const knex = await getConnection();
+    
     // Get ticket details
-    const ticket = await Ticket.get(id);
+    const ticket = await Ticket.get(knex, id);
     
     return {
       ticket: ticket ? { ...ticket, tenant } : undefined,

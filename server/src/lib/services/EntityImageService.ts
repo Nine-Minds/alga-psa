@@ -69,10 +69,10 @@ export async function uploadEntityImage(
 
     const createdDocument = await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Create the document
-      const document = await Document.insert({
+      const document = await Document.insert(trx, {
         ...documentData,
         document_id: newDocumentId
-      }, trx);
+      });
 
       if (!document?.document_id) {
         throw new Error('Failed to create document record');

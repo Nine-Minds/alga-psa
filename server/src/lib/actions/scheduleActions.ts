@@ -38,7 +38,10 @@ export async function getScheduleEntries(
         // Alternative: return { success: false, error: 'Permission denied to view schedule entries.' };
     }
 
-    const allEntries = await ScheduleEntry.getAll(start, end); // Fetch all entries for the tenant
+    const { knex: db } = await createTenantKnex();
+    const allEntries = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await ScheduleEntry.getAll(trx, start, end); // Fetch all entries for the tenant
+    });
 
     let filteredEntries: IScheduleEntry[];
 
@@ -143,8 +146,11 @@ export async function addScheduleEntry(
     }
     // --- End Permission Check ---
 
-    const createdEntry = await ScheduleEntry.create(entry, {
-      assignedUserIds
+    const { knex: db } = await createTenantKnex();
+    const createdEntry = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await ScheduleEntry.create(trx, entry, {
+        assignedUserIds
+      });
     });
     return { success: true, entry: createdEntry };
   } catch (error) {
@@ -167,7 +173,10 @@ export async function updateScheduleEntry(
     const canUpdateGlobally = userPermissions.includes('user_schedule:update');
 
     // Fetch the existing entry first to check permissions
-    const existingEntry = await ScheduleEntry.get(entry_id);
+    const { knex: db } = await createTenantKnex();
+    const existingEntry = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await ScheduleEntry.get(trx, entry_id);
+    });
     if (!existingEntry) {
       return { success: false, error: 'Schedule entry not found.' };
     }
@@ -220,11 +229,14 @@ export async function updateScheduleEntry(
         assigned_user_ids: entry.assigned_user_ids // Let ScheduleEntry.update handle merging if needed based on updateType
     };
 
-    const updatedEntry = await ScheduleEntry.update(
-        entry_id,
-        updateData,
-        entry.updateType || IEditScope.SINGLE
-    );
+    const updatedEntry = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await ScheduleEntry.update(
+          trx,
+          entry_id,
+          updateData,
+          entry.updateType || IEditScope.SINGLE
+      );
+    });
 
     return { success: true, entry: updatedEntry };
   } catch (error) {
@@ -244,7 +256,10 @@ export async function deleteScheduleEntry(entry_id: string, deleteType: IEditSco
     const canUpdateGlobally = userPermissions.includes('user_schedule:update');
 
     // Fetch the existing entry first to check permissions
-    const existingEntry = await ScheduleEntry.get(entry_id);
+    const { knex: db } = await createTenantKnex();
+    const existingEntry = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await ScheduleEntry.get(trx, entry_id);
+    });
     if (!existingEntry) {
       // If entry doesn't exist, deletion is technically successful (idempotent)
       // or we could return an error. Returning success for now.

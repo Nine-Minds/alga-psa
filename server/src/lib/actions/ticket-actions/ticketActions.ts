@@ -106,7 +106,7 @@ export async function createTicketFromAsset(data: CreateTicketFromAssetData, use
             }
 
             // Create the asset association
-            await AssetAssociationModel.create({
+            await AssetAssociationModel.create(trx, {
                 asset_id: validatedData.asset_id,
                 entity_id: newTicket.ticket_id,
                 entity_type: 'ticket',
@@ -480,7 +480,8 @@ export async function getTickets(user: IUser): Promise<ITicket[]> {
   }
 
   try {
-    const tickets = await Ticket.getAll();
+    const {knex} = await createTenantKnex();
+    const tickets = await Ticket.getAll(knex);
     // Convert dates
     const processedTickets = tickets.map((ticket: ITicket): ITicket => {
       return convertDates(ticket);

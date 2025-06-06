@@ -2,9 +2,11 @@
 import InteractionsFeed from 'server/src/components/interactions/InteractionsFeed';
 import { getInteractionsForEntity } from 'server/src/lib/actions/interactionActions';
 import ContactModel from 'server/src/lib/models/contact';
+import { getConnection } from 'server/src/lib/db/db';
 
 export default async function ContactActivityPage({ params }: { params: { id: string } }) {
-  const contact = await ContactModel.get(params.id);
+  const knex = await getConnection();
+  const contact = await ContactModel.get(knex, params.id);
   const interactions = await getInteractionsForEntity(params.id, 'contact');
 
   if (!contact) {

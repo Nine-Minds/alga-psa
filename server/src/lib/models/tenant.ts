@@ -1,12 +1,12 @@
 import logger from '@shared/core/logger';
 import { ITenant } from '../../interfaces';
-import { createTenantKnex } from '../db';
+import { getCurrentTenantId } from '../db';
+import { Knex } from 'knex';
 
 export const Tenant = {
-  getAll: async (): Promise<ITenant[]> => {
+  getAll: async (knexOrTrx: Knex | Knex.Transaction): Promise<ITenant[]> => {
     try {
-      const {knex: db} = await createTenantKnex();
-      const tenants = await db<ITenant>('tenants').select('*');
+      const tenants = await knexOrTrx<ITenant>('tenants').select('*');
       return tenants;
     } catch (error) {
       logger.error('Error getting all tenants:', error);
@@ -14,10 +14,9 @@ export const Tenant = {
     }
   },
 
-  findTenantByEmail: async (email: string): Promise<ITenant | undefined> => {
+  findTenantByEmail: async (knexOrTrx: Knex | Knex.Transaction, email: string): Promise<ITenant | undefined> => {
     try {
-      const {knex: db} = await createTenantKnex();
-      const tenant = await db<ITenant>('tenants').select('*').where({ email }).first();
+      const tenant = await knexOrTrx<ITenant>('tenants').select('*').where({ email }).first();
       return tenant;
     } catch (error) {
       logger.error(`Error finding tenant with email ${email}:`, error);
@@ -25,10 +24,9 @@ export const Tenant = {
     }
   },
 
-  findTenantByName: async (tenant: string): Promise<ITenant | undefined> => {
+  findTenantByName: async (knexOrTrx: Knex | Knex.Transaction, tenant: string): Promise<ITenant | undefined> => {
     try {
-      const {knex: db} = await createTenantKnex();
-      const tenantRecord = await db<ITenant>('tenants').select('*').where({ tenant }).first();
+      const tenantRecord = await knexOrTrx<ITenant>('tenants').select('*').where({ tenant }).first();
       return tenantRecord;
     } catch (error) {
       logger.error(`Error finding tenant with name ${tenant}:`, error);
@@ -36,10 +34,9 @@ export const Tenant = {
     }
   },
 
-  get: async (tenant: string): Promise<ITenant | undefined> => {
+  get: async (knexOrTrx: Knex | Knex.Transaction, tenant: string): Promise<ITenant | undefined> => {
     try {
-      const {knex: db} = await createTenantKnex();
-      const tenantRecord = await db<ITenant>('tenants').select('*').where({ tenant }).first();
+      const tenantRecord = await knexOrTrx<ITenant>('tenants').select('*').where({ tenant }).first();
       return tenantRecord;
     } catch (error) {
       logger.error(`Error getting tenant with id ${tenant}:`, error);
@@ -47,12 +44,11 @@ export const Tenant = {
     }
   },
 
-  insert: async (tenant: ITenant): Promise<ITenant> => {
+  insert: async (knexOrTrx: Knex | Knex.Transaction, tenant: ITenant): Promise<ITenant> => {
     try {
-      const {knex: db} = await createTenantKnex();
       logger.info('Inserting tenant:', tenant);
   
-      const [insertedTenant] = await db<ITenant>('tenants').insert(tenant).returning('*');
+      const [insertedTenant] = await knexOrTrx<ITenant>('tenants').insert(tenant).returning('*');
       return insertedTenant;
     } catch (error) {
       logger.error('Error inserting tenant:', error);
@@ -60,40 +56,36 @@ export const Tenant = {
     }
   },
 
-  update: async (tenant: string, tenantData: Partial<ITenant>): Promise<void> => {
+  update: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, tenantData: Partial<ITenant>): Promise<void> => {
     try {
-      const {knex: db} = await createTenantKnex();
-      await db<ITenant>('tenants').where({ tenant }).update(tenantData);
+      await knexOrTrx<ITenant>('tenants').where({ tenant }).update(tenantData);
     } catch (error) {
       logger.error(`Error updating tenant with id ${tenant}:`, error);
       throw error;
     }
   },
 
-  updatePaymentInfo: async (tenant: string, payment_platform_id: string, payment_method_id: string): Promise<void> => {
+  updatePaymentInfo: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, payment_platform_id: string, payment_method_id: string): Promise<void> => {
     try {
-      const {knex: db} = await createTenantKnex();
-      await db<ITenant>('tenants').where({ tenant }).update({ payment_platform_id, payment_method_id });
+      await knexOrTrx<ITenant>('tenants').where({ tenant }).update({ payment_platform_id, payment_method_id });
     } catch (error) {
       logger.error(`Error updating payment info for tenant ${tenant}:`, error);
       throw error;
     }
   },
 
-  updatePlan: async (tenant: string, plan: string): Promise<void> => {
+  updatePlan: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, plan: string): Promise<void> => {
     try {
-      const {knex: db} = await createTenantKnex();
-      await db<ITenant>('tenants').where({ tenant }).update({ plan });
+      await knexOrTrx<ITenant>('tenants').where({ tenant }).update({ plan });
     } catch (error) {
       logger.error(`Error updating plan for tenant ${tenant}:`, error);
       throw error;
     }
   },
 
-  delete: async (tenant: string): Promise<void> => {
+  delete: async (knexOrTrx: Knex | Knex.Transaction, tenant: string): Promise<void> => {
     try {
-      const {knex: db} = await createTenantKnex();
-      await db<ITenant>('tenants').where({ tenant }).del();
+      await knexOrTrx<ITenant>('tenants').where({ tenant }).del();
     } catch (error) {
       logger.error(`Error deleting tenant ${tenant}:`, error);
       throw error;
@@ -106,10 +98,9 @@ interface DefaultStatus {
   is_closed: boolean;
 }
 
-export async function getTenantDefaultStatuses(tenantId: string): Promise<DefaultStatus[]> {
+export async function getTenantDefaultStatuses(knexOrTrx: Knex | Knex.Transaction, tenantId: string): Promise<DefaultStatus[]> {
   try {
-    const {knex: db} = await createTenantKnex();
-    const result = await db('tenant_settings')
+    const result = await knexOrTrx('tenant_settings')
       .where({ tenant: tenantId })
       .select('default_project_statuses')
       .first();

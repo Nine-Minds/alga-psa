@@ -1,13 +1,14 @@
-import { createTenantKnex } from '../lib/db';
+import { BaseModel } from './BaseModel';
 import { IDocumentAssociation, IDocumentAssociationInput } from '../interfaces/document-association.interface';
 import { v4 as uuidv4 } from 'uuid';
+import type { Knex } from 'knex';
 
-class DocumentAssociation {
+class DocumentAssociation extends BaseModel {
     /**
      * Create a new document association
      */
-    static async create(data: IDocumentAssociationInput): Promise<Pick<IDocumentAssociation, "association_id">> {
-        const { knex, tenant } = await createTenantKnex();
+    static async create(knexOrTrx: Knex | Knex.Transaction, data: IDocumentAssociationInput): Promise<Pick<IDocumentAssociation, "association_id">> {
+        const tenant = await this.getTenant();
         if (!tenant) {
             throw new Error('No tenant found');
         }
@@ -20,7 +21,7 @@ class DocumentAssociation {
             updated_at: new Date()
         };
 
-        await knex('document_associations').insert(association);
+        await knexOrTrx('document_associations').insert(association);
 
         return { association_id: association.association_id };
     }
@@ -28,13 +29,13 @@ class DocumentAssociation {
     /**
      * Delete document associations by document ID
      */
-    static async deleteByDocument(document_id: string): Promise<void> {
-        const { knex, tenant } = await createTenantKnex();
+    static async deleteByDocument(knexOrTrx: Knex | Knex.Transaction, document_id: string): Promise<void> {
+        const tenant = await this.getTenant();
         if (!tenant) {
             throw new Error('No tenant found');
         }
 
-        await knex('document_associations')
+        await knexOrTrx('document_associations')
             .where({ document_id, tenant })
             .delete();
     }
@@ -42,13 +43,13 @@ class DocumentAssociation {
     /**
      * Delete document associations by entity
      */
-    static async deleteByEntity(entity_id: string, entity_type: string): Promise<void> {
-        const { knex, tenant } = await createTenantKnex();
+    static async deleteByEntity(knexOrTrx: Knex | Knex.Transaction, entity_id: string, entity_type: string): Promise<void> {
+        const tenant = await this.getTenant();
         if (!tenant) {
             throw new Error('No tenant found');
         }
 
-        await knex('document_associations')
+        await knexOrTrx('document_associations')
             .where({ entity_id, entity_type, tenant })
             .delete();
     }
@@ -56,13 +57,13 @@ class DocumentAssociation {
     /**
      * Get document associations by entity
      */
-    static async getByEntity(entity_id: string, entity_type: string): Promise<IDocumentAssociation[]> {
-        const { knex, tenant } = await createTenantKnex();
+    static async getByEntity(knexOrTrx: Knex | Knex.Transaction, entity_id: string, entity_type: string): Promise<IDocumentAssociation[]> {
+        const tenant = await this.getTenant();
         if (!tenant) {
             throw new Error('No tenant found');
         }
 
-        return knex('document_associations')
+        return knexOrTrx('document_associations')
             .where({ entity_id, entity_type, tenant })
             .orderBy('entered_at', 'desc');
     }
@@ -70,13 +71,13 @@ class DocumentAssociation {
     /**
      * Check if a document is associated with an entity
      */
-    static async isAssociated(document_id: string, entity_id: string, entity_type: string): Promise<boolean> {
-        const { knex, tenant } = await createTenantKnex();
+    static async isAssociated(knexOrTrx: Knex | Knex.Transaction, document_id: string, entity_id: string, entity_type: string): Promise<boolean> {
+        const tenant = await this.getTenant();
         if (!tenant) {
             throw new Error('No tenant found');
         }
 
-        const result = await knex('document_associations')
+        const result = await knexOrTrx('document_associations')
             .where({ document_id, entity_id, entity_type, tenant })
             .first();
 

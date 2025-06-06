@@ -1,14 +1,18 @@
 // server/src/lib/models/tag.ts
-import { createTenantKnex } from '../db';
+import { getCurrentTenantId } from '../db';
 import { ITag, TaggedEntityType } from '../../interfaces/tag.interfaces';
 import { v4 as uuidv4 } from 'uuid';
+import { Knex } from 'knex';
 
 const Tag = {
-  getAll: async (): Promise<ITag[]> => {
+  getAll: async (knexOrTrx: Knex | Knex.Transaction): Promise<ITag[]> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
-      const tags = await db<ITag>('tags')
-        .where('tenant', tenant!)
+      const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required for tag operations');
+      }
+      const tags = await knexOrTrx<ITag>('tags')
+        .where('tenant', tenant)
         .select('*');
       return tags;
     } catch (error) {
@@ -17,13 +21,16 @@ const Tag = {
     }
   },
 
-  getAllByEntityId: async (tagged_id: string, tagged_type: TaggedEntityType): Promise<ITag[]> => {
+  getAllByEntityId: async (knexOrTrx: Knex | Knex.Transaction, tagged_id: string, tagged_type: TaggedEntityType): Promise<ITag[]> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
-      const tags = await db<ITag>('tags')
+      const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required for tag operations');
+      }
+      const tags = await knexOrTrx<ITag>('tags')
         .where('tagged_id', tagged_id)
         .where('tagged_type', tagged_type)
-        .where('tenant', tenant!)
+        .where('tenant', tenant)
         .select('*');
       return tags;
     } catch (error) {
@@ -32,12 +39,15 @@ const Tag = {
     }
   },
 
-  get: async (tag_id: string): Promise<ITag | undefined> => {
+  get: async (knexOrTrx: Knex | Knex.Transaction, tag_id: string): Promise<ITag | undefined> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
-      const tag = await db<ITag>('tags')
+      const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required for tag operations');
+      }
+      const tag = await knexOrTrx<ITag>('tags')
         .where('tag_id', tag_id)
-        .where('tenant', tenant!)
+        .where('tenant', tenant)
         .first();
       return tag;
     } catch (error) {
@@ -46,11 +56,14 @@ const Tag = {
     }
   },
 
-  insert: async (tag: Omit<ITag, 'tag_id' | 'tenant'>): Promise<Pick<ITag, "tag_id">> => {
+  insert: async (knexOrTrx: Knex | Knex.Transaction, tag: Omit<ITag, 'tag_id' | 'tenant'>): Promise<Pick<ITag, "tag_id">> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
-      const [insertedTag] = await db<ITag>('tags')
-        .insert({ ...tag, tag_id: uuidv4(), tenant: tenant! })
+      const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required for tag operations');
+      }
+      const [insertedTag] = await knexOrTrx<ITag>('tags')
+        .insert({ ...tag, tag_id: uuidv4(), tenant })
         .returning('tag_id');
       return { tag_id: insertedTag.tag_id };
     } catch (error) {
@@ -59,12 +72,15 @@ const Tag = {
     }
   },
 
-  update: async (tag_id: string, tag: Partial<ITag>): Promise<void> => {
+  update: async (knexOrTrx: Knex | Knex.Transaction, tag_id: string, tag: Partial<ITag>): Promise<void> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
-      await db<ITag>('tags')
+      const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required for tag operations');
+      }
+      await knexOrTrx<ITag>('tags')
         .where('tag_id', tag_id)
-        .where('tenant', tenant!)
+        .where('tenant', tenant)
         .update(tag);
     } catch (error) {
       console.error(`Error updating tag with id ${tag_id}:`, error);
@@ -72,12 +88,15 @@ const Tag = {
     }
   },
 
-  delete: async (tag_id: string): Promise<void> => {
+  delete: async (knexOrTrx: Knex | Knex.Transaction, tag_id: string): Promise<void> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
-      await db<ITag>('tags')
+      const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required for tag operations');
+      }
+      await knexOrTrx<ITag>('tags')
         .where('tag_id', tag_id)
-        .where('tenant', tenant!)
+        .where('tenant', tenant)
         .del();
     } catch (error) {
       console.error(`Error deleting tag with id ${tag_id}:`, error);
@@ -85,12 +104,15 @@ const Tag = {
     }
   },
 
-  getAllByEntityIds: async (tagged_ids: string[], tagged_type: TaggedEntityType): Promise<ITag[]> => {
+  getAllByEntityIds: async (knexOrTrx: Knex | Knex.Transaction, tagged_ids: string[], tagged_type: TaggedEntityType): Promise<ITag[]> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
-      const tags = await db<ITag>('tags')
+      const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required for tag operations');
+      }
+      const tags = await knexOrTrx<ITag>('tags')
         .where('tagged_type', tagged_type)
-        .where('tenant', tenant!)
+        .where('tenant', tenant)
         .whereIn('tagged_id', tagged_ids)
         .select('*');
       return tags;
@@ -100,12 +122,15 @@ const Tag = {
     }
   },
 
-  getAllUniqueTagTextsByType: async (tagged_type: TaggedEntityType): Promise<string[]> => {
+  getAllUniqueTagTextsByType: async (knexOrTrx: Knex | Knex.Transaction, tagged_type: TaggedEntityType): Promise<string[]> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
-      const tags = await db<ITag>('tags')
+      const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required for tag operations');
+      }
+      const tags = await knexOrTrx<ITag>('tags')
         .where('tagged_type', tagged_type)
-        .where('tenant', tenant!)
+        .where('tenant', tenant)
         .distinct('tag_text')
         .orderBy('tag_text');
       return tags.map((t):string => t.tag_text);

@@ -52,7 +52,7 @@ export async function createBlockDocument(
         order_number: 0
       };
 
-      const documentResult = await Document.insert(documentData, trx);
+      const documentResult = await Document.insert(trx, documentData);
 
       // Create the block content
       const [blockContent] = await trx('document_block_content')

@@ -1,18 +1,19 @@
 // server/src/lib/models/billingPlan.ts
+import { Knex } from 'knex';
 import { IBillingPlan } from 'server/src/interfaces';
-import { createTenantKnex } from 'server/src/lib/db';
+import { getCurrentTenantId } from 'server/src/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 
 const BillingPlan = {
-  isInUse: async (planId: string): Promise<boolean> => {
-    const {knex: db, tenant} = await createTenantKnex();
+  isInUse: async (knexOrTrx: Knex | Knex.Transaction, planId: string): Promise<boolean> => {
+    const tenant = await getCurrentTenantId();
     
     if (!tenant) {
       throw new Error('Tenant context is required for checking billing plan usage');
     }
 
     try {
-      const result = await db('company_billing_plans')
+      const result = await knexOrTrx('company_billing_plans')
         .where({
           plan_id: planId,
           tenant
@@ -27,15 +28,15 @@ const BillingPlan = {
     }
   },
 
-  hasAssociatedServices: async (planId: string): Promise<boolean> => {
-    const {knex: db, tenant} = await createTenantKnex();
+  hasAssociatedServices: async (knexOrTrx: Knex | Knex.Transaction, planId: string): Promise<boolean> => {
+    const tenant = await getCurrentTenantId();
     
     if (!tenant) {
       throw new Error('Tenant context is required for checking billing plan services');
     }
 
     try {
-      const result = await db('plan_services')
+      const result = await knexOrTrx('plan_services')
         .where({
           plan_id: planId,
           tenant
@@ -50,20 +51,20 @@ const BillingPlan = {
     }
   },
 
-  delete: async (planId: string): Promise<void> => {
-    const {knex: db, tenant} = await createTenantKnex();
+  delete: async (knexOrTrx: Knex | Knex.Transaction, planId: string): Promise<void> => {
+    const tenant = await getCurrentTenantId();
     
     if (!tenant) {
       throw new Error('Tenant context is required for deleting billing plan');
     }
 
     try {
-      const isUsed = await BillingPlan.isInUse(planId);
+      const isUsed = await BillingPlan.isInUse(knexOrTrx, planId);
       if (isUsed) {
         throw new Error('Cannot delete plan that is in use by companies');
       }
 
-      const deletedCount = await db('billing_plans')
+      const deletedCount = await knexOrTrx('billing_plans')
         .where({
           plan_id: planId,
           tenant
@@ -79,15 +80,15 @@ const BillingPlan = {
     }
   },
 
-  getAll: async (): Promise<IBillingPlan[]> => {
-    const {knex: db, tenant} = await createTenantKnex();
+  getAll: async (knexOrTrx: Knex | Knex.Transaction): Promise<IBillingPlan[]> => {
+    const tenant = await getCurrentTenantId();
     
     if (!tenant) {
       throw new Error('Tenant context is required for fetching billing plans');
     }
 
     try {
-      const plans = await db<IBillingPlan>('billing_plans')
+      const plans = await knexOrTrx<IBillingPlan>('billing_plans')
         .where({ tenant })
         .select('*');
 
@@ -99,8 +100,8 @@ const BillingPlan = {
     }
   },
 
-  create: async (plan: Omit<IBillingPlan, 'plan_id'>): Promise<IBillingPlan> => {
-    const {knex: db, tenant} = await createTenantKnex();
+  create: async (knexOrTrx: Knex | Knex.Transaction, plan: Omit<IBillingPlan, 'plan_id'>): Promise<IBillingPlan> => {
+    const tenant = await getCurrentTenantId();
     if (!tenant) {
       throw new Error('No tenant found');
     }
@@ -109,12 +110,12 @@ const BillingPlan = {
       plan_id: uuidv4(),
       tenant
     };
-    const [createdPlan] = await db<IBillingPlan>('billing_plans').insert(planWithId).returning('*');
+    const [createdPlan] = await knexOrTrx<IBillingPlan>('billing_plans').insert(planWithId).returning('*');
     return createdPlan;
   },
 
-  update: async (planId: string, updateData: Partial<IBillingPlan>): Promise<IBillingPlan> => {
-    const {knex: db, tenant} = await createTenantKnex();
+  update: async (knexOrTrx: Knex | Knex.Transaction, planId: string, updateData: Partial<IBillingPlan>): Promise<IBillingPlan> => {
+    const tenant = await getCurrentTenantId();
     
     if (!tenant) {
       throw new Error('Tenant context is required for updating billing plan');
@@ -124,7 +125,7 @@ const BillingPlan = {
       // Remove tenant from update data to prevent modification
       const { tenant: _, ...dataToUpdate } = updateData;
 
-      const [updatedPlan] = await db<IBillingPlan>('billing_plans')
+      const [updatedPlan] = await knexOrTrx<IBillingPlan>('billing_plans')
         .where({
           plan_id: planId,
           tenant
@@ -143,15 +144,15 @@ const BillingPlan = {
     }
   },
 
-  findById: async (planId: string): Promise<IBillingPlan | null> => {
-    const {knex: db, tenant} = await createTenantKnex();
+  findById: async (knexOrTrx: Knex | Knex.Transaction, planId: string): Promise<IBillingPlan | null> => {
+    const tenant = await getCurrentTenantId();
     if (!tenant) {
       throw new Error('Tenant context is required for fetching a billing plan');
     }
 
     try {
       // Assume config fields are columns on billing_plans table
-      const plan = await db<IBillingPlan>('billing_plans')
+      const plan = await knexOrTrx<IBillingPlan>('billing_plans')
         .where({
           plan_id: planId,
           tenant: tenant

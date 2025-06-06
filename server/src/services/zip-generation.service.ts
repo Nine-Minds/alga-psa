@@ -3,6 +3,7 @@ import archiver from 'archiver';
 import { FileStoreModel } from '../models/storage';
 import { StorageService } from '../lib/storage/StorageService';
 import { v4 as uuidv4 } from 'uuid';
+import { createTenantKnex } from '../lib/db';
 
 export class ZipGenerationService {
   private storageService: StorageService;
@@ -27,7 +28,8 @@ export class ZipGenerationService {
         let successCount = 0;
         for (const record of fileRecords) {
           try {
-            const file = await FileStoreModel.findById(record.file_id);
+            const { knex } = await createTenantKnex();
+            const file = await FileStoreModel.findById(knex, record.file_id);
             if (!file) {
               console.warn(`File not found: ${record.file_id}`);
               continue;
@@ -57,17 +59,18 @@ export class ZipGenerationService {
   }
 
   async storeZipFile(zipFilePath: string, metadata: Record<string, unknown>): Promise<string> {
-    const fileStore = await FileStoreModel.create({
-      fileId: uuidv4(),
+    const { knex } = await createTenantKnex();
+    const fileStore = await FileStoreModel.create(knex, {
       file_name: `invoices-${Date.now()}.zip`,
       original_name: 'invoices.zip',
       mime_type: 'application/zip',
       file_size: 0, // Will be updated after upload
       storage_path: zipFilePath,
       uploaded_by_id: 'system',
+      fileId: uuidv4() // Add fileId since FileStore type expects it
     });
 
-    await FileStoreModel.createDocumentSystemEntry({
+    await FileStoreModel.createDocumentSystemEntry(knex, {
       fileId: fileStore.file_id,
       category: 'invoice-zip',
       metadata,

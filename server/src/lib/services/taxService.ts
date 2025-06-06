@@ -191,6 +191,7 @@ export class TaxService {
   }
   
   private async calculateCompositeTax(taxRate: ITaxRate, netAmount: number, date: ISO8601String): Promise<ITaxCalculationResult> {
+    const { knex } = await createTenantKnex();
     const components = await CompanyTaxSettings.getCompositeTaxComponents(taxRate.tax_rate_id);
     let totalTaxAmount = 0;
     let taxableAmount = netAmount;
@@ -218,6 +219,7 @@ export class TaxService {
   }
 
   private async calculateSimpleTax(taxRate: ITaxRate, netAmount: number, date: ISO8601String): Promise<ITaxCalculationResult> {
+    const { knex } = await createTenantKnex();
     const thresholds = await CompanyTaxSettings.getTaxRateThresholds(taxRate.tax_rate_id);
     
     if (thresholds.length > 0) {
@@ -295,6 +297,7 @@ export class TaxService {
   }
 
   private async getApplicableTaxHoliday(taxComponentId: string, date: ISO8601String): Promise<ITaxHoliday | undefined> {
+    const { knex } = await createTenantKnex();
     const holidays = await CompanyTaxSettings.getTaxHolidays(taxComponentId);
     const currentDate = new Date(date);
 
@@ -309,6 +312,7 @@ export class TaxService {
       throw new Error('Tenant context is required for tax settings lookup');
     }
 
+    const { knex } = await createTenantKnex();
     let taxSettings = await CompanyTaxSettings.get(companyId);
 
     if (!taxSettings) {

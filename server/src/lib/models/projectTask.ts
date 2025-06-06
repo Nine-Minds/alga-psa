@@ -1,33 +1,33 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
-import { createTenantKnex } from 'server/src/lib/db';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentTenantId } from '../tenant';
+import { getCurrentUser } from '../actions/user-actions/userActions';
 import { 
   IProjectTask, 
   ITaskChecklistItem, 
   IProjectTicketLink, 
   IProjectTicketLinkWithDetails, 
   IProjectTaskCardInfo 
-} from 'server/src/interfaces/project.interfaces';
+} from '../../interfaces/project.interfaces';
 import ProjectModel from './project'
 
 const ProjectTaskModel = {
-  addTask: async (phaseId: string, taskData: Omit<IProjectTask, 'task_id' | 'phase_id' | 'created_at' | 'updated_at' | 'tenant' | 'wbs_code'> & { order_key?: string }): Promise<IProjectTask> => {
+  addTask: async (knexOrTrx: Knex | Knex.Transaction, phaseId: string, taskData: Omit<IProjectTask, 'task_id' | 'phase_id' | 'created_at' | 'updated_at' | 'tenant' | 'wbs_code'> & { order_key?: string }): Promise<IProjectTask> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
-      const phase = await ProjectModel.getPhaseById(phaseId);
+      const tenant = await getCurrentTenantId();
+      const phase = await ProjectModel.getPhaseById(knexOrTrx, phaseId);
 
       if (!phase) {
         throw new Error('Phase not found');
       }
   
-      const newWbsCode = await ProjectModel.generateNextWbsCode(phase.wbs_code);
+      const newWbsCode = await ProjectModel.generateNextWbsCode(knexOrTrx, phase.wbs_code);
   
       // If no order_key provided, generate one at the end
       let orderKey = taskData.order_key;
       if (!orderKey) {
         const { generateKeyBetween } = await import('fractional-indexing');
-        const lastTask = await db('project_tasks')
+        const lastTask = await knexOrTrx('project_tasks')
           .where({ 
             phase_id: phaseId, 
             project_status_mapping_id: taskData.project_status_mapping_id,
@@ -38,7 +38,7 @@ const ProjectTaskModel = {
         orderKey = generateKeyBetween(lastTask?.order_key || null, null);
       }
   
-      const [newTask] = await db<IProjectTask>('project_tasks')
+      const [newTask] = await knexOrTrx<IProjectTask>('project_tasks')
         .insert({
           ...taskData,
           task_id: uuidv4(),
@@ -47,7 +47,7 @@ const ProjectTaskModel = {
           project_status_mapping_id: taskData.project_status_mapping_id,
           wbs_code: newWbsCode,
           order_key: orderKey,
-          tenant: tenant!,
+          tenant,
         })
         .returning('*');
   
@@ -58,9 +58,9 @@ const ProjectTaskModel = {
     }
   },
 
-  updateTask: async (taskId: string, taskData: Partial<IProjectTask>): Promise<IProjectTask> => {
+  updateTask: async (knexOrTrx: Knex | Knex.Transaction, taskId: string, taskData: Partial<IProjectTask>): Promise<IProjectTask> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
+      const tenant = await getCurrentTenantId();
 
       // Filter out invalid columns and transform data
       const validColumns = [
@@ -115,9 +115,9 @@ const ProjectTaskModel = {
         }
       }
 
-      const [updatedTask] = await db<IProjectTask>('project_tasks')
+      const [updatedTask] = await knexOrTrx<IProjectTask>('project_tasks')
         .where('task_id', taskId)
-        .andWhere('tenant', tenant!)
+        .andWhere('tenant', tenant)
         .update(finalTaskData)
         .returning('*');
 
@@ -128,14 +128,14 @@ const ProjectTaskModel = {
     }
   },
 
-  updateTaskStatus: async (taskId: string, projectStatusMappingId: string): Promise<IProjectTask> => {
+  updateTaskStatus: async (knexOrTrx: Knex | Knex.Transaction, taskId: string, projectStatusMappingId: string): Promise<IProjectTask> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
+      const tenant = await getCurrentTenantId();
       
       // Get current task to preserve phase information
-      const task = await db<IProjectTask>('project_tasks')
+      const task = await knexOrTrx<IProjectTask>('project_tasks')
         .where('task_id', taskId)
-        .andWhere('tenant', tenant!)
+        .andWhere('tenant', tenant)
         .first();
       
       if (!task) {
@@ -144,15 +144,15 @@ const ProjectTaskModel = {
 
       // Generate new WBS code for the task in its current phase
       const parentWbs = task.wbs_code.split('.').slice(0, -1).join('.');
-      const newWbsCode = await ProjectModel.generateNextWbsCode(parentWbs);
+      const newWbsCode = await ProjectModel.generateNextWbsCode(knexOrTrx, parentWbs);
 
-      const [updatedTask] = await db<IProjectTask>('project_tasks')
+      const [updatedTask] = await knexOrTrx<IProjectTask>('project_tasks')
         .where('task_id', taskId)
-        .andWhere('tenant', tenant!)
+        .andWhere('tenant', tenant)
         .update({
           project_status_mapping_id: projectStatusMappingId,
           wbs_code: newWbsCode,
-          updated_at: db.fn.now()
+          updated_at: knexOrTrx.fn.now()
         })
         .returning('*');
       return updatedTask;
@@ -162,12 +162,12 @@ const ProjectTaskModel = {
     }
   },
 
-  getTaskById: async (taskId: string): Promise<IProjectTask | null> => {
+  getTaskById: async (knexOrTrx: Knex | Knex.Transaction, taskId: string): Promise<IProjectTask | null> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
-      const task = await db<IProjectTask>('project_tasks')
+      const tenant = await getCurrentTenantId();
+      const task = await knexOrTrx<IProjectTask>('project_tasks')
         .where('task_id', taskId)
-        .andWhere('tenant', tenant!)
+        .andWhere('tenant', tenant)
         .first();
       return task || null;
     } catch (error) {
@@ -176,33 +176,45 @@ const ProjectTaskModel = {
     }
   },
 
-  deleteTask: async (taskId: string): Promise<void> => {
+  deleteTask: async (knexOrTrx: Knex | Knex.Transaction, taskId: string): Promise<void> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
-      await db.transaction(async (trx: Knex.Transaction) => {
+      const tenant = await getCurrentTenantId();
+      
+      const trx = knexOrTrx.isTransaction ? knexOrTrx : await knexOrTrx.transaction();
+      
+      try {
         await trx('task_resources')
           .where('task_id', taskId)
-          .andWhere('tenant', tenant!)
+          .andWhere('tenant', tenant)
           .del();
         await trx('task_checklist_items')
           .where('task_id', taskId)
-          .andWhere('tenant', tenant!)
+          .andWhere('tenant', tenant)
           .del();
         await trx<IProjectTask>('project_tasks')
           .where('task_id', taskId)
-          .andWhere('tenant', tenant!)
+          .andWhere('tenant', tenant)
           .del();
-      });
+          
+        if (!knexOrTrx.isTransaction) {
+          await trx.commit();
+        }
+      } catch (error) {
+        if (!knexOrTrx.isTransaction) {
+          await trx.rollback();
+        }
+        throw error;
+      }
     } catch (error) {
       console.error('Error deleting task:', error);
       throw error;
     }
   },
 
-  getTasks: async (projectId: string): Promise<IProjectTaskCardInfo[]> => {
+  getTasks: async (knexOrTrx: Knex | Knex.Transaction, projectId: string): Promise<IProjectTaskCardInfo[]> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
-      const tasks = await db<IProjectTask>('project_tasks')
+      const tenant = await getCurrentTenantId();
+      const tasks = await knexOrTrx<IProjectTask>('project_tasks')
         .join('project_phases', function() {
           this.on('project_tasks.phase_id', 'project_phases.phase_id')
               .andOn('project_tasks.tenant', 'project_phases.tenant')
@@ -212,12 +224,12 @@ const ProjectTaskModel = {
               .andOn('project_tasks.tenant', 'users.tenant')
         })
         .where('project_phases.project_id', projectId)
-        .andWhere('project_tasks.phase_id', db.ref('project_phases.phase_id')) // Ensure phase matches
-        .andWhere('project_tasks.tenant', tenant!) // Explicit tenant filter on main table
+        .andWhere('project_tasks.phase_id', knexOrTrx.ref('project_phases.phase_id')) // Ensure phase matches
+        .andWhere('project_tasks.tenant', tenant) // Explicit tenant filter on main table
         .select(
           'project_tasks.*',
           'project_phases.project_id',
-          db.raw('CONCAT(users.first_name, \' \', users.last_name) as assigned_to_name')
+          knexOrTrx.raw('CONCAT(users.first_name, \' \', users.last_name) as assigned_to_name')
         )
         .orderBy('project_tasks.wbs_code');
       return tasks.sort((a, b) => {
@@ -240,13 +252,16 @@ const ProjectTaskModel = {
     }
   },
 
-  reorderTasksInStatus: async (tasks: { taskId: string, newWbsCode: string }[]): Promise<void> => {
+  reorderTasksInStatus: async (knexOrTrx: Knex | Knex.Transaction, tasks: { taskId: string, newWbsCode: string }[]): Promise<void> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
-      await db.transaction(async (trx: Knex.Transaction) => {
+      const tenant = await getCurrentTenantId();
+      
+      const trx = knexOrTrx.isTransaction ? knexOrTrx : await knexOrTrx.transaction();
+      
+      try {
         const taskRecords = await trx('project_tasks')
           .whereIn('task_id', tasks.map((t): string => t.taskId))
-          .andWhere('tenant', tenant!)
+          .andWhere('tenant', tenant)
           .select('task_id', 'phase_id');
 
         if (taskRecords.length !== tasks.length) {
@@ -261,13 +276,22 @@ const ProjectTaskModel = {
         await Promise.all(tasks.map(({taskId, newWbsCode}): Promise<number> =>
           trx('project_tasks')
             .where('task_id', taskId)
-            .andWhere('tenant', tenant!)
+            .andWhere('tenant', tenant)
             .update({
               wbs_code: newWbsCode,
               updated_at: trx.fn.now()
             })
         ));
-      });
+        
+        if (!knexOrTrx.isTransaction) {
+          await trx.commit();
+        }
+      } catch (error) {
+        if (!knexOrTrx.isTransaction) {
+          await trx.rollback();
+        }
+        throw error;
+      }
     } catch (error) {
       console.error('Error reordering tasks:', error);
       throw error;
@@ -275,9 +299,9 @@ const ProjectTaskModel = {
   },
 
   // Task Checklist Methods
-  addChecklistItem: async (taskId: string, itemData: Omit<ITaskChecklistItem, 'checklist_item_id' | 'task_id' | 'created_at' | 'updated_at' | 'tenant'>): Promise<ITaskChecklistItem> => {
-    const {knex: db, tenant} = await createTenantKnex();
-    const [newItem] = await db('task_checklist_items')
+  addChecklistItem: async (knexOrTrx: Knex | Knex.Transaction, taskId: string, itemData: Omit<ITaskChecklistItem, 'checklist_item_id' | 'task_id' | 'created_at' | 'updated_at' | 'tenant'>): Promise<ITaskChecklistItem> => {
+    const tenant = await getCurrentTenantId();
+    const [newItem] = await knexOrTrx('task_checklist_items')
       .insert({
         ...itemData,
         task_id: taskId,
@@ -288,45 +312,44 @@ const ProjectTaskModel = {
     return newItem;
   },
 
-  updateChecklistItem: async (checklistItemId: string, itemData: Partial<ITaskChecklistItem>): Promise<ITaskChecklistItem> => {
-    const {knex: db} = await createTenantKnex();
-    const [updatedItem] = await db('task_checklist_items')
+  updateChecklistItem: async (knexOrTrx: Knex | Knex.Transaction, checklistItemId: string, itemData: Partial<ITaskChecklistItem>): Promise<ITaskChecklistItem> => {
+    const [updatedItem] = await knexOrTrx('task_checklist_items')
       .where({ checklist_item_id: checklistItemId })
       .update({
         ...itemData,
-        updated_at: db.fn.now()
+        updated_at: knexOrTrx.fn.now()
       })
       .returning('*');
     return updatedItem;
   },
 
-  deleteChecklistItem: async (checklistItemId: string): Promise<void> => {
-    const {knex: db, tenant} = await createTenantKnex();
-    await db('task_checklist_items')
+  deleteChecklistItem: async (knexOrTrx: Knex | Knex.Transaction, checklistItemId: string): Promise<void> => {
+    const tenant = await getCurrentTenantId();
+    await knexOrTrx('task_checklist_items')
       .where({
         checklist_item_id: checklistItemId,
-        tenant: tenant!
+        tenant
       })
       .delete();
   },
 
-  getChecklistItems: async (taskId: string): Promise<ITaskChecklistItem[]> => {
-    const {knex: db, tenant} = await createTenantKnex();
-    const items = await db('task_checklist_items')
+  getChecklistItems: async (knexOrTrx: Knex | Knex.Transaction, taskId: string): Promise<ITaskChecklistItem[]> => {
+    const tenant = await getCurrentTenantId();
+    const items = await knexOrTrx('task_checklist_items')
       .where({
         task_id: taskId,
-        tenant: tenant!
+        tenant
       })
       .orderBy('order_number', 'asc');
     return items;
   },
 
-  deleteChecklistItems: async (taskId: string): Promise<void> => {
+  deleteChecklistItems: async (knexOrTrx: Knex | Knex.Transaction, taskId: string): Promise<void> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
-      await db('task_checklist_items')
+      const tenant = await getCurrentTenantId();
+      await knexOrTrx('task_checklist_items')
         .where('task_id', taskId)
-        .andWhere('tenant', tenant!)
+        .andWhere('tenant', tenant)
         .delete();
     } catch (error) {
       console.error('Error deleting checklist items:', error);
@@ -334,10 +357,10 @@ const ProjectTaskModel = {
     }
   },
 
-  getAllTaskChecklistItems: async (projectId: string): Promise<{ [taskId: string]: ITaskChecklistItem[] }> => {
+  getAllTaskChecklistItems: async (knexOrTrx: Knex | Knex.Transaction, projectId: string): Promise<{ [taskId: string]: ITaskChecklistItem[] }> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
-      const items = await db('task_checklist_items')
+      const tenant = await getCurrentTenantId();
+      const items = await knexOrTrx('task_checklist_items')
         .join('project_tasks', function() {
           this.on('task_checklist_items.task_id', 'project_tasks.task_id')
               .andOn('task_checklist_items.tenant', 'project_tasks.tenant')
@@ -347,7 +370,7 @@ const ProjectTaskModel = {
               .andOn('project_tasks.tenant', 'project_phases.tenant')
         })
         .where('project_phases.project_id', projectId)
-        .andWhere('task_checklist_items.tenant', tenant!)
+        .andWhere('task_checklist_items.tenant', tenant)
         .orderBy('task_checklist_items.order_number', 'asc')
         .select('task_checklist_items.*');
 
@@ -365,20 +388,20 @@ const ProjectTaskModel = {
   },
 
   // Task Resources Methods
-  addTaskResource: async (taskId: string, userId: string, role?: string): Promise<void> => {
+  addTaskResource: async (knexOrTrx: Knex | Knex.Transaction, taskId: string, userId: string, role?: string): Promise<void> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
+      const tenant = await getCurrentTenantId();
       
-      const task = await db('project_tasks')
+      const task = await knexOrTrx('project_tasks')
         .where('task_id', taskId)
-        .andWhere('tenant', tenant!)
+        .andWhere('tenant', tenant)
         .first();
       
       if (!task) {
         throw new Error('Task not found');
       }
 
-      await db('task_resources').insert({
+      await knexOrTrx('task_resources').insert({
         tenant,
         task_id: taskId,
         assigned_to: task.assigned_to,
@@ -391,12 +414,12 @@ const ProjectTaskModel = {
     }
   },
 
-  removeTaskResource: async (assignmentId: string): Promise<void> => {
+  removeTaskResource: async (knexOrTrx: Knex | Knex.Transaction, assignmentId: string): Promise<void> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
-      await db('task_resources')
+      const tenant = await getCurrentTenantId();
+      await knexOrTrx('task_resources')
         .where('assignment_id', assignmentId)
-        .andWhere('tenant', tenant!)
+        .andWhere('tenant', tenant)
         .del();
     } catch (error) {
       console.error('Error removing task resource:', error);
@@ -404,7 +427,7 @@ const ProjectTaskModel = {
     }
   },
 
-  getTaskResources: async (taskId: string): Promise<Array<{
+  getTaskResources: async (knexOrTrx: Knex | Knex.Transaction, taskId: string): Promise<Array<{
     assignment_id: string;
     task_id: string;
     assigned_to: string | null;
@@ -415,8 +438,8 @@ const ProjectTaskModel = {
     tenant: string;
   }>> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
-      const resources = await db('task_resources')
+      const tenant = await getCurrentTenantId();
+      const resources = await knexOrTrx('task_resources')
         .select(
           'task_resources.*',
           'users.first_name',
@@ -427,7 +450,7 @@ const ProjectTaskModel = {
               .andOn('task_resources.tenant', 'users.tenant')
         })
         .where('task_id', taskId)
-        .andWhere('task_resources.tenant', tenant!);
+        .andWhere('task_resources.tenant', tenant);
       return resources;
     } catch (error) {
       console.error('Error getting task resources:', error);
@@ -436,17 +459,17 @@ const ProjectTaskModel = {
   },
 
   // Task Ticket Links Methods
-  addTaskTicketLink: async (projectId: string, taskId: string | null, ticketId: string, phaseId: string): Promise<IProjectTicketLink> => {
+  addTaskTicketLink: async (knexOrTrx: Knex | Knex.Transaction, projectId: string, taskId: string | null, ticketId: string, phaseId: string): Promise<IProjectTicketLink> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
+      const tenant = await getCurrentTenantId();
 
-      const existingLink = await db<IProjectTicketLink>('project_ticket_links')
+      const existingLink = await knexOrTrx<IProjectTicketLink>('project_ticket_links')
         .where({
           project_id: projectId,
           phase_id: phaseId,
           task_id: taskId,
           ticket_id: ticketId,
-          tenant: tenant!
+          tenant
         })
         .first();
 
@@ -454,15 +477,15 @@ const ProjectTaskModel = {
         throw new Error('This ticket is already linked to this task');
       }
 
-      const [newLink] = await db<IProjectTicketLink>('project_ticket_links')
+      const [newLink] = await knexOrTrx<IProjectTicketLink>('project_ticket_links')
         .insert({
           link_id: uuidv4(),
           project_id: projectId,
           phase_id: phaseId,
           task_id: taskId,
           ticket_id: ticketId,
-          tenant: tenant!,
-          created_at: db.fn.now()
+          tenant,
+          created_at: knexOrTrx.fn.now()
         })
         .returning('*');
       return newLink;
@@ -472,12 +495,12 @@ const ProjectTaskModel = {
     }
   },
 
-  getTaskTicketLinks: async (taskId: string): Promise<IProjectTicketLinkWithDetails[]> => {
+  getTaskTicketLinks: async (knexOrTrx: Knex | Knex.Transaction, taskId: string): Promise<IProjectTicketLinkWithDetails[]> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
-      const links = await db<IProjectTicketLink>('project_ticket_links')
+      const tenant = await getCurrentTenantId();
+      const links = await knexOrTrx<IProjectTicketLink>('project_ticket_links')
         .where('task_id', taskId)
-        .andWhere('project_ticket_links.tenant', tenant!)
+        .andWhere('project_ticket_links.tenant', tenant)
         .leftJoin('tickets', function() {
           this.on('project_ticket_links.ticket_id', 'tickets.ticket_id')
               .andOn('project_ticket_links.tenant', 'tickets.tenant')
@@ -500,12 +523,12 @@ const ProjectTaskModel = {
     }
   },
 
-  deleteTaskTicketLink: async (linkId: string): Promise<void> => {
+  deleteTaskTicketLink: async (knexOrTrx: Knex | Knex.Transaction, linkId: string): Promise<void> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
-      await db<IProjectTicketLink>('project_ticket_links')
+      const tenant = await getCurrentTenantId();
+      await knexOrTrx<IProjectTicketLink>('project_ticket_links')
         .where('link_id', linkId)
-        .andWhere('tenant', tenant!)
+        .andWhere('tenant', tenant)
         .del();
     } catch (error) {
       console.error('Error deleting ticket link:', error);
@@ -513,12 +536,12 @@ const ProjectTaskModel = {
     }
   },
 
-  updateTaskTicketLink: async (linkId: string, updateData: { project_id: string; phase_id: string }): Promise<void> => {
+  updateTaskTicketLink: async (knexOrTrx: Knex | Knex.Transaction, linkId: string, updateData: { project_id: string; phase_id: string }): Promise<void> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
-      await db('project_ticket_links')
+      const tenant = await getCurrentTenantId();
+      await knexOrTrx('project_ticket_links')
         .where('link_id', linkId)
-        .andWhere('tenant', tenant!)
+        .andWhere('tenant', tenant)
         .update(updateData);
     } catch (error) {
       console.error('Error updating task ticket link:', error);
@@ -526,12 +549,12 @@ const ProjectTaskModel = {
     }
   },
 
-  getAllTaskTicketLinks: async (projectId: string): Promise<{ [taskId: string]: IProjectTicketLinkWithDetails[] }> => {
+  getAllTaskTicketLinks: async (knexOrTrx: Knex | Knex.Transaction, projectId: string): Promise<{ [taskId: string]: IProjectTicketLinkWithDetails[] }> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
-      const links = await db('project_ticket_links')
+      const tenant = await getCurrentTenantId();
+      const links = await knexOrTrx('project_ticket_links')
         .where('project_ticket_links.project_id', projectId)
-        .andWhere('project_ticket_links.tenant', tenant!)
+        .andWhere('project_ticket_links.tenant', tenant)
         .leftJoin('tickets', function() {
           this.on('project_ticket_links.ticket_id', 'tickets.ticket_id')
               .andOn('project_ticket_links.tenant', 'tickets.tenant')
@@ -563,10 +586,10 @@ const ProjectTaskModel = {
     }
   },
 
-  getAllTaskResources: async (projectId: string): Promise<{ [taskId: string]: any[] }> => {
+  getAllTaskResources: async (knexOrTrx: Knex | Knex.Transaction, projectId: string): Promise<{ [taskId: string]: any[] }> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
-      const resources = await db('task_resources')
+      const tenant = await getCurrentTenantId();
+      const resources = await knexOrTrx('task_resources')
         .join('project_tasks', function() {
           this.on('task_resources.task_id', 'project_tasks.task_id')
               .andOn('task_resources.tenant', 'project_tasks.tenant')
@@ -580,7 +603,7 @@ const ProjectTaskModel = {
               .andOn('task_resources.tenant', 'users.tenant')
         })
         .where('project_phases.project_id', projectId)
-        .andWhere('task_resources.tenant', tenant!)
+        .andWhere('task_resources.tenant', tenant)
         .select(
           'task_resources.*',
           'users.first_name',

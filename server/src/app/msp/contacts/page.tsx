@@ -9,18 +9,20 @@ import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
 import Contacts from 'server/src/components/contacts/Contacts';
 import OverallInteractionsFeed from 'server/src/components/interactions/OverallInteractionsFeed';
+import { getConnection } from 'server/src/lib/db/db';
 
 type IdName = { id: string; name: string };
 
 export default async function ContactsPage() {
-  const contacts = await ContactModel.getAll(true);
-  const usersData = await UserModel.getAll(true);
+  const knex = await getConnection();
+  const contacts = await ContactModel.getAll(knex, true);
+  const usersData = await UserModel.getAll(knex, true);
   const companies: ICompany[] = await getAllCompanies(true);
 
   // Fetch roles for each user and combine data
   const usersWithRoles: IUserWithRoles[] = await Promise.all(
     usersData.map(async (user) => {
-      const roles = await UserModel.getUserRoles(user.user_id);
+      const roles = await UserModel.getUserRoles(knex, user.user_id);
       return { ...user, roles };
     })
   );

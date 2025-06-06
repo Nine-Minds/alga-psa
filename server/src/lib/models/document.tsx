@@ -1,27 +1,27 @@
 import logger from '../../utils/logger';
 import { IDocument } from '../../interfaces';
-import { createTenantKnex } from '../db';
+import { getCurrentTenantId } from '../db';
 import { Knex } from 'knex';
 
 const Document = {
-    getAll: async (): Promise<IDocument[]> => {
+    getAll: async (knexOrTrx: Knex | Knex.Transaction): Promise<IDocument[]> => {
         try {
-            const {knex: db, tenant} = await createTenantKnex();
+            const tenant = await getCurrentTenantId();
             
             if (!tenant) {
                 throw new Error('Tenant context is required for getting documents');
             }
 
-            return await db<IDocument>('documents')
+            return await knexOrTrx<IDocument>('documents')
                 .select(
                     'documents.*',
                     'users.first_name',
                     'users.last_name',
-                    db.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
+                    knexOrTrx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
                 )
                 .leftJoin('users', function() {
                     this.on('documents.created_by', '=', 'users.user_id')
-                        .andOn('users.tenant', '=', db.raw('?', [tenant]));
+                        .andOn('users.tenant', '=', knexOrTrx.raw('?', [tenant]));
                 })
                 .where({ 'documents.tenant': tenant });
         } catch (error) {
@@ -30,16 +30,16 @@ const Document = {
         }
     },
 
-    get: async (document_id: string, trx: Knex.Transaction): Promise<IDocument | undefined> => {
+    get: async (knexOrTrx: Knex | Knex.Transaction, document_id: string): Promise<IDocument | undefined> => {
         try {
-            return await trx<IDocument>('documents')
+            return await knexOrTrx<IDocument>('documents')
                     .select(
                         'documents.*',
                         'users.first_name as created_by_first_name',
                         'users.last_name as created_by_last_name',
-                        trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
-                        trx.raw("COALESCE(dt.type_name, sdt.type_name) as type_name"),
-                        trx.raw("COALESCE(dt.icon, sdt.icon) as type_icon")
+                        knexOrTrx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
+                        knexOrTrx.raw("COALESCE(dt.type_name, sdt.type_name) as type_name"),
+                        knexOrTrx.raw("COALESCE(dt.icon, sdt.icon) as type_icon")
                     )
                     .leftJoin('users', function() {
                         this.on('documents.created_by', '=', 'users.user_id');
@@ -57,9 +57,9 @@ const Document = {
         }
     },
 
-    insert: async (document: IDocument, trx: Knex.Transaction): Promise<Pick<IDocument, "document_id">> => {
+    insert: async (knexOrTrx: Knex | Knex.Transaction, document: IDocument): Promise<Pick<IDocument, "document_id">> => {
         try {
-            const [document_id] = await trx<IDocument>('documents')
+            const [document_id] = await knexOrTrx<IDocument>('documents')
                 .insert(document)
                 .returning('document_id');
             return document_id;
@@ -69,10 +69,10 @@ const Document = {
         }
     },
 
-    update: async (document_id: string, document: Partial<IDocument>, trx: Knex.Transaction): Promise<void> => {
+    update: async (knexOrTrx: Knex | Knex.Transaction, document_id: string, document: Partial<IDocument>): Promise<void> => {
         try {
             const { tenant: _, ...updateData } = document;
-            await trx<IDocument>('documents')
+            await knexOrTrx<IDocument>('documents')
                 .where('document_id', document_id)
                 .update(updateData);
         } catch (error) {
@@ -81,9 +81,9 @@ const Document = {
         }
     },
 
-    delete: async (document_id: string, trx: Knex.Transaction): Promise<void> => {
+    delete: async (knexOrTrx: Knex | Knex.Transaction, document_id: string): Promise<void> => {
         try {
-            await trx<IDocument>('documents')
+            await knexOrTrx<IDocument>('documents')
                 .where('document_id', document_id)
                 .del();
         } catch (error) {
@@ -92,10 +92,10 @@ const Document = {
         }
     },
 
-    getByTicketId: async (ticket_id: string, trx: Knex.Transaction): Promise<IDocument[]> => {
+    getByTicketId: async (knexOrTrx: Knex | Knex.Transaction, ticket_id: string): Promise<IDocument[]> => {
         try {
             // First, get document IDs from associations
-            const associations = await trx('document_associations')
+            const associations = await knexOrTrx('document_associations')
                 .select('document_id', 'tenant')
                 .where({
                     entity_id: ticket_id,
@@ -111,7 +111,7 @@ const Document = {
             const tenant = associations[0].tenant;
 
             // Get documents
-            const documents = await trx<IDocument>('documents')
+            const documents = await knexOrTrx<IDocument>('documents')
                 .select('documents.*')
                 .whereIn('document_id', documentIds)
                 .andWhere({ tenant });
@@ -121,7 +121,7 @@ const Document = {
             let usersMap: Record<string, any> = {};
             
             if (userIds.length > 0) {
-                const users = await trx('users')
+                const users = await knexOrTrx('users')
                     .select('user_id', 'first_name', 'last_name')
                     .whereIn('user_id', userIds)
                     .andWhere({ tenant });
@@ -148,10 +148,10 @@ const Document = {
         }
     },
 
-    getByCompanyId: async (company_id: string, trx: Knex.Transaction): Promise<IDocument[]> => {
+    getByCompanyId: async (knexOrTrx: Knex | Knex.Transaction, company_id: string): Promise<IDocument[]> => {
         try {
             // First, get document IDs from associations
-            const associations = await trx('document_associations')
+            const associations = await knexOrTrx('document_associations')
                 .select('document_id', 'tenant')
                 .where({
                     entity_id: company_id,
@@ -167,7 +167,7 @@ const Document = {
             const tenant = associations[0].tenant;
 
             // Get documents
-            const documents = await trx<IDocument>('documents')
+            const documents = await knexOrTrx<IDocument>('documents')
                 .select('documents.*')
                 .whereIn('document_id', documentIds)
                 .andWhere({ tenant });
@@ -177,7 +177,7 @@ const Document = {
             let usersMap: Record<string, any> = {};
             
             if (userIds.length > 0) {
-                const users = await trx('users')
+                const users = await knexOrTrx('users')
                     .select('user_id', 'first_name', 'last_name')
                     .whereIn('user_id', userIds)
                     .andWhere({ tenant });
@@ -204,10 +204,10 @@ const Document = {
         }
     },
 
-    getByContactNameId: async (contact_name_id: string, trx: Knex.Transaction): Promise<IDocument[]> => {
+    getByContactNameId: async (knexOrTrx: Knex | Knex.Transaction, contact_name_id: string): Promise<IDocument[]> => {
         try {
             // First, get document IDs from associations
-            const associations = await trx('document_associations')
+            const associations = await knexOrTrx('document_associations')
                 .select('document_id', 'tenant')
                 .where({
                     entity_id: contact_name_id,
@@ -223,7 +223,7 @@ const Document = {
             const tenant = associations[0].tenant;
 
             // Get documents
-            const documents = await trx<IDocument>('documents')
+            const documents = await knexOrTrx<IDocument>('documents')
                 .select('documents.*')
                 .whereIn('document_id', documentIds)
                 .andWhere({ tenant });
@@ -233,7 +233,7 @@ const Document = {
             let usersMap: Record<string, any> = {};
             
             if (userIds.length > 0) {
-                const users = await trx('users')
+                const users = await knexOrTrx('users')
                     .select('user_id', 'first_name', 'last_name')
                     .whereIn('user_id', userIds)
                     .andWhere({ tenant });

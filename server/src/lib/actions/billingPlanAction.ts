@@ -11,12 +11,12 @@ import { withTransaction } from '../../../../shared/db';
 
 export async function getBillingPlans(): Promise<IBillingPlan[]> {
     try {
-        const { tenant } = await createTenantKnex();
+        const { knex, tenant } = await createTenantKnex();
         if (!tenant) {
             throw new Error("tenant context not found");
         }
 
-        const plans = await BillingPlan.getAll();
+        const plans = await BillingPlan.getAll(knex);
         return plans;
     } catch (error) {
         console.error('Error fetching billing plans:', error);
@@ -29,7 +29,7 @@ export async function getBillingPlans(): Promise<IBillingPlan[]> {
 
 // New function to get a single billing plan by ID
 export async function getBillingPlanById(planId: string): Promise<IBillingPlan | null> {
-    const { tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
         throw new Error("tenant context not found");
     }
@@ -38,7 +38,7 @@ export async function getBillingPlanById(planId: string): Promise<IBillingPlan |
         // Assuming the BillingPlan model has a method like findById
         // This might need adjustment based on the actual model implementation
         // It should ideally fetch the base plan and potentially join/fetch config details
-        const plan = await BillingPlan.findById(planId);
+        const plan = await BillingPlan.findById(knex, planId);
         return plan; // The model method should return the plan with necessary fields
     } catch (error) {
         console.error(`Error fetching billing plan with ID ${planId}:`, error);
@@ -56,7 +56,7 @@ export async function getBillingPlanById(planId: string): Promise<IBillingPlan |
 export async function createBillingPlan(
     planData: Omit<IBillingPlan, 'plan_id'>
 ): Promise<IBillingPlan> {
-    const { tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
         throw new Error("tenant context not found");
     }
@@ -64,7 +64,7 @@ export async function createBillingPlan(
     try {
         // Remove tenant field if present in planData to prevent override
         const { tenant: _, ...safePlanData } = planData;
-        const plan = await BillingPlan.create(safePlanData);
+        const plan = await BillingPlan.create(knex, safePlanData);
         return plan;
     } catch (error) {
         console.error('Error creating billing plan:', error);
@@ -79,14 +79,14 @@ export async function updateBillingPlan(
     planId: string,
     updateData: Partial<IBillingPlan>
 ): Promise<IBillingPlan> {
-    const { tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
         throw new Error("tenant context not found");
     }
 
     try {
         // Fetch the existing plan to check its type
-        const existingPlan = await BillingPlan.findById(planId);
+        const existingPlan = await BillingPlan.findById(knex, planId);
         if (!existingPlan) {
             // Handle case where plan is not found before update attempt
             throw new Error(`Billing plan with ID ${planId} not found.`);
@@ -107,7 +107,7 @@ export async function updateBillingPlan(
 
         // Proceed with the update using the potentially modified data
         // Ensure BillingPlan.update handles empty updateData gracefully if all fields were removed
-        const plan = await BillingPlan.update(planId, safeUpdateData);
+        const plan = await BillingPlan.update(knex, planId, safeUpdateData);
         return plan;
     } catch (error) {
         console.error('Error updating billing plan:', error);
@@ -130,7 +130,7 @@ export async function deleteBillingPlan(planId: string): Promise<void> {
 
     try {
         // Check if plan is in use by companies before attempting to delete
-        const isInUse = await BillingPlan.isInUse(planId); // This check might be redundant now, but keep for clarity or remove if desired
+        const isInUse = await BillingPlan.isInUse(knex, planId); // This check might be redundant now, but keep for clarity or remove if desired
         if (isInUse) {
              // This specific error might be superseded by the detailed one below if the FK constraint is hit
              // Consider if this pre-check is still necessary or if relying on the DB error is sufficient
@@ -138,12 +138,12 @@ export async function deleteBillingPlan(planId: string): Promise<void> {
         }
 
         // Check if plan has associated services before attempting to delete
-        const hasServices = await BillingPlan.hasAssociatedServices(planId);
+        const hasServices = await BillingPlan.hasAssociatedServices(knex, planId);
         if (hasServices) {
             throw new Error(`Cannot delete plan that has associated services. Please remove all services from this plan before deleting.`);
         }
 
-        await BillingPlan.delete(planId);
+        await BillingPlan.delete(knex, planId);
     } catch (error) {
         console.error('Error deleting billing plan:', error);
         if (error instanceof Error) {
@@ -294,7 +294,7 @@ export async function updateBillingPlanFixedConfig(
 
     try {
         // Fetch the existing plan to check its type
-        const existingPlan = await BillingPlan.findById(planId); // Use BillingPlan model directly
+        const existingPlan = await BillingPlan.findById(knex, planId); // Use BillingPlan model directly
         if (!existingPlan) {
             throw new Error(`Billing plan with ID ${planId} not found.`);
         }
@@ -343,7 +343,7 @@ export async function updatePlanServiceFixedConfigRate(
 
     try {
         // Fetch the existing plan to check its type
-        const existingPlan = await BillingPlan.findById(planId); // Use BillingPlan model directly
+        const existingPlan = await BillingPlan.findById(knex, planId); // Use BillingPlan model directly
         if (!existingPlan) {
             throw new Error(`Billing plan with ID ${planId} not found.`);
         }
