@@ -60,23 +60,19 @@ function setupSocketHandlers(io: Server) {
   io.on('connection', (socket) => {
     console.log('\x1b[47m\x1b[30m[WEBSOCKET] 🔌 Client connected\x1b[0m');
 
-    // Handle screenshot streaming (disabled when VNC is enabled to avoid display conflicts)
+    // Handle screenshot streaming (now enabled alongside VNC for live feed)
     let screenshotInterval: NodeJS.Timeout | null = null;
     
-    if (process.env.VNC_ENABLED !== 'true') {
-      screenshotInterval = setInterval(async () => {
-        try {
-          const page = puppeteerManager.getPage();
-          const buf = await page.screenshot();
-          const base64img = Buffer.from(buf).toString('base64');
-          socket.emit('screenshot', base64img);
-        } catch (error) {
-          console.error('\x1b[41m[WEBSOCKET] ❌ Error taking screenshot\x1b[0m', error);
-        }
-      }, 2000);
-    } else {
-      console.log('\x1b[43m[WEBSOCKET] 📺 Screenshot streaming disabled - VNC mode active\x1b[0m');
-    }
+    screenshotInterval = setInterval(async () => {
+      try {
+        const page = puppeteerManager.getPage();
+        const buf = await page.screenshot();
+        const base64img = Buffer.from(buf).toString('base64');
+        socket.emit('screenshot', base64img);
+      } catch (error) {
+        console.error('\x1b[41m[WEBSOCKET] ❌ Error taking screenshot\x1b[0m', error);
+      }
+    }, 2000);
     
     // Track interval for cleanup
     if (screenshotInterval) {
