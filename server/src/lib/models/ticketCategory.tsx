@@ -1,4 +1,4 @@
-import { getCurrentTenantId } from '../tenant';
+import { getCurrentTenantId } from '../db';
 import { ITicketCategory } from '../../interfaces/ticket.interfaces';
 import { Knex } from 'knex';
 

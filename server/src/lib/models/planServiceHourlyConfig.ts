@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { getCurrentTenantId } from '../tenant';
+import { getCurrentTenantId } from '../db';
 import { IPlanServiceHourlyConfig, IUserTypeRate } from '../../interfaces/planServiceConfiguration.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -16,7 +16,11 @@ export default class PlanServiceHourlyConfig {
    */
   private async getTenant(): Promise<string> {
     if (!this.tenant) {
-      this.tenant = await getCurrentTenantId();
+      const tenantId = await getCurrentTenantId();
+      if (!tenantId) {
+        throw new Error('Tenant is required');
+      }
+      this.tenant = tenantId;
     }
     return this.tenant;
   }

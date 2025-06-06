@@ -1,5 +1,5 @@
 import logger from '../../utils/logger';
-import { getCurrentTenantId } from '../tenant';
+import { getCurrentTenantId } from '../db';
 import { Knex } from 'knex';
 
 interface IUserPreference {
@@ -66,6 +66,7 @@ const UserPreferences = {
 
             return preferences;
         } catch (error) {
+            const tenant = await getCurrentTenantId();
             logger.error(`Error getting all preferences for user ${user_id} in tenant ${tenant}:`, error);
             throw error;
         }
@@ -102,6 +103,7 @@ const UserPreferences = {
                     updated_at: preferenceData.updated_at
                 });
         } catch (error) {
+            const tenant = await getCurrentTenantId();
             logger.error(`Error upserting user preference for user ${preference.user_id}, setting ${preference.setting_name} in tenant ${tenant}:`, error);
             throw error;
         }
@@ -148,6 +150,7 @@ const UserPreferences = {
                 throw new Error(`Failed to delete preference '${setting_name}' for user ${user_id} in tenant ${tenant}`);
             }
         } catch (error) {
+            const tenant = await getCurrentTenantId();
             logger.error(`Error deleting user preference for user ${user_id}, setting ${setting_name} in tenant ${tenant}:`, error);
             throw error;
         }
@@ -179,6 +182,7 @@ const UserPreferences = {
             // Note: It's okay if no preferences were found to delete
             logger.info(`Deleted ${deletedCount} preferences for user ${user_id} in tenant ${tenant}`);
         } catch (error) {
+            const tenant = await getCurrentTenantId();
             logger.error(`Error deleting all preferences for user ${user_id} in tenant ${tenant}:`, error);
             throw error;
         }
@@ -204,7 +208,8 @@ const UserPreferences = {
                 throw new Error(`Users with ids [${missingUserIds.join(', ')}] not found in tenant ${tenant}`);
             }
 
-            const trx = knexOrTrx.isTransaction ? knexOrTrx : await knexOrTrx.transaction();
+            const isTransaction = (knexOrTrx as any).isTransaction || false;
+            const trx = isTransaction ? knexOrTrx as Knex.Transaction : await knexOrTrx.transaction();
             
             try {
                 for (const preference of preferences) {
@@ -224,11 +229,11 @@ const UserPreferences = {
                         });
                 }
                 
-                if (!knexOrTrx.isTransaction) {
+                if (!isTransaction) {
                     await trx.commit();
                 }
             } catch (error) {
-                if (!knexOrTrx.isTransaction) {
+                if (!isTransaction) {
                     await trx.rollback();
                 }
                 throw error;
