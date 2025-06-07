@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
-import { getCurrentTenantId } from '../tenant';
+import { getCurrentTenantId } from '../db';
 import { getCurrentUser } from '../actions/user-actions/userActions';
 import { 
   IProjectTask, 
@@ -15,6 +15,9 @@ const ProjectTaskModel = {
   addTask: async (knexOrTrx: Knex | Knex.Transaction, phaseId: string, taskData: Omit<IProjectTask, 'task_id' | 'phase_id' | 'created_at' | 'updated_at' | 'tenant' | 'wbs_code'> & { order_key?: string }): Promise<IProjectTask> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
       const phase = await ProjectModel.getPhaseById(knexOrTrx, phaseId);
 
       if (!phase) {
@@ -61,6 +64,9 @@ const ProjectTaskModel = {
   updateTask: async (knexOrTrx: Knex | Knex.Transaction, taskId: string, taskData: Partial<IProjectTask>): Promise<IProjectTask> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
 
       // Filter out invalid columns and transform data
       const validColumns = [
@@ -131,6 +137,9 @@ const ProjectTaskModel = {
   updateTaskStatus: async (knexOrTrx: Knex | Knex.Transaction, taskId: string, projectStatusMappingId: string): Promise<IProjectTask> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
       
       // Get current task to preserve phase information
       const task = await knexOrTrx<IProjectTask>('project_tasks')
@@ -165,6 +174,9 @@ const ProjectTaskModel = {
   getTaskById: async (knexOrTrx: Knex | Knex.Transaction, taskId: string): Promise<IProjectTask | null> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
       const task = await knexOrTrx<IProjectTask>('project_tasks')
         .where('task_id', taskId)
         .andWhere('tenant', tenant)
@@ -179,8 +191,12 @@ const ProjectTaskModel = {
   deleteTask: async (knexOrTrx: Knex | Knex.Transaction, taskId: string): Promise<void> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
       
-      const trx = knexOrTrx.isTransaction ? knexOrTrx : await knexOrTrx.transaction();
+      const isTransaction = (knexOrTrx as any).isTransaction || false;
+      const trx = isTransaction ? knexOrTrx as Knex.Transaction : await knexOrTrx.transaction();
       
       try {
         await trx('task_resources')
@@ -196,11 +212,11 @@ const ProjectTaskModel = {
           .andWhere('tenant', tenant)
           .del();
           
-        if (!knexOrTrx.isTransaction) {
+        if (!isTransaction) {
           await trx.commit();
         }
       } catch (error) {
-        if (!knexOrTrx.isTransaction) {
+        if (!isTransaction) {
           await trx.rollback();
         }
         throw error;
@@ -214,6 +230,9 @@ const ProjectTaskModel = {
   getTasks: async (knexOrTrx: Knex | Knex.Transaction, projectId: string): Promise<IProjectTaskCardInfo[]> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
       const tasks = await knexOrTrx<IProjectTask>('project_tasks')
         .join('project_phases', function() {
           this.on('project_tasks.phase_id', 'project_phases.phase_id')
@@ -255,8 +274,12 @@ const ProjectTaskModel = {
   reorderTasksInStatus: async (knexOrTrx: Knex | Knex.Transaction, tasks: { taskId: string, newWbsCode: string }[]): Promise<void> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
       
-      const trx = knexOrTrx.isTransaction ? knexOrTrx : await knexOrTrx.transaction();
+      const isTransaction = (knexOrTrx as any).isTransaction || false;
+      const trx = isTransaction ? knexOrTrx as Knex.Transaction : await knexOrTrx.transaction();
       
       try {
         const taskRecords = await trx('project_tasks')
@@ -283,11 +306,11 @@ const ProjectTaskModel = {
             })
         ));
         
-        if (!knexOrTrx.isTransaction) {
+        if (!isTransaction) {
           await trx.commit();
         }
       } catch (error) {
-        if (!knexOrTrx.isTransaction) {
+        if (!isTransaction) {
           await trx.rollback();
         }
         throw error;
@@ -301,6 +324,9 @@ const ProjectTaskModel = {
   // Task Checklist Methods
   addChecklistItem: async (knexOrTrx: Knex | Knex.Transaction, taskId: string, itemData: Omit<ITaskChecklistItem, 'checklist_item_id' | 'task_id' | 'created_at' | 'updated_at' | 'tenant'>): Promise<ITaskChecklistItem> => {
     const tenant = await getCurrentTenantId();
+    if (!tenant) {
+      throw new Error('Tenant context is required');
+    }
     const [newItem] = await knexOrTrx('task_checklist_items')
       .insert({
         ...itemData,
@@ -325,6 +351,9 @@ const ProjectTaskModel = {
 
   deleteChecklistItem: async (knexOrTrx: Knex | Knex.Transaction, checklistItemId: string): Promise<void> => {
     const tenant = await getCurrentTenantId();
+    if (!tenant) {
+      throw new Error('Tenant context is required');
+    }
     await knexOrTrx('task_checklist_items')
       .where({
         checklist_item_id: checklistItemId,
@@ -335,6 +364,9 @@ const ProjectTaskModel = {
 
   getChecklistItems: async (knexOrTrx: Knex | Knex.Transaction, taskId: string): Promise<ITaskChecklistItem[]> => {
     const tenant = await getCurrentTenantId();
+    if (!tenant) {
+      throw new Error('Tenant context is required');
+    }
     const items = await knexOrTrx('task_checklist_items')
       .where({
         task_id: taskId,
@@ -347,6 +379,9 @@ const ProjectTaskModel = {
   deleteChecklistItems: async (knexOrTrx: Knex | Knex.Transaction, taskId: string): Promise<void> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
       await knexOrTrx('task_checklist_items')
         .where('task_id', taskId)
         .andWhere('tenant', tenant)
@@ -360,6 +395,9 @@ const ProjectTaskModel = {
   getAllTaskChecklistItems: async (knexOrTrx: Knex | Knex.Transaction, projectId: string): Promise<{ [taskId: string]: ITaskChecklistItem[] }> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
       const items = await knexOrTrx('task_checklist_items')
         .join('project_tasks', function() {
           this.on('task_checklist_items.task_id', 'project_tasks.task_id')
@@ -391,6 +429,9 @@ const ProjectTaskModel = {
   addTaskResource: async (knexOrTrx: Knex | Knex.Transaction, taskId: string, userId: string, role?: string): Promise<void> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
       
       const task = await knexOrTrx('project_tasks')
         .where('task_id', taskId)
@@ -417,6 +458,9 @@ const ProjectTaskModel = {
   removeTaskResource: async (knexOrTrx: Knex | Knex.Transaction, assignmentId: string): Promise<void> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
       await knexOrTrx('task_resources')
         .where('assignment_id', assignmentId)
         .andWhere('tenant', tenant)
@@ -439,6 +483,9 @@ const ProjectTaskModel = {
   }>> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
       const resources = await knexOrTrx('task_resources')
         .select(
           'task_resources.*',
@@ -462,6 +509,9 @@ const ProjectTaskModel = {
   addTaskTicketLink: async (knexOrTrx: Knex | Knex.Transaction, projectId: string, taskId: string | null, ticketId: string, phaseId: string): Promise<IProjectTicketLink> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
 
       const existingLink = await knexOrTrx<IProjectTicketLink>('project_ticket_links')
         .where({
@@ -498,6 +548,9 @@ const ProjectTaskModel = {
   getTaskTicketLinks: async (knexOrTrx: Knex | Knex.Transaction, taskId: string): Promise<IProjectTicketLinkWithDetails[]> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
       const links = await knexOrTrx<IProjectTicketLink>('project_ticket_links')
         .where('task_id', taskId)
         .andWhere('project_ticket_links.tenant', tenant)
@@ -526,6 +579,9 @@ const ProjectTaskModel = {
   deleteTaskTicketLink: async (knexOrTrx: Knex | Knex.Transaction, linkId: string): Promise<void> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
       await knexOrTrx<IProjectTicketLink>('project_ticket_links')
         .where('link_id', linkId)
         .andWhere('tenant', tenant)
@@ -539,6 +595,9 @@ const ProjectTaskModel = {
   updateTaskTicketLink: async (knexOrTrx: Knex | Knex.Transaction, linkId: string, updateData: { project_id: string; phase_id: string }): Promise<void> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
       await knexOrTrx('project_ticket_links')
         .where('link_id', linkId)
         .andWhere('tenant', tenant)
@@ -552,6 +611,9 @@ const ProjectTaskModel = {
   getAllTaskTicketLinks: async (knexOrTrx: Knex | Knex.Transaction, projectId: string): Promise<{ [taskId: string]: IProjectTicketLinkWithDetails[] }> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
       const links = await knexOrTrx('project_ticket_links')
         .where('project_ticket_links.project_id', projectId)
         .andWhere('project_ticket_links.tenant', tenant)
@@ -589,6 +651,9 @@ const ProjectTaskModel = {
   getAllTaskResources: async (knexOrTrx: Knex | Knex.Transaction, projectId: string): Promise<{ [taskId: string]: any[] }> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
       const resources = await knexOrTrx('task_resources')
         .join('project_tasks', function() {
           this.on('task_resources.task_id', 'project_tasks.task_id')

@@ -122,7 +122,8 @@ const Team = {
             
             logger.info(`Deleting team ${team_id} and its members in tenant ${tenant}`);
             
-            const trx = knexOrTrx.isTransaction ? knexOrTrx : await knexOrTrx.transaction();
+            const isTransaction = (knexOrTrx as any).isTransaction || false;
+            const trx = isTransaction ? knexOrTrx as Knex.Transaction : await knexOrTrx.transaction();
             
             try {
                 // Delete team members first
@@ -138,11 +139,11 @@ const Team = {
                     .andWhere('team_id', team_id)
                     .del();
                 
-                if (!knexOrTrx.isTransaction) {
+                if (!isTransaction) {
                     await trx.commit();
                 }
             } catch (error) {
-                if (!knexOrTrx.isTransaction) {
+                if (!isTransaction) {
                     await trx.rollback();
                 }
                 throw error;

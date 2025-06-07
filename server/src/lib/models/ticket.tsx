@@ -46,6 +46,9 @@ const Ticket = {
   insert: async (knexOrTrx: Knex | Knex.Transaction, ticket: Partial<ITicket>): Promise<Pick<ITicket, "ticket_id">> => {
     try {
       const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
       // RLS will automatically set the tenant for the new ticket
       const [insertedTicket] = await knexOrTrx<ITicket>('tickets').insert({ ...ticket, tenant: tenant }).returning('ticket_id');
       return { ticket_id: insertedTicket.ticket_id };
