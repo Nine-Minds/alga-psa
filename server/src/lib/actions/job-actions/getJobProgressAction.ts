@@ -2,7 +2,7 @@
 
 import { getCurrentUser } from '../user-actions/userActions';
 import { createTenantKnex } from 'server/src/lib/db';
-import { getAdminConnection } from 'server/src/lib/db/admin';
+import { withAdminTransaction } from 'server/src/lib/db/admin';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 
@@ -24,19 +24,14 @@ export async function getJobProgressAction(jobId: string): Promise<JobProgressDa
   }
 
   try {
-    const {knex, tenant} = await createTenantKnex();
-    const adminConnection = await getAdminConnection();
+    const {tenant} = await createTenantKnex();
     console.log('Fetching job progress:', { jobId, tenant }); // Debug log
-
-    if (!adminConnection) {
-      throw new Error('No admin connection found');
-    }
 
     if (!tenant) {
       throw new Error('No tenant found');
     }
 
-    const { header, details } = await withTransaction(adminConnection, async (trx: Knex.Transaction) => {
+    const { header, details } = await withAdminTransaction(async (trx: Knex.Transaction) => {
       const [headerResult] = await trx('jobs as j')
         .select(
           'j.job_id as id',
