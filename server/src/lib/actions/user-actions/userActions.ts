@@ -201,9 +201,15 @@ export async function updateUserRoles(userId: string, roleIds: string[]): Promis
   }
 }
 
-export async function getUserRoles(userId: string): Promise<IRole[]> {
+export async function getUserRoles(userId: string, knexConnection?: Knex | Knex.Transaction): Promise<IRole[]> {
   try {
-    const {knex} = await createTenantKnex();
+    let knex: Knex | Knex.Transaction;
+    if (knexConnection) {
+      knex = knexConnection;
+    } else {
+      const result = await createTenantKnex();
+      knex = result.knex;
+    }
     const roles = await User.getUserRoles(knex, userId);
     return roles;
   } catch (error) {
@@ -227,9 +233,15 @@ export async function getAllRoles(): Promise<IRole[]> {
   }
 }
 
-export async function getUserRolesWithPermissions(userId: string): Promise<IRoleWithPermissions[]> {
+export async function getUserRolesWithPermissions(userId: string, knexConnection?: Knex | Knex.Transaction): Promise<IRoleWithPermissions[]> {
   try {
-    const {knex} = await createTenantKnex();
+    let knex: Knex | Knex.Transaction;
+    if (knexConnection) {
+      knex = knexConnection;
+    } else {
+      const result = await createTenantKnex();
+      knex = result.knex;
+    }
     const rolesWithPermissions = await User.getUserRolesWithPermissions(knex, userId);
     return rolesWithPermissions;
   } catch (error) {

@@ -1,5 +1,6 @@
 import { IUser, IRole, IPermission, IRoleWithPermissions } from 'server/src/interfaces/auth.interfaces';
 import { getUserRolesWithPermissions } from 'server/src/lib/actions/user-actions/userActions';
+import { Knex } from 'knex';
 
 export class Role implements IRole {
   role_id: string;
@@ -47,8 +48,8 @@ export class Permission implements IPermission {
   }
 }
 
-export async function hasPermission(user: IUser, resource: string, action: string): Promise<boolean> {
-  const rolesWithPermissions = await getUserRolesWithPermissions(user.user_id);
+export async function hasPermission(user: IUser, resource: string, action: string, knexConnection?: Knex | Knex.Transaction): Promise<boolean> {
+  const rolesWithPermissions = await getUserRolesWithPermissions(user.user_id, knexConnection);
   for (const role of rolesWithPermissions) {
     for (const permission of role.permissions) {
       if (permission.resource === resource && permission.action === action) {
@@ -75,10 +76,11 @@ export interface PermissionResult {
 
 export async function checkMultiplePermissions(
   user: IUser,
-  permissionChecks: PermissionCheck[]
+  permissionChecks: PermissionCheck[],
+  knexConnection?: Knex | Knex.Transaction
 ): Promise<PermissionResult[]> {
   // Get all roles and permissions in a single database query
-  const rolesWithPermissions = await getUserRolesWithPermissions(user.user_id);
+  const rolesWithPermissions = await getUserRolesWithPermissions(user.user_id, knexConnection);
   
   const userPermissions = new Set<string>();
   
