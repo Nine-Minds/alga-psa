@@ -622,7 +622,7 @@ export def dev-env-connect [
             }
             
             print $"($env.ALGA_COLOR_GREEN)NEXTAUTH_URL configuration completed.($env.ALGA_COLOR_RESET)"
-            print $"($env.ALGA_COLOR_CYAN)Note: Code server uses hardcoded internal URL (http://code-server:3000) for browser testing within the environment.($env.ALGA_COLOR_RESET)"
+            print $"($env.ALGA_COLOR_CYAN)Note: Code server uses hardcoded internal URL \(http://code-server:3000\) for browser testing within the environment.($env.ALGA_COLOR_RESET)"
         
         print $"($env.ALGA_COLOR_GREEN)Port forwarding active!($env.ALGA_COLOR_RESET)"
         
