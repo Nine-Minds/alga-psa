@@ -15,24 +15,24 @@ export async function addTicketResource(
   role: string,
   currentUser: IUserWithRoles
 ): Promise<ITicketResource> {
-  if (!await hasPermission(currentUser, 'ticket', 'update')) {
-    throw new Error('Permission denied: Cannot add ticket resource');
-  }
-
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-    // First, verify that the ticket exists and has the correct assigned_to
-    const ticket = await trx('tickets')
-      .where({
-        ticket_id: ticketId,
-        tenant: tenant
-      })
-      .first();
+      if (!await hasPermission(currentUser, 'ticket', 'update', trx)) {
+        throw new Error('Permission denied: Cannot add ticket resource');
+      }
 
-    if (!ticket) {
-      throw new Error(`Ticket not found in tenant ${tenant}`);
-    }
+      // First, verify that the ticket exists and has the correct assigned_to
+      const ticket = await trx('tickets')
+        .where({
+          ticket_id: ticketId,
+          tenant: tenant
+        })
+        .first();
+
+      if (!ticket) {
+        throw new Error(`Ticket not found in tenant ${tenant}`);
+      }
 
     // Check if resource already exists
     const existingResource = await trx('ticket_resources')
@@ -75,24 +75,24 @@ export async function removeTicketResource(
   assignmentId: string,
   currentUser: IUserWithRoles
 ): Promise<void> {
-  if (!await hasPermission(currentUser, 'ticket', 'update')) {
-    throw new Error('Permission denied: Cannot remove ticket resource');
-  }
-
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-    // Verify the resource exists before attempting to delete
-    const resource = await trx('ticket_resources')
-      .where({
-        assignment_id: assignmentId,
-        tenant: tenant
-      })
-      .first();
+      if (!await hasPermission(currentUser, 'ticket', 'update', trx)) {
+        throw new Error('Permission denied: Cannot remove ticket resource');
+      }
 
-    if (!resource) {
-      throw new Error(`Ticket resource not found in tenant ${tenant}`);
-    }
+      // Verify the resource exists before attempting to delete
+      const resource = await trx('ticket_resources')
+        .where({
+          assignment_id: assignmentId,
+          tenant: tenant
+        })
+        .first();
+
+      if (!resource) {
+        throw new Error(`Ticket resource not found in tenant ${tenant}`);
+      }
 
     await trx('ticket_resources')
       .where({
@@ -115,24 +115,24 @@ export async function getTicketResources(
   ticketId: string,
   currentUser: IUserWithRoles
 ): Promise<ITicketResource[]> {
-  if (!await hasPermission(currentUser, 'ticket', 'read')) {
-    throw new Error('Permission denied: Cannot view ticket resources');
-  }
-
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-    // First verify the ticket exists
-    const ticket = await trx('tickets')
-      .where({
-        ticket_id: ticketId,
-        tenant: tenant
-      })
-      .first();
+      if (!await hasPermission(currentUser, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view ticket resources');
+      }
 
-    if (!ticket) {
-      throw new Error(`Ticket not found in tenant ${tenant}`);
-    }
+      // First verify the ticket exists
+      const ticket = await trx('tickets')
+        .where({
+          ticket_id: ticketId,
+          tenant: tenant
+        })
+        .first();
+
+      if (!ticket) {
+        throw new Error(`Ticket not found in tenant ${tenant}`);
+      }
 
     const resources = await trx('ticket_resources')
       .where({
