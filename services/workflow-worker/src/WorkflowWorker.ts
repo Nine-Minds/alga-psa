@@ -9,7 +9,8 @@ import { TypeScriptWorkflowRuntime } from '@shared/workflow/core/index.js';
 import { createClient } from 'redis';
 import logger from '@shared/core/logger.js';
 import { getSecret } from '@shared/core/getSecret.js';
-import { getAdminConnection, withAdminTransaction } from '@shared/db/admin.js';
+import { getAdminConnection } from '@shared/db/admin.js';
+import { withAdminTransaction } from '@shared/db/index.js';
 import { Knex } from 'knex';
 
 // TODO: These utilities would need to be properly implemented or moved
@@ -541,7 +542,7 @@ export class WorkflowWorker {
             // loading the full execution state, applying the event, and notifying listeners.
             await this.workflowRuntime.processQueuedEvent(trx, {
               eventId: eventData.event_id,
-              executionId: eventData.execution_id,
+              executionId: eventData.execution_id || '',
               processingId: processingRecord.processing_id, // Crucial: use the ID from the DB record
               workerId: this.workerId,
               tenant: eventData.tenant
@@ -657,7 +658,7 @@ export class WorkflowWorker {
       });
       
       // Get the workflow registration, passing the system flag and transaction connection
-      const workflow = await this.getWorkflowRegistration(workflowId, event.tenant, isSystemManaged, trx);
+      const workflow = await this.getWorkflowRegistration(workflowId, event.tenant, isSystemManaged);
 
       if (!workflow) {
         logger.error(`[WorkflowWorker] Workflow ${workflowId} not found`);

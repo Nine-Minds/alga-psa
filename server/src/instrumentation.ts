@@ -15,7 +15,7 @@ export async function register() {
     
     try {
       // Import initializeApp dynamically to avoid issues with Edge runtime
-      const { initializeApp } = await import('./src/lib/actions/initializeApp');
+      const { initializeApp } = await import('./lib/actions/initializeApp');
       
       // Initialize the application (runs startup tasks, syncs templates, etc.)
       await initializeApp();

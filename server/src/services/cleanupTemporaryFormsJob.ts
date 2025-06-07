@@ -5,7 +5,7 @@
  * that were created for inline workflow tasks
  */
 
-import { withAdminTransaction } from '@shared/db/admin.js';
+import { withAdminTransaction } from '@shared/db';
 import { getTaskInboxService } from '@shared/workflow/core/taskInboxService.js';
 
 /**
