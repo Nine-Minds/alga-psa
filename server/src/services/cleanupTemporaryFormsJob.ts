@@ -5,7 +5,7 @@
  * that were created for inline workflow tasks
  */
 
-import { getAdminConnection } from '@shared/db/admin.js';
+import { withAdminTransaction } from '@shared/db/admin.js';
 import { getTaskInboxService } from '@shared/workflow/core/taskInboxService.js';
 
 /**
@@ -15,20 +15,22 @@ export async function cleanupTemporaryFormsJob(): Promise<{ success: boolean; de
   try {
     console.log('Starting cleanup job for temporary workflow forms');
     
-    // Get database connection
-    const knex = await getAdminConnection();
+    // Use transaction for cleanup operations
+    const result = await withAdminTransaction(async (trx) => {
+      // Get the task inbox service
+      const taskInboxService = getTaskInboxService();
+      
+      // Run the cleanup
+      const deletedCount = await taskInboxService.cleanupAllTemporaryForms(trx);
+      
+      return deletedCount;
+    });
     
-    // Get the task inbox service
-    const taskInboxService = getTaskInboxService();
-    
-    // Run the cleanup
-    const deletedCount = await taskInboxService.cleanupAllTemporaryForms(knex);
-    
-    console.log(`Cleanup job completed successfully. Deleted ${deletedCount} temporary forms.`);
+    console.log(`Cleanup job completed successfully. Deleted ${result} temporary forms.`);
     
     return {
       success: true,
-      deletedCount
+      deletedCount: result
     };
   } catch (error) {
     console.error('Error executing cleanup job for temporary workflow forms:', error);
