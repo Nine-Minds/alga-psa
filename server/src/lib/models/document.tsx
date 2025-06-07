@@ -42,7 +42,8 @@ const Document = {
                         knexOrTrx.raw("COALESCE(dt.icon, sdt.icon) as type_icon")
                     )
                     .leftJoin('users', function() {
-                        this.on('documents.created_by', '=', 'users.user_id');
+                        this.on('documents.created_by', '=', 'users.user_id')
+                            .andOn('users.tenant', '=', 'documents.tenant');
                     })
                     .leftJoin('document_types as dt', function() {
                         this.on('documents.type_id', '=', 'dt.type_id')

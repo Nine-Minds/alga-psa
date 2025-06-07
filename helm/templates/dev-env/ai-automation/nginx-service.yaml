@@ -1,8 +1,10 @@
 {{- if and .Values.devEnv.enabled .Values.devEnv.aiAutomation.enabled }}
+{{- $fullname := include "sebastian.fullname" . }}
+{{- $aiNginxService := printf "%s-ai-nginx" $fullname | trunc 63 | trimSuffix "-" }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "sebastian.fullname" . }}-ai-nginx
+  name: {{ $aiNginxService }}
   namespace: {{ .Values.devEnv.namespace }}
   labels:
     {{- include "sebastian.labels" . | nindent 4 }}
@@ -26,7 +28,7 @@ metadata:
   namespace: {{ .Values.devEnv.namespace }}
 spec:
   type: ExternalName
-  externalName: {{ include "sebastian.fullname" . }}-ai-nginx.{{ .Values.devEnv.namespace }}.svc.cluster.local
+  externalName: {{ $aiNginxService }}.{{ .Values.devEnv.namespace }}.svc.cluster.local
   ports:
     - port: 8080
       targetPort: 8080

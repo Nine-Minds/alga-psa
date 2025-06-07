@@ -296,12 +296,11 @@ spec:
             value: "{{ .Values.token.expire }}"
 
           # ----------- AUTH ----------------
+          # NEXTAUTH_URL is configured via .env file to allow dynamic updates during port forwarding
+          {{- if not .Values.devEnv.enabled }}
           - name: NEXTAUTH_URL
-            {{- if and .Values.devEnv.enabled .Values.devEnv.externalPorts }}
-            value: "http://localhost:{{ .Values.devEnv.externalPorts.app }}"
-            {{- else }}
             value: "https://{{ .Values.host }}"
-            {{- end }}
+          {{- end }}
           - name: NEXTAUTH_SECRET
             valueFrom:
               secretKeyRef:

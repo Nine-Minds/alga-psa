@@ -336,12 +336,7 @@ spec:
               value: "{{ .Values.token.expire }}"
 
             # ----------- AUTH ----------------
-            - name: NEXTAUTH_URL
-              {{- if .Values.devEnv.externalPorts }}
-              value: "http://localhost:{{ .Values.devEnv.externalPorts.codeApp }}"
-              {{- else }}
-              value: "https://{{ .Values.host }}"
-              {{- end }}
+            # NEXTAUTH_URL is configured via .env file to allow dynamic updates during port forwarding
             - name: NEXTAUTH_SECRET
               valueFrom:
                 secretKeyRef:

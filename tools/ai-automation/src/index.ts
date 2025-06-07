@@ -60,23 +60,41 @@ function setupSocketHandlers(io: Server) {
   io.on('connection', (socket) => {
     console.log('\x1b[47m\x1b[30m[WEBSOCKET] 🔌 Client connected\x1b[0m');
 
-    // Handle screenshot streaming (disabled when VNC is enabled to avoid display conflicts)
+    // Handle screenshot streaming (now enabled alongside VNC for live feed)
     let screenshotInterval: NodeJS.Timeout | null = null;
+    let consecutiveFailures = 0;
     
-    if (process.env.VNC_ENABLED !== 'true') {
-      screenshotInterval = setInterval(async () => {
-        try {
-          const page = puppeteerManager.getPage();
-          const buf = await page.screenshot();
-          const base64img = Buffer.from(buf).toString('base64');
-          socket.emit('screenshot', base64img);
-        } catch (error) {
-          console.error('\x1b[41m[WEBSOCKET] ❌ Error taking screenshot\x1b[0m', error);
+    screenshotInterval = setInterval(async () => {
+      try {
+        const page = puppeteerManager.getPage();
+        // Add timeout and optimize screenshot options for reliability
+        const buf = await page.screenshot({
+          timeout: 10000, // 10 second timeout for complex pages
+          captureBeyondViewport: false, // Don't capture off-screen content
+          optimizeForSpeed: true, // Prioritize speed over quality
+          fullPage: false // Only capture viewport to reduce processing time
+        });
+        const base64img = Buffer.from(buf).toString('base64');
+        socket.emit('screenshot', base64img);
+        consecutiveFailures = 0; // Reset failure counter on success
+      } catch (error) {
+        consecutiveFailures++;
+        // Log different error types differently
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes('timeout')) {
+          console.error(`\x1b[43m[WEBSOCKET] ⏰ Screenshot timeout (${consecutiveFailures} consecutive) - page too complex, skipping this frame\x1b[0m`);
+        } else if (errorMessage.includes('Target closed')) {
+          console.error('\x1b[41m[WEBSOCKET] ❌ Browser session closed, screenshots stopped\x1b[0m');
+        } else {
+          console.error(`\x1b[41m[WEBSOCKET] ❌ Error taking screenshot (${consecutiveFailures} consecutive)\x1b[0m`, error);
         }
-      }, 2000);
-    } else {
-      console.log('\x1b[43m[WEBSOCKET] 📺 Screenshot streaming disabled - VNC mode active\x1b[0m');
-    }
+        // Log warning if failures are getting excessive
+        if (consecutiveFailures >= 5) {
+          console.error('\x1b[43m[WEBSOCKET] ⚠️  Many consecutive screenshot failures - page may be permanently problematic\x1b[0m');
+        }
+        // Don't crash the interval, just skip this screenshot and try again in 2 seconds
+      }
+    }, 2000);
     
     // Track interval for cleanup
     if (screenshotInterval) {
@@ -479,16 +497,7 @@ function setupExpress(app: express.Application) {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  // VNC debug routes
-  app.use('/api/vnc', (async (req: Request, res: Response, next: any) => {
-    try {
-      const vncDebug = await import('./routes/vnc-debug.js');
-      vncDebug.default(req, res, next);
-    } catch (error) {
-      console.error('Error loading VNC debug routes:', error);
-      res.status(500).json({ error: 'VNC debug routes not available' });
-    }
-  }) as RequestHandler);
+  // VNC is handled by the nginx proxy at /vnc/ endpoint
 
   app.get('/api/browser/status', (async (req: Request, res: Response) => {
     console.log('\x1b[104m\x1b[30m[BACKEND] 📊 GET /api/browser/status received\x1b[0m');

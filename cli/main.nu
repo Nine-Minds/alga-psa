@@ -11,7 +11,7 @@ use "dev-env.nu" *
 use "build.nu" *
 
 # Main CLI entry point function
-def main [
+def --wrapped main [
    ...args: string   # All arguments and flags as strings
 ] {
    let command = ($args | get 0? | default null)
