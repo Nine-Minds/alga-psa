@@ -370,8 +370,7 @@ export async function verifyContactEmail(email: string): Promise<{ exists: boole
     }
 
     // If not a valid suffix, check contacts
-    const db = await getAdminConnection();
-    const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
+    const contact = await withAdminTransaction(async (trx: Knex.Transaction) => {
       return await trx('contacts')
         .join('companies', function() {
           this.on('companies.company_id', '=', 'contacts.company_id')
