@@ -14,8 +14,15 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const dynamic = 'force-dynamic';
 
+// Static variable to ensure initializeApp only runs once
+let isAppInitialized = false;
+
 export async function generateMetadata(): Promise<Metadata> {
-  await initializeApp();
+  // Only initialize the app once
+  if (!isAppInitialized) {
+    await initializeApp();
+    isAppInitialized = true;
+  }
   return {
     title: "MSP Application",
     keywords: "MSP, Managed Service Provider, IT Services, Network Management, Cloud Services",
