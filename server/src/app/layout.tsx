@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { initializeApp } from "../lib/actions/initializeApp";
 import "./globals.css";
 import { Toaster } from 'react-hot-toast';
 import { getCurrentTenant } from "../lib/actions/tenantActions";
@@ -14,15 +13,8 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const dynamic = 'force-dynamic';
 
-// Static variable to ensure initializeApp only runs once
-let isAppInitialized = false;
-
 export async function generateMetadata(): Promise<Metadata> {
-  // Only initialize the app once
-  if (!isAppInitialized) {
-    await initializeApp();
-    isAppInitialized = true;
-  }
+  // App initialization is now handled by instrumentation.ts
   return {
     title: "MSP Application",
     keywords: "MSP, Managed Service Provider, IT Services, Network Management, Cloud Services",
