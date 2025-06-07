@@ -1057,7 +1057,7 @@ export def dev-env-force-cleanup [
                 break
             } else {
                 let remaining_text = ($remaining_pods | str join ', ')
-                print -n $"\r  Waiting... \\(remaining: ($remaining_text)\\)"
+                print -n $"\r  Waiting... remaining: ($remaining_text)"
                 sleep 2sec
                 $wait_retries = $wait_retries + 1
             }
