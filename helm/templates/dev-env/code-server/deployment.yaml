@@ -336,7 +336,9 @@ spec:
               value: "{{ .Values.token.expire }}"
 
             # ----------- AUTH ----------------
-            # NEXTAUTH_URL is configured via .env file to allow dynamic updates during port forwarding
+            # NEXTAUTH_URL hardcoded to internal service for browser testing within the environment
+            - name: NEXTAUTH_URL
+              value: "http://code-server:3000"
             - name: NEXTAUTH_SECRET
               valueFrom:
                 secretKeyRef:
