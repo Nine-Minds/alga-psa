@@ -224,7 +224,7 @@ logging:
 
 # Authentication configuration for dev environments
 auth:
-  nextauth_session_expires: "30"
+  nextauth_session_expires: "86400"
 
 # Cryptography configuration for dev environments  
 crypto:
