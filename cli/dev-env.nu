@@ -1056,7 +1056,8 @@ export def dev-env-force-cleanup [
                 print $"\n($env.ALGA_COLOR_GREEN)All targeted ai-api pods have been terminated.($env.ALGA_COLOR_RESET)"
                 break
             } else {
-                print -n $"\r  Waiting... (remaining: ($remaining_pods | str join ', '))"
+                let remaining_text = ($remaining_pods | str join ', ')
+                print -n $"\r  Waiting... \\(remaining: ($remaining_text)\\)"
                 sleep 2sec
                 $wait_retries = $wait_retries + 1
             }
