@@ -1,8 +1,10 @@
 {{- if and .Values.devEnv.enabled .Values.devEnv.codeServer.enabled }}
+{{- $fullname := include "sebastian.fullname" . }}
+{{- $serviceName := printf "%s-code-server" $fullname | trunc 63 | trimSuffix "-" }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "sebastian.fullname" . }}-code-server
+  name: {{ $serviceName }}
   namespace: {{ .Values.devEnv.namespace }}
   labels:
     {{- include "sebastian.labels" . | nindent 4 }}

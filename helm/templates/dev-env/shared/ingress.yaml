@@ -1,8 +1,13 @@
 {{- if and .Values.devEnv.enabled .Values.devEnv.ingress.enabled }}
+{{- $fullname := include "sebastian.fullname" . }}
+{{- $ingressName := printf "%s-dev-env" $fullname | trunc 63 | trimSuffix "-" }}
+{{- $codeServerService := printf "%s-code-server" $fullname | trunc 63 | trimSuffix "-" }}
+{{- $aiWebService := printf "%s-ai-web" $fullname | trunc 63 | trimSuffix "-" }}
+{{- $aiApiService := printf "%s-ai-api" $fullname | trunc 63 | trimSuffix "-" }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "sebastian.fullname" . }}-dev-env
+  name: {{ $ingressName }}
   namespace: {{ .Values.devEnv.namespace }}
   labels:
     {{- include "sebastian.labels" . | nindent 4 }}
@@ -35,7 +40,7 @@ spec:
             pathType: {{ .pathType }}
             backend:
               service:
-                name: {{ include "sebastian.fullname" $ }}-code-server
+                name: {{ $codeServerService }}
                 port:
                   number: {{ $.Values.devEnv.codeServer.service.port }}
           {{- end }}
@@ -51,7 +56,7 @@ spec:
             pathType: {{ .pathType }}
             backend:
               service:
-                name: {{ include "sebastian.fullname" $ }}-ai-web
+                name: {{ $aiWebService }}
                 port:
                   number: {{ $.Values.devEnv.aiAutomation.web.service.port }}
           {{- end }}
@@ -65,7 +70,7 @@ spec:
             pathType: {{ .pathType }}
             backend:
               service:
-                name: {{ include "sebastian.fullname" $ }}-ai-api
+                name: {{ $aiApiService }}
                 port:
                   number: {{ $.Values.devEnv.aiAutomation.api.service.port }}
           {{- end }}

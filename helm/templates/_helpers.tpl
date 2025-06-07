@@ -59,3 +59,4 @@ For dev environments, use devEnv.namespace, otherwise use the global namespace.
 {{- if .Values.devEnv.enabled }}{{ .Values.devEnv.namespace }}{{ else }}{{ .Values.namespace }}{{ end }}
 {{- end }}
 
+

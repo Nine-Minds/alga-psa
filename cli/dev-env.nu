@@ -1,3 +1,23 @@
+# Helper function to sanitize branch names for Kubernetes resources
+def sanitize-branch-name [branch: string] {
+    # Sanitize branch name for Kubernetes namespace (lowercase, alphanumeric and hyphens only)
+    # First replace slashes with hyphens, then clean up any other special characters
+    let sanitized_base = ($branch | str replace -a "/" "-" | str downcase | str replace -a "[^a-z0-9-]" "-" | str replace -r "^-+|-+$" "" | str replace -r "-+" "-")
+    
+    # Ensure Helm release name stays under 53 character limit
+    # Release name format: "alga-dev-{sanitized_branch}" = 9 + sanitized_branch length
+    let max_branch_length = 43  # 53 - 9 = 44, but we need 43 to be safe
+    if ($sanitized_base | str length) > $max_branch_length {
+        # For long names, take first part and add hash of full name for uniqueness
+        let hash_suffix = ($sanitized_base | hash sha256 | str substring 0..7)
+        let prefix_length = $max_branch_length - 9  # 9 chars for "-" + 8-char hash
+        let prefix = ($sanitized_base | str substring 0..$prefix_length)
+        $"($prefix)-($hash_suffix)"
+    } else {
+        $sanitized_base
+    }
+}
+
 # Start development environment with Docker Compose
 export def dev-up [
     --detached (-d) # Run in detached mode (background)
@@ -89,9 +109,9 @@ export def dev-env-create [
         error make { msg: $"($env.ALGA_COLOR_RED)Cannot use both --from-tag and --use-latest. Choose one or the other.($env.ALGA_COLOR_RESET)" }
     }
     
-    # Sanitize branch name for Kubernetes namespace (lowercase, alphanumeric and hyphens only)
-    # First replace slashes and underscores with hyphens, then clean up any other special characters
-    let sanitized_branch = ($branch | str replace -a "/" "-" | str replace -a "_" "-" | str downcase | str replace -a "[^a-z0-9-]" "-" | str replace -r "^-+|-+$" "" | str replace -r "-+" "-")
+    # Sanitize branch name for Kubernetes namespace and Helm release name length limits
+    let sanitized_branch = (sanitize-branch-name $branch)
+    
     let namespace = $"alga-dev-($sanitized_branch)"
     
     # Checkout the branch if requested
@@ -464,7 +484,7 @@ export def dev-env-connect [
     branch: string     # Branch name to connect to
 ] {
     # Sanitize branch name for namespace lookup
-    let sanitized_branch = ($branch | str replace -a "/" "-" | str downcase | str replace -a "[^a-z0-9-]" "-" | str replace -r "^-+|-+$" "" | str replace -r "-+" "-")
+    let sanitized_branch = (sanitize-branch-name $branch)
     let namespace = $"alga-dev-($sanitized_branch)"
     
     # Check if environment exists
@@ -660,7 +680,7 @@ export def dev-env-destroy [
     --force            # Force deletion without confirmation
 ] {
     # Sanitize branch name for namespace lookup
-    let sanitized_branch = ($branch | str replace -a "/" "-" | str downcase | str replace -a "[^a-z0-9-]" "-" | str replace -r "^-+|-+$" "" | str replace -r "-+" "-")
+    let sanitized_branch = (sanitize-branch-name $branch)
     let namespace = $"alga-dev-($sanitized_branch)"
 
     # Helper to get all ai-api pods in the namespace
@@ -963,7 +983,7 @@ export def dev-env-force-cleanup [
     branch: string     # Branch name to force cleanup
 ] {
     # Sanitize branch name for namespace lookup
-    let sanitized_branch = ($branch | str replace -a "/" "-" | str downcase | str replace -a "[^a-z0-9-]" "-" | str replace -r "^-+|-+$" "" | str replace -r "-+" "-")
+    let sanitized_branch = (sanitize-branch-name $branch)
     let namespace = $"alga-dev-($sanitized_branch)"
 
     # Helper to get all ai-api pods in the namespace
@@ -1106,7 +1126,7 @@ export def dev-env-status [
     }
     
     # Sanitize branch name for namespace lookup
-    let sanitized_branch = ($branch | str replace -a "/" "-" | str downcase | str replace -a "[^a-z0-9-]" "-" | str replace -r "^-+|-+$" "" | str replace -r "-+" "-")
+    let sanitized_branch = (sanitize-branch-name $branch)
     let namespace = $"alga-dev-($sanitized_branch)"
     
     # Check if environment exists
