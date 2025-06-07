@@ -573,8 +573,8 @@ export def dev-env-connect [
             print $"  PSA App \(in code\):  http://localhost:($code_app_port)"
             print $"  AI Web:             http://localhost:($ai_web_port)"
             
-            # Update NEXTAUTH_URL in .env files for proper authentication
-            print $"($env.ALGA_COLOR_CYAN)Configuring NEXTAUTH_URL in .env files...($env.ALGA_COLOR_RESET)"
+            # Update NEXTAUTH_URL in .env files for main app pods only (code server uses hardcoded internal URL)
+            print $"($env.ALGA_COLOR_CYAN)Configuring NEXTAUTH_URL in main app .env files...($env.ALGA_COLOR_RESET)"
             
             # Helper function to update .env file
             def update-env-file [pod_name: string, nextauth_url: string, description: string] {
@@ -606,16 +606,12 @@ export def dev-env-connect [
                 }
             }
             
-            # Get pod names and update their .env files
+            # Get main app pod names and update their .env files (skip code server - it uses hardcoded internal URL)
             let main_app_pods = do {
                 kubectl get pods -n $namespace -l "app.kubernetes.io/component!=code-server,app.kubernetes.io/component!=ai-automation-api,app.kubernetes.io/component!=ai-automation-web" -o jsonpath='{.items[*].metadata.name}' --ignore-not-found | complete
             }
             
-            let code_server_pods = do {
-                kubectl get pods -n $namespace -l "app.kubernetes.io/component=code-server" -o jsonpath='{.items[*].metadata.name}' --ignore-not-found | complete
-            }
-            
-            # Update main app pods
+            # Update main app pods only
             if $main_app_pods.exit_code == 0 and not ($main_app_pods.stdout | is-empty) {
                 let main_pods = ($main_app_pods.stdout | str trim | split row ' ')
                 for pod in $main_pods {
@@ -625,17 +621,8 @@ export def dev-env-connect [
                 }
             }
             
-            # Update code server pods
-            if $code_server_pods.exit_code == 0 and not ($code_server_pods.stdout | is-empty) {
-                let code_pods = ($code_server_pods.stdout | str trim | split row ' ')
-                for pod in $code_pods {
-                    if ($pod | str trim | str length) > 0 {
-                        update-env-file $pod $"http://localhost:($code_app_port)" "code server"
-                    }
-                }
-            }
-            
             print $"($env.ALGA_COLOR_GREEN)NEXTAUTH_URL configuration completed.($env.ALGA_COLOR_RESET)"
+            print $"($env.ALGA_COLOR_CYAN)Note: Code server uses hardcoded internal URL (http://code-server:3000) for browser testing within the environment.($env.ALGA_COLOR_RESET)"
         
         print $"($env.ALGA_COLOR_GREEN)Port forwarding active!($env.ALGA_COLOR_RESET)"
         
