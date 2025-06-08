@@ -42,11 +42,11 @@ devEnv:
     password: "alga-dev"  # Default password for code-server
     resources:
       limits:
-        cpu: "2"
-        memory: "4Gi"
+        cpu: "6"
+        memory: "16Gi"
       requests:
         cpu: "500m"
-        memory: "1Gi"
+        memory: "4Gi"
   
   # AI Automation Configuration
   aiAutomation:
