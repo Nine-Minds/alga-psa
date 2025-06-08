@@ -287,10 +287,37 @@ export default function ControlPanel() {
       const currentPort = window.location.port;
       const currentProtocol = window.location.protocol;
       const currentHostname = window.location.hostname;
-      const vncUrl = `${currentProtocol}//${currentHostname}:${currentPort}/vnc/`;
+      
+      // Build the connection parameters for NoVNC (based on the working config)
+      const params = new URLSearchParams({
+        // Connection settings
+        autoconnect: 'true',
+        reconnect: 'true',
+        reconnect_delay: '2000',
+        
+        // IMPORTANT: Use /vnc/websockify path for nginx routing
+        path: '/vnc/websockify',
+        
+        // Display settings
+        resize: 'scale',
+        quality: '6',
+        compression: '2',
+        show_dot: 'false',
+        view_only: 'false',
+        
+        // Host and port (NoVNC will construct ws://${host}:${port}${path} internally)
+        host: currentHostname,
+        port: currentPort || '80',
+        
+        // Don't use encryption since we're proxying through nginx
+        encrypt: 'false'
+      });
+      
+      // Direct link to NoVNC vnc.html with the correct parameters
+      const vncUrl = `${currentProtocol}//${currentHostname}:${currentPort}/vnc/vnc.html?${params.toString()}`;
       
       window.open(vncUrl, '_blank');
-      setLog(prev => [...prev, { type: 'navigation', title: 'Opening Browser Control', content: `Browser control window opened at ${vncUrl}`, timestamp: new Date().toISOString() }]);
+      setLog(prev => [...prev, { type: 'navigation', title: 'Opening Browser Control', content: `Browser control window opened with direct VNC connection`, timestamp: new Date().toISOString() }]);
     } catch (error) {
       setLog(prev => [...prev, { type: 'error', title: 'Pop Out Error', content: error instanceof Error ? error.message : String(error), timestamp: new Date().toISOString() }]);
     }
