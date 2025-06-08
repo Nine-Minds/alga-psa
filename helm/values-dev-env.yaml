@@ -42,11 +42,11 @@ devEnv:
     password: "alga-dev"  # Default password for code-server
     resources:
       limits:
-        cpu: "2"
-        memory: "4Gi"
+        cpu: "6"
+        memory: "16Gi"
       requests:
         cpu: "500m"
-        memory: "1Gi"
+        memory: "4Gi"
   
   # AI Automation Configuration
   aiAutomation:
@@ -137,8 +137,11 @@ setup:
   pullPolicy: Always
 
 # Override base values for development
+# NOTE: The standalone PSA container is disabled in dev environments because
+# the code-server container runs the PSA application internally with hot-reload.
+# This avoids having two separate PSA instances running.
 server:
-  replicaCount: 1
+  replicaCount: 0  # Disabled - PSA runs inside code-server with hot-reload
   image:
     name: harbor.nineminds.com/nineminds/alga-psa-ee
     tag: "latest"
