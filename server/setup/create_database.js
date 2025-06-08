@@ -195,6 +195,18 @@ async function createDatabase(retryCount = 0) {
 
     await dbClient.connect();
 
+    // Check if database is already fully configured by checking for tenants table
+    try {
+      const tenantsCheck = await dbClient.query("SELECT 1 FROM information_schema.tables WHERE table_name = 'tenants'");
+      if (tenantsCheck.rows.length > 0) {
+        console.log('Database appears to be already configured (tenants table exists). Skipping setup.');
+        await dbClient.end();
+        return;
+      }
+    } catch (error) {
+      console.log('Tenants table not found, proceeding with database setup...');
+    }
+
     // Set Citus mode to sequential for DDL operations if Citus is available
     try {
       await dbClient.query(`SET LOCAL citus.multi_shard_modify_mode TO 'sequential';`);
