@@ -31,7 +31,6 @@ export interface EmailMessage {
 export interface EmailProviderConfig {
   providerId: string;
   providerType: 'smtp' | 'resend' | 'ses' | 'sendgrid';
-  priority: number; // Lower number = higher priority
   isEnabled: boolean;
   config: Record<string, any>; // Provider-specific configuration
   rateLimits?: {
@@ -84,9 +83,8 @@ export interface TenantEmailSettings {
   tenantId: string;
   defaultFromDomain?: string;
   customDomains: string[];
-  emailProvider: 'smtp' | 'resend' | 'hybrid';
+  emailProvider: 'smtp' | 'resend';
   providerConfigs: EmailProviderConfig[];
-  fallbackEnabled: boolean;
   trackingEnabled: boolean;
   maxDailyEmails?: number;
   createdAt: Date;
@@ -177,7 +175,7 @@ export class EmailProviderError extends Error {
 }
 
 /**
- * Email provider manager interface for handling multiple providers with fallback
+ * Email provider manager interface for handling email providers
  */
 export interface IEmailProviderManager {
   /**
@@ -186,22 +184,22 @@ export interface IEmailProviderManager {
   initialize(tenantSettings: TenantEmailSettings): Promise<void>;
   
   /**
-   * Send email using the best available provider
+   * Send email using the configured provider
    */
   sendEmail(message: EmailMessage, tenantId: string): Promise<EmailSendResult>;
   
   /**
-   * Send bulk emails with intelligent provider selection
+   * Send bulk emails using the configured provider
    */
   sendBulkEmails(messages: EmailMessage[], tenantId: string): Promise<EmailSendResult[]>;
   
   /**
-   * Get all available providers for a tenant
+   * Get the configured provider for a tenant
    */
   getAvailableProviders(tenantId: string): Promise<IEmailProvider[]>;
   
   /**
-   * Get health status of all providers
+   * Get health status of the provider
    */
   getProvidersHealth(tenantId: string): Promise<Array<{
     providerId: string;

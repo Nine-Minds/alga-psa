@@ -32,7 +32,6 @@ export async function getEmailSettings(): Promise<TenantEmailSettings | null> {
           {
             providerId: 'default-smtp',
             providerType: 'smtp',
-            priority: 1,
             isEnabled: true,
             config: {
               host: process.env.EMAIL_HOST || '',
@@ -43,7 +42,6 @@ export async function getEmailSettings(): Promise<TenantEmailSettings | null> {
             }
           }
         ],
-        fallbackEnabled: true,
         trackingEnabled: false,
         createdAt: new Date(),
         updatedAt: new Date()
@@ -59,7 +57,6 @@ export async function getEmailSettings(): Promise<TenantEmailSettings | null> {
       customDomains: settings.custom_domains || [],
       emailProvider: settings.email_provider,
       providerConfigs: settings.provider_configs || [],
-      fallbackEnabled: settings.fallback_enabled,
       trackingEnabled: settings.tracking_enabled,
       maxDailyEmails: settings.max_daily_emails,
       createdAt: settings.created_at,
@@ -101,7 +98,6 @@ export async function updateEmailSettings(updates: Partial<TenantEmailSettings>)
       custom_domains: JSON.stringify(updates.customDomains || []),
       email_provider: updates.emailProvider,
       provider_configs: JSON.stringify(updates.providerConfigs || []),
-      fallback_enabled: updates.fallbackEnabled,
       tracking_enabled: updates.trackingEnabled,
       max_daily_emails: updates.maxDailyEmails,
       updated_at: now

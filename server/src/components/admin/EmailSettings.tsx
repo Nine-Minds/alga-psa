@@ -128,45 +128,24 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
             <Badge variant={provider.isEnabled ? "default" : "secondary"}>
               {provider.isEnabled ? "Enabled" : "Disabled"}
             </Badge>
-            <Badge variant="secondary">Priority: {provider.priority}</Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor={`${provider.providerId}-enabled`}>Enabled</Label>
-              <Switch
-                id={`${provider.providerId}-enabled`}
-                checked={provider.isEnabled}
-                onCheckedChange={(checked: boolean) => {
-                  if (settings) {
-                    const updatedConfigs = settings.providerConfigs.map(p =>
-                      p.providerId === provider.providerId ? { ...p, isEnabled: checked } : p
-                    );
-                    setSettings({ ...settings, providerConfigs: updatedConfigs });
-                  }
-                }}
-              />
-            </div>
-            <div>
-              <Label htmlFor={`${provider.providerId}-priority`}>Priority</Label>
-              <Input
-                id={`${provider.providerId}-priority`}
-                type="number"
-                min="1"
-                value={provider.priority}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  if (settings) {
-                    const updatedConfigs = settings.providerConfigs.map(p =>
-                      p.providerId === provider.providerId 
-                        ? { ...p, priority: parseInt(e.target.value) || 1 } 
-                        : p
-                    );
-                    setSettings({ ...settings, providerConfigs: updatedConfigs });
-                  }
-                }}
-              />
-            </div>
+          <div className="flex items-center space-x-2">
+            <Switch
+              id={`${provider.providerId}-enabled`}
+              checked={provider.isEnabled}
+              onCheckedChange={(checked: boolean) => {
+                if (settings) {
+                  const updatedConfigs = settings.providerConfigs.map(p =>
+                    p.providerId === provider.providerId ? { ...p, isEnabled: checked } : p
+                  );
+                  setSettings({ ...settings, providerConfigs: updatedConfigs });
+                }
+              }}
+            />
+            <Label htmlFor={`${provider.providerId}-enabled`}>Enabled</Label>
+          </div>
           </div>
           
           {provider.providerType === 'smtp' && (
@@ -442,35 +421,21 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="default-provider">Default Email Provider</Label>
+              <Label htmlFor="default-provider">Email Provider</Label>
               <CustomSelect
                 id="default-provider"
                 value={settings?.emailProvider || ''}
                 onValueChange={(value: string) => {
                   if (settings) {
-                    setSettings({ ...settings, emailProvider: value as 'smtp' | 'resend' | 'hybrid' });
+                    setSettings({ ...settings, emailProvider: value as 'smtp' | 'resend' });
                   }
                 }}
                 options={[
-                  { value: 'smtp', label: 'SMTP Only' },
-                  { value: 'resend', label: 'Resend Only' },
-                  { value: 'hybrid', label: 'Hybrid (with fallback)' }
+                  { value: 'smtp', label: 'SMTP' },
+                  { value: 'resend', label: 'Resend' }
                 ]}
                 placeholder="Select provider"
               />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="fallback-enabled"
-                checked={settings?.fallbackEnabled || false}
-                onCheckedChange={(checked: boolean) => {
-                  if (settings) {
-                    setSettings({ ...settings, fallbackEnabled: checked });
-                  }
-                }}
-              />
-              <Label htmlFor="fallback-enabled">Enable Provider Fallback</Label>
             </div>
 
             <div className="flex items-center space-x-2">
