@@ -172,10 +172,15 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
         .where({ tenant })
         .orderBy('channel_name', 'asc'),
       
-      // Priorities
-      trx('priorities')
-        .where({ tenant })
-        .orderBy('priority_name', 'asc'),
+      // Priorities - fetch both standard and tenant-specific (tickets only)
+      Promise.all([
+        trx('standard_priorities')
+          .where({ item_type: 'ticket' })
+          .orderBy('priority_name', 'asc'),
+        trx('priorities')
+          .where({ tenant, item_type: 'ticket' })
+          .orderBy('priority_name', 'asc')
+      ]).then(([standardPriorities, tenantPriorities]) => [...standardPriorities, ...tenantPriorities]),
       
       // Categories
       trx('categories')
@@ -477,9 +482,12 @@ export async function getTicketsForListWithCursor(
         this.on('t.status_id', 's.status_id')
            .andOn('t.tenant', 's.tenant')
       })
-      .leftJoin('priorities as p', function() {
+      .leftJoin(db.raw(`(
+        SELECT priority_id, priority_name, NULL as tenant FROM standard_priorities WHERE item_type = 'ticket'
+        UNION ALL
+        SELECT priority_id, priority_name, tenant FROM priorities WHERE tenant = ? AND item_type = 'ticket'
+      ) as p`, [tenant]), function() {
         this.on('t.priority_id', 'p.priority_id')
-           .andOn('t.tenant', 'p.tenant')
       })
       .leftJoin('channels as c', function() {
         this.on('t.channel_id', 'c.channel_id')
@@ -680,9 +688,14 @@ export async function getTicketFormOptions(user: IUser) {
         })
         .orderBy('name', 'asc'),
       
-      trx('priorities')
-        .where({ tenant })
-        .orderBy('priority_name', 'asc'),
+      // Priorities - fetch both standard and tenant-specific
+      Promise.all([
+        trx('standard_priorities')
+          .orderBy('priority_name', 'asc'),
+        trx('priorities')
+          .where({ tenant })
+          .orderBy('priority_name', 'asc')
+      ]).then(([standardPriorities, tenantPriorities]) => [...standardPriorities, ...tenantPriorities]),
       
       trx('channels')
         .where({ tenant })

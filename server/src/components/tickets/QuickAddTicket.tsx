@@ -9,7 +9,7 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { getContactsByCompany } from 'server/src/lib/actions/contact-actions/contactActions';
 import { getTicketFormData } from 'server/src/lib/actions/ticket-actions/ticketFormActions';
 import { getTicketCategoriesByChannel } from 'server/src/lib/actions/categoryActions';
-import { IUser, IChannel, ITicketStatus, IPriority, ICompany, IContact, ITicket, ITicketCategory } from 'server/src/interfaces';
+import { IUser, IChannel, ITicketStatus, IPriority, IStandardPriority, ICompany, IContact, ITicket, ITicketCategory } from 'server/src/interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ChannelPicker } from 'server/src/components/settings/general/ChannelPicker';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
@@ -73,7 +73,7 @@ export function QuickAddTicket({
   const [users, setUsers] = useState<IUser[]>([]);
   const [channels, setChannels] = useState<IChannel[]>([]);
   const [statuses, setStatuses] = useState<ITicketStatus[]>([]);
-  const [priorities, setPriorities] = useState<IPriority[]>([]);
+  const [priorities, setPriorities] = useState<(IPriority | IStandardPriority)[]>([]);
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [isPrefilledCompany, setIsPrefilledCompany] = useState(false);
