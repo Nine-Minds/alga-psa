@@ -71,6 +71,7 @@ const createConnectionWithTenant = (config, tenant) => {
 
   return {
     ...config,
+    asyncStackTraces: true,
     pool: {
       ...config.pool,
       afterCreate: (conn, done) => {

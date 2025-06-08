@@ -5,6 +5,10 @@ import { dirname } from 'path';
 import fs from 'fs';
 import path from 'path';
 
+// Enable long stack traces for async operations
+Error.stackTraceLimit = 50;
+process.env.NODE_OPTIONS = '--async-stack-traces';
+
 // Calculate secrets directory path once at module load
 const DOCKER_SECRETS_PATH = '/run/secrets';
 const LOCAL_SECRETS_PATH = '../secrets';
@@ -13,8 +17,11 @@ const SECRETS_PATH = fs.existsSync(DOCKER_SECRETS_PATH) ? DOCKER_SECRETS_PATH : 
 function getSecret(secretName, envVar, defaultValue = '') {
   const secretPath = path.join(SECRETS_PATH, secretName);
   try {
-    return fs.readFileSync(secretPath, 'utf8').trim();
+    const secret = fs.readFileSync(secretPath, 'utf8').trim();
+    console.log(`Successfully read secret '${secretName}' from file: ${secretPath}`);
+    return secret;
   } catch (error) {
+    console.warn(`Failed to read secret file ${secretPath}:`, error.message);
     if (process.env[envVar]) {
       console.warn(`Using ${envVar} environment variable instead of Docker secret`);
       return process.env[envVar] || defaultValue;
@@ -154,6 +161,7 @@ async function createDatabase(retryCount = 0) {
   });
 
   try {
+    console.log(`Attempting to connect to PostgreSQL at ${process.env.DB_HOST}:${process.env.DB_PORT} with user 'postgres'`);
     await client.connect();
     console.log('Connected to PostgreSQL server');
 
@@ -243,6 +251,22 @@ async function createDatabase(retryCount = 0) {
     await dbClient.end();
   } catch (error) {
     console.error('Error during database setup:', error);
+    
+    // Log additional debugging information for authentication errors
+    if (error.code === '08P01' || error.message?.includes('SASL') || error.message?.includes('authentication')) {
+      console.error('=== AUTHENTICATION ERROR DEBUG INFO ===');
+      console.error(`Database Host: ${process.env.DB_HOST}`);
+      console.error(`Database Port: ${process.env.DB_PORT}`);
+      console.error(`Username: postgres`);
+      console.error(`Password source: ${postgresPassword ? 'Available' : 'Missing'}`);
+      console.error(`Password length: ${postgresPassword ? postgresPassword.length : 0} characters`);
+      console.error(`Secrets path used: ${SECRETS_PATH}`);
+      console.error(`Environment variables check:`);
+      console.error(`  - DB_PASSWORD_ADMIN: ${process.env.DB_PASSWORD_ADMIN ? 'Set' : 'Not set'}`);
+      console.error(`  - DB_HOST: ${process.env.DB_HOST || 'Not set'}`);
+      console.error(`  - DB_PORT: ${process.env.DB_PORT || 'Not set'}`);
+      console.error('=======================================');
+    }
     
     if (retryCount < MAX_RETRIES) {
       const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
