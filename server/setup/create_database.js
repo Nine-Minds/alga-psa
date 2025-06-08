@@ -195,6 +195,15 @@ async function createDatabase(retryCount = 0) {
 
     await dbClient.connect();
 
+    // Set Citus mode to sequential for DDL operations if Citus is available
+    try {
+      await dbClient.query(`SET LOCAL citus.multi_shard_modify_mode TO 'sequential';`);
+      console.log('Citus sequential mode enabled');
+    } catch (error) {
+      // Ignore error if Citus is not installed
+      console.log('Citus not detected, continuing with standard PostgreSQL');
+    }
+
     // Create extensions (including vector for pgvector support)
     await dbClient.query(`
       CREATE EXTENSION IF NOT EXISTS "vector";
