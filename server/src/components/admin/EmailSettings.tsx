@@ -146,7 +146,6 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
             />
             <Label htmlFor={`${provider.providerId}-enabled`}>Enabled</Label>
           </div>
-          </div>
           
           {provider.providerType === 'smtp' && (
             <div className="grid grid-cols-2 gap-4">
