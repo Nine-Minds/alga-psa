@@ -138,10 +138,10 @@ jobs:
           docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up --build -d postgres redis
         shell: bash
 
-      - name: Wait for foundational services to be ready
+      - name: Wait for postgres to be ready
         if: steps.changed_files_check.outputs.any_changed == 'true' && steps.install_docker_compose.outcome == 'success'
         run: |
-          echo "Waiting for postgres and redis to be ready..."
+          echo "Waiting for postgres to be ready..."
           
           # Wait for postgres to be healthy
           echo "Checking postgres health..."
@@ -158,21 +158,6 @@ jobs:
             ATTEMPT_NUM=$((ATTEMPT_NUM+1))
           done
           echo "Postgres is ready."
-          
-          # Wait for redis to be ready (try with and without auth)
-          echo "Checking redis health..."
-          ATTEMPT_NUM=1
-          until docker-compose -p alga-e2e-test exec -T redis sh -c 'redis-cli ping 2>/dev/null || redis-cli -a "$(cat /run/secrets/redis_password 2>/dev/null || echo "")" ping' | grep -q PONG; do
-            if [ $ATTEMPT_NUM -ge $MAX_ATTEMPTS ]; then
-              echo "Timeout: Redis did not become ready within the allocated time."
-              docker-compose -p alga-e2e-test logs redis
-              exit 1
-            fi
-            echo "Attempt $ATTEMPT_NUM/$MAX_ATTEMPTS: Redis not ready. Waiting 5 seconds..."
-            sleep 5
-            ATTEMPT_NUM=$((ATTEMPT_NUM+1))
-          done
-          echo "Redis is ready."
         shell: bash
 
       - name: Start setup services
