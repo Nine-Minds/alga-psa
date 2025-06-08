@@ -1,9 +1,10 @@
-import { createTenantKnex } from '../db';
+import { getCurrentTenantId } from '../db';
 import { ITimePeriod, ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
 import { ISO8601String } from 'server/src/types/types.d';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
+import { Knex } from 'knex';
 
 // Database representation of time period
 interface DbTimePeriod {
@@ -27,9 +28,13 @@ function fromDbDate(date: string): Temporal.PlainDate {
 }
 
 export class TimePeriod {
-  static async getLatest(): Promise<ITimePeriod | null> {
-    const {knex: db, tenant} = await createTenantKnex();
-    const latestPeriod = await db<DbTimePeriod>('time_periods')
+  static async getLatest(knexOrTrx: Knex | Knex.Transaction): Promise<ITimePeriod | null> {
+    const tenant = await getCurrentTenantId();
+    if (!tenant) {
+      throw new Error('Tenant context is required for time period operations');
+    }
+    
+    const latestPeriod = await knexOrTrx<DbTimePeriod>('time_periods')
       .where('tenant', tenant)
       .orderBy('end_date', 'desc')
       .first();
@@ -43,9 +48,13 @@ export class TimePeriod {
     };
   }
 
-  static async getAll(): Promise<ITimePeriod[]> {
-    const {knex: db, tenant} = await createTenantKnex();
-    const timePeriods = await db<DbTimePeriod>('time_periods')
+  static async getAll(knexOrTrx: Knex | Knex.Transaction): Promise<ITimePeriod[]> {
+    const tenant = await getCurrentTenantId();
+    if (!tenant) {
+      throw new Error('Tenant context is required for time period operations');
+    }
+    
+    const timePeriods = await knexOrTrx<DbTimePeriod>('time_periods')
       .where('tenant', tenant)
       .select('*')
       .orderBy('start_date', 'desc');
@@ -57,17 +66,21 @@ export class TimePeriod {
     }));
   }  
 
-  static async create(timePeriodData: Omit<ITimePeriod, 'period_id' | 'tenant'>): Promise<ITimePeriod> {
-    const {knex: db, tenant} = await createTenantKnex();
+  static async create(knexOrTrx: Knex | Knex.Transaction, timePeriodData: Omit<ITimePeriod, 'period_id' | 'tenant'>): Promise<ITimePeriod> {
+    const tenant = await getCurrentTenantId();
+    if (!tenant) {
+      throw new Error('Tenant context is required for time period operations');
+    }
+    
     // Create a clean object with only the fields we want to insert
     const dbData: DbTimePeriod = {
-      tenant: tenant!,
+      tenant,
       period_id: uuidv4(),
       start_date: toDbDate(timePeriodData.start_date),
       end_date: toDbDate(timePeriodData.end_date)
     };
 
-    const [newPeriod] = await db<DbTimePeriod>('time_periods')
+    const [newPeriod] = await knexOrTrx<DbTimePeriod>('time_periods')
       .insert(dbData)
       .returning('*');
 
@@ -78,9 +91,13 @@ export class TimePeriod {
     };
   }
 
-  static async findByDate(date: ISO8601String): Promise<ITimePeriodView | null> {
-    const {knex: db, tenant} = await createTenantKnex();
-    const period = await db<DbTimePeriod>('time_periods')
+  static async findByDate(knexOrTrx: Knex | Knex.Transaction, date: ISO8601String): Promise<ITimePeriodView | null> {
+    const tenant = await getCurrentTenantId();
+    if (!tenant) {
+      throw new Error('Tenant context is required for time period operations');
+    }
+    
+    const period = await knexOrTrx<DbTimePeriod>('time_periods')
       .where('tenant', tenant)
       .where('start_date', '<=', date)
       .where('end_date', '>', date)
@@ -97,18 +114,22 @@ export class TimePeriod {
   }
 
   static async findOverlapping(
+    knexOrTrx: Knex | Knex.Transaction,
     startDate: Temporal.PlainDate | ISO8601String,
     endDate: Temporal.PlainDate | ISO8601String,
     excludePeriodId?: string
   ): Promise<ITimePeriod | null> {
-    const {knex: db, tenant} = await createTenantKnex();
+    const tenant = await getCurrentTenantId();
+    if (!tenant) {
+      throw new Error('Tenant context is required for time period operations');
+    }
     
     // Convert inputs to database format
     const startStr = toDbDate(startDate);
     const endStr = toDbDate(endDate);
     
     // For half-open intervals [A,B), two periods overlap if: existing.start_date < newEnd AND existing.end_date > newStart
-    const period = await db<DbTimePeriod>('time_periods')
+    const period = await knexOrTrx<DbTimePeriod>('time_periods')
       .where('tenant', tenant)
       .andWhere('start_date', '<', endStr)
       .andWhere('end_date', '>', startStr)
@@ -127,9 +148,13 @@ export class TimePeriod {
     };
   }
 
-  static async findById(periodId: string): Promise<ITimePeriod | null> {
-    const {knex: db, tenant} = await createTenantKnex();
-    const period = await db<DbTimePeriod>('time_periods')
+  static async findById(knexOrTrx: Knex | Knex.Transaction, periodId: string): Promise<ITimePeriod | null> {
+    const tenant = await getCurrentTenantId();
+    if (!tenant) {
+      throw new Error('Tenant context is required for time period operations');
+    }
+    
+    const period = await knexOrTrx<DbTimePeriod>('time_periods')
       .where('tenant', tenant)
       .where('period_id', periodId)
       .first();
@@ -143,9 +168,13 @@ export class TimePeriod {
     };
   }
 
-  static async hasTimeSheets(periodId: string): Promise<boolean> {
-    const {knex: db, tenant} = await createTenantKnex();
-    const count = await db('time_sheets')
+  static async hasTimeSheets(knexOrTrx: Knex | Knex.Transaction, periodId: string): Promise<boolean> {
+    const tenant = await getCurrentTenantId();
+    if (!tenant) {
+      throw new Error('Tenant context is required for time period operations');
+    }
+    
+    const count = await knexOrTrx('time_sheets')
       .where('tenant', tenant)
       .where('period_id', periodId)
       .count('id as count')
@@ -154,16 +183,20 @@ export class TimePeriod {
     return count ? Number(count.count) > 0 : false;
   }
 
-  static async isEditable(periodId: string): Promise<boolean> {
-    const hasSheets = await this.hasTimeSheets(periodId);
+  static async isEditable(knexOrTrx: Knex | Knex.Transaction, periodId: string): Promise<boolean> {
+    const hasSheets = await this.hasTimeSheets(knexOrTrx, periodId);
     return !hasSheets;
   }
 
   static async update(
+    knexOrTrx: Knex | Knex.Transaction,
     periodId: string, 
     updates: Partial<Omit<ITimePeriod, 'period_id' | 'tenant'>>
   ): Promise<ITimePeriod> {
-    const {knex: db, tenant} = await createTenantKnex();
+    const tenant = await getCurrentTenantId();
+    if (!tenant) {
+      throw new Error('Tenant context is required for time period operations');
+    }
     
     // Create a clean object with only the fields we want to update
     const dbUpdates: Record<string, string> = {};
@@ -176,7 +209,7 @@ export class TimePeriod {
       dbUpdates.end_date = toDbDate(updates.end_date);
     }
 
-    const [updatedPeriod] = await db<DbTimePeriod>('time_periods')
+    const [updatedPeriod] = await knexOrTrx<DbTimePeriod>('time_periods')
       .where('period_id', periodId)
       .where('tenant', tenant)
       .update(dbUpdates)
@@ -193,9 +226,13 @@ export class TimePeriod {
     };
   }
 
-  static async delete(periodId: string): Promise<void> {
-    const {knex: db, tenant} = await createTenantKnex();
-    const deleted = await db('time_periods')
+  static async delete(knexOrTrx: Knex | Knex.Transaction, periodId: string): Promise<void> {
+    const tenant = await getCurrentTenantId();
+    if (!tenant) {
+      throw new Error('Tenant context is required for time period operations');
+    }
+    
+    const deleted = await knexOrTrx('time_periods')
       .where('period_id', periodId)
       .where('tenant', tenant)
       .delete();

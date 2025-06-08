@@ -1,18 +1,18 @@
 import { Knex } from 'knex';
 import { IStatus } from '../../interfaces/status.interface';
-import { createTenantKnex } from '../db';
+import { getCurrentTenantId } from '../db';
 
 const Status = {
-  getAll: async (): Promise<IStatus[]> => {
+  getAll: async (knexOrTrx: Knex | Knex.Transaction): Promise<IStatus[]> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
+      const tenant = await getCurrentTenantId();
       
       if (!tenant) {
         console.error('Tenant context is required for getting statuses');
         throw new Error('Tenant context is required for getting statuses');
       }
 
-      const statuses = await db<IStatus>('statuses')
+      const statuses = await knexOrTrx<IStatus>('statuses')
         .select('*')
         .where({ tenant });
         
@@ -23,17 +23,16 @@ const Status = {
     }
   },
 
-  get: async (id: string, trx?: Knex.Transaction): Promise<IStatus | undefined> => {
-    const {knex: db, tenant} = await createTenantKnex();
+  get: async (knexOrTrx: Knex | Knex.Transaction, id: string): Promise<IStatus | undefined> => {
+    const tenant = await getCurrentTenantId();
     
     if (!tenant) {
       console.error('Tenant context is required for getting status');
       throw new Error('Tenant context is required for getting status');
     }
 
-    const queryBuilder = trx || db;
     try {
-      const status = await queryBuilder<IStatus>('statuses')
+      const status = await knexOrTrx<IStatus>('statuses')
         .select('*')
         .where({
           status_id: id,
@@ -47,17 +46,16 @@ const Status = {
     }
   },
 
-  insert: async (status: Omit<IStatus, 'tenant'>, trx?: Knex.Transaction): Promise<Pick<IStatus, "status_id">> => {
-    const {knex: db, tenant} = await createTenantKnex();
+  insert: async (knexOrTrx: Knex | Knex.Transaction, status: Omit<IStatus, 'tenant'>): Promise<Pick<IStatus, "status_id">> => {
+    const tenant = await getCurrentTenantId();
     
     if (!tenant) {
       throw new Error('Tenant context is required for creating status');
     }
 
-    const queryBuilder = trx || db;
     try {
       // Check if this is the first status of this type - if so, make it default
-      const existingStatuses = await queryBuilder<IStatus>('statuses')
+      const existingStatuses = await knexOrTrx<IStatus>('statuses')
         .where({ 
           tenant, 
           status_type: status.status_type,
@@ -65,7 +63,7 @@ const Status = {
         });
 
       // Get the max order number for this status type
-      const maxOrderResult = await queryBuilder('statuses')
+      const maxOrderResult = await knexOrTrx('statuses')
         .max('order_number as maxOrder')
         .where({
           tenant,
@@ -82,7 +80,7 @@ const Status = {
         is_default: existingStatuses.length === 0 // Make default if no other default exists for this type
       };
 
-      const [insertedStatus] = await queryBuilder<IStatus>('statuses')
+      const [insertedStatus] = await knexOrTrx<IStatus>('statuses')
         .insert(statusToInsert)
         .returning('status_id');
       
@@ -93,8 +91,8 @@ const Status = {
     }
   },
 
-  update: async (id: string, status: Partial<IStatus>): Promise<IStatus> => {
-    const {knex: db, tenant} = await createTenantKnex();
+  update: async (knexOrTrx: Knex | Knex.Transaction, id: string, status: Partial<IStatus>): Promise<IStatus> => {
+    const tenant = await getCurrentTenantId();
     
     if (!tenant) {
       console.error('Tenant context is required for updating status');
@@ -107,12 +105,12 @@ const Status = {
 
       // If updating is_default to false, check if this is the last default status
       if (updateData.is_default === false) {
-        const currentStatus = await db<IStatus>('statuses')
+        const currentStatus = await knexOrTrx<IStatus>('statuses')
           .where({ tenant, status_id: id })
           .first();
 
         if (currentStatus) {
-          const defaultStatuses = await db<IStatus>('statuses')
+          const defaultStatuses = await knexOrTrx<IStatus>('statuses')
             .where({ 
               tenant, 
               is_default: true,
@@ -126,14 +124,14 @@ const Status = {
         }
       }
 
-      await db<IStatus>('statuses')
+      await knexOrTrx<IStatus>('statuses')
         .where({
           status_id: id,
           tenant
         })
         .update(updateData);
 
-      const updatedStatus = await db<IStatus>('statuses')
+      const updatedStatus = await knexOrTrx<IStatus>('statuses')
         .where({
           status_id: id,
           tenant
@@ -151,9 +149,9 @@ const Status = {
     }
   },
 
-  delete: async (id: string): Promise<void> => {
+  delete: async (knexOrTrx: Knex | Knex.Transaction, id: string): Promise<void> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
+      const tenant = await getCurrentTenantId();
       
       if (!tenant) {
         console.error('Tenant context is required for deleting status');
@@ -161,7 +159,7 @@ const Status = {
       }
 
       // Check if this is a default status
-      const status = await db<IStatus>('statuses')
+      const status = await knexOrTrx<IStatus>('statuses')
         .where({ 
           status_id: id,
           tenant,
@@ -173,7 +171,7 @@ const Status = {
         throw new Error('Cannot delete the default status');
       }
 
-      const result = await db<IStatus>('statuses')
+      const result = await knexOrTrx<IStatus>('statuses')
         .where({
           status_id: id,
           tenant

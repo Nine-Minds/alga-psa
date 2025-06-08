@@ -56,18 +56,20 @@ async function safePublishEvent(eventType: string, payload: any) {
  * This reduces multiple network calls by fetching all related data in a single server action
  */
 export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
-  if (!await hasPermission(user, 'ticket', 'read')) {
-    throw new Error('Permission denied: Cannot view ticket');
+  const {knex: db, tenant} = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
   }
 
-  try {
-    const {knex: db, tenant} = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'read', trx)) {
+      throw new Error('Permission denied: Cannot view ticket');
     }
 
+    try {
+
     // Fetch ticket with status info
-    const ticket = await db('tickets as t')
+    const ticket = await trx('tickets as t')
       .select(
         't.*',
         's.name as status_name',
@@ -100,7 +102,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       categories
     ] = await Promise.all([
       // Comments
-      db('comments')
+      trx('comments')
         .where({
           ticket_id: ticketId,
           tenant: tenant
@@ -108,7 +110,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
         .orderBy('created_at', 'asc'),
       
       // Documents
-      db('documents as d')
+      trx('documents as d')
         .select('d.*')
         .leftJoin('document_associations as da', function() {
           this.on('d.document_id', 'da.document_id')
@@ -120,7 +122,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
           'd.tenant': tenant
         }),
       
-      db('companies as c')
+      trx('companies as c')
         .select(
           'c.*',
           'da.document_id'
@@ -133,14 +135,14 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
         .where({ 'c.tenant': tenant })
         .orderBy('c.company_name', 'asc'),
 
-      db('ticket_resources')
+      trx('ticket_resources')
         .where({
           ticket_id: ticketId,
           tenant: tenant
         }),
       
       // Users
-      db('users as u')
+      trx('users as u')
         .select(
           'u.*',
           'd.file_id as avatar_file_id'
@@ -158,7 +160,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
         .orderBy('u.first_name', 'asc'),
       
       // Statuses
-      db('statuses')
+      trx('statuses')
         .where({
           tenant: tenant,
           status_type: 'ticket'
@@ -166,17 +168,17 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
         .orderBy('name', 'asc'),
       
       // Channels
-      db('channels')
+      trx('channels')
         .where({ tenant })
         .orderBy('channel_name', 'asc'),
       
       // Priorities
-      db('priorities')
+      trx('priorities')
         .where({ tenant })
         .orderBy('priority_name', 'asc'),
       
       // Categories
-      db('categories')
+      trx('categories')
         .where({ tenant })
         .orderBy('category_name', 'asc')
     ]);
@@ -189,7 +191,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
 
     let fileIdMap: Record<string, string> = {};
     if (documentIds.length > 0) {
-      const fileRecords = await db('documents')
+      const fileRecords = await trx('documents')
         .select('document_id', 'file_id')
         .whereIn('document_id', documentIds)
         .andWhere({ tenant });
@@ -225,7 +227,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
     
     if (ticket.company_id) {
       [company, contacts] = await Promise.all([
-        db('companies as c')
+        trx('companies as c')
           .select(
             'c.*',
             'd.file_id'
@@ -245,7 +247,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
           })
           .first(),
 
-        db('contacts')
+        trx('contacts')
           .where({
             company_id: ticket.company_id,
             tenant: tenant
@@ -267,7 +269,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
     }
 
     if (ticket.contact_name_id) {
-      contactInfo = await db('contacts')
+      contactInfo = await trx('contacts')
         .where({
           contact_name_id: ticket.contact_name_id,
           tenant: tenant
@@ -277,7 +279,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
 
     // Fetch created by user
     const createdByUser = ticket.entered_by ? 
-      await db('users')
+      await trx('users')
         .where({
           user_id: ticket.entered_by,
           tenant: tenant
@@ -286,7 +288,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
 
     // Fetch channel
     const channel = ticket.channel_id ?
-      await db('channels')
+      await trx('channels')
         .where({
           channel_id: ticket.channel_id,
           tenant: tenant
@@ -348,7 +350,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
     }));
 
     // Get scheduled hours for ticket
-    const scheduleEntries = await db('schedule_entries as se')
+    const scheduleEntries = await trx('schedule_entries as se')
       .select(
         'se.*',
         'sea.user_id'
@@ -416,10 +418,11 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       companies: companiesWithLogos,
       agentSchedules: agentSchedulesList
     };
-  } catch (error) {
-    console.error('Failed to fetch consolidated ticket data:', error);
-    throw new Error('Failed to fetch ticket data');
-  }
+    } catch (error) {
+      console.error('Failed to fetch consolidated ticket data:', error);
+      throw new Error('Failed to fetch ticket data');
+    }
+  });
 }
 
 /**
@@ -432,42 +435,43 @@ export async function getTicketsForListWithCursor(
   cursor?: string,
   limit: number = 50
 ): Promise<{ tickets: ITicketListItem[], nextCursor: string | null }> {
-  if (!await hasPermission(user, 'ticket', 'read')) {
-    throw new Error('Permission denied: Cannot view tickets');
+  const {knex: db, tenant} = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
   }
 
-  try {
-    const validatedFilters = validateData(ticketListFiltersSchema, filters) as ITicketListFilters;
-
-    // Explicitly clear "$undefined" string values for ID filters
-    // to prevent them from being used as literal filter values if they bypass Zod.
-    if (validatedFilters.channelId === '$undefined') {
-      validatedFilters.channelId = undefined;
-    }
-    if (validatedFilters.categoryId === '$undefined') {
-      validatedFilters.categoryId = undefined;
-    }
-    if (validatedFilters.companyId === '$undefined') {
-      validatedFilters.companyId = undefined;
-    }
-    if (validatedFilters.contactId === '$undefined') {
-      validatedFilters.contactId = undefined;
-    }
-    
-    const {knex: db, tenant} = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'read', trx)) {
+      throw new Error('Permission denied: Cannot view tickets');
     }
 
-    let query = db('tickets as t')
+    try {
+      const validatedFilters = validateData(ticketListFiltersSchema, filters) as ITicketListFilters;
+
+      // Explicitly clear "$undefined" string values for ID filters
+      // to prevent them from being used as literal filter values if they bypass Zod.
+      if (validatedFilters.channelId === '$undefined') {
+        validatedFilters.channelId = undefined;
+      }
+      if (validatedFilters.categoryId === '$undefined') {
+        validatedFilters.categoryId = undefined;
+      }
+      if (validatedFilters.companyId === '$undefined') {
+        validatedFilters.companyId = undefined;
+      }
+      if (validatedFilters.contactId === '$undefined') {
+        validatedFilters.contactId = undefined;
+      }
+
+    let query = trx('tickets as t')
       .select(
         't.*',
         's.name as status_name',
         'p.priority_name',
         'c.channel_name',
         'cat.category_name',
-        db.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
-        db.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name")
+        trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
+        trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name")
       )
       .leftJoin('statuses as s', function() {
         this.on('t.status_id', 's.status_id')
@@ -519,7 +523,7 @@ export async function getTicketsForListWithCursor(
     if (validatedFilters.channelId) {
       query = query.where('t.channel_id', validatedFilters.channelId);
     } else if (validatedFilters.channelFilterState !== 'all') {
-      const channelSubquery = db('channels')
+      const channelSubquery = trx('channels')
         .select('channel_id')
         .where('tenant', tenant)
         .where('is_inactive', validatedFilters.channelFilterState === 'inactive');
@@ -636,10 +640,11 @@ export async function getTicketsForListWithCursor(
       tickets: validateData(z.array(ticketListItemSchema), ticketListItems),
       nextCursor
     };
-  } catch (error) {
-    console.error('Failed to fetch tickets:', error);
-    throw new Error('Failed to fetch tickets');
-  }
+    } catch (error) {
+      console.error('Failed to fetch tickets:', error);
+      throw new Error('Failed to fetch tickets');
+    }
+  });
 }
 
 /**
@@ -647,15 +652,17 @@ export async function getTicketsForListWithCursor(
  * This consolidates multiple API calls into a single request
  */
 export async function getTicketFormOptions(user: IUser) {
-  if (!await hasPermission(user, 'ticket', 'read')) {
-    throw new Error('Permission denied: Cannot view ticket options');
+  const {knex: db, tenant} = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
   }
 
-  try {
-    const {knex: db, tenant} = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'read', trx)) {
+      throw new Error('Permission denied: Cannot view ticket options');
     }
+
+    try {
 
     // Fetch all options in parallel
     const [
@@ -666,31 +673,31 @@ export async function getTicketFormOptions(user: IUser) {
       companies,
       users
     ] = await Promise.all([
-      db('statuses')
+      trx('statuses')
         .where({
           tenant: tenant,
           status_type: 'ticket'  // Changed from item_type to status_type
         })
         .orderBy('name', 'asc'),
       
-      db('priorities')
+      trx('priorities')
         .where({ tenant })
         .orderBy('priority_name', 'asc'),
       
-      db('channels')
+      trx('channels')
         .where({ tenant })
         .orderBy('channel_name', 'asc'),
       
-      db('categories')
+      trx('categories')
         .where({ tenant })
         .orderBy('category_name', 'asc'),
       
-      db('companies as c')
+      trx('companies as c')
         .select('c.*')
         .where({ 'c.tenant': tenant })
         .orderBy('c.company_name', 'asc'),
 
-      db('users')
+      trx('users')
         .where({ tenant })
         .orderBy('first_name', 'asc')
     ]);
@@ -747,31 +754,33 @@ export async function getTicketFormOptions(user: IUser) {
       companies: companiesWithLogos, // Return companies with logos
       users
     };
-  } catch (error) {
-    console.error('Failed to fetch ticket form options:', error);
-    throw new Error('Failed to fetch ticket form options');
-  }
+    } catch (error) {
+      console.error('Failed to fetch ticket form options:', error);
+      throw new Error('Failed to fetch ticket form options');
+    }
+  });
 }
 
 /**
  * Update ticket with proper caching
  */
 export async function updateTicketWithCache(id: string, data: Partial<ITicket>, user: IUser) {
-  if (!await hasPermission(user, 'ticket', 'update')) {
-    throw new Error('Permission denied: Cannot update ticket');
+  const {knex: db, tenant} = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
   }
 
-  try {
-    // Validate update data
-    const validatedData = validateData(ticketUpdateSchema, data);
-
-    const {knex: db, tenant} = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'update', trx)) {
+      throw new Error('Permission denied: Cannot update ticket');
     }
 
+    try {
+      // Validate update data
+      const validatedData = validateData(ticketUpdateSchema, data);
+
     // Get current ticket state before update
-    const currentTicket = await db('tickets')
+    const currentTicket = await trx('tickets')
       .where({ ticket_id: id, tenant: tenant })
       .first();
 
@@ -801,7 +810,7 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
 
       if (newSubcategoryId) {
         // If setting a subcategory, verify it's a valid child of the category
-        const subcategory = await db('categories')
+        const subcategory = await trx('categories')
           .where({ category_id: newSubcategoryId, tenant: tenant })
           .first();
 
@@ -812,7 +821,7 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
     }
 
     // Get the status before and after update to check for closure
-    const oldStatus = await db('statuses')
+    const oldStatus = await trx('statuses')
       .where({
         status_id: currentTicket.status_id,
         tenant: tenant
@@ -823,7 +832,7 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
     
     // If we're changing the assigned_to field, we need to handle the ticket_resources table
     if (isChangingAssignment) {
-      updatedTicket = await db.transaction(async (trx) => {
+      // Use the existing transaction instead of creating a nested one
         // Step 1: Delete any ticket_resources where the new assigned_to is an additional_user_id
         // to avoid constraint violations after the update
         await trx('ticket_resources')
@@ -879,11 +888,10 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
           });
         }
         
-        return updated;
-      });
+        updatedTicket = updated;
     } else {
       // Regular update without changing assignment
-      [updatedTicket] = await db('tickets')
+      [updatedTicket] = await trx('tickets')
         .where({ ticket_id: id, tenant: tenant })
         .update(updateData)
         .returning('*');
@@ -895,7 +903,7 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
 
     // Get the new status if it was updated
     const newStatus = updateData.status_id ? 
-      await db('statuses')
+      await trx('statuses')
         .where({ 
           status_id: updateData.status_id,
           tenant: tenant
@@ -935,10 +943,11 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
     revalidatePath('/msp/tickets');
 
     return 'success';
-  } catch (error) {
-    console.error(error);
-    throw new Error('Failed to update ticket');
-  }
+    } catch (error) {
+      console.error(error);
+      throw new Error('Failed to update ticket');
+    }
+  });
 }
 
 /**
@@ -951,18 +960,20 @@ export async function addTicketCommentWithCache(
   isResolution: boolean,
   user: IUser
 ): Promise<IComment> {
-  if (!await hasPermission(user, 'ticket', 'update')) {
-    throw new Error('Permission denied: Cannot add comment');
+  const {knex: db, tenant} = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
   }
 
-  try {
-    const {knex: db, tenant} = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'update', trx)) {
+      throw new Error('Permission denied: Cannot add comment');
     }
 
+    try {
+
     // Verify ticket exists
-    const ticket = await db('tickets')
+    const ticket = await trx('tickets')
       .where({
         ticket_id: ticketId,
         tenant: tenant
@@ -985,7 +996,7 @@ export async function addTicketCommentWithCache(
     }
     
     // Insert comment with markdown_content
-    const [newComment] = await db('comments').insert({
+    const [newComment] = await trx('comments').insert({
       tenant,
       ticket_id: ticketId,
       user_id: user.user_id,
@@ -1014,10 +1025,11 @@ export async function addTicketCommentWithCache(
     revalidatePath(`/msp/tickets/${ticketId}`);
 
     return newComment;
-  } catch (error) {
-    console.error('Failed to add ticket comment:', error);
-    throw new Error('Failed to add ticket comment');
-  }
+    } catch (error) {
+      console.error('Failed to add ticket comment:', error);
+      throw new Error('Failed to add ticket comment');
+    }
+  });
 }
 
 /**
@@ -1030,27 +1042,34 @@ export async function getConsolidatedTicketListData(
   cursor?: string,
   limit: number = 50
 ) {
-  if (!await hasPermission(user, 'ticket', 'read')) {
-    throw new Error('Permission denied: Cannot view tickets');
+  const {knex: db, tenant} = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
   }
 
-  try {
-    // Fetch filter options and tickets in parallel
-    const [formOptions, ticketsData] = await Promise.all([
-      getTicketFormOptions(user),
-      getTicketsForListWithCursor(user, filters, cursor, limit)
-    ]);
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'read', trx)) {
+      throw new Error('Permission denied: Cannot view tickets');
+    }
 
-    // Return consolidated data
-    return {
-      options: formOptions,
-      tickets: ticketsData.tickets,
-      nextCursor: ticketsData.nextCursor
-    };
-  } catch (error) {
-    console.error('Failed to fetch consolidated ticket list data:', error);
-    throw new Error('Failed to fetch ticket list data');
-  }
+    try {
+      // Fetch filter options and tickets in parallel
+      const [formOptions, ticketsData] = await Promise.all([
+        getTicketFormOptions(user),
+        getTicketsForListWithCursor(user, filters, cursor, limit)
+      ]);
+
+      // Return consolidated data
+      return {
+        options: formOptions,
+        tickets: ticketsData.tickets,
+        nextCursor: ticketsData.nextCursor
+      };
+    } catch (error) {
+      console.error('Failed to fetch consolidated ticket list data:', error);
+      throw new Error('Failed to fetch ticket list data');
+    }
+  });
 }
 
 /**
@@ -1063,14 +1082,21 @@ export async function loadMoreTickets(
   cursor?: string,
   limit: number = 50
 ) {
-  if (!await hasPermission(user, 'ticket', 'read')) {
-    throw new Error('Permission denied: Cannot view tickets');
+  const {knex: db, tenant} = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
   }
 
-  try {
-    return await getTicketsForListWithCursor(user, filters, cursor, limit);
-  } catch (error) {
-    console.error('Failed to load more tickets:', error);
-    throw new Error('Failed to load more tickets');
-  }
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'read', trx)) {
+      throw new Error('Permission denied: Cannot view tickets');
+    }
+
+    try {
+      return await getTicketsForListWithCursor(user, filters, cursor, limit);
+    } catch (error) {
+      console.error('Failed to load more tickets:', error);
+      throw new Error('Failed to load more tickets');
+    }
+  });
 }

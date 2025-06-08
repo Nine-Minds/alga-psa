@@ -43,8 +43,8 @@ const extendedUpdateProjectSchema = updateProjectSchema.extend({
   contact_name_id: data.contact_name_id || null
 }));
 
-async function checkPermission(user: IUser, resource: string, action: string): Promise<void> {
-    const hasPermissionResult = await hasPermission(user, resource, action);
+async function checkPermission(user: IUser, resource: string, action: string, knexConnection?: Knex | Knex.Transaction): Promise<void> {
+    const hasPermissionResult = await hasPermission(user, resource, action, knexConnection);
     if (!hasPermissionResult) {
         throw new Error(`Permission denied: Cannot ${action} ${resource}`);
     }
@@ -59,8 +59,12 @@ export async function getProjects(): Promise<IProject[]> {
         if (!currentUser.tenant) {
             throw new Error("tenant context not found");
         }
-        await checkPermission(currentUser, 'project', 'read');
-        const projects = await ProjectModel.getAll(true);
+        const {knex} = await createTenantKnex();
+        
+        const projects = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            await checkPermission(currentUser, 'project', 'read', trx);
+            return await ProjectModel.getAll(trx, true);
+        });
         
         // Fetch assigned user details for each project
         const projectsWithUsers = await Promise.all(projects.map(async (project): Promise<IProject> => {
@@ -83,7 +87,10 @@ export async function getProjects(): Promise<IProject[]> {
 
 export async function getProjectPhase(phaseId: string): Promise<IProjectPhase | null> {
     try {
-        const phase = await ProjectModel.getPhaseById(phaseId);
+        const {knex} = await createTenantKnex();
+        const phase = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            return await ProjectModel.getPhaseById(trx, phaseId);
+        });
         return phase;
     } catch (error) {
         console.error('Error fetching project phase:', error);
@@ -98,53 +105,55 @@ export async function getProjectTreeData(projectId?: string) {
       throw new Error("user not found");
     }
 
-    await checkPermission(currentUser, 'project', 'read');
+    const {knex} = await createTenantKnex();
     
-    const projects = projectId ? 
-      [await ProjectModel.getById(projectId)] : 
-      await ProjectModel.getAll(true);
-    
-    const validProjects = projects.filter((p): p is IProject => p !== null);
-    
-    if (validProjects.length === 0) {
-      throw new Error('No projects found');
-    }
-    
-    const treeData = await Promise.all(validProjects.map(async (project): Promise<{
-      label: string;
-      value: string;
-      type: 'project';
-      children: {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await checkPermission(currentUser, 'project', 'read', trx);
+      const projects = projectId ? 
+        [await ProjectModel.getById(trx, projectId)] : 
+        await ProjectModel.getAll(trx, true);
+      
+      const validProjects = projects.filter((p): p is IProject => p !== null);
+      
+      if (validProjects.length === 0) {
+        throw new Error('No projects found');
+      }
+      
+      const treeData = await Promise.all(validProjects.map(async (project): Promise<{
         label: string;
         value: string;
-        type: 'phase';
+        type: 'project';
         children: {
           label: string;
           value: string;
-          type: 'status';
+          type: 'phase';
+          children: {
+            label: string;
+            value: string;
+            type: 'status';
+          }[];
         }[];
-      }[];
-    } | null> => {
-      try {
-        const [phases, statusMappings] = await Promise.all([
-          ProjectModel.getPhases(project.project_id),
-          ProjectModel.getProjectStatusMappings(project.project_id)
-        ]);
+      } | null> => {
+        try {
+          const [phases, statusMappings] = await Promise.all([
+            ProjectModel.getPhases(trx, project.project_id),
+            ProjectModel.getProjectStatusMappings(trx, project.project_id)
+          ]);
 
-        if (!statusMappings || statusMappings.length === 0) {
-          const standardStatuses = await ProjectModel.getStandardStatusesByType('project_task');
-          await Promise.all(standardStatuses.map((status): Promise<IProjectStatusMapping> => 
-            ProjectModel.addProjectStatusMapping(project.project_id, {
-              standard_status_id: status.standard_status_id,
-              is_standard: true,
-              custom_name: null,
-              display_order: status.display_order,
-              is_visible: true,
-            })
-          ));
-        }
+          if (!statusMappings || statusMappings.length === 0) {
+            const standardStatuses = await ProjectModel.getStandardStatusesByType(trx, 'project_task');
+            await Promise.all(standardStatuses.map((status): Promise<IProjectStatusMapping> => 
+              ProjectModel.addProjectStatusMapping(trx, project.project_id, {
+                standard_status_id: status.standard_status_id,
+                is_standard: true,
+                custom_name: null,
+                display_order: status.display_order,
+                is_visible: true,
+              })
+            ));
+          }
 
-        const statuses = await getProjectTaskStatuses(project.project_id);
+          const statuses = await getProjectTaskStatuses(project.project_id);
 
         return {
           label: project.project_name,
@@ -180,18 +189,19 @@ export async function getProjectTreeData(projectId?: string) {
       }
     }));
 
-    const validTreeData = treeData
-      .filter((data): data is NonNullable<typeof data> =>
-        data !== null && 
-        data.children && 
-        data.children.length > 0
-      );
-    
-    if (validTreeData.length === 0) {
-      throw new Error('No projects available with valid phases');
-    }
-    
-    return validTreeData;
+      const validTreeData = treeData
+        .filter((data): data is NonNullable<typeof data> =>
+          data !== null && 
+          data.children && 
+          data.children.length > 0
+        );
+      
+      if (validTreeData.length === 0) {
+        throw new Error('No projects available with valid phases');
+      }
+      
+      return validTreeData;
+    });
   } catch (error) {
     console.error('Error fetching project tree data:', error);
     throw new Error('Failed to fetch project tree data');
@@ -205,13 +215,15 @@ export async function updatePhase(phaseId: string, phaseData: Partial<IProjectPh
             throw new Error("user not found");
         }
 
-        await checkPermission(currentUser, 'project', 'update');
-
         // Skip validation in development mode since we're handling the types correctly
-        const updatedPhase = await ProjectModel.updatePhase(phaseId, {
-            ...phaseData,
-            start_date: phaseData.start_date ? new Date(phaseData.start_date) : null,
-            end_date: phaseData.end_date ? new Date(phaseData.end_date) : null
+        const {knex} = await createTenantKnex();
+        const updatedPhase = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            await checkPermission(currentUser, 'project', 'update', trx);
+            return await ProjectModel.updatePhase(trx, phaseId, {
+                ...phaseData,
+                start_date: phaseData.start_date ? new Date(phaseData.start_date) : null,
+                end_date: phaseData.end_date ? new Date(phaseData.end_date) : null
+            });
         });
         
         return updatedPhase;
@@ -228,8 +240,11 @@ export async function deletePhase(phaseId: string): Promise<void> {
             throw new Error("user not found");
         }
 
-        await checkPermission(currentUser, 'project', 'delete');
-        await ProjectModel.deletePhase(phaseId);
+        const {knex} = await createTenantKnex();
+        await withTransaction(knex, async (trx: Knex.Transaction) => {
+            await checkPermission(currentUser, 'project', 'delete', trx);
+            await ProjectModel.deletePhase(trx, phaseId);
+        });
     } catch (error) {
         console.error('Error deleting project phase:', error);
         throw error;
@@ -243,8 +258,6 @@ export async function addProjectPhase(phaseData: Omit<IProjectPhase, 'phase_id' 
             throw new Error("user not found");
         }
 
-        await checkPermission(currentUser, 'project', 'update');
-
         const validatedData = validateData(projectPhaseSchema.omit({ 
             phase_id: true,
             created_at: true,
@@ -253,52 +266,57 @@ export async function addProjectPhase(phaseData: Omit<IProjectPhase, 'phase_id' 
         }), phaseData);
 
         // Get the project first to get its WBS code
-        const project = await ProjectModel.getById(phaseData.project_id);
-        if (!project) {
-            throw new Error('Project not found');
-        }
-
-        const phases = await ProjectModel.getPhases(phaseData.project_id);
-        const nextOrderNumber = phases.length + 1;
-
-        // Get next phase number
-        const phaseNumbers = phases
-            .map((phase):number => {
-                const parts = phase.wbs_code.split('.');
-                return parseInt(parts[parts.length - 1]);
-            })
-            .filter(num => !isNaN(num));
-
-        const maxPhaseNumber = phaseNumbers.length > 0 ? Math.max(...phaseNumbers) : 0;
-        const newWbsCode = `${project.wbs_code}.${maxPhaseNumber + 1}`;
+        const {knex} = await createTenantKnex();
         
-        // Generate order key for the new phase
-        const { generateKeyBetween } = await import('fractional-indexing');
-        let orderKey: string;
-        
-        if (phases.length === 0) {
-            // First phase
-            orderKey = generateKeyBetween(null, null);
-        } else {
-            // Add after the last phase
-            const sortedPhases = [...phases].sort((a, b) => {
-                if (a.order_key && b.order_key) {
-                    return a.order_key < b.order_key ? -1 : a.order_key > b.order_key ? 1 : 0;
-                }
-                return 0;
-            });
-            const lastPhase = sortedPhases[sortedPhases.length - 1];
-            orderKey = generateKeyBetween(lastPhase.order_key || null, null);
-        }
+        return await withTransaction(knex, async (trx: Knex.Transaction) => {
+            await checkPermission(currentUser, 'project', 'update', trx);
+            const project = await ProjectModel.getById(trx, phaseData.project_id);
+            if (!project) {
+                throw new Error('Project not found');
+            }
 
-        const phaseWithDefaults = {
-            ...validatedData,
-            order_number: nextOrderNumber,
-            wbs_code: newWbsCode,
-            order_key: orderKey,
-        };
+            const phases = await ProjectModel.getPhases(trx, phaseData.project_id);
+            const nextOrderNumber = phases.length + 1;
 
-        return await ProjectModel.addPhase(phaseWithDefaults);
+            // Get next phase number
+            const phaseNumbers = phases
+                .map((phase):number => {
+                    const parts = phase.wbs_code.split('.');
+                    return parseInt(parts[parts.length - 1]);
+                })
+                .filter(num => !isNaN(num));
+
+            const maxPhaseNumber = phaseNumbers.length > 0 ? Math.max(...phaseNumbers) : 0;
+            const newWbsCode = `${project.wbs_code}.${maxPhaseNumber + 1}`;
+            
+            // Generate order key for the new phase
+            const { generateKeyBetween } = await import('fractional-indexing');
+            let orderKey: string;
+            
+            if (phases.length === 0) {
+                // First phase
+                orderKey = generateKeyBetween(null, null);
+            } else {
+                // Add after the last phase
+                const sortedPhases = [...phases].sort((a, b) => {
+                    if (a.order_key && b.order_key) {
+                        return a.order_key < b.order_key ? -1 : a.order_key > b.order_key ? 1 : 0;
+                    }
+                    return 0;
+                });
+                const lastPhase = sortedPhases[sortedPhases.length - 1];
+                orderKey = generateKeyBetween(lastPhase.order_key || null, null);
+            }
+
+            const phaseWithDefaults = {
+                ...validatedData,
+                order_number: nextOrderNumber,
+                wbs_code: newWbsCode,
+                order_key: orderKey,
+            };
+
+            return await ProjectModel.addPhase(trx, phaseWithDefaults);
+        });
     } catch (error) {
         console.error('Error adding project phase:', error);
         throw error;
@@ -315,11 +333,10 @@ export async function reorderPhase(
         throw new Error("user not found");
     }
 
-    await checkPermission(currentUser, 'project', 'update');
-    
     const {knex: db, tenant} = await createTenantKnex();
     
     await withTransaction(db, async (trx: Knex.Transaction) => {
+        await checkPermission(currentUser, 'project', 'update', trx);
         // Get the phase being moved
         const phase = await trx('project_phases')
             .where({ phase_id: phaseId, tenant })
@@ -410,8 +427,11 @@ export async function getProject(projectId: string): Promise<IProject | null> {
         if (!currentUser) {
             throw new Error("user not found");
         }
-        await checkPermission(currentUser, 'project', 'read');
-        return await ProjectModel.getById(projectId);
+        const {knex} = await createTenantKnex();
+        return await withTransaction(knex, async (trx: Knex.Transaction) => {
+            await checkPermission(currentUser, 'project', 'read', trx);
+            return await ProjectModel.getById(trx, projectId);
+        });
     } catch (error) {
         console.error('Error fetching project:', error);
         throw error;
@@ -420,7 +440,10 @@ export async function getProject(projectId: string): Promise<IProject | null> {
 
 async function getStandardProjectTaskStatuses(): Promise<IStandardStatus[]> {
     try {
-        return await ProjectModel.getStandardStatusesByType('project_task');
+        const {knex} = await createTenantKnex();
+        return await withTransaction(knex, async (trx: Knex.Transaction) => {
+            return await ProjectModel.getStandardStatusesByType(trx, 'project_task');
+        });
     } catch (error) {
         console.error('Error fetching standard project task statuses:', error);
         throw new Error('Failed to fetch standard project task statuses');
@@ -429,7 +452,10 @@ async function getStandardProjectTaskStatuses(): Promise<IStandardStatus[]> {
 
 export async function getProjectStatuses(): Promise<IStatus[]> {
   try {
-    return await ProjectModel.getStatusesByType('project');
+    const {knex} = await createTenantKnex();
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await ProjectModel.getStatusesByType(trx, 'project');
+    });
   } catch (error) {
     console.error('Error fetching project statuses:', error);
     throw new Error('Failed to fetch project statuses');
@@ -438,7 +464,10 @@ export async function getProjectStatuses(): Promise<IStatus[]> {
 
 export async function generateNextWbsCode(): Promise<string> {
     try {
-        return await ProjectModel.generateNextWbsCode('');
+        const {knex} = await createTenantKnex();
+        return await withTransaction(knex, async (trx: Knex.Transaction) => {
+            return await ProjectModel.generateNextWbsCode(trx, '');
+        });
     } catch (error) {
         console.error('Error generating WBS code:', error);
         throw error;
@@ -466,50 +495,54 @@ export async function createProject(projectData: Omit<IProject, 'project_id' | '
         if (!currentUser.tenant) {
             throw new Error("tenant context not found");
         }
-        await checkPermission(currentUser, 'project', 'create');
-
         const validatedData = validateData(createProjectSchema, projectData);
 
         // Ensure we're passing all fields including assigned_to and contact_name_id
-        const wbsCode = await ProjectModel.generateNextWbsCode('');
-        const defaultStatus = projectStatuses[0];
-        // Remove tenant field if present in validatedData
-        const { tenant: _, ...safeValidatedData } = validatedData;
-        const projectDataWithStatus = {
-            ...safeValidatedData,
-            status: defaultStatus.status_id,
-            status_name: defaultStatus.name,
-            is_closed: defaultStatus.is_closed,
-            assigned_to: safeValidatedData.assigned_to || null,
-            contact_name_id: safeValidatedData.contact_name_id || null,
-            wbs_code: wbsCode
-        };
-        console.log('Project data with status:', projectDataWithStatus); // Debug log
+        const {knex} = await createTenantKnex();
         
-        // Add debug logging before database insert
-        console.log('Creating project with data:', projectDataWithStatus);
+        const fullProject = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            await checkPermission(currentUser, 'project', 'create', trx);
+            const wbsCode = await ProjectModel.generateNextWbsCode(trx, '');
+            const defaultStatus = projectStatuses[0];
+            // Remove tenant field if present in validatedData
+            const { tenant: _, ...safeValidatedData } = validatedData;
+            const projectDataWithStatus = {
+                ...safeValidatedData,
+                status: defaultStatus.status_id,
+                status_name: defaultStatus.name,
+                is_closed: defaultStatus.is_closed,
+                assigned_to: safeValidatedData.assigned_to || null,
+                contact_name_id: safeValidatedData.contact_name_id || null,
+                wbs_code: wbsCode
+            };
+            console.log('Project data with status:', projectDataWithStatus); // Debug log
+            
+            // Add debug logging before database insert
+            console.log('Creating project with data:', projectDataWithStatus);
 
-        const newProject = await ProjectModel.create({
-            ...projectDataWithStatus,
-            assigned_to: validatedData.assigned_to || null,
-            contact_name_id: validatedData.contact_name_id || null
-        });
-
-        for (const status of standardTaskStatuses) {
-            await ProjectModel.addProjectStatusMapping(newProject.project_id, {
-                standard_status_id: status.standard_status_id,
-                is_standard: true,
-                custom_name: null,
-                display_order: status.display_order,
-                is_visible: true,
+            const newProject = await ProjectModel.create(trx, {
+                ...projectDataWithStatus,
+                assigned_to: validatedData.assigned_to || null,
+                contact_name_id: validatedData.contact_name_id || null
             });
-        }
 
-        // Fetch the full project details including contact and assigned user
-        const fullProject = await ProjectModel.getById(newProject.project_id);
-        if (!fullProject) {
-            throw new Error('Failed to fetch created project details');
-        }
+            for (const status of standardTaskStatuses) {
+                await ProjectModel.addProjectStatusMapping(trx, newProject.project_id, {
+                    standard_status_id: status.standard_status_id,
+                    is_standard: true,
+                    custom_name: null,
+                    display_order: status.display_order,
+                    is_visible: true,
+                });
+            }
+
+            // Fetch the full project details including contact and assigned user
+            const project = await ProjectModel.getById(trx, newProject.project_id);
+            if (!project) {
+                throw new Error('Failed to fetch created project details');
+            }
+            return project;
+        });
 
         // Ensure tenant exists before publishing event
         if (!currentUser.tenant) {
@@ -541,8 +574,6 @@ export async function updateProject(projectId: string, projectData: Partial<IPro
             throw new Error("user not found");
         }
 
-        await checkPermission(currentUser, 'project', 'update');
-
         if (!currentUser.tenant) {
             throw new Error("tenant context not found");
         }
@@ -551,19 +582,25 @@ export async function updateProject(projectId: string, projectData: Partial<IPro
         const { tenant: tenantField, ...safeProjectData } = projectData;
         const validatedData = validateData(updateProjectSchema, safeProjectData);
         
-        let updatedProject = await ProjectModel.update(projectId, validatedData);
+        const {knex} = await createTenantKnex();
+        
+        let updatedProject = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            await checkPermission(currentUser, 'project', 'update', trx);
+            let project = await ProjectModel.update(trx, projectId, validatedData);
 
-        // If status was updated, fetch the status details
-        if ('status' in safeProjectData && safeProjectData.status) {
-            const status = await ProjectModel.getCustomStatus(safeProjectData.status);
-            if (status) {
-                updatedProject = await ProjectModel.update(projectId, {
-                    ...updatedProject,
-                    status_name: status.name,
-                    is_closed: status.is_closed
-                });
+            // If status was updated, fetch the status details
+            if ('status' in safeProjectData && safeProjectData.status) {
+                const status = await ProjectModel.getCustomStatus(trx, safeProjectData.status);
+                if (status) {
+                    project = await ProjectModel.update(trx, projectId, {
+                        ...project,
+                        status_name: status.name,
+                        is_closed: status.is_closed
+                    });
+                }
             }
-        }
+            return project;
+        });
 
         // If assigned_to was updated, fetch the full user details and publish event
         if ('assigned_to' in projectData && projectData.assigned_to !== updatedProject.assigned_to) {
@@ -636,8 +673,11 @@ export async function deleteProject(projectId: string): Promise<void> {
             throw new Error("user not found");
         }
 
-        await checkPermission(currentUser, 'project', 'delete');
-        await ProjectModel.delete(projectId);
+        const {knex} = await createTenantKnex();
+        await withTransaction(knex, async (trx: Knex.Transaction) => {
+            await checkPermission(currentUser, 'project', 'delete', trx);
+            await ProjectModel.delete(trx, projectId);
+        });
     } catch (error) {
         console.error('Error deleting project:', error);
         throw error;
@@ -661,18 +701,31 @@ export async function getProjectDetails(projectId: string): Promise<{
             throw new Error("user not found");
         }
 
-        await checkPermission(currentUser, 'project', 'read');
-        const [project, phases, rawTasks, statuses, users, checklistItemsMap, ticketLinksMap, taskResourcesMap, companies] = await Promise.all([
-            ProjectModel.getById(projectId),
-            ProjectModel.getPhases(projectId),
-            ProjectTaskModel.getTasks(projectId),
+        const {knex} = await createTenantKnex();
+        
+        // Fetch data that doesn't need to be in a transaction
+        const [statuses, users, companies] = await Promise.all([
             getProjectTaskStatuses(projectId),
             getAllUsers(),
-            ProjectTaskModel.getAllTaskChecklistItems(projectId),
-            ProjectTaskModel.getAllTaskTicketLinks(projectId),
-            ProjectTaskModel.getAllTaskResources(projectId),
             getAllCompanies()
         ]);
+        
+        // Fetch project-specific data within a transaction
+        const projectData = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            await checkPermission(currentUser, 'project', 'read', trx);
+            const [project, phases, rawTasks, checklistItemsMap, ticketLinksMap, taskResourcesMap] = await Promise.all([
+                ProjectModel.getById(trx, projectId),
+                ProjectModel.getPhases(trx, projectId),
+                ProjectTaskModel.getTasks(trx, projectId),
+                ProjectTaskModel.getAllTaskChecklistItems(trx, projectId),
+                ProjectTaskModel.getAllTaskTicketLinks(trx, projectId),
+                ProjectTaskModel.getAllTaskResources(trx, projectId)
+            ]);
+            
+            return { project, phases, rawTasks, checklistItemsMap, ticketLinksMap, taskResourcesMap };
+        });
+        
+        const { project, phases, rawTasks, checklistItemsMap, ticketLinksMap, taskResourcesMap } = projectData;
 
         if (!project) {
             throw new Error('Project not found');
@@ -723,8 +776,11 @@ export async function updateProjectStructure(projectId: string, updates: { phase
             throw new Error("user not found");
         }
 
-        await checkPermission(currentUser, 'project', 'update');
-        await ProjectModel.updateStructure(projectId, updates);
+        const {knex} = await createTenantKnex();
+        await withTransaction(knex, async (trx: Knex.Transaction) => {
+            await checkPermission(currentUser, 'project', 'update', trx);
+            await ProjectModel.updateStructure(trx, projectId, updates);
+        });
     } catch (error) {
         console.error('Error updating project structure:', error);
         throw error;
@@ -733,47 +789,50 @@ export async function updateProjectStructure(projectId: string, updates: { phase
 
 export async function getProjectTaskStatuses(projectId: string): Promise<ProjectStatus[]> {
     try {
-        const statusMappings = await ProjectModel.getProjectStatusMappings(projectId);
-        if (!statusMappings || statusMappings.length === 0) {
-            console.warn(`No status mappings found for project ${projectId}`);
-            return [];
-        }
+        const {knex} = await createTenantKnex();
+        
+        return await withTransaction(knex, async (trx: Knex.Transaction) => {
+            const statusMappings = await ProjectModel.getProjectStatusMappings(trx, projectId);
+            if (!statusMappings || statusMappings.length === 0) {
+                console.warn(`No status mappings found for project ${projectId}`);
+                return [];
+            }
 
-        const statuses = await Promise.all(statusMappings.map(async (mapping: IProjectStatusMapping): Promise<ProjectStatus | null> => {
-            try {
-                if (mapping.is_standard && mapping.standard_status_id) {
-                    const standardStatus = await ProjectModel.getStandardStatus(mapping.standard_status_id);
-                    if (!standardStatus) {
-                        console.warn(`Standard status not found for mapping ${mapping.project_status_mapping_id}`);
-                        return null;
+            const statuses = await Promise.all(statusMappings.map(async (mapping: IProjectStatusMapping): Promise<ProjectStatus | null> => {
+                try {
+                    if (mapping.is_standard && mapping.standard_status_id) {
+                        const standardStatus = await ProjectModel.getStandardStatus(trx, mapping.standard_status_id);
+                        if (!standardStatus) {
+                            console.warn(`Standard status not found for mapping ${mapping.project_status_mapping_id}`);
+                            return null;
+                        }
+                        return {
+                            ...standardStatus,
+                            project_status_mapping_id: mapping.project_status_mapping_id,
+                            status_id: standardStatus.standard_status_id,
+                            custom_name: mapping.custom_name,
+                            display_order: mapping.display_order,
+                            is_visible: mapping.is_visible,
+                            is_standard: true,
+                            is_closed: standardStatus.is_closed
+                        } as ProjectStatus;
+                    } else if (mapping.status_id) {
+                        const customStatus = await ProjectModel.getCustomStatus(trx, mapping.status_id);
+                        if (!customStatus) {
+                            console.warn(`Custom status not found for mapping ${mapping.project_status_mapping_id}`);
+                            return null;
+                        }
+                        return {
+                            ...customStatus,
+                            project_status_mapping_id: mapping.project_status_mapping_id,
+                            status_id: customStatus.status_id,
+                            custom_name: mapping.custom_name,
+                            display_order: mapping.display_order,
+                            is_visible: mapping.is_visible,
+                            is_standard: false,
+                            is_closed: customStatus.is_closed
+                        } as ProjectStatus;
                     }
-                    return {
-                        ...standardStatus,
-                        project_status_mapping_id: mapping.project_status_mapping_id,
-                        status_id: standardStatus.standard_status_id,
-                        custom_name: mapping.custom_name,
-                        display_order: mapping.display_order,
-                        is_visible: mapping.is_visible,
-                        is_standard: true,
-                        is_closed: standardStatus.is_closed
-                    } as ProjectStatus;
-                } else if (mapping.status_id) {
-                    const customStatus = await ProjectModel.getCustomStatus(mapping.status_id);
-                    if (!customStatus) {
-                        console.warn(`Custom status not found for mapping ${mapping.project_status_mapping_id}`);
-                        return null;
-                    }
-                    return {
-                        ...customStatus,
-                        project_status_mapping_id: mapping.project_status_mapping_id,
-                        status_id: customStatus.status_id,
-                        custom_name: mapping.custom_name,
-                        display_order: mapping.display_order,
-                        is_visible: mapping.is_visible,
-                        is_standard: false,
-                        is_closed: customStatus.is_closed
-                    } as ProjectStatus;
-                }
                 console.warn(`Invalid status mapping ${mapping.project_status_mapping_id}: missing both standard_status_id and status_id`);
                 return null;
             } catch (error) {
@@ -782,14 +841,15 @@ export async function getProjectTaskStatuses(projectId: string): Promise<Project
             }
         }));
 
-        const validStatuses = statuses.filter((status): status is ProjectStatus => status !== null);
-        
-        if (validStatuses.length === 0) {
-            console.warn(`No valid statuses found for project ${projectId}`);
-            return [];
-        }
+            const validStatuses = statuses.filter((status): status is ProjectStatus => status !== null);
+            
+            if (validStatuses.length === 0) {
+                console.warn(`No valid statuses found for project ${projectId}`);
+                return [];
+            }
 
-        return validStatuses;
+            return validStatuses;
+        });
     } catch (error) {
         console.error('Error fetching project statuses:', error);
         return [];
@@ -806,8 +866,11 @@ export async function addStatusToProject(
             throw new Error("user not found");
         }
 
-        await checkPermission(currentUser, 'project', 'update');
-        return await ProjectModel.addStatusToProject(projectId, statusData);
+        const {knex} = await createTenantKnex();
+        return await withTransaction(knex, async (trx: Knex.Transaction) => {
+            await checkPermission(currentUser, 'project', 'update', trx);
+            return await ProjectModel.addStatusToProject(trx, projectId, statusData);
+        });
     } catch (error) {
         console.error('Error adding status to task:', error);
         throw error;
@@ -826,8 +889,11 @@ export async function updateProjectStatus(
             throw new Error("user not found");
         }
 
-        await checkPermission(currentUser, 'project', 'update');
-        const updatedStatus = await ProjectModel.updateProjectStatus(statusId, statusData, mappingData);
+        const {knex} = await createTenantKnex();
+        const updatedStatus = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            await checkPermission(currentUser, 'project', 'update', trx);
+            return await ProjectModel.updateProjectStatus(trx, statusId, statusData, mappingData);
+        });
 
         // If the status is closed, publish project closed event
         if (statusData.is_closed) {
@@ -856,8 +922,11 @@ export async function deleteProjectStatus(statusId: string): Promise<void> {
             throw new Error("user not found");
         }
 
-        await checkPermission(currentUser, 'project', 'delete');
-        await ProjectModel.deleteProjectStatus(statusId);
+        const {knex} = await createTenantKnex();
+        await withTransaction(knex, async (trx: Knex.Transaction) => {
+            await checkPermission(currentUser, 'project', 'delete', trx);
+            await ProjectModel.deleteProjectStatus(trx, statusId);
+        });
     } catch (error) {
         console.error('Error deleting project status:', error);
         throw new Error('Failed to delete project status');

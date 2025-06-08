@@ -172,7 +172,8 @@ export async function fetchScheduleActivities(
       : new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000);
     
     // Fetch schedule entries
-    const entries = await ScheduleEntry.getAll(start, end);
+    const { knex } = await createTenantKnex();
+    const entries = await ScheduleEntry.getAll(knex, start, end);
     
     // Filter entries assigned to the user
     let userEntries = entries.filter(entry =>

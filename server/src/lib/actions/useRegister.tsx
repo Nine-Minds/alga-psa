@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import User from 'server/src/lib/models/user';
 import Tenant from 'server/src/lib/models/tenant';
+import { getAdminConnection } from 'server/src/lib/db/admin';
 
 import { IUserRegister, IUserWithRoles, IRoleWithPermissions } from 'server/src/interfaces/auth.interfaces';
 
@@ -25,7 +26,8 @@ export async function verifyRegisterUser(token: string): Promise<VerifyResponse>
   logger.info(`User info got for email: ${userInfo?.email}`);
   if (userInfo) {
     try {
-      await Tenant.insert({
+      const db = await getAdminConnection();
+      await Tenant.insert(db, {
         company_name: userInfo.companyName,
         email: userInfo.email.toLowerCase(),
         created_at: new Date(),
@@ -46,7 +48,7 @@ export async function verifyRegisterUser(token: string): Promise<VerifyResponse>
         is_inactive: false,
         user_type: userInfo.user_type
       };
-      await User.insert(newUser);
+      await User.insert(db, newUser);
       return {
         message: 'User verified and registered successfully',
         wasSuccess: true,
@@ -132,7 +134,8 @@ export async function registerUser({ username, email, password, companyName }: I
   }
 
   logger.debug(`Checking if username [ ${username} ] already exists`);
-  const existingUsername = await User.findUserByUsername(username);
+  const db = await getAdminConnection();
+  const existingUsername = await User.findUserByUsername(db, username);
   if (existingUsername) {
     logger.error(`User [ ${username} ] already exists`);
     return false;
@@ -166,7 +169,8 @@ export async function registerUser({ username, email, password, companyName }: I
     return true;
   } else {
     try {
-      await Tenant.insert({
+      const db = await getAdminConnection();
+      await Tenant.insert(db, {
         company_name: companyName,
         email: email.toLowerCase(),
         created_at: new Date(),
@@ -187,7 +191,7 @@ export async function registerUser({ username, email, password, companyName }: I
         is_inactive: false,
         user_type: 'msp'
       };
-      await User.insert(newUser);
+      await User.insert(db, newUser);
       logger.info(`User [ ${email} ] registered successfully`);
       return true;
     } catch (error) {

@@ -1,9 +1,12 @@
 {{- if and .Values.devEnv.enabled .Values.devEnv.aiAutomation.enabled }}
+{{- $fullname := include "sebastian.fullname" . }}
+{{- $aiApiService := printf "%s-ai-api" $fullname | trunc 63 | trimSuffix "-" }}
+{{- $aiWebService := printf "%s-ai-web" $fullname | trunc 63 | trimSuffix "-" }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "sebastian.fullname" . }}-ai-api
+  name: {{ $aiApiService }}
   namespace: {{ .Values.devEnv.namespace }}
   labels:
     {{- include "sebastian.labels" . | nindent 4 }}
@@ -27,7 +30,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "sebastian.fullname" . }}-ai-web
+  name: {{ $aiWebService }}
   namespace: {{ .Values.devEnv.namespace }}
   labels:
     {{- include "sebastian.labels" . | nindent 4 }}

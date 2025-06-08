@@ -38,7 +38,7 @@ export async function GET(req: NextRequest, { params }: { params: { fileId: stri
       // Get document to verify it exists and belongs to the user's tenant
       const { knex } = await createTenantKnex();
       const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await Document.get(documentId, trx);
+        return await Document.get(trx, documentId);
       });
       
       if (!document || document.tenant !== session.user.tenant) {
@@ -84,7 +84,7 @@ export async function GET(req: NextRequest, { params }: { params: { fileId: stri
       // First, get the document to find its file_id
       const { knex } = await createTenantKnex();
       const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await Document.get(documentId, trx);
+        return await Document.get(trx, documentId);
       });
       
       if (!document || document.tenant !== session.user.tenant) {

@@ -358,7 +358,7 @@ export async function updateInvoiceManualItems(
   const currentDate = Temporal.Now.plainDateISO().toString();
 
   await updateManualInvoiceItemsInternal(invoiceId, changes, session, tenant); // Renamed internal call
-  return await Invoice.getFullInvoiceById(invoiceId);
+  return await Invoice.getFullInvoiceById(knex, invoiceId);
 }
 
 // Internal helper function to avoid recursive export/import loop
@@ -663,7 +663,7 @@ export async function addManualItemsToInvoice(
   }
 
   await addManualInvoiceItemsInternal(invoiceId, items, session, tenant); // Renamed internal call
-  return await Invoice.getFullInvoiceById(invoiceId);
+  return await Invoice.getFullInvoiceById(knex, invoiceId);
 }
 
 // Internal helper function

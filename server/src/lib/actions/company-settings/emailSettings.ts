@@ -4,18 +4,16 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { v4 as uuid4 } from 'uuid';
 import { ICompanyEmailSettings } from 'server/src/interfaces/company.interfaces';
-import { getAdminConnection } from 'server/src/lib/db/admin';
+import { getAdminConnection, withAdminTransaction } from 'server/src/lib/db/admin';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 
 export async function verifyEmailSuffix(email: string): Promise<boolean> {
   try {
-    const db = await getAdminConnection();
-    
     const domain = email.split('@')[1];
     if (!domain) return false;
 
-    const settings = await withTransaction(db, async (trx: Knex.Transaction) => {
+    const settings = await withAdminTransaction(async (trx: Knex.Transaction) => {
       return await trx('company_email_settings')
         .where({ 
           email_suffix: domain,
@@ -33,12 +31,10 @@ export async function verifyEmailSuffix(email: string): Promise<boolean> {
 
 export async function getCompanyByEmailSuffix(email: string): Promise<{ companyId: string; tenant: string } | null> {
   try {
-    const db = await getAdminConnection();
-    
     const domain = email.split('@')[1];
     if (!domain) return null;
 
-    return await withTransaction(db, async (trx: Knex.Transaction) => {
+    return await withAdminTransaction(async (trx: Knex.Transaction) => {
       const settings = await trx('company_email_settings')
         .where({ 
           email_suffix: domain,

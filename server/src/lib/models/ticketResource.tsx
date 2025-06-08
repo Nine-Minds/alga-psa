@@ -1,19 +1,20 @@
 // server/src/lib/models/ticket-resource.tsx
 import logger from '../../utils/logger';
 import { ITicketResource } from '../../interfaces/ticketResource.interfaces';
-import { createTenantKnex } from '../db';
+import { getCurrentTenantId } from '../db';
 import { v4 as uuid4 } from 'uuid';
+import { Knex } from 'knex';
 
 const TicketResource = {
-  create: async (resourceData: Omit<ITicketResource, 'assignment_id' | 'tenant'>): Promise<ITicketResource> => {
+  create: async (knexOrTrx: Knex | Knex.Transaction, resourceData: Omit<ITicketResource, 'assignment_id' | 'tenant'>): Promise<ITicketResource> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
+      const tenant = await getCurrentTenantId();
       if (!tenant) {
-        throw new Error('Tenant context is required for creating ticket resource');
+        throw new Error('No tenant context available');
       }
 
       // Verify ticket exists in the current tenant
-      const ticket = await db('tickets')
+      const ticket = await knexOrTrx('tickets')
         .where({
           ticket_id: resourceData.ticket_id,
           tenant
@@ -25,7 +26,7 @@ const TicketResource = {
       }
 
       // Verify assigned user exists in the current tenant
-      const assignedUser = await db('users')
+      const assignedUser = await knexOrTrx('users')
         .where({
           user_id: resourceData.assigned_to,
           tenant
@@ -38,7 +39,7 @@ const TicketResource = {
 
       // Verify additional user if provided
       if (resourceData.additional_user_id) {
-        const additionalUser = await db('users')
+        const additionalUser = await knexOrTrx('users')
           .where({
             user_id: resourceData.additional_user_id,
             tenant
@@ -50,7 +51,7 @@ const TicketResource = {
         }
       }
 
-      const [createdResource] = await db<ITicketResource>('ticket_resources')
+      const [createdResource] = await knexOrTrx<ITicketResource>('ticket_resources')
         .insert({
           ...resourceData,
           assignment_id: uuid4(),
@@ -70,15 +71,15 @@ const TicketResource = {
     }
   },
 
-  getByTicketId: async (ticket_id: string): Promise<ITicketResource[]> => {
+  getByTicketId: async (knexOrTrx: Knex | Knex.Transaction, ticket_id: string): Promise<ITicketResource[]> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
+      const tenant = await getCurrentTenantId();
       if (!tenant) {
-        throw new Error('Tenant context is required for getting ticket resources');
+        throw new Error('No tenant context available');
       }
 
       // Verify ticket exists in the current tenant
-      const ticket = await db('tickets')
+      const ticket = await knexOrTrx('tickets')
         .where({
           ticket_id,
           tenant
@@ -89,7 +90,7 @@ const TicketResource = {
         throw new Error(`Ticket with id ${ticket_id} not found in tenant ${tenant}`);
       }
 
-      const resources = await db<ITicketResource>('ticket_resources')
+      const resources = await knexOrTrx<ITicketResource>('ticket_resources')
         .select('*')
         .where({
           ticket_id,
@@ -103,15 +104,15 @@ const TicketResource = {
     }
   },
 
-  remove: async (assignment_id: string): Promise<void> => {
+  remove: async (knexOrTrx: Knex | Knex.Transaction, assignment_id: string): Promise<void> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
+      const tenant = await getCurrentTenantId();
       if (!tenant) {
-        throw new Error('Tenant context is required for removing ticket resource');
+        throw new Error('No tenant context available');
       }
 
       // Verify resource exists in the current tenant
-      const resource = await db<ITicketResource>('ticket_resources')
+      const resource = await knexOrTrx<ITicketResource>('ticket_resources')
         .where({
           assignment_id,
           tenant
@@ -122,7 +123,7 @@ const TicketResource = {
         throw new Error(`Ticket resource with id ${assignment_id} not found in tenant ${tenant}`);
       }
 
-      const deletedCount = await db<ITicketResource>('ticket_resources')
+      const deletedCount = await knexOrTrx<ITicketResource>('ticket_resources')
         .where({
           assignment_id,
           tenant
@@ -138,15 +139,15 @@ const TicketResource = {
     }
   },
 
-  update: async (assignment_id: string, data: Partial<ITicketResource>): Promise<void> => {
+  update: async (knexOrTrx: Knex | Knex.Transaction, assignment_id: string, data: Partial<ITicketResource>): Promise<void> => {
     try {
-      const {knex: db, tenant} = await createTenantKnex();
+      const tenant = await getCurrentTenantId();
       if (!tenant) {
-        throw new Error('Tenant context is required for updating ticket resource');
+        throw new Error('No tenant context available');
       }
 
       // Verify resource exists in the current tenant
-      const resource = await db<ITicketResource>('ticket_resources')
+      const resource = await knexOrTrx<ITicketResource>('ticket_resources')
         .where({
           assignment_id,
           tenant
@@ -159,7 +160,7 @@ const TicketResource = {
 
       // If assigned_to is being updated, verify the user exists in the tenant
       if (data.assigned_to) {
-        const assignedUser = await db('users')
+        const assignedUser = await knexOrTrx('users')
           .where({
             user_id: data.assigned_to,
             tenant
@@ -173,7 +174,7 @@ const TicketResource = {
 
       // If additional_user_id is being updated, verify the user exists in the tenant
       if (data.additional_user_id) {
-        const additionalUser = await db('users')
+        const additionalUser = await knexOrTrx('users')
           .where({
             user_id: data.additional_user_id,
             tenant
@@ -188,7 +189,7 @@ const TicketResource = {
       // Ensure tenant cannot be modified
       delete data.tenant;
 
-      const updatedCount = await db<ITicketResource>('ticket_resources')
+      const updatedCount = await knexOrTrx<ITicketResource>('ticket_resources')
         .where({
           assignment_id,
           tenant

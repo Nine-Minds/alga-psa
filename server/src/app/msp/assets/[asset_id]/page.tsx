@@ -4,6 +4,7 @@ import User from 'server/src/lib/models/user';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import AssetDetails from 'server/src/components/assets/AssetDetails';
+import { getConnection } from 'server/src/lib/db/db';
 
 interface Props {
   params: {
@@ -26,7 +27,8 @@ export default async function AssetPage({ params }: Props) {
   }
 
   try {
-    const user = await User.get(userId);
+    const knex = await getConnection();
+    const user = await User.get(knex, userId);
     if (!user) {
       console.error(`User not found for ID: ${userId}`);
       redirect('/auth/signin');

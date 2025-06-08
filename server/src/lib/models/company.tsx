@@ -1,18 +1,18 @@
 import { Knex } from 'knex';
-import { createTenantKnex } from 'server/src/lib/db';
+import { getCurrentTenantId } from 'server/src/lib/db';
 import { ICompany } from '../../interfaces/company.interfaces';
 import { BillingCycleType } from 'server/src/interfaces';
 
 const Company = {
-  async getById(companyId: string): Promise<ICompany | null> {
-    const {knex: db, tenant} = await createTenantKnex();
+  async getById(knexOrTrx: Knex | Knex.Transaction, companyId: string): Promise<ICompany | null> {
+    const tenant = await getCurrentTenantId();
     
     if (!tenant) {
       throw new Error('Tenant context is required for getting company by ID');
     }
 
     try {
-      const company = await db<ICompany>('companies')
+      const company = await knexOrTrx<ICompany>('companies')
         .where({
           company_id: companyId,
           tenant
@@ -25,15 +25,15 @@ const Company = {
     }
   },
 
-  async create(company: Omit<ICompany, 'company_id' | 'created_at' | 'updated_at'>): Promise<ICompany> {
-    const {knex: db, tenant} = await createTenantKnex();
+  async create(knexOrTrx: Knex | Knex.Transaction, company: Omit<ICompany, 'company_id' | 'created_at' | 'updated_at'>): Promise<ICompany> {
+    const tenant = await getCurrentTenantId();
     
     if (!tenant) {
       throw new Error('Tenant context is required for creating company');
     }
 
     try {
-      const [createdCompany] = await db<ICompany>('companies')
+      const [createdCompany] = await knexOrTrx<ICompany>('companies')
         .insert({
           ...company,
           tenant,
@@ -49,15 +49,15 @@ const Company = {
     }
   },
 
-  async update(companyId: string, company: Partial<ICompany>): Promise<ICompany> {
-    const {knex: db, tenant} = await createTenantKnex();
+  async update(knexOrTrx: Knex | Knex.Transaction, companyId: string, company: Partial<ICompany>): Promise<ICompany> {
+    const tenant = await getCurrentTenantId();
     
     if (!tenant) {
       throw new Error('Tenant context is required for updating company');
     }
 
     try {
-      const [updatedCompany] = await db<ICompany>('companies')
+      const [updatedCompany] = await knexOrTrx<ICompany>('companies')
         .where({
           company_id: companyId,
           tenant
@@ -79,15 +79,15 @@ const Company = {
     }
   },
 
-  async delete(companyId: string): Promise<void> {
-    const {knex: db, tenant} = await createTenantKnex();
+  async delete(knexOrTrx: Knex | Knex.Transaction, companyId: string): Promise<void> {
+    const tenant = await getCurrentTenantId();
     
     if (!tenant) {
       throw new Error('Tenant context is required for deleting company');
     }
 
     try {
-      const result = await db<ICompany>('companies')
+      const result = await knexOrTrx<ICompany>('companies')
         .where({
           company_id: companyId,
           tenant
@@ -103,15 +103,15 @@ const Company = {
     }
   },
 
-  async getAll(): Promise<ICompany[]> {
-    const {knex: db, tenant} = await createTenantKnex();
+  async getAll(knexOrTrx: Knex | Knex.Transaction): Promise<ICompany[]> {
+    const tenant = await getCurrentTenantId();
     
     if (!tenant) {
       throw new Error('Tenant context is required for listing companies');
     }
 
     try {
-      const companies = await db<ICompany>('companies')
+      const companies = await knexOrTrx<ICompany>('companies')
         .where({ tenant })
         .select('*');
       return companies;
@@ -121,15 +121,15 @@ const Company = {
     }
   },
 
-  async getByRegionCode(regionCode: string): Promise<ICompany[]> { // Renamed function and parameter
-    const {knex: db, tenant} = await createTenantKnex();
+  async getByRegionCode(knexOrTrx: Knex | Knex.Transaction, regionCode: string): Promise<ICompany[]> { // Renamed function and parameter
+    const tenant = await getCurrentTenantId();
     
     if (!tenant) {
       throw new Error('Tenant context is required for getting companies by region code');
     }
 
     try {
-      const companies = await db<ICompany>('companies')
+      const companies = await knexOrTrx<ICompany>('companies')
         .where({
           region_code: regionCode, // Changed column name
           tenant
@@ -142,15 +142,15 @@ const Company = {
     }
   },
 
-  async updateTaxSettings(companyId: string, taxSettings: Partial<ICompany>): Promise<ICompany> {
-    const {knex: db, tenant} = await createTenantKnex();
+  async updateTaxSettings(knexOrTrx: Knex | Knex.Transaction, companyId: string, taxSettings: Partial<ICompany>): Promise<ICompany> {
+    const tenant = await getCurrentTenantId();
     
     if (!tenant) {
       throw new Error('Tenant context is required for updating company tax settings');
     }
 
     try {
-      const [updatedCompany] = await db<ICompany>('companies')
+      const [updatedCompany] = await knexOrTrx<ICompany>('companies')
         .where({
           company_id: companyId,
           tenant
@@ -175,15 +175,15 @@ const Company = {
     }
   },
 
-  async getBillingCycle(companyId: string): Promise<string | null> {
-    const {knex: db, tenant} = await createTenantKnex();
+  async getBillingCycle(knexOrTrx: Knex | Knex.Transaction, companyId: string): Promise<string | null> {
+    const tenant = await getCurrentTenantId();
     
     if (!tenant) {
       throw new Error('Tenant context is required for getting company billing cycle');
     }
 
     try {
-      const company = await db<ICompany>('companies')
+      const company = await knexOrTrx<ICompany>('companies')
         .where({
           company_id: companyId,
           tenant
@@ -198,15 +198,15 @@ const Company = {
     }
   },
 
-  async updateBillingCycle(companyId: string, billingCycle: string): Promise<void> {
-    const {knex: db, tenant} = await createTenantKnex();
+  async updateBillingCycle(knexOrTrx: Knex | Knex.Transaction, companyId: string, billingCycle: string): Promise<void> {
+    const tenant = await getCurrentTenantId();
     
     if (!tenant) {
       throw new Error('Tenant context is required for updating company billing cycle');
     }
 
     try {
-      const result = await db<ICompany>('companies')
+      const result = await knexOrTrx<ICompany>('companies')
         .where({
           company_id: companyId,
           tenant

@@ -1,4 +1,4 @@
-import { createTenantKnex } from '../db';
+import { getCurrentTenantId, createTenantKnex } from '../db';
 import { IEditScope, IScheduleEntry, IRecurrencePattern } from 'server/src/interfaces/schedule.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { generateOccurrences } from '../utils/recurrenceUtils';
@@ -104,14 +104,14 @@ class ScheduleEntry {
     }
   }
 
-  static async getAll(start: Date, end: Date): Promise<IScheduleEntry[]> {
-    const {knex: db, tenant} = await createTenantKnex();
+  static async getAll(knexOrTrx: Knex | Knex.Transaction, start: Date, end: Date): Promise<IScheduleEntry[]> {
+    const tenant = await getCurrentTenantId();
     if (!tenant) {
       throw new Error('Tenant is required');
     }
     
     // Get all non-virtual entries (both regular and master recurring entries)
-    const regularEntries = await db('schedule_entries')
+    const regularEntries = await knexOrTrx('schedule_entries')
       .where('schedule_entries.tenant', tenant)
       .whereNull('original_entry_id') // This ensures we get master entries but not virtual instances
       .andWhere(function() {
@@ -156,7 +156,7 @@ class ScheduleEntry {
 
     // Get assigned user IDs for all non-virtual entries
     const entryIds = regularEntries.map((e): string => e.entry_id);
-    const assignedUserIds = await this.getAssignedUserIds(db, tenant, entryIds);
+    const assignedUserIds = await this.getAssignedUserIds(knexOrTrx, tenant, entryIds);
 
     // Merge assigned user IDs into entries
     const finalEntries = allEntries.map((entry): IScheduleEntry => ({
@@ -181,12 +181,12 @@ class ScheduleEntry {
     return finalEntries;
   }
 
-  static async getEarliest(): Promise<IScheduleEntry | undefined> {
-    const {knex: db, tenant} = await createTenantKnex();
+  static async getEarliest(knexOrTrx: Knex | Knex.Transaction): Promise<IScheduleEntry | undefined> {
+    const tenant = await getCurrentTenantId();
     if (!tenant) {
       throw new Error('Tenant is required');
     }
-    const entry = await db('schedule_entries')
+    const entry = await knexOrTrx('schedule_entries')
       .where('schedule_entries.tenant', tenant)
       .orderBy('scheduled_start', 'asc')
       .first() as (IScheduleEntry & { entry_id: string }) | undefined;
@@ -195,7 +195,7 @@ class ScheduleEntry {
 
     // Get assigned user IDs if entry_id exists
     if (entry.entry_id) {
-      const assignedUserIds = await this.getAssignedUserIds(db, tenant, [entry.entry_id]);
+      const assignedUserIds = await this.getAssignedUserIds(knexOrTrx, tenant, [entry.entry_id]);
       return {
         ...entry,
         assigned_user_ids: assignedUserIds[entry.entry_id] || []
@@ -208,12 +208,12 @@ class ScheduleEntry {
     };
   }
 
-  static async get(entry_id: string): Promise<IScheduleEntry | undefined> {
-    const {knex: db, tenant} = await createTenantKnex();
+  static async get(knexOrTrx: Knex | Knex.Transaction, entry_id: string): Promise<IScheduleEntry | undefined> {
+    const tenant = await getCurrentTenantId();
     if (!tenant) {
       throw new Error('Tenant is required');
     }
-    const entry = await db('schedule_entries')
+    const entry = await knexOrTrx('schedule_entries')
       .where('schedule_entries.tenant', tenant)
       .andWhere('entry_id', entry_id)
       .first() as (IScheduleEntry & { entry_id: string }) | undefined;
@@ -222,7 +222,7 @@ class ScheduleEntry {
 
     // Get assigned user IDs if entry exists
     if (entry && entry_id) {
-      const assignedUserIds = await this.getAssignedUserIds(db, tenant, [entry_id]);
+      const assignedUserIds = await this.getAssignedUserIds(knexOrTrx, tenant, [entry_id]);
       return {
         ...entry,
         assigned_user_ids: assignedUserIds[entry_id] || []
@@ -233,6 +233,7 @@ class ScheduleEntry {
   }
 
   static async create(
+    knexOrTrx: Knex | Knex.Transaction,
     entry: Omit<IScheduleEntry, 'entry_id' | 'created_at' | 'updated_at' | 'tenant'>,
     options: CreateScheduleEntryOptions
   ): Promise<IScheduleEntry> {
@@ -240,13 +241,14 @@ class ScheduleEntry {
       throw new Error('At least one assigned user is required');
     }
 
-    const {knex: db, tenant} = await createTenantKnex();
+    const tenant = await getCurrentTenantId();
     if (!tenant) {
       throw new Error('Tenant is required');
     }
 
-    // Start transaction
-    const trx = await db.transaction();
+    // Start transaction if not already in one
+    const isTransaction = (knexOrTrx as any).isTransaction || false;
+    const trx = isTransaction ? knexOrTrx as Knex.Transaction : await knexOrTrx.transaction();
     
     try {
       const entry_id = uuidv4();
@@ -433,19 +435,24 @@ class ScheduleEntry {
         }
       }
 
-      await trx.commit();
+      if (!isTransaction) {
+        await trx.commit();
+      }
 
       return {
         ...createdEntry,
         assigned_user_ids: options.assignedUserIds
       };
     } catch (error) {
-      await trx.rollback();
+      if (!isTransaction) {
+        await trx.rollback();
+      }
       throw error;
     }
   }
 
   static async update(
+    knexOrTrx: Knex | Knex.Transaction,
     entry_id: string, 
     entry: Partial<IScheduleEntry> & { assigned_user_ids?: string[] },
     updateType: IEditScope
@@ -456,13 +463,14 @@ class ScheduleEntry {
       providedFields: Object.keys(entry)
     });
 
-    const {knex: db, tenant} = await createTenantKnex();
+    const tenant = await getCurrentTenantId();
     if (!tenant) {
       throw new Error('Tenant is required');
     }
 
-    // Start transaction
-    const trx = await db.transaction();
+    // Start transaction if not already in one
+    const isTransaction = (knexOrTrx as any).isTransaction || false;
+    const trx = isTransaction ? knexOrTrx as Knex.Transaction : await knexOrTrx.transaction();
     console.log('[ScheduleEntry.update] Transaction started');
     
     try {
@@ -489,7 +497,9 @@ class ScheduleEntry {
 
       if (!originalEntry) {
         console.log('[ScheduleEntry.update] Master entry not found:', { masterEntryId });
-        await trx.rollback();
+        if (!isTransaction) {
+          await trx.rollback();
+        }
         return undefined;
       }
 
@@ -568,7 +578,9 @@ class ScheduleEntry {
                 });
 
               // 3. Return new standalone entry
-              await trx.commit();
+              if (!isTransaction) {
+                await trx.commit();
+              }
               return {
                 ...originalEntry,
                 entry_id: standaloneId,
@@ -638,7 +650,9 @@ class ScheduleEntry {
               await this.updateAssignees(trx, tenant, newMasterId, 
                 entry.assigned_user_ids || originalEntry.assigned_user_ids);
               
-              await trx.commit();
+              if (!isTransaction) {
+                await trx.commit();
+              }
               return {
                 ...newMasterEntry,
                 assigned_user_ids: entry.assigned_user_ids || originalEntry.assigned_user_ids
@@ -685,7 +699,9 @@ class ScheduleEntry {
                 await this.updateAssignees(trx, tenant, masterEntryId, entry.assigned_user_ids);
               }
 
-              await trx.commit();
+              if (!isTransaction) {
+                await trx.commit();
+              }
               return {
                 ...updatedMasterEntry,
                 assigned_user_ids: entry.assigned_user_ids || originalEntry.assigned_user_ids
@@ -825,7 +841,9 @@ class ScheduleEntry {
           assignedUsers: virtualEntry.assigned_user_ids.length
         });
 
-        await trx.commit();
+        if (!isTransaction) {
+          await trx.commit();
+        }
         return virtualEntry;
       } else {
         // For real entries, update the database
@@ -948,7 +966,9 @@ class ScheduleEntry {
         }
 
         console.log('[ScheduleEntry.update] Committing real entry update');
-        await trx.commit();
+        if (!isTransaction) {
+          await trx.commit();
+        }
 
         console.log('[ScheduleEntry.update] Update complete:', {
           entryId: updatedEntry.entry_id,
@@ -966,7 +986,9 @@ class ScheduleEntry {
         entry_id,
         isVirtual: entry_id.includes('_')
       });
-      await trx.rollback();
+      if (!isTransaction) {
+        await trx.rollback();
+      }
       throw error;
     }
   }
@@ -1109,14 +1131,24 @@ class ScheduleEntry {
     return virtualEntries;
   }
 
-  static async delete(entry_id: string, deleteType: IEditScope = IEditScope.SINGLE): Promise<boolean> {
-    const {knex: db, tenant} = await createTenantKnex();
+  static async delete(entry_id: string, deleteType: IEditScope = IEditScope.SINGLE, knexOrTrx?: Knex | Knex.Transaction): Promise<boolean> {
+    const tenant = await getCurrentTenantId();
     if (!tenant) {
       throw new Error('Tenant is required');
     }
 
-    // Start transaction
-    const trx = await db.transaction();
+    // If knexOrTrx is not provided, get the default connection
+    let db: Knex | Knex.Transaction;
+    if (!knexOrTrx) {
+      const tenantKnex = await createTenantKnex();
+      db = tenantKnex.knex;
+    } else {
+      db = knexOrTrx;
+    }
+
+    // Start transaction if not already in one
+    const isTransaction = (db as any).isTransaction || false;
+    const trx = isTransaction ? db as Knex.Transaction : await db.transaction();
 
     try {
       // Parse entry ID and determine if it's a virtual instance
@@ -1132,7 +1164,9 @@ class ScheduleEntry {
         .first();
 
       if (!originalEntry) {
-        await trx.rollback();
+        if (!isTransaction) {
+          await trx.rollback();
+        }
         return false;
       }
 
@@ -1171,7 +1205,9 @@ class ScheduleEntry {
                     recurrence_pattern: JSON.stringify(updatedPattern)
                   });
 
-                await trx.commit();
+                if (!isTransaction) {
+                  await trx.commit();
+                }
                 return true;
               }
               break;
@@ -1196,7 +1232,9 @@ class ScheduleEntry {
                     recurrence_pattern: JSON.stringify(updatedPattern)
                   });
 
-                await trx.commit();
+                if (!isTransaction) {
+                  await trx.commit();
+                }
                 return true;
               }
               break;
@@ -1208,7 +1246,9 @@ class ScheduleEntry {
                 .andWhere('entry_id', masterEntryId)
                 .del();
               
-              await trx.commit();
+              if (!isTransaction) {
+                await trx.commit();
+              }
               return deletedCount > 0;
           }
         }
@@ -1220,10 +1260,14 @@ class ScheduleEntry {
         .andWhere('entry_id', entry_id)
         .del();
       
-      await trx.commit();
+      if (!isTransaction) {
+        await trx.commit();
+      }
       return deletedCount > 0;
     } catch (error) {
-      await trx.rollback();
+      if (!isTransaction) {
+        await trx.rollback();
+      }
       throw error;
     }
   }

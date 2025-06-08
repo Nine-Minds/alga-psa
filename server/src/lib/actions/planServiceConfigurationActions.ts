@@ -142,12 +142,11 @@ export async function addRateTier(
 ): Promise<string> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const usageConfigModel = new (await import('server/src/lib/models/planServiceUsageConfig')).default(trx, tenant!);
+  const usageConfigModel = new (await import('server/src/lib/models/planServiceUsageConfig')).default(trx);
   
     return await usageConfigModel.addRateTier({
       ...tierData,
-      config_id: configId,
-      tenant: tenant!
+      config_id: configId
     });
   });
 }
@@ -161,7 +160,7 @@ export async function updateRateTier(
 ): Promise<boolean> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const usageConfigModel = new (await import('server/src/lib/models/planServiceUsageConfig')).default(trx, tenant!);
+  const usageConfigModel = new (await import('server/src/lib/models/planServiceUsageConfig')).default(trx);
   
     return await usageConfigModel.updateRateTier(tierId, tierData);
   });
@@ -173,7 +172,7 @@ export async function updateRateTier(
 export async function deleteRateTier(tierId: string): Promise<boolean> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const usageConfigModel = new (await import('server/src/lib/models/planServiceUsageConfig')).default(trx, tenant!);
+  const usageConfigModel = new (await import('server/src/lib/models/planServiceUsageConfig')).default(trx);
   
     return await usageConfigModel.deleteRateTier(tierId);
   });
@@ -188,12 +187,11 @@ export async function addUserTypeRate(
 ): Promise<string> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const hourlyConfigModel = new (await import('server/src/lib/models/planServiceHourlyConfig')).default(trx, tenant!);
+  const hourlyConfigModel = new (await import('server/src/lib/models/planServiceHourlyConfig')).default(trx);
   
     return await hourlyConfigModel.addUserTypeRate({
       ...rateData,
-      config_id: configId,
-      tenant: tenant!
+      config_id: configId
     });
   });
 }
@@ -207,7 +205,7 @@ export async function updateUserTypeRate(
 ): Promise<boolean> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const hourlyConfigModel = new (await import('server/src/lib/models/planServiceHourlyConfig')).default(trx, tenant!);
+  const hourlyConfigModel = new (await import('server/src/lib/models/planServiceHourlyConfig')).default(trx);
   
     return await hourlyConfigModel.updateUserTypeRate(rateId, rateData);
   });
@@ -219,7 +217,7 @@ export async function updateUserTypeRate(
 export async function deleteUserTypeRate(rateId: string): Promise<boolean> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-  const hourlyConfigModel = new (await import('server/src/lib/models/planServiceHourlyConfig')).default(trx, tenant!);
+  const hourlyConfigModel = new (await import('server/src/lib/models/planServiceHourlyConfig')).default(trx);
   
     return await hourlyConfigModel.deleteUserTypeRate(rateId);
   });

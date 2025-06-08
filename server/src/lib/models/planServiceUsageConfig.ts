@@ -1,41 +1,40 @@
 import { Knex } from 'knex';
-import { createTenantKnex } from 'server/src/lib/db';
-import { IPlanServiceUsageConfig, IPlanServiceRateTier } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { getCurrentTenantId } from '../db';
+import { IPlanServiceUsageConfig, IPlanServiceRateTier } from '../../interfaces/planServiceConfiguration.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
 export default class PlanServiceUsageConfig {
-  private knex: Knex;
-  private tenant: string;
+  private knex: Knex | Knex.Transaction;
+  private tenant?: string;
 
-  constructor(knex?: Knex, tenant?: string) {
-    this.knex = knex as Knex;
-    this.tenant = tenant as string;
+  constructor(knex: Knex | Knex.Transaction) {
+    this.knex = knex;
   }
 
   /**
-   * Initialize knex connection if not provided in constructor
+   * Get tenant context
    */
-  private async initKnex() {
-    if (!this.knex) {
-      const { knex, tenant } = await createTenantKnex();
-      if (!tenant) {
-        throw new Error("tenant context not found");
+  private async getTenant(): Promise<string> {
+    if (!this.tenant) {
+      const tenantId = await getCurrentTenantId();
+      if (!tenantId) {
+        throw new Error('Tenant is required');
       }
-      this.knex = knex;
-      this.tenant = tenant;
+      this.tenant = tenantId;
     }
+    return this.tenant;
   }
 
   /**
    * Get a usage configuration by config ID
    */
   async getByConfigId(configId: string): Promise<IPlanServiceUsageConfig | null> {
-    await this.initKnex();
+    const tenant = await this.getTenant();
     
     const config = await this.knex('plan_service_usage_config')
       .where({
         config_id: configId,
-        tenant: this.tenant
+        tenant
       })
       .first();
     
@@ -45,8 +44,8 @@ export default class PlanServiceUsageConfig {
   /**
    * Create a new usage configuration
    */
-  async create(data: Omit<IPlanServiceUsageConfig, 'created_at' | 'updated_at'>): Promise<boolean> {
-    await this.initKnex();
+  async create(data: Omit<IPlanServiceUsageConfig, 'created_at' | 'updated_at' | 'tenant'>): Promise<boolean> {
+    const tenant = await this.getTenant();
     
     const now = new Date();
     
@@ -55,7 +54,8 @@ export default class PlanServiceUsageConfig {
       unit_of_measure: data.unit_of_measure,
       enable_tiered_pricing: data.enable_tiered_pricing,
       minimum_usage: data.minimum_usage,
-      tenant: this.tenant,
+      base_rate: data.base_rate,
+      tenant,
       created_at: now,
       updated_at: now
     });
@@ -67,7 +67,7 @@ export default class PlanServiceUsageConfig {
    * Update an existing usage configuration
    */
   async update(configId: string, data: Partial<IPlanServiceUsageConfig>): Promise<boolean> {
-    await this.initKnex();
+    const tenant = await this.getTenant();
     
     const updateData = {
       ...data,
@@ -87,7 +87,7 @@ export default class PlanServiceUsageConfig {
     const result = await this.knex('plan_service_usage_config')
       .where({
         config_id: configId,
-        tenant: this.tenant
+        tenant
       })
       .update(updateData);
     
@@ -98,12 +98,12 @@ export default class PlanServiceUsageConfig {
    * Delete a usage configuration
    */
   async delete(configId: string): Promise<boolean> {
-    await this.initKnex();
+    const tenant = await this.getTenant();
     
     const result = await this.knex('plan_service_usage_config')
       .where({
         config_id: configId,
-        tenant: this.tenant
+        tenant
       })
       .delete();
     
@@ -114,12 +114,12 @@ export default class PlanServiceUsageConfig {
    * Get rate tiers for a usage configuration
    */
   async getRateTiers(configId: string): Promise<IPlanServiceRateTier[]> {
-    await this.initKnex();
+    const tenant = await this.getTenant();
     
     const tiers = await this.knex('plan_service_rate_tiers')
       .where({
         config_id: configId,
-        tenant: this.tenant
+        tenant
       })
       .orderBy('min_quantity', 'asc')
       .select('*');
@@ -130,8 +130,8 @@ export default class PlanServiceUsageConfig {
   /**
    * Add a rate tier to a usage configuration
    */
-  async addRateTier(data: Omit<IPlanServiceRateTier, 'tier_id' | 'created_at' | 'updated_at'>): Promise<string> {
-    await this.initKnex();
+  async addRateTier(data: Omit<IPlanServiceRateTier, 'tier_id' | 'created_at' | 'updated_at' | 'tenant'>): Promise<string> {
+    const tenant = await this.getTenant();
     
     const tierId = uuidv4();
     const now = new Date();
@@ -142,7 +142,7 @@ export default class PlanServiceUsageConfig {
       min_quantity: data.min_quantity,
       max_quantity: data.max_quantity,
       rate: data.rate,
-      tenant: this.tenant,
+      tenant,
       created_at: now,
       updated_at: now
     });
@@ -154,7 +154,7 @@ export default class PlanServiceUsageConfig {
    * Update a rate tier
    */
   async updateRateTier(tierId: string, data: Partial<IPlanServiceRateTier>): Promise<boolean> {
-    await this.initKnex();
+    const tenant = await this.getTenant();
     
     const updateData = {
       ...data,
@@ -174,7 +174,7 @@ export default class PlanServiceUsageConfig {
     const result = await this.knex('plan_service_rate_tiers')
       .where({
         tier_id: tierId,
-        tenant: this.tenant
+        tenant
       })
       .update(updateData);
     
@@ -185,12 +185,12 @@ export default class PlanServiceUsageConfig {
    * Delete a rate tier
    */
   async deleteRateTier(tierId: string): Promise<boolean> {
-    await this.initKnex();
+    const tenant = await this.getTenant();
     
     const result = await this.knex('plan_service_rate_tiers')
       .where({
         tier_id: tierId,
-        tenant: this.tenant
+        tenant
       })
       .delete();
     
@@ -201,12 +201,12 @@ export default class PlanServiceUsageConfig {
    * Delete all rate tiers for a specific configuration ID
    */
   async deleteRateTiersByConfigId(configId: string): Promise<boolean> {
-    await this.initKnex();
+    const tenant = await this.getTenant();
     
     const result = await this.knex('plan_service_rate_tiers')
       .where({
         config_id: configId,
-        tenant: this.tenant
+        tenant
       })
       .delete();
     

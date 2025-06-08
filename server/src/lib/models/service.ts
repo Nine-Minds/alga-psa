@@ -1,8 +1,9 @@
-import { createTenantKnex } from '../db';
+import { getCurrentTenantId } from '../db';
 import { IService } from '../../interfaces/billing.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { validateData } from '../utils/validation';
+import { Knex } from 'knex';
 
 // Use a constant for environment check
 const IS_DEVELOPMENT = typeof window !== 'undefined' &&
@@ -97,8 +98,8 @@ export const createServiceSchema = refinedCreateServiceSchema.transform((data) =
 export type CreateServiceSchemaType = z.infer<typeof createServiceSchema>;
 
 const Service = {
-  getAll: async (): Promise<IService[]> => {
-    const { knex: db, tenant } = await createTenantKnex();
+  getAll: async (knexOrTrx: Knex | Knex.Transaction): Promise<IService[]> => {
+    const tenant = await getCurrentTenantId();
 
     if (!tenant) {
       const error = new Error('Tenant context is required for fetching services');
@@ -111,12 +112,12 @@ const Service = {
 
     try {
       // Fetch services, joining with both standard and custom service types to get type names
-      const servicesData = await db('service_catalog as sc')
+      const servicesData = await knexOrTrx('service_catalog as sc')
         .where({ 'sc.tenant': tenant })
         .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
         .leftJoin('service_types as ct', function() {
           this.on('sc.custom_service_type_id', '=', 'ct.id')
-              .andOn('ct.tenant', '=', db.raw('?', [tenant]));
+              .andOn('ct.tenant', '=', knexOrTrx.raw('?', [tenant]));
         })
         .select(
           'sc.service_id',
@@ -124,13 +125,13 @@ const Service = {
           'sc.standard_service_type_id',
           'sc.custom_service_type_id',
           'sc.billing_method',
-          db.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
+          knexOrTrx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
           'sc.unit_of_measure',
           'sc.category_id',
           'sc.description',
           'sc.tenant',
           // Select the service type name from either standard or custom type
-          db.raw('COALESCE(sst.name, ct.name) as service_type_name')
+          knexOrTrx.raw('COALESCE(sst.name, ct.name) as service_type_name')
         );
       log.info(`[Service.getAll] Found ${servicesData.length} services`);
 
@@ -148,8 +149,8 @@ const Service = {
     }
   },
 
-  getById: async (service_id: string): Promise<IService | null> => {
-    const { knex: db, tenant } = await createTenantKnex();
+  getById: async (knexOrTrx: Knex | Knex.Transaction, service_id: string): Promise<IService | null> => {
+    const tenant = await getCurrentTenantId();
 
     if (!tenant) {
       const error = new Error('Tenant context is required for fetching service');
@@ -161,7 +162,7 @@ const Service = {
 
     try {
       // Fetch service by ID, joining with both standard and custom service types
-      const serviceData = await db('service_catalog as sc')
+      const serviceData = await knexOrTrx('service_catalog as sc')
         .where({
           'sc.service_id': service_id,
           'sc.tenant': tenant
@@ -169,7 +170,7 @@ const Service = {
         .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
         .leftJoin('service_types as ct', function() {
           this.on('sc.custom_service_type_id', '=', 'ct.id')
-              .andOn('ct.tenant', '=', db.raw('?', [tenant]));
+              .andOn('ct.tenant', '=', knexOrTrx.raw('?', [tenant]));
         })
         .select(
           'sc.service_id',
@@ -177,13 +178,13 @@ const Service = {
           'sc.standard_service_type_id',
           'sc.custom_service_type_id',
           'sc.billing_method',
-          db.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
+          knexOrTrx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
           'sc.unit_of_measure',
           'sc.category_id',
           'sc.description',
           'sc.tenant',
           // Select the service type name from either standard or custom type
-          db.raw('COALESCE(sst.name, ct.name) as service_type_name')
+          knexOrTrx.raw('COALESCE(sst.name, ct.name) as service_type_name')
         )
         .first(); // Use .first() as we expect only one
 
@@ -210,10 +211,10 @@ const Service = {
 
   // Note: Input type validation (exactly one ID) is expected to be handled by the caller (e.g., serviceAction)
   // or potentially by refining createServiceSchema further if desired.
-  create: async (serviceData: Omit<IService, 'service_id'> & { tenant?: string }): Promise<IService> => {
-    const { knex: db, tenant: dbTenant } = await createTenantKnex();
+  create: async (knexOrTrx: Knex | Knex.Transaction, serviceData: Omit<IService, 'service_id'> & { tenant?: string }): Promise<IService> => {
+    const dbTenant = await getCurrentTenantId();
 
-    // Use the tenant from the serviceData if provided, otherwise use the one from createTenantKnex
+    // Use the tenant from the serviceData if provided, otherwise use the one from getCurrentTenantId
     const effectiveTenant = serviceData.tenant || dbTenant;
 
     if (!effectiveTenant) {
@@ -260,14 +261,14 @@ const Service = {
 
     try {
       // Insert into service_catalog (assuming this is the correct table name)
-      const [createdService] = await db('service_catalog')
+      const [createdService] = await knexOrTrx('service_catalog')
         .insert(newService)
         .returning('*'); // Return all columns to match IService
 
       log.info('[Service.create] Successfully created service:', createdService);
       
       // After creation, fetch the complete service with type name by joining with type tables
-      const completeService = await db('service_catalog as sc')
+      const completeService = await knexOrTrx('service_catalog as sc')
         .where({
           'sc.service_id': createdService.service_id,
           'sc.tenant': effectiveTenant
@@ -275,7 +276,7 @@ const Service = {
         .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
         .leftJoin('service_types as ct', function() {
           this.on('sc.custom_service_type_id', '=', 'ct.id')
-              .andOn('ct.tenant', '=', db.raw('?', [effectiveTenant]));
+              .andOn('ct.tenant', '=', knexOrTrx.raw('?', [effectiveTenant]));
         })
         .select(
           'sc.service_id',
@@ -283,13 +284,13 @@ const Service = {
           'sc.standard_service_type_id',
           'sc.custom_service_type_id',
           'sc.billing_method',
-          db.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
+          knexOrTrx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
           'sc.unit_of_measure',
           'sc.category_id',
           'sc.description',
           'sc.tenant',
           // Select the service type name from either standard or custom type
-          db.raw('COALESCE(sst.name, ct.name) as service_type_name')
+          knexOrTrx.raw('COALESCE(sst.name, ct.name) as service_type_name')
         )
         .first();
 
@@ -308,8 +309,8 @@ const Service = {
     }
   },
 
-  update: async (service_id: string, serviceData: Partial<IService>): Promise<IService | null> => {
-    const { knex: db, tenant } = await createTenantKnex();
+  update: async (knexOrTrx: Knex | Knex.Transaction, service_id: string, serviceData: Partial<IService>): Promise<IService | null> => {
+    const tenant = await getCurrentTenantId();
 
     if (!tenant) {
       const error = new Error('Tenant context is required for updating service');
@@ -339,7 +340,7 @@ const Service = {
 
       // Ensure updateData conforms to Partial<IService> based on the *new* interface
       // Zod validation could be added here too if needed for partial updates.
-      const [updatedServiceData] = await db<IService>('service_catalog')
+      const [updatedServiceData] = await knexOrTrx<IService>('service_catalog')
         .where({
           service_id,
           tenant
@@ -353,7 +354,7 @@ const Service = {
       }
 
       // After update, fetch the complete service with type name by joining with type tables
-      const completeService = await db('service_catalog as sc')
+      const completeService = await knexOrTrx('service_catalog as sc')
         .where({
           'sc.service_id': service_id,
           'sc.tenant': tenant
@@ -361,7 +362,7 @@ const Service = {
         .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
         .leftJoin('service_types as ct', function() {
           this.on('sc.custom_service_type_id', '=', 'ct.id')
-              .andOn('ct.tenant', '=', db.raw('?', [tenant]));
+              .andOn('ct.tenant', '=', knexOrTrx.raw('?', [tenant]));
         })
         .select(
           'sc.service_id',
@@ -369,13 +370,13 @@ const Service = {
           'sc.standard_service_type_id',
           'sc.custom_service_type_id',
           'sc.billing_method',
-          db.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
+          knexOrTrx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
           'sc.unit_of_measure',
           'sc.category_id',
           'sc.description',
           'sc.tenant',
           // Select the service type name from either standard or custom type
-          db.raw('COALESCE(sst.name, ct.name) as service_type_name')
+          knexOrTrx.raw('COALESCE(sst.name, ct.name) as service_type_name')
         )
         .first();
 
@@ -394,8 +395,8 @@ const Service = {
     }
   },
 
-  delete: async (service_id: string): Promise<boolean> => {
-    const { knex: db, tenant } = await createTenantKnex();
+  delete: async (knexOrTrx: Knex | Knex.Transaction, service_id: string): Promise<boolean> => {
+    const tenant = await getCurrentTenantId();
 
     if (!tenant) {
       const error = new Error('Tenant context is required for deleting service');
@@ -404,9 +405,9 @@ const Service = {
     }
 
     try {
-      // Use a transaction to ensure both operations succeed or fail together
-      return await db.transaction(async (trx) => {
-        const updatedDetails = await trx('invoice_item_details')
+      // If we're already in a transaction, use it directly
+      if (knexOrTrx.isTransaction) {
+        const updatedDetails = await knexOrTrx('invoice_item_details')
           .where({
             service_id,
             tenant
@@ -418,7 +419,7 @@ const Service = {
         log.info(`[Service.delete] Updated ${updatedDetails} invoice_item_details records for service ${service_id}`);
 
         // Then delete the service
-        const deletedCount = await trx('service_catalog')
+        const deletedCount = await knexOrTrx('service_catalog')
           .where({
             service_id,
             tenant
@@ -427,15 +428,40 @@ const Service = {
 
         log.info(`[Service.delete] Deleted service ${service_id} for tenant ${tenant}. Affected rows: ${deletedCount}`);
         return deletedCount > 0;
-      });
+      } else {
+        // Otherwise create a transaction
+        return await knexOrTrx.transaction(async (trx) => {
+          const updatedDetails = await trx('invoice_item_details')
+            .where({
+              service_id,
+              tenant
+            })
+            .update({
+              service_id: null
+            });
+
+          log.info(`[Service.delete] Updated ${updatedDetails} invoice_item_details records for service ${service_id}`);
+
+          // Then delete the service
+          const deletedCount = await trx('service_catalog')
+            .where({
+              service_id,
+              tenant
+            })
+            .del();
+
+          log.info(`[Service.delete] Deleted service ${service_id} for tenant ${tenant}. Affected rows: ${deletedCount}`);
+          return deletedCount > 0;
+        });
+      }
     } catch (error) {
       log.error(`[Service.delete] Error deleting service ${service_id}:`, error);
       throw error;
     }
   },
 
-  getByCategoryId: async (category_id: string): Promise<IService[]> => {
-    const { knex: db, tenant } = await createTenantKnex();
+  getByCategoryId: async (knexOrTrx: Knex | Knex.Transaction, category_id: string): Promise<IService[]> => {
+    const tenant = await getCurrentTenantId();
 
     if (!tenant) {
       const error = new Error('Tenant context is required for fetching services by category');
@@ -445,7 +471,7 @@ const Service = {
 
     try {
       // Fetch services by category ID, joining with both standard and custom service types
-      const servicesData = await db('service_catalog as sc')
+      const servicesData = await knexOrTrx('service_catalog as sc')
         .where({
           'sc.category_id': category_id,
           'sc.tenant': tenant
@@ -453,7 +479,7 @@ const Service = {
         .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
         .leftJoin('service_types as ct', function() {
           this.on('sc.custom_service_type_id', '=', 'ct.id')
-              .andOn('ct.tenant', '=', db.raw('?', [tenant]));
+              .andOn('ct.tenant', '=', knexOrTrx.raw('?', [tenant]));
         })
         .select(
           'sc.service_id',
@@ -461,13 +487,13 @@ const Service = {
           'sc.standard_service_type_id',
           'sc.custom_service_type_id',
           'sc.billing_method',
-          db.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
+          knexOrTrx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
           'sc.unit_of_measure',
           'sc.category_id',
           'sc.description',
           'sc.tenant',
           // Select the service type name from either standard or custom type
-          db.raw('COALESCE(sst.name, ct.name) as service_type_name')
+          knexOrTrx.raw('COALESCE(sst.name, ct.name) as service_type_name')
         );
 
       log.info(`[Service.getByCategoryId] Found ${servicesData.length} services for category ${category_id}`);

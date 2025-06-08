@@ -13,9 +13,8 @@ import puppeteer from 'puppeteer';
 import { writeFile, unlink, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { CacheFactory } from 'server/src/lib/cache/CacheFactory';
-import Document from 'server/src/lib/models/document';
 import { convertBlockNoteToHTML } from 'server/src/lib/utils/blocknoteUtils';
-import DocumentAssociation from 'server/src/lib/models/document-association';
+import DocumentAssociation from 'server/src/models/document-association';
 import {
     IDocument,
     IDocumentType,
@@ -74,9 +73,9 @@ export async function addDocument(data: DocumentInput) {
       };
 
       console.log('Adding document:', new_document);
-      const document = await Document.insert(new_document, trx);
+      await trx('documents').insert(new_document);
 
-      return { _id: document.document_id };
+      return { _id: new_document.document_id };
     });
   } catch (error) {
     console.error(error);
@@ -93,7 +92,12 @@ export async function updateDocument(documentId: string, data: Partial<IDocument
     }
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      await Document.update(documentId, data, trx);
+      await trx('documents')
+        .where({ document_id: documentId, tenant })
+        .update({
+          ...data,
+          updated_at: new Date()
+        });
     });
   } catch (error) {
     console.error(error);
@@ -112,7 +116,9 @@ export async function deleteDocument(documentId: string, userId: string) {
     // Use a single transaction for all database operations
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Get the document first to get the file_id
-      const document = await Document.get(documentId, trx);
+      const document = await trx('documents')
+        .where({ document_id: documentId, tenant })
+        .first();
       if (!document) {
         throw new Error('Document not found');
       }
@@ -129,10 +135,10 @@ export async function deleteDocument(documentId: string, userId: string) {
         });
 
       // Delete all associations
-      await DocumentAssociation.deleteByDocument(document.document_id, trx);
+      await DocumentAssociation.deleteByDocument(trx, document.document_id);
 
       // Delete the document record
-      await Document.delete(documentId, trx);
+      await trx('documents').where({ document_id: documentId, tenant }).delete();
 
       return document;
     });
@@ -236,9 +242,19 @@ export async function getDocument(documentId: string) {
 // Get documents by ticket
 export async function getDocumentByTicketId(ticketId: string) {
   try {
-    const { knex } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const documents = await Document.getByTicketId(ticketId, trx);
+      const documents = await trx('documents')
+        .join('document_associations', 'documents.document_id', 'document_associations.document_id')
+        .where({
+          'document_associations.entity_id': ticketId,
+          'document_associations.entity_type': 'ticket',
+          'documents.tenant': tenant
+        })
+        .select('documents.*');
       return documents;
     });
   } catch (error) {
@@ -250,9 +266,19 @@ export async function getDocumentByTicketId(ticketId: string) {
 // Get documents by company
 export async function getDocumentByCompanyId(companyId: string) {
   try {
-    const { knex } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const documents = await Document.getByCompanyId(companyId, trx);
+      const documents = await trx('documents')
+        .join('document_associations', 'documents.document_id', 'document_associations.document_id')
+        .where({
+          'document_associations.entity_id': companyId,
+          'document_associations.entity_type': 'company',
+          'documents.tenant': tenant
+        })
+        .select('documents.*');
       return documents;
     });
   } catch (error) {
@@ -264,9 +290,19 @@ export async function getDocumentByCompanyId(companyId: string) {
 // Get documents by contact
 export async function getDocumentByContactNameId(contactNameId: string) {
   try {
-    const { knex } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const documents = await Document.getByContactNameId(contactNameId, trx);
+      const documents = await trx('documents')
+        .join('document_associations', 'documents.document_id', 'document_associations.document_id')
+        .where({
+          'document_associations.entity_id': contactNameId,
+          'document_associations.entity_type': 'contact',
+          'documents.tenant': tenant
+        })
+        .select('documents.*');
       return documents;
     });
   } catch (error) {
@@ -338,7 +374,9 @@ export async function getDocumentPreview(
 
     // Check if the identifier is a document ID
     let document = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await Document.get(identifier, trx);
+      return await trx('documents')
+        .where({ document_id: identifier, tenant })
+        .first();
     });
     console.log(`[getDocumentPreview] Document.get(${identifier}) result: ${document ? 'found' : 'not found'}`);
 
@@ -1108,7 +1146,7 @@ export async function createDocumentAssociations(
     await withTransaction(db, async (trx: Knex.Transaction) => {
       await Promise.all(
         associations.map((association): Promise<Pick<IDocumentAssociation, "association_id">> =>
-          DocumentAssociation.create(association, trx)
+          DocumentAssociation.create(trx, association)
         )
       );
     });
@@ -1210,8 +1248,8 @@ export async function uploadDocument(
 
       // Use transaction for document creation and associations
       return await withTransaction(knex, async (trx: Knex.Transaction) => {
-        const result = await Document.insert(document, trx);
-        const documentWithId = { ...document, document_id: result.document_id };
+        await trx('documents').insert(document);
+        const documentWithId = document;
 
         // Create associations if any entity IDs are provided
         const associations: IDocumentAssociationInput[] = [];
@@ -1256,7 +1294,7 @@ export async function uploadDocument(
         if (associations.length > 0) {
           await Promise.all(
             associations.map((association): Promise<Pick<IDocumentAssociation, "association_id">> =>
-              DocumentAssociation.create(association, trx)
+              DocumentAssociation.create(trx, association)
             )
           );
         }

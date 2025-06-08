@@ -61,10 +61,6 @@ interface CreateTicketFromAssetData {
 }
 
 export async function createTicketFromAsset(data: CreateTicketFromAssetData, user: IUser): Promise<ITicket> {
-    if (!await hasPermission(user, 'ticket', 'create')) {
-        throw new Error('Permission denied: Cannot create ticket');
-    }
-
     try {
         const {knex: db, tenant} = await createTenantKnex();
         if (!tenant) {
@@ -76,6 +72,9 @@ export async function createTicketFromAsset(data: CreateTicketFromAssetData, use
 
         const numberingService = new NumberingService();
         const result = await db.transaction(async (trx) => {
+            if (!await hasPermission(user, 'ticket', 'create', trx)) {
+                throw new Error('Permission denied: Cannot create ticket');
+            }
             const ticketNumber = await numberingService.getNextTicketNumber();
             
             // Create the ticket
@@ -106,7 +105,7 @@ export async function createTicketFromAsset(data: CreateTicketFromAssetData, use
             }
 
             // Create the asset association
-            await AssetAssociationModel.create({
+            await AssetAssociationModel.create(trx, {
                 asset_id: validatedData.asset_id,
                 entity_id: newTicket.ticket_id,
                 entity_type: 'ticket',
@@ -152,10 +151,6 @@ async function getDefaultStatusId(trx: any, tenant: string): Promise<string> {
 }
 
 export async function addTicket(data: FormData, user: IUser): Promise<ITicket|undefined> {
-  if (!await hasPermission(user, 'ticket', 'create')) {
-    throw new Error('Permission denied: Cannot create ticket');
-  }
-
   try {
     const {knex: db, tenant} = await createTenantKnex();
     if (!tenant) {
@@ -169,6 +164,9 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
     while (retries < MAX_RETRIES) {
       try {
         return await db.transaction(async (trx) => {
+          if (!await hasPermission(user, 'ticket', 'create', trx)) {
+            throw new Error('Permission denied: Cannot create ticket');
+          }
           // Get form data and convert empty strings to null for nullable fields
           const contact_name_id = data.get('contact_name_id');
           const category_id = data.get('category_id');
@@ -255,10 +253,6 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
 }
 
 export async function fetchTicketAttributes(ticketId: string, user: IUser) {
-  if (!await hasPermission(user, 'ticket', 'read')) {
-    throw new Error('Permission denied: Cannot view ticket attributes');
-  }
-
   try {
     // Validate ticket ID
     const { ticketId: validatedTicketId } = validateData(
@@ -271,22 +265,28 @@ export async function fetchTicketAttributes(ticketId: string, user: IUser) {
       throw new Error('Tenant not found');
     }
 
-    const attributes = await getTicketAttributes(validatedTicketId);
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view ticket attributes');
+      }
 
-    const ticketExists = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('tickets')
+      const attributes = await getTicketAttributes(validatedTicketId);
+
+      const ticketExists = await trx('tickets')
         .where({
           ticket_id: validatedTicketId,
           tenant: tenant
         })
         .first();
+
+      if (!ticketExists) {
+        throw new Error('Ticket not found or does not belong to the current tenant');
+      }
+
+      return { success: true, attributes };
     });
 
-    if (!ticketExists) {
-      throw new Error('Ticket not found or does not belong to the current tenant');
-    }
-
-    return { success: true, attributes };
+    return result;
   } catch (error) {
     console.error(error);
     return { success: false, error: 'Failed to fetch ticket attributes' };
@@ -294,10 +294,6 @@ export async function fetchTicketAttributes(ticketId: string, user: IUser) {
 }
 
 export async function updateTicket(id: string, data: Partial<ITicket>, user: IUser) {
-  if (!await hasPermission(user, 'ticket', 'update')) {
-    throw new Error('Permission denied: Cannot update ticket');
-  }
-
   try {
     // Validate update data
     const validatedData = validateData(ticketUpdateSchema, data);
@@ -307,60 +303,64 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
       throw new Error('Tenant not found');
     }
 
-    // Get current ticket state before update
-    const currentTicket = await db('tickets')
-      .where({ ticket_id: id, tenant: tenant })
-      .first();
+    const result = await db.transaction(async (trx) => {
+      if (!await hasPermission(user, 'ticket', 'update', trx)) {
+        throw new Error('Permission denied: Cannot update ticket');
+      }
 
-    if (!currentTicket) {
-      throw new Error('Ticket not found');
-    }
+      // Get current ticket state before update
+      const currentTicket = await trx('tickets')
+        .where({ ticket_id: id, tenant: tenant })
+        .first();
 
-    // Clean up the data before update
-    const updateData = { ...validatedData };
+      if (!currentTicket) {
+        throw new Error('Ticket not found');
+      }
 
-    // Handle null values for category and subcategory
-    if ('category_id' in updateData && !updateData.category_id) {
-      updateData.category_id = null;
-    }
-    if ('subcategory_id' in updateData && !updateData.subcategory_id) {
-      updateData.subcategory_id = null;
-    }
+      // Clean up the data before update
+      const updateData = { ...validatedData };
 
-    // Check if we're updating the assigned_to field
-    const isChangingAssignment = 'assigned_to' in updateData &&
-                                updateData.assigned_to !== currentTicket.assigned_to;
+      // Handle null values for category and subcategory
+      if ('category_id' in updateData && !updateData.category_id) {
+        updateData.category_id = null;
+      }
+      if ('subcategory_id' in updateData && !updateData.subcategory_id) {
+        updateData.subcategory_id = null;
+      }
 
-    // If updating category or subcategory, ensure they are compatible
-    if ('subcategory_id' in updateData || 'category_id' in updateData) {
-      const newSubcategoryId = updateData.subcategory_id;
-      const newCategoryId = updateData.category_id || currentTicket?.category_id;
+      // Check if we're updating the assigned_to field
+      const isChangingAssignment = 'assigned_to' in updateData &&
+                                  updateData.assigned_to !== currentTicket.assigned_to;
 
-      if (newSubcategoryId) {
-        // If setting a subcategory, verify it's a valid child of the category
-        const subcategory = await db('categories')
-          .where({ category_id: newSubcategoryId, tenant: tenant })
-          .first();
+      // If updating category or subcategory, ensure they are compatible
+      if ('subcategory_id' in updateData || 'category_id' in updateData) {
+        const newSubcategoryId = updateData.subcategory_id;
+        const newCategoryId = updateData.category_id || currentTicket?.category_id;
 
-        if (subcategory && subcategory.parent_category !== newCategoryId) {
-          throw new Error('Invalid category combination: subcategory must belong to the selected parent category');
+        if (newSubcategoryId) {
+          // If setting a subcategory, verify it's a valid child of the category
+          const subcategory = await trx('categories')
+            .where({ category_id: newSubcategoryId, tenant: tenant })
+            .first();
+
+          if (subcategory && subcategory.parent_category !== newCategoryId) {
+            throw new Error('Invalid category combination: subcategory must belong to the selected parent category');
+          }
         }
       }
-    }
 
-    // Get the status before and after update to check for closure
-    const oldStatus = await db('statuses')
-      .where({
-        status_id: currentTicket.status_id,
-        tenant: tenant
-      })
-      .first();
-    
-    let updatedTicket;
-    
-    // If we're changing the assigned_to field, we need to handle the ticket_resources table
-    if (isChangingAssignment) {
-      updatedTicket = await db.transaction(async (trx) => {
+      // Get the status before and after update to check for closure
+      const oldStatus = await trx('statuses')
+        .where({
+          status_id: currentTicket.status_id,
+          tenant: tenant
+        })
+        .first();
+      
+      let updatedTicket;
+      
+      // If we're changing the assigned_to field, we need to handle the ticket_resources table
+      if (isChangingAssignment) {
         // Step 1: Delete any ticket_resources where the new assigned_to is an additional_user_id
         // to avoid constraint violations after the update
         await trx('ticket_resources')
@@ -417,28 +417,29 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
         }
         
         return updated;
-      });
-    } else {
-      // Regular update without changing assignment
-      [updatedTicket] = await db('tickets')
-        .where({ ticket_id: id, tenant: tenant })
-        .update(updateData)
-        .returning('*');
-    }
+      } else {
+        // Regular update without changing assignment
+        const [updated] = await trx('tickets')
+          .where({ ticket_id: id, tenant: tenant })
+          .update(updateData)
+          .returning('*');
+        
+        updatedTicket = updated;
+      }
 
     if (!updatedTicket) {
       throw new Error('Ticket not found or update failed');
     }
 
-    // Get the new status if it was updated
-    const newStatus = updateData.status_id ? 
-      await db('statuses')
-        .where({ 
-          status_id: updateData.status_id,
-          tenant: tenant
-        })
-        .first() :
-      oldStatus;
+      // Get the new status if it was updated
+      const newStatus = updateData.status_id ? 
+        await trx('statuses')
+          .where({ 
+            status_id: updateData.status_id,
+            tenant: tenant
+          })
+          .first() :
+        oldStatus;
 
       // Publish appropriate event based on the update
       if (newStatus?.is_closed && !oldStatus?.is_closed) {
@@ -467,6 +468,9 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
         });
       }
 
+      return updatedTicket;
+    });
+
     return 'success';
   } catch (error) {
     console.error(error);
@@ -475,17 +479,23 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
 }
 
 export async function getTickets(user: IUser): Promise<ITicket[]> {
-  if (!await hasPermission(user, 'ticket', 'read')) {
-    throw new Error('Permission denied: Cannot view tickets');
-  }
-
   try {
-    const tickets = await Ticket.getAll();
-    // Convert dates
-    const processedTickets = tickets.map((ticket: ITicket): ITicket => {
-      return convertDates(ticket);
+    const {knex} = await createTenantKnex();
+    
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view tickets');
+      }
+
+      const tickets = await Ticket.getAll(trx);
+      // Convert dates
+      const processedTickets = tickets.map((ticket: ITicket): ITicket => {
+        return convertDates(ticket);
+      });
+      return validateData(z.array(ticketSchema), processedTickets);
     });
-    return validateData(z.array(ticketSchema), processedTickets);
+
+    return result;
   } catch (error) {
     console.error('Failed to fetch tickets:', error);
     throw new Error('Failed to fetch tickets');
@@ -493,10 +503,6 @@ export async function getTickets(user: IUser): Promise<ITicket[]> {
 }
 
 export async function getTicketsForList(user: IUser, filters: ITicketListFilters): Promise<ITicketListItem[]> {
-  if (!await hasPermission(user, 'ticket', 'read')) {
-    throw new Error('Permission denied: Cannot view tickets');
-  }
-
   try {
     const validatedFilters = validateData(ticketListFiltersSchema, filters) as ITicketListFilters;
     const {knex: db, tenant} = await createTenantKnex();
@@ -504,7 +510,12 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
       throw new Error('Tenant not found');
     }
 
-    let query = db('tickets as t')
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view tickets');
+      }
+
+      let query = trx('tickets as t')
       .select(
         't.*',
         's.name as status_name',
@@ -546,7 +557,7 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
     if (validatedFilters.channelId) {
       query = query.where('t.channel_id', validatedFilters.channelId);
     } else if (validatedFilters.channelFilterState !== 'all') {
-      const channelSubquery = db('channels')
+      const channelSubquery = trx('channels')
         .select('channel_id')
         .where('tenant', tenant)
         .where('is_inactive', validatedFilters.channelFilterState === 'inactive');
@@ -586,7 +597,7 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
       });
     }
 
-    const tickets = await query.orderBy('t.entered_at', 'desc');
+      const tickets = await query.orderBy('t.entered_at', 'desc');
 
       // Transform and validate the data
       const ticketListItems = tickets.map((ticket: any): ITicketListItem => {
@@ -621,7 +632,10 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
         };
       });
 
-    return validateData(z.array(ticketListItemSchema), ticketListItems);
+      return validateData(z.array(ticketListItemSchema), ticketListItems);
+    });
+
+    return result;
   } catch (error) {
     console.error('Failed to fetch tickets:', error);
     throw new Error('Failed to fetch tickets');
@@ -629,18 +643,19 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
 }
 
 export async function addTicketComment(ticketId: string, comment: string, isInternal: boolean, user: IUser): Promise<void> {
-  if (!await hasPermission(user, 'ticket', 'update')) {
-    throw new Error('Permission denied: Cannot add comment');
-  }
-
   try {
     const {knex: db, tenant} = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
     }
 
-    // Verify ticket exists
-    const ticket = await db('tickets')
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'ticket', 'update', trx)) {
+        throw new Error('Permission denied: Cannot add comment');
+      }
+
+      // Verify ticket exists
+      const ticket = await trx('tickets')
       .where({
         ticket_id: ticketId,
         tenant: tenant
@@ -651,8 +666,8 @@ export async function addTicketComment(ticketId: string, comment: string, isInte
       throw new Error('Ticket not found');
     }
 
-    // Insert comment
-    const [newComment] = await db('comments').insert({
+      // Insert comment
+      const [newComment] = await trx('comments').insert({
       tenant,
       ticket_id: ticketId,
       user_id: user.user_id,
@@ -662,19 +677,19 @@ export async function addTicketComment(ticketId: string, comment: string, isInte
       is_resolution: false
     }).returning('*');
 
-    // Publish comment added event
-    await safePublishEvent('TICKET_COMMENT_ADDED', {
-      tenantId: tenant,
-      ticketId: ticketId,
-      userId: user.user_id,
-      comment: {
-        id: newComment.id,
-        content: comment,
-        author: `${user.first_name} ${user.last_name}`,
-        isInternal
-      }
+      // Publish comment added event
+      await safePublishEvent('TICKET_COMMENT_ADDED', {
+        tenantId: tenant,
+        ticketId: ticketId,
+        userId: user.user_id,
+        comment: {
+          id: newComment.id,
+          content: comment,
+          author: `${user.first_name} ${user.last_name}`,
+          isInternal
+        }
+      });
     });
-
   } catch (error) {
     console.error('Failed to add ticket comment:', error);
     throw new Error('Failed to add ticket comment');
@@ -682,10 +697,6 @@ export async function addTicketComment(ticketId: string, comment: string, isInte
 }
 
 export async function deleteTicket(ticketId: string, user: IUser): Promise<void> {
-  if (!await hasPermission(user, 'ticket', 'delete')) {
-    throw new Error('Permission denied: Cannot delete ticket');
-  }
-
   try {
     const {knex: db, tenant} = await createTenantKnex();
     if (!tenant) {
@@ -694,6 +705,9 @@ export async function deleteTicket(ticketId: string, user: IUser): Promise<void>
 
     // Start transaction for atomic operations
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'ticket', 'delete', trx)) {
+        throw new Error('Permission denied: Cannot delete ticket');
+      }
       // Verify ticket exists and belongs to tenant
       const ticket = await trx('tickets')
         .where({
@@ -742,18 +756,19 @@ export async function deleteTicket(ticketId: string, user: IUser): Promise<void>
 }
 
 export async function getScheduledHoursForTicket(ticketId: string, user: IUser): Promise<IAgentSchedule[]> {
-  if (!await hasPermission(user, 'ticket', 'read')) {
-    throw new Error('Permission denied: Cannot view ticket schedule');
-  }
-
   try {
     const {knex: db, tenant} = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
     }
 
-    // Query schedule entries for the ticket
-    const scheduleEntries = await db('schedule_entries as se')
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view ticket schedule');
+      }
+
+      // Query schedule entries for the ticket
+      const scheduleEntries = await trx('schedule_entries as se')
       .select(
         'se.*',
         'sea.user_id'
@@ -807,7 +822,7 @@ export async function getScheduledHoursForTicket(ticketId: string, user: IUser):
     // If no schedules found, add some dummy data for testing
     if (result.length === 0) {
       // Get the ticket to find the assigned agent
-      const ticketData = await db('tickets')
+      const ticketData = await trx('tickets')
         .where({
           ticket_id: ticketId,
           tenant
@@ -822,7 +837,7 @@ export async function getScheduledHoursForTicket(ticketId: string, user: IUser):
       }
       
       // Add dummy data for additional agents
-      const additionalAgents = await db('ticket_resources')
+      const additionalAgents = await trx('ticket_resources')
         .where({
           ticket_id: ticketId,
           tenant
@@ -837,7 +852,10 @@ export async function getScheduledHoursForTicket(ticketId: string, user: IUser):
           });
         }
       });
-    }
+      }
+
+      return result;
+    });
 
     return result;
   } catch (error) {
@@ -862,15 +880,16 @@ export type DetailedTicket = ITicket & {
 };
 
 export async function getTicketById(id: string, user: IUser): Promise<DetailedTicket> {
-  if (!await hasPermission(user, 'ticket', 'read')) {
-    throw new Error('Permission denied: Cannot view ticket');
-  }
-
   try {
     const {knex: db, tenant} = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
     }
+
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view ticket');
+      }
 
     type TicketQueryResult = ITicket & {
       status_name: string;
@@ -882,7 +901,7 @@ export async function getTicketById(id: string, user: IUser): Promise<DetailedTi
       company_name?: string;
     };
 
-    const ticket: TicketQueryResult | undefined = await db('tickets as t')
+      const ticket: TicketQueryResult | undefined = await trx('tickets as t')
       .select(
         't.*',
         's.name as status_name',
@@ -923,17 +942,17 @@ export async function getTicketById(id: string, user: IUser): Promise<DetailedTi
       throw new Error('Ticket not found');
     }
 
-    // Fetch additional resources and available agents in parallel
-    const [additionalAgents, availableAgents] = await Promise.all([
-      db('ticket_resources')
-        .where({
-          ticket_id: id,
-          tenant: tenant
-        }),
-      db('users')
-        .where({ tenant: tenant })
-        .orderBy('first_name', 'asc')
-    ]);
+      // Fetch additional resources and available agents in parallel
+      const [additionalAgents, availableAgents] = await Promise.all([
+        trx('ticket_resources')
+          .where({
+            ticket_id: id,
+            tenant: tenant
+          }),
+        trx('users')
+          .where({ tenant: tenant })
+          .orderBy('first_name', 'asc')
+      ]);
 
 
     const assigned_to_name = (ticket.assigned_to_first_name || ticket.assigned_to_last_name)
@@ -957,7 +976,10 @@ export async function getTicketById(id: string, user: IUser): Promise<DetailedTi
     delete (detailedTicket as any).assigned_to_last_name;
 
 
-    return convertDates(detailedTicket);
+      return convertDates(detailedTicket);
+    });
+
+    return result;
   } catch (error) {
     console.error('Failed to fetch ticket:', error);
     throw new Error('Failed to fetch ticket');

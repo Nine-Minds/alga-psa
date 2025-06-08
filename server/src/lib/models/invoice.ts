@@ -1,5 +1,6 @@
 // server/src/lib/models/invoice.ts
-import { createTenantKnex } from '../db';
+import { Knex } from 'knex';
+import { getCurrentTenantId } from '../db';
 // Restore InvoiceViewModel import from interfaces
 import { IInvoice, IInvoiceItem, IInvoiceTemplate, LayoutSection, ICustomField, IConditionalRule, IInvoiceAnnotation, InvoiceViewModel } from '../../interfaces/invoice.interfaces';
 // Remove direct import from renderer types
@@ -8,26 +9,26 @@ import { getAdminConnection } from '../db/admin';
 import { getCompanyLogoUrl } from '../utils/avatarUtils'; // Added Import
 
 export default class Invoice {
-  static async create(invoice: Omit<IInvoice, 'invoice_id' | 'tenant'>): Promise<IInvoice> {
-    const { knex, tenant } = await createTenantKnex();
+  static async create(knexOrTrx: Knex | Knex.Transaction, invoice: Omit<IInvoice, 'invoice_id' | 'tenant'>): Promise<IInvoice> {
+    const tenant = await getCurrentTenantId();
 
     if (!Number.isInteger(invoice.total_amount)) {
       throw new Error('Total amount must be an integer');
     }
 
-    const [createdInvoice] = await knex('invoices').insert({...invoice, tenant}).returning('*');
+    const [createdInvoice] = await knexOrTrx('invoices').insert({...invoice, tenant}).returning('*');
     return createdInvoice;
   }
 
-  static async getById(invoiceId: string): Promise<IInvoice | null> {
-    const { knex, tenant } = await createTenantKnex();
+  static async getById(knexOrTrx: Knex | Knex.Transaction, invoiceId: string): Promise<IInvoice | null> {
+    const tenant = await getCurrentTenantId();
     
     if (!tenant) {
       throw new Error('Tenant context is required for getting invoice');
     }
 
     try {
-      const invoice = await knex('invoices')
+      const invoice = await knexOrTrx('invoices')
         .where({
           invoice_id: invoiceId,
           tenant
@@ -35,7 +36,7 @@ export default class Invoice {
         .first();
 
       if (invoice) {
-        invoice.invoice_items = await this.getInvoiceItems(invoiceId);
+        invoice.invoice_items = await this.getInvoiceItems(knexOrTrx, invoiceId);
         invoice.due_date = Temporal.PlainDate.from(invoice.due_date);
         if (invoice.finalized_at) {
           invoice.finalized_at = Temporal.PlainDate.from(invoice.finalized_at);
@@ -49,15 +50,15 @@ export default class Invoice {
     }
   }
 
-  static async update(invoiceId: string, updateData: Partial<IInvoice>): Promise<IInvoice> {
-    const { knex, tenant } = await createTenantKnex();
+  static async update(knexOrTrx: Knex | Knex.Transaction, invoiceId: string, updateData: Partial<IInvoice>): Promise<IInvoice> {
+    const tenant = await getCurrentTenantId();
     
     if (!tenant) {
       throw new Error('Tenant context is required for updating invoice');
     }
 
     try {
-      const [updatedInvoice] = await knex('invoices')
+      const [updatedInvoice] = await knexOrTrx('invoices')
         .where({
           invoice_id: invoiceId,
           tenant
@@ -76,15 +77,15 @@ export default class Invoice {
     }
   }
 
-  static async delete(invoiceId: string): Promise<boolean> {
-    const { knex, tenant } = await createTenantKnex();
+  static async delete(knexOrTrx: Knex | Knex.Transaction, invoiceId: string): Promise<boolean> {
+    const tenant = await getCurrentTenantId();
     
     if (!tenant) {
       throw new Error('Tenant context is required for deleting invoice');
     }
 
     try {
-      const deleted = await knex('invoices')
+      const deleted = await knexOrTrx('invoices')
         .where({
           invoice_id: invoiceId,
           tenant
@@ -102,8 +103,8 @@ export default class Invoice {
     }
   }
 
-  static async addInvoiceItem(invoiceItem: Omit<IInvoiceItem, 'item_id' | 'tenant'>): Promise<IInvoiceItem> {
-    const { knex, tenant } = await createTenantKnex();
+  static async addInvoiceItem(knexOrTrx: Knex | Knex.Transaction, invoiceItem: Omit<IInvoiceItem, 'item_id' | 'tenant'>): Promise<IInvoiceItem> {
+    const tenant = await getCurrentTenantId();
 
     if (!Number.isInteger(invoiceItem.total_price)) {
       throw new Error('Total price must be an integer');
@@ -127,12 +128,12 @@ export default class Invoice {
       delete itemToInsert.service_id;
     }
 
-    const [createdItem] = await knex('invoice_items').insert(itemToInsert).returning('*');
+    const [createdItem] = await knexOrTrx('invoice_items').insert(itemToInsert).returning('*');
     return createdItem;
   }
 
-  static async getInvoiceItems(invoiceId: string): Promise<IInvoiceItem[]> {
-    const { knex, tenant } = await createTenantKnex();
+  static async getInvoiceItems(knexOrTrx: Knex | Knex.Transaction, invoiceId: string): Promise<IInvoiceItem[]> {
+    const tenant = await getCurrentTenantId();
     
     if (!tenant) {
       throw new Error('Tenant context is required for getting invoice items');
@@ -141,7 +142,7 @@ export default class Invoice {
     try {
       console.log(`Getting invoice items for invoice ${invoiceId} in tenant ${tenant}`);
       
-      const query = knex('invoice_items')
+      const query = knexOrTrx('invoice_items')
         .select(
           'item_id',
           'invoice_id',
@@ -149,11 +150,11 @@ export default class Invoice {
           'description as name',
           'description',
           'is_discount',
-          knex.raw('CAST(quantity AS INTEGER) as quantity'),
-          knex.raw('CAST(unit_price AS BIGINT) as unit_price'),
-          knex.raw('CAST(total_price AS BIGINT) as total_price'),
-          knex.raw('CAST(tax_amount AS BIGINT) as tax_amount'),
-          knex.raw('CAST(net_amount AS BIGINT) as net_amount'),
+          knexOrTrx.raw('CAST(quantity AS INTEGER) as quantity'),
+          knexOrTrx.raw('CAST(unit_price AS BIGINT) as unit_price'),
+          knexOrTrx.raw('CAST(total_price AS BIGINT) as total_price'),
+          knexOrTrx.raw('CAST(tax_amount AS BIGINT) as tax_amount'),
+          knexOrTrx.raw('CAST(net_amount AS BIGINT) as net_amount'),
           'is_manual')
         .where({
           invoice_id: invoiceId,
@@ -175,15 +176,15 @@ export default class Invoice {
     }
   }
 
-  static async updateInvoiceItem(itemId: string, updateData: Partial<IInvoiceItem>): Promise<IInvoiceItem> {
-    const { knex, tenant } = await createTenantKnex();
+  static async updateInvoiceItem(knexOrTrx: Knex | Knex.Transaction, itemId: string, updateData: Partial<IInvoiceItem>): Promise<IInvoiceItem> {
+    const tenant = await getCurrentTenantId();
     
     if (!tenant) {
       throw new Error('Tenant context is required for updating invoice item');
     }
 
     try {
-      const [updatedItem] = await knex('invoice_items')
+      const [updatedItem] = await knexOrTrx('invoice_items')
         .where({
           item_id: itemId,
           tenant
@@ -202,15 +203,15 @@ export default class Invoice {
     }
   }
 
-  static async deleteInvoiceItem(itemId: string): Promise<boolean> {
-    const { knex, tenant } = await createTenantKnex();
+  static async deleteInvoiceItem(knexOrTrx: Knex | Knex.Transaction, itemId: string): Promise<boolean> {
+    const tenant = await getCurrentTenantId();
     
     if (!tenant) {
       throw new Error('Tenant context is required for deleting invoice item');
     }
 
     try {
-      const deleted = await knex('invoice_items')
+      const deleted = await knexOrTrx('invoice_items')
         .where({
           item_id: itemId,
           tenant
@@ -228,19 +229,18 @@ export default class Invoice {
     }
   }
 
-  static async getTemplates(): Promise<IInvoiceTemplate[]> {
-    const { knex, tenant } = await createTenantKnex();
-    return knex('invoice_templates').where({ tenant }).select('*');
+  static async getTemplates(knexOrTrx: Knex | Knex.Transaction): Promise<IInvoiceTemplate[]> {
+    const tenant = await getCurrentTenantId();
+    return knexOrTrx('invoice_templates').where({ tenant }).select('*');
   }
 
   /**
    * Get standard invoice templates. This is intentionally tenant-less as these are system-wide templates
    * that are available to all tenants. This is a valid exception to the tenant filtering requirement.
    */
-  static async getStandardTemplates(): Promise<IInvoiceTemplate[]> {
-    const { knex } = await createTenantKnex();
+  static async getStandardTemplates(knexOrTrx: Knex | Knex.Transaction): Promise<IInvoiceTemplate[]> {
     // Select necessary fields including AS/Wasm related ones
-    return knex('standard_invoice_templates')
+    return knexOrTrx('standard_invoice_templates')
       .select(
         'template_id',
         'name',
@@ -252,11 +252,11 @@ export default class Invoice {
       .orderBy('name');
   }
 
-  static async getAllTemplates(): Promise<IInvoiceTemplate[]> {
-    const { knex, tenant } = await createTenantKnex();
+  static async getAllTemplates(knexOrTrx: Knex | Knex.Transaction): Promise<IInvoiceTemplate[]> {
+    const tenant = await getCurrentTenantId();
     const [tenantTemplates, standardTemplates] = await Promise.all([
       // Explicitly select necessary fields for tenant templates
-      knex('invoice_templates')
+      knexOrTrx('invoice_templates')
         .where({ tenant })
         .select(
             'template_id',
@@ -270,7 +270,7 @@ export default class Invoice {
             'updated_at'
             // Note: 'dsl' might not exist on tenant templates table, adjust if needed
         ),
-      this.getStandardTemplates()
+      this.getStandardTemplates(knexOrTrx)
     ]);
 
     return [
@@ -279,31 +279,29 @@ export default class Invoice {
     ];
   }
 
-  private static async getTemplateSection(templateId: string, sectionType: string): Promise<LayoutSection> {
-    const { knex } = await createTenantKnex();
-    const section = await knex('template_sections')
+  private static async getTemplateSection(knexOrTrx: Knex | Knex.Transaction, templateId: string, sectionType: string): Promise<LayoutSection> {
+    const section = await knexOrTrx('template_sections')
       .where({ template_id: templateId, section_type: sectionType })
       .first();
     if (section) {
-      section.layout = await knex('layout_blocks')
+      section.layout = await knexOrTrx('layout_blocks')
         .where({ section_id: section.section_id });
     }
     return section;
   }
 
-  private static async getTemplateSections(templateId: string, sectionType: string): Promise<LayoutSection[]> {
-    const { knex } = await createTenantKnex();
-    const sections = await knex('template_sections')
+  private static async getTemplateSections(knexOrTrx: Knex | Knex.Transaction, templateId: string, sectionType: string): Promise<LayoutSection[]> {
+    const sections = await knexOrTrx('template_sections')
       .where({ template_id: templateId, section_type: sectionType });
     for (const section of sections) {
-      section.layout = await knex('layout_blocks')
+      section.layout = await knexOrTrx('layout_blocks')
         .where({ section_id: section.section_id });
     }
     return sections;
   }
 
-  static async saveTemplate(template: Omit<IInvoiceTemplate, 'tenant'>): Promise<IInvoiceTemplate> {
-    const { knex, tenant } = await createTenantKnex();
+  static async saveTemplate(knexOrTrx: Knex | Knex.Transaction, template: Omit<IInvoiceTemplate, 'tenant'>): Promise<IInvoiceTemplate> {
+    const tenant = await getCurrentTenantId();
     
     // Ensure version is provided (default to 1 if not specified)
     const templateWithDefaults = {
@@ -316,7 +314,7 @@ export default class Invoice {
     console.log('Template data being inserted in saveTemplate:', templateWithDefaults);
     
     // Explicitly specify all required fields to ensure they're included in the SQL query
-    const [savedTemplate] = await knex('invoice_templates')
+    const [savedTemplate] = await knexOrTrx('invoice_templates')
       .insert(templateWithDefaults)
       .onConflict(['tenant', 'template_id'])
       .merge(['name', 'version', 'assemblyScriptSource', 'wasmBinary', 'is_default'])
@@ -325,14 +323,12 @@ export default class Invoice {
     return savedTemplate;
   }
 
-  static async getCustomFields(_tenantId: string): Promise<ICustomField[]> {
-    const { knex } = await createTenantKnex();
-    return knex('custom_fields');
+  static async getCustomFields(knexOrTrx: Knex | Knex.Transaction, _tenantId: string): Promise<ICustomField[]> {
+    return knexOrTrx('custom_fields');
   }
 
-  static async saveCustomField(field: ICustomField): Promise<ICustomField> {
-    const { knex } = await createTenantKnex();
-    const [savedField] = await knex('custom_fields')
+  static async saveCustomField(knexOrTrx: Knex | Knex.Transaction, field: ICustomField): Promise<ICustomField> {
+    const [savedField] = await knexOrTrx('custom_fields')
       .insert(field)
       .onConflict('field_id')
       .merge()
@@ -340,14 +336,12 @@ export default class Invoice {
     return savedField;
   }
 
-  static async getConditionalRules(templateId: string): Promise<IConditionalRule[]> {
-    const { knex } = await createTenantKnex();
-    return knex('conditional_display_rules').where({ template_id: templateId });
+  static async getConditionalRules(knexOrTrx: Knex | Knex.Transaction, templateId: string): Promise<IConditionalRule[]> {
+    return knexOrTrx('conditional_display_rules').where({ template_id: templateId });
   }
 
-  static async saveConditionalRule(rule: IConditionalRule): Promise<IConditionalRule> {
-    const { knex } = await createTenantKnex();
-    const [savedRule] = await knex('conditional_display_rules')
+  static async saveConditionalRule(knexOrTrx: Knex | Knex.Transaction, rule: IConditionalRule): Promise<IConditionalRule> {
+    const [savedRule] = await knexOrTrx('conditional_display_rules')
       .insert(rule)
       .onConflict('rule_id')
       .merge()
@@ -355,28 +349,26 @@ export default class Invoice {
     return savedRule;
   }
 
-  static async addAnnotation(annotation: Omit<IInvoiceAnnotation, 'annotation_id'>): Promise<IInvoiceAnnotation> {
-    const { knex } = await createTenantKnex();
-    const [savedAnnotation] = await knex('invoice_annotations')
+  static async addAnnotation(knexOrTrx: Knex | Knex.Transaction, annotation: Omit<IInvoiceAnnotation, 'annotation_id'>): Promise<IInvoiceAnnotation> {
+    const [savedAnnotation] = await knexOrTrx('invoice_annotations')
       .insert(annotation)
       .returning('*');
     return savedAnnotation;
   }
 
-  static async getAnnotations(invoiceId: string): Promise<IInvoiceAnnotation[]> {
-    const { knex } = await createTenantKnex();
-    return knex('invoice_annotations').where({ invoice_id: invoiceId });
+  static async getAnnotations(knexOrTrx: Knex | Knex.Transaction, invoiceId: string): Promise<IInvoiceAnnotation[]> {
+    return knexOrTrx('invoice_annotations').where({ invoice_id: invoiceId });
   }
 
-  static async getAll(): Promise<IInvoice[]> {
-    const { knex, tenant } = await createTenantKnex();
+  static async getAll(knexOrTrx: Knex | Knex.Transaction): Promise<IInvoice[]> {
+    const tenant = await getCurrentTenantId();
     
     if (!tenant) {
       throw new Error('Tenant context is required for listing invoices');
     }
 
     try {
-      const invoices = await knex('invoices')
+      const invoices = await knexOrTrx('invoices')
         .where({ tenant })
         .select('*');
       return invoices;
@@ -387,19 +379,19 @@ export default class Invoice {
   }
 
   // Revert return type to InvoiceViewModel from interfaces
-  static async getFullInvoiceById(invoiceId: string): Promise<InvoiceViewModel> {
+  static async getFullInvoiceById(knexOrTrx: Knex | Knex.Transaction, invoiceId: string): Promise<InvoiceViewModel> {
     console.log('Getting full invoice details for:', invoiceId);
-    const {knex, tenant} = await createTenantKnex();
+    const tenant = await getCurrentTenantId();
 
     console.log('invoice details for invoiceId:', invoiceId, 'tenant:', tenant);
 
-    const invoice = await knex('invoices')
+    const invoice = await knexOrTrx('invoices')
       .select(
         '*',
-        knex.raw('CAST(subtotal AS BIGINT) as subtotal'),
-        knex.raw('CAST(tax AS BIGINT) as tax'),
-        knex.raw('CAST(total_amount AS BIGINT) as total_amount'),
-        knex.raw('CAST(credit_applied AS BIGINT) as credit_applied')
+        knexOrTrx.raw('CAST(subtotal AS BIGINT) as subtotal'),
+        knexOrTrx.raw('CAST(tax AS BIGINT) as tax'),
+        knexOrTrx.raw('CAST(total_amount AS BIGINT) as total_amount'),
+        knexOrTrx.raw('CAST(credit_applied AS BIGINT) as credit_applied')
       )
       .where({
         invoice_id: invoiceId,
@@ -428,14 +420,14 @@ export default class Invoice {
 
     // --- Fetch Tenant's Default Company ---
     let tenantCompanyInfo = null;
-    const tenantCompanyLink = await knex('tenant_companies')
+    const tenantCompanyLink = await knexOrTrx('tenant_companies')
       .where({ tenant: tenant, is_default: true })
       .select('company_id')
       .first();
 
     if (tenantCompanyLink) {
       // Step 2: Modify query - remove 'logo_url'
-      const tenantCompanyDetails = await knex('companies')
+      const tenantCompanyDetails = await knexOrTrx('companies')
         .where({ company_id: tenantCompanyLink.company_id })
         .select('company_name', 'address') // Removed 'logo_url'
         .first();
@@ -460,7 +452,7 @@ export default class Invoice {
     }
     // --- End Fetch Tenant's Default Company ---
   
-    const invoice_items = await this.getInvoiceItems(invoiceId);
+    const invoice_items = await this.getInvoiceItems(knexOrTrx, invoiceId);
     console.log('Processing invoice items for view model:', {
       total: invoice_items.length,
       manual: invoice_items.filter(item => item.is_manual).length,
@@ -473,7 +465,7 @@ export default class Invoice {
         unitPrice: item.unit_price
       }))
     });
-    const company = await knex('companies').where({ company_id: invoice.company_id }).first();
+    const company = await knexOrTrx('companies').where({ company_id: invoice.company_id }).first();
 // Add check for company existence
     if (!company) {
       console.error(`!!! Critical Error: Company details not found for company_id ${invoice.company_id} associated with invoice ${invoiceId} !!!`);
@@ -498,7 +490,7 @@ export default class Invoice {
     // Construct and return the original InvoiceViewModel (from interfaces)
     try {
       // Fetch contact details (assuming a primary contact exists)
-      const contact = await knex('contacts')
+      const contact = await knexOrTrx('contacts')
         .where({ company_id: invoice.company_id }) // Adjust if primary logic differs
         .first();
 
@@ -566,22 +558,22 @@ export default class Invoice {
     }
   }
 
-  static async generateInvoice(invoiceId: string): Promise<IInvoice> {
-    const { knex, tenant } = await createTenantKnex();
+  static async generateInvoice(knexOrTrx: Knex | Knex.Transaction, invoiceId: string): Promise<IInvoice> {
+    const tenant = await getCurrentTenantId();
     
     if (!tenant) {
       throw new Error('Tenant context is required for generating invoice');
     }
 
     try {
-      const [updatedInvoice] = await knex('invoices')
+      const [updatedInvoice] = await knexOrTrx('invoices')
         .where({ 
           invoice_id: invoiceId,
           tenant 
         })
         .update({
           status: 'sent',
-          finalized_at: knex.fn.now()
+          finalized_at: knexOrTrx.fn.now()
         })
         .returning('*');
       

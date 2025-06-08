@@ -113,7 +113,8 @@ const nextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: '5mb', // Increase limit for WASM uploads
-    }
+    },
+    instrumentationHook: true // Enable instrumentation for app initialization
   }
 };
 

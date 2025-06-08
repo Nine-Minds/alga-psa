@@ -1,41 +1,40 @@
 import { Knex } from 'knex';
-import { createTenantKnex } from 'server/src/lib/db';
-import { IPlanServiceHourlyConfig, IUserTypeRate } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { getCurrentTenantId } from '../db';
+import { IPlanServiceHourlyConfig, IUserTypeRate } from '../../interfaces/planServiceConfiguration.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
 export default class PlanServiceHourlyConfig {
-  private knex: Knex;
-  private tenant: string;
+  private knex: Knex | Knex.Transaction;
+  private tenant?: string;
 
-  constructor(knex?: Knex, tenant?: string) {
-    this.knex = knex as Knex;
-    this.tenant = tenant as string;
+  constructor(knex: Knex | Knex.Transaction) {
+    this.knex = knex;
   }
 
   /**
-   * Initialize knex connection if not provided in constructor
+   * Get tenant context
    */
-  private async initKnex() {
-    if (!this.knex) {
-      const { knex, tenant } = await createTenantKnex();
-      if (!tenant) {
-        throw new Error("tenant context not found");
+  private async getTenant(): Promise<string> {
+    if (!this.tenant) {
+      const tenantId = await getCurrentTenantId();
+      if (!tenantId) {
+        throw new Error('Tenant is required');
       }
-      this.knex = knex;
-      this.tenant = tenant;
+      this.tenant = tenantId;
     }
+    return this.tenant;
   }
 
   /**
    * Get an hourly configuration by config ID
    */
   async getByConfigId(configId: string): Promise<IPlanServiceHourlyConfig | null> {
-    await this.initKnex();
+    const tenant = await this.getTenant();
     
     const config = await this.knex('plan_service_hourly_configs') // Corrected table name (plural)
       .where({
         config_id: configId,
-        tenant: this.tenant
+        tenant
       })
       .first();
     
@@ -45,8 +44,8 @@ export default class PlanServiceHourlyConfig {
   /**
    * Create a new hourly configuration
    */
-  async create(data: Omit<IPlanServiceHourlyConfig, 'created_at' | 'updated_at'>): Promise<boolean> {
-    await this.initKnex();
+  async create(data: Omit<IPlanServiceHourlyConfig, 'created_at' | 'updated_at' | 'tenant'>): Promise<boolean> {
+    const tenant = await this.getTenant();
     
     const now = new Date();
     
@@ -61,7 +60,7 @@ export default class PlanServiceHourlyConfig {
       // overtime_threshold: data.overtime_threshold,
       // enable_after_hours_rate: data.enable_after_hours_rate,
       // after_hours_multiplier: data.after_hours_multiplier,
-      tenant: this.tenant,
+      tenant,
       created_at: now,
       updated_at: now
     });
@@ -73,7 +72,7 @@ export default class PlanServiceHourlyConfig {
    * Update an existing hourly configuration
    */
   async update(configId: string, data: Partial<IPlanServiceHourlyConfig>): Promise<boolean> {
-    await this.initKnex();
+    const tenant = await this.getTenant();
     
     const updateData = {
       ...data,
@@ -93,7 +92,7 @@ export default class PlanServiceHourlyConfig {
     const result = await this.knex('plan_service_hourly_configs') // Corrected table name (plural)
       .where({
         config_id: configId,
-        tenant: this.tenant
+        tenant
       })
       .update(updateData);
     
@@ -104,12 +103,12 @@ export default class PlanServiceHourlyConfig {
    * Delete an hourly configuration
    */
   async delete(configId: string): Promise<boolean> {
-    await this.initKnex();
+    const tenant = await this.getTenant();
     
     const result = await this.knex('plan_service_hourly_configs') // Corrected table name (plural)
       .where({
         config_id: configId,
-        tenant: this.tenant
+        tenant
       })
       .delete();
     
@@ -120,12 +119,12 @@ export default class PlanServiceHourlyConfig {
    * Get user type rates for an hourly configuration
    */
   async getUserTypeRates(configId: string): Promise<IUserTypeRate[]> {
-    await this.initKnex();
+    const tenant = await this.getTenant();
     
     const rates = await this.knex('user_type_rates')
       .where({
         config_id: configId,
-        tenant: this.tenant
+        tenant
       })
       .select('*');
     
@@ -135,8 +134,8 @@ export default class PlanServiceHourlyConfig {
   /**
    * Add a user type rate to an hourly configuration
    */
-  async addUserTypeRate(data: Omit<IUserTypeRate, 'rate_id' | 'created_at' | 'updated_at'>): Promise<string> {
-    await this.initKnex();
+  async addUserTypeRate(data: Omit<IUserTypeRate, 'rate_id' | 'created_at' | 'updated_at' | 'tenant'>): Promise<string> {
+    const tenant = await this.getTenant();
     
     const rateId = uuidv4();
     const now = new Date();
@@ -146,7 +145,7 @@ export default class PlanServiceHourlyConfig {
       config_id: data.config_id,
       user_type: data.user_type,
       rate: data.rate,
-      tenant: this.tenant,
+      tenant,
       created_at: now,
       updated_at: now
     });
@@ -158,7 +157,7 @@ export default class PlanServiceHourlyConfig {
    * Update a user type rate
    */
   async updateUserTypeRate(rateId: string, data: Partial<IUserTypeRate>): Promise<boolean> {
-    await this.initKnex();
+    const tenant = await this.getTenant();
     
     const updateData = {
       ...data,
@@ -178,7 +177,7 @@ export default class PlanServiceHourlyConfig {
     const result = await this.knex('user_type_rates')
       .where({
         rate_id: rateId,
-        tenant: this.tenant
+        tenant
       })
       .update(updateData);
     
@@ -189,12 +188,12 @@ export default class PlanServiceHourlyConfig {
    * Delete all user type rates for a specific hourly configuration ID
    */
   async deleteUserTypeRatesByConfigId(configId: string): Promise<number> {
-    await this.initKnex();
+    const tenant = await this.getTenant();
 
     const result = await this.knex('user_type_rates')
       .where({
         config_id: configId,
-        tenant: this.tenant
+        tenant
       })
       .delete();
 
@@ -204,8 +203,8 @@ export default class PlanServiceHourlyConfig {
   /**
    * Add multiple user type rates to an hourly configuration
    */
-  async addUserTypeRates(rates: Omit<IUserTypeRate, 'rate_id' | 'created_at' | 'updated_at'>[]): Promise<string[]> {
-    await this.initKnex();
+  async addUserTypeRates(rates: Omit<IUserTypeRate, 'rate_id' | 'created_at' | 'updated_at' | 'tenant'>[]): Promise<string[]> {
+    const tenant = await this.getTenant();
 
     if (!rates || rates.length === 0) {
       return [];
@@ -217,7 +216,7 @@ export default class PlanServiceHourlyConfig {
       config_id: rate.config_id,
       user_type: rate.user_type,
       rate: rate.rate,
-      tenant: this.tenant, // Ensure tenant is set from the model instance
+      tenant, // Ensure tenant is set from the model instance
       created_at: now,
       updated_at: now
     }));
@@ -234,12 +233,12 @@ export default class PlanServiceHourlyConfig {
    * Delete a user type rate
    */
   async deleteUserTypeRate(rateId: string): Promise<boolean> {
-    await this.initKnex();
+    const tenant = await this.getTenant();
     
     const result = await this.knex('user_type_rates')
       .where({
         rate_id: rateId,
-        tenant: this.tenant
+        tenant
       })
       .delete();
     

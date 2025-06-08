@@ -10,6 +10,8 @@ import { createClient } from 'redis';
 import logger from '@shared/core/logger.js';
 import { getSecret } from '@shared/core/getSecret.js';
 import { getAdminConnection } from '@shared/db/admin.js';
+import { withAdminTransaction } from '@shared/db/index.js';
+import { Knex } from 'knex';
 
 // TODO: These utilities would need to be properly implemented or moved
 // Currently they are in server/src/lib/workflow/util
@@ -452,67 +454,67 @@ export class WorkflowWorker {
           eventType: eventData.event_type
         });
         
-        // Get a database connection
-        const db = await getAdminConnection();
+        // Use transaction for test event processing
+        await withAdminTransaction(async (trx) => {
+          // Get the workflow registration directly by ID and version
+          const registration = await trx('workflow_registrations as wr')
+            .join('workflow_registration_versions as wrv', function() {
+              this.on('wrv.registration_id', '=', 'wr.registration_id')
+                  .andOn('wrv.tenant', '=', 'wr.tenant');
+            })
+            .where({
+              'wr.registration_id': workflowId,
+              'wr.tenant': tenant,
+              'wrv.version_id': versionId
+            })
+            .select(
+              'wr.registration_id',
+              'wr.name',
+              'wr.description',
+              'wr.tags',
+              'wr.status',
+              'wrv.version_id',
+              'wrv.version',
+              'wrv.definition'
+            )
+            .first();
+          
+          if (registration) {
+            logger.info(`[WorkflowWorker] Starting test workflow with specific version`, {
+              workflowId,
+              versionId,
+              name: registration.name
+            });
+            
+            // Start the workflow using the version ID
+            const result = await this.workflowRuntime.startWorkflowByVersionId(trx, {
+              tenant: eventData.tenant,
+              initialData: {
+                eventId: eventData.event_id,
+                eventType: eventData.event_type,
+                eventName: eventData.event_name,
+                eventPayload: eventData.payload || {},
+                triggerEvent: eventData
+              },
+              userId: eventData.user_id,
+              versionId: versionId as string,
+              isSystemManaged: false // For this test event path, the preceding query only fetches tenant workflows
+            });
+            
+            // Submit the original event to the workflow
+            await this.workflowRuntime.submitEvent(trx, {
+              execution_id: result.executionId,
+              event_name: eventData.event_name,
+              payload: eventData.payload,
+              user_id: eventData.user_id,
+              tenant: eventData.tenant
+            });
+          } else {
+            logger.error(`[WorkflowWorker] Test workflow with ID ${workflowId} and version ${versionId} not found`);
+          }
+        });
         
-        // Get the workflow registration directly by ID and version
-        const registration = await db('workflow_registrations as wr')
-          .join('workflow_registration_versions as wrv', function() {
-            this.on('wrv.registration_id', '=', 'wr.registration_id')
-                .andOn('wrv.tenant', '=', 'wr.tenant');
-          })
-          .where({
-            'wr.registration_id': workflowId,
-            'wr.tenant': tenant,
-            'wrv.version_id': versionId
-          })
-          .select(
-            'wr.registration_id',
-            'wr.name',
-            'wr.description',
-            'wr.tags',
-            'wr.status',
-            'wrv.version_id',
-            'wrv.version',
-            'wrv.definition'
-          )
-          .first();
-        
-        if (registration) {
-          logger.info(`[WorkflowWorker] Starting test workflow with specific version`, {
-            workflowId,
-            versionId,
-            name: registration.name
-          });
-          
-          // Start the workflow using the version ID
-          const result = await this.workflowRuntime.startWorkflowByVersionId(db, {
-            tenant: eventData.tenant,
-            initialData: {
-              eventId: eventData.event_id,
-              eventType: eventData.event_type,
-              eventName: eventData.event_name,
-              eventPayload: eventData.payload || {},
-              triggerEvent: eventData
-            },
-            userId: eventData.user_id,
-            versionId: versionId as string,
-            isSystemManaged: false // For this test event path, the preceding query only fetches tenant workflows
-          });
-          
-          // Submit the original event to the workflow
-          await this.workflowRuntime.submitEvent(db, {
-            execution_id: result.executionId,
-            event_name: eventData.event_name,
-            payload: eventData.payload,
-            user_id: eventData.user_id,
-            tenant: eventData.tenant
-          });
-          
-          return; // Skip the normal workflow attachment lookup
-        } else {
-          logger.error(`[WorkflowWorker] Test workflow with ID ${workflowId} and version ${versionId} not found`);
-        }
+        return; // Skip the normal workflow attachment lookup
       }
       
       // eventData is WorkflowEventBase, already parsed by RedisStreamClient's consumer handler
@@ -523,36 +525,37 @@ export class WorkflowWorker {
       if (eventData.execution_id && eventData.event_type === 'workflow') {
         logger.info(`[WorkflowWorker] Global event ${eventData.event_id} is for existing execution ${eventData.execution_id}. Routing to processQueuedEvent.`, { eventName: eventData.event_name });
         
-        const db = await getAdminConnection();
-        // Find the processing_id from the workflow_event_processing table.
-        // This record should have been created by TypeScriptWorkflowRuntime.enqueueEvent.
-        const processingRecord = await db('workflow_event_processing')
-          .where({
-            event_id: eventData.event_id,
-            execution_id: eventData.execution_id, // Ensure we get the right one if event_id isn't globally unique
-            tenant: eventData.tenant
-          })
-          .first();
+        await withAdminTransaction(async (trx) => {
+          // Find the processing_id from the workflow_event_processing table.
+          // This record should have been created by TypeScriptWorkflowRuntime.enqueueEvent.
+          const processingRecord = await trx('workflow_event_processing')
+            .where({
+              event_id: eventData.event_id,
+              execution_id: eventData.execution_id, // Ensure we get the right one if event_id isn't globally unique
+              tenant: eventData.tenant
+            })
+            .first();
 
-        if (processingRecord) {
-          // Call processQueuedEvent with all necessary parameters.
-          // processQueuedEvent will handle updating the processingRecord's status,
-          // loading the full execution state, applying the event, and notifying listeners.
-          await this.workflowRuntime.processQueuedEvent(db, {
-            eventId: eventData.event_id,
-            executionId: eventData.execution_id,
-            processingId: processingRecord.processing_id, // Crucial: use the ID from the DB record
-            workerId: this.workerId,
-            tenant: eventData.tenant
-          });
-          logger.info(`[WorkflowWorker] Routed event ${eventData.event_id} to processQueuedEvent for execution ${eventData.execution_id}.`);
-        } else {
-          // This case should be rare if enqueueEvent always creates a processing record.
-          // It might happen if an event is published to global stream bypassing enqueueEvent's DB operations,
-          // or if there's a race condition/delay in DB commit vs Redis publish.
-          logger.error(`[WorkflowWorker] Could not find processing record for event ${eventData.event_id} (execution: ${eventData.execution_id}) from global stream. Event may not be processed correctly by this path.`);
-          // Consider if fallback to processPendingEvents is sufficient or if specific error handling is needed.
-        }
+          if (processingRecord) {
+            // Call processQueuedEvent with all necessary parameters.
+            // processQueuedEvent will handle updating the processingRecord's status,
+            // loading the full execution state, applying the event, and notifying listeners.
+            await this.workflowRuntime.processQueuedEvent(trx, {
+              eventId: eventData.event_id,
+              executionId: eventData.execution_id || '',
+              processingId: processingRecord.processing_id, // Crucial: use the ID from the DB record
+              workerId: this.workerId,
+              tenant: eventData.tenant
+            });
+            logger.info(`[WorkflowWorker] Routed event ${eventData.event_id} to processQueuedEvent for execution ${eventData.execution_id}.`);
+          } else {
+            // This case should be rare if enqueueEvent always creates a processing record.
+            // It might happen if an event is published to global stream bypassing enqueueEvent's DB operations,
+            // or if there's a race condition/delay in DB commit vs Redis publish.
+            logger.error(`[WorkflowWorker] Could not find processing record for event ${eventData.event_id} (execution: ${eventData.execution_id}) from global stream. Event may not be processed correctly by this path.`);
+            // Consider if fallback to processPendingEvents is sufficient or if specific error handling is needed.
+          }
+        });
       } else {
         // Event is treated as a trigger for new workflows.
         logger.info(`[WorkflowWorker] Global event ${eventData.event_id} (type: ${eventData.event_type}, execution_id: ${eventData.execution_id || 'N/A'}) treated as a trigger for new workflows.`);
@@ -584,48 +587,49 @@ export class WorkflowWorker {
   private async findAttachedWorkflows(eventType: string, tenant: string): Promise<{ workflow_id: string; isSystemManaged: boolean }[]> { // Updated return type
     try {
       logger.info(`[WorkflowWorker] Finding workflows attached to event type ${eventType} for tenant ${tenant}`);
-      const db = await getAdminConnection();
+      
+      return await withAdminTransaction(async (trx) => {
+        // Step 1: Query workflow_event_attachments for the given eventType and tenant.
+        const attachments = await trx('workflow_event_attachments as wea')
+          .where({
+            'wea.event_type': eventType,
+            'wea.tenant': tenant,
+            'wea.is_active': true
+          })
+          .select('wea.workflow_id as workflow_id');
 
-      // Step 1: Query workflow_event_attachments for the given eventType and tenant.
-      const attachments = await db('workflow_event_attachments as wea')
-        .where({
-          'wea.event_type': eventType,
-          'wea.tenant': tenant,
-          'wea.is_active': true
-        })
-        .select('wea.workflow_id as workflow_id');
+        if (!attachments || attachments.length === 0) {
+          logger.info(`[WorkflowWorker] No attachments found in workflow_event_attachments for event type ${eventType} and tenant ${tenant}`);
+          return [];
+        }
 
-      if (!attachments || attachments.length === 0) {
-        logger.info(`[WorkflowWorker] No attachments found in workflow_event_attachments for event type ${eventType} and tenant ${tenant}`);
-        return [];
-      }
+        const workflowIds = attachments.map(att => att.workflow_id);
 
-      const workflowIds = attachments.map(att => att.workflow_id);
+        // Step 2: Check which of these workflow_ids exist in system_workflow_registrations
+        // This helps determine if a workflow_id from a tenant's attachment
+        // actually points to a system-defined workflow.
+        const systemWorkflowRegistrations = await trx('system_workflow_registrations as swr')
+          .whereIn('swr.registration_id', workflowIds)
+          .select('swr.registration_id');
 
-      // Step 2: Check which of these workflow_ids exist in system_workflow_registrations
-      // This helps determine if a workflow_id from a tenant's attachment
-      // actually points to a system-defined workflow.
-      const systemWorkflowRegistrations = await db('system_workflow_registrations as swr')
-        .whereIn('swr.registration_id', workflowIds)
-        .select('swr.registration_id');
+        const systemWorkflowIds = new Set(systemWorkflowRegistrations.map(reg => reg.registration_id));
 
-      const systemWorkflowIds = new Set(systemWorkflowRegistrations.map(reg => reg.registration_id));
+        // Step 3: Construct the results with the correct isSystemManaged flag
+        // If a workflow_id from workflow_event_attachments is found in system_workflow_registrations,
+        // then isSystemManaged is true. Otherwise, it's false.
+        const results = attachments.map(attachment => ({
+          workflow_id: attachment.workflow_id,
+          isSystemManaged: systemWorkflowIds.has(attachment.workflow_id)
+        }));
 
-      // Step 3: Construct the results with the correct isSystemManaged flag
-      // If a workflow_id from workflow_event_attachments is found in system_workflow_registrations,
-      // then isSystemManaged is true. Otherwise, it's false.
-      const results = attachments.map(attachment => ({
-        workflow_id: attachment.workflow_id,
-        isSystemManaged: systemWorkflowIds.has(attachment.workflow_id)
-      }));
+        logger.info(`[WorkflowWorker] Found ${results.length} workflows attached to event type ${eventType}`, {
+          results,
+          eventType,
+          tenant
+        });
 
-      logger.info(`[WorkflowWorker] Found ${results.length} workflows attached to event type ${eventType}`, {
-        results,
-        eventType,
-        tenant
+        return results;
       });
-
-      return results;
     } catch (error) {
       logger.error(`[WorkflowWorker] Error finding attached workflows for event type ${eventType}:`, error);
       return [];
@@ -653,7 +657,7 @@ export class WorkflowWorker {
         tenant: event.tenant
       });
       
-      // Get the workflow registration, passing the system flag
+      // Get the workflow registration, passing the system flag and transaction connection
       const workflow = await this.getWorkflowRegistration(workflowId, event.tenant, isSystemManaged);
 
       if (!workflow) {
@@ -668,49 +672,49 @@ export class WorkflowWorker {
         definition: workflow.definition ? 'present' : 'missing'
       });
       
-      // Get a database connection
-      const db = await getAdminConnection();
-      
-      // Log the workflow details
-      logger.info(`[WorkflowWorker] Starting workflow by version ID: ${workflow.version_id}`, {
-        workflowId,
-        workflowName: workflow.name,
-        version_id: workflow.version_id,
-        definitionMetadata: workflow.definition?.metadata
+      // Use a transaction to ensure atomicity of workflow start and event submission
+      await withAdminTransaction(async (trx) => {
+        // Log the workflow details
+        logger.info(`[WorkflowWorker] Starting workflow by version ID: ${workflow.version_id}`, {
+          workflowId,
+          workflowName: workflow.name,
+          version_id: workflow.version_id,
+          definitionMetadata: workflow.definition?.metadata
+        });
+        
+        // Start the workflow using the version ID
+        const result = await this.workflowRuntime.startWorkflowByVersionId(trx, {
+          tenant: event.tenant,
+          initialData: {
+            eventId: event.event_id,
+            eventType: event.event_type,
+            eventName: event.event_name,
+            eventPayload: event.payload || {},
+            triggerEvent: event
+          },
+          userId: event.user_id,
+          versionId: workflow.version_id, // Pass the version_id
+          isSystemManaged: isSystemManaged // Pass the isSystemManaged flag
+        });
+        
+        logger.info(`[WorkflowWorker] Started workflow ${workflow.name} with execution ID ${result.executionId}`, {
+          workflowId,
+          workflowName: workflow.name,
+          executionId: result.executionId,
+          eventId: event.event_id
+        });
+        
+        // Submit the original event to the workflow
+        await this.workflowRuntime.submitEvent(trx, {
+          execution_id: result.executionId,
+          event_name: event.event_name,
+          payload: event.payload,
+          user_id: event.user_id,
+          tenant: event.tenant
+        });
+        
+        logger.info(`[WorkflowWorker] Submitted event ${event.event_name} to workflow execution ${result.executionId}`);
       });
-      
-      // Start the workflow using the version ID
-      const result = await this.workflowRuntime.startWorkflowByVersionId(db, {
-        tenant: event.tenant,
-        initialData: {
-          eventId: event.event_id,
-          eventType: event.event_type,
-          eventName: event.event_name,
-          eventPayload: event.payload || {},
-          triggerEvent: event
-        },
-        userId: event.user_id,
-        versionId: workflow.version_id, // Pass the version_id
-        isSystemManaged: isSystemManaged // Pass the isSystemManaged flag
-      });
-      
-      logger.info(`[WorkflowWorker] Started workflow ${workflow.name} with execution ID ${result.executionId}`, {
-        workflowId,
-        workflowName: workflow.name,
-        executionId: result.executionId,
-        eventId: event.event_id
-      });
-      
-      // Submit the original event to the workflow
-      await this.workflowRuntime.submitEvent(db, {
-        execution_id: result.executionId,
-        event_name: event.event_name,
-        payload: event.payload,
-        user_id: event.user_id,
-        tenant: event.tenant
-      });
-      
-      logger.info(`[WorkflowWorker] Submitted event ${event.event_name} to workflow execution ${result.executionId}`);
     } catch (error) {
       logger.error(`[WorkflowWorker] Error starting workflow ${workflowId} from event:`, error);
     }
@@ -726,11 +730,12 @@ export class WorkflowWorker {
   private async getWorkflowRegistration(
     workflowId: string,
     tenant: string,
-    isSystemManaged: boolean // Added parameter
+    isSystemManaged: boolean, // Added parameter
+    knexConnection?: Knex | Knex.Transaction
   ): Promise<any> { // Consider defining a specific return type
     try {
-      // Get a database connection
-      const db = await getAdminConnection();
+      // Use provided connection or get a new one
+      const db = knexConnection || await getAdminConnection();
 
       const registrationTable = isSystemManaged ? 'system_workflow_registrations' : 'workflow_registrations';
       const versionTable = isSystemManaged ? 'system_workflow_registration_versions' : 'workflow_registration_versions';
@@ -792,54 +797,53 @@ export class WorkflowWorker {
    */
   private async processPendingEvents(): Promise<void> {
     try {
-      // Get a database connection
-      const db = await getAdminConnection();
-      
-      // Query for pending events
-      const pendingEvents = await db('workflow_event_processing')
-        .where('status', 'pending')
-        .orWhere('status', 'published')
-        .orderBy('created_at', 'asc')
-        .limit(this.config.batchSize);
-      
-      if (pendingEvents.length === 0) {
-        logger.debug(`[WorkflowWorker] No pending events to process`);
-        return;
-      }
-      
-      logger.info(`[WorkflowWorker] Found ${pendingEvents.length} pending events to process`);
-      
-      // Process each pending event
-      for (const processingRecord of pendingEvents) {
-        try {
-          // Process the event
-          await this.workflowRuntime.processQueuedEvent(db, {
-            eventId: processingRecord.event_id,
-            executionId: processingRecord.execution_id,
-            processingId: processingRecord.processing_id,
-            workerId: this.workerId,
-            tenant: processingRecord.tenant
-          });
-          
-          logger.info(`[WorkflowWorker] Successfully processed event ${processingRecord.event_id}`);
-        } catch (error) {
-          logger.error(`[WorkflowWorker] Error processing event ${processingRecord.event_id}:`, error);
-          
-          // Update the processing record to mark it as failed
-          await db('workflow_event_processing')
-            .where({
-              processing_id: processingRecord.processing_id,
-              tenant: processingRecord.tenant
-            })
-            .update({
-              status: 'failed',
-              error_message: error instanceof Error ? error.message : String(error),
-              attempt_count: db.raw('attempt_count + 1'),
-              last_attempt: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            });
+      await withAdminTransaction(async (trx) => {
+        // Query for pending events
+        const pendingEvents = await trx('workflow_event_processing')
+          .where('status', 'pending')
+          .orWhere('status', 'published')
+          .orderBy('created_at', 'asc')
+          .limit(this.config.batchSize);
+        
+        if (pendingEvents.length === 0) {
+          logger.debug(`[WorkflowWorker] No pending events to process`);
+          return;
         }
-      }
+        
+        logger.info(`[WorkflowWorker] Found ${pendingEvents.length} pending events to process`);
+        
+        // Process each pending event
+        for (const processingRecord of pendingEvents) {
+          try {
+            // Process the event
+            await this.workflowRuntime.processQueuedEvent(trx, {
+              eventId: processingRecord.event_id,
+              executionId: processingRecord.execution_id,
+              processingId: processingRecord.processing_id,
+              workerId: this.workerId,
+              tenant: processingRecord.tenant
+            });
+            
+            logger.info(`[WorkflowWorker] Successfully processed event ${processingRecord.event_id}`);
+          } catch (error) {
+            logger.error(`[WorkflowWorker] Error processing event ${processingRecord.event_id}:`, error);
+            
+            // Update the processing record to mark it as failed within the same transaction
+            await trx('workflow_event_processing')
+              .where({
+                processing_id: processingRecord.processing_id,
+                tenant: processingRecord.tenant
+              })
+              .update({
+                status: 'failed',
+                error_message: error instanceof Error ? error.message : String(error),
+                attempt_count: trx.raw('attempt_count + 1'),
+                last_attempt: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              });
+          }
+        }
+      });
       
       // Schedule the next batch of pending events
       setTimeout(() => this.processPendingEvents(), this.config.pollIntervalMs);

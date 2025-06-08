@@ -22,7 +22,7 @@ export async function GET(
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const fileRecord = await FileStoreModel.findById(fileId);
+    const fileRecord = await FileStoreModel.findById(knex, fileId);
 
     if (!fileRecord || fileRecord.tenant !== tenant) {
       return new NextResponse('File not found', { status: 404 });

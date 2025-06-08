@@ -18,13 +18,17 @@ import { timePeriodSchema, timePeriodSettingsSchema } from '../schemas/timeSheet
 import { formatUtcDateNoTime, toPlainDate } from '../utils/dateTimeUtils';
 import { parse } from 'path';
 import { Temporal } from '@js-temporal/polyfill';
+import { createTenantKnex } from '../db';
+import { withTransaction } from '@shared/db';
+import { Knex } from 'knex';
 
 // Special value to indicate end of period
 const END_OF_PERIOD = 0;
 
 export async function getLatestTimePeriod(): Promise<ITimePeriod | null> {
   try {
-    const latestPeriod = await TimePeriod.getLatest();
+    const { knex } = await createTenantKnex();
+    const latestPeriod = await TimePeriod.getLatest(knex);
     return latestPeriod ? validateData(timePeriodSchema, latestPeriod) : null;
   } catch (error) {
     console.error('Error fetching latest time period:', error)
@@ -34,7 +38,8 @@ export async function getLatestTimePeriod(): Promise<ITimePeriod | null> {
 
 export async function getTimePeriodSettings(): Promise<ITimePeriodSettings[]> {
   try {
-    const settings = await TimePeriodSettings.getActiveSettings();
+    const { knex } = await createTenantKnex();
+    const settings = await TimePeriodSettings.getActiveSettings(knex);
     return validateArray(timePeriodSettingsSchema, settings);
   } catch (error) {
     console.error('Error fetching time period settings:', error);
@@ -53,55 +58,59 @@ export async function createTimePeriod(
   console.log('start_date constructor:', timePeriodData.start_date?.constructor?.name);
   console.log('end_date constructor:', timePeriodData.end_date?.constructor?.name);
 
-  try {
-    console.log('Fetching active time period settings...');
-    const settings = await TimePeriodSettings.getActiveSettings();
-    const validatedSettings = validateArray(timePeriodSettingsSchema, settings);
-    console.log('Active settings fetched:', validatedSettings);
+  const { knex: db } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
+      console.log('Fetching active time period settings...');
+      const settings = await TimePeriodSettings.getActiveSettings(trx);
+      const validatedSettings = validateArray(timePeriodSettingsSchema, settings);
+      console.log('Active settings fetched:', validatedSettings);
 
-    const activeSetting = validatedSettings[0];
-    console.log('Using active setting:', activeSetting);
+      const activeSetting = validatedSettings[0];
+      console.log('Using active setting:', activeSetting);
 
-    // Check for overlapping periods
-    const overlappingPeriod = await TimePeriod.findOverlapping(timePeriodData.start_date, timePeriodData.end_date);
-    if (overlappingPeriod) {
-      throw new Error('Cannot create time period: overlaps with existing period');
+      // Check for overlapping periods
+      const overlappingPeriod = await TimePeriod.findOverlapping(trx, timePeriodData.start_date, timePeriodData.end_date);
+      if (overlappingPeriod) {
+        throw new Error('Cannot create time period: overlaps with existing period');
+      }
+
+      console.log('No overlapping periods found.');
+
+      console.log('Creating new time period...');
+      console.log('Data being sent to create:', {
+        ...timePeriodData,
+        start_date: timePeriodData.start_date,
+        end_date: timePeriodData.end_date
+      });
+
+      const timePeriod = await TimePeriod.create(trx, timePeriodData);
+      console.log('Time period created, before validation:', timePeriod);
+      console.log('Time period start_date type:', typeof timePeriod.start_date);
+      console.log('Time period end_date type:', typeof timePeriod.end_date);
+      console.log('Time period start_date constructor:', timePeriod.start_date?.constructor?.name);
+      console.log('Time period end_date constructor:', timePeriod.end_date?.constructor?.name);
+
+      const validatedPeriod = validateData(timePeriodSchema, timePeriod);
+      console.log('Time period after validation:', validatedPeriod);
+      console.log('Revalidating path: /msp/time-entry');
+      revalidatePath('/msp/time-entry');
+
+      console.log('createTimePeriod function completed successfully.');
+      return validatedPeriod;
+    } catch (error) {
+      console.error('Error in createTimePeriod function:', error);
+      throw error;
     }
-
-    console.log('No overlapping periods found.');
-
-    console.log('Creating new time period...');
-    console.log('Data being sent to create:', {
-      ...timePeriodData,
-      start_date: timePeriodData.start_date,
-      end_date: timePeriodData.end_date
-    });
-
-    const timePeriod = await TimePeriod.create(timePeriodData);
-    console.log('Time period created, before validation:', timePeriod);
-    console.log('Time period start_date type:', typeof timePeriod.start_date);
-    console.log('Time period end_date type:', typeof timePeriod.end_date);
-    console.log('Time period start_date constructor:', timePeriod.start_date?.constructor?.name);
-    console.log('Time period end_date constructor:', timePeriod.end_date?.constructor?.name);
-
-    const validatedPeriod = validateData(timePeriodSchema, timePeriod);
-    console.log('Time period after validation:', validatedPeriod);
-    console.log('Revalidating path: /msp/time-entry');
-    revalidatePath('/msp/time-entry');
-
-    console.log('createTimePeriod function completed successfully.');
-    return validatedPeriod;
-  } catch (error) {
-    console.error('Error in createTimePeriod function:', error);
-    throw error;
-  }
+  });
 }
 
 export async function fetchAllTimePeriods(): Promise<ITimePeriodView[]> {
   try {
     console.log('Fetching all time periods...');
 
-    const timePeriods = await TimePeriod.getAll();
+    const { knex } = await createTenantKnex();
+    const timePeriods = await TimePeriod.getAll(knex);
 
     // Convert model types to view types
     const periods = timePeriods.map((period: ITimePeriod): ITimePeriodView => ({
@@ -134,8 +143,9 @@ function getCurrentDate(): Temporal.PlainDate {
 
 export async function getCurrentTimePeriod(): Promise<ITimePeriodView | null> {
   try {
+    const { knex } = await createTenantKnex();
     const currentDate = getCurrentDate().toString();
-    const currentPeriod = await TimePeriod.findByDate(currentDate);
+    const currentPeriod = await TimePeriod.findByDate(knex, currentDate);
     if (!currentPeriod) return null;
 
     // Convert Temporal.PlainDate to string for view type
@@ -294,19 +304,20 @@ function alignToMonthDay(dateStr: string, targetDay: number): string {
 
 export async function deleteTimePeriod(periodId: string): Promise<void> {
   try {
+    const { knex } = await createTenantKnex();
     // Check if period exists and has no associated time records
-    const period = await TimePeriod.findById(periodId);
+    const period = await TimePeriod.findById(knex, periodId);
     if (!period) {
       throw new Error('Time period not found');
     }
 
-    const isEditable = await TimePeriod.isEditable(periodId);
+    const isEditable = await TimePeriod.isEditable(knex, periodId);
     if (!isEditable) {
       throw new Error('Cannot delete time period with associated time sheets');
     }
 
     try {
-      await TimePeriod.delete(periodId);
+      await TimePeriod.delete(knex, periodId);
       revalidatePath('/msp/time-entry');
     } catch (error: any) {
       if (error.message.includes('belongs to different tenant')) {
@@ -325,84 +336,91 @@ export async function updateTimePeriod(
   periodId: string,
   updates: Partial<Omit<ITimePeriod, 'period_id' | 'tenant'>>
 ): Promise<ITimePeriod> {
-  try {
-    // Check if period exists and has no associated time records
-    const period = await TimePeriod.findById(periodId);
-    if (!period) {
-      throw new Error('Time period not found');
-    }
-
-    const isEditable = await TimePeriod.isEditable(periodId);
-    if (!isEditable) {
-      throw new Error('Cannot update time period with associated time sheets');
-    }
-
-    // Check for overlapping periods
-    if (updates.start_date || updates.end_date) {
-      const startDate = updates.start_date || period.start_date;
-      const endDate = updates.end_date || period.end_date;
-      const overlappingPeriod = await TimePeriod.findOverlapping(startDate, endDate, periodId);
-      if (overlappingPeriod) {
-        throw new Error('Cannot update time period: overlaps with existing period');
-      }
-    }
-
+  const { knex: db } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const updatedPeriod = await TimePeriod.update(periodId, updates);
-      const validatedPeriod = validateData(timePeriodSchema, updatedPeriod);
-
-      revalidatePath('/msp/time-entry');
-      return validatedPeriod;
-    } catch (error: any) {
-      if (error.message.includes('belongs to different tenant')) {
-        throw new Error('Access denied: Cannot update time period');
+      // Check if period exists and has no associated time records
+      const period = await TimePeriod.findById(trx, periodId);
+      if (!period) {
+        throw new Error('Time period not found');
       }
-      console.error('Error updating time period:', error);
+
+      const isEditable = await TimePeriod.isEditable(trx, periodId);
+      if (!isEditable) {
+        throw new Error('Cannot update time period with associated time sheets');
+      }
+
+      // Check for overlapping periods
+      if (updates.start_date || updates.end_date) {
+        const startDate = updates.start_date || period.start_date;
+        const endDate = updates.end_date || period.end_date;
+        const overlappingPeriod = await TimePeriod.findOverlapping(trx, startDate, endDate, periodId);
+        if (overlappingPeriod) {
+          throw new Error('Cannot update time period: overlaps with existing period');
+        }
+      }
+
+      try {
+        const updatedPeriod = await TimePeriod.update(trx, periodId, updates);
+        const validatedPeriod = validateData(timePeriodSchema, updatedPeriod);
+
+        revalidatePath('/msp/time-entry');
+        return validatedPeriod;
+      } catch (error: any) {
+        if (error.message.includes('belongs to different tenant')) {
+          throw new Error('Access denied: Cannot update time period');
+        }
+        console.error('Error updating time period:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error in updateTimePeriod:', error);
       throw error;
     }
-  } catch (error) {
-    console.error('Error in updateTimePeriod:', error);
-    throw error;
-  }
+  });
 }
 
 export async function generateAndSaveTimePeriods(startDate: ISO8601String, endDate: ISO8601String): Promise<ITimePeriod[]> {
-  try {
-    const settings = await getTimePeriodSettings();
-    const validatedSettings = validateArray(timePeriodSettingsSchema, settings);
-    const generatedPeriods = await generateTimePeriods(validatedSettings, startDate, endDate);
+  const { knex: db } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
+      const settings = await getTimePeriodSettings();
+      const validatedSettings = validateArray(timePeriodSettingsSchema, settings);
+      const generatedPeriods = await generateTimePeriods(validatedSettings, startDate, endDate);
 
-    // Check for overlapping periods before saving
-    for (const period of generatedPeriods) {
-      const overlappingPeriod = await TimePeriod.findOverlapping(
-        toPlainDate(period.start_date),
-        toPlainDate(period.end_date)
-      );
-      if (overlappingPeriod) {
-        throw new Error(`Cannot create time period: overlaps with existing period from ${overlappingPeriod.start_date} to ${overlappingPeriod.end_date}`);
+      // Check for overlapping periods before saving
+      for (const period of generatedPeriods) {
+        const overlappingPeriod = await TimePeriod.findOverlapping(
+          trx,
+          toPlainDate(period.start_date),
+          toPlainDate(period.end_date)
+        );
+        if (overlappingPeriod) {
+          throw new Error(`Cannot create time period: overlaps with existing period from ${overlappingPeriod.start_date} to ${overlappingPeriod.end_date}`);
+        }
       }
+
+      // Save generated periods to the database
+      const savedPeriods = await Promise.all(generatedPeriods.map((period: ITimePeriodView): Promise<ITimePeriod> => {
+        // Convert string dates to Temporal.PlainDate for database
+        return TimePeriod.create(trx, {
+          ...period,
+          start_date: toPlainDate(period.start_date),
+          end_date: toPlainDate(period.end_date)
+        });
+      }));
+      const validatedPeriods = validateArray(timePeriodSchema, savedPeriods);
+
+      revalidatePath('/msp/time-entry');
+      return validatedPeriods;
+    } catch (error) {
+      console.error('Error generating and saving time periods:', error);
+      throw new Error('Failed to generate and save time periods');
     }
-
-    // Save generated periods to the database
-    const savedPeriods = await Promise.all(generatedPeriods.map((period: ITimePeriodView): Promise<ITimePeriod> => {
-      // Convert string dates to Temporal.PlainDate for database
-      return TimePeriod.create({
-        ...period,
-        start_date: toPlainDate(period.start_date),
-        end_date: toPlainDate(period.end_date)
-      });
-    }));
-    const validatedPeriods = validateArray(timePeriodSchema, savedPeriods);
-
-    revalidatePath('/msp/time-entry');
-    return validatedPeriods;
-  } catch (error) {
-    console.error('Error generating and saving time periods:', error);
-    throw new Error('Failed to generate and save time periods');
-  }
+  });
 }
 
-export async function createNextTimePeriod(settings: ITimePeriodSettings[], daysThreshold: number = 5): Promise<ITimePeriod | null> {
+export async function createNextTimePeriod(knexOrTrx: Knex | Knex.Transaction, settings: ITimePeriodSettings[], daysThreshold: number = 5): Promise<ITimePeriod | null> {
   try {
     // Get all existing time periods
     const existingPeriods = await fetchAllTimePeriods();

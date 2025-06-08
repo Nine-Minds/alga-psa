@@ -85,21 +85,24 @@ export class PDFGenerationService {
       mime_type: 'application/pdf',
     });
     
-    const fileRecord = await FileStoreModel.create({
-      fileId,
+    const { knex } = await createTenantKnex();
+    const fileRecord = await FileStoreModel.create(knex, {
       file_name: storagePath.split('/').pop()!,
       original_name: `${fileName}.pdf`,
       mime_type: 'application/pdf',
       file_size: pdfBuffer.length,
       storage_path: uploadResult.path,
       uploaded_by_id: options.userId,
-      metadata: {
-        version: options.version || 1,
-        cacheKey: options.cacheKey,
-        generatedAt: new Date().toISOString(),
-        entityId,
-        tenant: this.tenant
-      }
+      fileId: fileId // Add fileId since FileStore type expects it
+    });
+    
+    // Update metadata separately if needed
+    await FileStoreModel.updateMetadata(knex, fileRecord.file_id, {
+      version: options.version || 1,
+      cacheKey: options.cacheKey,
+      generatedAt: new Date().toISOString(),
+      entityId,
+      tenant: this.tenant
     });
 
     return fileRecord;
