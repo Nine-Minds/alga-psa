@@ -8,7 +8,7 @@ import { getServerSession } from "next-auth/next";
 import { options } from "server/src/app/api/auth/[...nextauth]/options";
 import { createTenantKnex } from 'server/src/lib/db';
 import { toISODate } from 'server/src/lib/utils/dateTimeUtils';
-import { auditLog } from 'server/src/lib/logging/auditLog';
+// import { auditLog } from 'server/src/lib/logging/auditLog';
 import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
 import { applyCreditToInvoice } from 'server/src/lib/actions/creditActions'; // Assuming this stays or moves appropriately
 import { IInvoiceItem, InvoiceViewModel, DiscountType } from 'server/src/interfaces/invoice.interfaces';
@@ -95,20 +95,20 @@ export async function finalizeInvoiceWithKnex(
       });
 
     // Record audit log
-    await auditLog(
-      trx,
-      {
-        userId: userId,
-        operation: 'invoice_finalized',
-        tableName: 'invoices',
-        recordId: invoiceId,
-        changedData: { finalized_at: toISODate(Temporal.Now.plainDateISO()) },
-        details: {
-          action: 'Invoice finalized',
-          invoiceNumber: invoice.invoice_number
-        }
-      }
-    );
+    // await auditLog(
+    //   trx,
+    //   {
+    //     userId: userId,
+    //     operation: 'invoice_finalized',
+    //     tableName: 'invoices',
+    //     recordId: invoiceId,
+    //     changedData: { finalized_at: toISODate(Temporal.Now.plainDateISO()) },
+    //     details: {
+    //       action: 'Invoice finalized',
+    //       invoiceNumber: invoice.invoice_number
+    //     }
+    //   }
+    // );
   });
 
   // Check if this is a prepayment invoice (no billing_cycle_id)
@@ -209,25 +209,25 @@ export async function finalizeInvoiceWithKnex(
       });
 
       // Log audit
-      await auditLog(
-        trx,
-        {
-          userId: userId,
-          operation: 'credit_issuance_from_negative_invoice',
-          tableName: 'companies',
-          recordId: invoice.company_id,
-          changedData: {
-            credit_balance: newBalance,
-            expiration_date: expirationDate
-          },
-          details: {
-            action: 'Credit issued from negative invoice',
-            invoiceId: invoiceId,
-            amount: creditAmount,
-            expiration_date: expirationDate
-          }
-        }
-      );
+      // await auditLog(
+      //   trx,
+      //   {
+      //     userId: userId,
+      //     operation: 'credit_issuance_from_negative_invoice',
+      //     tableName: 'companies',
+      //     recordId: invoice.company_id,
+      //     changedData: {
+      //       credit_balance: newBalance,
+      //       expiration_date: expirationDate
+      //     },
+      //     details: {
+      //       action: 'Credit issued from negative invoice',
+      //       invoiceId: invoiceId,
+      //       amount: creditAmount,
+      //       expiration_date: expirationDate
+      //     }
+      //   }
+      // );
     });
 
     // Log the credit update
@@ -295,20 +295,20 @@ export async function unfinalizeInvoice(invoiceId: string): Promise<void> {
       });
 
     // Record audit log
-    await auditLog(
-      trx,
-      {
-        userId: session.user.id,
-        operation: 'invoice_unfinalized',
-        tableName: 'invoices',
-        recordId: invoiceId,
-        changedData: { finalized_at: null },
-        details: {
-          action: 'Invoice unfinalized',
-          invoiceNumber: invoice.invoice_number
-        }
-      }
-    );
+    // await auditLog(
+    //   trx,
+    //   {
+    //     userId: session.user.id,
+    //     operation: 'invoice_unfinalized',
+    //     tableName: 'invoices',
+    //     recordId: invoiceId,
+    //     changedData: { finalized_at: null },
+    //     details: {
+    //       action: 'Invoice unfinalized',
+    //       invoiceNumber: invoice.invoice_number
+    //     }
+    //   }
+    // );
   });
 }
 
