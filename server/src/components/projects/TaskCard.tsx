@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { IProjectTask, IProjectTicketLinkWithDetails } from 'server/src/interfaces/project.interfaces';
+import { IProjectTask, IProjectTicketLinkWithDetails, ITaskType } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
-import { CheckSquare, Square, Ticket, Users, MoreVertical, Move, Copy, Edit, Trash2 } from 'lucide-react';
+import { CheckSquare, Square, Ticket, Users, MoreVertical, Move, Copy, Edit, Trash2, Bug, Sparkles, TrendingUp, Flag, BookOpen } from 'lucide-react';
 import { findPriorityById } from 'server/src/lib/actions/priorityActions';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { getTaskTicketLinksAction, getTaskResourcesAction } from 'server/src/lib/actions/project-actions/projectTaskActions';
@@ -14,14 +14,14 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "server/src/components/ui/DropdownMenu";
-import { ta } from 'date-fns/locale';
 import styles from 'server/src/components/projects/ProjectDetail.module.css';
 
 interface TaskCardProps {
   task: IProjectTask;
   users: IUserWithRoles[];
+  taskType?: ITaskType;
+  hasCriticalPath?: boolean;
   ticketLinks?: IProjectTicketLinkWithDetails[];
   taskResources?: any[];
   isAnimating?: boolean;
@@ -29,17 +29,27 @@ interface TaskCardProps {
   onAssigneeChange: (taskId: string, newAssigneeId: string, newTaskName?: string) => void;
   onDragStart: (e: React.DragEvent, taskId: string) => void;
   onDragEnd: (e: React.DragEvent) => void;
-  projectTreeData?: any[]; // Add projectTreeData prop
-  // Add handlers for the new actions - these will be passed down from ProjectDetail
+  projectTreeData?: any[];
   onMoveTaskClick: (task: IProjectTask) => void;
   onDuplicateTaskClick: (task: IProjectTask) => void;
   onEditTaskClick: (task: IProjectTask) => void;
   onDeleteTaskClick: (task: IProjectTask) => void;
 }
 
+const taskTypeIcons: Record<string, React.ComponentType<any>> = {
+  task: CheckSquare,
+  bug: Bug,
+  feature: Sparkles,
+  improvement: TrendingUp,
+  epic: Flag,
+  story: BookOpen
+};
+
 export const TaskCard: React.FC<TaskCardProps> = ({
   task,
   users,
+  taskType,
+  hasCriticalPath = false,
   ticketLinks,
   taskResources: providedTaskResources,
   isAnimating = false,
@@ -66,6 +76,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   );
   const [isDragging, setIsDragging] = useState(false);
   const [priority, setPriority] = useState<IPriority | IStandardPriority | null>(null);
+  const Icon = taskTypeIcons[task.task_type_key || 'task'] || CheckSquare;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -102,6 +113,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           const taskPriority = await findPriorityById(task.priority_id);
           setPriority(taskPriority);
         }
+
+
       } catch (error) {
         console.error('Error fetching task data:', error);
       }
@@ -202,11 +215,20 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       aria-grabbed={isDragging}
       aria-label={`Task: ${task.task_name}. Drag to reorder or use menu for actions.`}
     >
+      {/* Task type indicator */}
+      <div className="absolute top-2 left-2" title={taskType?.type_name || 'Task'}>
+        <Icon 
+          className="w-4 h-4" 
+          style={{ color: taskType?.color || '#6B7280' }}
+        />
+      </div>
+      
+
       {/* Action Menu Button */}
       <div className="absolute top-1 right-1 z-10">
         <DropdownMenu>
           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-            <Button id={`task-actions-${task.task_id}`} variant="ghost" size="sm" className="h-6 w-6 p-0"> {/* Changed size to sm and adjusted padding */}
+            <Button id={`task-actions-${task.task_id}`} variant="ghost" size="sm" className="h-6 w-6 p-0">
               <MoreVertical className="h-4 w-4" />
               <span className="sr-only">Task Actions</span>
             </Button>
@@ -232,7 +254,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         </DropdownMenu>
       </div>
 
-      <div className="flex items-center gap-2 mb-1 w-full px-1">
+      <div className="flex items-center gap-2 mb-1 w-full px-1 mt-6">
         <div className="font-semibold text-2xl flex-1">
           {task.task_name}
         </div>
@@ -240,7 +262,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           <div className="flex items-center gap-1">
             <div 
               className="w-3 h-3 rounded-full" 
-              style={{ backgroundColor: priority.color }}
+              style={{ backgroundColor: priority.color || '#6B7280' }}
               title={`${priority.priority_name} priority`}
             />
             <span className="text-xs text-gray-600">{priority.priority_name}</span>
@@ -297,6 +319,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           )}
         </div>
       </div>
+      
+      {/* Critical path indicator */}
+      {hasCriticalPath && (
+        <div className="absolute bottom-1 right-1">
+          <span className="text-xs text-orange-600 font-medium bg-orange-50 px-2 py-0.5 rounded">Critical Path</span>
+        </div>
+      )}
     </div>
   );
 };

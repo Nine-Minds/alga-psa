@@ -1,7 +1,9 @@
 'use client';
 
-import { IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails } from 'server/src/interfaces/project.interfaces';
+import { useEffect, useState } from 'react';
+import { IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails, ITaskType } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import StatusColumn from './StatusColumn';
 import styles from './ProjectDetail.module.css';
 import { Circle, Clipboard, PlayCircle, PauseCircle, CheckCircle, XCircle } from 'lucide-react';
@@ -9,6 +11,7 @@ import { Circle, Clipboard, PlayCircle, PauseCircle, CheckCircle, XCircle } from
 interface KanbanBoardProps {
   tasks: IProjectTask[];
   phaseTasks: IProjectTask[];
+  taskTypes: ITaskType[];
   users: IUserWithRoles[];
   statuses: ProjectStatus[];
   isAddingTask: boolean;
@@ -66,6 +69,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onDuplicateTaskClick,
   onEditTaskClick,
   onDeleteTaskClick,
+  taskTypes,
 }) => {
   // Ensure all tasks have ticket_links and resources initialized
   const enrichedTasks = tasks.map(task => {
@@ -117,6 +121,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             tasks={enrichedTasks}
             displayTasks={statusTasks}
             users={users}
+            taskTypes={taskTypes}
             ticketLinks={ticketLinks}
             taskResources={taskResources}
             statusIcon={statusIcons[status.name] || <Circle className="w-4 h-4" />}

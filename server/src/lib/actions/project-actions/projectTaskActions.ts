@@ -3,8 +3,10 @@
 import { Knex } from 'knex';
 import ProjectTaskModel from 'server/src/lib/models/projectTask';
 import ProjectModel from 'server/src/lib/models/project';
+import TaskTypeModel from 'server/src/lib/models/taskType';
+import TaskDependencyModel from 'server/src/lib/models/taskDependency';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
-import { IProjectTask, IProjectTicketLink, IProjectStatusMapping, ITaskChecklistItem, IProjectTicketLinkWithDetails, IProjectPhase } from 'server/src/interfaces/project.interfaces';
+import { IProjectTask, IProjectTicketLink, IProjectStatusMapping, ITaskChecklistItem, IProjectTicketLinkWithDetails, IProjectPhase, ITaskType, ICustomTaskType, IProjectTaskDependency, DependencyType } from 'server/src/interfaces/project.interfaces';
 import { IUser, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
@@ -842,6 +844,7 @@ export async function duplicateTaskToPhase(
                 assigned_to: options?.duplicatePrimaryAssignee ? originalTask.assigned_to : null,
                 project_status_mapping_id: finalStatusMappingId,
                 order_key: orderKey,
+                task_type_key: originalTask.task_type_key || 'task',
                 // Fields omitted: task_id, phase_id, wbs_code, created_at, updated_at, tenant (handled by model)
             };
 
@@ -1126,4 +1129,118 @@ export async function cleanupOrderKeysForStatus(
             message: 'Failed to clean up order keys'
         };
     }
+}
+
+// Task Type Actions
+export async function getTaskTypes(): Promise<ITaskType[]> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error("user not found");
+    }
+    
+    const {knex: db} = await createTenantKnex();
+    await checkPermission(currentUser, 'project', 'read', db);
+    
+    return await TaskTypeModel.getAllTaskTypes(db);
+}
+
+export async function createCustomTaskType(
+    data: Omit<ITaskType, 'type_id' | 'tenant' | 'created_at' | 'updated_at'>
+): Promise<ITaskType> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error("user not found");
+    }
+    
+    const {knex: db} = await createTenantKnex();
+    await checkPermission(currentUser, 'project', 'create', db);
+    
+    return await TaskTypeModel.createCustomTaskType(db, data as Omit<ICustomTaskType, 'type_id' | 'tenant' | 'created_at' | 'updated_at'>);
+}
+
+// Task Dependency Actions
+export async function addTaskDependency(
+    predecessorTaskId: string,
+    successorTaskId: string,
+    dependencyType?: DependencyType,
+    leadLagDays: number = 0,
+    notes?: string
+): Promise<IProjectTaskDependency> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error("user not found");
+    }
+    
+    const { knex: db, tenant } = await createTenantKnex();
+    
+    return await withTransaction(db, async (trx) => {
+        await checkPermission(currentUser, 'project', 'update', trx);
+        
+        if (!dependencyType) {
+            const [predecessor, successor] = await Promise.all([
+                trx('project_tasks').where({ task_id: predecessorTaskId, tenant }).first(),
+                trx('project_tasks').where({ task_id: successorTaskId, tenant }).first()
+            ]);
+            
+            if (!predecessor || !successor) {
+                throw new Error('One or both tasks not found');
+            }
+            
+            dependencyType = TaskDependencyModel.suggestDependencyType(
+                predecessor.task_type_key || 'task',
+                successor.task_type_key || 'task'
+            );
+        }
+        
+        return await TaskDependencyModel.addDependency(
+            trx,
+            predecessorTaskId, 
+            successorTaskId, 
+            dependencyType, 
+            leadLagDays, 
+            notes
+        );
+    });
+}
+
+export async function getTaskDependencies(taskId: string): Promise<{
+    predecessors: IProjectTaskDependency[],
+    successors: IProjectTaskDependency[]
+}> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error("user not found");
+    }
+    
+    const {knex: db} = await createTenantKnex();
+    await checkPermission(currentUser, 'project', 'read', db);
+    
+    return await TaskDependencyModel.getTaskDependencies(db, taskId);
+}
+
+export async function removeTaskDependency(dependencyId: string): Promise<void> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error("user not found");
+    }
+    
+    const {knex: db} = await createTenantKnex();
+    await checkPermission(currentUser, 'project', 'update', db);
+    
+    await TaskDependencyModel.removeDependency(db, dependencyId);
+}
+
+export async function updateTaskDependency(
+    dependencyId: string,
+    data: Partial<Pick<IProjectTaskDependency, 'lead_lag_days' | 'notes'>>
+): Promise<IProjectTaskDependency> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error("user not found");
+    }
+    
+    const {knex: db} = await createTenantKnex();
+    await checkPermission(currentUser, 'project', 'update', db);
+    
+    return await TaskDependencyModel.updateDependency(db, dependencyId, data);
 }

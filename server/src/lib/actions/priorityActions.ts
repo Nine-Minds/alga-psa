@@ -105,7 +105,7 @@ export async function updatePriority(priorityId: string, priorityData: Partial<I
 export interface FindPriorityByNameOutput {
   id: string;
   name: string;
-  priority_level: number;
+  order_number: number;
   color?: string;
 }
 
@@ -118,7 +118,7 @@ export async function findPriorityByName(name: string): Promise<FindPriorityByNa
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       const priority = await trx('priorities')
-        .select('priority_id as id', 'priority_name as name', 'priority_level', 'color')
+        .select('priority_id as id', 'priority_name as name', 'order_number', 'color')
         .where('tenant', tenant)
         .whereRaw('LOWER(priority_name) = LOWER(?)', [name])
         .first();

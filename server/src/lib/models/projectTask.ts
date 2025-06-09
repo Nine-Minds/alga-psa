@@ -50,6 +50,7 @@ const ProjectTaskModel = {
           project_status_mapping_id: taskData.project_status_mapping_id,
           wbs_code: newWbsCode,
           order_key: orderKey,
+          task_type_key: taskData.task_type_key || 'task',
           tenant,
         })
         .returning('*');
@@ -79,7 +80,8 @@ const ProjectTaskModel = {
         'wbs_code',
         'project_status_mapping_id',
         'order_key',
-        'priority_id'
+        'priority_id',
+        'task_type_key'
       ];
       
       const finalTaskData: Partial<IProjectTask> = {
@@ -103,6 +105,7 @@ const ProjectTaskModel = {
             case 'wbs_code':
             case 'project_status_mapping_id':
             case 'order_key':
+            case 'task_type_key':
               if (typeof value === 'string') {
                 finalTaskData[typedKey] = value;
               }

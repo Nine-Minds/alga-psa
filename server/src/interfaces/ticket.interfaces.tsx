@@ -53,7 +53,7 @@ export interface ITicketListFilters {
 export interface IPriority extends TenantEntity {
   priority_id: string;
   priority_name: string;
-  priority_level: number;
+  order_number: number;
   color: string;
   item_type: 'ticket' | 'project_task';
   created_by: string;
@@ -64,7 +64,7 @@ export interface IPriority extends TenantEntity {
 export interface IStandardPriority {
   priority_id: string;
   priority_name: string;
-  priority_level: number;
+  order_number: number;
   color: string;
   item_type: 'ticket' | 'project_task';
   created_at: Date;
