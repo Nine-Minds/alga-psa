@@ -1058,6 +1058,8 @@ export default function TaskForm({
                 taskTypes={taskTypes}
                 initialPredecessors={taskDependencies.predecessors}
                 initialSuccessors={taskDependencies.successors}
+                users={users}
+                phases={phases}
                 refreshDependencies={async () => {
                   try {
                     const dependencies = await getTaskDependencies(task.task_id);

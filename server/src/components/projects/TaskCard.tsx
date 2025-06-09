@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { IProjectTask, IProjectTicketLinkWithDetails, ITaskType, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
+import { IProjectTask, IProjectTicketLinkWithDetails, ITaskType } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
-import { CheckSquare, Square, Ticket, Users, MoreVertical, Move, Copy, Edit, Trash2, GitBranch, Bug, Sparkles, TrendingUp, Flag, BookOpen } from 'lucide-react';
+import { CheckSquare, Square, Ticket, Users, MoreVertical, Move, Copy, Edit, Trash2, Bug, Sparkles, TrendingUp, Flag, BookOpen } from 'lucide-react';
 import { findPriorityById } from 'server/src/lib/actions/priorityActions';
 import UserPicker from 'server/src/components/ui/UserPicker';
-import { getTaskTicketLinksAction, getTaskResourcesAction, getTaskDependencies } from 'server/src/lib/actions/project-actions/projectTaskActions';
+import { getTaskTicketLinksAction, getTaskResourcesAction } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import { Button } from 'server/src/components/ui/Button';
 import {
   DropdownMenu,
@@ -76,7 +76,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   );
   const [isDragging, setIsDragging] = useState(false);
   const [priority, setPriority] = useState<IPriority | IStandardPriority | null>(null);
-  const [dependencies, setDependencies] = useState<{ predecessors: IProjectTaskDependency[], successors: IProjectTaskDependency[] } | null>(null);
   const Icon = taskTypeIcons[task.task_type_key || 'task'] || CheckSquare;
 
   useEffect(() => {
@@ -115,16 +114,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           setPriority(taskPriority);
         }
 
-        // Fetch dependencies if available
-        if (task.task_id && !dependencies) {
-          try {
-            const deps = await getTaskDependencies(task.task_id);
-            setDependencies(deps);
-          } catch (error) {
-            console.error('Error fetching dependencies:', error);
-            setDependencies({ predecessors: [], successors: [] });
-          }
-        }
 
       } catch (error) {
         console.error('Error fetching task data:', error);
@@ -234,14 +223,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         />
       </div>
       
-      {/* Dependency indicators */}
-      <div className="absolute top-2 left-8 flex space-x-1">
-        {dependencies && dependencies.successors.length > 0 && (
-          <span title={`${dependencies.successors.length} dependent tasks`}>
-            <GitBranch className="w-3 h-3 text-green-500 transform -rotate-90" />
-          </span>
-        )}
-      </div>
 
       {/* Action Menu Button */}
       <div className="absolute top-1 right-1 z-10">

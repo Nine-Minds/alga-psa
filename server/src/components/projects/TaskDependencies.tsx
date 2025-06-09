@@ -103,7 +103,18 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
     }
 
     // Find the phase for this task
-    const taskPhase = phases.find(p => p.phase_id === taskData.phase_id) || phases[0];
+    let taskPhase = phases?.find(p => p.phase_id === taskData.phase_id);
+    
+    // If phase not found or phases array is empty, create a minimal phase object
+    if (!taskPhase && phases && phases.length > 0) {
+      taskPhase = phases[0];
+    }
+    
+    // If still no phase or no project_id, we can't open the task editor safely
+    if (!taskPhase || !taskPhase.project_id) {
+      console.error('Cannot open task: missing phase or project information');
+      return;
+    }
     
     openDrawer(
       <TaskEdit 
@@ -175,20 +186,22 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
   const renderTaskWithType = (taskInfo: any) => {
     const typeInfo = getTaskTypeInfo(taskInfo.task_type_key);
     return (
-      <span className="flex items-center gap-1">
+      <span className="flex items-center gap-2">
         {typeInfo && (
           <span 
-            className="w-2 h-2 rounded-full" 
+            className="w-3 h-3 rounded-full" 
             style={{ backgroundColor: typeInfo.color || '#6B7280' }}
             title={typeInfo.type_name}
           />
         )}
         <button
+          type="button"
           onClick={(e) => {
+            e.preventDefault();
             e.stopPropagation();
             onViewTask(taskInfo.task_id);
           }}
-          className="font-semibold text-xs text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+          className="font-semibold text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
         >
           {taskInfo.task_name || taskInfo.task_id.substring(0,8)}
         </button>
@@ -197,30 +210,51 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
   };
 
   return (
-    <div className="space-y-4 text-sm">
-      {error && <p className="text-red-500 text-xs">{error}</p>}
+    <div className="space-y-4">
+      {error && <p className="text-red-500 text-sm">{error}</p>}
       
-      {predecessors.length > 0 && (
+      {(predecessors.length > 0 || successors.length > 0) && (
         <div>
-          <h4 className="font-medium mb-1">Predecessors (This task depends on):</h4>
-          <ul className="space-y-1">
+          <h4 className="font-medium mb-2">Related Tasks:</h4>
+          <ul className="space-y-2">
             {predecessors.map(dep => {
               const displayInfo = getDependencyDisplayInfo(dep, true);
               return (
-                <li key={dep.dependency_id} className="flex items-center gap-2 p-1 rounded hover:bg-gray-50 dark:hover:bg-gray-800">
+                <li key={dep.dependency_id} className="flex items-center gap-2 p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800">
                   {displayInfo.icon}
-                  <span className="text-xs text-gray-600">{displayInfo.label}</span>
+                  <span className="text-sm text-gray-600">{displayInfo.label}</span>
                   {renderTaskWithType(dep.predecessor_task)}
-                  {dep.notes && <span className="text-gray-400 text-xs">({dep.notes})</span>}
+                  {dep.notes && <span className="text-gray-400 text-sm">({dep.notes})</span>}
                 <Button
                   id={`remove-dep-${dep.dependency_id}`}
                   size="sm"
                   variant="ghost"
                   onClick={() => handleRemove(dep.dependency_id)}
-                  className="ml-auto p-1 h-auto"
+                  className="ml-auto"
                   disabled={isLoading}
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-4 h-4" />
+                </Button>
+              </li>
+              );
+            })}
+            {successors.map(dep => {
+              const displayInfo = getDependencyDisplayInfo(dep, false);
+              return (
+                <li key={dep.dependency_id} className="flex items-center gap-2 p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800">
+                  {displayInfo.icon}
+                  <span className="text-sm text-gray-600">{displayInfo.label}</span>
+                  {renderTaskWithType(dep.successor_task)}
+                  {dep.notes && <span className="text-gray-400 text-sm">({dep.notes})</span>}
+                <Button
+                  id={`remove-dep-${dep.dependency_id}`}
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleRemove(dep.dependency_id)}
+                  className="ml-auto"
+                  disabled={isLoading}
+                >
+                  <X className="w-4 h-4" />
                 </Button>
               </li>
               );
@@ -229,27 +263,9 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
         </div>
       )}
 
-      {successors.length > 0 && (
-        <div>
-          <h4 className="font-medium mb-1">Successors (Tasks that depend on this):</h4>
-          <ul className="space-y-1">
-            {successors.map(dep => {
-              const displayInfo = getDependencyDisplayInfo(dep, false);
-              return (
-                <li key={dep.dependency_id} className="flex items-center gap-2 p-1 rounded hover:bg-gray-50 dark:hover:bg-gray-800">
-                  {renderTaskWithType(dep.successor_task)}
-                  <span className="text-xs text-gray-600">{displayInfo.label}</span>
-                  {displayInfo.icon}
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
-
       {showAddForm ? (
         <div className="border rounded p-3 space-y-3 bg-gray-50 dark:bg-gray-800">
-          <p className="text-xs font-medium">Add dependency for: {task.task_name}</p>
+          <p className="text-sm font-medium">Add dependency for: {task.task_name}</p>
           
           <div className="grid grid-cols-2 gap-2">
             <CustomSelect
@@ -276,13 +292,13 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
           </div>
           
           <div>
-            <label className="text-xs text-gray-600">Notes (optional)</label>
+            <label className="text-sm text-gray-600">Notes (optional)</label>
             <Input
               type="text"
               placeholder="Notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="text-xs h-8"
+              className="text-sm"
               disabled={isLoading}
             />
           </div>
@@ -292,8 +308,7 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
               id="add-dependency" 
               size="sm" 
               onClick={handleAdd} 
-              disabled={!selectedPredecessorId || isLoading} 
-              className="text-xs h-8">
+              disabled={!selectedPredecessorId || isLoading}>
               Add Dependency
             </Button>
             <Button
@@ -302,7 +317,7 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
              variant="ghost" 
              onClick={() => 
              { setShowAddForm(false); setError(null);}} 
-             className="text-xs h-8" disabled={isLoading}>
+             disabled={isLoading}>
               Cancel
             </Button>
           </div>
@@ -313,7 +328,7 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
           size="sm" 
           variant="outline" 
           onClick={() => setShowAddForm(true)} 
-          className="text-xs h-8 mt-2" disabled={isLoading}>
+          className="mt-2" disabled={isLoading}>
           + Add Dependency
         </Button>
       )}
