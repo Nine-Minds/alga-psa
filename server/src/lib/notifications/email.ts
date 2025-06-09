@@ -27,8 +27,41 @@ import {
   NotificationLog,
   NotificationService
 } from '../models/notification';
-import { getEmailService } from 'server/src/services/emailService';
+import { EmailProviderManager } from 'server/src/services/email/EmailProviderManager';
+import { TenantEmailSettings, EmailMessage } from 'server/src/types/email.types';
+import { getConnection } from '../db/db';
 export class EmailNotificationService implements NotificationService {
+  /**
+   * Get tenant email settings from database
+   */
+  private async getTenantEmailSettings(tenantId: string): Promise<TenantEmailSettings | null> {
+    try {
+      const knex = await getConnection(tenantId);
+      const settings = await knex('tenant_email_settings')
+        .where({ tenant_id: tenantId })
+        .first();
+      
+      if (!settings) {
+        console.warn(`No email settings found for tenant ${tenantId}`);
+        return null;
+      }
+      
+      return {
+        tenantId,
+        defaultFromDomain: settings.default_from_domain,
+        customDomains: settings.custom_domains || [],
+        emailProvider: settings.email_provider,
+        providerConfigs: settings.provider_configs || [],
+        fallbackEnabled: settings.fallback_enabled,
+        trackingEnabled: settings.tracking_enabled,
+        maxDailyEmails: settings.max_daily_emails
+      };
+    } catch (error) {
+      console.error(`Error fetching tenant email settings:`, error);
+      return null;
+    }
+  }
+
   private async compileTemplate(template: string, data: Record<string, any>): Promise<string> {
     // Dynamically import Handlebars only when needed
     const Handlebars = (await import('handlebars')).default;
@@ -269,21 +302,32 @@ export class EmailNotificationService implements NotificationService {
     }
     
     try {
-      // Get the effective template and compile subject
+      // Get the effective template and compile content
       const template = await this.getEffectiveTemplate(params.tenant, params.templateName);
       const compiledSubject = await this.compileTemplate(template.subject, params.data);
+      const compiledBody = await this.compileTemplate(template.body, params.data);
       
-      // Get email service instance and ensure it's initialized
-      const emailService = await getEmailService();
-      await emailService.initialize();
+      // Get tenant email settings and initialize provider manager
+      const tenantSettings = await this.getTenantEmailSettings(params.tenant);
+      
+      if (!tenantSettings) {
+        throw new Error(`No email settings configured for tenant ${params.tenant}`);
+      }
+      
+      const emailProviderManager = new EmailProviderManager();
+      await emailProviderManager.initialize(tenantSettings);
 
-      // Send email using templated email method
-      const success = await emailService.sendTemplatedEmail({
-        toEmail: params.emailAddress,
+      // Create email message
+      const emailMessage: EmailMessage = {
+        to: params.emailAddress,
         subject: compiledSubject,
-        templateName: params.templateName,
-        templateData: params.data
-      });
+        html: compiledBody,
+        text: compiledBody.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
+      };
+
+      // Send email using provider manager
+      const result = await emailProviderManager.sendEmail(emailMessage, params.tenant);
+      const success = result.success;
 
       // Log result
       await knex('notification_logs').insert({

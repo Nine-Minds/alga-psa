@@ -32,6 +32,8 @@ export class EmailProviderManager implements IEmailProviderManager {
     
     if (enabledConfig) {
       try {
+        logger.debug(`[EmailProviderManager] Initializing provider: ${enabledConfig.providerId} (${enabledConfig.providerType})`);
+        
         const provider = await this.createProvider(enabledConfig);
         await provider.initialize(enabledConfig.config);
         this.providers.set(tenantId, provider);
