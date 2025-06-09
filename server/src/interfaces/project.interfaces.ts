@@ -148,7 +148,7 @@ export interface ICustomTaskType extends TenantEntity {
 
 export type ITaskType = IStandardTaskType | ICustomTaskType;
 
-export type DependencyType = 
+export type DependencyType =
   | 'blocks'
   | 'blocked_by'
   | 'related_to';

@@ -132,7 +132,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     };
 
     fetchData();
-  }, [task.task_id, task.ticket_links, task.resources, ticketLinks, providedTaskResources, task.priority_id, dependencies]);
+  }, [task.task_id, task.ticket_links, task.resources, ticketLinks, providedTaskResources, task.priority_id]);
 
   // Computed values - ensure we handle the loading state
   const checklistItems = task.checklist_items || [];

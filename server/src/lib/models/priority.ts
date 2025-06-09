@@ -26,15 +26,15 @@ class Priority {
     if (itemType) {
       standardQuery.where({ item_type: itemType });
     }
-    standardQuery.orderBy('order_number', 'desc'); // Higher numbers first (Low priority first)
+    standardQuery.orderBy('order_number', 'asc');
     const standardPriorities = await standardQuery;
-    
+
     // Get tenant-specific priorities
-    const tenantQuery = knexOrTrx('priorities').select('*').where({ tenant });
+    const tenantQuery = knexOrTrx('priorities').where({ tenant });
     if (itemType) {
       tenantQuery.where({ item_type: itemType });
     }
-    tenantQuery.orderBy('order_number', 'desc'); // Higher numbers first (Low priority first)
+    tenantQuery.orderBy('order_number', 'asc');
     const tenantPriorities = await tenantQuery;
     
     // Combine both, standard first

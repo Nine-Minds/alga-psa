@@ -7,7 +7,6 @@ exports.up = async function(knex) {
         table.uuid('successor_task_id').notNullable().comment('The task that depends on the predecessor');
         table.enum('dependency_type', [
             'blocks',            // This task blocks the other task
-            'blocked_by',        // This task is blocked by the other task  
             'related_to'         // General relationship
         ]).notNullable().defaultTo('related_to');
         table.integer('lead_lag_days').defaultTo(0).comment('Positive for lag, negative for lead time');
