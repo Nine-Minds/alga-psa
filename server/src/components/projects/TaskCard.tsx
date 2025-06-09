@@ -1,7 +1,11 @@
+'use client';
+
 import { useEffect, useState } from 'react';
 import { IProjectTask, IProjectTicketLinkWithDetails, ITaskType, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { CheckSquare, Square, Ticket, Users, MoreVertical, Move, Copy, Edit, Trash2, ArrowRight, Lock, GitBranch, Bug, Sparkles, TrendingUp, Flag, BookOpen } from 'lucide-react';
+import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
+import { CheckSquare, Square, Ticket, Users, MoreVertical, Move, Copy, Edit, Trash2, GitBranch, Bug, Sparkles, TrendingUp, Flag, BookOpen } from 'lucide-react';
+import { findPriorityById } from 'server/src/lib/actions/priorityActions';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { getTaskTicketLinksAction, getTaskResourcesAction, getTaskDependencies } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import { Button } from 'server/src/components/ui/Button';
@@ -10,16 +14,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "server/src/components/ui/DropdownMenu";
-import { ta } from 'date-fns/locale';
 import styles from 'server/src/components/projects/ProjectDetail.module.css';
 
 interface TaskCardProps {
   task: IProjectTask;
   users: IUserWithRoles[];
   taskType?: ITaskType;
-  hasBlockingDependencies?: boolean;
   hasCriticalPath?: boolean;
   ticketLinks?: IProjectTicketLinkWithDetails[];
   taskResources?: any[];
@@ -41,15 +42,13 @@ const taskTypeIcons: Record<string, React.ComponentType<any>> = {
   feature: Sparkles,
   improvement: TrendingUp,
   epic: Flag,
-  story: BookOpen,
-  subtask: GitBranch
+  story: BookOpen
 };
 
 export const TaskCard: React.FC<TaskCardProps> = ({
   task,
   users,
   taskType,
-  hasBlockingDependencies = false,
   hasCriticalPath = false,
   ticketLinks,
   taskResources: providedTaskResources,
@@ -76,8 +75,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     null
   );
   const [isDragging, setIsDragging] = useState(false);
+  const [priority, setPriority] = useState<IPriority | IStandardPriority | null>(null);
   const [dependencies, setDependencies] = useState<{ predecessors: IProjectTaskDependency[], successors: IProjectTaskDependency[] } | null>(null);
-  
   const Icon = taskTypeIcons[task.task_type_key || 'task'] || CheckSquare;
 
   useEffect(() => {
@@ -109,7 +108,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           const resources = await getTaskResourcesAction(task.task_id);
           setTaskResources(resources || []); // Ensure empty array if API returns null/undefined
         }
-        
+
+        // Fetch priority if task has priority_id
+        if (task.priority_id && !priority) {
+          const taskPriority = await findPriorityById(task.priority_id);
+          setPriority(taskPriority);
+        }
+
         // Fetch dependencies if available
         if (task.task_id && !dependencies) {
           try {
@@ -120,13 +125,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             setDependencies({ predecessors: [], successors: [] });
           }
         }
+
       } catch (error) {
         console.error('Error fetching task data:', error);
       }
     };
 
     fetchData();
-  }, [task.task_id, task.ticket_links, task.resources, ticketLinks, providedTaskResources, dependencies]);
+  }, [task.task_id, task.ticket_links, task.resources, ticketLinks, providedTaskResources, task.priority_id, dependencies]);
 
   // Computed values - ensure we handle the loading state
   const checklistItems = task.checklist_items || [];
@@ -230,16 +236,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       
       {/* Dependency indicators */}
       <div className="absolute top-2 left-8 flex space-x-1">
-        {hasBlockingDependencies && (
-          <span title="Blocked by dependencies">
-            <Lock className="w-3 h-3 text-red-500" />
-          </span>
-        )}
-        {dependencies && dependencies.predecessors.length > 0 && (
-          <span title={`${dependencies.predecessors.length} dependencies`}>
-            <ArrowRight className="w-3 h-3 text-blue-500" />
-          </span>
-        )}
         {dependencies && dependencies.successors.length > 0 && (
           <span title={`${dependencies.successors.length} dependent tasks`}>
             <GitBranch className="w-3 h-3 text-green-500 transform -rotate-90" />
@@ -277,8 +273,20 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         </DropdownMenu>
       </div>
 
-      <div className="font-semibold text-2xl mb-1 w-full px-1 mt-6">
-        {task.task_name}
+      <div className="flex items-center gap-2 mb-1 w-full px-1 mt-6">
+        <div className="font-semibold text-2xl flex-1">
+          {task.task_name}
+        </div>
+        {priority && (
+          <div className="flex items-center gap-1">
+            <div 
+              className="w-3 h-3 rounded-full" 
+              style={{ backgroundColor: priority.color || '#6B7280' }}
+              title={`${priority.priority_name} priority`}
+            />
+            <span className="text-xs text-gray-600">{priority.priority_name}</span>
+          </div>
+        )}
       </div>
       {task.description && (
         <p className="text-sm text-gray-600 mb-2 line-clamp-2">

@@ -18,8 +18,7 @@ const taskTypeIcons: Record<string, React.ComponentType<any>> = {
   feature: Sparkles,
   improvement: TrendingUp,
   epic: Flag,
-  story: BookOpen,
-  subtask: GitBranch
+  story: BookOpen
 };
 
 export const TaskTypeSelector: React.FC<TaskTypeSelectorProps> = ({

@@ -66,6 +66,7 @@ export interface IProjectTask extends TenantEntity {
   wbs_code: string;  
   order_key?: string;
   due_date: Date | null;
+  priority_id?: string | null;
   task_type_key: string;
   task_type?: ITaskType;
   dependencies?: IProjectTaskDependency[];
@@ -148,13 +149,9 @@ export interface ICustomTaskType extends TenantEntity {
 export type ITaskType = IStandardTaskType | ICustomTaskType;
 
 export type DependencyType = 
-  | 'finish_to_start'
-  | 'start_to_start'
-  | 'finish_to_finish'
-  | 'start_to_finish'
   | 'blocks'
-  | 'relates_to'
-  | 'duplicates';
+  | 'blocked_by'
+  | 'related_to';
 
 export interface IProjectTaskDependency extends TenantEntity {
   dependency_id: string;

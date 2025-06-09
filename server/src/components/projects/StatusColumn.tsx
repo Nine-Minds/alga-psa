@@ -1,6 +1,6 @@
 'use client';
 
-import { IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails } from 'server/src/interfaces/project.interfaces';
+import { IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails, ITaskType } from 'server/src/interfaces/project.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import { Circle, Plus } from 'lucide-react';
 import TaskCard from './TaskCard';
@@ -13,6 +13,7 @@ interface StatusColumnProps {
   tasks: IProjectTask[];
   displayTasks: IProjectTask[];
   users: IUserWithRoles[];
+  taskTypes: ITaskType[];
   ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] };
   taskResources: { [taskId: string]: any[] };
   statusIcon: React.ReactNode;
@@ -64,6 +65,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   onDuplicateTaskClick,
   onEditTaskClick,
   onDeleteTaskClick,
+  taskTypes,
 }) => {
   const [isDraggedOver, setIsDraggedOver] = useState(false);
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
@@ -294,7 +296,9 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
         </div>
       </div>
       <div className={`${styles.kanbanTasks} ${styles.taskList}`} ref={tasksRef}>
-        {sortedTasks.map((task): JSX.Element => (
+        {sortedTasks.map((task): JSX.Element => {
+          const taskType = taskTypes.find(t => t.type_key === task.task_type_key);
+          return (
           <div key={task.task_id} data-task-id={task.task_id} className="relative">
             {/* Animated drop placeholder before task */}
             {dragOverTaskId === task.task_id && dropPosition === 'before' && (
@@ -302,6 +306,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
             )}
             <TaskCard
               task={task}
+              taskType={taskType}
               users={users}
               ticketLinks={ticketLinks[task.task_id]}
               taskResources={taskResources[task.task_id]}
@@ -321,7 +326,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
               <div className={`${styles.dropPlaceholder} ${styles.visible}`} />
             )}
           </div>
-        ))}
+        )})}
       </div>
     </div>
   );

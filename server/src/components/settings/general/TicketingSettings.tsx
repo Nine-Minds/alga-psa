@@ -386,7 +386,7 @@ const TicketingSettings = (): JSX.Element => {
         try {
           const addedPriority = await createPriority({
             priority_name: newPriority.trim(),
-            priority_level: 50,
+            order_number: 50,
             color: '#6B7280',
             item_type: selectedPriorityType,
             created_by: userId,
@@ -933,8 +933,8 @@ const TicketingSettings = (): JSX.Element => {
       ),
     },
     {
-      title: 'Level',
-      dataIndex: 'priority_level',
+      title: 'Order',
+      dataIndex: 'order_number',
       render: (value) => value,
     },
     {
@@ -1377,13 +1377,13 @@ const TicketingSettings = (): JSX.Element => {
                 await updatePriorityItem({
                   ...editingPriority,
                   priority_name: name,
-                  priority_level: level,
+                  order_number: level,
                   color: color
                 });
               } else {
                 await createPriority({
                   priority_name: name,
-                  priority_level: level,
+                  order_number: level,
                   color: color,
                   item_type: selectedPriorityType,
                   created_by: userId,
@@ -1412,14 +1412,14 @@ const TicketingSettings = (): JSX.Element => {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Priority Level (1-100, lower is higher priority)
+                    Order Number (1-100, higher numbers appear first)
                   </label>
                   <Input
                     name="level"
                     type="number"
                     min="1"
                     max="100"
-                    defaultValue={editingPriority?.priority_level || 50}
+                    defaultValue={editingPriority?.order_number || 50}
                     required
                   />
                 </div>

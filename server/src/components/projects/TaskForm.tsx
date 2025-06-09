@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { IProjectPhase, IProjectTask, ITaskChecklistItem, ProjectStatus, IProjectTicketLinkWithDetails } from 'server/src/interfaces/project.interfaces';
+import { IProjectPhase, IProjectTask, ITaskChecklistItem, ProjectStatus, IProjectTicketLinkWithDetails, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
 import AvatarIcon from 'server/src/components/ui/AvatarIcon';
 import { getProjectTreeData, getProjectDetails } from 'server/src/lib/actions/project-actions/projectActions';
+import { getAllPrioritiesWithStandard } from 'server/src/lib/actions/priorityActions';
 import {
   updateTaskWithChecklist,
   addTaskToPhase,
@@ -15,7 +17,8 @@ import {
   removeTaskResourceAction,
   getTaskResourcesAction,
   addTicketLinkAction,
-  duplicateTaskToPhase
+  duplicateTaskToPhase,
+  getTaskDependencies
 } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import * as Dialog from '@radix-ui/react-dialog';
@@ -33,6 +36,7 @@ import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTask
 import { ITaskType } from 'server/src/interfaces/project.interfaces';
 import TaskTicketLinks from './TaskTicketLinks';
 import { TaskDependencies } from './TaskDependencies';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from 'server/src/components/ui/TreeSelect';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { useDrawer } from 'server/src/context/DrawerContext';
@@ -112,6 +116,12 @@ export default function TaskForm({
     additionalAssigneeCount: number;
     ticketLinkCount: number;
   } | null>(null);
+  const [priorities, setPriorities] = useState<(IPriority | IStandardPriority)[]>([]);
+  const [selectedPriorityId, setSelectedPriorityId] = useState<string | null>(task?.priority_id ?? null);
+  const [taskDependencies, setTaskDependencies] = useState<{
+    predecessors: IProjectTaskDependency[];
+    successors: IProjectTaskDependency[];
+  }>({ predecessors: [], successors: [] });
   
   const { openDrawer, closeDrawer } = useDrawer();
 
@@ -128,6 +138,10 @@ export default function TaskForm({
         if (user) {
           setCurrentUserId(user.user_id);
         }
+
+        // Fetch priorities for project tasks
+        const allPriorities = await getAllPrioritiesWithStandard('project_task');
+        setPriorities(allPriorities);
         
         // Fetch task types
         const types = await getTaskTypes();
@@ -164,6 +178,7 @@ export default function TaskForm({
             const resources = await getTaskResourcesAction(task.task_id);
             setTaskResources(resources);
           }
+
         }
       } catch (error) {
         console.error('Error fetching initial data:', error);
@@ -171,6 +186,25 @@ export default function TaskForm({
     };
     fetchInitialData();
   }, [task?.task_id]);
+
+  // Separate effect for loading task dependencies
+  useEffect(() => {
+    const loadDependencies = async () => {
+      if (task?.task_id && mode === 'edit') {
+        try {
+          console.log('Fetching task dependencies from API');
+          const dependencies = await getTaskDependencies(task.task_id);
+          setTaskDependencies(dependencies);
+        } catch (error) {
+          console.error('Error fetching task dependencies:', error);
+          // Set empty dependencies on error to avoid breaking the UI
+          setTaskDependencies({ predecessors: [], successors: [] });
+        }
+      }
+    };
+
+    loadDependencies();
+  }, [task?.task_id, mode]);
 
   // Use provided projectTreeData if available, otherwise fetch it
   useEffect(() => {
@@ -381,6 +415,7 @@ export default function TaskForm({
             estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
             actual_hours: Math.round(actualHours * 60), // Convert hours to minutes for storage
             due_date: dueDate || null,
+            priority_id: selectedPriorityId,
             checklist_items: checklistItems,
             project_status_mapping_id: movedTask.project_status_mapping_id, // Always use the mapping from moveTaskToPhase
             task_type_key: selectedTaskType
@@ -400,6 +435,7 @@ export default function TaskForm({
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
           actual_hours: Math.round(actualHours * 60), // Convert hours to minutes for storage
           due_date: dueDate || null, // Use selected due date or null
+          priority_id: selectedPriorityId,
           phase_id: phase.phase_id,
           task_type_key: selectedTaskType
         };
@@ -462,6 +498,7 @@ export default function TaskForm({
     if (estimatedHours !== Number(task.estimated_hours) / 60) return true;
     if (actualHours !== Number(task.actual_hours) / 60) return true;
     if (assignedUser !== task.assigned_to) return true;
+    if (selectedPriorityId !== task.priority_id) return true;
 
     // Compare checklist items
     if (checklistItems.length !== task.checklist_items?.length) return true;
@@ -777,14 +814,30 @@ export default function TaskForm({
                   rows={1}
                 />
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Task Type</label>
-                  <TaskTypeSelector
-                    value={selectedTaskType}
-                    taskTypes={taskTypes}
-                    onChange={setSelectedTaskType}
-                    disabled={isSubmitting}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Task Type</label>
+                    <TaskTypeSelector
+                      value={selectedTaskType}
+                      taskTypes={taskTypes}
+                      onChange={setSelectedTaskType}
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                    <CustomSelect
+                      value={selectedPriorityId || ''}
+                      options={priorities.map(p => ({
+                        value: p.priority_id,
+                        label: p.priority_name,
+                        color: p.color
+                      }))}
+                      onValueChange={(value) => setSelectedPriorityId(value || null)}
+                      placeholder="Select priority"
+                      className="w-full"
+                    />
+                  </div>
                 </div>
 
                 {mode === 'edit' && (
@@ -892,6 +945,7 @@ export default function TaskForm({
                         .some(r => r.additional_user_id === u.user_id)
                     )}
                   />
+
 
                   <div>
                     <div className="flex justify-between items-center mb-2">
@@ -1002,8 +1056,16 @@ export default function TaskForm({
                 task={task}
                 allTasksInProject={allProjectTasks}
                 taskTypes={taskTypes}
-                initialPredecessors={task.dependencies || []}
-                initialSuccessors={task.dependents || []}
+                initialPredecessors={taskDependencies.predecessors}
+                initialSuccessors={taskDependencies.successors}
+                refreshDependencies={async () => {
+                  try {
+                    const dependencies = await getTaskDependencies(task.task_id);
+                    setTaskDependencies(dependencies);
+                  } catch (error) {
+                    console.error('Error refreshing dependencies:', error);
+                  }
+                }}
               />
             )}
 
@@ -1062,7 +1124,7 @@ export default function TaskForm({
           <Dialog.Portal>
             <Dialog.Overlay className="fixed inset-0 bg-black bg-opacity-50" />
             <Dialog.Content 
-              className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-[600px] max-h-[90vh] overflow-y-auto"
+              className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-[800px] max-h-[90vh] overflow-y-auto"
             >
               {renderContent()}
             </Dialog.Content>

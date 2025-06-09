@@ -1,88 +1,93 @@
-import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '@shared/db';
+import { getCurrentTenantId } from 'server/src/lib/db';
 import { IStandardTaskType, ICustomTaskType, ITaskType } from 'server/src/interfaces/project.interfaces';
 import { v4 as uuidv4 } from 'uuid';
+import { Knex } from 'knex';
 
 const TaskTypeModel = {
-    getAllTaskTypes: async (): Promise<ITaskType[]> => {
-        const { knex: db, tenant } = await createTenantKnex();
+    getAllTaskTypes: async (knexOrTrx: Knex | Knex.Transaction): Promise<ITaskType[]> => {
+        const tenant = await getCurrentTenantId();
+        if (!tenant) {
+            throw new Error('Tenant context is required for task type operations');
+        }
         
-        return await withTransaction(db, async (trx) => {
-            const standardTypes = await trx('standard_task_types')
-                .where({ is_active: true })
-                .orderBy('display_order');
-                
-            const customTypes = await trx('custom_task_types')
-                .where({ tenant, is_active: true })
-                .orderBy('display_order');
-                
-            const typeMap = new Map<string, ITaskType>();
+        const standardTypes = await knexOrTrx('standard_task_types')
+            .where({ is_active: true })
+            .orderBy('display_order');
             
-            standardTypes.forEach(type => typeMap.set(type.type_key, type));
-            customTypes.forEach(type => typeMap.set(type.type_key, type));
+        const customTypes = await knexOrTrx('custom_task_types')
+            .where({ tenant, is_active: true })
+            .orderBy('display_order');
             
-            return Array.from(typeMap.values()).sort((a, b) => a.display_order - b.display_order);
-        });
+        const typeMap = new Map<string, ITaskType>();
+        
+        standardTypes.forEach(type => typeMap.set(type.type_key, type));
+        customTypes.forEach(type => typeMap.set(type.type_key, type));
+        
+        return Array.from(typeMap.values()).sort((a, b) => a.display_order - b.display_order);
     },
     
-    getTaskTypeByKey: async (typeKey: string): Promise<ITaskType | null> => {
-        const { knex: db, tenant } = await createTenantKnex();
+    getTaskTypeByKey: async (knexOrTrx: Knex | Knex.Transaction, typeKey: string): Promise<ITaskType | null> => {
+        const tenant = await getCurrentTenantId();
+        if (!tenant) {
+            throw new Error('Tenant context is required for task type operations');
+        }
         
-        return await withTransaction(db, async (trx) => {
-            const customType = await trx('custom_task_types')
-                .where({ tenant, type_key: typeKey, is_active: true })
-                .first();
-                
-            if (customType) return customType;
+        const customType = await knexOrTrx('custom_task_types')
+            .where({ tenant, type_key: typeKey, is_active: true })
+            .first();
             
-            return await trx('standard_task_types')
-                .where({ type_key: typeKey, is_active: true })
-                .first();
-        });
+        if (customType) return customType;
+        
+        return await knexOrTrx('standard_task_types')
+            .where({ type_key: typeKey, is_active: true })
+            .first();
     },
     
-    createCustomTaskType: async (data: Omit<ICustomTaskType, 'type_id' | 'tenant' | 'created_at' | 'updated_at'>): Promise<ICustomTaskType> => {
-        const { knex: db, tenant } = await createTenantKnex();
+    createCustomTaskType: async (knexOrTrx: Knex | Knex.Transaction, data: Omit<ICustomTaskType, 'type_id' | 'tenant' | 'created_at' | 'updated_at'>): Promise<ICustomTaskType> => {
+        const tenant = await getCurrentTenantId();
+        if (!tenant) {
+            throw new Error('Tenant context is required for task type operations');
+        }
         
-        return await withTransaction(db, async (trx) => {
-            const [taskType] = await trx('custom_task_types')
-                .insert({
-                    type_id: uuidv4(),
-                    tenant,
-                    ...data,
-                    created_at: new Date(),
-                    updated_at: new Date()
-                })
-                .returning('*');
-                
-            return taskType;
-        });
+        const [taskType] = await knexOrTrx('custom_task_types')
+            .insert({
+                type_id: uuidv4(),
+                tenant,
+                ...data,
+                created_at: new Date(),
+                updated_at: new Date()
+            })
+            .returning('*');
+            
+        return taskType;
     },
     
-    updateCustomTaskType: async (typeId: string, data: Partial<Omit<ICustomTaskType, 'type_id' | 'tenant' | 'created_at' | 'updated_at'>>): Promise<ICustomTaskType> => {
-        const { knex: db, tenant } = await createTenantKnex();
+    updateCustomTaskType: async (knexOrTrx: Knex | Knex.Transaction, typeId: string, data: Partial<Omit<ICustomTaskType, 'type_id' | 'tenant' | 'created_at' | 'updated_at'>>): Promise<ICustomTaskType> => {
+        const tenant = await getCurrentTenantId();
+        if (!tenant) {
+            throw new Error('Tenant context is required for task type operations');
+        }
         
-        return await withTransaction(db, async (trx) => {
-            const [taskType] = await trx('custom_task_types')
-                .where({ type_id: typeId, tenant })
-                .update({
-                    ...data,
-                    updated_at: new Date()
-                })
-                .returning('*');
-                
-            return taskType;
-        });
+        const [taskType] = await knexOrTrx('custom_task_types')
+            .where({ type_id: typeId, tenant })
+            .update({
+                ...data,
+                updated_at: new Date()
+            })
+            .returning('*');
+            
+        return taskType;
     },
     
-    deleteCustomTaskType: async (typeId: string): Promise<void> => {
-        const { knex: db, tenant } = await createTenantKnex();
+    deleteCustomTaskType: async (knexOrTrx: Knex | Knex.Transaction, typeId: string): Promise<void> => {
+        const tenant = await getCurrentTenantId();
+        if (!tenant) {
+            throw new Error('Tenant context is required for task type operations');
+        }
         
-        await withTransaction(db, async (trx) => {
-            await trx('custom_task_types')
-                .where({ type_id: typeId, tenant })
-                .update({ is_active: false, updated_at: new Date() });
-        });
+        await knexOrTrx('custom_task_types')
+            .where({ type_id: typeId, tenant })
+            .update({ is_active: false, updated_at: new Date() });
     }
 };
 

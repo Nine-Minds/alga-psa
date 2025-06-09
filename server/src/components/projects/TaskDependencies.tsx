@@ -5,8 +5,10 @@ import { IProjectTask, IProjectTaskDependency, ITaskType, DependencyType } from 
 import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Input } from 'server/src/components/ui/Input';
-import { ArrowRight, ArrowRightLeft, GitMerge, GitPullRequest, Lock, Link as LinkIcon, Copy, X, Calendar } from 'lucide-react';
+import { Lock, Link as LinkIcon, X } from 'lucide-react';
 import { addTaskDependency, removeTaskDependency } from 'server/src/lib/actions/project-actions/projectTaskActions';
+import { useDrawer } from "server/src/context/DrawerContext";
+import TaskEdit from './TaskEdit';
 
 interface TaskDependenciesProps {
   task: IProjectTask;
@@ -15,27 +17,53 @@ interface TaskDependenciesProps {
   initialPredecessors?: IProjectTaskDependency[];
   initialSuccessors?: IProjectTaskDependency[];
   refreshDependencies?: () => void;
+  users?: any[];
+  phases?: any[];
 }
 
 const dependencyIcons: Record<DependencyType, React.ReactNode> = {
-  finish_to_start: <span title="Finish to Start"><ArrowRight className="w-4 h-4 text-blue-500" /></span>,
-  start_to_start: <span title="Start to Start"><ArrowRightLeft className="w-4 h-4 text-green-500" /></span>,
-  finish_to_finish: <span title="Finish to Finish"><GitMerge className="w-4 h-4 text-purple-500" /></span>,
-  start_to_finish: <span title="Start to Finish"><GitPullRequest className="w-4 h-4 text-orange-500" /></span>,
   blocks: <span title="Blocks"><Lock className="w-4 h-4 text-red-500" /></span>,
-  relates_to: <span title="Relates to"><LinkIcon className="w-4 h-4 text-gray-500" /></span>,
-  duplicates: <span title="Duplicates"><Copy className="w-4 h-4 text-purple-500" /></span>
-
+  blocked_by: <span title="Blocked by"><Lock className="w-4 h-4 text-orange-500" /></span>,
+  related_to: <span title="Related to"><LinkIcon className="w-4 h-4 text-gray-500" /></span>
 };
 
 const dependencyLabels: Record<DependencyType, string> = {
-  finish_to_start: 'Finish to Start (FS)',
-  start_to_start: 'Start to Start (SS)',
-  finish_to_finish: 'Finish to Finish (FF)',
-  start_to_finish: 'Start to Finish (SF)',
   blocks: 'Blocks',
-  relates_to: 'Related to',
-  duplicates: 'Duplicates'
+  blocked_by: 'Blocked by',
+  related_to: 'Related to'
+};
+
+// Function to get the display label and icon from the perspective of the viewing task
+const getDependencyDisplayInfo = (dependency: IProjectTaskDependency, isPredecessor: boolean) => {
+  const { dependency_type } = dependency;
+  
+  if (dependency_type === 'related_to') {
+    return {
+      label: 'Related to',
+      icon: dependencyIcons.related_to
+    };
+  }
+  
+  if (isPredecessor) {
+    // This task depends on the predecessor
+    if (dependency_type === 'blocks') {
+      return { label: 'Blocked by', icon: dependencyIcons.blocked_by };
+    } else if (dependency_type === 'blocked_by') {
+      return { label: 'Blocks', icon: dependencyIcons.blocks };
+    }
+  } else {
+    // This task is the predecessor to the successor
+    if (dependency_type === 'blocks') {
+      return { label: 'Blocks', icon: dependencyIcons.blocks };
+    } else if (dependency_type === 'blocked_by') {
+      return { label: 'Blocked by', icon: dependencyIcons.blocked_by };
+    }
+  }
+  
+  return {
+    label: dependencyLabels[dependency_type],
+    icon: dependencyIcons[dependency_type]
+  };
 };
 
 export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
@@ -44,15 +72,17 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
   taskTypes,
   initialPredecessors = [],
   initialSuccessors = [],
-  refreshDependencies
+  refreshDependencies,
+  users = [],
+  phases = []
 }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedPredecessorId, setSelectedPredecessorId] = useState('');
-  const [selectedType, setSelectedType] = useState<DependencyType>('finish_to_start');
-  const [leadLagDays, setLeadLagDays] = useState(0);
+  const [selectedType, setSelectedType] = useState<DependencyType>('related_to');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { openDrawer } = useDrawer();
   
   const [predecessors, setPredecessors] = useState<IProjectTaskDependency[]>(initialPredecessors);
   const [successors, setSuccessors] = useState<IProjectTaskDependency[]>(initialSuccessors);
@@ -66,6 +96,32 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
     return taskTypes.find(t => t.type_key === typeKey);
   };
 
+  const onViewTask = (taskId: string) => {
+    const taskData = allTasksInProject.find(t => t.task_id === taskId);
+    if (!taskData) {
+      return;
+    }
+
+    // Find the phase for this task
+    const taskPhase = phases.find(p => p.phase_id === taskData.phase_id) || phases[0];
+    
+    openDrawer(
+      <TaskEdit 
+        task={taskData}
+        phase={taskPhase}
+        phases={phases}
+        users={users}
+        inDrawer={true}
+        onClose={() => {}} // Drawer handles its own closing
+        onTaskUpdated={(updatedTask: IProjectTask | null) => {
+          if (refreshDependencies) {
+            refreshDependencies();
+          }
+        }}
+      />
+    );
+  };
+
   const handlePredecessorSelect = (predecessorId: string) => {
     setSelectedPredecessorId(predecessorId);
     
@@ -74,12 +130,8 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
       // Auto-suggest dependency type based on task types
       if (predecessor.task_type_key === 'bug') {
         setSelectedType('blocks');
-      } else if (predecessor.task_type_key === 'epic' && ['story', 'task'].includes(task.task_type_key)) {
-        setSelectedType('finish_to_start');
-      } else if (predecessor.task_type_key === 'feature' && task.task_type_key === 'feature') {
-        setSelectedType('start_to_start');
       } else {
-        setSelectedType('finish_to_start');
+        setSelectedType('related_to');
       }
     }
   };
@@ -89,10 +141,9 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
       setError(null);
       setIsLoading(true);
       try {
-        await addTaskDependency(selectedPredecessorId, task.task_id, selectedType, leadLagDays, notes || undefined);
+        await addTaskDependency(selectedPredecessorId, task.task_id, selectedType, 0, notes || undefined);
         setShowAddForm(false);
         setSelectedPredecessorId('');
-        setLeadLagDays(0);
         setNotes('');
         if (refreshDependencies) refreshDependencies();
       } catch (err: any) {
@@ -132,7 +183,15 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
             title={typeInfo.type_name}
           />
         )}
-        <span className="font-semibold text-xs">{taskInfo.task_name || taskInfo.task_id.substring(0,8)}</span>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onViewTask(taskInfo.task_id);
+          }}
+          className="font-semibold text-xs text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+        >
+          {taskInfo.task_name || taskInfo.task_id.substring(0,8)}
+        </button>
       </span>
     );
   };
@@ -141,24 +200,18 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
     <div className="space-y-4 text-sm">
       {error && <p className="text-red-500 text-xs">{error}</p>}
       
-      <div>
-        <h4 className="font-medium mb-1">Predecessors (This task depends on):</h4>
-        {predecessors.length === 0 ? (
-          <p className="text-xs text-gray-500">No dependencies</p>
-        ) : (
+      {predecessors.length > 0 && (
+        <div>
+          <h4 className="font-medium mb-1">Predecessors (This task depends on):</h4>
           <ul className="space-y-1">
-            {predecessors.map(dep => (
-              <li key={dep.dependency_id} className="flex items-center gap-2 p-1 rounded hover:bg-gray-50 dark:hover:bg-gray-800">
-                {dependencyIcons[dep.dependency_type]}
-                <span className="text-xs text-gray-600">{dependencyLabels[dep.dependency_type]}</span>
-                {renderTaskWithType(dep.predecessor_task)}
-                {dep.lead_lag_days !== 0 && (
-                  <span className="flex items-center gap-1 text-xs text-gray-500">
-                    <Calendar className="w-3 h-3" />
-                    {dep.lead_lag_days > 0 ? `+${dep.lead_lag_days}` : dep.lead_lag_days} days
-                  </span>
-                )}
-                {dep.notes && <span className="text-gray-400 text-xs">({dep.notes})</span>}
+            {predecessors.map(dep => {
+              const displayInfo = getDependencyDisplayInfo(dep, true);
+              return (
+                <li key={dep.dependency_id} className="flex items-center gap-2 p-1 rounded hover:bg-gray-50 dark:hover:bg-gray-800">
+                  {displayInfo.icon}
+                  <span className="text-xs text-gray-600">{displayInfo.label}</span>
+                  {renderTaskWithType(dep.predecessor_task)}
+                  {dep.notes && <span className="text-gray-400 text-xs">({dep.notes})</span>}
                 <Button
                   id={`remove-dep-${dep.dependency_id}`}
                   size="sm"
@@ -170,47 +223,43 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
                   <X className="w-3 h-3" />
                 </Button>
               </li>
-            ))}
+              );
+            })}
           </ul>
-        )}
-      </div>
+        </div>
+      )}
 
-      <div>
-        <h4 className="font-medium mb-1">Successors (Tasks that depend on this):</h4>
-        {successors.length === 0 ? (
-          <p className="text-xs text-gray-500">No dependent tasks</p>
-        ) : (
+      {successors.length > 0 && (
+        <div>
+          <h4 className="font-medium mb-1">Successors (Tasks that depend on this):</h4>
           <ul className="space-y-1">
-            {successors.map(dep => (
-              <li key={dep.dependency_id} className="flex items-center gap-2 p-1 rounded hover:bg-gray-50 dark:hover:bg-gray-800">
-                {renderTaskWithType(dep.successor_task)}
-                <span className="text-xs text-gray-600">{dependencyLabels[dep.dependency_type]}</span>
-                {dependencyIcons[dep.dependency_type]}
-                {dep.lead_lag_days !== 0 && (
-                  <span className="flex items-center gap-1 text-xs text-gray-500">
-                    <Calendar className="w-3 h-3" />
-                    {dep.lead_lag_days > 0 ? `+${dep.lead_lag_days}` : dep.lead_lag_days} days
-                  </span>
-                )}
-              </li>
-            ))}
+            {successors.map(dep => {
+              const displayInfo = getDependencyDisplayInfo(dep, false);
+              return (
+                <li key={dep.dependency_id} className="flex items-center gap-2 p-1 rounded hover:bg-gray-50 dark:hover:bg-gray-800">
+                  {renderTaskWithType(dep.successor_task)}
+                  <span className="text-xs text-gray-600">{displayInfo.label}</span>
+                  {displayInfo.icon}
+                </li>
+              );
+            })}
           </ul>
-        )}
-      </div>
+        </div>
+      )}
 
       {showAddForm ? (
         <div className="border rounded p-3 space-y-3 bg-gray-50 dark:bg-gray-800">
-          <p className="text-xs font-medium">Add predecessor for: {task.task_name}</p>
+          <p className="text-xs font-medium">Add dependency for: {task.task_name}</p>
           
           <div className="grid grid-cols-2 gap-2">
             <CustomSelect
               value={selectedPredecessorId}
               onValueChange={handlePredecessorSelect}
               disabled={isLoading}
-              placeholder="Select predecessor task"
+              placeholder="Select task"
               options={availableTasks.map(t => ({
                 value: t.task_id,
-                label: `${t.task_name} (${t.wbs_code || t.task_id.substring(0,8)})`
+                label: t.task_name
               }))}
             />
             
@@ -219,40 +268,23 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
               onValueChange={(v: string) => setSelectedType(v as DependencyType)}
               disabled={isLoading}
               options={[
-                { value: 'finish_to_start', label: 'Finish to Start (FS)' },
-                { value: 'start_to_start', label: 'Start to Start (SS)' },
-                { value: 'finish_to_finish', label: 'Finish to Finish (FF)' },
-                { value: 'start_to_finish', label: 'Start to Finish (SF)' },
                 { value: 'blocks', label: 'Blocks' },
-                { value: 'relates_to', label: 'Related To' },
-                { value: 'duplicates', label: 'Duplicates' }
+                { value: 'blocked_by', label: 'Blocked by' },
+                { value: 'related_to', label: 'Related to' }
               ]}
             />
           </div>
           
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-xs text-gray-600">Lead/Lag (days)</label>
-              <Input
-                type="number"
-                value={leadLagDays}
-                onChange={(e) => setLeadLagDays(parseInt(e.target.value) || 0)}
-                className="text-xs h-8"
-                placeholder="0"
-                disabled={isLoading}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-gray-600">Notes (optional)</label>
-              <Input
-                type="text"
-                placeholder="Notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="text-xs h-8"
-                disabled={isLoading}
-              />
-            </div>
+          <div>
+            <label className="text-xs text-gray-600">Notes (optional)</label>
+            <Input
+              type="text"
+              placeholder="Notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="text-xs h-8"
+              disabled={isLoading}
+            />
           </div>
           
           <div className="flex gap-2">

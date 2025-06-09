@@ -26,6 +26,7 @@ class Priority {
     if (itemType) {
       standardQuery.where({ item_type: itemType });
     }
+    standardQuery.orderBy('order_number', 'desc'); // Higher numbers first (Low priority first)
     const standardPriorities = await standardQuery;
     
     // Get tenant-specific priorities
@@ -33,6 +34,7 @@ class Priority {
     if (itemType) {
       tenantQuery.where({ item_type: itemType });
     }
+    tenantQuery.orderBy('order_number', 'desc'); // Higher numbers first (Low priority first)
     const tenantPriorities = await tenantQuery;
     
     // Combine both, standard first
@@ -53,7 +55,10 @@ class Priority {
     if (!tenant) {
       throw new Error('Tenant context is required for priority operations');
     }
-    const [insertedPriority] = await knexOrTrx('priorities').insert({...priority, tenant}).returning('*');
+    const [insertedPriority] = await knexOrTrx('priorities').insert({
+      ...priority, 
+      tenant,
+    }).returning('*');
     return insertedPriority;
   }
 

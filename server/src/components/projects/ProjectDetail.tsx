@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { IProject, IProjectPhase, IProjectTask, IProjectTicketLink, IProjectTicketLinkWithDetails, ProjectStatus } from 'server/src/interfaces/project.interfaces';
+import { IProject, IProjectPhase, IProjectTask, IProjectTicketLink, IProjectTicketLinkWithDetails, ProjectStatus, ITaskType } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { getAllPrioritiesWithStandard } from 'server/src/lib/actions/priorityActions';
+import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import TaskQuickAdd from './TaskQuickAdd';
 import TaskEdit from './TaskEdit';
@@ -106,6 +107,7 @@ export default function ProjectDetail({
 
   const [taskToDelete, setTaskToDelete] = useState<IProjectTask | null>(null);
   const [priorities, setPriorities] = useState<(IPriority | IStandardPriority)[]>([]);
+  const [taskTypes, setTaskTypes] = useState<ITaskType[]>([]);
   const [selectedPriorityFilter, setSelectedPriorityFilter] = useState<string>('all');
 
   const filteredTasks = useMemo(() => {
@@ -158,6 +160,10 @@ export default function ProjectDetail({
         // Fetch priorities for project tasks
         const allPriorities = await getAllPrioritiesWithStandard('project_task');
         setPriorities(allPriorities);
+
+        // Fetch task types
+        const types = await getTaskTypes();
+        setTaskTypes(types);
       } catch (error) {
         console.error('Error fetching initial data:', error);
         toast.error('Failed to load initial data');
@@ -890,6 +896,7 @@ export default function ProjectDetail({
             tasks={projectTasks}
             phaseTasks={filteredTasks}
             users={users}
+            taskTypes={taskTypes}
             statuses={projectStatuses}
             isAddingTask={isAddingTask}
             selectedPhase={!!selectedPhase}
