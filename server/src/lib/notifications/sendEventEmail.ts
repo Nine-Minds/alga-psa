@@ -126,9 +126,23 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       subject: emailSubject
     });
 
+    // Log environment state before email service initialization
+    logger.info('[SendEventEmail] Environment check before email service:', {
+      EMAIL_ENABLE: process.env.EMAIL_ENABLE,
+      EMAIL_HOST: process.env.EMAIL_HOST,
+      EMAIL_USERNAME: process.env.EMAIL_USERNAME,
+      EMAIL_FROM: process.env.EMAIL_FROM,
+      NODE_ENV: process.env.NODE_ENV
+    });
+
     // Get email service instance and ensure it's initialized
     const emailService = await getEmailService();
     await emailService.initialize();
+
+    // Check email service configuration status
+    logger.info('[SendEventEmail] Email service configuration status:', {
+      isConfigured: emailService.isConfigured()
+    });
 
     // Replace template variables with context values
     let html = templateContent;
@@ -148,12 +162,27 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
 
     const text = html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 
+    // Log right before sending email
+    logger.info('[SendEventEmail] About to send email:', {
+      to: params.to,
+      subject: emailSubject,
+      htmlLength: html.length,
+      textLength: text.length,
+      emailServiceConfigured: emailService.isConfigured()
+    });
+
     // Send email using the email service
     const success = await emailService.sendEmail({
       to: params.to,
       subject: emailSubject,
       html,
       text
+    });
+
+    logger.info('[SendEventEmail] Email send result:', {
+      success: success,
+      to: params.to,
+      subject: emailSubject
     });
 
     if (!success) {
