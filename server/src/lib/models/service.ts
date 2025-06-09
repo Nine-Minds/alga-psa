@@ -33,7 +33,7 @@ const baseServiceSchema = z.object({
   ),
   unit_of_measure: z.string(),
   category_id: z.string().uuid().nullable(), // Matches DB FK (nullable) - IService allows string | null
-  tax_rate_id: z.string().uuid().nullable(), // Corrected: Matches DB FK (nullable)
+  tax_rate_id: z.union([z.string().uuid(), z.null()]).optional(), // Accept string, null, or undefined
   description: z.string().nullable(), // Added: Description field from the database
   service_type_name: z.string().optional(), // Add service_type_name to the schema
 });
@@ -223,6 +223,14 @@ const Service = {
 
     // Remove service_type_name from the input data as it's a virtual field
     const { service_type_name, ...dataWithoutTypeName } = serviceData;
+    
+    // Ensure all nullable fields are properly set to null instead of undefined
+    const cleanedData = {
+      ...dataWithoutTypeName,
+      tax_rate_id: dataWithoutTypeName.tax_rate_id ?? null,
+      category_id: dataWithoutTypeName.category_id ?? null,
+      description: dataWithoutTypeName.description ?? null,
+    };
 
     // Validate the input data using the updated creation schema
     // The refine check in the schema ensures one ID is present.
@@ -234,10 +242,10 @@ const Service = {
     // The result 'validatedData' will match CreateServiceSchemaType
     // Ensure default_rate is a number before validation
     const dataToValidate = {
-      ...dataWithoutTypeName,
-      default_rate: typeof dataWithoutTypeName.default_rate === 'string'
-        ? parseFloat(dataWithoutTypeName.default_rate) || 0
-        : dataWithoutTypeName.default_rate,
+      ...cleanedData,
+      default_rate: typeof cleanedData.default_rate === 'string'
+        ? parseFloat(cleanedData.default_rate) || 0
+        : cleanedData.default_rate,
     };
 
     const validatedData = createServiceSchema.parse(dataToValidate);

@@ -164,6 +164,8 @@ export async function createService(
             default_rate: typeof serviceData.default_rate === 'string'
                 ? parseFloat(serviceData.default_rate) || 0
                 : serviceData.default_rate,
+            // Explicitly handle tax_rate_id to ensure it's null rather than undefined
+            tax_rate_id: serviceData.tax_rate_id || null,
         };
 
             // 4. Create the service using the model
