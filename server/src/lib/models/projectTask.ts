@@ -78,7 +78,8 @@ const ProjectTaskModel = {
         'actual_hours',
         'wbs_code',
         'project_status_mapping_id',
-        'order_key'
+        'order_key',
+        'priority_id'
       ];
       
       const finalTaskData: Partial<IProjectTask> = {
@@ -92,6 +93,9 @@ const ProjectTaskModel = {
           
           switch(typedKey) {
             case 'assigned_to':
+              finalTaskData[typedKey] = value === '' ? null : value as string | null;
+              break;
+            case 'priority_id':
               finalTaskData[typedKey] = value === '' ? null : value as string | null;
               break;
             case 'task_name':

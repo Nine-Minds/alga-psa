@@ -66,6 +66,7 @@ export interface IProjectTask extends TenantEntity {
   wbs_code: string;  
   order_key?: string;
   due_date: Date | null;
+  priority_id?: string | null;
   checklist_items?: ITaskChecklistItem[];
   ticket_links?: IProjectTicketLinkWithDetails[];
   resources?: any[];

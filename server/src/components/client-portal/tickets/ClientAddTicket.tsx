@@ -40,7 +40,7 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
       setIsLoading(true);
       try {
         const formData = await getTicketFormData();
-        setPriorities(formData.priorities);
+        setPriorities(formData.priorities as IPriority[]);
       } catch (error) {
         console.error('Error fetching form data:', error);
       } finally {

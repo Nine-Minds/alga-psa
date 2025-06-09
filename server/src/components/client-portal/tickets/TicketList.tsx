@@ -7,7 +7,7 @@ import Spinner from 'server/src/components/ui/Spinner';
 import { format } from 'date-fns';
 import { getClientTickets, updateTicketStatus } from 'server/src/lib/actions/client-portal-actions/client-tickets';
 import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
-import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
+import { getAllPrioritiesWithStandard } from 'server/src/lib/actions/priorityActions';
 import { getTicketCategories } from 'server/src/lib/actions/ticketCategoryActions';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ITicketListItem, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
@@ -50,7 +50,7 @@ export function TicketList() {
       try {
         const [statuses, priorities, categories] = await Promise.all([
           getTicketStatuses(),
-          getAllPriorities(),
+          getAllPrioritiesWithStandard('ticket'),
           getTicketCategories()
         ]);
 

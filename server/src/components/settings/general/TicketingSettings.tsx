@@ -7,11 +7,11 @@ import { Button } from 'server/src/components/ui/Button';
 import { Plus, X, Edit2, ChevronRight, ChevronDown, Network, Search, MoreVertical } from "lucide-react"; 
 import { getAllChannels, createChannel, deleteChannel, updateChannel } from 'server/src/lib/actions/channel-actions/channelActions';
 import { getStatuses, createStatus, deleteStatus, updateStatus } from 'server/src/lib/actions/status-actions/statusActions';
-import { getAllPriorities, createPriority, deletePriority, updatePriority } from 'server/src/lib/actions/priorityActions';
+import { getAllPriorities, getAllPrioritiesWithStandard, createPriority, deletePriority, updatePriority } from 'server/src/lib/actions/priorityActions';
 import { getTicketCategories, createTicketCategory, deleteTicketCategory, updateTicketCategory } from 'server/src/lib/actions/ticketCategoryActions';
 import { IChannel } from 'server/src/interfaces/channel.interface';
 import { IStatus, ItemType } from 'server/src/interfaces/status.interface';
-import { IPriority, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
+import { IPriority, IStandardPriority, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import NumberingSettings from './NumberingSettings';
 import { Switch } from 'server/src/components/ui/Switch';
@@ -26,6 +26,7 @@ import {
   DropdownMenuItem,
 } from 'server/src/components/ui/DropdownMenu';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import * as Dialog from '@radix-ui/react-dialog';
 
 interface SettingSectionProps<T extends object> {
   title: string;
@@ -250,7 +251,7 @@ const TicketingSettings = (): JSX.Element => {
   const [channels, setChannels] = useState<IChannel[]>([]);
   const [statuses, setStatuses] = useState<IStatus[]>([]);
   const [selectedStatusType, setSelectedStatusType] = useState<ItemType>('ticket');
-  const [priorities, setPriorities] = useState<IPriority[]>([]);
+  const [priorities, setPriorities] = useState<(IPriority | IStandardPriority)[]>([]);
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
   const [newChannel, setNewChannel] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
@@ -268,6 +269,9 @@ const TicketingSettings = (): JSX.Element => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<IChannel | IStatus | IPriority | ITicketCategory | null>(null);
   const [itemTypeToDelete, setItemTypeToDelete] = useState<string | null>(null);
+  const [selectedPriorityType, setSelectedPriorityType] = useState<'ticket' | 'project_task'>('ticket');
+  const [showPriorityDialog, setShowPriorityDialog] = useState(false);
+  const [editingPriority, setEditingPriority] = useState<IPriority | null>(null);
 
   useEffect(() => {
     const initUser = async () => {
@@ -285,7 +289,7 @@ const TicketingSettings = (): JSX.Element => {
         const [fetchedChannels, fetchedStatuses, fetchedPriorities, fetchedCategories] = await Promise.all([
           getAllChannels(true),
           getStatuses(selectedStatusType),
-          getAllPriorities(),
+          getAllPrioritiesWithStandard(),
           getTicketCategories()
         ]);
         setChannels(fetchedChannels);
@@ -382,6 +386,9 @@ const TicketingSettings = (): JSX.Element => {
         try {
           const addedPriority = await createPriority({
             priority_name: newPriority.trim(),
+            priority_level: 50,
+            color: '#6B7280',
+            item_type: selectedPriorityType,
             created_by: userId,
             created_at: new Date()
           });
@@ -430,8 +437,8 @@ const TicketingSettings = (): JSX.Element => {
     const updatePriorityItem = async (updatedPriority: IPriority): Promise<void> => {
       try {
         await updatePriority(updatedPriority.priority_id, updatedPriority);
-        setPriorities(priorities.map((priority): IPriority =>
-          priority.priority_id === updatedPriority.priority_id ? updatedPriority : priority
+        setPriorities(priorities.map((priority) =>
+          'tenant' in priority && priority.priority_id === updatedPriority.priority_id ? updatedPriority : priority
         ));
       } catch (error) {
         console.error('Error updating priority:', error);
@@ -595,7 +602,9 @@ const TicketingSettings = (): JSX.Element => {
 
     const handleDeletePriorityRequestWrapper = (priorityId: string): void => {
       const priority = priorities.find(p => p.priority_id === priorityId);
-      if (priority) handleDeleteItemRequest(priority, 'priority');
+      if (priority && 'tenant' in priority) {
+        handleDeleteItemRequest(priority as IPriority, 'priority');
+      }
     };
 
     const handleDeleteCategoryRequestWrapper = (categoryId: string): void => {
@@ -899,10 +908,47 @@ const TicketingSettings = (): JSX.Element => {
     return baseColumns;
   };
 
-  const priorityColumns: ColumnDefinition<IPriority>[] = [
+  const priorityColumns: ColumnDefinition<IPriority | IStandardPriority>[] = [
     {
       title: 'Name',
       dataIndex: 'priority_name',
+      render: (value, record) => (
+        <div className="flex items-center gap-2">
+          <div 
+            className="w-4 h-4 rounded-full" 
+            style={{ backgroundColor: record.color }}
+          />
+          <span>{value}</span>
+          {'tenant' in record ? null : (
+            <span className="text-xs text-gray-500 italic">(Standard)</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      title: 'Type',
+      dataIndex: 'item_type',
+      render: (value) => (
+        <span className="capitalize">{value === 'project_task' ? 'Project Task' : 'Ticket'}</span>
+      ),
+    },
+    {
+      title: 'Level',
+      dataIndex: 'priority_level',
+      render: (value) => value,
+    },
+    {
+      title: 'Color',
+      dataIndex: 'color',
+      render: (value) => (
+        <div className="flex items-center gap-2">
+          <div 
+            className="w-6 h-6 rounded border border-gray-300" 
+            style={{ backgroundColor: value }}
+          />
+          <span className="text-xs text-gray-500">{value}</span>
+        </div>
+      ),
     },
   ];
 
@@ -1069,18 +1115,95 @@ const TicketingSettings = (): JSX.Element => {
     {
       label: "Priorities",
       content: (
-        <SettingSection<IPriority>
-          title="Priorities"
-          items={priorities}
-          newItem={newPriority}
-          setNewItem={setNewPriority}
-          addItem={addPriority}
-          updateItem={updatePriorityItem}
-          deleteItem={handleDeletePriorityRequestWrapper}
-          getItemName={(priority) => priority.priority_name}
-          getItemKey={(priority) => priority.priority_id}
-          columns={priorityColumns}
-        />
+        <div>
+          {/* Priorities Section with Tabs for Ticket and Project Task */}
+          <div className="bg-white p-6 rounded-lg shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Priorities</h3>
+              <CustomSelect
+                value={selectedPriorityType}
+                onValueChange={(value) => setSelectedPriorityType(value as 'ticket' | 'project_task')}
+                options={[
+                  { value: 'ticket', label: 'Ticket Priorities' },
+                  { value: 'project_task', label: 'Project Task Priorities' }
+                ]}
+                className="w-64"
+              />
+            </div>
+            
+            {/* Info box about standard priorities */}
+            <div className="bg-blue-50 p-4 rounded-md mb-4">
+              <p className="text-sm text-blue-700">
+                <strong>Standard Priorities:</strong> System-defined priorities cannot be edited or deleted. 
+                You can create custom priorities specific to your organization that will appear alongside standard ones.
+              </p>
+            </div>
+
+            <DataTable
+              data={priorities.filter(p => p.item_type === selectedPriorityType)}
+              columns={[...priorityColumns, {
+                title: 'Actions',
+                dataIndex: 'action',
+                width: '5%',
+                render: (_, item) => (
+                  'tenant' in item ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          className="h-8 w-8 p-0"
+                          id={`priority-actions-menu-${item.priority_id}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <span className="sr-only">Open menu</span>
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          id={`edit-priority-${item.priority_id}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingPriority(item as IPriority);
+                            setShowPriorityDialog(true);
+                          }}
+                        >
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          id={`delete-priority-${item.priority_id}`}
+                          className="text-red-600 focus:text-red-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeletePriorityRequestWrapper(item.priority_id);
+                          }}
+                        >
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <span className="text-xs text-gray-400">System</span>
+                  )
+                ),
+              }]}
+              pagination={false}
+            />
+            
+            <div className="mt-4">
+              <Button 
+                id='add-priority-button' 
+                onClick={() => {
+                  setEditingPriority(null);
+                  setShowPriorityDialog(true);
+                }} 
+                className="bg-primary-500 text-white hover:bg-primary-600"
+              >
+                <Plus className="h-4 w-4 mr-2" /> Add Priority
+              </Button>
+            </div>
+          </div>
+        </div>
       )
     },
     {
@@ -1233,6 +1356,120 @@ const TicketingSettings = (): JSX.Element => {
         confirmLabel="Delete"
         cancelLabel="Cancel"
       />
+      
+      {/* Priority Add/Edit Dialog */}
+      <Dialog.Root open={showPriorityDialog} onOpenChange={setShowPriorityDialog}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/50" />
+          <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg p-6 w-[500px] max-w-[90vw]">
+            <Dialog.Title className="text-lg font-semibold mb-4">
+              {editingPriority ? 'Edit Priority' : 'Add New Priority'}
+            </Dialog.Title>
+            
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              const name = formData.get('name') as string;
+              const level = parseInt(formData.get('level') as string);
+              const color = formData.get('color') as string;
+              
+              if (editingPriority) {
+                await updatePriorityItem({
+                  ...editingPriority,
+                  priority_name: name,
+                  priority_level: level,
+                  color: color
+                });
+              } else {
+                await createPriority({
+                  priority_name: name,
+                  priority_level: level,
+                  color: color,
+                  item_type: selectedPriorityType,
+                  created_by: userId,
+                  created_at: new Date()
+                });
+                // Refresh priorities list
+                const updatedPriorities = await getAllPrioritiesWithStandard();
+                setPriorities(updatedPriorities);
+              }
+              
+              setShowPriorityDialog(false);
+              setEditingPriority(null);
+            }}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Priority Name
+                  </label>
+                  <Input
+                    name="name"
+                    defaultValue={editingPriority?.priority_name || ''}
+                    required
+                    placeholder="e.g., Urgent"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Priority Level (1-100, lower is higher priority)
+                  </label>
+                  <Input
+                    name="level"
+                    type="number"
+                    min="1"
+                    max="100"
+                    defaultValue={editingPriority?.priority_level || 50}
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Color
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      name="color"
+                      type="color"
+                      defaultValue={editingPriority?.color || '#6B7280'}
+                      className="h-10 w-20"
+                      required
+                    />
+                    <Input
+                      type="text"
+                      value={editingPriority?.color || '#6B7280'}
+                      readOnly
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-2 mt-6">
+                <Button
+                  id="cancel-priority-dialog"
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setShowPriorityDialog(false);
+                    setEditingPriority(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  id="submit-priority-dialog"
+                  type="submit" 
+                  variant="default"
+                >
+                  {editingPriority ? 'Update' : 'Add'} Priority
+                </Button>
+              </div>
+            </form>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   );
 };
