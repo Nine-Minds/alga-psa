@@ -31,10 +31,10 @@ export class PlanServiceConfigurationService {
     this.tenant = tenant as string;
     if (knex) {
       this.planServiceConfigModel = new PlanServiceConfiguration(knex, tenant);
-      this.fixedConfigModel = new PlanServiceFixedConfig(knex);
+      this.fixedConfigModel = new PlanServiceFixedConfig(knex, tenant);
       this.hourlyConfigModel = new PlanServiceHourlyConfig(knex);
       this.usageConfigModel = new PlanServiceUsageConfig(knex);
-      this.bucketConfigModel = new PlanServiceBucketConfig(knex);
+      this.bucketConfigModel = new PlanServiceBucketConfig(knex, tenant);
     } else {
       // These will be initialized in initKnex
       this.planServiceConfigModel = {} as PlanServiceConfiguration;
@@ -60,10 +60,10 @@ export class PlanServiceConfigurationService {
       
       // Initialize models with knex connection
       this.planServiceConfigModel = new PlanServiceConfiguration(knex, tenant);
-      this.fixedConfigModel = new PlanServiceFixedConfig(knex);
+      this.fixedConfigModel = new PlanServiceFixedConfig(knex, tenant);
       this.hourlyConfigModel = new PlanServiceHourlyConfig(knex);
       this.usageConfigModel = new PlanServiceUsageConfig(knex);
-      this.bucketConfigModel = new PlanServiceBucketConfig(knex);
+      this.bucketConfigModel = new PlanServiceBucketConfig(knex, tenant);
       // Removed billingPlanModel initialization
     }
   }
@@ -153,10 +153,10 @@ export class PlanServiceConfigurationService {
     return await this.knex.transaction(async (trx) => {
       // Create models with transaction
       const planServiceConfigModel = new PlanServiceConfiguration(trx, this.tenant);
-      const fixedConfigModel = new PlanServiceFixedConfig(trx);
+      const fixedConfigModel = new PlanServiceFixedConfig(trx, this.tenant);
       const hourlyConfigModel = new PlanServiceHourlyConfig(trx);
       const usageConfigModel = new PlanServiceUsageConfig(trx);
-      const bucketConfigModel = new PlanServiceBucketConfig(trx);
+      const bucketConfigModel = new PlanServiceBucketConfig(trx, this.tenant);
       
       // Create base configuration
       const configId = await planServiceConfigModel.create(baseConfig);
@@ -257,10 +257,10 @@ export class PlanServiceConfigurationService {
     return await this.knex.transaction(async (trx) => {
       // Create models with transaction
       const planServiceConfigModel = new PlanServiceConfiguration(trx, this.tenant);
-      const fixedConfigModel = new PlanServiceFixedConfig(trx);
+      const fixedConfigModel = new PlanServiceFixedConfig(trx, this.tenant);
       const hourlyConfigModel = new PlanServiceHourlyConfig(trx);
       const usageConfigModel = new PlanServiceUsageConfig(trx);
-      const bucketConfigModel = new PlanServiceBucketConfig(trx);
+      const bucketConfigModel = new PlanServiceBucketConfig(trx, this.tenant);
       
       // Update base configuration if provided
       if (baseConfig) {
@@ -348,10 +348,10 @@ export class PlanServiceConfigurationService {
     return await this.knex.transaction(async (trx) => {
       // Create models with transaction
       const planServiceConfigModel = new PlanServiceConfiguration(trx, this.tenant);
-      const fixedConfigModel = new PlanServiceFixedConfig(trx);
+      const fixedConfigModel = new PlanServiceFixedConfig(trx, this.tenant);
       const hourlyConfigModel = new PlanServiceHourlyConfig(trx);
       const usageConfigModel = new PlanServiceUsageConfig(trx);
-      const bucketConfigModel = new PlanServiceBucketConfig(trx);
+      const bucketConfigModel = new PlanServiceBucketConfig(trx, this.tenant);
 
       // Explicitly delete type-specific configuration first (no CASCADE)
       switch (currentConfig.configuration_type) {
@@ -411,7 +411,7 @@ export class PlanServiceConfigurationService {
     return await this.knex.transaction(async (trx) => {
       // Create models with transaction
       const planServiceConfigModel = new PlanServiceConfiguration(trx, this.tenant);
-      const bucketConfigModel = new PlanServiceBucketConfig(trx);
+      const bucketConfigModel = new PlanServiceBucketConfig(trx, this.tenant);
 
       // 1. Find existing base configuration
       let baseConfig = await planServiceConfigModel.getByPlanAndServiceId(planId, serviceId);
