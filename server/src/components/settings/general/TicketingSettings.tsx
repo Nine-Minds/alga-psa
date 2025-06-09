@@ -386,6 +386,9 @@ const TicketingSettings = (): JSX.Element => {
         try {
           const addedPriority = await createPriority({
             priority_name: newPriority.trim(),
+            priority_level: 50,
+            color: '#6B7280',
+            item_type: selectedPriorityType,
             created_by: userId,
             created_at: new Date()
           });
@@ -599,7 +602,9 @@ const TicketingSettings = (): JSX.Element => {
 
     const handleDeletePriorityRequestWrapper = (priorityId: string): void => {
       const priority = priorities.find(p => p.priority_id === priorityId);
-      if (priority) handleDeleteItemRequest(priority, 'priority');
+      if (priority && 'tenant' in priority) {
+        handleDeleteItemRequest(priority as IPriority, 'priority');
+      }
     };
 
     const handleDeleteCategoryRequestWrapper = (categoryId: string): void => {
@@ -1443,6 +1448,7 @@ const TicketingSettings = (): JSX.Element => {
               
               <div className="flex justify-end gap-2 mt-6">
                 <Button
+                  id="cancel-priority-dialog"
                   type="button"
                   variant="secondary"
                   onClick={() => {
@@ -1452,7 +1458,11 @@ const TicketingSettings = (): JSX.Element => {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" variant="primary">
+                <Button 
+                  id="submit-priority-dialog"
+                  type="submit" 
+                  variant="default"
+                >
                   {editingPriority ? 'Update' : 'Add'} Priority
                 </Button>
               </div>
