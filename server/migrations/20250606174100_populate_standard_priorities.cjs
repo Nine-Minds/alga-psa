@@ -4,25 +4,25 @@ exports.up = async function(knex) {
     {
       priority_name: 'Low',
       priority_level: 70,
-      color: '#9CA3AF',
+      color: '#10B981', // Green
       item_type: 'ticket'
     },
     {
       priority_name: 'Medium',
       priority_level: 50,
-      color: '#F59E0B',
+      color: '#F59E0B', // Yellow
       item_type: 'ticket'
     },
     {
       priority_name: 'High',
       priority_level: 30,
-      color: '#EF4444',
+      color: '#EC4899', // Pink
       item_type: 'ticket'
     },
     {
       priority_name: 'Urgent',
       priority_level: 10,
-      color: '#DC2626',
+      color: '#EF4444', // Red
       item_type: 'ticket'
     }
   ]);
@@ -32,25 +32,25 @@ exports.up = async function(knex) {
     {
       priority_name: 'Low',
       priority_level: 70,
-      color: '#9CA3AF',
+      color: '#10B981', // Green
       item_type: 'project_task'
     },
     {
       priority_name: 'Medium',
       priority_level: 50,
-      color: '#F59E0B',
+      color: '#F59E0B', // Yellow
       item_type: 'project_task'
     },
     {
       priority_name: 'High',
       priority_level: 30,
-      color: '#EF4444',
+      color: '#EC4899', // Pink
       item_type: 'project_task'
     },
     {
       priority_name: 'Critical',
       priority_level: 5,
-      color: '#7C3AED',
+      color: '#EF4444', // Red
       item_type: 'project_task'
     }
   ]);
