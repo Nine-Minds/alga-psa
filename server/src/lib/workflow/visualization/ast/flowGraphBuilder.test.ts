@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildFlowGraph, applyDirectedLayout } from './flowGraphBuilder';
+import { buildFlowGraph, applyLayout } from './flowGraphBuilder';
 import { WorkflowAnalysis, StateTransition, ActionCall } from '../types/astTypes';
 
 describe('flowGraphBuilder', () => {
@@ -96,8 +96,8 @@ describe('flowGraphBuilder', () => {
     });
   });
 
-  describe('applyDirectedLayout', () => {
-    it('should position nodes in a directed layout', () => {
+  describe('applyLayout', () => {
+    it('should position nodes in a directed layout', async () => {
       // Create a simple graph with a few nodes and edges
       const graph = {
         nodes: [
@@ -135,7 +135,7 @@ describe('flowGraphBuilder', () => {
       };
       
       // Apply the directed layout
-      const layoutedGraph = applyDirectedLayout(graph);
+      const layoutedGraph = await applyLayout(graph);
       
       // Verify that node positions are updated
       expect(layoutedGraph.nodes[0].position).not.toEqual({ x: 0, y: 0 });

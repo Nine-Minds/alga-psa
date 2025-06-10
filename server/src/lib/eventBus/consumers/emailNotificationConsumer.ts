@@ -78,6 +78,7 @@ export async function initializeEmailNotificationConsumer(tenantId: string) {
             't.assigned_to',
             't.ticket_number',
             't.title',
+            knex.raw("t.attributes->>'description' as description"),
             'c.email as company_email',
             'co.email as contact_email',
             'p.priority_name',
@@ -106,6 +107,7 @@ export async function initializeEmailNotificationConsumer(tenantId: string) {
         if (ticket) {
           event.payload.ticketNumber = ticket.ticket_number;
           event.payload.title = ticket.title;
+          event.payload.description = ticket.description || 'No description provided';
           event.payload.priority = ticket.priority_name || 'Unknown';
           event.payload.status = ticket.status_name || 'Unknown';
         }
@@ -356,6 +358,7 @@ export async function initializeEmailNotificationConsumer(tenantId: string) {
                   ticket: {
                     id: event.payload.ticketNumber || event.payload.ticketId,
                     title: event.payload.title,
+                    description: event.payload.description,
                     priority: event.payload.priority,
                     status: event.payload.status,
                     url: `/tickets/${event.payload.ticketNumber || event.payload.ticketId}`
@@ -486,6 +489,7 @@ export async function initializeEmailNotificationConsumer(tenantId: string) {
                     ticket: {
                       id: event.payload.ticketNumber || event.payload.ticketId,
                       title: event.payload.title,
+                      description: event.payload.description,
                       priority: event.payload.priority,
                       status: event.payload.status,
                       url: `/tickets/${event.payload.ticketNumber || event.payload.ticketId}`

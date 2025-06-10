@@ -63,10 +63,24 @@ export class EmailService {
 
   private async initializeConfig() {
     console.log('[EmailService] Starting email service configuration');
+    console.log('[EmailService] Environment variables check:', {
+      EMAIL_ENABLE: process.env.EMAIL_ENABLE,
+      EMAIL_HOST: process.env.EMAIL_HOST,
+      EMAIL_PORT: process.env.EMAIL_PORT,
+      EMAIL_USERNAME: process.env.EMAIL_USERNAME,
+      EMAIL_FROM: process.env.EMAIL_FROM,
+      // Don't log password for security
+      HAS_EMAIL_PASSWORD: !!process.env.EMAIL_PASSWORD
+    });
+    
     const isEnabled = process.env.EMAIL_ENABLE === 'true';
     
     if (!isEnabled) {
-      console.log('[EmailService] Email notifications are disabled via EMAIL_ENABLE environment variable');
+      console.log('[EmailService] Email notifications are disabled via EMAIL_ENABLE environment variable:', {
+        EMAIL_ENABLE_VALUE: process.env.EMAIL_ENABLE,
+        EXPECTED_VALUE: 'true',
+        ACTUAL_TYPE: typeof process.env.EMAIL_ENABLE
+      });
       return;
     }
 
@@ -83,9 +97,25 @@ export class EmailService {
     if (!from) missingConfigs.push('EMAIL_FROM/SMTP_FROM');
 
     if (missingConfigs.length > 0) {
-      console.error('[EmailService] Missing required email configuration:', missingConfigs.join(', '));
+      console.error('[EmailService] Missing required email configuration:', {
+        missingConfigs: missingConfigs.join(', '),
+        availableValues: {
+          host: !!host,
+          username: !!username,
+          password: !!password,
+          from: !!from
+        }
+      });
       return;
     }
+
+    console.log('[EmailService] Configuration validated successfully:', {
+      host: host,
+      port: port,
+      username: username,
+      from: from,
+      isEnabled: isEnabled
+    });
 
     this.config = {
       host: host!,
@@ -105,6 +135,13 @@ export class EmailService {
       return;
     }
 
+    console.log('[EmailService] Initializing transporter with config:', {
+      host: this.config.host,
+      port: this.config.port,
+      secure: this.config.port === 465,
+      username: this.config.username
+    });
+
     try {
       this.transporter = nodemailer.createTransport({
         host: this.config.host,
@@ -116,11 +153,21 @@ export class EmailService {
         }
       });
 
+      console.log('[EmailService] Transporter created, attempting verification...');
+      
       // Verify transporter configuration
       await this.transporter.verify();
       console.log('[EmailService] Transporter verified successfully');
     } catch (error) {
-      console.error('[EmailService] Failed to initialize transporter:', error);
+      console.error('[EmailService] Failed to initialize transporter:', {
+        error: error,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        config: {
+          host: this.config.host,
+          port: this.config.port,
+          username: this.config.username
+        }
+      });
       this.transporter = null;
     }
   }
@@ -133,8 +180,45 @@ export class EmailService {
   }
 
   public async sendEmail(options: EmailOptions): Promise<boolean> {
-    if (!this.config?.isEnabled || !this.transporter) {
-      console.log('[EmailService] Email service is not enabled or not properly configured');
+    console.log('[EmailService] sendEmail called with options:', {
+      to: options.to,
+      subject: options.subject,
+      hasHtml: !!options.html,
+      hasText: !!options.text,
+      attachmentCount: options.attachments?.length || 0
+    });
+
+    // Detailed diagnostics
+    const diagnostics = {
+      isInitialized: this.initialized,
+      hasConfig: !!this.config,
+      configIsEnabled: this.config?.isEnabled,
+      hasTransporter: !!this.transporter,
+      transporterType: this.transporter?.constructor?.name
+    };
+
+    console.log('[EmailService] Service state diagnostics:', diagnostics);
+
+    if (!this.config?.isEnabled) {
+      console.log('[EmailService] Service disabled - config.isEnabled is false or config missing:', {
+        hasConfig: !!this.config,
+        configIsEnabled: this.config?.isEnabled,
+        configDetails: this.config ? {
+          host: this.config.host,
+          port: this.config.port,
+          username: this.config.username,
+          from: this.config.from
+        } : null
+      });
+      return false;
+    }
+
+    if (!this.transporter) {
+      console.log('[EmailService] Service disabled - transporter is null/undefined:', {
+        hasConfig: !!this.config,
+        transporterValue: this.transporter,
+        initializationAttempted: this.initialized
+      });
       return false;
     }
 

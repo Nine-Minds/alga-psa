@@ -11,7 +11,7 @@ import { Label } from '../ui/Label';
 import CustomSelect from '../ui/CustomSelect';
 import { Switch } from '../ui/Switch';
 import { Badge } from '../ui/Badge';
-import { Mail, Globe, Settings, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Mail, Globe, Settings, CheckCircle, XCircle, Clock, Eye, EyeOff } from 'lucide-react';
 import {
   TenantEmailSettings,
   EmailProviderConfig
@@ -51,12 +51,21 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newDomain, setNewDomain] = useState('');
-  const [activeTab, setActiveTab] = useState('providers');
+  const [selectedProvider, setSelectedProvider] = useState<'smtp' | 'resend'>('smtp');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
 
   useEffect(() => {
     loadEmailSettings();
     loadDomains();
   }, []);
+
+  useEffect(() => {
+    // Update selected provider when settings load
+    if (settings?.emailProvider) {
+      setSelectedProvider(settings.emailProvider);
+    }
+  }, [settings]);
 
   const loadEmailSettings = async () => {
     try {
@@ -99,8 +108,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
     try {
       await addEmailDomain(newDomain.trim());
       setNewDomain('');
-      loadDomains();
-      setError(null);
+      await loadDomains();
     } catch (err: any) {
       setError(err.message || 'Failed to add domain');
     }
@@ -109,402 +117,372 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
   const verifyDomain = async (domain: string) => {
     try {
       await verifyEmailDomain(domain);
-      loadDomains();
-      setError(null);
+      await loadDomains();
     } catch (err: any) {
       setError(err.message || 'Failed to verify domain');
     }
   };
 
-  const renderProviderConfig = (provider: EmailProviderConfig) => {
+  const handleProviderChange = (providerType: 'smtp' | 'resend') => {
+    if (!settings) return;
+
+    setSelectedProvider(providerType);
+    
+    // Update the settings to use the selected provider
+    const updatedSettings = {
+      ...settings,
+      emailProvider: providerType,
+      providerConfigs: settings.providerConfigs.map(config => ({
+        ...config,
+        isEnabled: config.providerType === providerType
+      }))
+    };
+
+    // Ensure we have a config for the selected provider
+    const hasProvider = updatedSettings.providerConfigs.some(config => config.providerType === providerType);
+    if (!hasProvider) {
+      const newConfig: EmailProviderConfig = {
+        providerId: `${providerType}-provider`,
+        providerType: providerType,
+        isEnabled: true,
+        config: providerType === 'smtp' ? {
+          host: '',
+          port: 587,
+          username: '',
+          password: '',
+          from: ''
+        } : {
+          apiKey: '',
+          from: ''
+        }
+      };
+      updatedSettings.providerConfigs.push(newConfig);
+    }
+
+    setSettings(updatedSettings);
+  };
+
+  const updateProviderConfig = (providerId: string, configUpdates: any) => {
+    if (!settings) return;
+
+    const updatedConfigs = settings.providerConfigs.map(config =>
+      config.providerId === providerId
+        ? { ...config, config: { ...config.config, ...configUpdates } }
+        : config
+    );
+
+    setSettings({ ...settings, providerConfigs: updatedConfigs });
+  };
+
+  const getCurrentProviderConfig = () => {
+    return settings?.providerConfigs.find(config => 
+      config.providerType === selectedProvider && config.isEnabled
+    );
+  };
+
+  const renderSMTPConfig = () => {
+    const config = getCurrentProviderConfig();
+    if (!config) return null;
+
     return (
-      <Card key={provider.providerId} className="mb-4">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-base font-medium flex items-center gap-2">
-            <Mail className="h-4 w-4" />
-            {provider.providerType.toUpperCase()} Provider
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            <Badge variant={provider.isEnabled ? "default" : "secondary"}>
-              {provider.isEnabled ? "Enabled" : "Disabled"}
-            </Badge>
-            <Badge variant="secondary">Priority: {provider.priority}</Badge>
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="smtp-host">SMTP Host</Label>
+            <Input
+              id="smtp-host"
+              value={config.config.host || ''}
+              placeholder="smtp.example.com"
+              onChange={(e) => updateProviderConfig(config.providerId, { host: e.target.value })}
+            />
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor={`${provider.providerId}-enabled`}>Enabled</Label>
-              <Switch
-                id={`${provider.providerId}-enabled`}
-                checked={provider.isEnabled}
-                onCheckedChange={(checked: boolean) => {
-                  if (settings) {
-                    const updatedConfigs = settings.providerConfigs.map(p =>
-                      p.providerId === provider.providerId ? { ...p, isEnabled: checked } : p
-                    );
-                    setSettings({ ...settings, providerConfigs: updatedConfigs });
-                  }
-                }}
-              />
-            </div>
-            <div>
-              <Label htmlFor={`${provider.providerId}-priority`}>Priority</Label>
+          <div>
+            <Label htmlFor="smtp-port">Port</Label>
+            <Input
+              id="smtp-port"
+              type="number"
+              value={config.config.port || 587}
+              placeholder="587"
+              onChange={(e) => updateProviderConfig(config.providerId, { port: parseInt(e.target.value) })}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="smtp-username">Username</Label>
+            <Input
+              id="smtp-username"
+              value={config.config.username || ''}
+              placeholder="your-email@example.com"
+              onChange={(e) => updateProviderConfig(config.providerId, { username: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label htmlFor="smtp-password">Password</Label>
+            <div className="relative">
               <Input
-                id={`${provider.providerId}-priority`}
-                type="number"
-                min="1"
-                value={provider.priority}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  if (settings) {
-                    const updatedConfigs = settings.providerConfigs.map(p =>
-                      p.providerId === provider.providerId 
-                        ? { ...p, priority: parseInt(e.target.value) || 1 } 
-                        : p
-                    );
-                    setSettings({ ...settings, providerConfigs: updatedConfigs });
-                  }
-                }}
+                id="smtp-password"
+                type={showPassword ? "text" : "password"}
+                value={config.config.password === '***' ? '' : config.config.password || ''}
+                placeholder="Enter password"
+                onChange={(e) => updateProviderConfig(config.providerId, { password: e.target.value })}
               />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
           </div>
-          
-          {provider.providerType === 'smtp' && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>SMTP Host</Label>
-                <Input 
-                  value={provider.config.host || ''} 
-                  placeholder="smtp.example.com"
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    if (settings) {
-                      const updatedConfigs = settings.providerConfigs.map(p =>
-                        p.providerId === provider.providerId 
-                          ? { ...p, config: { ...p.config, host: e.target.value } }
-                          : p
-                      );
-                      setSettings({ ...settings, providerConfigs: updatedConfigs });
-                    }
-                  }}
-                />
-              </div>
-              <div>
-                <Label>Port</Label>
-                <Input 
-                  type="number"
-                  value={provider.config.port || 587} 
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    if (settings) {
-                      const updatedConfigs = settings.providerConfigs.map(p =>
-                        p.providerId === provider.providerId 
-                          ? { ...p, config: { ...p.config, port: parseInt(e.target.value) || 587 } }
-                          : p
-                      );
-                      setSettings({ ...settings, providerConfigs: updatedConfigs });
-                    }
-                  }}
-                />
-              </div>
-              <div>
-                <Label>Username</Label>
-                <Input 
-                  value={provider.config.username || ''} 
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    if (settings) {
-                      const updatedConfigs = settings.providerConfigs.map(p =>
-                        p.providerId === provider.providerId 
-                          ? { ...p, config: { ...p.config, username: e.target.value } }
-                          : p
-                      );
-                      setSettings({ ...settings, providerConfigs: updatedConfigs });
-                    }
-                  }}
-                />
-              </div>
-              <div>
-                <Label>Password</Label>
-                <Input 
-                  type="password"
-                  value={provider.config.password || ''} 
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    if (settings) {
-                      const updatedConfigs = settings.providerConfigs.map(p =>
-                        p.providerId === provider.providerId 
-                          ? { ...p, config: { ...p.config, password: e.target.value } }
-                          : p
-                      );
-                      setSettings({ ...settings, providerConfigs: updatedConfigs });
-                    }
-                  }}
-                />
-              </div>
-            </div>
-          )}
-          
-          {provider.providerType === 'resend' && (
-            <div>
-              <Label>API Key</Label>
-              <Input 
-                type="password"
-                value={provider.config.apiKey || ''} 
-                placeholder="re_..."
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  if (settings) {
-                    const updatedConfigs = settings.providerConfigs.map(p =>
-                      p.providerId === provider.providerId 
-                        ? { ...p, config: { ...p.config, apiKey: e.target.value } }
-                        : p
-                    );
-                    setSettings({ ...settings, providerConfigs: updatedConfigs });
-                  }
-                }}
-              />
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        </div>
+
+        <div>
+          <Label htmlFor="smtp-from">From Address</Label>
+          <Input
+            id="smtp-from"
+            value={config.config.from || ''}
+            placeholder="noreply@example.com"
+            onChange={(e) => updateProviderConfig(config.providerId, { from: e.target.value })}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  const renderResendConfig = () => {
+    const config = getCurrentProviderConfig();
+    if (!config) return null;
+
+    return (
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="resend-api-key">Resend API Key</Label>
+          <div className="relative">
+            <Input
+              id="resend-api-key"
+              type={showApiKey ? "text" : "password"}
+              value={config.config.apiKey === '***' ? '' : config.config.apiKey || ''}
+              placeholder="re_xxxxxxxxxxxxxxxxxx"
+              onChange={(e) => updateProviderConfig(config.providerId, { apiKey: e.target.value })}
+            />
+            <button
+              type="button"
+              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              onClick={() => setShowApiKey(!showApiKey)}
+            >
+              {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+          <p className="text-sm text-gray-500 mt-1">
+            Get your API key from <a href="https://resend.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">resend.com/api-keys</a>
+          </p>
+        </div>
+
+        <div>
+          <Label htmlFor="resend-from">From Address</Label>
+          <Input
+            id="resend-from"
+            value={config.config.from || ''}
+            placeholder="noreply@yourdomain.com"
+            onChange={(e) => updateProviderConfig(config.providerId, { from: e.target.value })}
+          />
+          <p className="text-sm text-gray-500 mt-1">
+            Must be from a verified domain. Use the Domains tab to add custom domains.
+          </p>
+        </div>
+      </div>
     );
   };
 
   const renderDomainStatus = (domain: DomainStatus) => {
     const getStatusIcon = () => {
       switch (domain.status) {
-        case 'verified':
-          return <CheckCircle className="h-4 w-4 text-green-500" />;
-        case 'failed':
-          return <XCircle className="h-4 w-4 text-red-500" />;
-        default:
-          return <Clock className="h-4 w-4 text-yellow-500" />;
+        case 'verified': return <CheckCircle className="h-4 w-4 text-green-500" />;
+        case 'failed': return <XCircle className="h-4 w-4 text-red-500" />;
+        default: return <Clock className="h-4 w-4 text-yellow-500" />;
       }
     };
 
-    const getBadgeVariant = (status: string) => {
-      switch (status) {
-        case 'verified':
-          return 'success';
-        case 'failed':
-          return 'error';
-        default:
-          return 'warning';
+    const getStatusBadge = () => {
+      switch (domain.status) {
+        case 'verified': return <Badge variant="default" className="bg-green-100 text-green-800">Verified</Badge>;
+        case 'failed': return <Badge variant="error">Failed</Badge>;
+        default: return <Badge variant="secondary">Pending</Badge>;
       }
     };
 
     return (
-      <Card key={domain.domain} className="mb-4">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-base font-medium flex items-center gap-2">
-            <Globe className="h-4 w-4" />
-            {domain.domain}
-          </CardTitle>
+      <div key={domain.domain} className="border rounded-lg p-4">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             {getStatusIcon()}
-            <Badge variant={getBadgeVariant(domain.status)}>
-              {domain.status}
-            </Badge>
+            <span className="font-medium">{domain.domain}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {getStatusBadge()}
             {domain.status === 'pending' && (
-              <Button 
-                id={`verify-domain-${domain.domain}-button`}
-                size="sm" 
+              <Button
+                id={`verify-domain-${domain.domain}`}
+                size="sm"
+                variant="outline"
                 onClick={() => verifyDomain(domain.domain)}
               >
                 Verify
               </Button>
             )}
           </div>
-        </CardHeader>
-        {domain.dnsRecords && (
-          <CardContent>
-            <div className="text-sm text-muted-foreground mb-2">
-              Required DNS Records:
-            </div>
-            <div className="space-y-2">
-              {domain.dnsRecords.map((record, index) => (
-                <div key={index} className="bg-muted p-2 rounded text-xs font-mono">
-                  <div><strong>Type:</strong> {record.type}</div>
-                  <div><strong>Name:</strong> {record.name}</div>
-                  <div><strong>Value:</strong> {record.value}</div>
+        </div>
+        
+        {domain.dnsRecords && domain.status !== 'verified' && (
+          <div className="mt-3">
+            <p className="text-sm text-gray-600 mb-2">Required DNS Records:</p>
+            <div className="space-y-2 text-sm">
+              {domain.dnsRecords.map((record, idx) => (
+                <div key={idx} className="bg-gray-50 p-2 rounded font-mono text-xs">
+                  <strong>{record.type}</strong> {record.name} → {record.value}
                 </div>
               ))}
             </div>
-          </CardContent>
+          </div>
         )}
-      </Card>
+      </div>
     );
   };
 
-  if (loading) return <div>Loading email settings...</div>;
+  if (loading) {
+    return <div>Loading email settings...</div>;
+  }
+
+  if (error) {
+    return <div className="text-red-600">Error: {error}</div>;
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Email Settings</h1>
-        <Button 
-          id="save-email-settings-button"
-          onClick={saveSettings} 
-          disabled={saving}
-        >
-          {saving ? 'Saving...' : 'Save Changes'}
+      {/* Provider Configuration Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            Email Provider Configuration
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Provider Selection */}
+          <div>
+            <Label htmlFor="provider-select">Email Provider</Label>
+            <CustomSelect
+              id="provider-select"
+              value={selectedProvider}
+              onValueChange={(value: string) => handleProviderChange(value as 'smtp' | 'resend')}
+              options={[
+                { value: 'smtp', label: 'SMTP (Traditional Email Server)' },
+                { value: 'resend', label: 'Resend (Modern API Service)' }
+              ]}
+              placeholder="Select email provider"
+            />
+            <p className="text-sm text-gray-500 mt-1">
+              {selectedProvider === 'smtp' 
+                ? 'Configure traditional SMTP email server settings'
+                : 'Configure Resend API for modern email delivery'
+              }
+            </p>
+          </div>
+
+          {/* Provider Status */}
+          <div className="flex items-center gap-2">
+            <Badge variant={getCurrentProviderConfig()?.isEnabled ? "default" : "secondary"}>
+              {getCurrentProviderConfig()?.isEnabled ? "Active" : "Inactive"}
+            </Badge>
+            <span className="text-sm text-gray-600">
+              {selectedProvider.toUpperCase()} Provider
+            </span>
+          </div>
+
+          {/* Provider-specific Configuration */}
+          {selectedProvider === 'smtp' && renderSMTPConfig()}
+          {selectedProvider === 'resend' && renderResendConfig()}
+
+          {/* General Settings */}
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-medium mb-4">General Settings</h3>
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="tracking-enabled"
+                  checked={settings?.trackingEnabled || false}
+                  onCheckedChange={(checked: boolean) => {
+                    if (settings) {
+                      setSettings({ ...settings, trackingEnabled: checked });
+                    }
+                  }}
+                />
+                <Label htmlFor="tracking-enabled">Enable Email Tracking</Label>
+              </div>
+
+              <div>
+                <Label htmlFor="daily-limit">Daily Email Limit</Label>
+                <Input
+                  id="daily-limit"
+                  type="number"
+                  value={settings?.maxDailyEmails || 1000}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    if (settings) {
+                      setSettings({ 
+                        ...settings, 
+                        maxDailyEmails: parseInt(e.target.value) || undefined 
+                      });
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Custom Domains Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Globe className="h-5 w-5" />
+            Custom Domains
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              placeholder="example.com"
+              value={newDomain}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewDomain(e.target.value)}
+              onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                if (e.key === 'Enter') {
+                  addDomain();
+                }
+              }}
+            />
+            <Button 
+              id="add-domain-button"
+              onClick={addDomain} 
+              disabled={!newDomain.trim()}
+            >
+              Add Domain
+            </Button>
+          </div>
+          
+          {domains.map(renderDomainStatus)}
+        </CardContent>
+      </Card>
+
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <Button id="save-email-settings" onClick={saveSettings} disabled={saving}>
+          {saving ? 'Saving...' : 'Save Settings'}
         </Button>
       </div>
-
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-red-600">{error}</p>
-        </div>
-      )}
-
-      {/* Simple tab navigation */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
-          <button
-            onClick={() => setActiveTab('providers')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'providers'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <Mail className="h-4 w-4 inline mr-2" />
-            Providers
-          </button>
-          <button
-            onClick={() => setActiveTab('domains')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'domains'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <Globe className="h-4 w-4 inline mr-2" />
-            Domains
-          </button>
-          <button
-            onClick={() => setActiveTab('general')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'general'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <Settings className="h-4 w-4 inline mr-2" />
-            General
-          </button>
-        </nav>
-      </div>
-
-      {/* Tab content */}
-      {activeTab === 'providers' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Email Providers Configuration</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {settings?.providerConfigs.map(renderProviderConfig)}
-          </CardContent>
-        </Card>
-      )}
-
-      {activeTab === 'domains' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Custom Domains</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                placeholder="example.com"
-                value={newDomain}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewDomain(e.target.value)}
-                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                  if (e.key === 'Enter') {
-                    addDomain();
-                  }
-                }}
-              />
-              <Button 
-                id="add-domain-button"
-                onClick={addDomain} 
-                disabled={!newDomain.trim()}
-              >
-                Add Domain
-              </Button>
-            </div>
-            
-            {domains.map(renderDomainStatus)}
-          </CardContent>
-        </Card>
-      )}
-
-      {activeTab === 'general' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>General Settings</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="default-provider">Default Email Provider</Label>
-              <CustomSelect
-                id="default-provider"
-                value={settings?.emailProvider || ''}
-                onValueChange={(value: string) => {
-                  if (settings) {
-                    setSettings({ ...settings, emailProvider: value as 'smtp' | 'resend' | 'hybrid' });
-                  }
-                }}
-                options={[
-                  { value: 'smtp', label: 'SMTP Only' },
-                  { value: 'resend', label: 'Resend Only' },
-                  { value: 'hybrid', label: 'Hybrid (with fallback)' }
-                ]}
-                placeholder="Select provider"
-              />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="fallback-enabled"
-                checked={settings?.fallbackEnabled || false}
-                onCheckedChange={(checked: boolean) => {
-                  if (settings) {
-                    setSettings({ ...settings, fallbackEnabled: checked });
-                  }
-                }}
-              />
-              <Label htmlFor="fallback-enabled">Enable Provider Fallback</Label>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="tracking-enabled"
-                checked={settings?.trackingEnabled || false}
-                onCheckedChange={(checked: boolean) => {
-                  if (settings) {
-                    setSettings({ ...settings, trackingEnabled: checked });
-                  }
-                }}
-              />
-              <Label htmlFor="tracking-enabled">Enable Email Tracking</Label>
-            </div>
-
-            <div>
-              <Label htmlFor="daily-limit">Daily Email Limit</Label>
-              <Input
-                id="daily-limit"
-                type="number"
-                value={settings?.maxDailyEmails || 1000}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  if (settings) {
-                    setSettings({ 
-                      ...settings, 
-                      maxDailyEmails: parseInt(e.target.value) || undefined 
-                    });
-                  }
-                }}
-              />
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 };

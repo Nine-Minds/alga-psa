@@ -9,10 +9,10 @@ import {
   TicketAssignedEvent,
   TicketCommentAddedEvent
 } from '../events';
-import { getEmailService } from 'server/src/services/emailService';
 import { sendEventEmail } from '../../notifications/sendEventEmail';
 import logger from '@shared/core/logger';
 import { createTenantKnex } from '../../db';
+import { getConnection } from '../../db/db';
 import { getSecret } from '../../utils/getSecret';
 
 /**
@@ -375,7 +375,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
   const { tenantId } = payload;
   
   try {
-    const { knex: db } = await createTenantKnex();
+    const db = await getConnection(tenantId);
     
     // Get ticket details
     const ticket = await db('tickets as t')
@@ -462,7 +462,10 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
               title: ticket.title,
               priority: ticket.priority_name || 'Unknown',
               status: ticket.status_name || 'Unknown',
-              assignedBy: payload.userId,
+              assignedBy: await db('users')
+                .where({ user_id: payload.userId, tenant: tenantId })
+                .first()
+                .then(user => user ? `${user.first_name} ${user.last_name}` : 'System'),
               url: `/tickets/${ticket.ticket_number}`
             }
           }

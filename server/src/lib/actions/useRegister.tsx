@@ -10,6 +10,8 @@ import { IUserRegister, IUserWithRoles, IRoleWithPermissions } from 'server/src/
 import { getInfoFromToken, createToken } from 'server/src/utils/tokenizer';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
 import { getEmailService } from 'server/src/services/emailService';
+import { EmailProviderManager } from 'server/src/services/email/EmailProviderManager';
+import { TenantEmailSettings, EmailMessage } from 'server/src/types/email.types';
 import logger from 'server/src/utils/logger';
 
 const VERIFY_EMAIL_ENABLED = process.env.VERIFY_EMAIL_ENABLED === 'true';

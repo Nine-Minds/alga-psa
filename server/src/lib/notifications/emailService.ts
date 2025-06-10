@@ -144,12 +144,36 @@ class EmailService {
       hasText: !!params.text
     });
 
-    if (!this.config?.isEnabled || !this.transporter) {
-      console.log('[EmailService] Email service is not enabled or not properly configured:', {
-        isEnabled: this.config?.isEnabled,
-        hasTransporter: !!this.transporter,
-        host: this.config?.host,
-        port: this.config?.port
+    // Enhanced diagnostics
+    const diagnostics = {
+      hasConfig: !!this.config,
+      configIsEnabled: this.config?.isEnabled,
+      hasTransporter: !!this.transporter,
+      isInitialized: this.initialized,
+      configDetails: this.config ? {
+        host: this.config.host,
+        port: this.config.port,
+        username: this.config.username,
+        from: this.config.from
+      } : null
+    };
+
+    console.log('[EmailService - notifications] Service state diagnostics:', diagnostics);
+
+    if (!this.config?.isEnabled) {
+      console.log('[EmailService - notifications] Service disabled - config.isEnabled is false:', {
+        EMAIL_ENABLE_ENV: process.env.EMAIL_ENABLE,
+        configIsEnabled: this.config?.isEnabled,
+        hasConfig: !!this.config
+      });
+      return false;
+    }
+
+    if (!this.transporter) {
+      console.log('[EmailService - notifications] Service disabled - transporter is null:', {
+        hasConfig: !!this.config,
+        transporterValue: this.transporter,
+        initializationAttempted: this.initialized
       });
       return false;
     }

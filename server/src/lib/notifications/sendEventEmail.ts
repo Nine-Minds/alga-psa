@@ -1,5 +1,6 @@
-import { getEmailService } from 'server/src/services/emailService';
 import { getConnection } from '../db/db';
+import { EmailProviderManager } from 'server/src/services/email/EmailProviderManager';
+import { TenantEmailSettings, EmailMessage } from 'server/src/types/email.types';
 import logger from '@shared/core/logger';
 
 export interface SendEmailParams {
@@ -27,9 +28,54 @@ function flattenObject(obj: Record<string, unknown>, prefix = ''): Record<string
   }, {});
 }
 
+/**
+ * Get tenant email settings from database
+ */
+async function getTenantEmailSettings(tenantId: string, knex: any): Promise<TenantEmailSettings | null> {
+  try {
+    const settings = await knex('tenant_email_settings')
+      .where({ tenant_id: tenantId })
+      .first();
+    
+    if (!settings) {
+      logger.warn(`[SendEventEmail] No email settings found for tenant ${tenantId}`);
+      return null;
+    }
+    
+    // Log the tenant settings (mask sensitive data)
+    logger.info(`[SendEventEmail] Retrieved tenant email settings:`, {
+      tenantId,
+      emailProvider: settings.email_provider,
+      defaultFromDomain: settings.default_from_domain,
+      providerConfigsCount: (settings.provider_configs || []).length,
+      trackingEnabled: settings.tracking_enabled,
+      maxDailyEmails: settings.max_daily_emails
+    });
+    
+    // Log provider configurations (with masked API keys)
+    const enabledProviders = (settings.provider_configs || []).filter((c: any) => c.isEnabled);
+    logger.debug(`[SendEventEmail] Found ${enabledProviders.length} enabled email provider(s)`);
+    
+    return {
+      tenantId,
+      defaultFromDomain: settings.default_from_domain,
+      customDomains: settings.custom_domains || [],
+      emailProvider: settings.email_provider,
+      providerConfigs: settings.provider_configs || [],
+      trackingEnabled: settings.tracking_enabled,
+      maxDailyEmails: settings.max_daily_emails,
+      createdAt: new Date(settings.created_at || new Date()),
+      updatedAt: new Date(settings.updated_at || new Date())
+    };
+  } catch (error) {
+    logger.error(`[SendEventEmail] Error fetching tenant email settings:`, error);
+    return null;
+  }
+}
+
 export async function sendEventEmail(params: SendEmailParams): Promise<void> {
   try {
-    logger.info('[SendEventEmail] Preparing to send email:', {
+    logger.info('[SendEventEmail] 🚀 NEW EMAIL PROVIDER MANAGER VERSION - Preparing to send email:', {
       to: params.to,
       subject: params.subject,
       tenantId: params.tenantId,
@@ -126,43 +172,82 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       subject: emailSubject
     });
 
-    // Get email service instance and ensure it's initialized
-    const emailService = await getEmailService();
-    await emailService.initialize();
+    // Get tenant email settings and initialize provider manager
+    const tenantSettings = await getTenantEmailSettings(params.tenantId, knex);
+    
+    if (!tenantSettings) {
+      throw new Error(`No email settings configured for tenant ${params.tenantId}`);
+    }
+    
+    const emailProviderManager = new EmailProviderManager();
+    await emailProviderManager.initialize(tenantSettings);
+    
+    logger.info('[SendEventEmail] Using EmailProviderManager with settings:', {
+      tenantId: params.tenantId,
+      provider: tenantSettings.emailProvider,
+      enabledConfigs: tenantSettings.providerConfigs.filter(c => c.isEnabled).length
+    });
 
-    // Replace template variables with context values
+    // Replace template variables with context values in both HTML and subject
     let html = templateContent;
+    let subject = emailSubject;
+    
     Object.entries(params.context).forEach(([contextKey, contextValue]) => {
       if (typeof contextValue === 'object' && contextValue !== null) {
         Object.entries(contextValue).forEach(([key, value]) => {
           const placeholder = `{{${contextKey}.${key}}}`;
-          html = html.replace(new RegExp(placeholder, 'g'), String(value));
+          const regex = new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+          html = html.replace(regex, String(value));
+          subject = subject.replace(regex, String(value));
         });
       }
     });
 
     logger.debug('[SendEventEmail] Template variables replaced:', {
       originalContent: templateContent,
-      finalContent: html
+      finalContent: html,
+      originalSubject: emailSubject,
+      finalSubject: subject
     });
 
     const text = html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 
-    // Send email using the email service
-    const success = await emailService.sendEmail({
-      to: params.to,
-      subject: emailSubject,
+    // Create email message for provider manager
+    const emailMessage: EmailMessage = {
+      from: { email: tenantSettings.providerConfigs.find(c => c.isEnabled)?.config?.from || 'noreply@example.com' },
+      to: [{ email: params.to }],
+      subject: subject,
       html,
       text
+    };
+
+    // Log right before sending email
+    logger.info('[SendEventEmail] About to send email via EmailProviderManager:', {
+      to: params.to,
+      subject: subject,
+      htmlLength: html.length,
+      textLength: text.length,
+      provider: tenantSettings.emailProvider
     });
 
-    if (!success) {
-      throw new Error('Failed to send email');
+    // Send email using the provider manager
+    const result = await emailProviderManager.sendEmail(emailMessage, params.tenantId);
+
+    logger.info('[SendEventEmail] Email send result:', {
+      success: result.success,
+      to: params.to,
+      subject: subject,
+      providerId: result.providerId,
+      providerType: result.providerType
+    });
+
+    if (!result.success) {
+      throw new Error(`Failed to send email: ${result.error || 'Unknown error'}`);
     }
 
     logger.info('[SendEventEmail] Email sent successfully:', {
       to: params.to,
-      subject: emailSubject,
+      subject: subject,
       tenantId: params.tenantId,
       template: params.template
     });

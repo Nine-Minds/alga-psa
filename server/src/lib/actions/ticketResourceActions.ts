@@ -8,6 +8,7 @@ import { hasPermission } from 'server/src/lib/auth/rbac';
 import { withTransaction } from '@shared/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
+import { getEventBus } from '../../lib/eventBus';
 
 export async function addTicketResource(
   ticketId: string,
@@ -58,6 +59,16 @@ export async function addTicketResource(
         assigned_at: new Date()
       })
       .returning('*');
+
+      // Publish TICKET_ASSIGNED event for additional user assignment
+      await getEventBus().publish({
+        eventType: 'TICKET_ASSIGNED',
+        payload: {
+          tenantId: tenant,
+          ticketId: ticketId,
+          userId: additionalUserId
+        }
+      });
 
       return resource;
     } catch (error) {

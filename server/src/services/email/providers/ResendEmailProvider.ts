@@ -85,6 +85,10 @@ export class ResendEmailProvider implements IEmailProvider {
   private client: AxiosInstance | null = null;
   private config: ResendConfig | null = null;
   private initialized = false;
+  
+  // Cache for connection verification to avoid repeated API calls
+  private static connectionVerified: Map<string, { verified: boolean; timestamp: number }> = new Map();
+  private static readonly VERIFICATION_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
   constructor(providerId: string) {
     this.providerId = providerId;
@@ -102,7 +106,13 @@ export class ResendEmailProvider implements IEmailProvider {
       
       logger.info(`[ResendEmailProvider:${this.providerId}] Resend provider initialized successfully`);
     } catch (error: any) {
-      logger.error(`[ResendEmailProvider:${this.providerId}] Failed to initialize:`, error);
+      // Log safe error information to avoid circular reference issues
+      logger.error(`[ResendEmailProvider:${this.providerId}] Failed to initialize:`, {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
       throw new EmailProviderError(
         `Resend initialization failed: ${error.message}`,
         this.providerId,
@@ -124,48 +134,79 @@ export class ResendEmailProvider implements IEmailProvider {
       );
     }
 
-    try {
-      logger.info(`[ResendEmailProvider:${this.providerId}] Sending email to ${message.to.map(t => t.email).join(', ')}`);
-      
-      const emailRequest = this.buildEmailRequest(message);
-      const response = await this.client.post<ResendEmailResponse>('/emails', emailRequest);
-      
-      logger.info(`[ResendEmailProvider:${this.providerId}] Email sent successfully:`, {
-        messageId: response.data.id,
-        tenantId
-      });
+    const maxRetries = 3;
+    const baseDelay = 1000; // 1 second
 
-      return {
-        success: true,
-        messageId: response.data.id,
-        providerId: this.providerId,
-        providerType: this.providerType,
-        sentAt: new Date(response.data.created_at),
-        metadata: {
-          resendId: response.data.id,
-          from: response.data.from,
-          to: response.data.to
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        logger.info(`[ResendEmailProvider:${this.providerId}] Sending email to ${message.to.map(t => t.email).join(', ')} (attempt ${attempt + 1}/${maxRetries + 1})`);
+        
+        const emailRequest = this.buildEmailRequest(message);
+        const response = await this.client.post<ResendEmailResponse>('/emails', emailRequest);
+        
+        logger.info(`[ResendEmailProvider:${this.providerId}] Email sent successfully:`, {
+          messageId: response.data.id,
+          tenantId,
+          attempt: attempt + 1
+        });
+
+        return {
+          success: true,
+          messageId: response.data.id,
+          providerId: this.providerId,
+          providerType: this.providerType,
+          sentAt: new Date(response.data.created_at),
+          metadata: {
+            resendId: response.data.id,
+            from: response.data.from,
+            to: response.data.to,
+            attempts: attempt + 1
+          }
+        };
+      } catch (error: any) {
+        const isRateLimit = error.response?.status === 429;
+        const isLastAttempt = attempt === maxRetries;
+
+        // Log safe error information to avoid circular reference issues
+        logger.error(`[ResendEmailProvider:${this.providerId}] Failed to send email (attempt ${attempt + 1}):`, {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          isRateLimit,
+          isLastAttempt
+        });
+        
+        // If it's a rate limit error and we have retries left, wait and retry
+        if (isRateLimit && !isLastAttempt) {
+          const delay = baseDelay * Math.pow(2, attempt); // Exponential backoff
+          logger.info(`[ResendEmailProvider:${this.providerId}] Rate limit hit, retrying in ${delay}ms`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
         }
-      };
-    } catch (error: any) {
-      logger.error(`[ResendEmailProvider:${this.providerId}] Failed to send email:`, error);
-      
-      const resendError = this.parseResendError(error);
-      const isRetryable = this.isRetryableError(error);
-      
-      return {
-        success: false,
-        providerId: this.providerId,
-        providerType: this.providerType,
-        error: resendError.message,
-        sentAt: new Date(),
-        metadata: {
-          errorName: resendError.name,
-          statusCode: error.response?.status,
-          retryable: isRetryable
-        }
-      };
+        
+        // If it's the last attempt or not a rate limit error, return failure
+        const resendError = this.parseResendError(error);
+        const isRetryable = this.isRetryableError(error);
+        
+        return {
+          success: false,
+          providerId: this.providerId,
+          providerType: this.providerType,
+          error: resendError.message,
+          sentAt: new Date(),
+          metadata: {
+            errorName: resendError.name,
+            statusCode: error.response?.status,
+            retryable: isRetryable,
+            attempts: attempt + 1
+          }
+        };
+      }
     }
+
+    // This should never be reached, but TypeScript needs it
+    throw new Error('Unexpected end of retry loop');
   }
 
   async sendBulkEmails(messages: EmailMessage[], tenantId: string): Promise<EmailSendResult[]> {
@@ -206,7 +247,13 @@ export class ResendEmailProvider implements IEmailProvider {
           }
         }
       } catch (error: any) {
-        logger.error(`[ResendEmailProvider:${this.providerId}] Batch send failed:`, error);
+        // Log safe error information to avoid circular reference issues
+        logger.error(`[ResendEmailProvider:${this.providerId}] Batch send failed:`, {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data
+        });
         
         // Add failed results for this batch
         for (let j = 0; j < batch.length; j++) {
@@ -248,7 +295,13 @@ export class ResendEmailProvider implements IEmailProvider {
         details: 'Resend API connection successful'
       };
     } catch (error: any) {
-      logger.error(`[ResendEmailProvider:${this.providerId}] Health check failed:`, error);
+      // Log safe error information to avoid circular reference issues
+      logger.error(`[ResendEmailProvider:${this.providerId}] Health check failed:`, {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
       return {
         healthy: false,
         details: `Resend API error: ${error.message}`
@@ -314,7 +367,13 @@ export class ResendEmailProvider implements IEmailProvider {
         status: response.data.status
       };
     } catch (error: any) {
-      logger.error(`[ResendEmailProvider:${this.providerId}] Failed to create domain:`, error);
+      // Log safe error information to avoid circular reference issues
+      logger.error(`[ResendEmailProvider:${this.providerId}] Failed to create domain:`, {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
       throw new EmailProviderError(
         `Failed to create domain: ${error.message}`,
         this.providerId,
@@ -372,7 +431,13 @@ export class ResendEmailProvider implements IEmailProvider {
 
       return result;
     } catch (error: any) {
-      logger.error(`[ResendEmailProvider:${this.providerId}] Failed to verify domain:`, error);
+      // Log safe error information to avoid circular reference issues
+      logger.error(`[ResendEmailProvider:${this.providerId}] Failed to verify domain:`, {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
       
       return {
         domain: 'unknown',
@@ -409,7 +474,13 @@ export class ResendEmailProvider implements IEmailProvider {
         verifiedAt: domain.status === 'verified' ? new Date(domain.created_at) : undefined
       }));
     } catch (error: any) {
-      logger.error(`[ResendEmailProvider:${this.providerId}] Failed to list domains:`, error);
+      // Log safe error information to avoid circular reference issues
+      logger.error(`[ResendEmailProvider:${this.providerId}] Failed to list domains:`, {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
       throw new EmailProviderError(
         `Failed to list domains: ${error.message}`,
         this.providerId,
@@ -436,7 +507,13 @@ export class ResendEmailProvider implements IEmailProvider {
       logger.info(`[ResendEmailProvider:${this.providerId}] Domain deleted successfully: ${domainId}`);
       return { success: true };
     } catch (error: any) {
-      logger.error(`[ResendEmailProvider:${this.providerId}] Failed to delete domain:`, error);
+      // Log safe error information to avoid circular reference issues
+      logger.error(`[ResendEmailProvider:${this.providerId}] Failed to delete domain:`, {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
       throw new EmailProviderError(
         `Failed to delete domain: ${error.message}`,
         this.providerId,
@@ -452,6 +529,18 @@ export class ResendEmailProvider implements IEmailProvider {
       throw new Error('Missing required Resend API key');
     }
 
+    // Log API key details for debugging (safely masked)
+    const apiKey = config.apiKey;
+    const maskedKey = apiKey.length > 8 ? 
+      `${apiKey.substring(0, 12)}...${apiKey.substring(apiKey.length - 6)}` : 
+      '***masked***';
+    
+    logger.info(`[ResendEmailProvider:${this.providerId}] Validating config with API key:`, {
+      apiKeyLength: apiKey.length,
+      maskedKey,
+      baseUrl: config.baseUrl || 'https://api.resend.com'
+    });
+
     return {
       apiKey: config.apiKey,
       baseUrl: config.baseUrl || 'https://api.resend.com',
@@ -463,6 +552,19 @@ export class ResendEmailProvider implements IEmailProvider {
     if (!this.config) {
       throw new Error('No configuration available');
     }
+
+    // Log API key details for debugging (safely masked)
+    const apiKey = this.config.apiKey;
+    const maskedKey = apiKey.length > 8 ? 
+      `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 4)}` : 
+      '***masked***';
+    
+    logger.info(`[ResendEmailProvider:${this.providerId}] Creating client with API key:`, {
+      baseURL: this.config.baseUrl,
+      apiKeyLength: apiKey.length,
+      maskedKey,
+      authHeader: `Bearer ${maskedKey}`
+    });
 
     this.client = axios.create({
       baseURL: this.config.baseUrl,
@@ -491,16 +593,49 @@ export class ResendEmailProvider implements IEmailProvider {
   }
 
   private async verifyConnection(): Promise<void> {
-    if (!this.client) {
+    if (!this.client || !this.config) {
       throw new Error('Client not initialized');
+    }
+
+    // Check cache first
+    const cacheKey = this.config.apiKey;
+    const cached = ResendEmailProvider.connectionVerified.get(cacheKey);
+    const now = Date.now();
+    
+    if (cached && (now - cached.timestamp) < ResendEmailProvider.VERIFICATION_CACHE_TTL) {
+      if (cached.verified) {
+        logger.info(`[ResendEmailProvider:${this.providerId}] API connection verified (cached)`);
+        return;
+      } else {
+        throw new Error('Resend API verification failed (cached)');
+      }
     }
 
     try {
       // Make a simple API call to verify the connection and API key
       await this.client.get('/domains');
       logger.info(`[ResendEmailProvider:${this.providerId}] API connection verified`);
+      
+      // Cache successful verification
+      ResendEmailProvider.connectionVerified.set(cacheKey, {
+        verified: true,
+        timestamp: now
+      });
     } catch (error: any) {
-      logger.error(`[ResendEmailProvider:${this.providerId}] API verification failed:`, error);
+      // Log safe error information to avoid circular reference issues
+      logger.error(`[ResendEmailProvider:${this.providerId}] API verification failed:`, {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
+      
+      // Cache failed verification for a shorter time
+      ResendEmailProvider.connectionVerified.set(cacheKey, {
+        verified: false,
+        timestamp: now
+      });
+      
       throw new Error(`Resend API verification failed: ${error.message}`);
     }
   }

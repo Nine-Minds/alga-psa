@@ -343,10 +343,10 @@ export class EventBus {
 
       eventSchema.parse(fullEvent);
 
-      // Publish to the global workflow events stream
-      const globalStream = 'workflow:events:global';
       const client = await getClient();
 
+      // 1. Publish to the global workflow events stream (for workflows)
+      const globalStream = 'workflow:events:global';
       await this.ensureStreamAndGroup(globalStream);
 
       // Convert the event to the format expected by the workflow worker
@@ -388,10 +388,43 @@ export class EventBus {
         }
       );
 
-      logger.info('[EventBus] Event published successfully:', {
+      logger.info('[EventBus] Event published to workflow stream:', {
         stream: globalStream,
         eventType: fullEvent.eventType,
         eventId: fullEvent.id
+      });
+
+      // 2. ALSO publish to individual event stream (for legacy systems like email notifications)
+      const individualStream = getEventStream(fullEvent.eventType);
+      await this.ensureStreamAndGroup(individualStream);
+
+      // Publish the original event format for legacy consumers
+      await client.xAdd(
+        individualStream,
+        '*',
+        { 
+          event: JSON.stringify(fullEvent)
+        },
+        {
+          TRIM: {
+            strategy: 'MAXLEN',
+            threshold: getRedisConfig().eventBus.maxStreamLength,
+            strategyModifier: '~'
+          }
+        }
+      );
+
+      logger.info('[EventBus] Event published to individual stream:', {
+        stream: individualStream,
+        eventType: fullEvent.eventType,
+        eventId: fullEvent.id
+      });
+
+      logger.info('[EventBus] Event published successfully to both streams:', {
+        eventType: fullEvent.eventType,
+        eventId: fullEvent.id,
+        workflowStream: globalStream,
+        individualStream: individualStream
       });
     } catch (error) {
       logger.error('Error publishing event:', error);
