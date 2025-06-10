@@ -1,15 +1,16 @@
-FROM node:22.5.1
+FROM node:alpine
+
 
 # Install necessary OS packages in a single layer
-RUN apt-get update && apt-get install -y \
+RUN apk add --no-cache \
+    bash \
+    postgresql-client \
+    redis \
     graphicsmagick \
     imagemagick \
     ghostscript \
-    postgresql-client \
-    redis-tools \
     curl \
-    && rm -rf /var/lib/apt/lists/*
-
+    nano
 WORKDIR /app
 
 # Copy only package.json to leverage caching in npm install
