@@ -7,20 +7,33 @@ exports.up = async function(knex) {
     table.timestamp('updated_at');
   });
   
-  // Step 2: Set default values for ALL rows (update each column separately)
+  // Step 2: Set default values for ALL rows
   const currentTimestamp = new Date();
   
-  // Update order_number for any NULL values
-  await knex.raw(`UPDATE priorities SET order_number = 50 WHERE order_number IS NULL`);
+  // Check if there are any rows to update
+  const rowCount = await knex('priorities').count('* as count').first();
+  console.log(`Found ${rowCount.count} rows in priorities table`);
   
-  // Update color for any NULL values  
-  await knex.raw(`UPDATE priorities SET color = '#6B7280' WHERE color IS NULL`);
+  // Update ALL rows unconditionally to ensure no NULLs remain
+  await knex('priorities').update({
+    order_number: 50,
+    color: '#6B7280', 
+    item_type: 'ticket',
+    updated_at: currentTimestamp
+  });
   
-  // Update item_type for any NULL values
-  await knex.raw(`UPDATE priorities SET item_type = 'ticket' WHERE item_type IS NULL`);
+  // Verify no NULL values remain
+  const nullCount = await knex('priorities')
+    .whereNull('order_number')
+    .orWhereNull('color')
+    .orWhereNull('item_type')
+    .orWhereNull('updated_at')
+    .count('* as count')
+    .first();
   
-  // Update updated_at for any NULL values
-  await knex.raw(`UPDATE priorities SET updated_at = ? WHERE updated_at IS NULL`, [currentTimestamp]);
+  if (nullCount.count > 0) {
+    throw new Error(`Still found ${nullCount.count} rows with NULL values after update`);
+  }
   
   // Step 3: Add NOT NULL constraints
   await knex.schema.alterTable('priorities', (table) => {
