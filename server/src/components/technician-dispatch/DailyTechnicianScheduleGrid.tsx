@@ -527,9 +527,9 @@ const DailyTechnicianScheduleGrid: React.FC<DailyTechnicianScheduleGridProps> = 
             {technicians.map((tech) => (
               <div
                 key={tech.user_id}
-                className="h-16 mb-4 flex items-center justify-between text-[rgb(var(--color-text-700))] pl-2 pr-2"
+                className={`h-16 mb-4 flex items-center justify-between pl-2 pr-2 ${tech.is_inactive ? 'text-[rgb(var(--color-text-300))] opacity-75' : 'text-[rgb(var(--color-text-600))]'}`}
               >
-                <span className="truncate">{tech.first_name} {tech.last_name}</span>
+                <span className={`truncate ${tech.is_inactive ? 'text-[rgb(var(--color-text-400))]' : ''}`}>{tech.first_name} {tech.last_name}</span>
                 <Button
                   id={`view-week-${tech.user_id}`}
                   variant="ghost"
@@ -537,7 +537,7 @@ const DailyTechnicianScheduleGrid: React.FC<DailyTechnicianScheduleGridProps> = 
                   onClick={() => onTechnicianClick(tech.user_id)}
                   tooltipText="View Week"
                   tooltip={true}
-                  aria-label={`View week for ${tech.first_name} ${tech.last_name}`}
+                  aria-label={`View week for ${tech.first_name} ${tech.last_name}${tech.is_inactive ? ' (Inactive)' : ''}`}
                 >
                   <CalendarDays className="h-4 w-4" />
                 </Button>

@@ -231,7 +231,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
       try {
         if (canEdit || canView) {
           // Fetch all users including inactive ones - we'll filter them in the display logic
-          const fetchedUsers = await getAllUsers(false, 'internal');
+          const fetchedUsers = await getAllUsers(true, 'internal');
           setUsers(fetchedUsers);
         } else {
           setUsers([]);
