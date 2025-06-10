@@ -309,7 +309,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
     const getStatusBadge = () => {
       switch (domain.status) {
         case 'verified': return <Badge variant="default" className="bg-green-100 text-green-800">Verified</Badge>;
-        case 'failed': return <Badge variant="destructive">Failed</Badge>;
+        case 'failed': return <Badge variant="error">Failed</Badge>;
         default: return <Badge variant="secondary">Pending</Badge>;
       }
     };
@@ -325,6 +325,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
             {getStatusBadge()}
             {domain.status === 'pending' && (
               <Button
+                id={`verify-domain-${domain.domain}`}
                 size="sm"
                 variant="outline"
                 onClick={() => verifyDomain(domain.domain)}
@@ -478,7 +479,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
 
       {/* Save Button */}
       <div className="flex justify-end">
-        <Button onClick={saveSettings} disabled={saving}>
+        <Button id="save-email-settings" onClick={saveSettings} disabled={saving}>
           {saving ? 'Saving...' : 'Save Settings'}
         </Button>
       </div>
