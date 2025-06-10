@@ -60,22 +60,33 @@ export const ServiceTypeModel = {
   async findAllIncludingStandard(knexOrTrx: Knex | Knex.Transaction): Promise<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]> {
     const tenant = await getCurrentTenantId();
 
-    // 1. Fetch all standard types
-    const standardTypes = await knexOrTrx('standard_service_types')
-      .select('id', 'name', 'billing_method')
-      .then(types => types.map(st => ({ ...st, is_standard: true })));
-
-    // 2. Fetch all active tenant-specific custom types
+    // 1. Fetch all active tenant-specific custom types with their referenced standard service type IDs
     const customTypes = await knexOrTrx<IServiceType>(TABLE_NAME)
       .where('tenant', tenant)
       .andWhere('is_active', true)
-      .select('id', 'name', 'billing_method')
+      .select('id', 'name', 'billing_method', 'standard_service_type_id')
       .then(types => types.map(ct => ({ ...ct, is_standard: false })));
 
-    // 3. Combine the lists
-    const combinedTypes = [...standardTypes, ...customTypes];
+    // 2. Get the list of standard service type IDs that are already represented by custom types
+    const referencedStandardTypeIds = customTypes
+      .map(ct => ct.standard_service_type_id)
+      .filter(id => id !== null && id !== undefined);
 
-    // 4. Sort alphabetically by name
+    // 3. Fetch standard types that are NOT already represented by custom types
+    const standardTypes = await knexOrTrx('standard_service_types')
+      .select('id', 'name', 'billing_method')
+      .whereNotIn('id', referencedStandardTypeIds)
+      .then(types => types.map(st => ({ ...st, is_standard: true })));
+
+    // 4. Combine the lists (only custom types and unreferenced standard types)
+    const combinedTypes = [...standardTypes, ...customTypes.map(ct => ({ 
+      id: ct.id, 
+      name: ct.name, 
+      billing_method: ct.billing_method, 
+      is_standard: ct.is_standard 
+    }))];
+
+    // 5. Sort alphabetically by name
     combinedTypes.sort((a, b) => a.name.localeCompare(b.name));
 
     // Ensure the return type matches the promise signature
