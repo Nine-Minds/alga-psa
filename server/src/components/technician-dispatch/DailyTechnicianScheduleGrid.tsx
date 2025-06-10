@@ -117,7 +117,7 @@ const DailyTechnicianScheduleGrid: React.FC<DailyTechnicianScheduleGridProps> = 
   const [hasScrolled, setHasScrolled] = useState(false);
 
   useEffect(() => {
-    if (!hasScrolled && events.length > 0 && gridRef.current) {
+    if (!hasScrolled && gridRef.current) {
       const scrollToBusinessHours = () => {
         const pixelsPerHour = 120; // 4 slots * 30px each
         const scrollToHour = 8;
@@ -130,9 +130,10 @@ const DailyTechnicianScheduleGrid: React.FC<DailyTechnicianScheduleGridProps> = 
         setHasScrolled(true);
       };
 
-      scrollToBusinessHours();
+      // Small delay to ensure the DOM is ready
+      setTimeout(scrollToBusinessHours, 100);
     }
-  }, [events, hasScrolled]); // Only run when events load and haven't scrolled yet
+  }, [hasScrolled]); // Run when component mounts
 
   const isSyncingScroll = useRef(false);
 

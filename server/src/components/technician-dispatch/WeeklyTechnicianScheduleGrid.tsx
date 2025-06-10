@@ -164,7 +164,7 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
   
   // Auto-scroll to business hours when the calendar loads
   useEffect(() => {
-    if (!hasScrolled && calendarRef.current && events.length > 0) {
+    if (!hasScrolled && calendarRef.current) {
       const scrollToBusinessHours = () => {
         const timeGridContainer = calendarRef.current?.querySelector('.rbc-time-content');
         if (timeGridContainer) {
@@ -182,7 +182,7 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
       
       setTimeout(scrollToBusinessHours, 100);
     }
-  }, [events, hasScrolled]);
+  }, [hasScrolled]);
 
   // Get the technicians to display
   const displayedTechnicians = useMemo(() => {
