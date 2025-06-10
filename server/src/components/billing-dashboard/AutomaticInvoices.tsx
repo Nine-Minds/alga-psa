@@ -323,11 +323,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
             data={filteredPeriods}
             // Add onRowClick prop - implementation depends on DataTable component
             // Assuming it takes a function like this:
-            onRowClick={(record: Period) => {
-              if (record.billing_cycle_id) {
-                handlePreviewInvoice(record.billing_cycle_id);
-              }
-            }}
+            // Temporarily disabled invoice preview on row click
+            // onRowClick={(record: Period) => {
+            //   if (record.billing_cycle_id) {
+            //     handlePreviewInvoice(record.billing_cycle_id);
+            //   }
+            // }
             columns={[
               {
                 title: (
@@ -403,14 +404,15 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem
+                          {/* Temporarily disabled invoice preview */}
+                          {/* <DropdownMenuItem
                             id={`preview-invoice-${record.billing_cycle_id}`}
                             onClick={() => handlePreviewInvoice(record.billing_cycle_id || '')}
                             disabled={isPreviewLoading} // Disable only during preview loading
                           >
                             Preview
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
+                          </DropdownMenuItem> */}
+                          {/* <DropdownMenuSeparator /> */}
                           {/* Delete Option Moved Here */}
                           <DropdownMenuItem
                             id={`delete-billing-cycle-${record.billing_cycle_id}`}
@@ -435,8 +437,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
               }
             ]}
             pagination={false}
-            // Fixed rowClassName prop
-            rowClassName={() => "cursor-pointer hover:bg-muted/50"}
+            // Fixed rowClassName prop - removed cursor-pointer since row click is disabled
+            rowClassName={() => "hover:bg-muted/50"}
           />
         </div>
 
