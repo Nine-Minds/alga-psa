@@ -32,9 +32,10 @@ async function getTenantEmailSettings(tenantId: string, knex: any): Promise<Tena
       customDomains: settings.custom_domains || [],
       emailProvider: settings.email_provider,
       providerConfigs: settings.provider_configs || [],
-      fallbackEnabled: settings.fallback_enabled,
       trackingEnabled: settings.tracking_enabled,
-      maxDailyEmails: settings.max_daily_emails
+      maxDailyEmails: settings.max_daily_emails,
+      createdAt: settings.created_at,
+      updatedAt: settings.updated_at
     };
   } catch (error) {
     console.error(`Error fetching tenant email settings:`, error);
@@ -115,7 +116,8 @@ export async function sendVerificationEmail({
       
       // Create email message
       const emailMessage: EmailMessage = {
-        to: email,
+        from: { email: `noreply@${tenantSettings.defaultFromDomain || 'localhost'}` },
+        to: [{ email }],
         subject: template.subject || 'Verify your email address',
         html,
         text
