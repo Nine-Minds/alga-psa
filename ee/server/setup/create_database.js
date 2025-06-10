@@ -5,6 +5,10 @@ import { dirname } from 'path';
 import fs from 'fs';
 import path from 'path';
 
+// Enable long stack traces for async operations
+Error.stackTraceLimit = 50;
+process.env.NODE_OPTIONS = '--async-stack-traces';
+
 // Calculate secrets directory path once at module load
 const DOCKER_SECRETS_PATH = '/run/secrets';
 const LOCAL_SECRETS_PATH = '../secrets';
@@ -13,12 +17,15 @@ const SECRETS_PATH = fs.existsSync(DOCKER_SECRETS_PATH) ? DOCKER_SECRETS_PATH : 
 function getSecret(secretName, envVar, defaultValue = '') {
   const secretPath = path.join(SECRETS_PATH, secretName);
   try {
-    return fs.readFileSync(secretPath, 'utf8').trim();
+    const secret = fs.readFileSync(secretPath, 'utf8').trim();
+    console.log(`Successfully read secret '${secretName}' from file: ${secretPath}`);
+    return secret;
   } catch (error) {
-    if (process.env[envVar]) {
-      console.warn(`Using ${envVar} environment variable instead of Docker secret`);
-      return process.env[envVar] || defaultValue;
-    }
+      console.warn(`Failed to read secret file ${secretPath}:`, error.message);
+      if (process.env[envVar]) {
+        console.warn(`Using ${envVar} environment variable instead of Docker secret`);
+        return process.env[envVar] || defaultValue;
+      }
     console.warn(`Neither secret file ${secretPath} nor ${envVar} environment variable found, using default value`);
     return defaultValue;
   }
@@ -186,6 +193,26 @@ async function createDatabase(retryCount = 0) {
     await dbClient.connect();
 
     // Create extensions required for EE
+        // Check if database is already fully configured by checking for tenants table
+    try {
+      const tenantsCheck = await dbClient.query("SELECT 1 FROM information_schema.tables WHERE table_name = 'tenants'");
+      if (tenantsCheck.rows.length > 0) {
+        console.log('Database appears to be already configured (tenants table exists). Skipping setup.');
+        await dbClient.end();
+        return;
+      }
+    } catch (error) {
+      console.log('Tenants table not found, proceeding with database setup...');
+    }
+
+    // Set Citus mode to sequential for DDL operations if Citus is available
+    try {
+      await dbClient.query(`SET LOCAL citus.multi_shard_modify_mode TO 'sequential';`);
+      console.log('Citus sequential mode enabled');
+    } catch (error) {
+      // Ignore error if Citus is not installed
+      console.log('Citus not detected, continuing with standard PostgreSQL');
+    }
     await dbClient.query(`
       CREATE EXTENSION IF NOT EXISTS "vector";
     `);

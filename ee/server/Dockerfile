@@ -1,27 +1,37 @@
-FROM node:22.5.1
+FROM node:alpine
+
 
 # Install necessary OS packages in a single layer
-RUN apt-get update && apt-get install -y \
+RUN apk add --no-cache \
+    bash \
+    postgresql-client \
+    redis \
     graphicsmagick \
     imagemagick \
     ghostscript \
-    postgresql-client \
-    redis-tools \
     curl \
-    && rm -rf /var/lib/apt/lists/*
-
+    nano
 WORKDIR /app
 
-# Copy only package.json to leverage caching in npm install
+# Copy package files for dependency installation
 COPY ./package.json ./package.json 
-RUN npm install
+COPY ./server/package.json ./server/package.json
+COPY ./tsconfig.base.json ./tsconfig.base.json
+RUN npm install --omit=dev
 
+ARG CACHE_BUST=2
+# Copy pre-built shared workspace
+COPY ./shared/dist ./shared/dist
+COPY ./shared/package.json ./shared/package.json
 
-# Copy source code files that are less likely to change the dependency tree
+# Copy source code files
 RUN mkdir -p /app/ee/server/src/app 
 COPY ./server /app/server 
 COPY ./ee/server/setup /app/server/setup 
-COPY ./ee/server/src /app/ee/server/src 
+COPY ./ee/server/src /app/ee/server/src
+
+# Copy pre-built Next.js application (built locally) - explicit copy to override .dockerignore
+# Add cache busting argument
 
 # Copy base migrations first, then EE migrations (EE migrations will be mixed with CE ones)
 COPY ./server/migrations/ /app/server/migrations/

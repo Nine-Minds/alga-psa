@@ -1,14 +1,14 @@
 # Start with a base image and install system dependencies
 FROM node:alpine AS base
-RUN apk add \
+RUN apk add --no-cache \
+    bash \
+    postgresql-client \
+    redis \
     graphicsmagick \
     imagemagick \
     ghostscript \
-    postgresql-client \
-    redis \
     curl \
-    nano \
-    bash
+    nano
 WORKDIR /app
 
 # Stage for installing dependencies (cache-friendly)
@@ -29,7 +29,7 @@ COPY . .
 
 WORKDIR /app
 RUN npm install --workspace=shared
-RUN npm run build --workspace=shared
+# RUN npm run build --workspace=shared
 
 WORKDIR /app/server
 
@@ -53,7 +53,7 @@ COPY .env.example /app/server/.env
 
 
 WORKDIR /app
-RUN npm run build
+# RUN npm run build
 
 # Final production image with minimal runtime artifacts
 FROM node:alpine
@@ -75,7 +75,9 @@ COPY .env.example /app/server/.env
 
 # Copy built application and node_modules from earlier stages -- minimalist approach
 COPY --from=builder /app/shared ./shared
-COPY --from=builder /app/server/.next ./server/.next
+# Use local build instead of container build
+COPY ./server/.next ./server/.next
+COPY ./server/dist ./server/dist
 COPY --from=builder /app/server/public ./server/public
 COPY --from=builder /app/server/next.config.mjs ./server/
 COPY --from=builder /app/server/package.json ./server/
