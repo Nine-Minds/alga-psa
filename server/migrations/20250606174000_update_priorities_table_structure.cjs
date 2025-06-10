@@ -1,20 +1,35 @@
 exports.up = async function(knex) {
-  // Step 1: Add columns with defaults only (no NOT NULL constraints for CitusDB compatibility)
+  // Step 1: Add columns without constraints
   await knex.schema.alterTable('priorities', (table) => {
-    table.integer('order_number').defaultTo(50);
-    table.text('color').defaultTo('#6B7280');
-    table.text('item_type').defaultTo('ticket');
-    table.timestamp('updated_at').defaultTo(knex.fn.now());
+    table.integer('order_number');
+    table.text('color');
+    table.text('item_type');
+    table.timestamp('updated_at');
   });
   
-  // Step 2: Add CHECK constraint with explicit name
+  // Step 2: Set default values for new columns
+  await knex('priorities').update({
+    order_number: 50,
+    color: '#6B7280',
+    item_type: 'ticket',
+    updated_at: knex.fn.now()
+  });
+  
+  // Step 3: Add NOT NULL constraints
+  await knex.schema.alterTable('priorities', (table) => {
+    table.integer('order_number').notNullable().alter();
+    table.text('color').notNullable().alter();
+    table.text('item_type').notNullable().alter();
+  });
+  
+  // Step 4: Add CHECK constraint with explicit name
   await knex.schema.raw(`
     ALTER TABLE priorities 
     ADD CONSTRAINT priorities_item_type_check 
     CHECK (item_type IN ('ticket', 'project_task'))
   `);
   
-  // Step 3: Add unique constraint with explicit name
+  // Step 5: Add unique constraint with explicit name
   await knex.schema.raw(`
     ALTER TABLE priorities 
     ADD CONSTRAINT priorities_tenant_name_type_unique 
