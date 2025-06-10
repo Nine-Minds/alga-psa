@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button } from 'server/src/components/ui/Button';
+import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import DailyTechnicianScheduleGrid from './DailyTechnicianScheduleGrid';
 import WeeklyTechnicianScheduleGrid from './WeeklyTechnicianScheduleGrid';
 import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
@@ -7,7 +8,7 @@ import { IUser, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { DropEvent, EventDrop, WorkItemDrop } from 'server/src/interfaces/event.interfaces';
 import { View, NavigateAction } from 'react-big-calendar';
 import { withDragAndDropProps } from 'react-big-calendar/lib/addons/dragAndDrop';
-import { XCircle } from 'lucide-react';
+import { XCircle, Plus } from 'lucide-react';
 import moment from 'moment';
 
 interface ScheduleViewPanelProps {
@@ -30,6 +31,9 @@ interface ScheduleViewPanelProps {
   onResetSelections?: () => void;
   onSelectAll?: () => void;
   canEdit?: boolean;
+  showInactiveUsers?: boolean;
+  onShowInactiveUsersChange?: (show: boolean) => void;
+  onQuickAddTicket?: () => void;
 }
 
 const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
@@ -52,6 +56,9 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
   onResetSelections,
   onSelectAll,
   canEdit,
+  showInactiveUsers = false,
+  onShowInactiveUsersChange,
+  onQuickAddTicket,
 }) => {
 
   const handleNavigate = (newDate: Date, view: string, action: string) => {
@@ -136,7 +143,27 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
     <div className="flex-1 p-4 bg-white overflow-hidden flex flex-col">
       {/* Header Section */}
       <div className="flex flex-col mb-4 gap-4 pb-4">
-        <h2 className="text-xl font-bold text-[rgb(var(--color-text-900))]">Technician Dispatch</h2>
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-bold text-[rgb(var(--color-text-900))]">Technician Dispatch</h2>
+          <div className="flex items-center gap-4">
+            {/* Show Inactive Users Switch */}
+            <SwitchWithLabel
+              label="Show Inactive Users"
+              checked={showInactiveUsers}
+              onCheckedChange={onShowInactiveUsersChange || (() => {})}
+            />
+            {/* Quick Add Ticket Button */}
+            <Button
+              id="quick-add-ticket-button"
+              onClick={onQuickAddTicket}
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Add Ticket
+            </Button>
+          </div>
+        </div>
         <div className="flex justify-between items-center w-full">
           {/* Date Navigation - Left */}
           <div className="flex items-center justify-start">
