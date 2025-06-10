@@ -8,14 +8,15 @@ exports.up = async function(knex) {
   });
   
   // Step 2: Set default values for ALL rows (handle both NULL and existing values)
+  const currentTimestamp = new Date();
   await knex.raw(`
     UPDATE priorities 
     SET 
       order_number = COALESCE(order_number, 50),
       color = COALESCE(color, '#6B7280'),
       item_type = COALESCE(item_type, 'ticket'),
-      updated_at = COALESCE(updated_at, CURRENT_TIMESTAMP)
-  `);
+      updated_at = COALESCE(updated_at, ?)
+  `, [currentTimestamp]);
   
   // Step 3: Add NOT NULL constraints
   await knex.schema.alterTable('priorities', (table) => {
