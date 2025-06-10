@@ -7,16 +7,20 @@ exports.up = async function(knex) {
     table.timestamp('updated_at');
   });
   
-  // Step 2: Set default values for ALL rows (handle both NULL and existing values)
+  // Step 2: Set default values for ALL rows (update each column separately)
   const currentTimestamp = new Date();
-  await knex.raw(`
-    UPDATE priorities 
-    SET 
-      order_number = COALESCE(order_number, 50),
-      color = COALESCE(color, '#6B7280'),
-      item_type = COALESCE(item_type, 'ticket'),
-      updated_at = COALESCE(updated_at, ?)
-  `, [currentTimestamp]);
+  
+  // Update order_number for any NULL values
+  await knex.raw(`UPDATE priorities SET order_number = 50 WHERE order_number IS NULL`);
+  
+  // Update color for any NULL values  
+  await knex.raw(`UPDATE priorities SET color = '#6B7280' WHERE color IS NULL`);
+  
+  // Update item_type for any NULL values
+  await knex.raw(`UPDATE priorities SET item_type = 'ticket' WHERE item_type IS NULL`);
+  
+  // Update updated_at for any NULL values
+  await knex.raw(`UPDATE priorities SET updated_at = ? WHERE updated_at IS NULL`, [currentTimestamp]);
   
   // Step 3: Add NOT NULL constraints
   await knex.schema.alterTable('priorities', (table) => {
