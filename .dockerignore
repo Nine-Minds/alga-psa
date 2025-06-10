@@ -51,6 +51,6 @@ docs
 tests
 
 *draft*
-.next
+#.next
 node_modules
 temp_wasm_compile

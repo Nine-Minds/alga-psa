@@ -19,6 +19,7 @@ COPY ./server/package.json ./server/package.json
 COPY ./tsconfig.base.json ./tsconfig.base.json
 RUN npm install --omit=dev
 
+ARG CACHE_BUST=2
 # Copy pre-built shared workspace
 COPY ./shared/dist ./shared/dist
 COPY ./shared/package.json ./shared/package.json
@@ -29,7 +30,9 @@ COPY ./server /app/server
 COPY ./ee/server/setup /app/server/setup 
 COPY ./ee/server/src /app/ee/server/src
 
-# Copy pre-built Next.js application (built locally)
+# Copy pre-built Next.js application (built locally) - explicit copy to override .dockerignore
+# Add cache busting argument
+
 COPY ./server/.next /app/server/.next
 COPY ./server/dist /app/server/dist 
 
