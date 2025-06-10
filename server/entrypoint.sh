@@ -253,13 +253,33 @@ start_app() {
     log "Setting NEXTAUTH_SECRET from secret file..."
     export NEXTAUTH_SECRET=$(get_secret "nextauth_secret" "NEXTAUTH_SECRET")
     
+    # Debug: Check if .next directory exists
+    log "DEBUG: Checking for build artifacts..."
+    log "Current directory: $(pwd)"
+    log "Contents of /app/server:"
+    ls -la /app/server/ || true
+    log "Checking for .next directory:"
+    ls -la /app/server/.next/ || log ".next directory not found"
+    log "Checking for dist directory:"
+    ls -la /app/server/dist/ || log "dist directory not found"
+    
     if [ "$NODE_ENV" = "development" ]; then
         log "Starting server in development mode..."
         npm run dev
     else
         log "Starting server in production mode..."
         pwd
-        cd /app/server && npm start
+        cd /app/server
+        log "About to run npm start in directory: $(pwd)"
+        
+        # Try to start, but don't exit on failure - keep container running for debug
+        if ! npm start; then
+            log "ERROR: npm start failed, but keeping container alive for debugging"
+            log "Sleeping indefinitely - you can exec into the container to troubleshoot"
+            while true; do
+                sleep 3600
+            done
+        fi
     fi
 }
 
