@@ -16,6 +16,7 @@ import { searchDispatchWorkItems, getWorkItemById, DispatchSearchOptions } from 
 import { addScheduleEntry, updateScheduleEntry, getScheduleEntries, deleteScheduleEntry, ScheduleActionResult } from 'server/src/lib/actions/scheduleActions';
 import { getWorkItemStatusOptions, StatusOption } from 'server/src/lib/actions/status-actions/statusActions';
 import { checkCurrentUserPermission, checkCurrentUserPermissions } from 'server/src/lib/actions/permissionActions';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { toast } from 'react-hot-toast';
 import { DragState } from 'server/src/interfaces/drag.interfaces';
 import { HighlightedSlot } from 'server/src/interfaces/schedule.interfaces';
@@ -73,6 +74,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   // Permission states
   const [canView, setCanView] = useState<boolean | null>(null);
   const [canEdit, setCanEdit] = useState<boolean | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isLoadingPermissions, setIsLoadingPermissions] = useState(true);
   const [permissionError, setPermissionError] = useState<string | null>(null);
 
@@ -188,26 +190,38 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
     };
   }, []);
 
-  // Fetch Permissions using batched permission check
+  // Fetch Permissions and Admin Status using batched permission check
   useEffect(() => {
-    const fetchPermissions = async () => {
+    const fetchPermissionsAndAdminStatus = async () => {
       setIsLoadingPermissions(true);
       setPermissionError(null);
       try {
-        const permissionResults = await checkCurrentUserPermissions([
-          { resource: 'technician_dispatch', action: 'read' },
-          { resource: 'technician_dispatch', action: 'update' }
-        ]);
+        // Check if user is admin
+        const currentUser = await getCurrentUser();
+        const userIsAdmin = currentUser ? currentUser.roles.some(role => role.role_name.toLowerCase() === 'admin') : false;
+        setIsAdmin(userIsAdmin);
         
-        const viewPermission = permissionResults.find(
-          p => p.resource === 'technician_dispatch' && p.action === 'read'
-        );
-        const editPermission = permissionResults.find(
-          p => p.resource === 'technician_dispatch' && p.action === 'update'
-        );
-        
-        setCanView(viewPermission?.granted ?? false);
-        setCanEdit(editPermission?.granted ?? false);
+        // If admin, grant all permissions
+        if (userIsAdmin) {
+          setCanView(true);
+          setCanEdit(true);
+        } else {
+          // Otherwise, check specific permissions
+          const permissionResults = await checkCurrentUserPermissions([
+            { resource: 'technician_dispatch', action: 'read' },
+            { resource: 'technician_dispatch', action: 'update' }
+          ]);
+          
+          const viewPermission = permissionResults.find(
+            p => p.resource === 'technician_dispatch' && p.action === 'read'
+          );
+          const editPermission = permissionResults.find(
+            p => p.resource === 'technician_dispatch' && p.action === 'update'
+          );
+          
+          setCanView(viewPermission?.granted ?? false);
+          setCanEdit(editPermission?.granted ?? false);
+        }
       } catch (err) {
         console.error('Error fetching permissions:', err);
         setPermissionError('Failed to load permissions.');
@@ -217,7 +231,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
         setIsLoadingPermissions(false);
       }
     };
-    fetchPermissions();
+    fetchPermissionsAndAdminStatus();
   }, []);
 
   useEffect(() => {
