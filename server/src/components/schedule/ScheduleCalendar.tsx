@@ -213,8 +213,25 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
   }, [fetchEvents]);
 
   const handleSelectSlot = (slotInfo: any) => {
+    // For month view, adjust the start time to 8am and end time to be 15 minutes after
+    let adjustedSlotInfo = { ...slotInfo };
+    if (view === 'month') {
+      const startDate = new Date(slotInfo.start);
+      // Set the start time to 8am
+      startDate.setHours(8, 0, 0, 0);
+      
+      const endDate = new Date(startDate);
+      endDate.setMinutes(startDate.getMinutes() + 15);
+      
+      adjustedSlotInfo = {
+        ...slotInfo,
+        start: startDate,
+        end: endDate
+      };
+    }
+    
     setSelectedSlot({
-      ...slotInfo,
+      ...adjustedSlotInfo,
       defaultAssigneeId: focusedTechnicianId
     });
     setShowEntryPopup(true);
