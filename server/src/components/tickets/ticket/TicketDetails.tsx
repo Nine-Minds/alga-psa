@@ -904,56 +904,56 @@ const handleClose = () => {
                 />
 
                 <div className="flex gap-6">
-                    <div className="flex-grow col-span-2 space-y-6" id="ticket-main-content">
+                    <div className="flex-grow col-span-2" id="ticket-main-content">
                         <Suspense fallback={<div id="ticket-info-skeleton" className="animate-pulse bg-gray-200 h-64 rounded-lg mb-6"></div>}>
-                            <TicketInfo
-                                id={`${id}-info`}
-                                ticket={ticket}
-                                conversations={conversations}
-                                statusOptions={statusOptions}
-                                agentOptions={agentOptions}
-                                channelOptions={channelOptions}
-                                priorityOptions={priorityOptions}
-                                onSelectChange={handleSelectChange}
-                                onUpdateDescription={handleUpdateDescription}
-                                isSubmitting={isSubmitting}
-                                users={availableAgents}
-                            />
+                            <div className="mb-6">
+                                <TicketInfo
+                                    id={`${id}-info`}
+                                    ticket={ticket}
+                                    conversations={conversations}
+                                    statusOptions={statusOptions}
+                                    agentOptions={agentOptions}
+                                    channelOptions={channelOptions}
+                                    priorityOptions={priorityOptions}
+                                    onSelectChange={handleSelectChange}
+                                    onUpdateDescription={handleUpdateDescription}
+                                    isSubmitting={isSubmitting}
+                                    users={availableAgents}
+                                />
+                            </div>
                         </Suspense>
                         <Suspense fallback={<div id="ticket-conversation-skeleton" className="animate-pulse bg-gray-200 h-96 rounded-lg mb-6"></div>}>
-                            <TicketConversation
-                                id={`${id}-conversation`}
-                                ticket={ticket}
-                                conversations={conversations}
-                                documents={documents}
-                                userMap={userMap}
-                                currentUser={session?.user}
-                                activeTab={activeTab}
-                                isEditing={isEditing}
-                                currentComment={currentComment}
-                                editorKey={editorKey}
-                                onNewCommentContentChange={setNewCommentContent}
-                                onAddNewComment={handleAddNewComment}
-                                onTabChange={setActiveTab}
-                                onEdit={handleEdit}
-                                onSave={handleSave}
-                                onClose={handleClose}
-                                onDelete={handleDeleteRequest}
-                                onContentChange={handleContentChange}
-                                isSubmitting={isSubmitting}
-                                hideInternalTab={false}
-                            />
+                            <div className="mb-6">
+                                <TicketConversation
+                                    id={`${id}-conversation`}
+                                    ticket={ticket}
+                                    conversations={conversations}
+                                    documents={documents}
+                                    userMap={userMap}
+                                    currentUser={session?.user}
+                                    activeTab={activeTab}
+                                    isEditing={isEditing}
+                                    currentComment={currentComment}
+                                    editorKey={editorKey}
+                                    onNewCommentContentChange={setNewCommentContent}
+                                    onAddNewComment={handleAddNewComment}
+                                    onTabChange={setActiveTab}
+                                    onEdit={handleEdit}
+                                    onSave={handleSave}
+                                    onClose={handleClose}
+                                    onDelete={handleDeleteRequest}
+                                    onContentChange={handleContentChange}
+                                    isSubmitting={isSubmitting}
+                                    hideInternalTab={false}
+                                />
+                            </div>
                         </Suspense>
                         
                         <Suspense fallback={<div id="ticket-documents-skeleton" className="animate-pulse bg-gray-200 h-64 rounded-lg mb-6"></div>}>
-                            <div className="mt-6">
-                                <div className="bg-white rounded-lg shadow">
-                                    <TicketDocumentsSection
-                                        id={`${id}-documents-section`}
-                                        ticketId={ticket.ticket_id || ''}
-                                    />
-                                </div>
-                            </div>
+                            <TicketDocumentsSection
+                                id={`${id}-documents-section`}
+                                ticketId={ticket.ticket_id || ''}
+                            />
                         </Suspense>
                     </div>
                     <div className={isInDrawer ? "w-96" : "w-1/4"} id="ticket-properties-container">
