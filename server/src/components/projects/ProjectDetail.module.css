@@ -9,8 +9,7 @@
   height: calc(100vh - 100px);
   padding: 1rem;
   position: relative;
-  overflow-y: auto;
-  scroll-behavior: smooth;
+  overflow: hidden; /* Prevent scrolling on main content when using kanban */
 }
 
 .mainContent::-webkit-scrollbar {
@@ -33,13 +32,12 @@
 
 .contentWrapper {
   display: flex;
-  min-height: min-content;
+  flex: 1;
   overflow-x: auto;
   gap: 1rem;
   margin-bottom: 8px;
   padding-bottom: 8px;
-  position: sticky;
-  bottom: 0;
+  min-height: 0; /* Allow flex children to shrink */
 }
 
 .contentWrapper::-webkit-scrollbar {
@@ -71,12 +69,17 @@
 .kanbanContainer {
   flex: 4;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* Allow it to shrink */
 }
 
 .kanbanBoard {
   display: flex;
   gap: 1rem;
   min-width: min-content;
+  flex: 1; /* Take up available height */
+  min-height: 0; /* Allow it to shrink */
 }
 
 .kanbanColumn {
@@ -84,11 +87,44 @@
   flex-direction: column;
   min-width: 230px;
   flex: 1;
+  max-height: 100%;
+  overflow: hidden; /* Prevent overflow on the column itself */
 }
 
 .kanbanTasks {
   padding: 8px;
   flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(155, 155, 155, 0.5) transparent;
+}
+
+/* Minimal scrollbar styling for webkit browsers */
+.kanbanTasks::-webkit-scrollbar {
+  width: 4px;
+}
+
+.kanbanTasks::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.kanbanTasks::-webkit-scrollbar-thumb {
+  background-color: rgba(155, 155, 155, 0.5);
+  border-radius: 2px;
+}
+
+.kanbanTasks::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(155, 155, 155, 0.7);
+}
+
+/* Hide scrollbar when not hovering over the column */
+.kanbanColumn:not(:hover) .kanbanTasks::-webkit-scrollbar {
+  width: 0;
+}
+
+.kanbanColumn:not(:hover) .kanbanTasks {
+  scrollbar-width: none; /* Firefox */
 }
 
 .kanbanWrapper {
