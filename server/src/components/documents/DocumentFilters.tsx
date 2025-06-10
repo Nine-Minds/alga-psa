@@ -22,6 +22,7 @@ const documentTypes: SelectOption[] = [
   { value: 'application/pdf', label: 'PDF' },
   { value: 'image', label: 'Images' },
   { value: 'text', label: 'Documents' },
+  { value: 'video', label: 'Video' },
   { value: 'application', label: 'Other' }
 ];
 

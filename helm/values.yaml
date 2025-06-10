@@ -111,6 +111,7 @@ config:
           - 'text/plain'
           - 'application/msword'
           - 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+          - 'video/*'
         retention_days: 30  # Number of days to retain files
       # S3 configuration (Enterprise Edition only)
       s3:
@@ -121,13 +122,14 @@ config:
         secret_key: ''  # AWS secret key
         endpoint: ''    # Optional custom endpoint for S3-compatible services
         # Storage quotas and limits
-        max_file_size: 104857600  # 100MB in bytes
+        max_file_size: 524288000  # 500MB in bytes
         allowed_mime_types:
           - 'image/*'
           - 'application/pdf'
           - 'text/plain'
           - 'application/msword'
           - 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+          - 'video/*'
         retention_days: 30  # Number of days to retain files
     # Storage locations configuration
     locations:
@@ -142,6 +144,7 @@ config:
           - 'image/png'
           - 'application/msword'
           - 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+          - 'video/*'
       avatars:  # Location for user avatars
         name: "User Avatars"
         path: "/avatars"
