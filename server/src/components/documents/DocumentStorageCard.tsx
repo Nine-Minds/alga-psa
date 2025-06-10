@@ -17,7 +17,10 @@ import {
     FileType,
     FileCode,
     Unlink,
-    EyeOff
+    EyeOff,
+    Video,
+    Eye,
+    X
 } from 'lucide-react';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
@@ -52,9 +55,8 @@ export default function DocumentStorageCard({
     const [isLoading, setIsLoading] = useState(false);
     const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
     const [showDisassociateConfirmation, setShowDisassociateConfirmation] = useState(false);
+    const [showFullSizeModal, setShowFullSizeModal] = useState(false);
 
-    // Debug log
-    console.log('Rendering DocumentStorageCard with document:', document);
 
     const loadPreview = async () => {
         const identifierForPreview = document.file_id || document.document_id;
@@ -122,8 +124,22 @@ export default function DocumentStorageCard({
 
     const handleView = () => {
         if (!document.file_id) return;
-        const downloadUrl = getDocumentDownloadUrl(document.file_id);
-        window.open(downloadUrl, '_blank');
+        
+        // For images, videos, and PDFs, show in modal
+        if (document.mime_type?.startsWith('image/') || 
+            document.mime_type?.startsWith('video/') || 
+            document.mime_type === 'application/pdf') {
+            setShowFullSizeModal(true);
+        } else {
+            // For other files, download
+            const downloadUrl = getDocumentDownloadUrl(document.file_id);
+            window.open(downloadUrl, '_blank');
+        }
+    };
+
+    const handleFullSizeView = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        handleView();
     };
 
     const getFileIcon = () => {
@@ -131,6 +147,9 @@ export default function DocumentStorageCard({
 
         if (document.mime_type.startsWith('image/')) {
             return <Image className="w-6 h-6" />;
+        }
+        if (document.mime_type.startsWith('video/')) {
+            return <Video className="w-6 h-6" />;
         }
         if (document.mime_type === 'application/pdf') {
             return <FileType className="w-6 h-6" />;
@@ -216,19 +235,51 @@ export default function DocumentStorageCard({
                         </div>
                     ) : (
                         <div className="mt-4 preview-container">
-                            {previewContent.previewImage ? (
-                                <img
-                                    src={previewContent.previewImage}
-                                    alt={document.document_name}
-                                    className="max-w-full h-auto rounded-md border border-[rgb(var(--color-border-200))] cursor-pointer"
-                                    style={{ maxHeight: '200px', objectFit: 'contain' }}
-                                    onClick={handleView}
-                                    role="button"
-                                    tabIndex={0}
-                                />
+                            {document.mime_type?.startsWith('video/') ? (
+                                <div className="relative group">
+                                    <video
+                                        className="max-w-full h-auto rounded-md border border-[rgb(var(--color-border-200))] cursor-pointer transition-opacity group-hover:opacity-75"
+                                        style={{ maxHeight: '200px', objectFit: 'contain' }}
+                                        onClick={handleFullSizeView}
+                                        controls={false}
+                                        muted
+                                        preload="metadata"
+                                    >
+                                        <source src={`/api/documents/view/${document.file_id}`} type={document.mime_type} />
+                                        Your browser does not support the video tag.
+                                    </video>
+                                    <div 
+                                        className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                        onClick={handleFullSizeView}
+                                    >
+                                        <div className="bg-black bg-opacity-50 text-white p-2 rounded-full pointer-events-none">
+                                            <Eye className="w-6 h-6" />
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : previewContent.previewImage ? (
+                                <div className="relative group">
+                                    <img
+                                        src={previewContent.previewImage}
+                                        alt={document.document_name}
+                                        className="max-w-full h-auto rounded-md border border-[rgb(var(--color-border-200))] cursor-pointer transition-opacity group-hover:opacity-75"
+                                        style={{ maxHeight: '200px', objectFit: 'contain' }}
+                                        onClick={handleFullSizeView}
+                                        role="button"
+                                        tabIndex={0}
+                                    />
+                                    <div 
+                                        className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                        onClick={handleFullSizeView}
+                                    >
+                                        <div className="bg-black bg-opacity-50 text-white p-2 rounded-full pointer-events-none">
+                                            <Eye className="w-6 h-6" />
+                                        </div>
+                                    </div>
+                                </div>
                             ) : previewContent.content ? (
                                 <div
-                                    className="text-sm text-[rgb(var(--color-text-700))] max-h-[200px] overflow-hidden p-3 rounded-md bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-200))] cursor-pointer"
+                                    className="text-sm text-[rgb(var(--color-text-700))] max-h-[200px] overflow-hidden p-3 rounded-md bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-200))] cursor-pointer hover:bg-[rgb(var(--color-border-100))] transition-colors"
                                     style={{
                                         display: '-webkit-box',
                                         WebkitLineClamp: '8',
@@ -236,7 +287,7 @@ export default function DocumentStorageCard({
                                         whiteSpace: 'pre-wrap'
                                     }}
                                     dangerouslySetInnerHTML={{ __html: previewContent.content }}
-                                    onClick={handleView}
+                                    onClick={handleFullSizeView}
                                     role="button"
                                     tabIndex={0}
                                 />
@@ -339,6 +390,74 @@ export default function DocumentStorageCard({
                 />
             )
         }
+
+        {/* Full Size View Modal */}
+        {showFullSizeModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75" onClick={() => setShowFullSizeModal(false)}>
+                <div className={`relative bg-white rounded-lg shadow-xl overflow-hidden ${
+                    document.mime_type === 'application/pdf' 
+                        ? 'w-[95vw] max-w-6xl h-[90vh]' 
+                        : 'max-w-[90vw] max-h-[90vh]'
+                }`}>
+                    <div className="absolute top-4 right-4 z-10">
+                        <Button
+                            id={`${id}-close-modal-button`}
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowFullSizeModal(false)}
+                            className="bg-black bg-opacity-50 text-white hover:bg-opacity-75 rounded-full p-2"
+                        >
+                            <X className="w-4 h-4" />
+                        </Button>
+                    </div>
+                    <div className="p-4">
+                        <h3 className="text-lg font-semibold mb-4 text-[rgb(var(--color-text-900))]">
+                            {document.document_name}
+                        </h3>
+                        <div className="flex justify-center items-center" onClick={(e) => e.stopPropagation()}>
+                            {document.mime_type?.startsWith('image/') ? (
+                                <img
+                                    src={`/api/documents/view/${document.file_id}`}
+                                    alt={document.document_name}
+                                    className="max-w-full max-h-[70vh] object-contain"
+                                />
+                            ) : document.mime_type?.startsWith('video/') ? (
+                                <video
+                                    className="max-w-full max-h-[70vh] object-contain"
+                                    controls
+                                    autoPlay={false}
+                                >
+                                    <source src={`/api/documents/view/${document.file_id}`} type={document.mime_type} />
+                                    Your browser does not support the video tag.
+                                </video>
+                            ) : document.mime_type === 'application/pdf' ? (
+                                <iframe
+                                    src={`/api/documents/view/${document.file_id}`}
+                                    className="w-full border-0"
+                                    style={{ height: 'calc(90vh - 120px)', width: '100%' }}
+                                    title={document.document_name}
+                                />
+                            ) : (
+                                <div className="text-center p-8">
+                                    <p className="text-[rgb(var(--color-text-500))]">Preview not available for this file type.</p>
+                                    <Button
+                                        id={`${id}-download-modal-button`}
+                                        onClick={() => {
+                                            const downloadUrl = getDocumentDownloadUrl(document.file_id!);
+                                            window.open(downloadUrl, '_blank');
+                                        }}
+                                        className="mt-4"
+                                    >
+                                        <Download className="w-4 h-4 mr-2" />
+                                        Download File
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
         </>
     );
 

@@ -23,8 +23,8 @@ const config: StorageConfig = {
         local: {
             type: 'local',
             basePath: process.env.STORAGE_LOCAL_BASE_PATH || '/data/files',
-            maxFileSize: parseInt(process.env.STORAGE_LOCAL_MAX_FILE_SIZE || '209715200'), // 200MB
-            allowedMimeTypes: (process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES || 'image/*,application/pdf,text/plain,application/zip').split(','),
+            maxFileSize: parseInt(process.env.STORAGE_LOCAL_MAX_FILE_SIZE || '524288000'), // 500MB
+            allowedMimeTypes: (process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES || 'image/*,application/pdf,text/plain,application/zip,video/*').split(','),
             retentionDays: parseInt(process.env.STORAGE_LOCAL_RETENTION_DAYS || '30'),
         },
         s3: {
@@ -34,8 +34,8 @@ const config: StorageConfig = {
             accessKey: process.env.STORAGE_S3_ACCESS_KEY,
             secretKey: process.env.STORAGE_S3_SECRET_KEY,
             endpoint: process.env.STORAGE_S3_ENDPOINT,
-            maxFileSize: parseInt(process.env.STORAGE_S3_MAX_FILE_SIZE || '104857600'),
-            allowedMimeTypes: (process.env.STORAGE_S3_ALLOWED_MIME_TYPES || 'image/*,application/pdf,text/plain').split(','),
+            maxFileSize: parseInt(process.env.STORAGE_S3_MAX_FILE_SIZE || '524288000'), // 500MB
+            allowedMimeTypes: (process.env.STORAGE_S3_ALLOWED_MIME_TYPES || 'image/*,application/pdf,text/plain,video/*').split(','),
             retentionDays: parseInt(process.env.STORAGE_S3_RETENTION_DAYS || '30'),
         },
     },

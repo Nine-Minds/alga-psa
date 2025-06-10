@@ -5,10 +5,10 @@ export interface IDocumentAssociation extends TenantEntity {
     document_id: string;
     entity_id: string;
     entity_type: 'user' | 'ticket' | 'company' | 'contact' | 'asset';
-    entered_at?: Date;
-    updated_at?: Date;
+    created_at?: Date;
     notes?: string;
     created_by?: string;
+    is_entity_logo?: boolean;
 }
 
 export interface IDocumentAssociationInput {
