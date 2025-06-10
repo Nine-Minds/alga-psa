@@ -55,3 +55,4 @@ RUN chmod +x /app/entrypoint.sh
 EXPOSE 3000
 ENV NODE_ENV=production
 ENTRYPOINT ["/app/entrypoint.sh"]
+
