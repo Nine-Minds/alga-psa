@@ -69,6 +69,9 @@ const UserManagement = (): JSX.Element => {
 
   const handleCreateUser = async () => {
     try {
+      // Clear any previous errors
+      setError(null);
+      
       const createdUser = await addUser({
         firstName: newUser.firstName,
         lastName: newUser.lastName,
@@ -87,9 +90,14 @@ const UserManagement = (): JSX.Element => {
       setShowNewUserForm(false);
       // Reset newUser state with the default role
       setNewUser({ firstName: '', lastName: '', email: '', password: '', role: roles.length > 0 ? roles[0].role_id : '' });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating user:', error);
-      setError('Failed to create user');
+      // Display specific error message if available
+      if (error.message === "A user with this email address already exists") {
+        setError('This email address is already in use. Please use a different email address.');
+      } else {
+        setError(error.message || 'Failed to create user');
+      }
     }
   };
 
@@ -189,11 +197,11 @@ const UserManagement = (): JSX.Element => {
                   placeholder="Select Role"
                 />
               </div>
+              {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
               <Button id="submit-new-user-btn" onClick={handleCreateUser}>Create User</Button>
             </div>
           </div>
         )}
-        {error && <p className="text-red-500 mb-4">{error}</p>}
         {loading ? (
           <p>Loading users...</p>
         ) : (

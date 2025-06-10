@@ -22,6 +22,26 @@ interface ActionResult {
   error?: string;
 }
 
+/**
+ * Check if an email exists globally across all tenants
+ * @param email The email address to check
+ * @returns Promise<boolean> True if email exists, false otherwise
+ */
+export async function checkEmailExistsGlobally(email: string): Promise<boolean> {
+  try {
+    const db = await getAdminConnection();
+    
+    const existingUser = await db('users')
+      .where({ email: email.toLowerCase() })
+      .first();
+    
+    return !!existingUser;
+  } catch (error) {
+    console.error('Error checking email existence globally:', error);
+    throw new Error('Failed to check email existence');
+  }
+}
+
 export async function addUser(userData: { firstName: string; lastName: string; email: string, password: string, roleId?: string }): Promise<IUser> {
   try {
     const {knex: db, tenant} = await createTenantKnex();
@@ -30,13 +50,19 @@ export async function addUser(userData: { firstName: string; lastName: string; e
       throw new Error("Role is required");
     }
 
+    // Check if email already exists globally
+    const emailExists = await checkEmailExistsGlobally(userData.email);
+    if (emailExists) {
+      throw new Error("A user with this email address already exists");
+    }
+
     const newUser = await withTransaction(db, async (trx: Knex.Transaction) => {
       const [user] = await trx('users')
         .insert({
           first_name: userData.firstName,
           last_name: userData.lastName,
-          email: userData.email,
-          username: userData.email,
+          email: userData.email.toLowerCase(), // Store email in lowercase for consistency
+          username: userData.email.toLowerCase(),
           is_inactive: false,
           hashed_password: await hashPassword(userData.password),
           tenant: tenant || undefined
@@ -53,8 +79,12 @@ export async function addUser(userData: { firstName: string; lastName: string; e
 
     revalidatePath('/settings');
     return newUser;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error adding user:', error);
+    // Pass through the specific error message if it's about duplicate email
+    if (error.message === "A user with this email address already exists") {
+      throw error;
+    }
     throw new Error('Failed to add user');
   }
 }
@@ -429,12 +459,9 @@ export async function registerClientUser(
         return { success: false, error: 'Contact is inactive' };
       }
 
-      // Check if user already exists
-      const existingUser = await trx('users')
-        .where({ email })
-        .first();
-
-      if (existingUser) {
+      // Check if user already exists globally
+      const emailExists = await checkEmailExistsGlobally(email);
+      if (emailExists) {
         return { success: false, error: 'User with this email already exists' };
       }
 
