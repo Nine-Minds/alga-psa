@@ -116,13 +116,15 @@ export async function GET(
       return new NextResponse('Forbidden', { status: 403 });
     }
 
-    // Ensure it's an image type (or allow other types if needed)
-    if (!fileRecord.mime_type?.startsWith('image/')) {
-        // Allow SVG as well
-       if (fileRecord.mime_type !== 'image/svg+xml') {
-         console.warn(`Attempted to view non-image file: ${fileId}, MIME: ${fileRecord.mime_type}`);
-         return new NextResponse('File is not a viewable image', { status: 400 });
-       }
+    // Check if it's a viewable file type (images, videos, PDFs)
+    const isViewableType = fileRecord.mime_type?.startsWith('image/') || 
+                          fileRecord.mime_type?.startsWith('video/') || 
+                          fileRecord.mime_type === 'application/pdf' ||
+                          fileRecord.mime_type === 'image/svg+xml';
+    
+    if (!isViewableType) {
+        console.warn(`Attempted to view non-viewable file: ${fileId}, MIME: ${fileRecord.mime_type}`);
+        return new NextResponse('File type not supported for viewing', { status: 400 });
     }
 
     // Get the storage provider instance

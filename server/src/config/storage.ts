@@ -17,11 +17,6 @@ interface StorageConfig {
 }
 
 // Parse environment variables or use defaults
-console.log('Loading storage config with env vars:', {
-    STORAGE_LOCAL_ALLOWED_MIME_TYPES: process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES,
-    STORAGE_S3_ALLOWED_MIME_TYPES: process.env.STORAGE_S3_ALLOWED_MIME_TYPES
-});
-
 const config: StorageConfig = {
     defaultProvider: process.env.STORAGE_DEFAULT_PROVIDER || 'local',
     providers: {
