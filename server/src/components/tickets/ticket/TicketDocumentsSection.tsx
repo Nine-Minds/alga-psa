@@ -5,6 +5,8 @@ import { useSession } from 'next-auth/react';
 import Documents from 'server/src/components/documents/Documents';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { getDocumentByTicketId } from 'server/src/lib/actions/document-actions/documentActions';
+import styles from './TicketDetails.module.css';
+import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 
 interface TicketDocumentsSectionProps {
@@ -45,18 +47,22 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
 
   return (
     <ReflectionContainer id={id} label="Ticket Documents">
-      <div className="p-6">
-        <h2 className="text-xl font-bold mb-4">Documents</h2>
-        <Documents
-          id={`${id}-documents`}
-          documents={documents}
-          userId={userId}
-          entityId={ticketId}
-          entityType="ticket"
-          isLoading={isLoading}
-          onDocumentCreated={fetchDocuments}
-          uploadFormRef={uploadFormRef}
-        />
+      <div {...withDataAutomationId({ id })} className={`${styles['card']}`}>
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold">Documents</h2>
+          </div>
+          <Documents
+            id={`${id}-documents`}
+            documents={documents}
+            userId={userId}
+            entityId={ticketId}
+            entityType="ticket"
+            isLoading={isLoading}
+            onDocumentCreated={fetchDocuments}
+            uploadFormRef={uploadFormRef}
+          />
+        </div>
       </div>
     </ReflectionContainer>
   );
