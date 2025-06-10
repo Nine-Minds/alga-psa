@@ -8,12 +8,21 @@ exports.up = async function(knex) {
   });
   
   // Step 2: Set default values for new columns
-  await knex('priorities').update({
-    order_number: 50,
-    color: '#6B7280',
-    item_type: 'ticket',
-    updated_at: knex.fn.now()
-  });
+  await knex('priorities')
+    .whereNull('order_number')
+    .update({ order_number: 50 });
+    
+  await knex('priorities')
+    .whereNull('color')
+    .update({ color: '#6B7280' });
+    
+  await knex('priorities')
+    .whereNull('item_type')
+    .update({ item_type: 'ticket' });
+    
+  await knex('priorities')
+    .whereNull('updated_at')
+    .update({ updated_at: knex.fn.now() });
   
   // Step 3: Add NOT NULL constraints
   await knex.schema.alterTable('priorities', (table) => {
