@@ -52,9 +52,10 @@ export class EmailNotificationService implements NotificationService {
         customDomains: settings.custom_domains || [],
         emailProvider: settings.email_provider,
         providerConfigs: settings.provider_configs || [],
-        fallbackEnabled: settings.fallback_enabled,
         trackingEnabled: settings.tracking_enabled,
-        maxDailyEmails: settings.max_daily_emails
+        maxDailyEmails: settings.max_daily_emails,
+        createdAt: settings.created_at,
+        updatedAt: settings.updated_at
       };
     } catch (error) {
       console.error(`Error fetching tenant email settings:`, error);
@@ -305,7 +306,7 @@ export class EmailNotificationService implements NotificationService {
       // Get the effective template and compile content
       const template = await this.getEffectiveTemplate(params.tenant, params.templateName);
       const compiledSubject = await this.compileTemplate(template.subject, params.data);
-      const compiledBody = await this.compileTemplate(template.body, params.data);
+      const compiledBody = await this.compileTemplate(template.html_content || '', params.data);
       
       // Get tenant email settings and initialize provider manager
       const tenantSettings = await this.getTenantEmailSettings(params.tenant);
@@ -319,7 +320,8 @@ export class EmailNotificationService implements NotificationService {
 
       // Create email message
       const emailMessage: EmailMessage = {
-        to: params.emailAddress,
+        from: { email: `noreply@${tenantSettings.defaultFromDomain || 'localhost'}` },
+        to: [{ email: params.emailAddress }],
         subject: compiledSubject,
         html: compiledBody,
         text: compiledBody.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
