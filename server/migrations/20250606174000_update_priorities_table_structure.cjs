@@ -1,19 +1,49 @@
 exports.up = async function(knex) {
-  // Add new columns to priorities table for tenant-specific priorities
+  // Step 1: Add columns without constraints
   await knex.schema.alterTable('priorities', (table) => {
-    table.integer('order_number').notNullable().defaultTo(50); // Default ordering
-    table.text('color').notNullable().defaultTo('#6B7280'); // Default gray color
-    table.enum('item_type', ['ticket', 'project_task']).notNullable().defaultTo('ticket');
-    table.timestamp('updated_at').defaultTo(knex.fn.now());
-    
-    // Add unique constraint on tenant, priority_name and item_type combination
-    table.unique(['tenant', 'priority_name', 'item_type']);
+    table.integer('order_number');
+    table.text('color');
+    table.text('item_type');
+    table.timestamp('updated_at');
   });
+  
+  // Step 2: Set default values for new columns
+  await knex('priorities').update({
+    order_number: 50,
+    color: '#6B7280',
+    item_type: 'ticket',
+    updated_at: knex.fn.now()
+  });
+  
+  // Step 3: Add NOT NULL constraints
+  await knex.schema.alterTable('priorities', (table) => {
+    table.integer('order_number').notNullable().alter();
+    table.text('color').notNullable().alter();
+    table.text('item_type').notNullable().alter();
+  });
+  
+  // Step 4: Add CHECK constraint with explicit name
+  await knex.schema.raw(`
+    ALTER TABLE priorities 
+    ADD CONSTRAINT priorities_item_type_check 
+    CHECK (item_type IN ('ticket', 'project_task'))
+  `);
+  
+  // Step 5: Add unique constraint with explicit name
+  await knex.schema.raw(`
+    ALTER TABLE priorities 
+    ADD CONSTRAINT priorities_tenant_name_type_unique 
+    UNIQUE (tenant, priority_name, item_type)
+  `);
 };
 
 exports.down = async function(knex) {
+  // Drop constraints first
+  await knex.schema.raw('ALTER TABLE priorities DROP CONSTRAINT IF EXISTS priorities_tenant_name_type_unique');
+  await knex.schema.raw('ALTER TABLE priorities DROP CONSTRAINT IF EXISTS priorities_item_type_check');
+  
+  // Then drop columns
   await knex.schema.alterTable('priorities', (table) => {
-    table.dropUnique(['tenant', 'priority_name', 'item_type']);
     table.dropColumn('order_number');
     table.dropColumn('color');
     table.dropColumn('item_type');
