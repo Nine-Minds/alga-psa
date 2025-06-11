@@ -169,7 +169,7 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
             {...withDataAutomationId({ id })}
             data-automation-type={dataAutomationType}
           >
-            <span>{selectedChannel?.channel_name || 'Select Channel'}</span>
+            <span className={!selectedChannel ? 'text-gray-400' : ''}>{selectedChannel?.channel_name || 'Select Channel'}</span>
             <ChevronDownIcon className="ml-2 h-4 w-4" />
           </Button>
         </Popover.Trigger>

@@ -254,7 +254,7 @@ export const CompanyPicker: React.FC<CompanyPickerProps & AutomationProps> = ({
               <span>{selectedCompany.company_name}</span>
             </div>
           ) : (
-            <span>Select Client</span>
+            <span className="text-gray-400">Select Client</span>
           )}
           <ChevronDown className="ml-2 h-4 w-4" />
         </Button>

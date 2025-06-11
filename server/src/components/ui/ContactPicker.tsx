@@ -236,9 +236,9 @@ export const ContactPicker: React.FC<ContactPickerProps & AutomationProps> = ({
               border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))]
               hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))]
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
-              disabled:opacity-50 disabled:pointer-events-none
+              disabled:pointer-events-none
               ${buttonWidth === 'full' ? 'w-full' : ''}
-              ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}
+              ${disabled ? 'cursor-not-allowed' : ''}
             `}
           >
             <div className="flex items-center gap-2 flex-1">

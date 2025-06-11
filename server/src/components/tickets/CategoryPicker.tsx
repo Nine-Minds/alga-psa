@@ -20,6 +20,7 @@ interface CategoryPickerProps {
   showExclude?: boolean;
   showReset?: boolean;
   allowEmpty?: boolean;
+  disabled?: boolean;
 }
 
 type CategoryType = 'parent' | 'child';
@@ -36,6 +37,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
   showExclude = false,
   showReset = false,
   allowEmpty = false,
+  disabled = false,
   "data-automation-type": dataAutomationType = 'custom',
 }) => {
   // Register components with UI reflection system
@@ -235,12 +237,13 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
           className={className}
           selectedClassName="bg-gray-50"
           hoverClassName="hover:bg-gray-50"
-          triggerClassName="hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          triggerClassName={`focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${!disabled ? 'hover:border-gray-400' : ''}`}
           contentClassName="bg-white rounded-md shadow-lg border border-gray-200"
           multiSelect={multiSelect}
           showExclude={showExclude}
           showReset={showReset}
           allowEmpty={allowEmpty}
+          disabled={disabled}
         />
       </div>
     </ReflectionContainer>

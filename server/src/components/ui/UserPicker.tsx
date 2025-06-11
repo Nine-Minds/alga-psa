@@ -287,7 +287,7 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
         disabled={disabled}
         {...pickerProps}
         data-automation-type={dataAutomationType}
-        className={`inline-flex items-center justify-between rounded-lg p-2 h-10 text-sm font-medium transition-colors bg-white cursor-pointer border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ${
+        className={`inline-flex items-center justify-between rounded-lg p-2 h-10 text-sm font-medium transition-colors bg-white cursor-pointer border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none ${
           buttonWidth === 'full' ? 'w-full' : 'w-fit min-w-[150px]'
         }`}
       >
@@ -300,7 +300,7 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
               size={size === 'sm' ? 'sm' : 'md'}
             />
           )}
-          <span>{selectedUserName}</span>
+          <span className={!currentUser ? 'text-gray-400' : ''}>{selectedUserName}</span>
         </div>
         <ChevronDown className="w-4 h-4 text-gray-500" />
       </button>
