@@ -10,6 +10,7 @@ import { setNewPassword } from 'server/src/lib/actions/useRegister';
 import { AlertProps, TPasswordCriteria } from 'server/src/interfaces';
 import Alert from 'server/src/components/auth/Alert';
 import { Input } from 'server/src/components/ui/Input';
+import { Button } from 'server/src/components/ui/Button';
 
 
 type FormData = {
@@ -233,12 +234,14 @@ const SetNewPasswordContent: React.FC = () => {
             </div>
           </div>
           <Form.Submit asChild>
-            <button
+            <Button
+              id="reset-password-button"
               type="submit"
-              className="w-full px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+              variant="default"
+              className="w-full"
             >
               Reset password
-            </button>
+            </Button>
           </Form.Submit>
         </Form.Root>
         <div className="text-center">
