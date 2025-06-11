@@ -10,7 +10,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Card } from 'server/src/components/ui/Card';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { EyeOpenIcon, EyeClosedIcon } from '@radix-ui/react-icons';
+import { Eye, EyeOff } from 'lucide-react';
 import PasswordChangeForm from './PasswordChangeForm';
 
 interface UserDetailsProps {
@@ -326,9 +326,9 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                 >
                   {showAdminNewPassword ? (
-                    <EyeOpenIcon className="h-5 w-5 text-gray-400" />
+                    <Eye className="h-5 w-5 text-gray-400" />
                   ) : (
-                    <EyeClosedIcon className="h-5 w-5 text-gray-400" />
+                    <EyeOff className="h-5 w-5 text-gray-400" />
                   )}
                 </button>
               </div>

@@ -12,7 +12,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem
 } from 'server/src/components/ui/DropdownMenu';
-import { Search, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { Search, MoreVertical, Pencil, Trash2, Eye, EyeOff } from 'lucide-react';
 import ClientUserDetails from './ClientUserDetails';
 import { 
   getCurrentUser, 
@@ -38,6 +38,7 @@ export function UserManagementSettings() {
   const [newUser, setNewUser] = useState({ firstName: '', lastName: '', email: '', password: '' });
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [userToDelete, setUserToDelete] = useState<IUser | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const { openDrawer } = useDrawer();
 
   useEffect(() => {
@@ -308,12 +309,26 @@ export function UserManagementSettings() {
               </div>
               <div>
                 <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={newUser.password}
-                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={newUser.password}
+                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  >
+                    {showPassword ? (
+                      <Eye className="h-5 w-5 text-gray-400" />
+                    ) : (
+                      <EyeOff className="h-5 w-5 text-gray-400" />
+                    )}
+                  </button>
+                </div>
               </div>
               <Button id="submit-new-user-btn" onClick={handleCreateUser}>Create User</Button>
             </div>

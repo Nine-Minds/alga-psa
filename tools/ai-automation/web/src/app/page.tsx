@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState, useRef } from 'react';
-import { ArrowRight, Eye, Code, ExternalLink } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Code, ExternalLink } from 'lucide-react';
 import io from 'socket.io-client';
 import Image from 'next/image';
 import { Box, Flex, Grid, Text, TextArea, Button, Card, ScrollArea, Dialog } from '@radix-ui/themes';
@@ -175,6 +175,7 @@ export default function ControlPanel() {
   const [url, setUrl] = useState('http://server:3000');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null); // For fetch cancellation
@@ -733,15 +734,39 @@ export default function ControlPanel() {
                           style={inputStyle}
                         />
                       </Box>
-                      <Box style={{ flex: 1 }}>
+                      <Box style={{ flex: 1, position: 'relative' }}>
                         <input
-                          type="password"
+                          type={showPassword ? "text" : "password"}
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="Password"
                           autoComplete="off"
-                          style={inputStyle}
+                          style={{ ...inputStyle, paddingRight: '40px' }}
                         />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          style={{
+                            position: 'absolute',
+                            right: '8px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'var(--gray-9)'
+                          }}
+                        >
+                          {showPassword ? (
+                            <Eye size={20} />
+                          ) : (
+                            <EyeOff size={20} />
+                          )}
+                        </button>
                       </Box>
                     </Flex>
                   </Flex>

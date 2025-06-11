@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button';
-import { EyeOpenIcon, EyeClosedIcon } from '@radix-ui/react-icons';
+import { Eye, EyeOff } from 'lucide-react';
 import { changeOwnPassword } from 'server/src/lib/actions/user-actions/userActions';
 
 interface PasswordChangeFormProps {
@@ -79,9 +79,9 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
                 className="absolute inset-y-0 right-0 pr-3 flex items-center"
               >
                 {showCurrentPassword ? (
-                  <EyeOpenIcon className="h-5 w-5 text-gray-400" />
+                  <Eye className="h-5 w-5 text-gray-400" />
                 ) : (
-                  <EyeClosedIcon className="h-5 w-5 text-gray-400" />
+                  <EyeOff className="h-5 w-5 text-gray-400" />
                 )}
               </button>
             </div>
@@ -104,9 +104,9 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
                 className="absolute inset-y-0 right-0 pr-3 flex items-center"
               >
                 {showNewPassword ? (
-                  <EyeOpenIcon className="h-5 w-5 text-gray-400" />
+                  <Eye className="h-5 w-5 text-gray-400" />
                 ) : (
-                  <EyeClosedIcon className="h-5 w-5 text-gray-400" />
+                  <EyeOff className="h-5 w-5 text-gray-400" />
                 )}
               </button>
             </div>
@@ -129,9 +129,9 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
                 className="absolute inset-y-0 right-0 pr-3 flex items-center"
               >
                 {showConfirmPassword ? (
-                  <EyeOpenIcon className="h-5 w-5 text-gray-400" />
+                  <Eye className="h-5 w-5 text-gray-400" />
                 ) : (
-                  <EyeClosedIcon className="h-5 w-5 text-gray-400" />
+                  <EyeOff className="h-5 w-5 text-gray-400" />
                 )}
               </button>
             </div>
