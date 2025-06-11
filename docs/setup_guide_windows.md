@@ -94,7 +94,7 @@ EMAIL_PORT=587  # SMTP port (587 for TLS, 465 for SSL)
 EMAIL_USERNAME=noreply@example.com  # SMTP username
 
 # Authentication Configuration
-NEXTAUTH_URL=http://localhost:3000  # Must be valid URL
+NEXTAUTH_URL=http://localhost:3000  # Must be valid URL - for production, use your public domain (e.g., https://your-domain.com)
 NEXTAUTH_SESSION_EXPIRES=86400  # Must be > 0
 ```
 
@@ -220,6 +220,44 @@ docker compose logs [service-name]
 ✓ RLS policies properly configured
 ✓ Database users have appropriate permissions
 ✓ Environment variables properly validated
+
+## Production/Public Deployment Configuration
+
+When deploying for public access (not localhost), additional configuration is required:
+
+### Authentication URL Configuration
+The `NEXTAUTH_URL` environment variable must match your public domain:
+
+```bash
+# For local development
+NEXTAUTH_URL=http://localhost:3000
+
+# For production deployment
+NEXTAUTH_URL=https://your-domain.com
+```
+
+### SSL/TLS Configuration
+For production deployments:
+1. Ensure your domain has valid SSL certificates
+2. Configure your reverse proxy (nginx, Apache, etc.) for HTTPS
+3. Update `NEXTAUTH_URL` to use `https://` protocol
+4. Verify OAuth providers (if used) allow your production domain
+
+### Email Configuration for Production
+Update email settings for production notifications:
+```bash
+EMAIL_ENABLE=true
+EMAIL_FROM=noreply@your-domain.com  # Use your domain
+EMAIL_HOST=your-smtp-server.com
+EMAIL_USERNAME=noreply@your-domain.com
+```
+
+### Security Considerations
+- Use strong, unique secrets (different from development)
+- Ensure all secret files have proper permissions (600)
+- Configure firewall rules appropriately
+- Regular backup procedures
+- Monitor access logs
 
 ## Next Steps
 

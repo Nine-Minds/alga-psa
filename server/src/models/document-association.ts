@@ -16,9 +16,7 @@ class DocumentAssociation extends BaseModel {
         const association: IDocumentAssociation = {
             ...data,
             association_id: uuidv4(),
-            tenant,
-            entered_at: new Date(),
-            updated_at: new Date()
+            tenant
         };
 
         await knexOrTrx('document_associations').insert(association);
@@ -65,7 +63,7 @@ class DocumentAssociation extends BaseModel {
 
         return knexOrTrx('document_associations')
             .where({ entity_id, entity_type, tenant })
-            .orderBy('entered_at', 'desc');
+            .orderBy('created_at', 'desc');
     }
 
     /**

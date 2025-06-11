@@ -269,7 +269,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
           const message = err.message.replace('VALIDATION_ERROR:', '').trim();
           if (message.includes('associated records:')) {
             setDeleteError(
-              `Cannot delete contact\n${message}\n\nTo maintain data integrity, you can edit the contact and set its status to inactive instead.`
+              `Cannot delete contact\n${message}\n\nTo maintain data integrity, you can edit the contact and mark it as inactive instead.`
             );
           } else {
             setDeleteError(message);

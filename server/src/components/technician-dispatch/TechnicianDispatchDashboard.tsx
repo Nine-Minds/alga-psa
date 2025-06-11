@@ -26,6 +26,8 @@ import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 import EntryPopup from 'server/src/components/schedule/EntryPopup';
 import Spinner from 'server/src/components/ui/Spinner';
+import { QuickAddTicket } from 'server/src/components/tickets/QuickAddTicket';
+import { ITicket } from 'server/src/interfaces/ticket.interfaces';
 
 enableMapSet();
 
@@ -70,6 +72,8 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   const [statusFilterOptions, setStatusFilterOptions] = useState<StatusOption[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const ITEMS_PER_PAGE = 10;
+  const [showInactiveUsers, setShowInactiveUsers] = useState<boolean>(false);
+  const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState<boolean>(false);
 
   // Permission states
   const [canView, setCanView] = useState<boolean | null>(null);
@@ -240,6 +244,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
     const fetchInitialData = async () => {
       try {
         if (canEdit || canView) {
+          // Fetch all users including inactive ones - we'll filter them in the display logic
           const fetchedUsers = await getAllUsers(true, 'internal');
           setUsers(fetchedUsers);
         } else {
@@ -563,6 +568,11 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
       filteredUsers = users.filter(user => user.user_id === currentUser.id);
     }
     
+    // Filter out inactive users unless showInactiveUsers is true
+    if (!showInactiveUsers) {
+      filteredUsers = filteredUsers.filter(user => !user.is_inactive);
+    }
+    
     // Sort technicians alphabetically by first name, then last name
     return filteredUsers.sort((a, b) => {
       // First sort by first name
@@ -581,7 +591,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
       
       return 0;
     });
-  }, [users, canView, canEdit, currentUser, isLoadingPermissions]);
+  }, [users, canView, canEdit, currentUser, isLoadingPermissions, showInactiveUsers]);
 
   const displayedEvents = useMemo(() => {
     if (displayedTechnicians.length === 0 && viewMode === 'week') {
@@ -667,6 +677,11 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
       />
     );
   }, [openDrawer, closeDrawer, refreshAllData, events, updateScheduleEntry, addScheduleEntry]);
+
+  const handleTicketAdded = useCallback(async (ticket: ITicket) => {
+    await refreshAllData();
+    toast.success('Ticket created successfully');
+  }, [refreshAllData]);
 
   const handleEventClick = useCallback(async (event: Omit<IScheduleEntry, 'tenant'>) => {
     try {
@@ -875,6 +890,9 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
           onResetSelections={handleResetSelections}
           onSelectAll={handleSelectAll}
           canEdit={canEdit ?? false}
+          showInactiveUsers={showInactiveUsers}
+          onShowInactiveUsersChange={setShowInactiveUsers}
+          onQuickAddTicket={() => setIsQuickAddTicketOpen(true)}
         />
       </div>
 
@@ -900,6 +918,13 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
           />
         </div>
       )}
+
+      {/* Quick Add Ticket Dialog */}
+      <QuickAddTicket
+        open={isQuickAddTicketOpen}
+        onOpenChange={setIsQuickAddTicketOpen}
+        onTicketAdded={handleTicketAdded}
+      />
     </div>
   );
 };

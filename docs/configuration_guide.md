@@ -80,10 +80,14 @@ EMAIL_USERNAME=noreply@example.com  # Required: Valid email address
 
 #### Authentication Settings (NEXTAUTH_*)
 ```
-NEXTAUTH_URL=http://localhost:3000  # Required: Valid URL
+NEXTAUTH_URL=http://localhost:3000  # Required: Valid URL - for production, must match your public domain
 NEXTAUTH_SESSION_EXPIRES=86400  # Required: Number greater than 0
 # NEXTAUTH_SECRET managed via Docker secrets
 ```
+
+**Important**: For production deployments, `NEXTAUTH_URL` must match your actual public domain:
+- Development: `http://localhost:3000`
+- Production: `https://your-domain.com`
 
 #### Crypto Settings (CRYPTO_*)
 ```

@@ -90,15 +90,15 @@ const TechnicianSidebar = ({
         return (
           <div 
             key={tech.user_id} 
-            className={`h-16 mb-4 flex items-center justify-between text-[rgb(var(--color-text-700))] pl-2 rounded-md ${
+            className={`h-16 mb-4 flex items-center justify-between pl-2 rounded-md ${
               isFocus 
                 ? 'bg-[rgb(var(--color-primary-200))]' 
                 : isComparing 
                   ? 'bg-[rgb(var(--color-primary-50))]' 
                   : ''
-            }`}
+            } ${tech.is_inactive ? 'text-[rgb(var(--color-text-300))] opacity-75' : 'text-[rgb(var(--color-text-600))]'}`}
           >
-            <span className="truncate">{tech.first_name} {tech.last_name}</span>
+            <span className={`truncate ${tech.is_inactive ? 'text-[rgb(var(--color-text-400))]' : ''}`}>{tech.first_name} {tech.last_name}</span>
             <div className="flex items-center flex-shrink-0">
               {!isFocus && (
                 <Button
@@ -112,7 +112,7 @@ const TechnicianSidebar = ({
                   }}
                   tooltipText="View Week"
                   tooltip={true}
-                  aria-label={`View week for ${tech.first_name} ${tech.last_name}`}
+                  aria-label={`View week for ${tech.first_name} ${tech.last_name}${tech.is_inactive ? ' (Inactive)' : ''}`}
                 >
                   <CalendarDays className="h-4 w-4" />
                 </Button>
@@ -125,7 +125,7 @@ const TechnicianSidebar = ({
                   onClick={() => onComparisonChange(tech.user_id, !isComparing)}
                   tooltipText={isComparing ? "Stop Comparing" : "Compare"}
                   tooltip={true}
-                  aria-label={`Compare ${tech.first_name} ${tech.last_name}`}
+                  aria-label={`Compare ${tech.first_name} ${tech.last_name}${tech.is_inactive ? ' (Inactive)' : ''}`}
                 >
                   <Layers2 className="h-4 w-4" />
                 </Button>
