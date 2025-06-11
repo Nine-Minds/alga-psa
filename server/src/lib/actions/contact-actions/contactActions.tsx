@@ -1067,6 +1067,7 @@ export async function getContactByEmail(email: string, companyId: string) {
 
 /**
  * Create a new contact for a company
+ * @deprecated Use createOrFindContactByEmail instead for better duplicate handling
  */
 export async function createCompanyContact({
   companyId,
@@ -1087,14 +1088,29 @@ export async function createCompanyContact({
       throw new Error('Tenant not found');
     }
 
+    // Check if email already exists across the tenant
+    const existingContact = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('contacts')
+        .where({ 
+          email: email.trim().toLowerCase(), 
+          tenant 
+        })
+        .first();
+    });
+
+    if (existingContact) {
+      throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system');
+    }
+
     const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const [inserted] = await trx('contacts')
         .insert({
           tenant,
           company_id: companyId,
           full_name: fullName,
-          email,
+          email: email.trim().toLowerCase(),
           phone_number: phone,
+          role: jobTitle,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -1160,7 +1176,7 @@ export async function createOrFindContactByEmail({
   companyId: string;
   phone?: string;
   title?: string;
-}): Promise<{ contact: IContact; isNew: boolean }> {
+}): Promise<{ contact: IContact & { company_name: string }; isNew: boolean }> {
   try {
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
@@ -1168,8 +1184,8 @@ export async function createOrFindContactByEmail({
     }
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // First, try to find existing contact
-      const existingContact = await trx('contacts')
+      // First, check if contact exists anywhere in the tenant
+      const existingContactInTenant = await trx('contacts')
         .select(
           'contacts.*',
           'companies.company_name'
@@ -1180,13 +1196,26 @@ export async function createOrFindContactByEmail({
         })
         .where({
           'contacts.email': email.toLowerCase(),
-          'contacts.company_id': companyId,
           'contacts.tenant': tenant
         })
         .first();
 
-      if (existingContact) {
-        return { contact: existingContact, isNew: false };
+      if (existingContactInTenant) {
+        // If the contact exists but is in a different company, throw an error
+        if (existingContactInTenant.company_id !== companyId) {
+          // If contact has no company, still throw error - don't auto-assign
+          if (!existingContactInTenant.company_id) {
+            throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system without a company assignment');
+          }
+          // If they already belong to a different company, throw error with company name
+          throw new Error(`EMAIL_EXISTS: This email is already associated with ${existingContactInTenant.company_name || 'another company'}`);
+        }
+        // Contact exists in the same company - return it
+        const contactWithCompanyName = {
+          ...existingContactInTenant,
+          company_name: existingContactInTenant.company_name || ''
+        };
+        return { contact: contactWithCompanyName, isNew: false };
       }
 
       // Create new contact if not found
