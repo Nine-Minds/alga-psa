@@ -8,7 +8,8 @@ import {
   createCompany, 
   getAllCompanies, 
   getAllCompaniesPaginated,
-  deleteCompany, 
+  deleteCompany,
+  updateCompany, 
   importCompaniesFromCSV, 
   exportCompaniesToCSV,
   type PaginatedCompaniesResponse 
@@ -24,13 +25,17 @@ import CustomSelect from '../ui/CustomSelect';
 import { getCurrentUser, getUserPreference, setUserPreference } from 'server/src/lib/actions/user-actions/userActions';
 import CompaniesImportDialog from './CompaniesImportDialog';
 import { ConfirmationDialog } from '../ui/ConfirmationDialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { useToast } from 'server/src/hooks/use-toast';
 
 const COMPANY_VIEW_MODE_SETTING = 'company_list_view_mode';
 
 const Companies: React.FC = () => {
+  const { toast } = useToast();
+  
   // UI Reflection Integration
   const { automationIdProps: containerProps, updateMetadata } = useAutomationIdAndRegister({
     id: 'companies-page',
@@ -92,6 +97,7 @@ const Companies: React.FC = () => {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [multiDeleteError, setMultiDeleteError] = useState<string | null>(null);
+  const [showDeactivateOption, setShowDeactivateOption] = useState(false);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -206,6 +212,7 @@ const Companies: React.FC = () => {
   const handleDeleteCompany = async (company: ICompany) => {
     setCompanyToDelete(company);
     setDeleteError(null);
+    setShowDeactivateOption(false);
     setIsDeleteDialogOpen(true);
   };
 
@@ -218,6 +225,7 @@ const Companies: React.FC = () => {
       if (!result.success) {
         if ('code' in result && result.code === 'COMPANY_HAS_DEPENDENCIES') {
           handleDependencyError(result, setDeleteError);
+          setShowDeactivateOption(true);
           return;
         }
         throw new Error(result.message || 'Failed to delete company');
@@ -228,6 +236,24 @@ const Companies: React.FC = () => {
     } catch (error) {
       console.error('Error deleting company:', error);
       setDeleteError('An error occurred while deleting the company. Please try again.');
+    }
+  };
+
+  const handleMarkCompanyInactive = async () => {
+    if (!companyToDelete) return;
+    
+    try {
+      await updateCompany(companyToDelete.company_id, { is_inactive: true });
+      await refreshCompanies();
+      resetDeleteState();
+      toast({
+        title: "Company Status Updated",
+        description: `${companyToDelete.company_name} has been marked as inactive successfully.`,
+        variant: "default"
+      });
+    } catch (error) {
+      console.error('Error marking company as inactive:', error);
+      setDeleteError('An error occurred while marking the company as inactive. Please try again.');
     }
   };
 
@@ -347,8 +373,8 @@ const Companies: React.FC = () => {
     const dependencyText = formatDependencyText(result);
     
     setError(
-      `Unable to delete this company\n\n` +
-      `This company has the following associated records:\n${dependencyText}\n\n` +
+      `Unable to delete this company.\n\n` +
+      `This company has the following associated records:\n• ${dependencyText.split(', ').join('\n• ')}\n\n` +
       `Please remove or reassign these items before deleting the company.`
     );
   };
@@ -358,6 +384,7 @@ const Companies: React.FC = () => {
     setIsDeleteDialogOpen(false);
     setCompanyToDelete(null);
     setDeleteError(null);
+    setShowDeactivateOption(false);
   };
 
   const handleExportToCSV = async () => {
@@ -602,24 +629,67 @@ const Companies: React.FC = () => {
       />
 
       {/* Single company delete confirmation dialog */}
-      <ConfirmationDialog
+      <Dialog 
+        isOpen={isDeleteDialogOpen} 
+        onClose={resetDeleteState}
         id="single-delete-confirmation-dialog"
-        isOpen={isDeleteDialogOpen}
-        onClose={() => {
-          setIsDeleteDialogOpen(false);
-          setCompanyToDelete(null);
-          setDeleteError(null);
-        }}
-        onConfirm={() => void confirmDelete()}
         title="Delete Company"
-        message={
-          deleteError 
-            ? deleteError 
-            : `Are you sure you want to delete ${companyToDelete?.company_name}? This action cannot be undone.`
-        }
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-      />
+      >
+        <DialogContent>
+          <div className="space-y-4">
+            {deleteError ? (
+              <div className="text-gray-600 whitespace-pre-line">
+                {deleteError}
+              </div>
+            ) : (
+              <p className="text-gray-600">
+                Are you sure you want to delete {companyToDelete?.company_name}? This action cannot be undone.
+              </p>
+            )}
+            
+            {showDeactivateOption && deleteError && (
+              <div className="bg-blue-50 p-4 rounded-md border border-blue-200">
+                <p className="text-sm text-blue-800">
+                  <strong>Alternative Option:</strong> You can mark this company as inactive instead. 
+                  Inactive companies are hidden from most views but retain all their data and can be marked as active later.
+                </p>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <div className="mt-4 flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={resetDeleteState}
+                id="single-delete-cancel"
+              >
+                Cancel
+              </Button>
+              
+              {showDeactivateOption && (
+                <Button
+                  variant="ghost"
+                  onClick={() => void handleMarkCompanyInactive()}
+                  id="single-delete-mark-inactive"
+                >
+                  Mark as Inactive
+                </Button>
+              )}
+              
+              {!deleteError && (
+                <Button
+                  onClick={() => void confirmDelete()}
+                  id="single-delete-confirm"
+                  variant="destructive"
+                >
+                  Delete
+                </Button>
+              )}
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       {/* CSV Import Dialog */}
       <CompaniesImportDialog
