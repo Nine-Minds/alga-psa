@@ -539,9 +539,15 @@ export async function changeOwnPassword(
       return { success: false, error: 'User not found' };
     }
 
-    // TODO: Implement password verification and update
-    // These methods need to be implemented in the User model or use direct database operations
-    return { success: false, error: 'Password change functionality not implemented' };
+    // Verify current password
+    const isValidPassword = await User.verifyPassword(currentUser.user_id, currentPassword);
+    if (!isValidPassword) {
+      return { success: false, error: 'Current password is incorrect' };
+    }
+
+    // Hash the new password and update
+    const hashedPassword = await hashPassword(newPassword);
+    await User.updatePassword(currentUser.email, hashedPassword);
 
     return { success: true };
   } catch (error) {
@@ -655,9 +661,9 @@ export async function adminChangeUserPassword(
       return { success: false, error: 'Unauthorized: Admin privileges required' };
     }
 
-    // TODO: Implement password update
-    // This method needs to be implemented in the User model or use direct database operations
-    return { success: false, error: 'Admin password change functionality not implemented' };
+    // Hash the new password and update
+    const hashedPassword = await hashPassword(newPassword);
+    await User.updatePassword(targetUser.email, hashedPassword);
 
     return { success: true };
   } catch (error) {
