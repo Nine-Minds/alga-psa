@@ -239,7 +239,7 @@ const Companies: React.FC = () => {
     }
   };
 
-  const handleDeactivateCompany = async () => {
+  const handleMarkCompanyInactive = async () => {
     if (!companyToDelete) return;
     
     try {
@@ -247,13 +247,13 @@ const Companies: React.FC = () => {
       await refreshCompanies();
       resetDeleteState();
       toast({
-        title: "Company Deactivated",
-        description: `${companyToDelete.company_name} has been deactivated successfully.`,
+        title: "Company Status Updated",
+        description: `${companyToDelete.company_name} has been marked as inactive successfully.`,
         variant: "default"
       });
     } catch (error) {
-      console.error('Error deactivating company:', error);
-      setDeleteError('An error occurred while deactivating the company. Please try again.');
+      console.error('Error marking company as inactive:', error);
+      setDeleteError('An error occurred while marking the company as inactive. Please try again.');
     }
   };
 
@@ -650,8 +650,8 @@ const Companies: React.FC = () => {
             {showDeactivateOption && deleteError && (
               <div className="bg-blue-50 p-4 rounded-md border border-blue-200">
                 <p className="text-sm text-blue-800">
-                  <strong>Alternative Option:</strong> You can deactivate this company instead. 
-                  Deactivated companies are hidden from most views but retain all their data and can be reactivated later.
+                  <strong>Alternative Option:</strong> You can mark this company as inactive instead. 
+                  Inactive companies are hidden from most views but retain all their data and can be marked as active later.
                 </p>
               </div>
             )}
@@ -669,12 +669,11 @@ const Companies: React.FC = () => {
               
               {showDeactivateOption && (
                 <Button
-                  variant="outline"
-                  onClick={() => void handleDeactivateCompany()}
-                  id="single-delete-deactivate"
-                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-300"
+                  variant="ghost"
+                  onClick={() => void handleMarkCompanyInactive()}
+                  id="single-delete-mark-inactive"
                 >
-                  Deactivate Instead
+                  Mark as Inactive
                 </Button>
               )}
               
