@@ -78,22 +78,11 @@ spec:
             - name: vnc
               containerPort: 5900
               protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: http
-            initialDelaySeconds: 60
-            periodSeconds: 30
-            failureThreshold: 3
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: http
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            failureThreshold: 3
           resources:
-            {{- toYaml .Values.devEnv.aiAutomation.api.resources | nindent 12 }}
+            limits:
+              memory: "4Gi"
+            requests:
+              memory: "4Gi"
           volumeMounts:
             - name: shm
               mountPath: /dev/shm
