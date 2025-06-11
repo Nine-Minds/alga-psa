@@ -243,20 +243,22 @@ export const CompanyPicker: React.FC<CompanyPickerProps & AutomationProps> = ({
           id={`${id}-toggle`}
           data-automation-type={dataAutomationType}
         >
-          {selectedCompany ? (
-            <div className="flex items-center space-x-2">
-              <CompanyAvatar
-                companyId={selectedCompany.company_id}
-                companyName={selectedCompany.company_name}
-                logoUrl={selectedCompany.logoUrl ?? null}
-                size="sm"
-              />
-              <span>{selectedCompany.company_name}</span>
-            </div>
-          ) : (
-            <span className="text-gray-400">Select Client</span>
-          )}
-          <ChevronDown className="ml-2 h-4 w-4" />
+          <div className="flex-1 text-left">
+            {selectedCompany ? (
+              <div className="flex items-center space-x-2">
+                <CompanyAvatar
+                  companyId={selectedCompany.company_id}
+                  companyName={selectedCompany.company_name}
+                  logoUrl={selectedCompany.logoUrl ?? null}
+                  size="sm"
+                />
+                <span>{selectedCompany.company_name}</span>
+              </div>
+            ) : (
+              <span className="text-gray-400">Select Client</span>
+            )}
+          </div>
+          <ChevronDown className="h-4 w-4 text-gray-500" />
         </Button>
 
         {isOpen && (
@@ -321,7 +323,7 @@ export const CompanyPicker: React.FC<CompanyPickerProps & AutomationProps> = ({
                       id={`${id}-company-picker-company-${company.company_id}`}
                       label={company.company_name}
                       onClick={(e) => handleSelect(company.company_id, e)}
-                      className={`w-full justify-start px-4 py-2 cursor-pointer hover:bg-gray-100 ${
+                      className={`w-full justify-start px-2 py-2 cursor-pointer hover:bg-gray-100 ${
                         company.company_id === selectedCompanyId ? 'bg-blue-100 hover:bg-blue-200' : ''
                       }`}
                     >

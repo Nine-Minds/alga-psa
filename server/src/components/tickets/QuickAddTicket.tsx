@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
-import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { addTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
@@ -109,12 +108,6 @@ export function QuickAddTicket({
 
         if (Array.isArray(formData.statuses) && formData.statuses.length > 0) {
           setStatuses(formData.statuses);
-          if (!statusId) {
-            const defaultStatus = formData.statuses.find(s => !s.is_closed);
-            if (defaultStatus) {
-              setStatusId(defaultStatus.status_id);
-            }
-          }
         }
 
         if (formData.selectedCompany) {
@@ -376,7 +369,6 @@ export function QuickAddTicket({
             <>
               {hasAttemptedSubmit && error && (
                 <Alert variant="destructive" className="mb-4">
-                  <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
                     <p className="font-medium mb-2">Please fill in the required fields:</p>
                     <ul className="list-disc list-inside space-y-1">
