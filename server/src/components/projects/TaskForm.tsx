@@ -809,7 +809,7 @@ export default function TaskForm({
           <TextArea
                   value={taskName}
                   onChange={(e) => setTaskName(e.target.value)}
-                  placeholder="Title..."
+                  placeholder="Title... *"
                   className="w-full text-2xl font-bold p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                   rows={1}
                 />
@@ -1107,7 +1107,7 @@ export default function TaskForm({
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Button id='save-button' type="submit" disabled={isSubmitting}>
+                    <Button id='save-button' type="submit" disabled={isSubmitting || !taskName.trim()}>
                       {isSubmitting ? (mode === 'edit' ? 'Updating...' : 'Adding...') : (mode === 'edit' ? 'Update' : 'Save')}
                     </Button>
                   </div>

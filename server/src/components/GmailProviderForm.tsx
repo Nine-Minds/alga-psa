@@ -235,7 +235,7 @@ export function GmailProviderForm({
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="providerName">Provider Name</Label>
+              <Label htmlFor="providerName">Provider Name *</Label>
               <Input
                 id="providerName"
                 {...form.register('providerName')}
@@ -247,7 +247,7 @@ export function GmailProviderForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="mailbox">Gmail Address</Label>
+              <Label htmlFor="mailbox">Gmail Address *</Label>
               <Input
                 id="mailbox"
                 type="email"
@@ -291,7 +291,7 @@ export function GmailProviderForm({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="projectId">Google Cloud Project ID</Label>
+            <Label htmlFor="projectId">Google Cloud Project ID *</Label>
             <Input
               id="projectId"
               {...form.register('projectId')}
@@ -304,7 +304,7 @@ export function GmailProviderForm({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="clientId">Client ID</Label>
+              <Label htmlFor="clientId">Client ID *</Label>
               <Input
                 id="clientId"
                 {...form.register('clientId')}
@@ -316,7 +316,7 @@ export function GmailProviderForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="clientSecret">Client Secret</Label>
+              <Label htmlFor="clientSecret">Client Secret *</Label>
               <div className="relative">
                 <Input
                   id="clientSecret"
@@ -342,7 +342,7 @@ export function GmailProviderForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="redirectUri">Redirect URI</Label>
+            <Label htmlFor="redirectUri">Redirect URI *</Label>
             <Input
               id="redirectUri"
               {...form.register('redirectUri')}
@@ -389,7 +389,7 @@ export function GmailProviderForm({
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="pubsubTopicName">Pub/Sub Topic Name</Label>
+              <Label htmlFor="pubsubTopicName">Pub/Sub Topic Name *</Label>
               <Input
                 id="pubsubTopicName"
                 {...form.register('pubsubTopicName')}
@@ -401,7 +401,7 @@ export function GmailProviderForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="pubsubSubscriptionName">Subscription Name</Label>
+              <Label htmlFor="pubsubSubscriptionName">Subscription Name *</Label>
               <Input
                 id="pubsubSubscriptionName"
                 {...form.register('pubsubSubscriptionName')}

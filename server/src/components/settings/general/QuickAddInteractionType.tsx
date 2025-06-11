@@ -101,7 +101,7 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
         {/* Type Name */}
         <div className="space-y-2">
           <Label htmlFor="type-name" className="text-sm font-medium">
-            Interaction Type Name:
+            Interaction Type Name: *
           </Label>
           <Input
             id="type-name"

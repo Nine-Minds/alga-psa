@@ -40,7 +40,7 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ onSubmit }) => {
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
             <div>
                 <Text as="label" size="2" weight="medium" className="block mb-2">
-                    Document Name
+                    Document Name *
                 </Text>
                 <Input
                     {...register('document_name', { required: 'Document name is required' })}
@@ -54,7 +54,7 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ onSubmit }) => {
 
             <div>
                 <Text as="label" size="2" weight="medium" className="block mb-2">
-                    Document Type
+                    Document Type *
                 </Text>
                 <Input
                     {...register('type_id', { required: 'Document type is required' })}
@@ -68,7 +68,7 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ onSubmit }) => {
 
             <div>
                 <Text as="label" size="2" weight="medium" className="block mb-2">
-                    User ID
+                    User ID *
                 </Text>
                 <Input
                     {...register('user_id', { required: 'User ID is required' })}
@@ -109,7 +109,7 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ onSubmit }) => {
 
             <div>
                 <Text as="label" size="2" weight="medium" className="block mb-2">
-                    Order Number
+                    Order Number *
                 </Text>
                 <Input
                     type="number"
@@ -124,7 +124,7 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ onSubmit }) => {
 
             <div>
                 <Text as="label" size="2" weight="medium" className="block mb-2">
-                    Content
+                    Content *
                 </Text>
                 <TextArea
                     {...register('content', { required: 'Content is required' })}

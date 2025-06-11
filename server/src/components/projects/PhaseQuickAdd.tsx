@@ -76,7 +76,7 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
               <TextArea
                 value={phaseName}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPhaseName(e.target.value)}
-                placeholder="Phase name..."
+                placeholder="Phase name... *"
                 className="w-full p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg font-semibold"
                 rows={1}
               />
@@ -109,7 +109,7 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
                 <Button id="cancel-phase-button" variant="ghost" onClick={handleCancel} disabled={isSubmitting}>
                   Cancel
                 </Button>
-                <Button id="save-phase-button" type="submit" disabled={isSubmitting}>
+                <Button id="save-phase-button" type="submit" disabled={isSubmitting || !phaseName.trim()}>
                   {isSubmitting ? 'Adding...' : 'Save'}
                 </Button>
               </div>

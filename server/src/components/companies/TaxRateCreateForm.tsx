@@ -102,7 +102,7 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
                 <p className="text-red-600 text-sm">{validationError || errorTaxRegions}</p>
             )}
             <div>
-                <Label htmlFor="tax-rate-region">Tax Region</Label>
+                <Label htmlFor="tax-rate-region">Tax Region *</Label>
                 <CustomSelect
                     id="tax-rate-region"
                     value={regionCode}
@@ -111,13 +111,13 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
                         setValidationError(null);
                     }}
                     options={taxRegions.map(r => ({ value: r.region_code, label: r.region_name }))}
-                    placeholder={isLoadingTaxRegions ? "Loading regions..." : "Select Tax Region"}
+                    placeholder={isLoadingTaxRegions ? "Loading regions..." : "Select Tax Region *"}
                     disabled={isSubmitting || isLoadingTaxRegions}
                     required={true}
                 />
             </div>
             <div>
-                <Label htmlFor="tax-rate-percentage">Percentage (%)</Label>
+                <Label htmlFor="tax-rate-percentage">Percentage (%) *</Label>
                 <Input
                     id="tax-rate-percentage"
                     type="number"
@@ -127,7 +127,7 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
                         setPercentage(e.target.value);
                         setValidationError(null);
                     }}
-                    placeholder="e.g., 8.25"
+                    placeholder="e.g., 8.25 *"
                     disabled={isSubmitting}
                     required
                 />
@@ -143,7 +143,7 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
                 />
             </div>
             <div>
-                <Label htmlFor="tax-rate-start-date">Start Date</Label>
+                <Label htmlFor="tax-rate-start-date">Start Date *</Label>
                 <Input
                     id="tax-rate-start-date"
                     type="date"
@@ -176,7 +176,7 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
                     closeButton?.click();
                     // If that doesn't work, the parent's onOpenChange(false) should handle it
                 }} disabled={isSubmitting}>Cancel</Button>
-                <Button id="submit-create-tax-rate-button" type="submit" disabled={isSubmitting}>
+                <Button id="submit-create-tax-rate-button" type="submit" disabled={isSubmitting || !regionCode || !percentage.trim() || !startDate}>
                     {isSubmitting ? 'Creating...' : 'Create Tax Rate'}
                 </Button>
             </div>

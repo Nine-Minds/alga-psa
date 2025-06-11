@@ -118,7 +118,7 @@ export default function RegisterForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="email">Email address</Label>
+        <Label htmlFor="email">Email address *</Label>
         <div className="relative">
           <Input
             id="email"
@@ -133,7 +133,7 @@ export default function RegisterForm() {
               emailStatus === 'valid' ? 'border-green-500' :
               emailStatus === 'invalid' ? 'border-red-500' : ''
             }`}
-            placeholder="Enter your email"
+            placeholder="Enter your email *"
             aria-describedby="email-status"
           />
           {isCheckingEmail && (
@@ -162,7 +162,7 @@ export default function RegisterForm() {
       {showNameFields && (
         <>
           <div className="space-y-2">
-            <Label htmlFor="firstName">First Name</Label>
+            <Label htmlFor="firstName">First Name *</Label>
             <Input
               id="firstName"
               name="firstName"
@@ -173,12 +173,12 @@ export default function RegisterForm() {
               onChange={(e) => setFirstName(e.target.value)}
               disabled={isLoading}
               className="mt-1"
-              placeholder="Enter your first name"
+              placeholder="Enter your first name *"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="lastName">Last Name</Label>
+            <Label htmlFor="lastName">Last Name *</Label>
             <Input
               id="lastName"
               name="lastName"
@@ -189,14 +189,14 @@ export default function RegisterForm() {
               onChange={(e) => setLastName(e.target.value)}
               disabled={isLoading}
               className="mt-1"
-              placeholder="Enter your last name"
+              placeholder="Enter your last name *"
             />
           </div>
         </>
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password">Password *</Label>
         <Input
           id="password"
           name="password"
@@ -211,7 +211,7 @@ export default function RegisterForm() {
             passwordStrength === 'medium' ? 'border-yellow-500' :
             passwordStrength === 'weak' ? 'border-red-500' : ''
           }`}
-          placeholder="Create a password"
+          placeholder="Create a password *"
           aria-describedby="password-requirements"
         />
         <div id="password-requirements" className="text-sm mt-1">

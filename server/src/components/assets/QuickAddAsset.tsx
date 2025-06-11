@@ -417,7 +417,7 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
           <form onSubmit={handleSubmit} className="space-y-4">
             {!companyId && (
               <div>
-                <label className="block text-sm font-medium text-gray-700">Company</label>
+                <label className="block text-sm font-medium text-gray-700">Company *</label>
                 <CompanyPicker
                   {...withDataAutomationId({ id: 'company-picker' })}
                   companies={companies}
@@ -432,7 +432,7 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
             )}
 
             <div {...withDataAutomationId({ id: 'asset-name-container' })}>
-              <label className="block text-sm font-medium text-gray-700">Asset Name</label>
+              <label className="block text-sm font-medium text-gray-700">Asset Name *</label>
               <Input
                 {...withDataAutomationId({ id: 'asset-name-input' })}
                 value={formData.name}
@@ -443,7 +443,7 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
             </div>
 
             <div {...withDataAutomationId({ id: 'asset-tag-container' })}>
-              <label className="block text-sm font-medium text-gray-700">Asset Tag</label>
+              <label className="block text-sm font-medium text-gray-700">Asset Tag *</label>
               <Input
                 {...withDataAutomationId({ id: 'asset-tag-input' })}
                 value={formData.asset_tag}
@@ -454,7 +454,7 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
             </div>
 
             <div {...withDataAutomationId({ id: 'asset-type-container' })}>
-              <label className="block text-sm font-medium text-gray-700">Type</label>
+              <label className="block text-sm font-medium text-gray-700">Type *</label>
               <CustomSelect
                 {...withDataAutomationId({ id: 'asset-type-select' })}
                 options={ASSET_TYPE_OPTIONS}
@@ -463,7 +463,7 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
                   ...prev, 
                   asset_type: value as AssetType 
                 }))}
-                placeholder="Select type"
+                placeholder="Select type *"
               />
             </div>
 

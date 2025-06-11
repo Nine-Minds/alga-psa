@@ -128,7 +128,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
               <TextArea
                 value={projectName}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setProjectName(e.target.value)}
-                placeholder="Project Name..."
+                placeholder="Project Name *"
                 className="w-full text-lg font-semibold p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
                 rows={1}
                 autoFocus
@@ -141,7 +141,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                 rows={3}
               />
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status *</label>
                 <CustomSelect
                   value={selectedStatusId || ''}
                   onValueChange={setSelectedStatusId}
@@ -153,7 +153,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Client *</label>
                 <CompanyPicker
                   id='company-picker'
                   companies={companies}

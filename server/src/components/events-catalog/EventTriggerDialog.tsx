@@ -186,7 +186,7 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-4">
                 <div>
-                  <Label htmlFor="workflow-select">Select Workflow</Label>
+                  <Label htmlFor="workflow-select">Select Workflow *</Label>
                   {isLoadingWorkflows ? (
                     <div className="w-full border border-gray-300 rounded-md p-2 mt-1 bg-gray-50">
                       <div className="animate-pulse flex space-x-4">
@@ -219,7 +219,7 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
                 </div>
 
                 <div>
-                  <Label htmlFor="trigger-name">Trigger Name</Label>
+                  <Label htmlFor="trigger-name">Trigger Name *</Label>
                   <Input
                     id="trigger-name"
                     value={triggerName}

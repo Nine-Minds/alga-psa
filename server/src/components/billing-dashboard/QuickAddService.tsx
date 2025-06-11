@@ -240,7 +240,7 @@ console.log('[QuickAddService] Service created successfully');
           {errorTaxRates && <div className="text-red-500 mb-4">{errorTaxRates}</div>} {/* Show tax rate error */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="serviceName" className="block text-sm font-medium text-gray-700 mb-1">Service Name</Label>
+              <Label htmlFor="serviceName" className="block text-sm font-medium text-gray-700 mb-1">Service Name *</Label>
               <Input
                 id="serviceName"
                 value={serviceData.service_name}
@@ -252,7 +252,7 @@ console.log('[QuickAddService] Service created successfully');
 
             {/* Updated to Service Type dropdown using allServiceTypes */}
             <div>
-              <Label htmlFor="serviceType" className="block text-sm font-medium text-gray-700 mb-1">Service Type</Label>
+              <Label htmlFor="serviceType" className="block text-sm font-medium text-gray-700 mb-1">Service Type *</Label>
               <SearchableSelect
                 id="serviceType"
                 options={allServiceTypes.map(type => ({ value: type.id, label: type.name }))}
@@ -303,14 +303,14 @@ console.log('[QuickAddService] Service created successfully');
             </div>
 
             <div>
-              <Label htmlFor="defaultRate" className="block text-sm font-medium text-gray-700 mb-1">Default Rate</Label>
+              <Label htmlFor="defaultRate" className="block text-sm font-medium text-gray-700 mb-1">Default Rate *</Label>
               <Input
                 id="defaultRate"
                 type="number"
                 step="0.01" // Allow cents
                 value={serviceData.default_rate / 100} // Display in dollars
                 onChange={(e) => setServiceData({ ...serviceData, default_rate: Math.round(parseFloat(e.target.value) * 100) || 0 })} // Store in cents, default to 0 if invalid
-                placeholder="Default Rate"
+                placeholder="Default Rate ($) *"
                 required
               />
             </div>
@@ -419,7 +419,7 @@ console.log('[QuickAddService] Service created successfully');
               <Button id='cancel-button' type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button id='save-button' type="submit">Save Service</Button>
+              <Button id='save-button' type="submit" disabled={!serviceData.service_name || !serviceData.service_type_id || !serviceData.default_rate}>Save Service</Button>
             </div>
           </form>
         </Dialog.Content>

@@ -183,13 +183,13 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
             {/* Removed Tabs - Only show basic info */}
             <div className="space-y-4">
               <div>
-                <Label htmlFor="plan-name">Plan Name</Label>
+                <Label htmlFor="plan-name">Plan Name *</Label>
                 <Input
                   id="plan-name"
                   type="text"
                   value={planName}
                   onChange={(e) => setPlanName(e.target.value)}
-                  placeholder="Enter plan name"
+                  placeholder="Enter plan name *"
                   required
                   className={validationErrors.planName ? 'border-red-500' : ''}
                 />
@@ -198,13 +198,13 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
                 )}
               </div>
               <div>
-                <Label htmlFor="billing-frequency">Billing Frequency</Label>
+                <Label htmlFor="billing-frequency">Billing Frequency *</Label>
                 <CustomSelect
                   id="billing-frequency"
                   options={BILLING_FREQUENCY_OPTIONS}
                   onValueChange={setBillingFrequency}
                   value={billingFrequency}
-                  placeholder="Select billing frequency"
+                  placeholder="Select billing frequency *"
                   className={`w-full ${validationErrors.billingFrequency ? 'border-red-500' : ''}`}
                   required
                 />
@@ -247,7 +247,7 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
               >
                 Cancel
               </Button>
-              <Button id='save-billing-plan-button' type="submit" disabled={isSaving}>
+              <Button id='save-billing-plan-button' type="submit" disabled={isSaving || !planName.trim() || !billingFrequency}>
                 {isSaving ? 'Saving...' : (editingPlan ? 'Update Plan Basics' : 'Save and Configure')}
               </Button>
             </div>

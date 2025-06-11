@@ -195,7 +195,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
         }}>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="fullName">Full Name</Label>
+              <Label htmlFor="fullName">Full Name *</Label>
               <Input
                 id="quick-add-contact-name"
                 value={fullName}
@@ -204,7 +204,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
               />
             </div>
             <div>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email *</Label>
               <Input
                 id="quick-add-contact-email"
                 type="email"

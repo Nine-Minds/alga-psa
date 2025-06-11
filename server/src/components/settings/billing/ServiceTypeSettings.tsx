@@ -282,12 +282,12 @@ const ServiceTypeSettings: React.FC = () => {
           <div className="space-y-4 py-4">
             {error && <div className="text-red-500 mb-4">{error}</div>}
             <div>
-              <label htmlFor="typeName" className="block text-sm font-medium text-gray-700">Name</label>
+              <label htmlFor="typeName" className="block text-sm font-medium text-gray-700">Name *</label>
               <Input
                 id="typeName"
                 value={editingType?.name || ''}
                 onChange={(e) => setEditingType({ ...editingType, name: e.target.value })}
-                placeholder="e.g., Custom Support Tier"
+                placeholder="e.g., Custom Support Tier *"
                 required
               />
             </div>
@@ -301,7 +301,7 @@ const ServiceTypeSettings: React.FC = () => {
               />
             </div>
             <div>
-              <Label htmlFor="billing-method-select">Billing Method</Label>
+              <Label htmlFor="billing-method-select">Billing Method *</Label>
               <CustomSelect
                 id="billing-method-select"
                 options={[
@@ -314,14 +314,14 @@ const ServiceTypeSettings: React.FC = () => {
                     setEditingType({ ...editingType, billing_method: value as 'fixed' | 'per_unit' });
                   }
                 }}
-                placeholder="Select billing method"
+                placeholder="Select billing method *"
                 required
               />
             </div>
           </div>
           <DialogFooter>
             <Button id="cancel-edit-type-button" variant="outline" onClick={handleCloseEditDialog}>Cancel</Button>
-            <Button id="save-type-button" onClick={handleSaveType}>Save</Button>
+            <Button id="save-type-button" onClick={handleSaveType} disabled={!editingType?.name?.trim() || !editingType?.billing_method}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

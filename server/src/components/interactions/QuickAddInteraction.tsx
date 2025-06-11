@@ -473,7 +473,7 @@ export function QuickAddInteraction({
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Title"
+                placeholder="Title *"
                 required
               />
               
@@ -621,6 +621,7 @@ export function QuickAddInteraction({
                   id="save-interaction-button"
                   type="submit" 
                   className="flex-1"
+                  disabled={!typeId || !title.trim()}
                 >
                   {isEditMode ? 'Update Interaction' : 'Save Interaction'}
                 </Button>

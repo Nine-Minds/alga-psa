@@ -220,7 +220,7 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Base fields */}
         <div>
-          <Label htmlFor="name">Name</Label>
+          <Label htmlFor="name">Name *</Label>
           <div className="mt-1">
             <Input
               id="name"
@@ -232,7 +232,7 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
         </div>
 
         <div>
-          <Label htmlFor="asset_tag">Asset Tag</Label>
+          <Label htmlFor="asset_tag">Asset Tag *</Label>
           <div className="mt-1">
             <Input
               id="asset_tag"
@@ -244,13 +244,13 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
         </div>
 
         <div>
-          <Label htmlFor="asset_type">Asset Type</Label>
+          <Label htmlFor="asset_type">Asset Type *</Label>
           <div className="mt-1">
             <CustomSelect
               options={ASSET_TYPE_OPTIONS}
               value={formData.asset_type}
               onValueChange={(value) => handleChange('asset_type', value)}
-              placeholder="Select Asset Type"
+              placeholder="Select Asset Type *"
             />
           </div>
         </div>
@@ -322,7 +322,7 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
           <Button
             id='create-button'
             type="submit"
-            disabled={isSubmitting || isLoadingCompanies || !formData.asset_type}
+            disabled={isSubmitting || isLoadingCompanies || !formData.asset_type || !formData.name.trim() || !formData.asset_tag.trim()}
           >
             Create Asset
           </Button>

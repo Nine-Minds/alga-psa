@@ -387,7 +387,7 @@ export function QuickAddTicket({
                       setTitle(e.target.value);
                       clearErrorIfSubmitted();
                     }}
-                    placeholder="Ticket Title"
+                    placeholder="Ticket Title *"
                   />
                   <TextArea
                     id={`${id}-description`}
@@ -396,7 +396,7 @@ export function QuickAddTicket({
                       setDescription(e.target.value);
                       clearErrorIfSubmitted();
                     }}
-                    placeholder="Description"
+                    placeholder="Description *"
                   />
 
                   <CompanyPicker
@@ -446,7 +446,7 @@ export function QuickAddTicket({
                     }))}
                     buttonWidth="full"
                     size="sm"
-                    placeholder="Assign To"
+                    placeholder="Assign To *"
                   />
 
                   <ChannelPicker
@@ -479,7 +479,7 @@ export function QuickAddTicket({
                       clearErrorIfSubmitted();
                     }}
                     options={memoizedStatusOptions}
-                    placeholder="Select Status"
+                    placeholder="Select Status *"
                   />
 
                   <CustomSelect
@@ -490,7 +490,7 @@ export function QuickAddTicket({
                       clearErrorIfSubmitted();
                     }}
                     options={memoizedPriorityOptions}
-                    placeholder="Select Priority"
+                    placeholder="Select Priority *"
                   />
 
                   <DialogFooter>
@@ -506,7 +506,7 @@ export function QuickAddTicket({
                       id={`${id}-submit-btn`}
                       type="submit"
                       variant="default"
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || !title.trim() || !description.trim() || !assignedTo || !channelId || !statusId || !priorityId || !companyId}
                     >
                       {isSubmitting ? 'Saving...' : 'Save Ticket'}
                     </Button>
