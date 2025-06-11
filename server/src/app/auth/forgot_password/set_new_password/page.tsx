@@ -3,7 +3,8 @@ import React, { useState, FormEvent, useEffect, Suspense  } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { EyeOpenIcon, EyeClosedIcon, CheckCircledIcon, CrossCircledIcon } from '@radix-ui/react-icons';
+import { Eye, EyeOff } from 'lucide-react';
+import { CheckCircledIcon, CrossCircledIcon } from '@radix-ui/react-icons';
 import * as Form from '@radix-ui/react-form';
 import * as Label from '@radix-ui/react-label';
 import { setNewPassword } from 'server/src/lib/actions/useRegister';
@@ -170,9 +171,9 @@ const SetNewPasswordContent: React.FC = () => {
                   className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400"
                 >
                   {showPassword ? (
-                    <EyeOpenIcon className="h-5 w-5 text-gray-400" />
+                    <Eye className="h-5 w-5 text-gray-400" />
                   ) : (
-                    <EyeClosedIcon className="h-5 w-5 text-gray-400" />
+                    <EyeOff className="h-5 w-5 text-gray-400" />
                   )}
                 </button>
               </div>
