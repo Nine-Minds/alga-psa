@@ -24,6 +24,7 @@ import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 import { DynamicExtensionsComponent } from 'server/src/lib/extensions/ExtensionComponentLoader';
 import { EmailSettings } from '../../admin/EmailSettings';
+import ImportExportHome from '../import-export/ImportExportHome';
 // Removed import: import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
 // Revert to standard function component
@@ -48,6 +49,7 @@ const SettingsPage = (): JSX.Element =>  {
     'tax': 'Tax',
     'email': 'Email',
     'integrations': 'Integrations',
+    'import-export': 'Import/Export',
     ...(isEEAvailable && { 'extensions': 'Extensions' }) // Only add if EE is available
   };
 
@@ -180,6 +182,20 @@ const SettingsPage = (): JSX.Element =>  {
       label: "Integrations",
       // Render the QBO settings client component directly
       content: <QboIntegrationSettings />,
+    },
+    {
+      label: "Import/Export",
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>Import/Export</CardTitle>
+            <CardDescription>Import data from external systems or export your data</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ImportExportHome />
+          </CardContent>
+        </Card>
+      ),
     }
   ];
 

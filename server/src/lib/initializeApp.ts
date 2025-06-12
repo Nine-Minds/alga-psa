@@ -5,6 +5,7 @@ import { initializeScheduledJobs } from './jobs/initializeScheduledJobs';
 import logger from '@shared/core/logger';
 import { initializeServerWorkflows } from '@shared/workflow/init/serverInit';
 import { syncStandardTemplates } from './startupTasks'; // Import the sync function
+import { initializeImportSources } from './import/initialize';
 
 export async function initializeApp() {
   try {
@@ -23,6 +24,10 @@ export async function initializeApp() {
     // Sync standard invoice templates
     await syncStandardTemplates();
     logger.info('Standard invoice templates synced');
+    
+    // Initialize import/export sources
+    await initializeImportSources();
+    logger.info('Import/export sources initialized');
     
     // Register cleanup handlers
     process.on('SIGTERM', async () => {

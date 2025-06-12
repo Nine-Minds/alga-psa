@@ -60,6 +60,7 @@
     "handlebars": "^4.7.8",
     "jsondiffpatch": "^0.6.0",
     "jsonwebtoken": "^9.0.2",
+    "libphonenumber-js": "^1.12.9",
     "lucide-react": "^0.475.0",
     "marked": "^15.0.7",
     "monaco-editor": "^0.52.2",
