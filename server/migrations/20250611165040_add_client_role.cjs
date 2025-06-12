@@ -8,63 +8,103 @@ exports.up = async function(knex) {
   const tenants = await knex('tenants').select('tenant');
   if (!tenants.length) return;
 
-  // For each tenant, add the client role if it doesn't exist
+  // For each tenant, add the roles if they don't exist
   for (const { tenant } of tenants) {
-    // Check if client role already exists
-    const existingRole = await knex('roles')
-      .where({ tenant, role_name: 'client' })
-      .first();
-    
-    if (!existingRole) {
-      await knex('roles').insert({
-        tenant,
-        role_id: knex.raw('gen_random_uuid()'),
-        role_name: 'client',
-        description: 'Client user role'
-      });
-    }
+    // --- Role Definitions ---
+    const rolesToCreate = [
+      { role_name: 'Client', description: 'Client user role' },
+      { role_name: 'Client_Admin', description: 'Client administrator role' },
+      { role_name: 'Dispatcher', description: 'Role for users who can dispatch and schedule for other users' }
+    ];
 
-    // Get the client role
-    const clientRole = await knex('roles')
-      .where({ tenant, role_name: 'client' })
-      .first();
-
-    if (clientRole) {
-      // Get basic permissions for client role
-      const clientPermissions = await knex('permissions')
+    for (const role of rolesToCreate) {
+      const existingRole = await knex('roles')
         .where({ tenant })
-        .where(function() {
-          this.where('resource', 'project').andWhere('action', 'read')
-            .orWhere(function() {
-              this.where('resource', 'profile').whereIn('action', ['read', 'update']);
-            })
-            .orWhere(function() {
-              this.where('resource', 'asset').andWhere('action', 'read');
-            })
-            .orWhere(function() {
-              this.where('resource', 'ticket').whereIn('action', ['create', 'read', 'update']);
-            });
+        .whereRaw('LOWER(role_name) = ?', [role.role_name.toLowerCase()])
+        .first();
+      
+      if (!existingRole) {
+        await knex('roles').insert({
+          tenant,
+          role_id: knex.raw('gen_random_uuid()'),
+          ...role
         });
-
-      // Assign permissions to client role
-      for (const perm of clientPermissions) {
-        const exists = await knex('role_permissions')
-          .where({
-            tenant,
-            role_id: clientRole.role_id,
-            permission_id: perm.permission_id
-          })
-          .first();
-
-        if (!exists) {
-          await knex('role_permissions').insert({
-            tenant,
-            role_id: clientRole.role_id,
-            permission_id: perm.permission_id
-          });
-        }
       }
     }
+
+    // --- Permission Definitions ---
+    const getPermissions = async (permissionMap) => {
+      const permissions = await knex('permissions')
+        .where({ tenant })
+        .where(function() {
+          for (const resource in permissionMap) {
+            this.orWhere(function() {
+              this.where('resource', resource).whereIn('action', permissionMap[resource]);
+            });
+          }
+        });
+      return permissions;
+    };
+
+    const clientPermissionMap = {
+      'project': ['read'],
+      'profile': ['read', 'update'],
+      'asset': ['read'],
+      'ticket': ['create', 'read', 'update']
+    };
+
+    const clientAdminPermissionMap = {
+      ...clientPermissionMap,
+      'user': ['create', 'read', 'update', 'delete'],
+      'billing': ['read'],
+      'contact': ['create', 'read', 'update', 'delete'],
+      'company': ['read', 'update'],
+      'document': ['create', 'read', 'update', 'delete']
+    };
+
+    const dispatcherPermissionMap = {
+      'schedule': ['create', 'read', 'update', 'delete'],
+      'user': ['read'],
+      'ticket': ['read', 'update'],
+      'company': ['read'],
+      'contact': ['read']
+    };
+
+    // --- Role-Permission Assignment ---
+    const assignPermissionsToRole = async (roleName, permissions) => {
+      const role = await knex('roles')
+        .where({ tenant })
+        .whereRaw('LOWER(role_name) = ?', [roleName.toLowerCase()])
+        .first();
+
+      if (role) {
+        for (const perm of permissions) {
+          const exists = await knex('role_permissions')
+            .where({
+              tenant,
+              role_id: role.role_id,
+              permission_id: perm.permission_id
+            })
+            .first();
+
+          if (!exists) {
+            await knex('role_permissions').insert({
+              tenant,
+              role_id: role.role_id,
+              permission_id: perm.permission_id
+            });
+          }
+        }
+      }
+    };
+
+    const clientPermissions = await getPermissions(clientPermissionMap);
+    const clientAdminPermissions = await getPermissions(clientAdminPermissionMap);
+    const dispatcherPermissions = await getPermissions(dispatcherPermissionMap);
+
+    await assignPermissionsToRole('Client', clientPermissions);
+    await assignPermissionsToRole('Client_Admin', clientAdminPermissions);
+    await assignPermissionsToRole('Dispatcher', dispatcherPermissions);
   }
 };
 
@@ -77,22 +117,29 @@ exports.down = async function(knex) {
   const tenants = await knex('tenants').select('tenant');
   if (!tenants.length) return;
 
-  for (const { tenant } of tenants) {
-    // Remove role permissions for client role
-    await knex('role_permissions')
-      .where('tenant', tenant)
-      .whereIn('role_id', function() {
-        this.select('role_id')
-          .from('roles')
-          .where('tenant', tenant)
-          .where('role_name', 'client');
-      })
-      .delete();
+  const roleNames = ['Client', 'Client_Admin', 'Dispatcher'];
 
-    // Remove client role
-    await knex('roles')
-      .where('tenant', tenant)
-      .where('role_name', 'client')
-      .delete();
+  for (const { tenant } of tenants) {
+    // Get the role IDs for the roles we are removing
+    const rolesToDelete = await knex('roles')
+      .where({ tenant })
+      .whereIn('role_name', roleNames)
+      .select('role_id');
+
+    const roleIdsToDelete = rolesToDelete.map(r => r.role_id);
+
+    if (roleIdsToDelete.length > 0) {
+      // Remove role permissions
+      await knex('role_permissions')
+        .where({ tenant })
+        .whereIn('role_id', roleIdsToDelete)
+        .delete();
+
+      // Remove roles
+      await knex('roles')
+        .where({ tenant })
+        .whereIn('role_id', roleIdsToDelete)
+        .delete();
+    }
   }
 };
