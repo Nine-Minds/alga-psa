@@ -21,7 +21,7 @@ import {
   deleteUser,
   getClientUsersForCompany
 } from 'server/src/lib/actions/user-actions/userActions';
-import { getContactByEmail, createCompanyContact } from 'server/src/lib/actions/contact-actions/contactActions';
+import { createOrFindContactByEmail } from 'server/src/lib/actions/contact-actions/contactActions';
 import { createClientUser } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
 import { IUser, IPermission } from 'server/src/interfaces/auth.interfaces';
 import { useDrawer } from "server/src/context/DrawerContext";
@@ -95,27 +95,20 @@ export function UserManagementSettings() {
     if (!companyId) return;
 
     try {
-      // 1. Create or get contact
-      let contactId = null;
-      const existingContact = await getContactByEmail(newUser.email, companyId);
-      
-      if (existingContact) {
-        contactId = existingContact.contact_name_id;
-      } else {
-        // Create new contact
-        const contact = await createCompanyContact({
-          companyId,
-          fullName: `${newUser.firstName} ${newUser.lastName}`,
-          email: newUser.email
-        });
-        contactId = contact.contact_name_id;
-      }
+      // 1. Create or find contact using the improved function
+      const { contact, isNew } = await createOrFindContactByEmail({
+        email: newUser.email,
+        name: `${newUser.firstName} ${newUser.lastName}`,
+        companyId,
+        phone: '', // Add phone if available in newUser
+        title: '' // Add title/role if available in newUser
+      });
 
       // 2. Create user account
       const result = await createClientUser({
         email: newUser.email,
         password: newUser.password,
-        contactId,
+        contactId: contact.contact_name_id,
         companyId,
         firstName: newUser.firstName,
         lastName: newUser.lastName
@@ -132,7 +125,11 @@ export function UserManagementSettings() {
       setNewUser({ firstName: '', lastName: '', email: '', password: '' });
     } catch (error) {
       console.error('Error creating user:', error);
-      setError('Failed to create user');
+      if (error instanceof Error && error.message.includes('EMAIL_EXISTS')) {
+        setError('A contact with this email address already exists');
+      } else {
+        setError('Failed to create user');
+      }
     }
   };
 
