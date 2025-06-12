@@ -40,7 +40,7 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({ isOpen, onClos
         <RadixDialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
         <RadixDialog.Content
           {...withDataAutomationId(updateDialog)}
-          className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 w-full ${className || 'max-w-3xl'} z-50`}
+          className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 w-full ${className || 'max-w-3xl'} z-50 focus-within:ring-2 focus-within:ring-purple-100 focus-within:ring-offset-2`}
           onKeyDown={onKeyDown}
           onOpenAutoFocus={onOpenAutoFocus}
         >
