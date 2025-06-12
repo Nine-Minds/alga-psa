@@ -6,6 +6,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { Eye, EyeOff } from 'lucide-react';
 import { verifyContactEmail } from 'server/src/lib/actions/user-actions/userActions';
 import { initiateRegistration } from 'server/src/lib/actions/user-actions/registrationActions';
 import { verifyEmailSuffix } from 'server/src/lib/actions/company-settings/emailSettings';
@@ -22,6 +23,7 @@ export default function RegisterForm() {
   const [emailStatus, setEmailStatus] = useState<'checking' | 'valid' | 'invalid' | null>(null);
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
   // Password strength validation
@@ -223,25 +225,43 @@ export default function RegisterForm() {
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="password">Password *</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          required
-          value={password}
-          onChange={(e) => {
-            setPassword(e.target.value);
-            clearErrorIfSubmitted();
-          }}
-          disabled={isLoading}
-          className={`mt-1 ${
-            hasAttemptedSubmit && (!password.trim() || passwordStrength === 'weak') ? 'border-red-500' : ''
-          }`}
-          placeholder="Create a password"
-          aria-describedby="password-requirements"
-        />
+          <Label htmlFor="password">Password *</Label>
+          <div className="relative">
+            <Input
+              id="password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              required
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                clearErrorIfSubmitted();
+              }}
+              disabled={isLoading}
+              className={`mt-1 pr-10 ${
+                hasAttemptedSubmit && (!password.trim() || passwordStrength === 'weak') ? 'border-red-500' :
+                passwordStrength === 'strong' ? 'border-green-500' :
+                passwordStrength === 'medium' ? 'border-yellow-500' :
+                passwordStrength === 'weak' ? 'border-red-500' : ''
+              }`}
+              placeholder="Create a password"
+              aria-describedby="password-requirements"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              disabled={isLoading}
+            >
+              {showPassword ? (
+                <Eye className="h-5 w-5 text-gray-400" />
+            ) : (
+                <EyeOff className="h-5 w-5 text-gray-400" />
+              )}
+            </button>
+          </div>
+          
         <div id="password-requirements" className="text-sm mt-1">
           <p className="text-gray-500">Password must contain:</p>
           <ul className="list-disc list-inside space-y-1">

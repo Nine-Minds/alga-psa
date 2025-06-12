@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
-import { Checkbox } from '../ui/Checkbox';
 import { AlertProps } from '../../interfaces/general.interfaces';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { FormComponent, FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types';
@@ -22,7 +21,6 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [termsAccepted, setTermsAccepted] = useState(false);
 
   // Register the form component
   const updateForm = useRegisterUIComponent<FormComponent>({
@@ -61,7 +59,7 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
       });
     } finally {
       // Re-enable form elements after submission
-      const isFormValid = email.length > 0 && password.length > 0 && termsAccepted;
+      const isFormValid = email.length > 0 && password.length > 0;
     }
   };
 
@@ -122,19 +120,11 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <Checkbox
-          id="msp-terms-checkbox"
-          label="Agree to Terms and Conditions"
-          checked={termsAccepted}
-          onChange={(e) => setTermsAccepted(e.target.checked)}
-        />
-        <div className="text-sm">
+        <div className="text-sm text-right">
           <Link href="/auth/forgot_password" className="font-medium text-purple-600 hover:text-purple-500" {...withDataAutomationId({ id: 'msp-forgot-password-link' })}>
             Forgot password?
           </Link>
         </div>
-      </div>
 
       <div>
         <Button
