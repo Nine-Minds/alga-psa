@@ -34,6 +34,7 @@ import { toast } from 'react-hot-toast';
 import { TaskTypeSelector } from './TaskTypeSelector';
 import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import { ITaskType } from 'server/src/interfaces/project.interfaces';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import TaskTicketLinks from './TaskTicketLinks';
 import { TaskDependencies } from './TaskDependencies';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
@@ -131,7 +132,7 @@ export default function TaskForm({
     projectStatuses[0]?.project_status_mapping_id
   );
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
-  const [validationError, setValidationError] = useState<string>('');
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -385,7 +386,7 @@ export default function TaskForm({
 
   const clearErrorIfSubmitted = () => {
     if (hasAttemptedSubmit) {
-      setValidationError('');
+      setValidationErrors([]);
     }
   };
 
@@ -393,13 +394,15 @@ export default function TaskForm({
     e.preventDefault();
     setHasAttemptedSubmit(true);
     
-    const validationErrors = [];
-    if (!taskName.trim()) validationErrors.push('Title');
+    const errors: string[] = [];
+    if (!taskName.trim()) errors.push('Task name');
     
-    if (validationErrors.length > 0) {
-      setValidationError(`Please fill in the required fields: ${validationErrors.join(', ')}`);
+    if (errors.length > 0) {
+      setValidationErrors(errors);
       return;
     }
+    
+    setValidationErrors([]);
 
     setIsSubmitting(true);
 
@@ -821,15 +824,17 @@ export default function TaskForm({
         </div>
       )}
       <form onSubmit={handleSubmit} className="flex flex-col h-full" noValidate>
-        {hasAttemptedSubmit && validationError && (
-          <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded mb-4">
-            <p className="font-medium mb-2">Please fill in the required fields:</p>
-            <ul className="list-disc list-inside space-y-1">
-              {validationError.split(': ')[1]?.split(', ').map((err, index) => (
-                <li key={index}>{err}</li>
-              )) || <li>{validationError}</li>}
-            </ul>
-          </div>
+        {hasAttemptedSubmit && validationErrors.length > 0 && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>
+              <p className="font-medium mb-2">Please fill in the required fields:</p>
+              <ul className="list-disc list-inside space-y-1">
+                {validationErrors.map((err, index) => (
+                  <li key={index}>{err}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
         )}
         <div className="space-y-4">
           <TextArea
