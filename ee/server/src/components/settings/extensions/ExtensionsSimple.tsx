@@ -30,7 +30,9 @@ const convertExtensionToUI = (ext: Extension): ExtensionUI => ({
   name: ext.name,
   description: ext.description || '',
   version: ext.version,
-  author: ext.manifest.author || 'Unknown',
+  author: typeof ext.manifest.author === 'string' 
+    ? ext.manifest.author 
+    : (ext.manifest.author?.name || 'Unknown'),
   isEnabled: ext.is_enabled,
   createdAt: ext.created_at,
   updatedAt: ext.updated_at,

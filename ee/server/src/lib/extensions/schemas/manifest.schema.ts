@@ -89,12 +89,21 @@ const extensionSettingSchema = z.object({
 // Semantic version regex pattern
 const semverPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/;
 
+// Author schema - can be either a string or an object
+const authorSchema = z.union([
+  z.string(),
+  z.object({
+    name: z.string(),
+    email: z.string().email().optional(),
+  })
+]);
+
 // Main extension manifest schema
 export const extensionManifestSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
   version: z.string().regex(semverPattern, 'Version must be a valid semantic version (e.g., 1.0.0)'),
-  author: z.string().optional(),
+  author: authorSchema.optional(),
   homepage: z.string().url().optional(),
   repository: z.string().url().optional(),
   license: z.string().optional(),
