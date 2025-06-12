@@ -300,7 +300,6 @@ export default function RegisterForm() {
       <Button
         id='register-button'
         type="submit"
-        className="w-full"
         disabled={isLoading}
         className={`w-full ${
           !email.trim() || emailStatus !== 'valid' || !password.trim() || passwordStrength === 'weak' ||

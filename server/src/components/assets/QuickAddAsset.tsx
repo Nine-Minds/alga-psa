@@ -168,6 +168,10 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
         return; // This should never happen due to validation
       }
 
+      if (!effectiveCompanyId) {
+        return; // This should never happen due to validation
+      }
+
       const assetData: CreateAssetRequest = {
         asset_type: formData.asset_type,
         company_id: effectiveCompanyId,
