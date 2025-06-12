@@ -12,6 +12,7 @@ import { Switch } from 'server/src/components/ui/Switch';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Label } from 'server/src/components/ui/Label';
 import { MoreVertical, Plus } from 'lucide-react';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -48,6 +49,8 @@ const ServiceTypeSettings: React.FC = () => {
   // State for Delete Dialog
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [typeToDelete, setTypeToDelete] = useState<IServiceType | null>(null);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   const fetchTypes = async () => {
     setLoading(true);
@@ -83,11 +86,15 @@ const ServiceTypeSettings: React.FC = () => {
   // --- Dialog Handlers ---
   const handleOpenAddDialog = () => {
     setEditingType({}); // Empty object for add mode
+    setHasAttemptedSubmit(false);
+    setValidationErrors([]);
     setIsEditDialogOpen(true);
   };
 
   const handleOpenEditDialog = (type: IServiceType) => {
     setEditingType({ ...type }); // Copy type data for editing
+    setHasAttemptedSubmit(false);
+    setValidationErrors([]);
     setIsEditDialogOpen(true);
   };
 
@@ -95,23 +102,37 @@ const ServiceTypeSettings: React.FC = () => {
     setIsEditDialogOpen(false);
     setEditingType(null);
     setError(null); // Clear errors on close
+    setHasAttemptedSubmit(false);
+    setValidationErrors([]);
+  };
+
+  const clearErrorIfSubmitted = () => {
+    if (hasAttemptedSubmit) {
+      setValidationErrors([]);
+    }
   };
 
   const handleSaveType = async () => {
     if (!editingType) return;
-    setError(null);
+    setHasAttemptedSubmit(true);
     
     // Validation
-    if (!editingType.name) {
-      setError("Service Type name cannot be empty.");
-      return;
+    const errors: string[] = [];
+    if (!editingType.name?.trim()) {
+      errors.push("Service Type name");
     }
     
     // Billing method is now mandatory for custom types
     if (!editingType.billing_method) {
-      setError("Billing Method is required.");
+      errors.push("Billing method");
+    }
+    
+    if (errors.length > 0) {
+      setValidationErrors(errors);
       return;
     }
+    
+    setValidationErrors([]);
 
     try {
       if (editingType.id) { // Update existing
@@ -120,9 +141,10 @@ const ServiceTypeSettings: React.FC = () => {
         await updateServiceType(id, updateData);
       } else { // Create new
         // Prepare create data with required fields
+        // We've already validated these fields exist above
         const createData = {
-            name: editingType.name,
-            billing_method: editingType.billing_method, // Now required
+            name: editingType.name!,
+            billing_method: editingType.billing_method!, // Now required
             description: editingType.description || null,
             is_active: editingType.is_active ?? true, // Default to active
         };
@@ -132,7 +154,8 @@ const ServiceTypeSettings: React.FC = () => {
       await fetchTypes(); // Refresh list
     } catch (saveError) {
       console.error("Error saving service type:", saveError);
-      setError(saveError instanceof Error ? saveError.message : "Failed to save service type");
+      const errorMessage = saveError instanceof Error ? saveError.message : "Failed to save service type";
+      setValidationErrors([errorMessage]);
     }
   };
 
@@ -247,8 +270,6 @@ const ServiceTypeSettings: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {error && <div className="text-red-500 mb-4 p-4 border border-red-500 rounded">{error}</div>}
-
       {/* Main card - only for custom types now */}
       <Card>
         <CardHeader>
@@ -279,16 +300,32 @@ const ServiceTypeSettings: React.FC = () => {
           <DialogHeader>
             <DialogTitle>{editingType?.id ? 'Edit' : 'Add'} Custom Service Type</DialogTitle>
           </DialogHeader>
+          <form onSubmit={(e) => { e.preventDefault(); handleSaveType(); }} noValidate>
           <div className="space-y-4 py-4">
-            {error && <div className="text-red-500 mb-4">{error}</div>}
+            {hasAttemptedSubmit && validationErrors.length > 0 && (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  <p className="font-medium mb-2">Please fill in the required fields:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    {validationErrors.map((err, index) => (
+                      <li key={index}>{err}</li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
             <div>
-              <label htmlFor="typeName" className="block text-sm font-medium text-gray-700">Name</label>
+              <label htmlFor="typeName" className="block text-sm font-medium text-gray-700">Name *</label>
               <Input
                 id="typeName"
                 value={editingType?.name || ''}
-                onChange={(e) => setEditingType({ ...editingType, name: e.target.value })}
-                placeholder="e.g., Custom Support Tier"
+                onChange={(e) => {
+                  setEditingType({ ...editingType, name: e.target.value });
+                  clearErrorIfSubmitted();
+                }}
+                placeholder="e.g., Custom Support Tier *"
                 required
+                className={hasAttemptedSubmit && !editingType?.name?.trim() ? 'border-red-500' : ''}
               />
             </div>
             <div>
@@ -301,7 +338,7 @@ const ServiceTypeSettings: React.FC = () => {
               />
             </div>
             <div>
-              <Label htmlFor="billing-method-select">Billing Method</Label>
+              <Label htmlFor="billing-method-select">Billing Method *</Label>
               <CustomSelect
                 id="billing-method-select"
                 options={[
@@ -312,17 +349,20 @@ const ServiceTypeSettings: React.FC = () => {
                 onValueChange={(value: string) => {
                   if (value === 'fixed' || value === 'per_unit') {
                     setEditingType({ ...editingType, billing_method: value as 'fixed' | 'per_unit' });
+                    clearErrorIfSubmitted();
                   }
                 }}
-                placeholder="Select billing method"
+                placeholder="Select billing method..."
                 required
+                className={hasAttemptedSubmit && !editingType?.billing_method ? 'ring-1 ring-red-500' : ''}
               />
             </div>
           </div>
           <DialogFooter>
             <Button id="cancel-edit-type-button" variant="outline" onClick={handleCloseEditDialog}>Cancel</Button>
-            <Button id="save-type-button" onClick={handleSaveType}>Save</Button>
+            <Button id="save-type-button" type="submit" className={!editingType?.name?.trim() || !editingType?.billing_method ? 'opacity-50' : ''}>Save</Button>
           </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 

@@ -273,14 +273,14 @@ function TreeSelect<T extends string>({
           value={selectedValue}
           open={isOpen}
           onOpenChange={setIsOpen}
-          disabled={disabled || !Array.isArray(options) || options.length === 0}
+          disabled={disabled}
         >
           <RadixSelect.Trigger
             className={`
               inline-flex items-center justify-between
-              border border-gray-200 rounded-lg p-2
-              bg-white cursor-pointer min-h-[38px]
-              disabled:opacity-50 disabled:cursor-not-allowed
+              border border-[rgb(var(--color-border-400))] rounded-lg p-2
+              bg-white min-h-[38px]
+              ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}
               text-sm w-full
               ${triggerClassName}
               ${className}
@@ -290,7 +290,9 @@ function TreeSelect<T extends string>({
               placeholder={placeholder}
               className="flex-1 text-left"
             >
-              {displayLabel || placeholder}
+              <span className={!displayLabel ? 'text-gray-400' : ''}>
+                {displayLabel || placeholder}
+              </span>
             </RadixSelect.Value>
             <div className="flex items-center gap-2">
               {showReset && hasSelections && (

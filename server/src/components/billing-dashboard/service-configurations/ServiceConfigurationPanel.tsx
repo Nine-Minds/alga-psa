@@ -17,7 +17,6 @@ import {
 } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import { IService, IBillingPlanFixedConfig } from 'server/src/interfaces/billing.interfaces';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { AlertCircle } from 'lucide-react';
 import { Button } from 'server/src/components/ui/Button';
 
 interface ServiceConfigurationPanelProps {
@@ -150,7 +149,6 @@ export function ServiceConfigurationPanel({
     <div className={`space-y-4 ${className}`}>
       {error && (
         <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}

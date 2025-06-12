@@ -12,6 +12,7 @@ import { CreateAssetRequest } from 'server/src/interfaces/asset.interfaces';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import { ICompany } from 'server/src/interfaces';
 import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 interface QuickAddAssetProps {
   companyId?: string;
@@ -70,6 +71,7 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(companyId || null);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
   const updateDialog = useRegisterUIComponent({
     id: 'quick-add-asset-dialog',
@@ -130,19 +132,44 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
     }
   }, [open, companyId]);
 
+  const validateForm = () => {
+    const validationErrors = [];
+    const effectiveCompanyId = companyId || selectedCompanyId;
+    if (!effectiveCompanyId) validationErrors.push('Company');
+    if (!formData.name.trim()) validationErrors.push('Asset Name');
+    if (!formData.asset_tag.trim()) validationErrors.push('Asset Tag');
+    if (!formData.asset_type) validationErrors.push('Asset Type');
+    return validationErrors;
+  };
+
+  const clearErrorIfSubmitted = () => {
+    if (hasAttemptedSubmit) {
+      setError(null);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setHasAttemptedSubmit(true);
+
+    const validationErrors = validateForm();
+    if (validationErrors.length > 0) {
+      setError(validationErrors.join('\n'));
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
     try {
       const effectiveCompanyId = companyId || selectedCompanyId;
-      if (!effectiveCompanyId) {
-        throw new Error('Please select a company');
-      }
 
       if (!formData.asset_type) {
-        throw new Error('Please select an asset type');
+        return; // This should never happen due to validation
+      }
+
+      if (!effectiveCompanyId) {
+        return; // This should never happen due to validation
       }
 
       const assetData: CreateAssetRequest = {
@@ -233,6 +260,7 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
       if (!companyId) {
         setSelectedCompanyId(null);
       }
+      setHasAttemptedSubmit(false);
     } catch (error) {
       console.error('Error creating asset:', error);
       setError(error instanceof Error ? error.message : 'Failed to create asset');
@@ -411,59 +439,89 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-[480px]">
+        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-[480px] max-h-[90vh] overflow-y-auto">
           <Dialog.Title className="text-lg font-bold mb-4">Add New Asset</Dialog.Title>
-          {error && <div className="text-red-500 mb-4">{error}</div>}
+          
+          {hasAttemptedSubmit && error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>
+                <p className="font-medium mb-2">Please fill in the required fields:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  {error.split('\n').map((err, index) => (
+                    <li key={index}>{err}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <form onSubmit={handleSubmit} className="space-y-4">
             {!companyId && (
               <div>
-                <label className="block text-sm font-medium text-gray-700">Company</label>
-                <CompanyPicker
-                  {...withDataAutomationId({ id: 'company-picker' })}
-                  companies={companies}
-                  selectedCompanyId={selectedCompanyId}
-                  onSelect={setSelectedCompanyId}
-                  filterState="active"
-                  onFilterStateChange={() => {}}
-                  clientTypeFilter="all"
-                  onClientTypeFilterChange={() => {}}
-                />
+                <label className="block text-sm font-medium text-gray-700">Company *</label>
+                <div className={hasAttemptedSubmit && !selectedCompanyId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
+                  <CompanyPicker
+                    {...withDataAutomationId({ id: 'company-picker' })}
+                    companies={companies}
+                    selectedCompanyId={selectedCompanyId}
+                    onSelect={(id) => {
+                      setSelectedCompanyId(id);
+                      clearErrorIfSubmitted();
+                    }}
+                    filterState="active"
+                    onFilterStateChange={() => {}}
+                    clientTypeFilter="all"
+                    onClientTypeFilterChange={() => {}}
+                  />
+                </div>
               </div>
             )}
 
             <div {...withDataAutomationId({ id: 'asset-name-container' })}>
-              <label className="block text-sm font-medium text-gray-700">Asset Name</label>
+              <label className="block text-sm font-medium text-gray-700">Asset Name *</label>
               <Input
                 {...withDataAutomationId({ id: 'asset-name-input' })}
                 value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, name: e.target.value }));
+                  clearErrorIfSubmitted();
+                }}
                 placeholder="Enter asset name"
+                className={hasAttemptedSubmit && !formData.name.trim() ? 'border-red-500' : ''}
                 required
               />
             </div>
 
             <div {...withDataAutomationId({ id: 'asset-tag-container' })}>
-              <label className="block text-sm font-medium text-gray-700">Asset Tag</label>
+              <label className="block text-sm font-medium text-gray-700">Asset Tag *</label>
               <Input
                 {...withDataAutomationId({ id: 'asset-tag-input' })}
                 value={formData.asset_tag}
-                onChange={(e) => setFormData(prev => ({ ...prev, asset_tag: e.target.value }))}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, asset_tag: e.target.value }));
+                  clearErrorIfSubmitted();
+                }}
                 placeholder="Enter asset tag"
+                className={hasAttemptedSubmit && !formData.asset_tag.trim() ? 'border-red-500' : ''}
                 required
               />
             </div>
 
             <div {...withDataAutomationId({ id: 'asset-type-container' })}>
-              <label className="block text-sm font-medium text-gray-700">Type</label>
+              <label className="block text-sm font-medium text-gray-700">Type *</label>
               <CustomSelect
                 {...withDataAutomationId({ id: 'asset-type-select' })}
                 options={ASSET_TYPE_OPTIONS}
                 value={formData.asset_type}
-                onValueChange={(value) => setFormData(prev => ({ 
-                  ...prev, 
-                  asset_type: value as AssetType 
-                }))}
+                onValueChange={(value) => {
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    asset_type: value as AssetType 
+                  }));
+                  clearErrorIfSubmitted();
+                }}
                 placeholder="Select type"
+                className={hasAttemptedSubmit && !formData.asset_type ? 'border-red-500' : ''}
               />
             </div>
 
@@ -499,7 +557,12 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
               <Button {...withDataAutomationId({ id: 'cancel-button' })} type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button {...withDataAutomationId({ id: 'submit-button' })} type="submit" disabled={isSubmitting}>
+              <Button 
+                {...withDataAutomationId({ id: 'submit-button' })} 
+                type="submit" 
+                disabled={isSubmitting}
+                className={(!formData.name.trim() || !formData.asset_tag.trim() || !formData.asset_type || (!companyId && !selectedCompanyId)) && !isSubmitting ? 'opacity-50' : ''}
+              >
                 {isSubmitting ? 'Creating...' : 'Create Asset'}
               </Button>
             </div>

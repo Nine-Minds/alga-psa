@@ -22,6 +22,7 @@ import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog'
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Switch } from 'server/src/components/ui/Switch';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { Plus, Edit2, Trash2, MapPin, Star } from 'lucide-react';
 import { useToast } from 'server/src/hooks/use-toast';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
@@ -252,6 +253,8 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
   const [isLoadingCountries, setIsLoadingCountries] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [locationToDelete, setLocationToDelete] = useState<ICompanyLocation | null>(null);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const { toast } = useToast();
 
 
@@ -314,6 +317,8 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
       is_default: locations.length === 0 // First location should be default
     });
     setIsDialogOpen(true);
+    setHasAttemptedSubmit(false);
+    setValidationErrors([]);
   };
 
   const handleEditLocation = (location: ICompanyLocation) => {
@@ -340,8 +345,34 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
     setIsDialogOpen(true);
   };
 
+  const clearErrorIfSubmitted = () => {
+    if (hasAttemptedSubmit) {
+      setValidationErrors([]);
+    }
+  };
+
   const handleSaveLocation = async () => {
+    setHasAttemptedSubmit(true);
+    const errors: string[] = [];
+    
+    // Validate required fields
+    if (!formData.address_line1.trim()) {
+      errors.push('Address Line 1');
+    }
+    if (!formData.city.trim()) {
+      errors.push('City');
+    }
+    if (!formData.country_code || !formData.country_name) {
+      errors.push('Country');
+    }
+    
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    
     setIsLoading(true);
+    setValidationErrors([]);
     try {
       // Prepare the data, converting empty strings to null for region_code
       const locationData = {
@@ -521,18 +552,29 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
       <Dialog 
         id="company-location-dialog"
         isOpen={isDialogOpen} 
-        onClose={() => setIsDialogOpen(false)}
+        onClose={() => {
+          setIsDialogOpen(false);
+          setHasAttemptedSubmit(false);
+          setValidationErrors([]);
+        }}
         className="max-w-2xl max-h-[90vh] overflow-y-auto"
         title={editingLocation ? 'Edit Location' : 'Add New Location'}
       >
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingLocation ? 'Edit Location' : 'Add New Location'}
-            </DialogTitle>
-          </DialogHeader>
           
           <form onSubmit={(e) => { e.preventDefault(); handleSaveLocation(); }} className="space-y-4" noValidate>
+            {hasAttemptedSubmit && validationErrors.length > 0 && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertDescription>
+                  <p className="font-medium mb-2">Please fill in the required fields:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    {validationErrors.map((err, index) => (
+                      <li key={index}>{err}</li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
             <div {...(() => {
               const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
                 id: 'location-name-field',
@@ -548,7 +590,10 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
               <Input
                 id="location-name-input"
                 value={formData.location_name}
-                onChange={(e) => setFormData(prev => ({ ...prev, location_name: e.target.value }))}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, location_name: e.target.value }));
+                  clearErrorIfSubmitted();
+                }}
                 placeholder="e.g., Main Office, Warehouse"
               />
             </div>
@@ -568,7 +613,12 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
               <Input
                 id="address-line1-input"
                 value={formData.address_line1}
-                onChange={(e) => setFormData(prev => ({ ...prev, address_line1: e.target.value }))}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, address_line1: e.target.value }));
+                  clearErrorIfSubmitted();
+                }}
+                placeholder="Enter address *"
+                className={hasAttemptedSubmit && !formData.address_line1.trim() ? 'border-red-500' : ''}
                 required
               />
             </div>
@@ -616,7 +666,12 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
               <Input
                 id="city-input"
                 value={formData.city}
-                onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, city: e.target.value }));
+                  clearErrorIfSubmitted();
+                }}
+                placeholder="Enter city *"
+                className={hasAttemptedSubmit && !formData.city.trim() ? 'border-red-500' : ''}
                 required
               />
             </div>
@@ -671,15 +726,20 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
               return automationIdProps;
             })()}>
               <Label htmlFor="country-picker">Country *</Label>
-              <CountryPicker
-                data-automation-id="country-picker"
-                value={formData.country_code}
-                onValueChange={handleCountryChange}
-                countries={countries}
-                disabled={isLoadingCountries || isLoading}
-                placeholder={isLoadingCountries ? "Loading countries..." : "Select Country"}
-                buttonWidth="full"
-              />
+              <div className={hasAttemptedSubmit && (!formData.country_code || !formData.country_name) ? 'ring-1 ring-red-500 rounded-lg' : ''}>
+                <CountryPicker
+                  data-automation-id="country-picker"
+                  value={formData.country_code}
+                  onValueChange={(code, name) => {
+                    handleCountryChange(code, name);
+                    clearErrorIfSubmitted();
+                  }}
+                  countries={countries}
+                  disabled={isLoadingCountries || isLoading}
+                  placeholder={isLoadingCountries ? "Loading countries..." : "Select Country *"}
+                  buttonWidth="full"
+                />
+              </div>
             </div>
             
             <div {...(() => {
@@ -832,7 +892,11 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
                 id="cancel-location-button"
                 data-automation-id="cancel-location-button"
                 variant="outline" 
-                onClick={() => setIsDialogOpen(false)}
+                onClick={() => {
+                  setIsDialogOpen(false);
+                  setHasAttemptedSubmit(false);
+                  setValidationErrors([]);
+                }}
                 disabled={isLoading}
                 type="button"
               >
@@ -842,7 +906,8 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
                 id="save-location-button"
                 data-automation-id="save-location-button"
                 type="submit"
-                disabled={isLoading || !formData.address_line1 || !formData.city || !formData.country_name}
+                disabled={isLoading}
+                className={!formData.address_line1 || !formData.city || !formData.country_name ? 'opacity-50' : ''}
               >
                 {isLoading ? 'Saving...' : 'Save Location'}
               </Button>

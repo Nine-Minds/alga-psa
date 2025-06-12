@@ -7,6 +7,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Switch } from 'server/src/components/ui/Switch';
 import { ExternalLink } from 'lucide-react';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { WorkItemDrawer } from 'server/src/components/time-management/time-entry/time-sheet/WorkItemDrawer';
 import { format, isWeekend, addYears } from 'date-fns';
@@ -110,6 +111,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   const [recurrencePattern, setRecurrencePattern] = useState<IRecurrencePattern | null>(null);
   const [isEditingWorkItem, setIsEditingWorkItem] = useState(false);
   const [availableWorkItems, setAvailableWorkItems] = useState<IWorkItem[]>([]);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
     // Determine mode and permissions
     const isEditing = !!event;
@@ -148,12 +151,12 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             setAvailableWorkItems([items]);
           } else {
             setAvailableWorkItems([]);
-            alert('No work items found for the selected period');
+            setValidationErrors(['No work items found for the selected period']);
           }
         } catch (error) {
           console.error('Error fetching work items:', error);
           setAvailableWorkItems([]);
-          alert('Failed to fetch work items. Please try again.');
+          setValidationErrors(['Failed to fetch work items. Please try again.']);
         }
       };
 
@@ -312,45 +315,66 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [pendingUpdateData, setPendingUpdateData] = useState<Omit<IScheduleEntry, 'tenant'>>();
 
-  const handleSave = () => {
-    // Validate required fields and dates
-    if (!entryData.title) {
-      alert('Title is required');
-      return;
+  const clearErrorIfSubmitted = () => {
+    if (hasAttemptedSubmit) {
+      setValidationErrors([]);
     }
+  };
 
+  const handleSave = () => {
+    if (!canEditFields && isEditing) return;
+    
+    setHasAttemptedSubmit(true);
+    const errors: string[] = [];
+    
+    // Validate required fields
+    if (!entryData.title?.trim() && entryData.work_item_type === 'ad_hoc') {
+      errors.push('Title is required for ad-hoc entries');
+    }
+    if (!entryData.scheduled_start) {
+      errors.push('Start date/time');
+    }
+    if (!entryData.scheduled_end) {
+      errors.push('End date/time');
+    }
+    if (!entryData.assigned_user_ids || entryData.assigned_user_ids.length === 0) {
+      errors.push('At least one assigned user');
+    }
+    
     // Validate dates
     const startDate = new Date(entryData.scheduled_start);
     const endDate = new Date(entryData.scheduled_end);
 
     if (isNaN(startDate.getTime())) {
-      alert('Start date is invalid');
-      return;
+      errors.push('Start date is invalid');
     }
 
     if (isNaN(endDate.getTime())) {
-      alert('End date is invalid');
-      return;
+      errors.push('End date is invalid');
     }
 
-    if (endDate <= startDate) {
-      alert('End date must be after start date');
+    if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && endDate <= startDate) {
+      errors.push('End date must be after start date');
+    }
+    
+    if (errors.length > 0) {
+      setValidationErrors(errors);
       return;
     }
+    
+    setValidationErrors([]);
 
     // Validate recurrence pattern dates if present
     if (recurrencePattern) {
       // Validate interval
       if (!Number.isInteger(recurrencePattern.interval) || recurrencePattern.interval < 1) {
-        alert('Recurrence interval must be a positive whole number');
-        return;
+        errors.push('Recurrence interval must be a positive whole number');
       }
 
       // Validate count if specified
       if (recurrencePattern.count !== undefined) {
         if (!Number.isInteger(recurrencePattern.count) || recurrencePattern.count < 1) {
-          alert('Number of occurrences must be a positive whole number');
-          return;
+          errors.push('Number of occurrences must be a positive whole number');
         }
       }
 
@@ -358,14 +382,17 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       if (recurrencePattern.endDate) {
         const patternEndDate = new Date(recurrencePattern.endDate);
         if (isNaN(patternEndDate.getTime())) {
-          alert('Recurrence end date is invalid');
-          return;
-        }
-        if (patternEndDate <= startDate) {
-          alert('Recurrence end date must be after start date');
-          return;
+          errors.push('Recurrence end date is invalid');
+        } else if (patternEndDate <= startDate) {
+          errors.push('Recurrence end date must be after start date');
         }
       }
+    }
+    
+    // Check if we have any recurrence errors
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      return;
     }
 
     // Prepare entry data
@@ -388,11 +415,11 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
 
   // Create the content of the form
   const content = (
-    <div className={`bg-white p-4 rounded-lg h-auto flex flex-col transition-all duration-300 overflow-y-auto z-10
+    <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className={`bg-white p-4 rounded-lg h-auto flex flex-col transition-all duration-300 overflow-y-auto z-10
     ${isInDrawer ? 
       'w-fit max-w-[90vw] shadow-none' : 
       'max-w-[95vw] w-auto min-w-[300px] max-h-[90vh] shadow-none'
-      }`}
+      }`} noValidate
     >
       <div className="shrink-0 pb-4 border-b flex justify-between items-center">
         <h2 className="text-xl font-bold">
@@ -416,6 +443,18 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         </div>
       </div>
       <div className="flex-1 overflow-y-auto space-y-4 p-1">
+        {hasAttemptedSubmit && validationErrors.length > 0 && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>
+              <p className="font-medium mb-2">Please fill in the required fields:</p>
+              <ul className="list-disc list-inside space-y-1">
+                {validationErrors.map((err, index) => (
+                  <li key={index}>{err}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
         {/* Display message for private events */}
         {privateEventMessage && (
           <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
@@ -480,7 +519,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             {canAssignMultipleAgents && (
               <div className="flex-1">
                 <label htmlFor="assigned_users" className="block text-sm font-medium text-gray-700 mb-1">
-                  Assigned Users
+                  Assigned Users *
                 </label>
                 <UserPicker
                   value={entryData.assigned_user_ids?.[0] || currentUserId}
@@ -511,7 +550,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
           </div>
           <div className="flex gap-4">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700">Start</label>
+              <label className="block text-sm font-medium text-gray-700">Start *</label>
               <DateTimePicker
                 id="scheduled_start"
                 value={entryData.scheduled_start}
@@ -526,7 +565,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               />
             </div>
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700">End</label>
+              <label className="block text-sm font-medium text-gray-700">End *</label>
               <DateTimePicker
                 id="scheduled_end"
                 value={entryData.scheduled_end}
@@ -581,12 +620,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                   value={recurrencePattern.interval}
                   onChange={(e) => {
                     const value = parseInt(e.target.value);
-                    if (value < 1) {
-                      alert('Interval must be a positive number');
-                      return;
-                    }
-                    if (value > 100) {
-                      alert('Maximum interval is 100');
+                    if (value < 1 || value > 100) {
+                      // Don't update if out of range
                       return;
                     }
                     setRecurrencePattern(prev => {
@@ -595,6 +630,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                     });
                   }}
                   min={1}
+                  max={100}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                   disabled={!canEditFields} // Disable based on permissions
                 />
@@ -638,12 +674,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                   value={recurrencePattern.count}
                   onChange={(e) => {
                     const value = parseInt(e.target.value);
-                    if (value < 1) {
-                      alert('Number of occurrences must be a positive number');
-                      return;
-                    }
-                    if (value > 100) {
-                      alert('Maximum number of occurrences is 100');
+                    if (value < 1 || value > 100) {
+                      // Don't update if out of range
                       return;
                     }
                     setRecurrencePattern(prev => {
@@ -652,6 +684,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                     });
                   }}
                   min={1}
+                  max={100}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                   disabled={!canEditFields} // Disable based on permissions
                 />
@@ -696,7 +729,14 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         ) : (
           <Button
             id="save-entry-btn"
-            onClick={handleSave}
+            type="submit"
+            className={`${
+              (entryData.work_item_type === 'ad_hoc' && !entryData.title?.trim()) || 
+              !entryData.scheduled_start || 
+              !entryData.scheduled_end || 
+              entryData.assigned_user_ids.length === 0 
+                ? 'opacity-50' : ''
+            }`}
             // Disable save only if editing AND user lacks permission to edit these fields
             disabled={isEditing && !canEditFields}
           >
@@ -704,7 +744,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
           </Button>
         )}
       </div>
-    </div>
+    </form>
   );
 
   // Provide the context value to child components

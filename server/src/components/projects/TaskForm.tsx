@@ -34,6 +34,7 @@ import { toast } from 'react-hot-toast';
 import { TaskTypeSelector } from './TaskTypeSelector';
 import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import { ITaskType } from 'server/src/interfaces/project.interfaces';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import TaskTicketLinks from './TaskTicketLinks';
 import { TaskDependencies } from './TaskDependencies';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
@@ -130,6 +131,8 @@ export default function TaskForm({
     defaultStatus?.project_status_mapping_id ||
     projectStatuses[0]?.project_status_mapping_id
   );
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -381,9 +384,25 @@ export default function TaskForm({
     }
   };
 
+  const clearErrorIfSubmitted = () => {
+    if (hasAttemptedSubmit) {
+      setValidationErrors([]);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (taskName.trim() === '') return;
+    setHasAttemptedSubmit(true);
+    
+    const errors: string[] = [];
+    if (!taskName.trim()) errors.push('Task name');
+    
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    
+    setValidationErrors([]);
 
     setIsSubmitting(true);
 
@@ -804,13 +823,30 @@ export default function TaskForm({
           </Button>
         </div>
       )}
-      <form onSubmit={handleSubmit} className="flex flex-col h-full">
+      <form onSubmit={handleSubmit} className="flex flex-col h-full" noValidate>
+        {hasAttemptedSubmit && validationErrors.length > 0 && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>
+              <p className="font-medium mb-2">Please fill in the required fields:</p>
+              <ul className="list-disc list-inside space-y-1">
+                {validationErrors.map((err, index) => (
+                  <li key={index}>{err}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
         <div className="space-y-4">
           <TextArea
                   value={taskName}
-                  onChange={(e) => setTaskName(e.target.value)}
-                  placeholder="Title..."
-                  className="w-full text-2xl font-bold p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  onChange={(e) => {
+                    setTaskName(e.target.value);
+                    clearErrorIfSubmitted();
+                  }}
+                  placeholder="Title... *"
+                  className={`w-full text-2xl font-bold p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                    hasAttemptedSubmit && !taskName.trim() ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   rows={1}
                 />
 
@@ -1107,7 +1143,7 @@ export default function TaskForm({
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Button id='save-button' type="submit" disabled={isSubmitting}>
+                    <Button id='save-button' type="submit" disabled={isSubmitting} className={!taskName.trim() ? 'opacity-50' : ''}>
                       {isSubmitting ? (mode === 'edit' ? 'Updating...' : 'Adding...') : (mode === 'edit' ? 'Update' : 'Save')}
                     </Button>
                   </div>

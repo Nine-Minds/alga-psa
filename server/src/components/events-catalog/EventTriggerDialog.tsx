@@ -43,6 +43,8 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
   const [triggerDescription, setTriggerDescription] = useState<string>("");
   const [parameterMappings, setParameterMappings] = useState<ParameterMapping[]>([]);
   const [activeTab, setActiveTab] = useState<string>("basic");
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState<boolean>(false);
+  const [validationError, setValidationError] = useState<string>("");
   
   // Load workflows when dialog opens
   useEffect(() => {
@@ -76,6 +78,12 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
   };
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
+  const clearErrorIfSubmitted = () => {
+    if (hasAttemptedSubmit) {
+      setValidationError("");
+    }
+  };
+
   // Reset form when event changes
   useEffect(() => {
     if (event) {
@@ -84,6 +92,8 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
       setSelectedWorkflowId("");
       setParameterMappings([]);
       setActiveTab("basic");
+      setHasAttemptedSubmit(false);
+      setValidationError("");
     }
   }, [event]);
 
@@ -111,13 +121,14 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
 
   // Handle form submission
   const handleSubmit = async () => {
-    if (!selectedWorkflowId) {
-      toast.error("Please select a workflow");
-      return;
-    }
-
-    if (!triggerName) {
-      toast.error("Please enter a trigger name");
+    setHasAttemptedSubmit(true);
+    
+    const validationErrors = [];
+    if (!selectedWorkflowId) validationErrors.push("Workflow");
+    if (!triggerName.trim()) validationErrors.push("Trigger Name");
+    
+    if (validationErrors.length > 0) {
+      setValidationError(`Please fill in the required fields: ${validationErrors.join(", ")}`);
       return;
     }
 
@@ -183,10 +194,20 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
           </TabsList>
 
           <TabsContent value="basic" className="space-y-4 py-4">
+            {hasAttemptedSubmit && validationError && (
+              <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded mb-4">
+                <p className="font-medium mb-2">Please fill in the required fields:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  {validationError.split(": ")[1]?.split(", ").map((err, index) => (
+                    <li key={index}>{err}</li>
+                  )) || <li>{validationError}</li>}
+                </ul>
+              </div>
+            )}
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-4">
                 <div>
-                  <Label htmlFor="workflow-select">Select Workflow</Label>
+                  <Label htmlFor="workflow-select">Select Workflow *</Label>
                   {isLoadingWorkflows ? (
                     <div className="w-full border border-gray-300 rounded-md p-2 mt-1 bg-gray-50">
                       <div className="animate-pulse flex space-x-4">
@@ -198,9 +219,14 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
                   ) : (
                     <select
                       id="workflow-select"
-                      className="w-full border border-gray-300 rounded-md p-2 mt-1"
+                      className={`w-full border rounded-md p-2 mt-1 ${
+                        hasAttemptedSubmit && !selectedWorkflowId ? 'border-red-500' : 'border-gray-300'
+                      }`}
                       value={selectedWorkflowId}
-                      onChange={(e) => setSelectedWorkflowId(e.target.value)}
+                      onChange={(e) => {
+                        setSelectedWorkflowId(e.target.value);
+                        clearErrorIfSubmitted();
+                      }}
                       disabled={workflowOptions.length === 0}
                     >
                       <option value="">Select a workflow</option>
@@ -219,12 +245,16 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
                 </div>
 
                 <div>
-                  <Label htmlFor="trigger-name">Trigger Name</Label>
+                  <Label htmlFor="trigger-name">Trigger Name *</Label>
                   <Input
                     id="trigger-name"
                     value={triggerName}
-                    onChange={(e) => setTriggerName(e.target.value)}
-                    placeholder="Enter trigger name"
+                    onChange={(e) => {
+                      setTriggerName(e.target.value);
+                      clearErrorIfSubmitted();
+                    }}
+                    placeholder="Enter trigger name *"
+                    className={hasAttemptedSubmit && !triggerName.trim() ? 'border-red-500' : ''}
                   />
                 </div>
 
@@ -387,7 +417,10 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
             id="cancel-button"
             type="button"
             variant="outline"
-            onClick={() => onClose()}
+            onClick={() => {
+              setHasAttemptedSubmit(false);
+              onClose();
+            }}
             disabled={isSubmitting}
           >
             Cancel
@@ -396,7 +429,8 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
             id="attach-workflow-button"
             type="button"
             onClick={handleSubmit}
-            disabled={!selectedWorkflowId || !triggerName || isSubmitting}
+            disabled={isSubmitting}
+            className={!selectedWorkflowId || !triggerName ? 'opacity-50' : ''}
           >
             {isSubmitting ? "Attaching..." : "Attach Workflow"}
           </Button>

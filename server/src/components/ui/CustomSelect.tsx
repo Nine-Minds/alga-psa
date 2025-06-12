@@ -122,7 +122,7 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
             border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))]
             hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))]
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
-            disabled:opacity-50 disabled:pointer-events-none
+            disabled:pointer-events-none
             ${className}
             ${customStyles?.trigger || ''}
           `}
@@ -132,7 +132,9 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
             placeholder={placeholder}
             className="flex-1 text-left"
           >
-            {selectedOption?.label || placeholder}
+            <span className={!selectedOption ? 'text-gray-400' : ''}>
+              {selectedOption?.label || placeholder}
+            </span>
           </RadixSelect.Value>
           <RadixSelect.Icon>
             <ChevronDown className="w-4 h-4 text-gray-500" />

@@ -11,6 +11,7 @@ import { ICompany } from 'server/src/interfaces';
 import { createAsset } from 'server/src/lib/actions/asset-actions/assetActions';
 import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 interface CreateAssetDialogProps {
   onClose: () => void;
@@ -74,6 +75,8 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(true);
   const [formData, setFormData] = useState(INITIAL_FORM_DATA);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -90,13 +93,26 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
     fetchCompanies();
   }, []);
 
+  const validateForm = () => {
+    const validationErrors = [];
+    if (!formData.name.trim()) validationErrors.push('Name');
+    if (!formData.asset_tag.trim()) validationErrors.push('Asset Tag');
+    if (!formData.asset_type) validationErrors.push('Asset Type');
+    return validationErrors;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.asset_type) {
-      return; // Prevent submission if no asset type is selected
+    setHasAttemptedSubmit(true);
+
+    const validationErrors = validateForm();
+    if (validationErrors.length > 0) {
+      setError(validationErrors.join('\n'));
+      return;
     }
     
     setIsSubmitting(true);
+    setError(null);
 
     try {
       const assetData: CreateAssetRequest = {
@@ -108,8 +124,15 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
       onClose();
     } catch (error) {
       console.error('Error creating asset:', error);
+      setError('Failed to create asset. Please try again.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const clearErrorIfSubmitted = () => {
+    if (hasAttemptedSubmit) {
+      setError(null);
     }
   };
 
@@ -118,6 +141,7 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
       ...prev,
       [field]: value
     }));
+    clearErrorIfSubmitted();
   };
 
   const updateWorkstationField = <K extends keyof WorkstationFields>(
@@ -161,6 +185,7 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
               <Input
                 value={formData.workstation?.os_type || ''}
                 onChange={(e) => updateWorkstationField('os_type', e.target.value)}
+                placeholder="e.g., Windows 11"
               />
             </div>
             <div>
@@ -168,6 +193,7 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
               <Input
                 value={formData.workstation?.cpu_model || ''}
                 onChange={(e) => updateWorkstationField('cpu_model', e.target.value)}
+                placeholder="e.g., Intel Core i7-12700"
               />
             </div>
             <div>
@@ -202,6 +228,7 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
               <Input
                 value={formData.network_device?.management_ip || ''}
                 onChange={(e) => updateNetworkDeviceField('management_ip', e.target.value)}
+                placeholder="e.g., 192.168.1.100"
               />
             </div>
           </>
@@ -218,39 +245,58 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
       title="Create New Asset"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Error Display */}
+        {hasAttemptedSubmit && error && (
+          <Alert variant="destructive">
+            <AlertDescription>
+              <p className="font-medium mb-2">Please fill in the required fields:</p>
+              <ul className="list-disc list-inside space-y-1">
+                {error.split('\n').map((err, index) => (
+                  <li key={index}>{err}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Base fields */}
         <div>
-          <Label htmlFor="name">Name</Label>
+          <Label htmlFor="name">Name *</Label>
           <div className="mt-1">
             <Input
               id="name"
               value={formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
+              placeholder="Enter asset name"
+              className={hasAttemptedSubmit && !formData.name.trim() ? 'border-red-500' : ''}
               required
             />
           </div>
         </div>
 
         <div>
-          <Label htmlFor="asset_tag">Asset Tag</Label>
+          <Label htmlFor="asset_tag">Asset Tag *</Label>
           <div className="mt-1">
             <Input
               id="asset_tag"
               value={formData.asset_tag}
               onChange={(e) => handleChange('asset_tag', e.target.value)}
+              placeholder="Enter asset tag"
+              className={hasAttemptedSubmit && !formData.asset_tag.trim() ? 'border-red-500' : ''}
               required
             />
           </div>
         </div>
 
         <div>
-          <Label htmlFor="asset_type">Asset Type</Label>
+          <Label htmlFor="asset_type">Asset Type *</Label>
           <div className="mt-1">
             <CustomSelect
               options={ASSET_TYPE_OPTIONS}
               value={formData.asset_type}
               onValueChange={(value) => handleChange('asset_type', value)}
               placeholder="Select Asset Type"
+              className={hasAttemptedSubmit && !formData.asset_type ? 'border-red-500' : ''}
             />
           </div>
         </div>
@@ -322,9 +368,10 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
           <Button
             id='create-button'
             type="submit"
-            disabled={isSubmitting || isLoadingCompanies || !formData.asset_type}
+            disabled={isSubmitting || isLoadingCompanies}
+            className={!formData.asset_type || !formData.name.trim() || !formData.asset_tag.trim() ? 'opacity-50' : ''}
           >
-            Create Asset
+            {isSubmitting ? 'Creating...' : 'Create Asset'}
           </Button>
         </div>
       </form>

@@ -7,7 +7,6 @@ import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel'; // Import SwitchWithLabel
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { AlertCircle } from 'lucide-react';
 
 interface CompanyBundleDialogProps {
   onBundleAssigned: (startDate: string, endDate: string | null) => void;
@@ -116,7 +115,6 @@ export function CompanyBundleDialog({
             )}
             {error && (
               <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}

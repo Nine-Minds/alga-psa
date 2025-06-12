@@ -92,6 +92,7 @@ const Documents = ({
   const [hasContentChanged, setHasContentChanged] = useState(false);
   const editorRef = useRef<BlockNoteEditor | null>(null);
   const [isEditModeInDrawer, setIsEditModeInDrawer] = useState(false);
+  const [drawerError, setDrawerError] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialDocuments && initialDocuments.length > 0) {
@@ -191,11 +192,12 @@ const Documents = ({
   const handleSaveNewDocument = async () => {
     try {
       if (!newDocumentName.trim()) {
-        setError('Document name is required');
+        setDrawerError('Document name is required');
         return;
       }
 
       setIsSaving(true);
+      setDrawerError(null);
       const result = await createBlockDocument({
         document_name: newDocumentName,
         user_id: userId,
@@ -217,7 +219,7 @@ const Documents = ({
       setIsDrawerOpen(false);
     } catch (error) {
       console.error('Error creating document:', error);
-      setError('Failed to create document');
+      setDrawerError('Failed to create document');
     } finally {
       setIsSaving(false);
     }
@@ -256,7 +258,7 @@ const Documents = ({
       setIsDrawerOpen(false);
     } catch (error) {
       console.error('Error saving document:', error);
-      setError('Failed to save document');
+      setDrawerError('Failed to save document');
     } finally {
       setIsSaving(false);
     }
@@ -433,7 +435,10 @@ const Documents = ({
           <Drawer
             id={`${id}-document-drawer`}
             isOpen={isDrawerOpen}
-            onClose={() => setIsDrawerOpen(false)}
+            onClose={() => {
+              setIsDrawerOpen(false);
+              setDrawerError(null);
+            }}
             isInDrawer={isInDrawer}
             hideCloseButton={true}
             drawerVariant="document"
@@ -479,6 +484,7 @@ const Documents = ({
                     id={`${id}-close-drawer-btn`}
                     onClick={() => {
                       setIsDrawerOpen(false);
+                      setDrawerError(null);
                       if (!isCreatingNew) {
                         setIsEditModeInDrawer(false);
                       }
@@ -492,16 +498,22 @@ const Documents = ({
             </div>
 
             <div className="flex-1 overflow-hidden flex flex-col">
+              {drawerError && (
+                <div className="mb-4 bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded">
+                  {drawerError}
+                </div>
+              )}
               <div className="mb-4 relative p-0.5">
                 <Input
                   id={`${id}-document-name`}
                   type="text"
-                  placeholder="Document Name"
+                  placeholder="Document Name *"
                   value={isCreatingNew ? newDocumentName : documentName}
                   onChange={(e) => {
                     if (isCreatingNew || isEditModeInDrawer) {
                       if (isCreatingNew) {
                         setNewDocumentName(e.target.value);
+                        setDrawerError(null); // Clear error when user types
                       } else {
                         setDocumentName(e.target.value);
                       }
@@ -544,6 +556,7 @@ const Documents = ({
                   id={`${id}-cancel-btn`}
                   onClick={() => {
                     setIsDrawerOpen(false);
+                    setDrawerError(null);
                     if (!isCreatingNew) {
                       setIsEditModeInDrawer(false);
                     }
@@ -558,6 +571,7 @@ const Documents = ({
                     onClick={isCreatingNew ? handleSaveNewDocument : handleSaveChanges}
                     disabled={isSaving || (!hasContentChanged && !isCreatingNew && documentName === selectedDocument?.document_name)}
                     variant="default"
+                    className={isCreatingNew && !newDocumentName.trim() ? 'opacity-50' : ''}
                   >
                     {isSaving ? 'Saving...' : 'Save'}
                   </Button>

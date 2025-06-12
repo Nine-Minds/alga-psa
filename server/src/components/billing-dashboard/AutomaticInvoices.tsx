@@ -60,6 +60,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
   const [companyFilter, setCompanyFilter] = useState<string>('');
   const [invoicedPeriods, setInvoicedPeriods] = useState<Period[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [currentReadyPage, setCurrentReadyPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [showReverseDialog, setShowReverseDialog] = useState(false);
   const [selectedCycleToReverse, setSelectedCycleToReverse] = useState<{
@@ -436,7 +437,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                 }
               }
             ]}
-            pagination={false}
+            pagination={true}
+            currentPage={currentReadyPage}
+            onPageChange={setCurrentReadyPage}
+            pageSize={itemsPerPage}
+            totalItems={filteredPeriods.length}
             // Fixed rowClassName prop - removed cursor-pointer since row click is disabled
             rowClassName={() => "hover:bg-muted/50"}
           />
