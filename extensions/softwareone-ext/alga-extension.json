@@ -1,0 +1,133 @@
+{
+  "id": "com.alga.softwareone",
+  "name": "SoftwareOne Integration",
+  "version": "0.1.0",
+  "description": "Browse and bill SoftwareOne agreements inside Alga PSA",
+  "author": {
+    "name": "Alga Development Team",
+    "email": "dev@alga.io"
+  },
+  "minAppVersion": "1.5.0",
+  "tenantMode": "specific",
+  "main": "dist/index.js",
+  "permissions": {
+    "api": [
+      "companies:read",
+      "invoices:write",
+      "settings:read",
+      "settings:write",
+      "storage:read",
+      "storage:write"
+    ],
+    "ui": {
+      "navigation": ["main"],
+      "dashboards": []
+    }
+  },
+  "components": [
+    {
+      "type": "navigation",
+      "id": "swone-main-nav",
+      "displayName": "SoftwareOne",
+      "icon": "CloudIcon",
+      "component": "./dist/components/NavItem.js",
+      "permissions": [],
+      "props": {
+        "path": "/softwareone/agreements"
+      }
+    },
+    {
+      "type": "page",
+      "id": "swone-settings",
+      "path": "/settings/softwareone",
+      "displayName": "SoftwareOne Settings",
+      "component": "./dist/pages/SettingsPage.js",
+      "permissions": ["settings:write"]
+    },
+    {
+      "type": "page",
+      "id": "swone-agreements",
+      "path": "/softwareone/agreements",
+      "displayName": "Agreements",
+      "component": "./dist/pages/AgreementsList.js",
+      "permissions": []
+    },
+    {
+      "type": "page",
+      "id": "swone-agreement-detail",
+      "path": "/softwareone/agreement/:id",
+      "displayName": "Agreement Details",
+      "component": "./dist/pages/AgreementDetail.js",
+      "permissions": []
+    },
+    {
+      "type": "page",
+      "id": "swone-statements",
+      "path": "/softwareone/statements",
+      "displayName": "Statements",
+      "component": "./dist/pages/StatementsList.js",
+      "permissions": []
+    },
+    {
+      "type": "page",
+      "id": "swone-statement-detail",
+      "path": "/softwareone/statement/:id",
+      "displayName": "Statement Details",
+      "component": "./dist/pages/StatementDetail.js",
+      "permissions": []
+    }
+  ],
+  "api": {
+    "endpoints": [
+      {
+        "id": "sync",
+        "path": "/sync",
+        "method": "POST",
+        "handler": "./dist/handlers/runSync.js",
+        "permissions": ["storage:write"]
+      },
+      {
+        "id": "activate-agreement",
+        "path": "/activate-agreement",
+        "method": "POST",
+        "handler": "./dist/handlers/activateAgreement.js",
+        "permissions": ["storage:write"]
+      }
+    ]
+  },
+  "settings": [
+    {
+      "key": "apiEndpoint",
+      "type": "string",
+      "label": "API Endpoint",
+      "description": "SoftwareOne API endpoint URL",
+      "required": true,
+      "default": "https://api.softwareone.com"
+    },
+    {
+      "key": "apiToken",
+      "type": "string",
+      "label": "API Token",
+      "description": "SoftwareOne API authentication token",
+      "required": true,
+      "encrypted": true
+    },
+    {
+      "key": "syncInterval",
+      "type": "number",
+      "label": "Sync Interval (minutes)",
+      "description": "How often to sync data from SoftwareOne",
+      "default": 60,
+      "min": 15,
+      "max": 1440
+    },
+    {
+      "key": "enableAutoSync",
+      "type": "boolean",
+      "label": "Enable Auto-sync",
+      "description": "Automatically sync data at the specified interval",
+      "default": false
+    }
+  ],
+  "dependencies": {}
+}

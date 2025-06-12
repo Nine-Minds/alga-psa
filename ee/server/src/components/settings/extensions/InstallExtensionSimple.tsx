@@ -243,7 +243,11 @@ export default function InstallExtension() {
                     
                     <div>
                       <dt className="text-sm font-medium text-gray-500">Author</dt>
-                      <dd className="mt-1 text-sm text-gray-900">{manifest.author || 'Unknown'}</dd>
+                      <dd className="mt-1 text-sm text-gray-900">
+                        {typeof manifest.author === 'string' 
+                          ? manifest.author 
+                          : (manifest.author?.name || 'Unknown')}
+                      </dd>
                     </div>
                     
                     <div className="sm:col-span-2">
