@@ -9,7 +9,7 @@ export interface ExtensionManifest {
   name: string;
   description?: string;
   version: string;
-  author?: string;
+  author?: string | { name: string; email?: string };
   homepage?: string;
   repository?: string;
   license?: string;
