@@ -130,6 +130,8 @@ export default function TaskForm({
     defaultStatus?.project_status_mapping_id ||
     projectStatuses[0]?.project_status_mapping_id
   );
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [validationError, setValidationError] = useState<string>('');
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -381,9 +383,23 @@ export default function TaskForm({
     }
   };
 
+  const clearErrorIfSubmitted = () => {
+    if (hasAttemptedSubmit) {
+      setValidationError('');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (taskName.trim() === '') return;
+    setHasAttemptedSubmit(true);
+    
+    const validationErrors = [];
+    if (!taskName.trim()) validationErrors.push('Title');
+    
+    if (validationErrors.length > 0) {
+      setValidationError(`Please fill in the required fields: ${validationErrors.join(', ')}`);
+      return;
+    }
 
     setIsSubmitting(true);
 
@@ -804,13 +820,28 @@ export default function TaskForm({
           </Button>
         </div>
       )}
-      <form onSubmit={handleSubmit} className="flex flex-col h-full">
+      <form onSubmit={handleSubmit} className="flex flex-col h-full" noValidate>
+        {hasAttemptedSubmit && validationError && (
+          <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded mb-4">
+            <p className="font-medium mb-2">Please fill in the required fields:</p>
+            <ul className="list-disc list-inside space-y-1">
+              {validationError.split(': ')[1]?.split(', ').map((err, index) => (
+                <li key={index}>{err}</li>
+              )) || <li>{validationError}</li>}
+            </ul>
+          </div>
+        )}
         <div className="space-y-4">
           <TextArea
                   value={taskName}
-                  onChange={(e) => setTaskName(e.target.value)}
+                  onChange={(e) => {
+                    setTaskName(e.target.value);
+                    clearErrorIfSubmitted();
+                  }}
                   placeholder="Title... *"
-                  className="w-full text-2xl font-bold p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className={`w-full text-2xl font-bold p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                    hasAttemptedSubmit && !taskName.trim() ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   rows={1}
                 />
 
@@ -1107,7 +1138,7 @@ export default function TaskForm({
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Button id='save-button' type="submit" disabled={isSubmitting || !taskName.trim()}>
+                    <Button id='save-button' type="submit" disabled={isSubmitting} className={!taskName.trim() ? 'opacity-50' : ''}>
                       {isSubmitting ? (mode === 'edit' ? 'Updating...' : 'Adding...') : (mode === 'edit' ? 'Update' : 'Save')}
                     </Button>
                   </div>

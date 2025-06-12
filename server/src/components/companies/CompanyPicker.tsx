@@ -23,6 +23,7 @@ interface CompanyPickerProps {
   clientTypeFilter: 'all' | 'company' | 'individual';
   onClientTypeFilterChange: (type: 'all' | 'company' | 'individual') => void;
   fitContent?: boolean;
+  className?: string;
 }
 
 // Component for individual option buttons that registers with UI reflection
@@ -63,6 +64,7 @@ export const CompanyPicker: React.FC<CompanyPickerProps & AutomationProps> = ({
   clientTypeFilter,
   onClientTypeFilterChange,
   fitContent = false,
+  className = '',
   "data-automation-type": dataAutomationType = 'picker',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -225,7 +227,7 @@ export const CompanyPicker: React.FC<CompanyPickerProps & AutomationProps> = ({
   return (
     <ReflectionContainer id={`${id}`} label="Company Picker">
       <div
-        className={`${fitContent ? 'inline-flex' : 'w-full'} rounded-md relative`}
+        className={`${fitContent ? 'inline-flex' : 'w-full'} rounded-md relative ${className}`}
         ref={dropdownRef}
         {...withDataAutomationId({ id })}
         data-automation-type={dataAutomationType}

@@ -27,6 +27,7 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
   const [selectedIcon, setSelectedIcon] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
   // Populate form when editing
   useEffect(() => {
@@ -44,10 +45,12 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
     setSelectedIcon('');
     setError(null);
     setIsLoading(false);
+    setHasAttemptedSubmit(false);
     onClose();
   };
 
   const handleSubmit = async () => {
+    setHasAttemptedSubmit(true);
     if (!typeName.trim()) {
       setError('Please enter a name for the interaction type.');
       return;
@@ -71,6 +74,7 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
       }
       
       onSuccess();
+      setHasAttemptedSubmit(false);
       handleClose();
     } catch (error) {
       console.error('Error saving interaction type:', error);
@@ -108,7 +112,7 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
             value={typeName}
             onChange={(e) => setTypeName(e.target.value)}
             placeholder="e.g., 'Client Onboarding Call', 'Sales Demo', 'Project Review'"
-            className="w-full"
+            className={`w-full ${hasAttemptedSubmit && !typeName.trim() ? 'border-red-500' : ''}`}
           />
         </div>
 
@@ -150,8 +154,8 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
           <Button
             id={editingType ? "update-interaction-type" : "create-interaction-type"}
             onClick={handleSubmit}
-            disabled={isLoading || !typeName.trim()}
-            className="bg-primary-500 text-white hover:bg-primary-600"
+            disabled={isLoading}
+            className={`bg-primary-500 text-white hover:bg-primary-600 ${!typeName.trim() ? 'opacity-50' : ''}`}
           >
             {isLoading 
               ? (editingType ? 'Updating...' : 'Creating...') 

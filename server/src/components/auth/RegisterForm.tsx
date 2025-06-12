@@ -21,6 +21,7 @@ export default function RegisterForm() {
   const [showNameFields, setShowNameFields] = useState(false);
   const [emailStatus, setEmailStatus] = useState<'checking' | 'valid' | 'invalid' | null>(null);
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const router = useRouter();
 
   // Password strength validation
@@ -78,18 +79,36 @@ export default function RegisterForm() {
     return () => clearTimeout(timer);
   }, [email]);
 
+  const validateForm = () => {
+    const validationErrors = [];
+    if (!email.trim()) validationErrors.push('Email');
+    if (emailStatus !== 'valid') validationErrors.push('Valid email address');
+    if (!password.trim()) validationErrors.push('Password');
+    if (passwordStrength === 'weak') validationErrors.push('Stronger password');
+    if (showNameFields && !firstName.trim()) validationErrors.push('First Name');
+    if (showNameFields && !lastName.trim()) validationErrors.push('Last Name');
+    return validationErrors;
+  };
+
+  const clearErrorIfSubmitted = () => {
+    if (hasAttemptedSubmit) {
+      setError('');
+    }
+  };
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
+    setHasAttemptedSubmit(true);
+
+    const validationErrors = validateForm();
+    if (validationErrors.length > 0) {
+      setError(`Please complete the following: ${validationErrors.join(', ')}`);
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      if (emailStatus !== 'valid') {
-        setError("Please enter a valid email address");
-        setIsLoading(false);
-        return;
-      }
-
       // For both contact-based and email suffix registration
       const result = await initiateRegistration(
         email,
@@ -116,7 +135,7 @@ export default function RegisterForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form onSubmit={onSubmit} className="space-y-4" noValidate>
       <div className="space-y-2">
         <Label htmlFor="email">Email address *</Label>
         <div className="relative">
@@ -127,13 +146,15 @@ export default function RegisterForm() {
             autoComplete="email"
             required
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              clearErrorIfSubmitted();
+            }}
             disabled={isLoading}
             className={`mt-1 ${
-              emailStatus === 'valid' ? 'border-green-500' :
-              emailStatus === 'invalid' ? 'border-red-500' : ''
+              hasAttemptedSubmit && (!email.trim() || emailStatus === 'invalid') ? 'border-red-500' : ''
             }`}
-            placeholder="Enter your email *"
+            placeholder="Enter your email"
             aria-describedby="email-status"
           />
           {isCheckingEmail && (
@@ -170,10 +191,13 @@ export default function RegisterForm() {
               autoComplete="given-name"
               required
               value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
+              onChange={(e) => {
+                setFirstName(e.target.value);
+                clearErrorIfSubmitted();
+              }}
               disabled={isLoading}
-              className="mt-1"
-              placeholder="Enter your first name *"
+              className={`mt-1 ${hasAttemptedSubmit && !firstName.trim() ? 'border-red-500' : ''}`}
+              placeholder="Enter your first name"
             />
           </div>
 
@@ -186,10 +210,13 @@ export default function RegisterForm() {
               autoComplete="family-name"
               required
               value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
+              onChange={(e) => {
+                setLastName(e.target.value);
+                clearErrorIfSubmitted();
+              }}
               disabled={isLoading}
-              className="mt-1"
-              placeholder="Enter your last name *"
+              className={`mt-1 ${hasAttemptedSubmit && !lastName.trim() ? 'border-red-500' : ''}`}
+              placeholder="Enter your last name"
             />
           </div>
         </>
@@ -204,14 +231,15 @@ export default function RegisterForm() {
           autoComplete="new-password"
           required
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            clearErrorIfSubmitted();
+          }}
           disabled={isLoading}
           className={`mt-1 ${
-            passwordStrength === 'strong' ? 'border-green-500' :
-            passwordStrength === 'medium' ? 'border-yellow-500' :
-            passwordStrength === 'weak' ? 'border-red-500' : ''
+            hasAttemptedSubmit && (!password.trim() || passwordStrength === 'weak') ? 'border-red-500' : ''
           }`}
-          placeholder="Create a password *"
+          placeholder="Create a password"
           aria-describedby="password-requirements"
         />
         <div id="password-requirements" className="text-sm mt-1">
@@ -236,9 +264,16 @@ export default function RegisterForm() {
         </div>
       </div>
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+      {hasAttemptedSubmit && error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>
+            <p className="font-medium mb-2">Please fill in the required fields:</p>
+            <ul className="list-disc list-inside space-y-1">
+              {error.split(', ').map((err, index) => (
+                <li key={index}>{err}</li>
+              ))}
+            </ul>
+          </AlertDescription>
         </Alert>
       )}
 
@@ -246,7 +281,12 @@ export default function RegisterForm() {
         id='register-button'
         type="submit"
         className="w-full"
-        disabled={isLoading || emailStatus !== 'valid' || !passwordStrength || passwordStrength === 'weak'}
+        disabled={isLoading}
+        className={`w-full ${
+          !email.trim() || emailStatus !== 'valid' || !password.trim() || passwordStrength === 'weak' ||
+          (showNameFields && (!firstName.trim() || !lastName.trim()))
+            ? 'opacity-50' : ''
+        }`}
       >
         {isLoading ? (
           <>

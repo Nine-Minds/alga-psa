@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Button } from './ui/Button';
 import { Alert, AlertDescription } from './ui/Alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/Tabs';
-import { Plus, Settings, Trash2, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { Plus, Settings, Trash2, CheckCircle, Clock } from 'lucide-react';
 import { MicrosoftProviderForm } from './MicrosoftProviderForm';
 import { GmailProviderForm } from './GmailProviderForm';
 import { EmailProviderList } from './EmailProviderList';
@@ -162,7 +162,6 @@ export function EmailProviderConfiguration({
       {/* Error Alert */}
       {error && (
         <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}

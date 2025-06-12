@@ -15,7 +15,7 @@ import { Label } from './ui/Label';
 import { Switch } from './ui/Switch';
 import { Alert, AlertDescription } from './ui/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
-import { ExternalLink, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
+import { ExternalLink, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
 
 const gmailProviderSchema = z.object({
@@ -53,6 +53,7 @@ export function GmailProviderForm({
   const [showClientSecret, setShowClientSecret] = useState(false);
   const [oauthStatus, setOauthStatus] = useState<'idle' | 'authorizing' | 'success' | 'error'>('idle');
   const [pubsubStatus, setPubsubStatus] = useState<'idle' | 'creating' | 'success' | 'error'>('idle');
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
   const isEditing = !!provider;
 
@@ -82,6 +83,14 @@ export function GmailProviderForm({
   });
 
   const onSubmit = async (data: GmailProviderFormData) => {
+    setHasAttemptedSubmit(true);
+    
+    // Check if form is valid
+    const isValid = await form.trigger();
+    if (!isValid) {
+      return;
+    }
+    
     try {
       setLoading(true);
       setError(null);
@@ -240,6 +249,7 @@ export function GmailProviderForm({
                 id="providerName"
                 {...form.register('providerName')}
                 placeholder="e.g., Support Gmail"
+                className={hasAttemptedSubmit && form.formState.errors.providerName ? 'border-red-500' : ''}
               />
               {form.formState.errors.providerName && (
                 <p className="text-sm text-red-500">{form.formState.errors.providerName.message}</p>
@@ -253,6 +263,7 @@ export function GmailProviderForm({
                 type="email"
                 {...form.register('mailbox')}
                 placeholder="support@company.com"
+                className={hasAttemptedSubmit && form.formState.errors.mailbox ? 'border-red-500' : ''}
               />
               {form.formState.errors.mailbox && (
                 <p className="text-sm text-red-500">{form.formState.errors.mailbox.message}</p>
@@ -296,6 +307,7 @@ export function GmailProviderForm({
               id="projectId"
               {...form.register('projectId')}
               placeholder="my-project-id"
+              className={hasAttemptedSubmit && form.formState.errors.projectId ? 'border-red-500' : ''}
             />
             {form.formState.errors.projectId && (
               <p className="text-sm text-red-500">{form.formState.errors.projectId.message}</p>
@@ -309,6 +321,7 @@ export function GmailProviderForm({
                 id="clientId"
                 {...form.register('clientId')}
                 placeholder="xxxxxxxxx.apps.googleusercontent.com"
+                className={hasAttemptedSubmit && form.formState.errors.clientId ? 'border-red-500' : ''}
               />
               {form.formState.errors.clientId && (
                 <p className="text-sm text-red-500">{form.formState.errors.clientId.message}</p>
@@ -323,6 +336,7 @@ export function GmailProviderForm({
                   type={showClientSecret ? 'text' : 'password'}
                   {...form.register('clientSecret')}
                   placeholder="Enter client secret"
+                  className={hasAttemptedSubmit && form.formState.errors.clientSecret ? 'border-red-500' : ''}
                 />
                 <Button
                   id="toggle-gmail-secret"
@@ -347,6 +361,7 @@ export function GmailProviderForm({
               id="redirectUri"
               {...form.register('redirectUri')}
               placeholder="https://yourapp.com/api/auth/google/callback"
+              className={hasAttemptedSubmit && form.formState.errors.redirectUri ? 'border-red-500' : ''}
             />
             {form.formState.errors.redirectUri && (
               <p className="text-sm text-red-500">{form.formState.errors.redirectUri.message}</p>
@@ -394,6 +409,7 @@ export function GmailProviderForm({
                 id="pubsubTopicName"
                 {...form.register('pubsubTopicName')}
                 placeholder="gmail-notifications"
+                className={hasAttemptedSubmit && form.formState.errors.pubsubTopicName ? 'border-red-500' : ''}
               />
               {form.formState.errors.pubsubTopicName && (
                 <p className="text-sm text-red-500">{form.formState.errors.pubsubTopicName.message}</p>
@@ -406,6 +422,7 @@ export function GmailProviderForm({
                 id="pubsubSubscriptionName"
                 {...form.register('pubsubSubscriptionName')}
                 placeholder="gmail-webhook-subscription"
+                className={hasAttemptedSubmit && form.formState.errors.pubsubSubscriptionName ? 'border-red-500' : ''}
               />
               {form.formState.errors.pubsubSubscriptionName && (
                 <p className="text-sm text-red-500">{form.formState.errors.pubsubSubscriptionName.message}</p>
@@ -484,9 +501,26 @@ export function GmailProviderForm({
       </Card>
 
       {/* Error Display */}
+      {hasAttemptedSubmit && Object.keys(form.formState.errors).length > 0 && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            <p className="font-medium mb-2">Please fill in the required fields:</p>
+            <ul className="list-disc list-inside space-y-1">
+              {form.formState.errors.providerName && <li>Provider Name</li>}
+              {form.formState.errors.mailbox && <li>Gmail Address</li>}
+              {form.formState.errors.projectId && <li>Google Cloud Project ID</li>}
+              {form.formState.errors.clientId && <li>Client ID</li>}
+              {form.formState.errors.clientSecret && <li>Client Secret</li>}
+              {form.formState.errors.redirectUri && <li>Redirect URI</li>}
+              {form.formState.errors.pubsubTopicName && <li>Pub/Sub Topic Name</li>}
+              {form.formState.errors.pubsubSubscriptionName && <li>Subscription Name</li>}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+      
       {error && (
         <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
@@ -496,7 +530,12 @@ export function GmailProviderForm({
         <Button id="gmail-cancel-btn" type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button id="gmail-submit-btn" type="submit" disabled={loading}>
+        <Button 
+          id="gmail-submit-btn" 
+          type="submit" 
+          disabled={loading}
+          className={Object.keys(form.formState.errors).length > 0 && !loading ? 'opacity-50' : ''}
+        >
           {loading ? 'Saving...' : isEditing ? 'Update Provider' : 'Add Provider'}
         </Button>
       </div>

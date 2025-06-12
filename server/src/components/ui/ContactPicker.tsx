@@ -250,7 +250,7 @@ export const ContactPicker: React.FC<ContactPickerProps & AutomationProps> = ({
                   size="xs"
                 />
               )}
-              <span className={!selectedContact && disabled ? 'text-gray-400' : ''}>{selectedContact ? selectedContact.full_name : placeholder}</span>
+              <span className={!selectedContact ? 'text-gray-400' : ''}>{selectedContact ? selectedContact.full_name : placeholder}</span>
             </div>
             <div className="flex items-center">
               <ChevronDown className={`h-4 w-4 ${disabled ? 'text-gray-400' : ''}`} />

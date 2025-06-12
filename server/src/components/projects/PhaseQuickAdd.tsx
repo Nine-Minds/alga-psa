@@ -8,6 +8,7 @@ import { TextArea } from 'server/src/components/ui/TextArea';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { toast } from 'react-hot-toast';
 import { addProjectPhase } from 'server/src/lib/actions/project-actions/projectActions';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 interface PhaseQuickAddProps {
   projectId: string;
@@ -28,9 +29,11 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setHasAttemptedSubmit(true);
     if (phaseName.trim() === '') return;
 
     setIsSubmitting(true);
@@ -71,13 +74,20 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
           <Dialog.Title className="text-xl font-semibold mb-4">
             Add New Phase
           </Dialog.Title>
+          {hasAttemptedSubmit && !phaseName.trim() && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>
+                Phase name is required
+              </AlertDescription>
+            </Alert>
+          )}
           <form onSubmit={handleSubmit} className="flex flex-col">
             <div className="space-y-4">
               <TextArea
                 value={phaseName}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPhaseName(e.target.value)}
                 placeholder="Phase name... *"
-                className="w-full p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg font-semibold"
+                className={`w-full p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg font-semibold ${hasAttemptedSubmit && !phaseName.trim() ? 'border-red-500' : 'border-gray-300'}`}
                 rows={1}
               />
               <TextArea
@@ -109,7 +119,7 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
                 <Button id="cancel-phase-button" variant="ghost" onClick={handleCancel} disabled={isSubmitting}>
                   Cancel
                 </Button>
-                <Button id="save-phase-button" type="submit" disabled={isSubmitting || !phaseName.trim()}>
+                <Button id="save-phase-button" type="submit" disabled={isSubmitting} className={!phaseName.trim() ? 'opacity-50' : ''}>
                   {isSubmitting ? 'Adding...' : 'Save'}
                 </Button>
               </div>

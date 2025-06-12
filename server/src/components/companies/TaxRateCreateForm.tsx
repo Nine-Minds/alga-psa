@@ -3,6 +3,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { addTaxRate } from 'server/src/lib/actions/taxRateActions';
 import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions';
 import { ITaxRegion } from 'server/src/interfaces/tax.interfaces';
@@ -20,7 +21,8 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]); // Default to today
     const [endDate, setEndDate] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [validationError, setValidationError] = useState<string | null>(null);
+    const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+    const [validationErrors, setValidationErrors] = useState<string[]>([]);
     
     // Tax regions state
     const [taxRegions, setTaxRegions] = useState<Pick<ITaxRegion, 'region_code' | 'region_name'>[]>([]);
@@ -47,37 +49,38 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
         fetchTaxRegions();
     }, []);
 
-    const validateForm = (): boolean => {
-        if (!regionCode) {
-            setValidationError('Tax region is required.');
-            return false;
-        }
+    const validateForm = () => {
+        const validationErrors = [];
+        if (!regionCode) validationErrors.push('Tax region');
         
         const percValue = parseFloat(percentage);
-        if (isNaN(percValue) || percValue <= 0 || percValue > 100) {
-            setValidationError('Percentage must be a valid number between 0 and 100.');
-            return false;
+        if (!percentage.trim() || isNaN(percValue) || percValue <= 0 || percValue > 100) {
+            validationErrors.push('Valid percentage (0-100)');
         }
         
-        if (!startDate) {
-            setValidationError('Start date is required.');
-            return false;
+        if (!startDate) validationErrors.push('Start date');
+        
+        return validationErrors;
+    };
+
+    const clearErrorIfSubmitted = () => {
+        if (hasAttemptedSubmit) {
+            setValidationErrors([]);
         }
-        
-        // Description is optional
-        // End date is optional
-        
-        setValidationError(null);
-        return true;
     };
 
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
-        if (!validateForm()) {
+        setHasAttemptedSubmit(true);
+
+        const errors = validateForm();
+        if (errors.length > 0) {
+            setValidationErrors(errors);
             return;
         }
 
         setIsSubmitting(true);
+        setValidationErrors([]);
         try {
             const percentageValue = parseFloat(percentage); // Already validated
             
@@ -97,9 +100,21 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
     };
 
     return (
-        <form onSubmit={handleSubmit} className="px-4 space-y-4">
-            {(validationError || errorTaxRegions) && (
-                <p className="text-red-600 text-sm">{validationError || errorTaxRegions}</p>
+        <form onSubmit={handleSubmit} className="px-4 space-y-4" noValidate>
+            {hasAttemptedSubmit && validationErrors.length > 0 && (
+                <Alert variant="destructive" className="mb-4">
+                    <AlertDescription>
+                        <p className="font-medium mb-2">Please fill in the required fields:</p>
+                        <ul className="list-disc list-inside space-y-1">
+                            {validationErrors.map((err, index) => (
+                                <li key={index}>{err}</li>
+                            ))}
+                        </ul>
+                    </AlertDescription>
+                </Alert>
+            )}
+            {errorTaxRegions && (
+                <p className="text-red-600 text-sm">{errorTaxRegions}</p>
             )}
             <div>
                 <Label htmlFor="tax-rate-region">Tax Region *</Label>
@@ -108,12 +123,13 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
                     value={regionCode}
                     onValueChange={(value) => {
                         setRegionCode(value);
-                        setValidationError(null);
+                        clearErrorIfSubmitted();
                     }}
                     options={taxRegions.map(r => ({ value: r.region_code, label: r.region_name }))}
                     placeholder={isLoadingTaxRegions ? "Loading regions..." : "Select Tax Region *"}
                     disabled={isSubmitting || isLoadingTaxRegions}
                     required={true}
+                    className={hasAttemptedSubmit && !regionCode ? 'ring-1 ring-red-500' : ''}
                 />
             </div>
             <div>
@@ -125,11 +141,12 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
                     value={percentage}
                     onChange={(e) => {
                         setPercentage(e.target.value);
-                        setValidationError(null);
+                        clearErrorIfSubmitted();
                     }}
                     placeholder="e.g., 8.25 *"
                     disabled={isSubmitting}
                     required
+                    className={hasAttemptedSubmit && (!percentage.trim() || parseFloat(percentage) <= 0 || parseFloat(percentage) > 100) ? 'border-red-500' : ''}
                 />
             </div>
             <div>
@@ -150,10 +167,11 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
                     value={startDate}
                     onChange={(e) => {
                         setStartDate(e.target.value);
-                        setValidationError(null);
+                        clearErrorIfSubmitted();
                     }}
                     disabled={isSubmitting}
                     required
+                    className={hasAttemptedSubmit && !startDate ? 'border-red-500' : ''}
                 />
             </div>
             <div>
@@ -171,12 +189,19 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
                 {/* Use a standard button for Cancel, Drawer closes via onOpenChange prop in parent */}
                 {/* We need a way to trigger the close from here. A simple approach is to simulate clicking the built-in close button if available, or rely on the parent managing the open state */}
                 <Button id="cancel-create-tax-rate-button" type="button" variant="ghost" onClick={() => {
+                    setHasAttemptedSubmit(false);
+                    setValidationErrors([]);
                     // Attempt to find and click the Drawer's default close button
                     const closeButton = document.querySelector('button[aria-label="Close"]') as HTMLElement | null;
                     closeButton?.click();
                     // If that doesn't work, the parent's onOpenChange(false) should handle it
                 }} disabled={isSubmitting}>Cancel</Button>
-                <Button id="submit-create-tax-rate-button" type="submit" disabled={isSubmitting || !regionCode || !percentage.trim() || !startDate}>
+                <Button 
+                    id="submit-create-tax-rate-button" 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className={!regionCode || !percentage.trim() || !startDate ? 'opacity-50' : ''}
+                >
                     {isSubmitting ? 'Creating...' : 'Create Tax Rate'}
                 </Button>
             </div>

@@ -110,7 +110,7 @@ export function SearchableSelect({
           disabled={disabled}
           {...automationIdProps}
         >
-          <span className="truncate">
+          <span className={cn("truncate", !selectedOption && "text-gray-400")}>
             {selectedOption ? selectedOption.label : placeholder}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
