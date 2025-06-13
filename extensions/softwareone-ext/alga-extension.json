@@ -11,29 +11,19 @@
   "tenantMode": "specific",
   "main": "dist/index.js",
   "autoEnable": true,
-  "permissions": {
-    "api": [
-      "companies:read",
-      "invoices:write",
-      "settings:read",
-      "settings:write",
-      "storage:read",
-      "storage:write"
-    ],
-    "ui": {
-      "navigation": ["main"],
-      "dashboards": []
-    }
-  },
+  "permissions": [
+    "companies:read",
+    "invoices:write",
+    "settings:read",
+    "settings:write",
+    "storage:read",
+    "storage:write"
+  ],
   "components": [
     {
       "type": "navigation",
       "slot": "main-nav",
-      "id": "swone-main-nav",
-      "displayName": "SoftwareOne",
-      "icon": "CloudIcon",
       "component": "./dist/components/NavItem.js",
-      "permissions": [],
       "props": {
         "id": "swone-nav",
         "label": "SoftwareOne",
@@ -46,11 +36,7 @@
     {
       "type": "navigation",
       "slot": "settings-nav",
-      "id": "swone-settings-nav",
-      "displayName": "SoftwareOne",
-      "icon": "CloudIcon",
       "component": "./dist/components/NavItem.js",
-      "permissions": ["settings:write"],
       "props": {
         "id": "swone-settings-nav",
         "label": "SoftwareOne",
@@ -61,64 +47,61 @@
       }
     },
     {
-      "type": "page",
-      "id": "swone-settings",
-      "path": "/settings/softwareone",
-      "displayName": "SoftwareOne Settings",
+      "type": "custom-page",
+      "slot": "main",
       "component": "./dist/components/SettingsPageWrapper.js",
-      "permissions": ["settings:write"]
+      "props": {
+        "id": "swone-settings",
+        "path": "/settings/softwareone",
+        "title": "SoftwareOne Settings",
+        "permissions": ["settings:write"]
+      }
     },
     {
-      "type": "page",
-      "id": "swone-agreements",
-      "path": "/softwareone/agreements",
-      "displayName": "Agreements",
+      "type": "custom-page",
+      "slot": "main",
       "component": "./dist/components/AgreementsListWrapper.js",
-      "permissions": []
+      "props": {
+        "id": "swone-agreements",
+        "path": "/softwareone/agreements",
+        "title": "Agreements",
+        "permissions": []
+      }
     },
     {
-      "type": "page",
-      "id": "swone-agreement-detail",
-      "path": "/softwareone/agreement/:id",
-      "displayName": "Agreement Details",
+      "type": "custom-page",
+      "slot": "main",
       "component": "./dist/pages/AgreementDetail.js",
-      "permissions": []
+      "props": {
+        "id": "swone-agreement-detail",
+        "path": "/softwareone/agreement/:id",
+        "title": "Agreement Details",
+        "permissions": []
+      }
     },
     {
-      "type": "page",
-      "id": "swone-statements",
-      "path": "/softwareone/statements",
-      "displayName": "Statements",
+      "type": "custom-page",
+      "slot": "main",
       "component": "./dist/pages/StatementsList.js",
-      "permissions": []
+      "props": {
+        "id": "swone-statements",
+        "path": "/softwareone/statements",
+        "title": "Statements",
+        "permissions": []
+      }
     },
     {
-      "type": "page",
-      "id": "swone-statement-detail",
-      "path": "/softwareone/statement/:id",
-      "displayName": "Statement Details",
+      "type": "custom-page",
+      "slot": "main",
       "component": "./dist/pages/StatementDetail.js",
-      "permissions": []
+      "props": {
+        "id": "swone-statement-detail",
+        "path": "/softwareone/statement/:id",
+        "title": "Statement Details",
+        "permissions": []
+      }
     }
   ],
-  "api": {
-    "endpoints": [
-      {
-        "id": "sync",
-        "path": "/sync",
-        "method": "POST",
-        "handler": "./dist/handlers/runSync.js",
-        "permissions": ["storage:write"]
-      },
-      {
-        "id": "activate-agreement",
-        "path": "/activate-agreement",
-        "method": "POST",
-        "handler": "./dist/handlers/activateAgreement.js",
-        "permissions": ["storage:write"]
-      }
-    ]
-  },
   "settings": [
     {
       "key": "apiEndpoint",
