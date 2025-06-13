@@ -432,7 +432,7 @@ describe('Project Management', () => {
             phaseId = phase.phase_id;
 
             // Get status mapping
-            const statusMappings = await ProjectModel.getProjectStatusMappings(projectId);
+            const statusMappings = await ProjectModel.getProjectStatusMappings(db, projectId);
             statusMappingId = statusMappings[0].project_status_mapping_id;
         });
 
@@ -446,7 +446,8 @@ describe('Project Management', () => {
                 assigned_to: null,
                 due_date: null,
                 project_status_mapping_id: statusMappingId,
-                wbs_code: taskWbsCode
+                wbs_code: taskWbsCode,
+                task_type_key: 'standard'
             };
 
             const result = await addTaskToPhase(phaseId, taskData, []);
@@ -473,7 +474,8 @@ describe('Project Management', () => {
                 assigned_to: null,
                 due_date: null,
                 project_status_mapping_id: statusMappingId,
-                wbs_code: taskWbsCode
+                wbs_code: taskWbsCode,
+                task_type_key: 'standard'
             };
 
             const task = await addTaskToPhase(phaseId, taskData, []);
@@ -521,7 +523,8 @@ describe('Project Management', () => {
                 assigned_to: null,
                 due_date: null,
                 project_status_mapping_id: statusMappingId,
-                wbs_code: taskWbsCode
+                wbs_code: taskWbsCode,
+                task_type_key: 'standard'
             };
 
             const task = await addTaskToPhase(phaseId, taskData, []);
@@ -574,7 +577,7 @@ describe('Project Management', () => {
             const newPhase = await addProjectPhase(newPhaseData);
 
             // Get status mapping for new project
-            const newStatusMappings = await ProjectModel.getProjectStatusMappings(newProject.project_id);
+            const newStatusMappings = await ProjectModel.getProjectStatusMappings(db, newProject.project_id);
             const newStatusMappingId = newStatusMappings[0].project_status_mapping_id;
 
             // Create a task
@@ -587,7 +590,8 @@ describe('Project Management', () => {
                 assigned_to: null,
                 due_date: null,
                 project_status_mapping_id: statusMappingId,
-                wbs_code: taskWbsCode
+                wbs_code: taskWbsCode,
+                task_type_key: 'standard'
             };
 
             const task = await addTaskToPhase(phaseId, taskData, []);
@@ -651,7 +655,7 @@ describe('Project Management', () => {
             phaseId = phase.phase_id;
 
             // Get status mapping
-            const statusMappings = await ProjectModel.getProjectStatusMappings(projectId);
+            const statusMappings = await ProjectModel.getProjectStatusMappings(db, projectId);
             const statusMappingId = statusMappings[0].project_status_mapping_id;
 
             // Create task
@@ -664,7 +668,8 @@ describe('Project Management', () => {
                 assigned_to: null,
                 due_date: null,
                 project_status_mapping_id: statusMappingId,
-                wbs_code: taskWbsCode
+                wbs_code: taskWbsCode,
+                task_type_key: 'standard'
             };
 
             const task = await addTaskToPhase(phaseId, taskData, []);

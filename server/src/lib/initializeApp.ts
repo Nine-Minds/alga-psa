@@ -35,8 +35,19 @@ export async function initializeApp() {
       process.exit(0);
     });
 
-    // Initialize policy engine
+    // Initialize enterprise features
     if (isEnterprise) {
+      // Initialize extensions
+      try {
+        const { initializeExtensions } = await import('../../../ee/server/src/lib/extensions/initialize');
+        await initializeExtensions();
+        logger.info('Extension system initialized');
+      } catch (error) {
+        logger.error('Failed to initialize extensions:', error);
+        // Continue startup even if extensions fail to load
+      }
+
+      // Initialize policy engine (commented out for now)
       // const { PolicyEngine } = await import('@ee/lib/auth');
       // const policyEngine = new PolicyEngine();
 

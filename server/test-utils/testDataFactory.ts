@@ -176,30 +176,30 @@ export async function createUser(
  * @param options Optional properties for the created entities
  * @returns Object containing the created IDs
  */
-// export async function createTestEnvironment(
-//   db: Knex,
-//   options: {
-//     companyName?: string;
-//     userName?: string;
-//     billingCycle?: BillingCycleType;
-//   } = {}
-// ): Promise<{
-//   tenantId: string;
-//   companyId: string;
-//   locationId: string;
-//   userId: string;
-// }> {
-//   const tenantId = await createTenant(db);
-//   const companyId = await createCompany(db, tenantId, options.companyName, {
-//     billing_cycle: options.billingCycle || 'monthly'
-//   });
-//   const locationId = await createCompanyLocation(db, companyId, tenantId);
-//   const userId = await createUser(db, tenantId, {
-//     username: options.userName
-//   });
+export async function createTestEnvironment(
+  db: Knex,
+  options: {
+    companyName?: string;
+    userName?: string;
+    billingCycle?: BillingCycleType;
+  } = {}
+): Promise<{
+  tenantId: string;
+  companyId: string;
+  locationId: string;
+  userId: string;
+}> {
+  const tenantId = await createTenant(db);
+  const companyId = await createCompany(db, tenantId, options.companyName, {
+    billing_cycle: options.billingCycle || 'monthly'
+  });
+  const locationId = await createCompanyLocation(db, companyId, tenantId);
+  const userId = await createUser(db, tenantId, {
+    username: options.userName
+  });
 
-//   return { tenantId, companyId, locationId, userId };
-// }
+  return { tenantId, companyId, locationId, userId };
+}
 
 /**
  * Helper function to generate a timestamp for test data

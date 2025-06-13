@@ -9,7 +9,6 @@ import React, { createContext, ReactNode, useContext, useEffect, useState } from
 import { ExtensionContextValue } from './types';
 // import { useTenant } from '../../../hooks/useTenant';
 // import { useAuth } from '../../../auth/session';
-import logger from '@/utils/logger';
 
 // Temporary fallbacks for missing hooks
 const useTenant = () => ({ id: 'default-tenant' });
@@ -34,10 +33,11 @@ export const ExtensionProvider: React.FC<ExtensionProviderProps> = ({ children }
   useEffect(() => {
     const initialize = async () => {
       try {
+        
         // In the future, we might load extension settings, etc.
-        logger.debug('Extension system initialized', { tenant: tenant?.id });
+        console.debug('Extension system initialized', { tenant: tenant?.id });
       } catch (error) {
-        logger.error('Failed to initialize extension system', { error });
+        console.error('Failed to initialize extension system', error);
       } finally {
         setInitialized(true);
       }
