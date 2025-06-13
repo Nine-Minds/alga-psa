@@ -2,10 +2,14 @@ import React from 'react';
 import { GetServerSideProps } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import DefaultLayout from '@/components/layout/DefaultLayout';
 import dynamic from 'next/dynamic';
 
-// Dynamically import the component to handle any client-side dependencies
+// Dynamically import components to handle any client-side dependencies
+const SimpleLayout = dynamic(
+  () => import('@/components/extensions/softwareone/SimpleLayout'),
+  { ssr: false }
+);
+
 const StatementsList = dynamic(
   () => import('@/components/extensions/softwareone/StatementsList'),
   { 
@@ -16,9 +20,9 @@ const StatementsList = dynamic(
 
 export default function SoftwareOneStatementsPage() {
   return (
-    <DefaultLayout>
+    <SimpleLayout>
       <StatementsList />
-    </DefaultLayout>
+    </SimpleLayout>
   );
 }
 

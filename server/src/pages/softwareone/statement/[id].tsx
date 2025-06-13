@@ -2,11 +2,15 @@ import React from 'react';
 import { GetServerSideProps } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import DefaultLayout from '@/components/layout/DefaultLayout';
 import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
 
-// Dynamically import the component to handle any client-side dependencies
+// Dynamically import components to handle any client-side dependencies
+const SimpleLayout = dynamic(
+  () => import('@/components/extensions/softwareone/SimpleLayout'),
+  { ssr: false }
+);
+
 const StatementDetail = dynamic(
   () => import('@/components/extensions/softwareone/StatementDetail'),
   { 
@@ -21,18 +25,18 @@ export default function SoftwareOneStatementDetailPage() {
 
   if (!id || typeof id !== 'string') {
     return (
-      <DefaultLayout>
+      <SimpleLayout>
         <div className="p-6">
           <p>Invalid statement ID</p>
         </div>
-      </DefaultLayout>
+      </SimpleLayout>
     );
   }
 
   return (
-    <DefaultLayout>
+    <SimpleLayout>
       <StatementDetail statementId={id} />
-    </DefaultLayout>
+    </SimpleLayout>
   );
 }
 
