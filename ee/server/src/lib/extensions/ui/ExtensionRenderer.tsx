@@ -68,8 +68,8 @@ export function ExtensionRenderer({
           return;
         }
         
-        // Fetch the component JavaScript from the API
-        const response = await fetch(`/api/extensions/${extensionId}/components/${componentPath}`);
+        // Fetch the component JavaScript from the public API
+        const response = await fetch(`/api/extensions/${extensionId}/public-components/${componentPath}`);
         
         if (!response.ok) {
           throw new Error(`Failed to load component: ${response.statusText}`);
