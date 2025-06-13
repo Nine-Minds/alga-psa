@@ -53,7 +53,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // Construct the file path
     const extensionsDir = path.join(process.cwd(), 'extensions');
     const extensionDir = 'softwareone-ext'; // Hardcoded for now, should derive from extension ID
-    const filePath = path.join(extensionsDir, extensionDir, cleanPath);
+    const filePath = path.join(extensionsDir, extensionDir, 'dist', cleanPath);
 
     // Security: Ensure the path doesn't escape the extension directory
     const normalizedPath = path.normalize(filePath);

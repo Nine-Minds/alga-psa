@@ -1,166 +1,73 @@
-/**
- * Extension Renderer Component
- * 
- * Handles dynamic loading of extension components
- */
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { Suspense } from 'react';
 import { ExtensionRendererProps } from './types';
 import { ExtensionErrorBoundary } from './ExtensionErrorBoundary';
 
-// Client-side logger replacement
-const logger = {
-  debug: (...args: any[]) => console.debug('[ExtensionRenderer]', ...args),
-  info: (...args: any[]) => console.info('[ExtensionRenderer]', ...args),
-  warn: (...args: any[]) => console.warn('[ExtensionRenderer]', ...args),
-  error: (...args: any[]) => console.error('[ExtensionRenderer]', ...args),
-};
+// Create a cache for the dynamically imported components.
+// The key is a unique identifier for the component, and the value is the lazy-loaded component.
+const componentCache = new Map<string, React.LazyExoticComponent<React.ComponentType<any>>>();
 
-// Cache for loaded components
-const componentCache = new Map<string, React.ComponentType<any>>();
-
-/**
- * Loading state component
- */
+// A simple loading component to show while the extension component is being fetched.
 const Loading = () => (
-  <div className="rounded-md border border-gray-200 bg-gray-50 p-4 text-center">
-    <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
-    <span className="ml-2 text-sm text-gray-600">Loading extension...</span>
-  </div>
+  <div className="p-4 text-center text-gray-500">Loading Extension...</div>
 );
 
-/**
- * Renders an extension component with dynamic loading
- */
+// A component to display when the extension component fails to load.
+const ErrorDisplay = ({ error, componentPath }: { error: any; componentPath: string }) => (
+    <div className="p-4 text-red-700 bg-red-100 border border-red-300 rounded-md">
+        <p className="font-semibold">Error loading component</p>
+        <p className="text-sm">Could not load <code className="text-xs bg-red-200 p-1 rounded">{componentPath}</code>.</p>
+        <pre className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded">{error.toString()}</pre>
+    </div>
+);
+
 export function ExtensionRenderer({
   extensionId,
   componentPath,
   slotProps = {},
   defaultProps = {},
-  onRender,
   onError,
 }: ExtensionRendererProps) {
-  const [Component, setComponent] = useState<React.ComponentType<any> | null>(null);
-  const [loading, setLoading] = useState(true);
-  const startTime = useRef(Date.now());
-
-  // Generate a cache key for this component
+  // Generate a unique cache key for the component.
   const cacheKey = `${extensionId}:${componentPath}`;
 
-  // Combine props
-  const componentProps = {
+  // If the component is not already in the cache, create a lazy-loaded version and add it.
+  if (!componentCache.has(cacheKey)) {
+    const LazyComponent = React.lazy(() => {
+        // Use a dynamic import to fetch the component from the API endpoint.
+        // To prevent the Next.js bundler from trying to resolve this import at
+        // build time, we construct a full, dynamic URL. This forces the import
+        // to be handled entirely at runtime by the browser.
+        const componentUrl = `${window.location.origin}/api/extensions/${extensionId}/components/${componentPath}`;
+        // Tell webpack to ignore this import so it remains dynamic at runtime.
+        return import(/* webpackIgnore: true */ /* @vite-ignore */ componentUrl)
+            .catch(err => {
+                // If the import fails, log the error and return a component that displays the error.
+                console.error(`[ExtensionRenderer] Failed to load component: ${componentPath}`, err);
+                onError?.(err);
+                return { default: () => <ErrorDisplay error={err} componentPath={componentPath} /> };
+            });
+    });
+    componentCache.set(cacheKey, LazyComponent);
+  }
+
+  // Retrieve the lazy-loaded component from the cache.
+  const LazyComponent = componentCache.get(cacheKey)!;
+
+  // Combine the default props from the extension manifest and the props from the slot.
+  const combinedProps = {
     ...defaultProps,
     ...slotProps,
     extensionId,
   };
 
-  // Load the component dynamically
-  useEffect(() => {
-    let isMounted = true;
-    
-    async function loadComponent() {
-      try {
-        // Check if the component is already cached
-        if (componentCache.has(cacheKey)) {
-          const cachedComponent = componentCache.get(cacheKey)!;
-          if (isMounted) {
-            setComponent(() => cachedComponent);
-            setLoading(false);
-            
-            // Track render time
-            const loadTime = Date.now() - startTime.current;
-            onRender?.(loadTime);
-          }
-          return;
-        }
-        
-        // Fetch the component JavaScript from the API
-        const response = await fetch(`/api/extensions/${extensionId}/components/${componentPath}`);
-        
-        if (!response.ok) {
-          throw new Error(`Failed to load component: ${response.statusText}`);
-        }
-        
-        const componentCode = await response.text();
-        
-        // Create a function that returns the component
-        // This is a simplified approach - in production, you'd want more security measures
-        const moduleFunction = new Function('React', 'exports', 'require', componentCode + '\nreturn exports.default || exports;');
-        
-        // Create a minimal module environment
-        const exports: any = {};
-        const require = (moduleName: string) => {
-          // Provide access to commonly needed modules
-          if (moduleName === 'react') return React;
-          if (moduleName === '@radix-ui/react-icons') {
-            // Return a mock or the actual module if available
-            return {
-              CloudIcon: () => React.createElement('span', {}, '☁️'),
-              // Add other icons as needed
-            };
-          }
-          throw new Error(`Module '${moduleName}' not available to extensions`);
-        };
-        
-        // Execute the module code
-        const LoadedComponent = moduleFunction(React, exports, require);
-        
-        // Ensure we have a valid React component
-        if (!LoadedComponent || (typeof LoadedComponent !== 'function' && typeof LoadedComponent !== 'object')) {
-          throw new Error('Invalid component exported from extension');
-        }
-        
-        // Cache the component
-        componentCache.set(cacheKey, LoadedComponent);
-        
-        if (isMounted) {
-          setComponent(() => LoadedComponent);
-          setLoading(false);
-          
-          // Track render time
-          const loadTime = Date.now() - startTime.current;
-          onRender?.(loadTime);
-        }
-      } catch (error) {
-        logger.error('Failed to load extension component', {
-          extensionId,
-          componentPath,
-          error,
-        });
-        
-        if (isMounted) {
-          setLoading(false);
-          onError?.(error as Error);
-        }
-      }
-    }
-    
-    loadComponent();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [cacheKey, extensionId, componentPath, onRender, onError]);
-  
-  if (loading) {
-    return <Loading />;
-  }
-  
-  if (!Component) {
-    return (
-      <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-        Failed to load extension component
-      </div>
-    );
-  }
-  
   return (
-    <ExtensionErrorBoundary 
-      extensionId={extensionId}
-      onError={onError}
-    >
-      <Component {...componentProps} />
+    <ExtensionErrorBoundary extensionId={extensionId} onError={onError}>
+      <Suspense fallback={<Loading />}>
+        {/* Render the lazy-loaded component inside a Suspense boundary. */}
+        <LazyComponent {...combinedProps} />
+      </Suspense>
     </ExtensionErrorBoundary>
   );
 }
