@@ -370,6 +370,7 @@ Scheduler hooks for billing cycle    Auto‑post SoftwareOne charges to weekly A
    - Need to run server with NEXT_PUBLIC_EDITION=enterprise
    - Verify extension loads on startup
    - Confirm navigation appears in sidebar
+   - **Note**: Created symlink `server/extensions -> ../extensions` to fix loader path issue
 
 2. **Storage Integration**
    - Currently using localStorage mock
@@ -420,3 +421,30 @@ The extension is structurally complete and ready for testing in a running enviro
    - Documented technical debt and future improvements
 
 These additions were necessary to make the extension system functional and provide a complete implementation that can be tested and deployed.
+
+⸻
+
+## 15. Troubleshooting
+
+### Extension Not Loading
+**Problem**: Logs show "Extensions directory does not exist"
+**Solution**: Created symlink from `server/extensions` to `../extensions` because the loader runs from the server directory
+
+### Extension Not Visible in Menu
+**Checklist**:
+1. Ensure `NEXT_PUBLIC_EDITION=enterprise` is set
+2. Check logs for "Extension loaded successfully" with SoftwareOne details
+3. Verify extension is enabled in database (check extensions table)
+4. Check `/api/extensions/check-softwareone` endpoint for status
+5. Verify navigation API returns items: `/api/extensions/navigation`
+
+### Component Loading Issues
+**Problem**: Extension components fail to load
+**Solution**: 
+1. Ensure extension is built (`npm run build` in extension directory)
+2. Check browser console for loading errors
+3. Verify component paths in manifest match built files in `dist/`
+
+### Storage Issues
+**Problem**: Settings not persisting
+**Solution**: Currently using localStorage mock. Check browser's localStorage for keys starting with `swone:`
