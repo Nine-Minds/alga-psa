@@ -308,8 +308,10 @@ Scheduler hooks for billing cycle    Auto‑post SoftwareOne charges to weekly A
 2. **Get Extension Visible**
    - ✅ Fixed instrumentation.ts to call correct initializeApp
    - ✅ Verified extension initialization is called when NEXT_PUBLIC_EDITION=enterprise
-   - ⚠️ Need to verify extension is actually loaded (check logs)
-   - ⚠️ Check if extension is registered in database
+   - ✅ Confirmed autoEnable:true in manifest will enable extension on registration
+   - ✅ Created check-softwareone API endpoint for debugging
+   - ⚠️ Need to verify extension is actually loaded (requires running server)
+   - ⚠️ Check if extension is registered in database (requires DB access)
    - ⚠️ Verify navigation API returns extension items
    - ⚠️ Test if NavItem component renders correctly
 
@@ -325,11 +327,13 @@ Scheduler hooks for billing cycle    Auto‑post SoftwareOne charges to weekly A
 
 ### 2025-01-10 Progress:
 1. ✅ Cleaned up all debug/temporary code
-2. ✅ Fixed ExtensionRenderer to load actual components
-3. ✅ Created component serving API endpoint
-4. ✅ Updated NavItem component for Next.js
+2. ✅ Fixed ExtensionRenderer to load actual components via dynamic loading
+3. ✅ Created component serving API endpoint `/api/extensions/[extensionId]/components/[...path]`
+4. ✅ Updated NavItem component for Next.js navigation
 5. ✅ Rebuilt extension with fixes
-6. ⏳ Still need to verify extension loading and visibility
+6. ✅ Fixed instrumentation.ts to use correct initializeApp
+7. ✅ Created check-softwareone API endpoint for status verification
+8. ⏳ Still need to verify extension loading and visibility (requires running server)
 
 ## Ready for implementation?
 

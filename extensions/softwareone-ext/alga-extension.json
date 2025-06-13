@@ -65,7 +65,7 @@
       "id": "swone-settings",
       "path": "/settings/softwareone",
       "displayName": "SoftwareOne Settings",
-      "component": "./dist/pages/SettingsPage.js",
+      "component": "./dist/components/SettingsPageWrapper.js",
       "permissions": ["settings:write"]
     },
     {
@@ -73,7 +73,7 @@
       "id": "swone-agreements",
       "path": "/softwareone/agreements",
       "displayName": "Agreements",
-      "component": "./dist/pages/AgreementsList.js",
+      "component": "./dist/components/AgreementsListWrapper.js",
       "permissions": []
     },
     {
