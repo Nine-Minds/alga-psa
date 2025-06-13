@@ -12,6 +12,7 @@
   "main": "dist/index.js",
   "autoEnable": true,
   "permissions": [
+    "ui:view",
     "companies:read",
     "invoices:write",
     "settings:read",
@@ -22,7 +23,7 @@
   "components": [
     {
       "type": "navigation",
-      "slot": "main-nav",
+      "slot": "main-navigation",
       "component": "./dist/components/NavItem.js",
       "props": {
         "id": "swone-nav",
@@ -35,7 +36,7 @@
     },
     {
       "type": "navigation",
-      "slot": "settings-nav",
+      "slot": "settings-navigation",
       "component": "./dist/components/NavItem.js",
       "props": {
         "id": "swone-settings-nav",
@@ -48,7 +49,7 @@
     },
     {
       "type": "custom-page",
-      "slot": "main",
+      "slot": "custom-pages",
       "component": "./dist/components/SettingsPageWrapper.js",
       "props": {
         "id": "swone-settings",
@@ -59,7 +60,7 @@
     },
     {
       "type": "custom-page",
-      "slot": "main",
+      "slot": "custom-pages",
       "component": "./dist/components/AgreementsListWrapper.js",
       "props": {
         "id": "swone-agreements",
@@ -70,7 +71,7 @@
     },
     {
       "type": "custom-page",
-      "slot": "main",
+      "slot": "custom-pages",
       "component": "./dist/pages/AgreementDetail.js",
       "props": {
         "id": "swone-agreement-detail",
@@ -81,7 +82,7 @@
     },
     {
       "type": "custom-page",
-      "slot": "main",
+      "slot": "custom-pages",
       "component": "./dist/pages/StatementsList.js",
       "props": {
         "id": "swone-statements",
@@ -92,7 +93,7 @@
     },
     {
       "type": "custom-page",
-      "slot": "main",
+      "slot": "custom-pages",
       "component": "./dist/pages/StatementDetail.js",
       "props": {
         "id": "swone-statement-detail",
