@@ -68,39 +68,47 @@ export function ExtensionRenderer({
           return;
         }
         
-        // Dynamic import - in a real implementation, this would be fetching
-        // from an API or special URL that serves the extension's JavaScript
-        // For now, we'll simulate it with a timeout and placeholder component
+        // Fetch the component JavaScript from the API
+        const response = await fetch(`/api/extensions/${extensionId}/components/${componentPath}`);
         
-        // For demonstration purposes only - would be replaced with actual loading
-        await new Promise(resolve => setTimeout(resolve, 500));
+        if (!response.ok) {
+          throw new Error(`Failed to load component: ${response.statusText}`);
+        }
         
-        // In a real implementation, this would be:
-        // const module = await import(`/api/extensions/${extensionId}/components/${componentPath}`);
-        // const Component = module.default;
+        const componentCode = await response.text();
         
-        // For now, create a placeholder component
-        const PlaceholderComponent = (props: any) => (
-          <div className="border border-dashed p-4 rounded-md bg-gray-50">
-            <div className="text-sm font-medium text-gray-700 mb-2">
-              Extension Component from {extensionId}
-            </div>
-            <div className="text-xs text-gray-500 mb-3">
-              Component Path: {componentPath}
-            </div>
-            <div className="bg-white p-3 rounded border text-xs">
-              <pre className="whitespace-pre-wrap">
-                {JSON.stringify(props, null, 2)}
-              </pre>
-            </div>
-          </div>
-        );
+        // Create a function that returns the component
+        // This is a simplified approach - in production, you'd want more security measures
+        const moduleFunction = new Function('React', 'exports', 'require', componentCode + '\nreturn exports.default || exports;');
+        
+        // Create a minimal module environment
+        const exports: any = {};
+        const require = (moduleName: string) => {
+          // Provide access to commonly needed modules
+          if (moduleName === 'react') return React;
+          if (moduleName === '@radix-ui/react-icons') {
+            // Return a mock or the actual module if available
+            return {
+              CloudIcon: () => React.createElement('span', {}, '☁️'),
+              // Add other icons as needed
+            };
+          }
+          throw new Error(`Module '${moduleName}' not available to extensions`);
+        };
+        
+        // Execute the module code
+        const LoadedComponent = moduleFunction(React, exports, require);
+        
+        // Ensure we have a valid React component
+        if (!LoadedComponent || (typeof LoadedComponent !== 'function' && typeof LoadedComponent !== 'object')) {
+          throw new Error('Invalid component exported from extension');
+        }
         
         // Cache the component
-        componentCache.set(cacheKey, PlaceholderComponent);
+        componentCache.set(cacheKey, LoadedComponent);
         
         if (isMounted) {
-          setComponent(() => PlaceholderComponent);
+          setComponent(() => LoadedComponent);
           setLoading(false);
           
           // Track render time
