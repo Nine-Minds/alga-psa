@@ -5,14 +5,15 @@ import { DataTable } from 'server/src/components/ui/DataTable';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { Button } from 'server/src/components/ui/Button';
-import { Info } from 'lucide-react';
+import { Input } from 'server/src/components/ui/Input';
+import { Info, Search } from 'lucide-react';
 import { 
   getAllBillingCycles, 
   updateBillingCycle,
   canCreateNextBillingCycle,
   createNextBillingCycle
 } from 'server/src/lib/actions/billingCycleActions';
-import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
+import { getAllCompaniesPaginated } from 'server/src/lib/actions/company-actions/companyActions';
 import { BillingCycleType, ICompany } from 'server/src/interfaces';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 
@@ -30,6 +31,11 @@ const BillingCycles: React.FC = () => {
   const [companies, setCompanies] = useState<Partial<ICompany>[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize] = useState<number>(10);
+  const [totalCount, setTotalCount] = useState<number>(0);
   const [cycleStatus, setCycleStatus] = useState<{
     [companyId: string]: {
       canCreate: boolean;
@@ -45,20 +51,37 @@ const BillingCycles: React.FC = () => {
     error?: string;
   } | null>(null);
 
+  // Debounce search term
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300); // 300ms delay
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchTerm]);
+
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentPage, debouncedSearchTerm]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [cycles, fetchedCompanies] = await Promise.all([
+      const [cycles, companiesResponse] = await Promise.all([
         getAllBillingCycles(),
-        getAllCompanies()
+        getAllCompaniesPaginated({
+          page: currentPage,
+          pageSize,
+          searchTerm: debouncedSearchTerm,
+          includeInactive: true
+        })
       ]);
 
       setBillingCycles(cycles);
-      setCompanies(fetchedCompanies);
+      setCompanies(companiesResponse.companies);
+      setTotalCount(companiesResponse.totalCount);
 
       // Check which companies can have cycles created
       const cycleCreationStatus: {
@@ -69,7 +92,7 @@ const BillingCycles: React.FC = () => {
         }
       } = {};
       
-      for (const company of fetchedCompanies) {
+      for (const company of companiesResponse.companies) {
         if (company.company_id) {
           const status = await canCreateNextBillingCycle(company.company_id);
           cycleCreationStatus[company.company_id] = status;
@@ -189,14 +212,33 @@ const BillingCycles: React.FC = () => {
     },
   ];
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div className="flex items-center">
-          <h3 className="text-lg font-semibold">Billing Cycles</h3>
-          <Tooltip content="Configure billing cycles for companies and create new billing periods.">
-            <Info className="ml-2 h-4 w-4 text-gray-500" />
-          </Tooltip>
+      <CardHeader className="flex flex-col gap-4">
+        <div className="flex flex-row items-center justify-between">
+          <div className="flex items-center">
+            <h3 className="text-lg font-semibold">Billing Cycles</h3>
+            <Tooltip content="Configure billing cycles for companies and create new billing periods.">
+              <Info className="ml-2 h-4 w-4 text-gray-500" />
+            </Tooltip>
+          </div>
+        </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            type="text"
+            placeholder="Search companies..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1); // Reset to first page on new search
+            }}
+            className="pl-10 pr-4 py-2 w-full md:w-80"
+          />
         </div>
       </CardHeader>
       <CardContent>
@@ -212,6 +254,10 @@ const BillingCycles: React.FC = () => {
             data={companies}
             columns={columns}
             pagination={true}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalItems={totalCount}
+            onPageChange={handlePageChange}
           />
         )}
 
