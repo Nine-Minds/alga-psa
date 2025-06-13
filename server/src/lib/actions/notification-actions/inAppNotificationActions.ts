@@ -7,48 +7,40 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { 
   CreateNotificationData, 
-  Notification, 
+  InternalNotification, 
   NotificationListResult,
-  NotificationEvent
+  EnrichedNotification,
+  NotificationSseEvent
 } from 'server/src/interfaces/notification.interfaces';
 import { NotificationPublisher } from 'server/src/lib/notifications/publisher';
-import { v4 as uuidv4 } from 'uuid';
 
 /**
- * Create a new in-app notification for a specific user with real-time delivery
+ * Create a new in-app notification for a specific user with real-time delivery.
+ * This is the primary action for creating a single notification.
  */
 export async function createNotificationAction(
-  userId: number,
   notificationData: CreateNotificationData
-): Promise<Notification> {
+): Promise<InternalNotification> {
   const { tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
   
-  if (!tenant) {
-    throw new Error('Tenant not found');
+  if (!tenant || !currentUser) {
+    throw new Error('Authentication required');
   }
 
-  // Create notification event for publisher
-  const notificationEvent: NotificationEvent = {
-    id: uuidv4(),
-    tenant,
-    userId,
-    type: notificationData.type,
-    category: notificationData.category,
-    title: notificationData.title,
-    message: notificationData.message,
-    data: notificationData.data,
-    actionUrl: notificationData.actionUrl,
-    priority: notificationData.priority || 'normal',
-  };
-
-  // Use publisher to save and broadcast notification
+  // The publisher will handle fetching template/type info and broadcasting the event.
   const publisher = new NotificationPublisher();
   try {
-    const notification = await publisher.publishNotification(notificationEvent);
+    const targetUserId = notificationData.user_id !== undefined ? notificationData.user_id : currentUser.user_id;
+    const dataToPublish: CreateNotificationData = {
+      ...notificationData,
+      user_id: Number(targetUserId),
+    };
+    const notification = await publisher.publishNotification(dataToPublish);
 
-    // Revalidate notification-related paths
-    revalidatePath('/msp/dashboard');
-    revalidatePath('/msp/notifications');
+    // Revalidate paths for the user who received the notification
+    revalidatePath(`/users/${notification.user_id}/dashboard`);
+    revalidatePath(`/users/${notification.user_id}/notifications`);
 
     return notification;
   } finally {
@@ -57,7 +49,7 @@ export async function createNotificationAction(
 }
 
 /**
- * Get notifications for the current user with pagination
+ * Get notifications for the current user with pagination, enriched with type and priority details.
  */
 export async function getNotificationsAction(
   page: number = 1,
@@ -74,28 +66,47 @@ export async function getNotificationsAction(
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     const offset = (page - 1) * pageSize;
 
-    // Build base query
-    let query = trx('notifications')
-      .where('tenant', tenant)
-      .where('user_id', currentUser.user_id)
-      .where('archived_at', null);
+    // Base query for notifications
+    let query = trx('internal_notifications as n')
+      .where('n.tenant', tenant)
+      .where('n.user_id', currentUser.user_id)
+      .whereNull('n.archived_at');
 
     if (unreadOnly) {
-      query = query.where('read_at', null);
+      query = query.whereNull('n.read_at');
     }
 
-    // Get notifications with pagination
-    const notifications = await query
+    // Get notifications with joins for enrichment
+    const notifications: EnrichedNotification[] = await query
       .clone()
-      .orderBy('created_at', 'desc')
+      .leftJoin('internal_notification_types as nt', 'n.type_id', 'nt.internal_notification_type_id')
+      .leftJoin('standard_priorities as sp', 'n.priority_id', 'sp.priority_id')
+      .select(
+        'n.*',
+        'nt.type_name',
+        'nt.category_name',
+        'sp.priority_name',
+        'sp.color as priority_color'
+      )
+      .orderBy('n.created_at', 'desc')
       .limit(pageSize)
       .offset(offset)
-      .select('*');
+      .then(rows => rows.map(r => ({
+        ...r,
+        type: {
+          internal_notification_type_id: r.type_id,
+          type_name: r.type_name,
+          category_name: r.category_name,
+        },
+        priority: r.priority_id ? {
+          priority_id: r.priority_id,
+          priority_name: r.priority_name,
+          color: r.priority_color,
+        } : undefined,
+      })));
 
     // Get total count
-    const [{ count }] = await query
-      .clone()
-      .count('id as count');
+    const [{ count }] = await query.clone().count('n.internal_notification_id as count');
 
     return {
       notifications,
@@ -117,19 +128,17 @@ export async function getUnreadNotificationCountAction(): Promise<number> {
   const currentUser = await getCurrentUser();
 
   if (!tenant || !currentUser) {
-    throw new Error('Authentication required');
+    return 0;
   }
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const [{ count }] = await trx('notifications')
-      .where('tenant', tenant)
-      .where('user_id', currentUser.user_id)
-      .where('read_at', null)
-      .where('archived_at', null)
-      .count('id as count');
+  const [{ count }] = await knex('internal_notifications')
+    .where('tenant', tenant)
+    .where('user_id', currentUser.user_id)
+    .whereNull('read_at')
+    .whereNull('archived_at')
+    .count('internal_notification_id as count');
 
-    return Number(count);
-  });
+  return Number(count);
 }
 
 /**
@@ -144,13 +153,11 @@ export async function markNotificationReadAction(notificationId: string): Promis
   }
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const [updated] = await trx('notifications')
+    const [updated] = await trx('internal_notifications')
       .where('tenant', tenant)
-      .where('id', notificationId)
+      .where('internal_notification_id', notificationId)
       .where('user_id', currentUser.user_id)
-      .update({
-        read_at: new Date()
-      })
+      .update({ read_at: new Date() })
       .returning('*');
 
     if (!updated) {
@@ -160,12 +167,11 @@ export async function markNotificationReadAction(notificationId: string): Promis
     // Broadcast read status update via Redis
     const publisher = new NotificationPublisher();
     try {
-      await publisher.publishNotificationRead(currentUser.user_id, notificationId, tenant);
+      await publisher.publishNotificationRead(Number(currentUser.user_id), notificationId, tenant);
     } finally {
       publisher.disconnect();
     }
 
-    // Revalidate notification-related paths
     revalidatePath('/msp/dashboard');
     revalidatePath('/msp/notifications');
   });
@@ -182,19 +188,14 @@ export async function markAllNotificationsReadAction(): Promise<void> {
     throw new Error('Authentication required');
   }
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    await trx('notifications')
-      .where('tenant', tenant)
-      .where('user_id', currentUser.user_id)
-      .where('read_at', null)
-      .update({
-        read_at: new Date()
-      });
+  await knex('internal_notifications')
+    .where('tenant', tenant)
+    .where('user_id', currentUser.user_id)
+    .whereNull('read_at')
+    .update({ read_at: new Date() });
 
-    // Revalidate notification-related paths
-    revalidatePath('/msp/dashboard');
-    revalidatePath('/msp/notifications');
-  });
+  revalidatePath('/msp/dashboard');
+  revalidatePath('/msp/notifications');
 }
 
 /**
@@ -208,24 +209,19 @@ export async function archiveNotificationAction(notificationId: string): Promise
     throw new Error('Authentication required');
   }
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const [updated] = await trx('notifications')
-      .where('tenant', tenant)
-      .where('id', notificationId)
-      .where('user_id', currentUser.user_id)
-      .update({
-        archived_at: new Date()
-      })
-      .returning('*');
+  const [updated] = await knex('internal_notifications')
+    .where('tenant', tenant)
+    .where('internal_notification_id', notificationId)
+    .where('user_id', currentUser.user_id)
+    .update({ archived_at: new Date() })
+    .returning('*');
 
-    if (!updated) {
-      throw new Error('Notification not found or access denied');
-    }
+  if (!updated) {
+    throw new Error('Notification not found or access denied');
+  }
 
-    // Revalidate notification-related paths
-    revalidatePath('/msp/dashboard');
-    revalidatePath('/msp/notifications');
-  });
+  revalidatePath('/msp/dashboard');
+  revalidatePath('/msp/notifications');
 }
 
 /**
@@ -234,7 +230,7 @@ export async function archiveNotificationAction(notificationId: string): Promise
 export async function createBulkNotificationsAction(
   userIds: number[],
   notificationData: CreateNotificationData
-): Promise<Notification[]> {
+): Promise<InternalNotification[]> {
   const { knex, tenant } = await createTenantKnex();
 
   if (!tenant) {
@@ -245,22 +241,21 @@ export async function createBulkNotificationsAction(
     const notificationsToInsert = userIds.map(userId => ({
       tenant,
       user_id: userId,
-      type: notificationData.type,
-      category: notificationData.category,
+      type_id: notificationData.type_id,
       title: notificationData.title,
       message: notificationData.message,
       data: notificationData.data ? JSON.stringify(notificationData.data) : null,
-      action_url: notificationData.actionUrl,
-      priority: notificationData.priority || 'normal',
-      expires_at: notificationData.expiresAt,
-      created_at: new Date()
+      action_url: notificationData.action_url,
+      priority_id: notificationData.priority_id,
+      expires_at: notificationData.expires_at,
     }));
 
-    const notifications = await trx('notifications')
+    const notifications = await trx('internal_notifications')
       .insert(notificationsToInsert)
       .returning('*');
 
-    // Revalidate notification-related paths
+    // In a real scenario, you'd likely want to publish these to the event bus as well
+    // For now, just revalidating paths
     revalidatePath('/msp/dashboard');
     revalidatePath('/msp/notifications');
 
