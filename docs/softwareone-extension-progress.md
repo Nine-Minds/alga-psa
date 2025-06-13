@@ -350,6 +350,9 @@ Scheduler hooks for billing cycle    Auto‑post SoftwareOne charges to weekly A
 3. ✅ Created test-softwareone endpoint to verify extension status
 4. ✅ Confirmed extension is enabled and navigation items are registered
 5. ✅ Extension loader modified to show detailed validation errors
+6. ✅ Fixed navigation API authentication issue by implementing server action
+7. ✅ Created `getExtensionNavigationItems` server action for client-side use
+8. ✅ Documented architectural decisions and their implications
 
 ## Ready for implementation?
 
@@ -471,7 +474,52 @@ These additions were necessary to make the extension system functional and provi
 
 ⸻
 
-## 15. Troubleshooting
+## 15. Architectural Decisions & Implications
+
+### Server Actions vs API Endpoints
+**Decision**: Use server actions for extension data fetching from client components
+**Rationale**: 
+- Server actions automatically handle authentication context
+- No need to manage auth tokens in client-side code
+- Simpler error handling and type safety
+**Implications**:
+- All extension client components should use server actions for data fetching
+- API endpoints should primarily be used for external integrations or webhooks
+- This pattern ensures consistent authentication across the extension system
+
+### Extension Storage Architecture
+**Current State**: Using localStorage mock for development
+**Production Requirements**:
+- Must integrate with ExtensionStorageService for proper tenant isolation
+- Need to implement encryption for sensitive data (API tokens)
+- Storage should be namespaced by extension ID
+**Implications**:
+- Settings persistence will change when moving to production
+- Migration path needed from localStorage to ExtensionStorageService
+- Extension developers need clear documentation on storage patterns
+
+### Component Loading Strategy
+**Decision**: Dynamic loading via Function() with component caching
+**Rationale**:
+- Allows extensions to be loaded without rebuilding the main app
+- Provides isolation between extensions
+- Enables hot-reloading during development
+**Security Considerations**:
+- Components are loaded from trusted sources only (verified extensions)
+- Path traversal protection implemented
+- Consider CSP headers for production
+
+### Permission Model
+**Current Implementation**: Simple resource:action format
+**Valid Resources**: extension, ui, storage, data, api, ticket, project, company, contact, billing, schedule, document, user, time, workflow
+**Implications**:
+- Extensions must declare all required permissions upfront
+- Permissions are checked at multiple levels (manifest validation, runtime)
+- Future consideration: granular permissions per tenant
+
+⸻
+
+## 16. Troubleshooting
 
 ### Extension Not Loading
 **Problem**: Logs show "Extensions directory does not exist"
@@ -511,3 +559,51 @@ These additions were necessary to make the extension system functional and provi
 ### Storage Issues
 **Problem**: Settings not persisting
 **Solution**: Currently using localStorage mock. Check browser's localStorage for keys starting with `swone:`
+
+### Navigation API Authentication Issues
+**Problem**: Navigation API returns 400 Bad Request - "Tenant not found"
+**Cause**: The `/api/extensions/navigation` endpoint requires authentication headers, but the NavigationSlot component was making plain fetch requests without auth
+**Solution**: Replaced API call with server action `getExtensionNavigationItems` that runs in server context with proper authentication
+**Impact**: This pattern should be used for all extension API calls from client components
+
+⸻
+
+## 17. Known Limitations & Future Work
+
+### Current Limitations:
+1. **Storage**: Using localStorage mock - not suitable for production
+2. **Scheduling**: No background job support for automated syncing
+3. **Settings Encryption**: API tokens stored in plain text
+4. **Hot Reload**: Extension changes require server restart
+5. **Testing**: No automated tests for extension functionality
+
+### Required for Production:
+1. **Implement ExtensionStorageService Integration**
+   - Replace localStorage with proper tenant-isolated storage
+   - Add encryption for sensitive settings
+   - Implement storage quotas
+
+2. **Add Background Job Support**
+   - Integrate with job scheduler for periodic syncs
+   - Add retry logic for failed API calls
+   - Implement rate limiting
+
+3. **Security Enhancements**
+   - Encrypt API tokens at rest
+   - Add CSP headers for extension components
+   - Implement extension sandboxing
+
+4. **Developer Experience**
+   - Hot reload for extension development
+   - Extension CLI for scaffolding
+   - Better error messages for manifest validation
+
+5. **Testing Infrastructure**
+   - Unit tests for API client
+   - Integration tests for sync logic
+   - E2E tests for UI components
+
+### Migration Considerations:
+- When moving from localStorage to ExtensionStorageService, need data migration
+- Consider backward compatibility for settings format
+- Document upgrade path for extension developers
