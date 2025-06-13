@@ -306,7 +306,9 @@ Scheduler hooks for billing cycle    Auto‑post SoftwareOne charges to weekly A
 
 ### 🔄 In Progress:
 2. **Get Extension Visible**
-   - ⚠️ Verify extension is loaded on server startup
+   - ✅ Fixed instrumentation.ts to call correct initializeApp
+   - ✅ Verified extension initialization is called when NEXT_PUBLIC_EDITION=enterprise
+   - ⚠️ Need to verify extension is actually loaded (check logs)
    - ⚠️ Check if extension is registered in database
    - ⚠️ Verify navigation API returns extension items
    - ⚠️ Test if NavItem component renders correctly
