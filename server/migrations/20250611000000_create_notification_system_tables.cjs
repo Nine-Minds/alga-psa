@@ -5,32 +5,32 @@
 exports.up = function(knex) {
   return knex.schema
     // Core notifications table for in-app notifications
-    .createTable('notifications', table => {
+    .createTable('internal_notifications', table => {
+      table.uuid('internal_notification_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       table.uuid('tenant').notNullable();
-      table.uuid('id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
       table.integer('user_id').notNullable();
-      table.string('type', 50).notNullable();
-      table.string('category', 50).notNullable();
+      table.uuid('type_id').notNullable();
       table.string('title', 255).notNullable();
       table.text('message');
       table.jsonb('data');
       table.string('action_url', 500);
-      table.string('priority', 20).defaultTo('normal'); // 'low', 'normal', 'high', 'urgent'
+      table.uuid('priority_id');
       table.timestamp('read_at');
       table.timestamp('archived_at');
       table.timestamp('created_at').defaultTo(knex.fn.now());
       table.timestamp('expires_at');
 
-      table.primary(['tenant', 'id']);
-      table.foreign(['tenant', 'user_id']).references(['tenant', 'user_id']).inTable('users').onDelete('CASCADE');
-      table.index(['tenant', 'user_id', 'read_at'], 'idx_notifications_tenant_user_unread');
-      table.index(['created_at'], 'idx_notifications_created_desc');
+      table.foreign(['tenant', 'user_id']).references(['tenant', 'user_id']).inTable('users');
+      table.foreign('type_id').references('internal_notification_type_id').inTable('internal_notification_types');
+      table.foreign('priority_id').references('priority_id').inTable('standard_priorities');
+      table.index(['tenant', 'user_id', 'read_at'], 'idx_internal_notifications_tenant_user_unread');
+      table.index(['created_at'], 'idx_internal_notifications_created_desc');
     })
 
     // Direct messages table for user-to-user messaging
     .createTable('direct_messages', table => {
       table.uuid('tenant').notNullable();
-      table.uuid('id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
+      table.uuid('direct_message_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
       table.integer('sender_id').notNullable();
       table.integer('recipient_id').notNullable();
       table.uuid('thread_id');
@@ -41,41 +41,49 @@ exports.up = function(knex) {
       table.timestamp('edited_at');
       table.timestamp('deleted_at');
 
-      table.primary(['tenant', 'id']);
-      table.foreign(['tenant', 'sender_id']).references(['tenant', 'user_id']).inTable('users').onDelete('CASCADE');
-      table.foreign(['tenant', 'recipient_id']).references(['tenant', 'user_id']).inTable('users').onDelete('CASCADE');
+      table.primary(['tenant', 'direct_message_id']);
+      table.foreign(['tenant', 'sender_id']).references(['tenant', 'user_id']).inTable('users');
+      table.foreign(['tenant', 'recipient_id']).references(['tenant', 'user_id']).inTable('users');
       table.index(['thread_id'], 'idx_direct_messages_thread');
       table.index(['recipient_id', 'read_at'], 'idx_direct_messages_recipient_unread');
     })
 
+    // Notification types and categories (Global)
+    .createTable('internal_notification_types', table => {
+      table.uuid('internal_notification_type_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      table.string('type_name', 50).notNullable().unique();
+      table.string('category_name', 50).notNullable();
+      table.timestamps(true, true);
+    })
+
     // Notification preferences (extends existing user_notification_preferences)
-    .createTable('notification_preferences_v2', table => {
+    .createTable('internal_notification_preferences', table => {
       table.uuid('tenant').notNullable();
       table.integer('user_id').notNullable();
-      table.string('notification_type', 50).notNullable();
+      table.uuid('internal_notification_type_id').notNullable();
       table.string('channel', 20).notNullable(); // 'in_app', 'email', 'sms'
       table.boolean('enabled').defaultTo(true);
       table.time('quiet_hours_start');
       table.time('quiet_hours_end');
 
-      table.primary(['tenant', 'user_id', 'notification_type', 'channel']);
-      table.foreign(['tenant', 'user_id']).references(['tenant', 'user_id']).inTable('users').onDelete('CASCADE');
+      table.primary(['tenant', 'user_id', 'internal_notification_type_id', 'channel']);
+      table.foreign(['tenant', 'user_id']).references(['tenant', 'user_id']).inTable('users');
+      table.foreign(['internal_notification_type_id']).references(['internal_notification_type_id']).inTable('internal_notification_types');
     })
 
-    // Notification templates for different event types
-    .createTable('notification_templates_v2', table => {
-      table.uuid('tenant').notNullable();
-      table.uuid('id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
-      table.string('type', 50).notNullable();
+    // Notification templates for different event types (Global)
+    .createTable('internal_notification_templates', table => {
+      table.uuid('internal_notification_template_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      table.uuid('type_id').notNullable().unique(); // Each type gets one template
       table.string('title_template', 255);
       table.text('message_template');
       table.string('action_template', 500);
-      table.string('default_priority', 20);
+      table.uuid('default_priority_id');
       table.jsonb('variables'); // Expected template variables
+      table.timestamps(true, true);
 
-      table.primary(['tenant', 'id']);
-      table.unique(['tenant', 'type']);
-      table.foreign('tenant').references('tenant').inTable('tenants').onDelete('CASCADE');
+      table.foreign('type_id').references('internal_notification_type_id').inTable('internal_notification_types');
+      table.foreign('default_priority_id').references('priority_id').inTable('standard_priorities');
     });
 };
 
@@ -85,8 +93,9 @@ exports.up = function(knex) {
  */
 exports.down = function(knex) {
   return knex.schema
-    .dropTableIfExists('notification_templates_v2')
-    .dropTableIfExists('notification_preferences_v2')
+    .dropTableIfExists('internal_notification_templates')
+    .dropTableIfExists('internal_notification_preferences')
     .dropTableIfExists('direct_messages')
-    .dropTableIfExists('notifications');
+    .dropTableIfExists('internal_notifications')
+    .dropTableIfExists('internal_notification_types');
 };
