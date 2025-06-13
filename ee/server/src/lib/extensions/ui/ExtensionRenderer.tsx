@@ -8,7 +8,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ExtensionRendererProps } from './types';
 import { ExtensionErrorBoundary } from './ExtensionErrorBoundary';
-import logger from '../../../../../../server/src/utils/logger';
+
+// Client-side logger replacement
+const logger = {
+  debug: (...args: any[]) => console.debug('[ExtensionRenderer]', ...args),
+  info: (...args: any[]) => console.info('[ExtensionRenderer]', ...args),
+  warn: (...args: any[]) => console.warn('[ExtensionRenderer]', ...args),
+  error: (...args: any[]) => console.error('[ExtensionRenderer]', ...args),
+};
 
 // Cache for loaded components
 const componentCache = new Map<string, React.ComponentType<any>>();
