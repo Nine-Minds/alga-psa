@@ -203,10 +203,10 @@ Task    Owner    Details    Status
 1.4 Sync handler    Back‑end dev    runSync — fetch /agreements, /statements; map & store; support ?full=true.    ✅ Structure created
 1.5 React‑query wrapper    Front‑end dev    useSwoneQuery(key, fn) auto invalidates on activation/edit.    ✅ Structure created
 
-### Phase 2 – Settings UX (1 day) ❌ NOT IMPLEMENTED
-    1. ❌ Build SettingsPage with Alga Input, Tab, Alert.
-    2. ❌ Save creds to storage.set('config', …) encrypted at rest note: not yet supported – see §7 deficiency.
-    3. ❌ "Test connection" button uses API client.
+### Phase 2 – Settings UX (1 day) ⚠️ PARTIALLY IMPLEMENTED
+    1. ✅ Build SettingsPage with Alga Input, Tab, Alert - Full UI implemented with Formik, Tabs
+    2. ⚠️ Save creds to storage.set('config', …) - Using localStorage mock, encryption not implemented
+    3. ⚠️ "Test connection" button uses API client - UI ready, needs actual API implementation
 
 ### Phase 3 – Agreements list & detail (3 days) ⚠️ STRUCTURE ONLY
 
@@ -316,10 +316,15 @@ Scheduler hooks for billing cycle    Auto‑post SoftwareOne charges to weekly A
    - ⚠️ Test if NavItem component renders correctly
 
 ### ⏳ Next:
-3. **Implement Core Features**
-   - Implement Settings page with storage integration
-   - Connect to SoftwareOne API
-   - Build data views with actual functionality
+3. **Complete Settings Implementation**
+   - Replace localStorage with actual extension storage API
+   - Implement real SoftwareOne API client
+   - Add encryption for API token storage
+   
+4. **Implement Data Views**
+   - Build AgreementsList with DataGrid
+   - Implement AgreementDetail with tabs
+   - Create StatementsList and detail views
 
 ⸻
 
@@ -333,7 +338,10 @@ Scheduler hooks for billing cycle    Auto‑post SoftwareOne charges to weekly A
 5. ✅ Rebuilt extension with fixes
 6. ✅ Fixed instrumentation.ts to use correct initializeApp
 7. ✅ Created check-softwareone API endpoint for status verification
-8. ⏳ Still need to verify extension loading and visibility (requires running server)
+8. ✅ Implemented SettingsPage with full UI (Formik, Tabs, validation)
+9. ✅ Created wrapper components for extension integration
+10. ✅ Updated manifest to use wrapper components
+11. ⏳ Still need to verify extension loading and visibility (requires running server)
 
 ## Ready for implementation?
 
