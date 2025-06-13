@@ -6,18 +6,18 @@ import DefaultLayout from '@/components/layout/DefaultLayout';
 import dynamic from 'next/dynamic';
 
 // Dynamically import the component to handle any client-side dependencies
-const AgreementsList = dynamic(
-  () => import('@/../../extensions/softwareone-ext/src/components/AgreementsList').then(mod => ({ default: mod.AgreementsList })),
+const StatementsList = dynamic(
+  () => import('@/../../extensions/softwareone-ext/src/components/StatementsList').then(mod => ({ default: mod.StatementsList })),
   { 
     ssr: false,
-    loading: () => <div className="p-6">Loading agreements...</div>
+    loading: () => <div className="p-6">Loading statements...</div>
   }
 );
 
-export default function SoftwareOneAgreementsPage() {
+export default function SoftwareOneStatementsPage() {
   return (
     <DefaultLayout>
-      <AgreementsList />
+      <StatementsList />
     </DefaultLayout>
   );
 }

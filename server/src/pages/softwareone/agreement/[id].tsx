@@ -3,21 +3,35 @@ import { GetServerSideProps } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import DefaultLayout from '@/components/layout/DefaultLayout';
+import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
 
 // Dynamically import the component to handle any client-side dependencies
-const AgreementsList = dynamic(
-  () => import('@/../../extensions/softwareone-ext/src/components/AgreementsList').then(mod => ({ default: mod.AgreementsList })),
+const AgreementDetail = dynamic(
+  () => import('@/../../extensions/softwareone-ext/src/components/AgreementDetail').then(mod => ({ default: mod.AgreementDetail })),
   { 
     ssr: false,
-    loading: () => <div className="p-6">Loading agreements...</div>
+    loading: () => <div className="p-6">Loading agreement details...</div>
   }
 );
 
-export default function SoftwareOneAgreementsPage() {
+export default function SoftwareOneAgreementDetailPage() {
+  const router = useRouter();
+  const { id } = router.query;
+
+  if (!id || typeof id !== 'string') {
+    return (
+      <DefaultLayout>
+        <div className="p-6">
+          <p>Invalid agreement ID</p>
+        </div>
+      </DefaultLayout>
+    );
+  }
+
   return (
     <DefaultLayout>
-      <AgreementsList />
+      <AgreementDetail agreementId={id} />
     </DefaultLayout>
   );
 }
