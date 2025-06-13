@@ -19,14 +19,14 @@ describe('Billing Plan Actions', () => {
           plan_name: 'Basic', 
           billing_frequency: 'monthly', 
           is_custom: false,
-          plan_type: 'fixed'
+          plan_type: 'Fixed'
         },
         { 
           plan_id: '2', 
           plan_name: 'Pro', 
           billing_frequency: 'yearly', 
           is_custom: false,
-          plan_type: 'time-based'
+          plan_type: 'Hourly'
         },
       ];
 
@@ -51,7 +51,7 @@ describe('Billing Plan Actions', () => {
         plan_name: 'New Plan',
         billing_frequency: 'monthly',
         is_custom: true,
-        plan_type: 'fixed',
+        plan_type: 'Fixed',
       };
 
       const createdPlan: IBillingPlan = { ...newPlan, plan_id: '3' };
@@ -69,7 +69,7 @@ describe('Billing Plan Actions', () => {
         plan_name: 'New Plan',
         billing_frequency: 'monthly',
         is_custom: true,
-        plan_type: 'fixed',
+        plan_type: 'Fixed',
       };
 
       (BillingPlan.create as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Database error'));

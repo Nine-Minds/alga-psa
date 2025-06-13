@@ -10,6 +10,7 @@
   "minAppVersion": "1.5.0",
   "tenantMode": "specific",
   "main": "dist/index.js",
+  "autoEnable": true,
   "permissions": {
     "api": [
       "companies:read",
@@ -27,13 +28,36 @@
   "components": [
     {
       "type": "navigation",
+      "slot": "main-nav",
       "id": "swone-main-nav",
       "displayName": "SoftwareOne",
       "icon": "CloudIcon",
       "component": "./dist/components/NavItem.js",
       "permissions": [],
       "props": {
-        "path": "/softwareone/agreements"
+        "id": "swone-nav",
+        "label": "SoftwareOne",
+        "icon": "CloudIcon",
+        "path": "/softwareone/agreements",
+        "priority": 75,
+        "permissions": []
+      }
+    },
+    {
+      "type": "navigation",
+      "slot": "settings-nav",
+      "id": "swone-settings-nav",
+      "displayName": "SoftwareOne",
+      "icon": "CloudIcon",
+      "component": "./dist/components/NavItem.js",
+      "permissions": ["settings:write"],
+      "props": {
+        "id": "swone-settings-nav",
+        "label": "SoftwareOne",
+        "icon": "CloudIcon",
+        "path": "/settings/softwareone",
+        "priority": 70,
+        "permissions": ["settings:write"]
       }
     },
     {

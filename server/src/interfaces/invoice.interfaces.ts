@@ -111,6 +111,8 @@ export interface IInvoiceTemplate extends TenantEntity {
   is_default?: boolean;
   created_at?: ISO8601String; // Added timestamp
   updated_at?: ISO8601String; // Added timestamp
+  parsed?: ParsedTemplate; // Added for backward compatibility with tests
+  dsl?: string; // Added for backward compatibility with tests
 }
 
 export interface GlobalCalculation {

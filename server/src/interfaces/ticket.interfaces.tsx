@@ -25,6 +25,7 @@ export interface ITicket extends TenantEntity, ITaggable {
   attributes: Record<string, unknown> | null; // Changed from any to unknown
   priority_id: string;
   location?: ICompanyLocation; // For populated location data
+  estimated_hours?: number;
 }
 
 export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_id' | 'channel_id' | 'entered_by' | 'category_id' | 'subcategory_id'> {
