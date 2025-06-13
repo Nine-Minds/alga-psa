@@ -163,7 +163,7 @@ spec:
           - name: STORAGE_LOCAL_BASE_PATH
             value: "{{ .Values.config.storage.providers.local.base_path | default "/data/files" }}"
           - name: STORAGE_LOCAL_MAX_FILE_SIZE
-            value: {{ .Values.config.storage.providers.local.max_file_size | default 104857600 | quote }}
+            value: "{{ .Values.config.storage.providers.local.max_file_size | default 104857600 }}"
           - name: STORAGE_LOCAL_ALLOWED_MIME_TYPES
             value: "{{ join "," .Values.config.storage.providers.local.allowed_mime_types | default "image/*,application/pdf,text/plain" }}"
           - name: STORAGE_LOCAL_RETENTION_DAYS
@@ -206,7 +206,7 @@ spec:
           - name: STORAGE_UPLOAD_MAX_CONCURRENT
             value: "{{ .Values.config.storage.upload.max_concurrent }}"
           - name: STORAGE_UPLOAD_CHUNK_SIZE
-            value: {{ .Values.config.storage.upload.chunk_size | quote }}
+            value: "{{ .Values.config.storage.upload.chunk_size }}"
 
           # ----------- STORAGE BACKUP ----------------
           {{- if .Values.config.storage.backup.enabled }}
