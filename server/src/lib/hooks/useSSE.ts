@@ -65,12 +65,19 @@ export function useSSE({
       if (event.lastEventId) {
         setLastEventId(event.lastEventId);
       }
-      // Create a new event with the correct type
-      const messageEvent = new MessageEvent('notification', {
+      // Create a custom event object with the correct type
+      const messageEvent = {
+        type: 'notification',
         data: event.data,
         lastEventId: event.lastEventId,
-      });
-      messageEvent.type = 'notification';
+        target: event.target,
+        currentTarget: event.currentTarget,
+        bubbles: false,
+        cancelable: false,
+        preventDefault: () => {},
+        stopPropagation: () => {},
+        stopImmediatePropagation: () => {}
+      } as MessageEvent;
       onMessage?.(messageEvent);
     });
 
@@ -78,11 +85,18 @@ export function useSSE({
       if (event.lastEventId) {
         setLastEventId(event.lastEventId);
       }
-      const messageEvent = new MessageEvent('initial-notifications', {
+      const messageEvent = {
+        type: 'initial-notifications',
         data: event.data,
         lastEventId: event.lastEventId,
-      });
-      messageEvent.type = 'initial-notifications';
+        target: event.target,
+        currentTarget: event.currentTarget,
+        bubbles: false,
+        cancelable: false,
+        preventDefault: () => {},
+        stopPropagation: () => {},
+        stopImmediatePropagation: () => {}
+      } as MessageEvent;
       onMessage?.(messageEvent);
     });
 
@@ -90,11 +104,18 @@ export function useSSE({
       if (event.lastEventId) {
         setLastEventId(event.lastEventId);
       }
-      const messageEvent = new MessageEvent('notification-read', {
+      const messageEvent = {
+        type: 'notification-read',
         data: event.data,
         lastEventId: event.lastEventId,
-      });
-      messageEvent.type = 'notification-read';
+        target: event.target,
+        currentTarget: event.currentTarget,
+        bubbles: false,
+        cancelable: false,
+        preventDefault: () => {},
+        stopPropagation: () => {},
+        stopImmediatePropagation: () => {}
+      } as MessageEvent;
       onMessage?.(messageEvent);
     });
 
@@ -105,11 +126,18 @@ export function useSSE({
 
     eventSource.addEventListener('connected', (event) => {
       console.log('SSE connected event received');
-      const messageEvent = new MessageEvent('connected', {
+      const messageEvent = {
+        type: 'connected',
         data: event.data,
         lastEventId: event.lastEventId,
-      });
-      messageEvent.type = 'connected';
+        target: event.target,
+        currentTarget: event.currentTarget,
+        bubbles: false,
+        cancelable: false,
+        preventDefault: () => {},
+        stopPropagation: () => {},
+        stopImmediatePropagation: () => {}
+      } as MessageEvent;
       onMessage?.(messageEvent);
     });
 

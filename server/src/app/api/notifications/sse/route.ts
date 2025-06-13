@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { NotificationSubscriber } from '@/lib/notifications/subscriber';
+import { options as authOptions } from 'server/src/app/api/auth/[...nextauth]/options';
+import { NotificationSubscriber } from 'server/src/lib/notifications/subscriber';
 
 export const runtime = 'nodejs'; // Required for streaming
 export const dynamic = 'force-dynamic';
@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   try {
     // Authentication
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user || !session.user.tenant) {
       return new Response('Unauthorized', { status: 401 });
     }
 
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     // Create subscription
     const subscriber = new NotificationSubscriber({
       userId: session.user.id,
-      tenantId: session.user.tenantId,
+      tenantId: session.user.tenant,
       writer,
       encoder,
     });

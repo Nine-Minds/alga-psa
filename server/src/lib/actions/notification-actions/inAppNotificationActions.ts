@@ -10,9 +10,33 @@ import {
   InternalNotification, 
   NotificationListResult,
   EnrichedNotification,
+  Notification,
   NotificationSseEvent
 } from 'server/src/interfaces/notification.interfaces';
 import { NotificationPublisher } from 'server/src/lib/notifications/publisher';
+
+/**
+ * Convert EnrichedNotification to frontend-friendly Notification format
+ */
+function enrichedToFrontendNotification(enriched: EnrichedNotification): Notification {
+  return {
+    internal_notification_id: enriched.internal_notification_id,
+    tenant: enriched.tenant,
+    user_id: enriched.user_id,
+    title: enriched.title,
+    message: enriched.message,
+    data: enriched.data,
+    action_url: enriched.action_url,
+    read_at: enriched.read_at,
+    archived_at: enriched.archived_at,
+    created_at: enriched.created_at,
+    expires_at: enriched.expires_at,
+    type_name: enriched.type.type_name,
+    category_name: enriched.type.category_name,
+    priority_name: enriched.priority?.priority_name,
+    priority_color: enriched.priority?.color,
+  };
+}
 
 /**
  * Create a new in-app notification for a specific user with real-time delivery.
@@ -109,7 +133,7 @@ export async function getNotificationsAction(
     const [{ count }] = await query.clone().count('n.internal_notification_id as count');
 
     return {
-      notifications,
+      notifications: notifications.map(enrichedToFrontendNotification),
       pagination: {
         page,
         pageSize,

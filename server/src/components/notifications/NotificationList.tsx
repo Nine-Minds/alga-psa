@@ -53,6 +53,7 @@ export function NotificationList({ notifications, onClose }: NotificationListPro
       {unreadCount > 0 && (
         <div className="p-3 border-b bg-gray-50">
           <Button
+            id="mark-all-notifications-read"
             variant="ghost"
             size="sm"
             onClick={handleMarkAllRead}
@@ -68,7 +69,7 @@ export function NotificationList({ notifications, onClose }: NotificationListPro
         <div className="divide-y">
           {optimisticNotifications.map((notification) => (
             <NotificationItem
-              key={notification.id}
+              key={notification.internal_notification_id}
               notification={notification}
               onClose={onClose}
             />
@@ -78,6 +79,7 @@ export function NotificationList({ notifications, onClose }: NotificationListPro
 
       <div className="p-3 border-t bg-gray-50">
         <Button
+          id="view-all-notifications"
           variant="ghost"
           size="sm"
           className="w-full"

@@ -20,6 +20,7 @@ export function NotificationBell() {
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <Button
+          id="notification-bell"
           variant="ghost"
           size="icon"
           className="relative p-2 h-10 w-10"

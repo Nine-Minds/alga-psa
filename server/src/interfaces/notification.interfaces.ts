@@ -41,8 +41,27 @@ export interface EnrichedNotification extends Omit<InternalNotification, 'type_i
   };
 }
 
+// Frontend-friendly notification interface (flattened from EnrichedNotification)
+export interface Notification {
+  internal_notification_id: string;
+  tenant: string;
+  user_id: number;
+  title: string;
+  message?: string;
+  data?: Record<string, any>;
+  action_url?: string;
+  read_at?: Date;
+  archived_at?: Date;
+  created_at: Date;
+  expires_at?: Date;
+  type_name: string; // Flattened from type.type_name
+  category_name: string; // Flattened from type.category_name  
+  priority_name?: string; // Flattened from priority.priority_name
+  priority_color?: string; // Flattened from priority.color
+}
+
 export interface NotificationListResult {
-  notifications: EnrichedNotification[];
+  notifications: Notification[];
   pagination: {
     page: number;
     pageSize: number;

@@ -126,8 +126,18 @@ export class NotificationPublisher {
     if (!notification) return null;
 
     return {
-      ...notification,
+      internal_notification_id: notification.internal_notification_id,
+      tenant: notification.tenant,
+      user_id: notification.user_id,
+      title: notification.title,
+      message: notification.message,
+      data: notification.data,
+      action_url: notification.action_url,
       created_at: new Date(notification.created_at).toISOString(),
+      type_name: notification.type_name,
+      category_name: notification.category_name,
+      priority_name: notification.priority_name,
+      priority_color: notification.priority_color,
     };
   }
 
