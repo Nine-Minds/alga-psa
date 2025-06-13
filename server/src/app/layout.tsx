@@ -8,6 +8,7 @@ import { Suspense } from "react";
 import { Theme } from '@radix-ui/themes';
 import { ThemeProvider } from '../context/ThemeContext';
 import { ClientUIStateProvider } from '../types/ui-reflection/ClientUIStateProvider';
+import { DynamicExtensionProvider } from '../components/extensions/DynamicExtensionProvider';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -46,17 +47,19 @@ async function MainContent({ children }: { children: React.ReactNode }) {
     <TenantProvider tenant={tenant}>
       <ThemeProvider>
         <Theme>
-          <ClientUIStateProvider
-            initialPageState={{
-              id: 'msp-application',
-              title: 'MSP Application',
-              components: []
-            }}
-          >
-            <div className="min-h-screen bg-background font-sans antialiased">
-              {children}
-            </div>
-          </ClientUIStateProvider>
+          <DynamicExtensionProvider>
+            <ClientUIStateProvider
+              initialPageState={{
+                id: 'msp-application',
+                title: 'MSP Application',
+                components: []
+              }}
+            >
+              <div className="min-h-screen bg-background font-sans antialiased">
+                {children}
+              </div>
+            </ClientUIStateProvider>
+          </DynamicExtensionProvider>
         </Theme>
       </ThemeProvider>
     </TenantProvider>
