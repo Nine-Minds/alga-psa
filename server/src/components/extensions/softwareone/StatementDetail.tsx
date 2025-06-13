@@ -1,13 +1,127 @@
+'use client';
+
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { dummyStatements, dummyCharges } from '../data/dummyStatements';
-import { Statement } from '../types/statement';
 
 interface StatementDetailProps {
   statementId: string;
 }
 
-export function StatementDetail({ statementId }: StatementDetailProps) {
+// Dummy data
+const dummyStatements = [
+  {
+    id: 's1',
+    agreementId: '1',
+    agreementName: 'Microsoft Enterprise Agreement - Acme Corp',
+    period: '2024-12',
+    startDate: '2024-12-01',
+    endDate: '2024-12-31',
+    totalAmount: 45250.00,
+    currency: 'USD',
+    lineItemCount: 15,
+    status: 'finalized' as const,
+    createdAt: '2025-01-05T10:00:00Z'
+  },
+  {
+    id: 's2',
+    agreementId: '1',
+    agreementName: 'Microsoft Enterprise Agreement - Acme Corp',
+    period: '2024-11',
+    startDate: '2024-11-01',
+    endDate: '2024-11-30',
+    totalAmount: 42150.00,
+    currency: 'USD',
+    lineItemCount: 14,
+    status: 'imported' as const,
+    createdAt: '2024-12-05T10:00:00Z',
+    importedAt: '2024-12-10T14:30:00Z'
+  },
+  {
+    id: 's3',
+    agreementId: '2',
+    agreementName: 'Adobe Creative Cloud - Design Team',
+    period: '2024-12',
+    startDate: '2024-12-01',
+    endDate: '2024-12-31',
+    totalAmount: 8540.00,
+    currency: 'USD',
+    lineItemCount: 8,
+    status: 'draft' as const,
+    createdAt: '2025-01-05T11:00:00Z'
+  },
+  {
+    id: 's4',
+    agreementId: '4',
+    agreementName: 'AWS Cloud Services - Tech Startup',
+    period: '2024-12',
+    startDate: '2024-12-01',
+    endDate: '2024-12-31',
+    totalAmount: 125670.50,
+    currency: 'USD',
+    lineItemCount: 45,
+    status: 'finalized' as const,
+    createdAt: '2025-01-05T12:00:00Z'
+  }
+];
+
+const dummyCharges: Record<string, any[]> = {
+  's1': [
+    {
+      id: 'c1-1',
+      statementId: 's1',
+      productName: 'Microsoft 365 E5',
+      quantity: 150,
+      unitPrice: 57.00,
+      totalPrice: 8550.00,
+      currency: 'USD',
+      description: 'Enterprise licenses'
+    },
+    {
+      id: 'c1-2',
+      statementId: 's1',
+      productName: 'Exchange Online Plan 2',
+      quantity: 50,
+      unitPrice: 8.00,
+      totalPrice: 400.00,
+      currency: 'USD',
+      description: 'Additional mailboxes'
+    },
+    {
+      id: 'c1-3',
+      statementId: 's1',
+      productName: 'Azure Active Directory Premium P2',
+      quantity: 200,
+      unitPrice: 9.00,
+      totalPrice: 1800.00,
+      currency: 'USD',
+      description: 'Identity management'
+    }
+  ],
+  's4': [
+    {
+      id: 'c4-1',
+      statementId: 's4',
+      productName: 'EC2 - m5.large',
+      quantity: 5040,
+      unitPrice: 0.096,
+      totalPrice: 483.84,
+      currency: 'USD',
+      description: 'On-demand instances'
+    },
+    {
+      id: 'c4-2',
+      statementId: 's4',
+      productName: 'RDS - db.t3.medium',
+      quantity: 1440,
+      unitPrice: 0.068,
+      totalPrice: 97.92,
+      currency: 'USD',
+      description: 'Database hours'
+    }
+  ]
+};
+
+export default function StatementDetail({ statementId }: StatementDetailProps) {
   const router = useRouter();
   const [showSuccess, setShowSuccess] = useState(false);
   
@@ -38,7 +152,7 @@ export function StatementDetail({ statementId }: StatementDetailProps) {
     setTimeout(() => setShowSuccess(false), 3000);
   };
 
-  const getStatusBadge = (status: Statement['status']) => {
+  const getStatusBadge = (status: 'draft' | 'finalized' | 'imported') => {
     const colors = {
       draft: 'bg-gray-100 text-gray-800',
       finalized: 'bg-blue-100 text-blue-800',

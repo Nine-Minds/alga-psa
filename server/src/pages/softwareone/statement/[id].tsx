@@ -8,7 +8,7 @@ import dynamic from 'next/dynamic';
 
 // Dynamically import the component to handle any client-side dependencies
 const StatementDetail = dynamic(
-  () => import('@/../../extensions/softwareone-ext/src/components/StatementDetail').then(mod => ({ default: mod.StatementDetail })),
+  () => import('@/components/extensions/softwareone/StatementDetail'),
   { 
     ssr: false,
     loading: () => <div className="p-6">Loading statement details...</div>

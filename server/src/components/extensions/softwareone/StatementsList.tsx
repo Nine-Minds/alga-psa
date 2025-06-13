@@ -1,15 +1,72 @@
-import { useRouter } from 'next/navigation';
-import { dummyStatements } from '../data/dummyStatements';
-import { Statement } from '../types/statement';
+'use client';
 
-export function StatementsList() {
+import { useRouter } from 'next/navigation';
+
+// Dummy data
+const dummyStatements = [
+  {
+    id: 's1',
+    agreementId: '1',
+    agreementName: 'Microsoft Enterprise Agreement - Acme Corp',
+    period: '2024-12',
+    startDate: '2024-12-01',
+    endDate: '2024-12-31',
+    totalAmount: 45250.00,
+    currency: 'USD',
+    lineItemCount: 15,
+    status: 'finalized' as const,
+    createdAt: '2025-01-05T10:00:00Z'
+  },
+  {
+    id: 's2',
+    agreementId: '1',
+    agreementName: 'Microsoft Enterprise Agreement - Acme Corp',
+    period: '2024-11',
+    startDate: '2024-11-01',
+    endDate: '2024-11-30',
+    totalAmount: 42150.00,
+    currency: 'USD',
+    lineItemCount: 14,
+    status: 'imported' as const,
+    createdAt: '2024-12-05T10:00:00Z',
+    importedAt: '2024-12-10T14:30:00Z'
+  },
+  {
+    id: 's3',
+    agreementId: '2',
+    agreementName: 'Adobe Creative Cloud - Design Team',
+    period: '2024-12',
+    startDate: '2024-12-01',
+    endDate: '2024-12-31',
+    totalAmount: 8540.00,
+    currency: 'USD',
+    lineItemCount: 8,
+    status: 'draft' as const,
+    createdAt: '2025-01-05T11:00:00Z'
+  },
+  {
+    id: 's4',
+    agreementId: '4',
+    agreementName: 'AWS Cloud Services - Tech Startup',
+    period: '2024-12',
+    startDate: '2024-12-01',
+    endDate: '2024-12-31',
+    totalAmount: 125670.50,
+    currency: 'USD',
+    lineItemCount: 45,
+    status: 'finalized' as const,
+    createdAt: '2025-01-05T12:00:00Z'
+  }
+];
+
+export default function StatementsList() {
   const router = useRouter();
 
-  const handleRowClick = (statement: Statement) => {
-    router.push(`/softwareone/statement/${statement.id}`);
+  const handleRowClick = (statementId: string) => {
+    router.push(`/softwareone/statement/${statementId}`);
   };
 
-  const getStatusBadge = (status: Statement['status']) => {
+  const getStatusBadge = (status: 'draft' | 'finalized' | 'imported') => {
     const colors = {
       draft: 'bg-gray-100 text-gray-800',
       finalized: 'bg-blue-100 text-blue-800',
@@ -75,7 +132,7 @@ export function StatementsList() {
             {dummyStatements.map((statement) => (
               <tr
                 key={statement.id}
-                onClick={() => handleRowClick(statement)}
+                onClick={() => handleRowClick(statement.id)}
                 className="hover:bg-gray-50 cursor-pointer"
               >
                 <td className="px-6 py-4 whitespace-nowrap">

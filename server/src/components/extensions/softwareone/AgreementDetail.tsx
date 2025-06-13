@@ -1,13 +1,87 @@
+'use client';
+
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { dummyAgreements } from '../data/dummyAgreements';
-import { Agreement } from '../types/agreement';
 
 interface AgreementDetailProps {
   agreementId: string;
 }
 
-export function AgreementDetail({ agreementId }: AgreementDetailProps) {
+// Dummy data
+const dummyAgreements = [
+  {
+    id: '1',
+    name: 'Microsoft Enterprise Agreement - Acme Corp',
+    product: 'Microsoft 365 E5',
+    vendor: 'Microsoft',
+    consumer: 'Acme Corporation',
+    consumerId: 'comp-001',
+    status: 'active' as const,
+    currency: 'USD',
+    spxy: 2024,
+    marginRpxy: 15.5,
+    createdAt: '2024-01-15T08:00:00Z',
+    updatedAt: '2024-12-01T10:30:00Z'
+  },
+  {
+    id: '2',
+    name: 'Adobe Creative Cloud - Design Team',
+    product: 'Creative Cloud All Apps',
+    vendor: 'Adobe',
+    consumer: 'Design Studios Inc',
+    consumerId: 'comp-002',
+    status: 'active' as const,
+    currency: 'USD',
+    spxy: 2024,
+    marginRpxy: 12.0,
+    createdAt: '2024-02-20T09:15:00Z',
+    updatedAt: '2024-11-15T14:20:00Z'
+  },
+  {
+    id: '3',
+    name: 'Salesforce CRM - Global Sales',
+    product: 'Sales Cloud Enterprise',
+    vendor: 'Salesforce',
+    consumer: 'Global Sales Corp',
+    consumerId: 'comp-003',
+    status: 'pending' as const,
+    currency: 'USD',
+    spxy: 2025,
+    marginRpxy: 18.0,
+    createdAt: '2024-11-01T11:00:00Z',
+    updatedAt: '2024-12-10T16:45:00Z'
+  },
+  {
+    id: '4',
+    name: 'AWS Cloud Services - Tech Startup',
+    product: 'AWS Business Support',
+    vendor: 'Amazon',
+    consumer: 'Tech Innovations LLC',
+    consumerId: 'comp-004',
+    status: 'active' as const,
+    currency: 'USD',
+    spxy: 2024,
+    marginRpxy: 20.0,
+    createdAt: '2023-06-10T07:30:00Z',
+    updatedAt: '2024-12-05T09:10:00Z'
+  },
+  {
+    id: '5',
+    name: 'Google Workspace - Education',
+    product: 'Google Workspace Enterprise',
+    vendor: 'Google',
+    consumer: 'City University',
+    consumerId: 'comp-005',
+    status: 'active' as const,
+    currency: 'USD',
+    spxy: 2024,
+    marginRpxy: 10.5,
+    createdAt: '2023-09-01T08:00:00Z',
+    updatedAt: '2024-11-20T11:30:00Z'
+  }
+];
+
+export default function AgreementDetail({ agreementId }: AgreementDetailProps) {
   const router = useRouter();
   const [showSuccess, setShowSuccess] = useState(false);
   
@@ -37,7 +111,7 @@ export function AgreementDetail({ agreementId }: AgreementDetailProps) {
     setTimeout(() => setShowSuccess(false), 3000);
   };
 
-  const getStatusBadge = (status: Agreement['status']) => {
+  const getStatusBadge = (status: 'active' | 'inactive' | 'pending') => {
     const colors = {
       active: 'bg-green-100 text-green-800',
       inactive: 'bg-gray-100 text-gray-800',
