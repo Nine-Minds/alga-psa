@@ -430,6 +430,15 @@ These additions were necessary to make the extension system functional and provi
 **Problem**: Logs show "Extensions directory does not exist"
 **Solution**: Created symlink from `server/extensions` to `../extensions` because the loader runs from the server directory
 
+### Invalid Extension Manifest
+**Problem**: "Invalid extension manifest" error during registration
+**Solution**: Updated manifest to match schema expectations:
+- Change `type: "page"` to `type: "custom-page"`
+- Move component props to nested `props` object
+- Simplify permissions to flat array (not nested object)
+- Remove `api` section (not in current schema)
+- Remove extra fields like `id`, `displayName` from navigation components
+
 ### Extension Not Visible in Menu
 **Checklist**:
 1. Ensure `NEXT_PUBLIC_EDITION=enterprise` is set
