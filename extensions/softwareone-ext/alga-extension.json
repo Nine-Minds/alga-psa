@@ -13,10 +13,10 @@
   "autoEnable": true,
   "permissions": [
     "ui:view",
-    "companies:read",
-    "invoices:write",
-    "settings:read",
-    "settings:write",
+    "company:read",
+    "billing:write",
+    "extension:read",
+    "extension:write",
     "storage:read",
     "storage:write"
   ],
@@ -44,7 +44,7 @@
         "icon": "CloudIcon",
         "path": "/settings/softwareone",
         "priority": 70,
-        "permissions": ["settings:write"]
+        "permissions": ["extension:write"]
       }
     },
     {
@@ -55,7 +55,7 @@
         "id": "swone-settings",
         "path": "/settings/softwareone",
         "title": "SoftwareOne Settings",
-        "permissions": ["settings:write"]
+        "permissions": ["extension:write"]
       }
     },
     {
