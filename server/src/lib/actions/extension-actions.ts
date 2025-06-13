@@ -49,13 +49,21 @@ export async function getExtensionNavigationItems(): Promise<ExtensionNavigation
           
           // Add each navigation component with extension context
           navComponents.forEach((component: any) => {
-            items.push({
-              extensionId: extension.id,
-              extensionName: extension.name,
-              component: component.component,
-              props: {
-                ...component.props,
-                // Ensure required props are present
+           // Robustly clean the component path to handle stale data in the database
+           const cleanedPath = component.component
+             ?.replace(/^dist\//, '')
+             ?.replace(/^components\//, '');
+
+           console.log('[extension-actions] Original component path:', component.component);
+           console.log('[extension-actions] Cleaned component path:', cleanedPath);
+           
+           items.push({
+             extensionId: extension.id,
+             extensionName: extension.name,
+             component: cleanedPath,
+             props: {
+               ...component.props,
+               // Ensure required props are present
                 id: component.props?.id || `${extension.name}-nav`,
                 label: component.props?.label || extension.name,
                 path: component.props?.path || `/msp/extensions/${extension.name}`,

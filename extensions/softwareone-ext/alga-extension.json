@@ -9,7 +9,7 @@
   },
   "minAppVersion": "1.5.0",
   "tenantMode": "specific",
-  "main": "dist/index.js",
+  "main": "index.js",
   "autoEnable": true,
   "permissions": [
     "ui:view",
@@ -24,7 +24,7 @@
     {
       "type": "navigation",
       "slot": "main-navigation",
-      "component": "./dist/components/NavItem.js",
+      "component": "NavItem.js",
       "props": {
         "id": "swone-nav",
         "label": "SoftwareOne",
@@ -37,7 +37,7 @@
     {
       "type": "navigation",
       "slot": "settings-navigation",
-      "component": "./dist/components/NavItem.js",
+      "component": "NavItem.js",
       "props": {
         "id": "swone-settings-nav",
         "label": "SoftwareOne",
@@ -50,7 +50,7 @@
     {
       "type": "custom-page",
       "slot": "custom-pages",
-      "component": "./dist/components/SettingsPageWrapper.js",
+      "component": "SettingsPageWrapper.js",
       "props": {
         "id": "swone-settings",
         "path": "/settings/softwareone",
@@ -61,7 +61,7 @@
     {
       "type": "custom-page",
       "slot": "custom-pages",
-      "component": "./dist/components/AgreementsListWrapper.js",
+      "component": "AgreementsListWrapper.js",
       "props": {
         "id": "swone-agreements",
         "path": "/softwareone/agreements",
@@ -72,7 +72,7 @@
     {
       "type": "custom-page",
       "slot": "custom-pages",
-      "component": "./dist/pages/AgreementDetail.js",
+      "component": "pages/AgreementDetail.js",
       "props": {
         "id": "swone-agreement-detail",
         "path": "/softwareone/agreement/:id",
@@ -83,7 +83,7 @@
     {
       "type": "custom-page",
       "slot": "custom-pages",
-      "component": "./dist/pages/StatementsList.js",
+      "component": "pages/StatementsList.js",
       "props": {
         "id": "swone-statements",
         "path": "/softwareone/statements",
@@ -94,7 +94,7 @@
     {
       "type": "custom-page",
       "slot": "custom-pages",
-      "component": "./dist/pages/StatementDetail.js",
+      "component": "pages/StatementDetail.js",
       "props": {
         "id": "swone-statement-detail",
         "path": "/softwareone/statement/:id",

@@ -98,7 +98,7 @@
     "pg-boss": "^10.1.5",
     "pg-query-stream": "^4.6.0",
     "prosemirror-view": "1.37.2",
-    "puppeteer": "^24.2.0",
+    "puppeteer": "^24.10.1",
     "qrcode": "^1.5.4",
     "querystring-es3": "^0.2.1",
     "radash": "^12.1.0",
