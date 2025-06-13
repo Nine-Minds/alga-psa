@@ -1,15 +1,13 @@
 import React from 'react';
+import { GetServerSideProps } from 'next';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
 
-// Dynamically import components to handle any client-side dependencies
-const SimpleLayout = dynamic(
-  () => import('@/components/extensions/softwareone/SimpleLayout'),
-  { ssr: false }
-);
-
-const AgreementDetail = dynamic(
-  () => import('@/components/extensions/softwareone/AgreementDetail'),
+// Dynamically import the page content as a single component
+const AgreementDetailPageContent = dynamic(
+  () => import('@/components/extensions/softwareone/AgreementDetailPageContent'),
   { 
     ssr: false,
     loading: () => <div className="p-6">Loading agreement details...</div>
@@ -22,17 +20,28 @@ export default function SoftwareOneAgreementDetailPage() {
 
   if (!id || typeof id !== 'string') {
     return (
-      <SimpleLayout>
-        <div className="p-6">
-          <p>Invalid agreement ID</p>
-        </div>
-      </SimpleLayout>
+      <div className="p-6">
+        <p>Invalid agreement ID</p>
+      </div>
     );
   }
 
-  return (
-    <SimpleLayout>
-      <AgreementDetail agreementId={id} />
-    </SimpleLayout>
-  );
+  return <AgreementDetailPageContent agreementId={id} />;
 }
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const session = await getServerSession(context.req, context.res, authOptions);
+
+  if (!session) {
+    return {
+      redirect: {
+        destination: '/auth/signin',
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: {},
+  };
+};
