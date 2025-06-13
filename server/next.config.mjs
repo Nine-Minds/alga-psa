@@ -22,6 +22,7 @@ const nextConfig = {
       },
       alias: {
         ...config.resolve.alias,
+        '@': path.join(__dirname, 'src'),
         '@ee': process.env.NEXT_PUBLIC_EDITION === 'enterprise'
           ? path.join(__dirname, '../ee/server/src')
           : path.join(__dirname, 'src/empty'), // Point to empty implementations for CE builds

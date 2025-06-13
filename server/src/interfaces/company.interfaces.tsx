@@ -41,6 +41,7 @@ export interface ICompany extends TenantEntity {
   auto_invoice?: boolean;
   invoice_delivery_method?: string;  
   region_code?: string | null; // Replaced tax_region with region_code FK
+  tax_region?: string; // Added for backward compatibility with tests
   is_tax_exempt: boolean;
   tax_exemption_certificate?: string;
   timezone?: string;

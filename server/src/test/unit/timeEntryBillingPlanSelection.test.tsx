@@ -33,7 +33,7 @@ describe('TimeEntryEditForm with Billing Plan Selection', () => {
   };
 
   const mockServices = [
-    { id: 'test-service-id', name: 'Test Service', type: 'Time', is_taxable: false }
+    { id: 'test-service-id', name: 'Test Service', type: 'Time', is_taxable: false, tax_rate_id: null }
   ];
 
   const mockTaxRegions = [

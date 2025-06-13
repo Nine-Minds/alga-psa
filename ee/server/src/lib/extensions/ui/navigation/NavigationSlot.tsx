@@ -12,7 +12,6 @@ import { ReflectionContainer } from '@/types/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
 import { ContainerComponent } from '@/types/ui-reflection/types';
 import { useExtensionContext } from '../ExtensionProvider';
-import logger from '@/utils/logger';
 
 /**
  * Navigation Slot component
@@ -40,57 +39,29 @@ export function NavigationSlot({
   useEffect(() => {
     const fetchNavigationItems = async () => {
       try {
-        // In a real implementation, this would fetch from an API endpoint
-        // For example: /api/extensions/navigation
+        // Fetch navigation items from the API
+        const response = await fetch('/api/extensions/navigation');
         
-        // For now, we'll use a placeholder implementation
-        await new Promise(resolve => setTimeout(resolve, 300));
+        if (!response.ok) {
+          throw new Error(`Failed to fetch navigation items: ${response.statusText}`);
+        }
         
-        // Mock data for demonstration
-        const mockItems: ExtensionNavigationItem[] = [
-          {
-            extensionId: 'sample-extension-1',
-            component: 'NavItem',
-            props: {
-              id: 'sample-nav-1',
-              label: 'Custom Reports',
-              icon: 'BarChartIcon',
-              path: '/msp/extensions/reports',
-              priority: 80,
-              permissions: ['view:reports']
-            }
-          },
-          {
-            extensionId: 'sample-extension-2',
-            component: undefined, // Some items may not need a custom component
-            props: {
-              id: 'sample-nav-2',
-              label: 'Asset Tracking',
-              icon: 'BoxIcon',
-              path: '/msp/extensions/assets',
-              priority: 70,
-              permissions: ['view:assets']
-            }
-          }
-        ];
+        const data = await response.json();
+        const navigationItems: ExtensionNavigationItem[] = data.items || [];
         
         // Filter based on permissions
-        const filteredItems = mockItems.filter(item => {
+        const filteredItems = navigationItems.filter(item => {
           const requiredPermissions = item.props.permissions || [];
           return requiredPermissions.every(permission => 
             extensionContext.hasPermission(permission)
           );
         });
         
-        // Sort by priority (higher values first)
-        filteredItems.sort((a, b) => 
-          (b.props.priority || 0) - (a.props.priority || 0)
-        );
-        
+        // Items are already sorted by priority from the API
         setItems(filteredItems);
         setLoading(false);
       } catch (error) {
-        logger.error('Failed to fetch navigation items', { error });
+        console.error('Failed to fetch navigation items', error);
         setError('Failed to load navigation extensions');
         setLoading(false);
       }
