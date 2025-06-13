@@ -39,7 +39,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         // Check if the extension has navigation components
         if (manifest.components) {
           const navComponents = manifest.components.filter((comp: any) => 
-            comp.type === 'navigation' && comp.slot === 'main-nav'
+            comp.type === 'navigation' && comp.slot === 'main-navigation'
           );
           
           // Add each navigation component with extension context

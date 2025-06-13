@@ -438,6 +438,11 @@ These additions were necessary to make the extension system functional and provi
 - Simplify permissions to flat array (not nested object)
 - Remove `api` section (not in current schema)
 - Remove extra fields like `id`, `displayName` from navigation components
+- Use correct slot names:
+  - `main-navigation` (not `main-nav`)
+  - `settings-navigation` (not `settings-nav`)
+  - `custom-pages` for all custom pages
+- Add required `ui:view` permission
 
 ### Extension Not Visible in Menu
 **Checklist**:
