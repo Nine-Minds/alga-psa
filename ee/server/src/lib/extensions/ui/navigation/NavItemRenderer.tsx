@@ -12,7 +12,12 @@ import * as Tooltip from '@radix-ui/react-tooltip';
 import * as RadixIcons from '@radix-ui/react-icons';
 import { NavItemRendererProps } from './NavigationTypes';
 import { ExtensionRenderer } from '../ExtensionRenderer';
-import logger from '../../../../../../../server/src/utils/logger';
+
+// Client-side logger replacement
+const logger = {
+  debug: (...args: any[]) => console.debug('[NavItemRenderer]', ...args),
+  error: (...args: any[]) => console.error('[NavItemRenderer]', ...args),
+};
 
 /**
  * Navigation Item Renderer component
