@@ -24,7 +24,7 @@ export function NotificationItem({ notification, onClose }: NotificationItemProp
       setIsRead(true);
       startTransition(async () => {
         try {
-          await markNotificationReadAction(notification.id);
+          await markNotificationReadAction(notification.internal_notification_id);
         } catch (error) {
           console.error('Failed to mark notification as read:', error);
           setIsRead(false);
@@ -44,7 +44,7 @@ export function NotificationItem({ notification, onClose }: NotificationItemProp
     
     startTransition(async () => {
       try {
-        await archiveNotificationAction(notification.id);
+        await archiveNotificationAction(notification.internal_notification_id);
       } catch (error) {
         console.error('Failed to archive notification:', error);
         setIsArchived(false);
@@ -52,8 +52,9 @@ export function NotificationItem({ notification, onClose }: NotificationItemProp
     });
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
+  const getPriorityColor = (priority?: string) => {
+    if (!priority) return 'bg-blue-500';
+    switch (priority.toLowerCase()) {
       case 'urgent':
         return 'bg-red-500';
       case 'high':
@@ -67,8 +68,9 @@ export function NotificationItem({ notification, onClose }: NotificationItemProp
     }
   };
 
-  const getPriorityVariant = (priority: string) => {
-    switch (priority) {
+  const getPriorityVariant = (priority?: string) => {
+    if (!priority) return 'outline';
+    switch (priority.toLowerCase()) {
       case 'urgent':
         return 'destructive';
       case 'high':
@@ -95,7 +97,7 @@ export function NotificationItem({ notification, onClose }: NotificationItemProp
         <div
           className={cn(
             'w-2 h-2 rounded-full mt-2 flex-shrink-0',
-            getPriorityColor(notification.priority)
+            getPriorityColor(notification.priority_name)
           )}
         />
 
@@ -110,16 +112,17 @@ export function NotificationItem({ notification, onClose }: NotificationItemProp
             </h5>
             
             <div className="flex items-center gap-1 flex-shrink-0">
-              {notification.priority !== 'normal' && (
+              {notification.priority_name && notification.priority_name.toLowerCase() !== 'normal' && (
                 <Badge 
-                  variant={getPriorityVariant(notification.priority)}
+                  variant={getPriorityVariant(notification.priority_name)}
                   className="text-xs"
                 >
-                  {notification.priority}
+                  {notification.priority_name}
                 </Badge>
               )}
               
               <Button
+                id={`archive-notification-${notification.internal_notification_id}`}
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6 opacity-50 hover:opacity-100"
@@ -153,7 +156,7 @@ export function NotificationItem({ notification, onClose }: NotificationItemProp
           {/* Category/Type badge */}
           <div className="mt-2">
             <Badge variant="outline" className="text-xs">
-              {notification.category}
+              {notification.category_name}
             </Badge>
           </div>
         </div>

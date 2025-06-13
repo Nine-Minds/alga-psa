@@ -54,7 +54,7 @@ export function useNotifications() {
           // Add new notification to the beginning of the list
           setNotifications(prev => {
             // Avoid duplicates
-            if (prev.some(n => n.id === data.id)) {
+            if (prev.some(n => n.internal_notification_id === data.internal_notification_id)) {
               return prev;
             }
             return [data, ...prev];
@@ -62,7 +62,7 @@ export function useNotifications() {
           setUnreadCount(prev => prev + 1);
           
           // Show toast for high priority notifications
-          if (data.priority === 'high' || data.priority === 'urgent') {
+          if (data.priority_name === 'high' || data.priority_name === 'urgent') {
             toast.error(data.message || data.title);
           } else {
             // Show regular toast for normal notifications
@@ -80,9 +80,9 @@ export function useNotifications() {
 
         case 'notification-read':
           // Update read status
-          if (data.id) {
+          if (data.internal_notification_id) {
             setNotifications(prev =>
-              prev.map(n => n.id === data.id ? { ...n, read_at: data.read_at } : n)
+              prev.map(n => n.internal_notification_id === data.internal_notification_id ? { ...n, read_at: data.read_at } : n)
             );
             setUnreadCount(prev => Math.max(0, prev - 1));
           }
