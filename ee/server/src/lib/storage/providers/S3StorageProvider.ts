@@ -8,7 +8,7 @@ import {
     S3
 } from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
-import { BaseStorageProvider, UploadResult, StorageError } from 'server/src/lib/storage/providers/StorageProvider';
+import { BaseStorageProvider, UploadResult, StorageError, RangeOptions } from 'server/src/lib/storage/providers/StorageProvider';
 import { S3ProviderConfig, StorageCapabilities } from 'server/src/types/storage';
 
 export class S3StorageProvider extends BaseStorageProvider {
@@ -168,6 +168,28 @@ export class S3StorageProvider extends BaseStorageProvider {
             return retryableCodes.includes(error.name) || super.isRetryableError(error);
         }
         return super.isRetryableError(error);
+    }
+
+    async getReadStream(path: string, range?: RangeOptions): Promise<Readable> {
+        try {
+            return await this.withRetry(async () => {
+                const command = new GetObjectCommand({
+                    Bucket: this.bucket,
+                    Key: path,
+                    Range: range ? `bytes=${range.start}-${range.end}` : undefined,
+                });
+
+                const response = await this.client.send(command);
+                
+                if (!response.Body) {
+                    throw new Error('Empty response body');
+                }
+
+                return response.Body as Readable;
+            });
+        } catch (error) {
+            throw this.handleError('download', error);
+        }
     }
 
     private streamToBuffer(stream: Readable): Promise<Buffer> {

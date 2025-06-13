@@ -8,11 +8,16 @@ export interface UploadResult {
     metadata?: Record<string, string>;
 }
 
+export interface RangeOptions {
+    start: number;
+    end: number;
+}
+
 export interface StorageProviderInterface {
     getCapabilities(): StorageCapabilities;
     upload(file: Buffer | Readable, path: string, options?: { mime_type?: string; metadata?: Record<string, string> }): Promise<UploadResult>;
     download(path: string): Promise<Buffer>;
-    getReadStream(path: string): Promise<Readable>;
+    getReadStream(path: string, range?: RangeOptions): Promise<Readable>;
     delete(path: string): Promise<void>;
     exists(path: string): Promise<boolean>;
     getMetadata?(path: string): Promise<Record<string, string>>;
@@ -49,12 +54,24 @@ export abstract class BaseStorageProvider implements StorageProviderInterface {
     abstract upload(file: Buffer | Readable, path: string, options?: { mime_type?: string; metadata?: Record<string, string> }): Promise<UploadResult>;
     abstract download(path: string): Promise<Buffer>;
     
-    async getReadStream(path: string): Promise<Readable> {
+    async getReadStream(path: string, range?: RangeOptions): Promise<Readable> {
         const buffer = await this.download(path);
-        const readable = new Readable();
-        readable.push(buffer);
-        readable.push(null); // Signal end of stream
-        return readable;
+        
+        if (range) {
+            // Create a partial buffer based on the range
+            const { start, end } = range;
+            const partialBuffer = buffer.slice(start, end + 1);
+            const readable = new Readable();
+            readable.push(partialBuffer);
+            readable.push(null); // Signal end of stream
+            return readable;
+        } else {
+            // Return full buffer as stream
+            const readable = new Readable();
+            readable.push(buffer);
+            readable.push(null); // Signal end of stream
+            return readable;
+        }
     }
 
     abstract delete(path: string): Promise<void>;
