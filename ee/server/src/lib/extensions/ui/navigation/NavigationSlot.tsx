@@ -12,6 +12,7 @@ import { ReflectionContainer } from '@/types/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
 import { ContainerComponent } from '@/types/ui-reflection/types';
 import { useExtensionContext } from '../ExtensionProvider';
+import { getExtensionNavigationItems } from '@/lib/actions/extension-actions';
 
 /**
  * Navigation Slot component
@@ -39,15 +40,8 @@ export function NavigationSlot({
   useEffect(() => {
     const fetchNavigationItems = async () => {
       try {
-        // Fetch navigation items from the API
-        const response = await fetch('/api/extensions/navigation');
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch navigation items: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        const navigationItems: ExtensionNavigationItem[] = data.items || [];
+        // Use server action to fetch navigation items
+        const navigationItems = await getExtensionNavigationItems();
         
         // Filter based on permissions
         const filteredItems = navigationItems.filter(item => {
@@ -57,7 +51,7 @@ export function NavigationSlot({
           );
         });
         
-        // Items are already sorted by priority from the API
+        // Items are already sorted by priority from the server action
         setItems(filteredItems);
         setLoading(false);
       } catch (error) {
