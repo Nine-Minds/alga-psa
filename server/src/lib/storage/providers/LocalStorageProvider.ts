@@ -2,10 +2,10 @@ import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 import path from 'path';
 import { promises as fs } from 'fs';
-import { createWriteStream } from 'fs';
+import { createWriteStream, createReadStream } from 'fs';
 import { Buffer } from 'buffer';
 import { LocalProviderConfig, StorageCapabilities } from '../../../types/storage.d';
-import { BaseStorageProvider, UploadResult, StorageError } from './StorageProvider';
+import { BaseStorageProvider, UploadResult, StorageError, RangeOptions } from './StorageProvider';
 
 export class LocalStorageProvider extends BaseStorageProvider {
     private readonly basePath: string;
@@ -133,6 +133,29 @@ export class LocalStorageProvider extends BaseStorageProvider {
                 this.handleError('list', error);
             }
             return [];
+        }
+    }
+
+    async getReadStream(storagePath: string, range?: RangeOptions): Promise<Readable> {
+        try {
+            const fullPath = path.join(this.basePath, storagePath);
+            
+            if (!await this.exists(storagePath)) {
+                throw new Error('File not found');
+            }
+
+            if (range) {
+                // Create a read stream with the specified range
+                return createReadStream(fullPath, {
+                    start: range.start,
+                    end: range.end
+                });
+            } else {
+                // Create a read stream for the entire file
+                return createReadStream(fullPath);
+            }
+        } catch (error) {
+            this.handleError('download', error);
         }
     }
 

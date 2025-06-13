@@ -20,11 +20,149 @@ import {
     EyeOff,
     Video,
     Eye,
-    X
+    X,
+    Play
 } from 'lucide-react';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { ContainerComponent, ButtonComponent } from 'server/src/types/ui-reflection/types';
+
+// Helper component for video previews with browser compatibility checking
+interface VideoPreviewProps {
+    fileId: string;
+    mimeType: string;
+    fileName: string;
+    onClick: (e: React.MouseEvent) => void;
+}
+
+function VideoPreviewComponent({ fileId, mimeType, fileName, onClick }: VideoPreviewProps) {
+    const [canPlay, setCanPlay] = useState<boolean | null>(null);
+
+    useEffect(() => {
+        // Check if browser can play this video format
+        const video = document.createElement('video');
+        const canPlayResult = video.canPlayType(mimeType);
+        setCanPlay(canPlayResult === 'probably' || canPlayResult === 'maybe');
+    }, [mimeType]);
+
+    // Browser-supported video formats (common ones)
+    const isBrowserSupported = mimeType === 'video/mp4' || 
+                               mimeType === 'video/webm' || 
+                               mimeType === 'video/ogg';
+
+    if (canPlay === false || !isBrowserSupported) {
+        // Show fallback for unsupported formats
+        return (
+            <div 
+                className="max-w-full h-48 rounded-md border border-[rgb(var(--color-border-200))] cursor-pointer transition-all hover:border-[rgb(var(--color-border-300))] bg-gray-50 flex flex-col items-center justify-center group"
+                onClick={onClick}
+            >
+                <Video className="w-12 h-12 text-gray-400 mb-2" />
+                <p className="text-sm text-gray-600 text-center px-4">
+                    {fileName}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                    {mimeType}
+                </p>
+                <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="bg-black bg-opacity-50 text-white p-2 rounded-full">
+                        <Play className="w-4 h-4" />
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Show native video preview for supported formats
+    return (
+        <div className="relative group">
+            <video
+                className="max-w-full h-auto rounded-md border border-[rgb(var(--color-border-200))] cursor-pointer transition-opacity group-hover:opacity-75"
+                style={{ maxHeight: '200px', objectFit: 'contain' }}
+                onClick={onClick}
+                controls={false}
+                muted
+                preload="metadata"
+            >
+                <source src={`/api/documents/view/${fileId}`} type={mimeType} />
+                Your browser does not support the video tag.
+            </video>
+            <div 
+                className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                onClick={onClick}
+            >
+                <div className="bg-black bg-opacity-50 text-white p-2 rounded-full pointer-events-none">
+                    <Eye className="w-6 h-6" />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// Modal component for video playback with browser compatibility checking
+interface VideoModalProps {
+    fileId: string;
+    documentId: string;
+    mimeType: string;
+    fileName: string;
+}
+
+function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoModalProps) {
+    const [canPlay, setCanPlay] = useState<boolean | null>(null);
+
+    useEffect(() => {
+        // Check if browser can play this video format
+        const video = document.createElement('video');
+        const canPlayResult = video.canPlayType(mimeType);
+        setCanPlay(canPlayResult === 'probably' || canPlayResult === 'maybe');
+    }, [mimeType]);
+
+    // Browser-supported video formats (common ones)
+    const isBrowserSupported = mimeType === 'video/mp4' || 
+                               mimeType === 'video/webm' || 
+                               mimeType === 'video/ogg';
+
+    if (canPlay === false || !isBrowserSupported) {
+        // Show download option for unsupported formats
+        return (
+            <div className="text-center p-8">
+                <Video className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <p className="text-[rgb(var(--color-text-700))] mb-2 font-medium">
+                    {fileName}
+                </p>
+                <p className="text-[rgb(var(--color-text-500))] mb-4 text-sm">
+                    Video format ({mimeType}) not supported for browser playback
+                </p>
+                <Button
+                    id={`download-video-${fileId}`}
+                    onClick={() => {
+                        const downloadUrl = getDocumentDownloadUrl(documentId);
+                        window.open(downloadUrl, '_blank');
+                    }}
+                    className="mb-2"
+                >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download to Play
+                </Button>
+                <div className="text-xs text-[rgb(var(--color-text-400))] mt-2">
+                    The video will be downloaded and can be played with your system's default video player
+                </div>
+            </div>
+        );
+    }
+
+    // Show native video player for supported formats
+    return (
+        <video
+            className="max-w-full max-h-[70vh] object-contain"
+            controls
+            autoPlay={false}
+        >
+            <source src={`/api/documents/view/${fileId}`} type={mimeType} />
+            Your browser does not support the video tag.
+        </video>
+    );
+}
 
 export interface DocumentStorageCardProps {
     id: string;
@@ -236,27 +374,12 @@ export default function DocumentStorageCard({
                     ) : (
                         <div className="mt-4 preview-container">
                             {document.mime_type?.startsWith('video/') ? (
-                                <div className="relative group">
-                                    <video
-                                        className="max-w-full h-auto rounded-md border border-[rgb(var(--color-border-200))] cursor-pointer transition-opacity group-hover:opacity-75"
-                                        style={{ maxHeight: '200px', objectFit: 'contain' }}
-                                        onClick={handleFullSizeView}
-                                        controls={false}
-                                        muted
-                                        preload="metadata"
-                                    >
-                                        <source src={`/api/documents/view/${document.file_id}`} type={document.mime_type} />
-                                        Your browser does not support the video tag.
-                                    </video>
-                                    <div 
-                                        className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                                        onClick={handleFullSizeView}
-                                    >
-                                        <div className="bg-black bg-opacity-50 text-white p-2 rounded-full pointer-events-none">
-                                            <Eye className="w-6 h-6" />
-                                        </div>
-                                    </div>
-                                </div>
+                                <VideoPreviewComponent 
+                                    fileId={document.file_id || ''}
+                                    mimeType={document.mime_type || ''}
+                                    fileName={document.document_name}
+                                    onClick={handleFullSizeView}
+                                />
                             ) : previewContent.previewImage ? (
                                 <div className="relative group">
                                     <img
@@ -286,7 +409,7 @@ export default function DocumentStorageCard({
                                         WebkitBoxOrient: 'vertical',
                                         whiteSpace: 'pre-wrap'
                                     }}
-                                    dangerouslySetInnerHTML={{ __html: previewContent.content }}
+                                    dangerouslySetInnerHTML={{ __html: previewContent.content || '' }}
                                     onClick={handleFullSizeView}
                                     role="button"
                                     tabIndex={0}
@@ -422,14 +545,12 @@ export default function DocumentStorageCard({
                                     className="max-w-full max-h-[70vh] object-contain"
                                 />
                             ) : document.mime_type?.startsWith('video/') ? (
-                                <video
-                                    className="max-w-full max-h-[70vh] object-contain"
-                                    controls
-                                    autoPlay={false}
-                                >
-                                    <source src={`/api/documents/view/${document.file_id}`} type={document.mime_type} />
-                                    Your browser does not support the video tag.
-                                </video>
+                                <VideoModalComponent 
+                                    fileId={document.file_id || ''}
+                                    documentId={document.document_id}
+                                    mimeType={document.mime_type || ''}
+                                    fileName={document.document_name}
+                                />
                             ) : document.mime_type === 'application/pdf' ? (
                                 <iframe
                                     src={`/api/documents/view/${document.file_id}`}
