@@ -115,7 +115,9 @@ export class ExtensionLoader {
 
   private async registerExtensionForTenants(manifest: ExtensionManifest, extensionPath: string): Promise<void> {
     try {
-      const { knex } = await createTenantKnex();
+      // Use admin connection to avoid headers context issue during initialization
+      const { getAdminConnection } = await import('@/lib/db/admin');
+      const knex = await getAdminConnection();
       
       // Get all tenants or specific ones based on tenantMode
       let tenants: any[] = [];
@@ -139,10 +141,18 @@ export class ExtensionLoader {
             tenant: tenant.tenant
           });
         } catch (error) {
+          let errorDetails = error instanceof Error ? error.message : 'Unknown error';
+          
+          // If it's a validation error, include the specific validation errors
+          if (error instanceof Error && 'errors' in error) {
+            const validationError = error as any;
+            errorDetails = `${errorDetails} - Validation errors: ${JSON.stringify(validationError.errors)}`;
+          }
+          
           logger.error('Failed to register extension for tenant', {
             extension: manifest.name,
             tenant: tenant.tenant,
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: errorDetails
           });
         }
       }
