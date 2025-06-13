@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 
 // Dynamically import the component to handle any client-side dependencies
 const AgreementsList = dynamic(
-  () => import('@/../../extensions/softwareone-ext/src/components/AgreementsList').then(mod => ({ default: mod.AgreementsList })),
+  () => import('@/components/extensions/softwareone/AgreementsList'),
   { 
     ssr: false,
     loading: () => <div className="p-6">Loading agreements...</div>
