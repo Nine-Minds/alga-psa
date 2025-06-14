@@ -40,9 +40,27 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // We'll check for at least one tenant where it's enabled
     const registry = new ExtensionRegistry(knex);
     const extensions = await registry.getAllExtensions();
-    const extension = extensions.find(ext => ext.id === extensionId && ext.is_enabled);
+    
+    // Find extension by either UUID or manifest ID
+    const extension = extensions.find(ext => {
+      // Check if extensionId matches the database UUID
+      if (ext.id === extensionId) return ext.is_enabled;
+      
+      // Check if extensionId matches the manifest ID
+      if (ext.manifest && typeof ext.manifest === 'object' && ext.manifest.id === extensionId) {
+        return ext.is_enabled;
+      }
+      
+      return false;
+    });
+    
+    console.log('[Extension Component API] Extension lookup:', {
+      requestedId: extensionId,
+      foundExtension: extension ? { id: extension.id, manifestId: extension.manifest?.id, name: extension.name } : null
+    });
     
     if (!extension || !extension.is_enabled) {
+      console.error('[Extension Component API] Extension not found or not enabled', { extensionId });
       return res.status(404).json({ error: 'Extension not found or not enabled' });
     }
 
@@ -59,10 +77,27 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     // Construct the file path
-    // When running from server directory, extensions are in ./extensions
-    const extensionsDir = path.join(process.cwd(), 'extensions');
+    // Extensions are in the root project directory, not the server directory
+    const cwd = process.cwd();
+    let extensionsDir: string;
+    
+    // Check if we're running from the server directory or root
+    if (cwd.endsWith('/server')) {
+      extensionsDir = path.join(cwd, '..', 'extensions');
+    } else {
+      extensionsDir = path.join(cwd, 'extensions');
+    }
+    
     const extensionDir = 'softwareone-ext'; // Hardcoded for now, should derive from extension ID
     const filePath = path.join(extensionsDir, extensionDir, 'dist', cleanPath);
+    
+    console.log('[Extension Component API] Path construction:', {
+      cwd,
+      extensionsDir,
+      extensionDir,
+      cleanPath,
+      filePath
+    });
 
     // Security: Ensure the path doesn't escape the extension directory
     const normalizedPath = path.normalize(filePath);

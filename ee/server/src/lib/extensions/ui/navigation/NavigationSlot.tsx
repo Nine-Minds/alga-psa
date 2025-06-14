@@ -65,6 +65,16 @@ export function NavigationSlot({
         
         console.log('[NavigationSlot] Filtered items:', filteredItems);
         
+        // Log detailed item info for debugging
+        filteredItems.forEach(item => {
+          console.log('[NavigationSlot] Navigation item detail:', {
+            extensionId: item.extensionId,
+            extensionName: item.extensionName,
+            component: item.component,
+            props: item.props
+          });
+        });
+        
         // Items are already sorted by priority from the server action
         setItems(filteredItems);
         setLoading(false);

@@ -48,13 +48,20 @@ export function ExtensionRenderer({
         return;
       }
 
-      // Try to load as descriptor first
+      // Try to load as descriptor
       try {
-        const descriptorUrl = `${window.location.origin}/api/extensions/${extensionId}/components/${componentPath}`;
+        const descriptorUrl = `/api/extensions/${extensionId}/components/${componentPath}`;
         console.log(`[ExtensionRenderer] Attempting to load from: ${descriptorUrl}`);
         
         const response = await fetch(descriptorUrl);
         console.log(`[ExtensionRenderer] Response status: ${response.status}`);
+        console.log(`[ExtensionRenderer] Response OK: ${response.ok}`);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`[ExtensionRenderer] Failed to load descriptor: ${response.status} - ${errorText}`);
+          throw new Error(`Failed to load descriptor: ${response.status}`);
+        }
         
         const contentType = response.headers.get('content-type');
         console.log(`[ExtensionRenderer] Content-Type: ${contentType}`);
@@ -72,17 +79,24 @@ export function ExtensionRenderer({
             // Load handlers if specified
             if (data.handlers?.module) {
               console.log(`[ExtensionRenderer] Loading handlers from: ${data.handlers.module}`);
-              const handlersUrl = `${window.location.origin}/api/extensions/${extensionId}/components/${data.handlers.module}`;
+              const handlersUrl = `/api/extensions/${extensionId}/components/${data.handlers.module}`;
               const handlerModule = await import(/* webpackIgnore: true */ /* @vite-ignore */ handlersUrl);
               console.log(`[ExtensionRenderer] Handlers loaded:`, handlerModule);
               setHandlers(handlerModule.default || handlerModule);
             }
             return;
           }
+        } else {
+          console.error(`[ExtensionRenderer] Unexpected content type: ${contentType}`);
         }
       } catch (err) {
-        console.error(`[ExtensionRenderer] Error checking if descriptor:`, err);
-        // Not a descriptor, fall back to component loading
+        console.error(`[ExtensionRenderer] Error loading descriptor:`, err);
+        // For descriptors detected by path, we should set an error state
+        if (componentPath.endsWith('.json') || componentPath.includes('/descriptors/')) {
+          setIsDescriptor(true);
+          // Set empty descriptor to show error
+          setDescriptor(null);
+        }
       }
       
       console.log(`[ExtensionRenderer] Not a descriptor, treating as component`);
@@ -129,6 +143,12 @@ export function ExtensionRenderer({
     if (!descriptor) {
       console.log(`[ExtensionRenderer] No descriptor loaded yet, showing loading...`);
       return <Loading />;
+    }
+    
+    // Check if descriptor failed to load (null after load attempt)
+    if (descriptor === null) {
+      console.error(`[ExtensionRenderer] Descriptor failed to load for: ${componentPath}`);
+      return <ErrorDisplay error={new Error('Failed to load descriptor')} componentPath={componentPath} />;
     }
 
     console.log(`[ExtensionRenderer] Rendering DescriptorRenderer with descriptor:`, descriptor);
