@@ -29,10 +29,10 @@ export function useExtensions() {
         setError(err instanceof Error ? err.message : 'Unknown error');
         console.error('Failed to fetch extensions:', err);
         
-        // For development, provide a mock extension
+        // For development, provide a mock extension using the actual database ID
         setExtensions([
           {
-            id: 'softwareone',
+            id: '63a7a0dc-7836-4a5f-aa08-ecdb31b064b5', // Use actual database ID
             name: 'SoftwareOne Integration',
             version: '0.1.0',
             enabled: true,
