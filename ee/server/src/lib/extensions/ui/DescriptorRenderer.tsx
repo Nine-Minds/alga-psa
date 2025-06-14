@@ -39,70 +39,73 @@ export function DescriptorRenderer({
   const [errors, setErrors] = useState<Record<string, Error>>({});
 
   // Build handler context
-  const context = useMemo<HandlerContext>(() => ({
-    extension: {
-      id: providedContext?.extension?.id || '',
-      version: providedContext?.extension?.version || '',
-      storage: providedContext?.extension?.storage || {
-        get: async (key: string) => Promise.resolve(null),
-        set: async (key: string, value: any) => Promise.resolve(),
-        delete: async (key: string) => Promise.resolve(),
-        list: async (prefix?: string) => Promise.resolve([])
+  const context = useMemo<HandlerContext>(() => {
+    // If we have a full context provided, use it
+    if (providedContext?.navigate && providedContext?.api && providedContext?.ui) {
+      return providedContext as HandlerContext;
+    }
+    
+    // Otherwise build a default context
+    return {
+      extension: {
+        id: providedContext?.extension?.id || '',
+        version: providedContext?.extension?.version || '',
+        storage: providedContext?.extension?.storage || {
+          get: async (key: string) => Promise.resolve(null),
+          set: async (key: string, value: any) => Promise.resolve(),
+          delete: async (key: string) => Promise.resolve(),
+          list: async (prefix?: string) => Promise.resolve([])
+        }
+      },
+      navigate: providedContext?.navigate || ((path: string) => router.push(path)),
+      api: providedContext?.api || {
+        get: async (endpoint: string, params?: any) => {
+          const response = await fetch(endpoint, { 
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          return { data: await response.json() };
+        },
+        post: async (endpoint: string, body?: any) => {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+          return { data: await response.json() };
+        },
+        put: async (endpoint: string, body?: any) => {
+          const response = await fetch(endpoint, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+          return { data: await response.json() };
+        },
+        delete: async (endpoint: string) => {
+          const response = await fetch(endpoint, { method: 'DELETE' });
+          return { data: await response.json() };
+        }
+      },
+      ui: providedContext?.ui || {
+        toast: (message: string, type = 'info') => {
+          console.log(`[${type.toUpperCase()}] ${message}`);
+        },
+        dialog: async (descriptor: UIDescriptor) => {
+          console.log('Dialog not yet implemented', descriptor);
+          return null;
+        },
+        confirm: async (message: string, title?: string) => {
+          return window.confirm(title ? `${title}\n\n${message}` : message);
+        }
+      },
+      user: providedContext?.user || {
+        id: '',
+        tenantId: '',
+        permissions: []
       }
-    },
-    navigate: (path: string) => router.push(path),
-    api: {
-      get: async (endpoint: string, params?: any) => {
-        // Mock API implementation for now
-        const response = await fetch(endpoint, { 
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        return { data: await response.json() };
-      },
-      post: async (endpoint: string, body?: any) => {
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
-        return { data: await response.json() };
-      },
-      put: async (endpoint: string, body?: any) => {
-        const response = await fetch(endpoint, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
-        return { data: await response.json() };
-      },
-      delete: async (endpoint: string) => {
-        const response = await fetch(endpoint, { method: 'DELETE' });
-        return { data: await response.json() };
-      }
-    },
-    ui: {
-      toast: (message: string, type = 'info') => {
-        // Simple console log for now
-        console.log(`[${type.toUpperCase()}] ${message}`);
-      },
-      dialog: async (descriptor: UIDescriptor) => {
-        // TODO: Implement dialog rendering
-        console.log('Dialog not yet implemented', descriptor);
-        return null;
-      },
-      confirm: async (message: string, title?: string) => {
-        // TODO: Implement confirmation dialog
-        return window.confirm(title ? `${title}\n\n${message}` : message);
-      }
-    },
-    user: providedContext?.user || {
-      id: '',
-      tenantId: '',
-      permissions: []
-    },
-    ...providedContext
-  }), [router, providedContext]);
+    };
+  }, [router, providedContext]);
 
   // Handle data fetching for page descriptors
   useEffect(() => {
