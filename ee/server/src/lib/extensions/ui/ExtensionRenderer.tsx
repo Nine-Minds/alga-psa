@@ -53,7 +53,8 @@ export function ExtensionRenderer({
       // Try to load as descriptor if we think it might be one
       if (shouldLoadAsDescriptor || isDescriptor === null) {
         try {
-          const descriptorUrl = `/api/extensions/${extensionId}/components/${componentPath}`;
+          // For development, load directly from extension dist directory
+          const descriptorUrl = `/extensions/${extensionId}/dist/${componentPath}`;
           console.log(`[ExtensionRenderer] Attempting to load from: ${descriptorUrl}`);
           
           const response = await fetch(descriptorUrl);
@@ -82,7 +83,7 @@ export function ExtensionRenderer({
               // Load handlers if specified
               if (data.handlers?.module) {
                 console.log(`[ExtensionRenderer] Loading handlers from: ${data.handlers.module}`);
-                const handlersUrl = `/api/extensions/${extensionId}/components/${data.handlers.module}`;
+                const handlersUrl = `/extensions/${extensionId}/dist/${data.handlers.module}`;
                 try {
                   const handlerModule = await import(/* webpackIgnore: true */ /* @vite-ignore */ handlersUrl);
                   console.log(`[ExtensionRenderer] Handlers loaded:`, handlerModule);

@@ -295,16 +295,27 @@ export function DescriptorRenderer({
     // Handle children
     if (desc.children) {
       const children = desc.children.map((child, index) => {
-        // If child is a primitive (string or number), pass it directly
+        const key = `${desc.id || 'desc'}-child-${index}`;
+        
+        // If child is a primitive (string or number), return it directly
         if (typeof child === 'string' || typeof child === 'number') {
-          return renderDescriptor(child);
+          return child;
         }
+        
         // If child is an object but doesn't have an id, add one
         if (typeof child === 'object' && !('id' in child)) {
-          return renderDescriptor({ ...child, id: `${desc.id}-child-${index}` });
+          return React.cloneElement(
+            renderDescriptor({ ...child, id: key }) as React.ReactElement,
+            { key }
+          );
         }
-        // Otherwise, render as is
-        return renderDescriptor(child);
+        
+        // Otherwise, render as is with key
+        const renderedChild = renderDescriptor(child);
+        if (React.isValidElement(renderedChild)) {
+          return React.cloneElement(renderedChild, { key });
+        }
+        return renderedChild;
       });
       return <Component {...props}>{children}</Component>;
     }
@@ -393,8 +404,10 @@ export function DescriptorRenderer({
 
   // Handle both UIDescriptor and PageDescriptor types
   if (isPageDescriptor(descriptor)) {
-    return <>{renderDescriptor(descriptor.content)}</>;
+    const rendered = renderDescriptor(descriptor.content);
+    return React.isValidElement(rendered) ? rendered : <div>{rendered}</div>;
   } else {
-    return <>{renderDescriptor(descriptor as UIDescriptor)}</>;
+    const rendered = renderDescriptor(descriptor as UIDescriptor);
+    return React.isValidElement(rendered) ? rendered : <div>{rendered}</div>;
   }
 }

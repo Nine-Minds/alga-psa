@@ -1,6 +1,6 @@
 import React from 'react';
 import { ExtensionRouter } from '../../lib/extensions/routing/ExtensionRouter';
-import { ExtensionProvider } from '../../lib/extensions/ExtensionProvider';
+import { ExtensionProvider } from '../../lib/extensions/ui/ExtensionProvider';
 
 /**
  * Dynamic catch-all route for extension pages
