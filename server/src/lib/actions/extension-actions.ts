@@ -21,31 +21,46 @@ export interface ExtensionNavigationItem {
  */
 export async function getExtensionNavigationItems(): Promise<ExtensionNavigationItem[]> {
   try {
+    logger.info('[getExtensionNavigationItems] Starting to fetch navigation items');
+    
     const { knex, tenant } = await createTenantKnex();
     
     if (!tenant) {
-      logger.error('Tenant not found in getExtensionNavigationItems');
+      logger.error('[getExtensionNavigationItems] Tenant not found');
       return [];
     }
+    
+    logger.info('[getExtensionNavigationItems] Tenant found:', tenant);
 
     const navigationItems = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const registry = new ExtensionRegistry(trx);
       
       // Get all enabled extensions
       const extensions = await registry.listExtensions({ tenant_id: tenant });
+      logger.info('[getExtensionNavigationItems] Total extensions found:', extensions.length);
+      
       const enabledExtensions = extensions.filter(ext => ext.is_enabled);
+      logger.info('[getExtensionNavigationItems] Enabled extensions:', enabledExtensions.map(e => ({ id: e.id, name: e.name, is_enabled: e.is_enabled })));
       
       // Extract navigation items from enabled extensions
       const items: ExtensionNavigationItem[] = [];
       
       for (const extension of enabledExtensions) {
         const manifest = extension.manifest;
+        logger.info('[getExtensionNavigationItems] Processing extension:', { 
+          id: extension.id, 
+          name: extension.name,
+          hasComponents: !!manifest.components,
+          componentsCount: manifest.components?.length || 0
+        });
         
         // Check if the extension has navigation components
         if (manifest.components) {
           const navComponents = manifest.components.filter((comp: any) => 
             comp.type === 'navigation' && comp.slot === 'main-navigation'
           );
+          
+          logger.info('[getExtensionNavigationItems] Navigation components found:', navComponents.length);
           
           // Add each navigation component with extension context
           navComponents.forEach((component: any) => {
@@ -54,8 +69,10 @@ export async function getExtensionNavigationItems(): Promise<ExtensionNavigation
            const cleanedPath = component.component
              ?.replace(/^dist\//, '');
 
-           console.log('[extension-actions] Original component path:', component.component);
-           console.log('[extension-actions] Cleaned component path:', cleanedPath);
+           logger.info('[getExtensionNavigationItems] Component paths:', {
+             original: component.component,
+             cleaned: cleanedPath
+           });
            
            items.push({
              extensionId: extension.id,
@@ -78,17 +95,20 @@ export async function getExtensionNavigationItems(): Promise<ExtensionNavigation
       // Sort by priority (higher values first)
       items.sort((a, b) => (b.props.priority || 0) - (a.props.priority || 0));
       
+      logger.info('[getExtensionNavigationItems] Final items:', items);
+      
       return items;
     });
 
-    logger.info('Fetched extension navigation items via server action', { 
+    logger.info('[getExtensionNavigationItems] Fetched extension navigation items', { 
       tenant, 
-      count: navigationItems.length 
+      count: navigationItems.length,
+      items: navigationItems
     });
 
     return navigationItems;
   } catch (error) {
-    logger.error('Failed to fetch extension navigation via server action', { error });
+    logger.error('[getExtensionNavigationItems] Failed to fetch extension navigation', { error });
     return [];
   }
 }

@@ -24,10 +24,14 @@ export function NavigationSlot({
   collapsed = false,
   filter,
 }: NavigationSlotProps) {
+  console.log('[NavigationSlot] Component rendering');
+  
   const [items, setItems] = useState<ExtensionNavigationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const extensionContext = useExtensionContext();
+  
+  console.log('[NavigationSlot] Initial state:', { loading, itemsCount: items.length, error });
   
   // Register with Alga's UI automation system
   const { automationIdProps } = useAutomationIdAndRegister<ContainerComponent>({
@@ -39,23 +43,33 @@ export function NavigationSlot({
   // Fetch navigation items
   useEffect(() => {
     const fetchNavigationItems = async () => {
+      console.log('[NavigationSlot] Fetching navigation items...');
       try {
         // Use server action to fetch navigation items
         const navigationItems = await getExtensionNavigationItems();
+        console.log('[NavigationSlot] Received navigation items:', navigationItems);
         
         // Filter based on permissions
         const filteredItems = navigationItems.filter(item => {
           const requiredPermissions = item.props.permissions || [];
-          return requiredPermissions.every(permission => 
+          const hasPermissions = requiredPermissions.every(permission => 
             extensionContext.hasPermission(permission)
           );
+          console.log('[NavigationSlot] Checking permissions for item:', {
+            item: item.props.id,
+            requiredPermissions,
+            hasPermissions
+          });
+          return hasPermissions;
         });
+        
+        console.log('[NavigationSlot] Filtered items:', filteredItems);
         
         // Items are already sorted by priority from the server action
         setItems(filteredItems);
         setLoading(false);
       } catch (error) {
-        console.error('Failed to fetch navigation items', error);
+        console.error('[NavigationSlot] Failed to fetch navigation items', error);
         setError('Failed to load navigation extensions');
         setLoading(false);
       }
