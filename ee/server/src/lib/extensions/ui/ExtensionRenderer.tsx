@@ -1,12 +1,15 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { ExtensionRendererProps } from './types';
 import { ExtensionErrorBoundary } from './ExtensionErrorBoundary';
+import { DescriptorRenderer } from './DescriptorRenderer';
+import { UIDescriptor, PageDescriptor } from './descriptors/types';
 
-// Create a cache for the dynamically imported components.
-// The key is a unique identifier for the component, and the value is the lazy-loaded component.
+// Create a cache for the dynamically imported components and descriptors.
 const componentCache = new Map<string, React.LazyExoticComponent<React.ComponentType<any>>>();
+const descriptorCache = new Map<string, Promise<UIDescriptor | PageDescriptor>>();
+const handlerCache = new Map<string, Promise<Record<string, Function>>>();
 
 // A simple loading component to show while the extension component is being fetched.
 const Loading = () => (
@@ -29,21 +32,100 @@ export function ExtensionRenderer({
   defaultProps = {},
   onError,
 }: ExtensionRendererProps) {
-  // Generate a unique cache key for the component.
+  const [descriptor, setDescriptor] = useState<UIDescriptor | PageDescriptor | null>(null);
+  const [handlers, setHandlers] = useState<Record<string, Function>>({});
+  const [isDescriptor, setIsDescriptor] = useState<boolean | null>(null);
+
+  // Check if the component path is a descriptor (ends with .json or has descriptor in the path)
+  useEffect(() => {
+    const checkIfDescriptor = async () => {
+      // First, try to detect by file extension
+      if (componentPath.endsWith('.json') || componentPath.includes('/descriptors/')) {
+        setIsDescriptor(true);
+        return;
+      }
+
+      // Try to load as descriptor first
+      try {
+        const descriptorUrl = `${window.location.origin}/api/extensions/${extensionId}/components/${componentPath}`;
+        const response = await fetch(descriptorUrl);
+        const contentType = response.headers.get('content-type');
+        
+        if (contentType?.includes('application/json')) {
+          const data = await response.json();
+          // Check if it has descriptor structure
+          if (data.type && (typeof data.type === 'string')) {
+            setIsDescriptor(true);
+            setDescriptor(data);
+            
+            // Load handlers if specified
+            if (data.handlers?.module) {
+              const handlersUrl = `${window.location.origin}/api/extensions/${extensionId}/components/${data.handlers.module}`;
+              const handlerModule = await import(/* webpackIgnore: true */ /* @vite-ignore */ handlersUrl);
+              setHandlers(handlerModule.default || handlerModule);
+            }
+            return;
+          }
+        }
+      } catch (err) {
+        // Not a descriptor, fall back to component loading
+      }
+      
+      setIsDescriptor(false);
+    };
+
+    checkIfDescriptor();
+  }, [extensionId, componentPath]);
+
+  // If it's a descriptor, render with DescriptorRenderer
+  if (isDescriptor === true) {
+    const context = {
+      extension: {
+        id: extensionId,
+        version: '1.0.0', // TODO: Get from manifest
+        storage: {
+          get: async (key: string) => Promise.resolve(null),
+          set: async (key: string, value: any) => Promise.resolve(),
+          delete: async (key: string) => Promise.resolve(),
+          list: async (prefix?: string) => Promise.resolve([])
+        }
+      },
+      user: {
+        id: '', // TODO: Get from context
+        tenantId: '', // TODO: Get from context
+        permissions: [] // TODO: Get from context
+      }
+    };
+
+    if (!descriptor) {
+      return <Loading />;
+    }
+
+    return (
+      <ExtensionErrorBoundary extensionId={extensionId} onError={onError}>
+        <DescriptorRenderer
+          descriptor={descriptor}
+          handlers={handlers}
+          context={context}
+          data={{ ...defaultProps, ...slotProps }}
+        />
+      </ExtensionErrorBoundary>
+    );
+  }
+
+  // If it's still being determined, show loading
+  if (isDescriptor === null) {
+    return <Loading />;
+  }
+
+  // Otherwise, use the existing component loading logic
   const cacheKey = `${extensionId}:${componentPath}`;
 
-  // If the component is not already in the cache, create a lazy-loaded version and add it.
   if (!componentCache.has(cacheKey)) {
     const LazyComponent = React.lazy(() => {
-        // Use a dynamic import to fetch the component from the API endpoint.
-        // To prevent the Next.js bundler from trying to resolve this import at
-        // build time, we construct a full, dynamic URL. This forces the import
-        // to be handled entirely at runtime by the browser.
         const componentUrl = `${window.location.origin}/api/extensions/${extensionId}/components/${componentPath}`;
-        // Tell webpack to ignore this import so it remains dynamic at runtime.
         return import(/* webpackIgnore: true */ /* @vite-ignore */ componentUrl)
             .catch(err => {
-                // If the import fails, log the error and return a component that displays the error.
                 console.error(`[ExtensionRenderer] Failed to load component: ${componentPath}`, err);
                 onError?.(err);
                 return { default: () => <ErrorDisplay error={err} componentPath={componentPath} /> };
@@ -52,10 +134,8 @@ export function ExtensionRenderer({
     componentCache.set(cacheKey, LazyComponent);
   }
 
-  // Retrieve the lazy-loaded component from the cache.
   const LazyComponent = componentCache.get(cacheKey)!;
 
-  // Combine the default props from the extension manifest and the props from the slot.
   const combinedProps = {
     ...defaultProps,
     ...slotProps,
@@ -65,7 +145,6 @@ export function ExtensionRenderer({
   return (
     <ExtensionErrorBoundary extensionId={extensionId} onError={onError}>
       <Suspense fallback={<Loading />}>
-        {/* Render the lazy-loaded component inside a Suspense boundary. */}
         <LazyComponent {...combinedProps} />
       </Suspense>
     </ExtensionErrorBoundary>

@@ -1,0 +1,21 @@
+{
+  "type": "nav-item",
+  "props": {
+    "className": "flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-gray-100 cursor-pointer"
+  },
+  "handlers": {
+    "onClick": "navigateToAgreements"
+  },
+  "children": [
+    {
+      "type": "CloudIcon",
+      "props": {
+        "className": "w-5 h-5 mr-3 text-gray-400"
+      }
+    },
+    {
+      "type": "span",
+      "children": ["SoftwareOne"]
+    }
+  ]
+}

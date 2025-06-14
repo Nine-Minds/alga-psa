@@ -4,11 +4,16 @@
   "description": "Browse and bill SoftwareOne agreements inside Alga PSA",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc && vite build",
+    "build": "npm run build:components && npm run build:descriptors",
+    "build:components": "tsc && vite build",
+    "build:descriptors": "vite build --config vite.descriptors.config.ts",
+    "build:all": "npm run clean && npm run build",
+    "clean": "rm -rf dist",
     "dev": "vite",
     "test": "vitest",
     "lint": "eslint src",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "validate": "node scripts/validate-descriptors.js"
   },
   "dependencies": {
     "@radix-ui/react-tabs": "^1.0.4",

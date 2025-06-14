@@ -159,19 +159,6 @@ Stretch    Editable local‑markup, self‑service exposure to customer portal, 
   - [ ] Error reporting
   - [ ] DevTools integration
 
-**4.4 Developer Experience** (Week 3)
-- [ ] Create descriptor builder utilities
-  - [ ] Type-safe builders
-  - [ ] Common patterns
-  - [ ] Helper functions
-- [ ] Documentation
-  - [ ] Descriptor API reference
-  - [ ] Migration guide
-  - [ ] Examples
-- [ ] Testing utilities
-  - [ ] Descriptor test helpers
-  - [ ] Mock context
-  - [ ] Snapshot testing
 
 ### ⏳ Future Phases
 
@@ -179,37 +166,7 @@ Stretch    Editable local‑markup, self‑service exposure to customer portal, 
 - [ ] **5.1 Extension Storage Integration**
   - [ ] Replace localStorage with ExtensionStorageService
   - [ ] Implement proper tenant isolation
-  - [ ] Add encryption for sensitive data
-- [ ] **5.2 SoftwareOne API Client**
-  - [ ] Implement authenticated API calls
-  - [ ] Add retry logic and rate limiting
-  - [ ] Error handling and logging
-- [ ] **5.3 Data Synchronization**
-  - [ ] Sync agreements from API
-  - [ ] Sync statements and charges
-  - [ ] Cache management
-- [ ] **5.4 Real Data Integration**
-  - [ ] Replace dummy data with API calls
-  - [ ] Loading states
-  - [ ] Error states
 
-#### Phase 6 - Production Readiness
-- [ ] **6.1 Security**
-  - [ ] API token encryption
-  - [ ] Input validation
-  - [ ] XSS prevention
-- [ ] **6.2 Performance**
-  - [ ] Implement caching strategy
-  - [ ] Optimize bundle size
-  - [ ] Virtual scrolling for large datasets
-- [ ] **6.3 Testing**
-  - [ ] Unit tests for descriptors
-  - [ ] Integration tests
-  - [ ] E2E tests
-- [ ] **6.4 Documentation**
-  - [ ] User guide
-  - [ ] API documentation
-  - [ ] Deployment guide
 
 ### 📋 Detailed Task Breakdown
 

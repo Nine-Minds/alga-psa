@@ -24,7 +24,7 @@
     {
       "type": "navigation",
       "slot": "main-navigation",
-      "component": "components/NavItem.js",
+      "component": "descriptors/navigation/NavItem.json",
       "props": {
         "id": "swone-nav",
         "label": "SoftwareOne",
@@ -37,7 +37,7 @@
     {
       "type": "navigation",
       "slot": "settings-navigation",
-      "component": "components/NavItem.js",
+      "component": "descriptors/navigation/NavItem.json",
       "props": {
         "id": "swone-settings-nav",
         "label": "SoftwareOne",
@@ -50,7 +50,7 @@
     {
       "type": "custom-page",
       "slot": "custom-pages",
-      "component": "components/SettingsPageWrapper.js",
+      "component": "descriptors/pages/SettingsPage.json",
       "props": {
         "id": "swone-settings",
         "path": "/settings/softwareone",
@@ -61,7 +61,7 @@
     {
       "type": "custom-page",
       "slot": "custom-pages",
-      "component": "components/AgreementsListWrapper.js",
+      "component": "descriptors/pages/AgreementsList.json",
       "props": {
         "id": "swone-agreements",
         "path": "/softwareone/agreements",
@@ -72,7 +72,7 @@
     {
       "type": "custom-page",
       "slot": "custom-pages",
-      "component": "pages/AgreementDetail.js",
+      "component": "descriptors/pages/AgreementDetail.json",
       "props": {
         "id": "swone-agreement-detail",
         "path": "/softwareone/agreement/:id",
@@ -83,7 +83,7 @@
     {
       "type": "custom-page",
       "slot": "custom-pages",
-      "component": "pages/StatementsList.js",
+      "component": "descriptors/pages/StatementsList.json",
       "props": {
         "id": "swone-statements",
         "path": "/softwareone/statements",
@@ -94,7 +94,7 @@
     {
       "type": "custom-page",
       "slot": "custom-pages",
-      "component": "pages/StatementDetail.js",
+      "component": "descriptors/pages/StatementDetail.json",
       "props": {
         "id": "swone-statement-detail",
         "path": "/softwareone/statement/:id",
