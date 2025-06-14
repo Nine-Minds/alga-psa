@@ -35,72 +35,87 @@ export function ExtensionRenderer({
   const [descriptor, setDescriptor] = useState<UIDescriptor | PageDescriptor | null>(null);
   const [handlers, setHandlers] = useState<Record<string, Function>>({});
   const [isDescriptor, setIsDescriptor] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(true);
 
   // Check if the component path is a descriptor (ends with .json or has descriptor in the path)
   useEffect(() => {
     const checkIfDescriptor = async () => {
       console.log(`[ExtensionRenderer] Checking component: ${componentPath} for extension: ${extensionId}`);
       
+      let shouldLoadAsDescriptor = false;
+      
       // First, try to detect by file extension
       if (componentPath.endsWith('.json') || componentPath.includes('/descriptors/')) {
         console.log(`[ExtensionRenderer] Detected as descriptor by path: ${componentPath}`);
-        setIsDescriptor(true);
-        return;
+        shouldLoadAsDescriptor = true;
       }
 
-      // Try to load as descriptor
-      try {
-        const descriptorUrl = `/api/extensions/${extensionId}/components/${componentPath}`;
-        console.log(`[ExtensionRenderer] Attempting to load from: ${descriptorUrl}`);
-        
-        const response = await fetch(descriptorUrl);
-        console.log(`[ExtensionRenderer] Response status: ${response.status}`);
-        console.log(`[ExtensionRenderer] Response OK: ${response.ok}`);
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`[ExtensionRenderer] Failed to load descriptor: ${response.status} - ${errorText}`);
-          throw new Error(`Failed to load descriptor: ${response.status}`);
-        }
-        
-        const contentType = response.headers.get('content-type');
-        console.log(`[ExtensionRenderer] Content-Type: ${contentType}`);
-        
-        if (contentType?.includes('application/json')) {
-          const data = await response.json();
-          console.log(`[ExtensionRenderer] Loaded JSON data:`, data);
+      // Try to load as descriptor if we think it might be one
+      if (shouldLoadAsDescriptor || isDescriptor === null) {
+        try {
+          const descriptorUrl = `/api/extensions/${extensionId}/components/${componentPath}`;
+          console.log(`[ExtensionRenderer] Attempting to load from: ${descriptorUrl}`);
           
-          // Check if it has descriptor structure
-          if (data.type && (typeof data.type === 'string')) {
-            console.log(`[ExtensionRenderer] Valid descriptor detected with type: ${data.type}`);
-            setIsDescriptor(true);
-            setDescriptor(data);
+          const response = await fetch(descriptorUrl);
+          console.log(`[ExtensionRenderer] Response status: ${response.status}`);
+          console.log(`[ExtensionRenderer] Response OK: ${response.ok}`);
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`[ExtensionRenderer] Failed to load descriptor: ${response.status} - ${errorText}`);
+            throw new Error(`Failed to load descriptor: ${response.status}`);
+          }
+          
+          const contentType = response.headers.get('content-type');
+          console.log(`[ExtensionRenderer] Content-Type: ${contentType}`);
+          
+          if (contentType?.includes('application/json')) {
+            const data = await response.json();
+            console.log(`[ExtensionRenderer] Loaded JSON data:`, data);
             
-            // Load handlers if specified
-            if (data.handlers?.module) {
-              console.log(`[ExtensionRenderer] Loading handlers from: ${data.handlers.module}`);
-              const handlersUrl = `/api/extensions/${extensionId}/components/${data.handlers.module}`;
-              const handlerModule = await import(/* webpackIgnore: true */ /* @vite-ignore */ handlersUrl);
-              console.log(`[ExtensionRenderer] Handlers loaded:`, handlerModule);
-              setHandlers(handlerModule.default || handlerModule);
+            // Check if it has descriptor structure
+            if (data.type && (typeof data.type === 'string')) {
+              console.log(`[ExtensionRenderer] Valid descriptor detected with type: ${data.type}`);
+              setIsDescriptor(true);
+              setDescriptor(data);
+              
+              // Load handlers if specified
+              if (data.handlers?.module) {
+                console.log(`[ExtensionRenderer] Loading handlers from: ${data.handlers.module}`);
+                const handlersUrl = `/api/extensions/${extensionId}/components/${data.handlers.module}`;
+                try {
+                  const handlerModule = await import(/* webpackIgnore: true */ /* @vite-ignore */ handlersUrl);
+                  console.log(`[ExtensionRenderer] Handlers loaded:`, handlerModule);
+                  setHandlers(handlerModule.default || handlerModule);
+                } catch (handlerErr) {
+                  console.error(`[ExtensionRenderer] Failed to load handlers:`, handlerErr);
+                }
+              }
+              console.log(`[ExtensionRenderer] Descriptor loading complete`);
+              return;
             }
+          } else {
+            console.error(`[ExtensionRenderer] Unexpected content type: ${contentType}`);
+          }
+        } catch (err) {
+          console.error(`[ExtensionRenderer] Error loading descriptor:`, err);
+          // For descriptors detected by path, we should set an error state
+          if (componentPath.endsWith('.json') || componentPath.includes('/descriptors/')) {
+            setIsDescriptor(true);
+            // Set empty descriptor to show error
+            setDescriptor(null);
             return;
           }
-        } else {
-          console.error(`[ExtensionRenderer] Unexpected content type: ${contentType}`);
-        }
-      } catch (err) {
-        console.error(`[ExtensionRenderer] Error loading descriptor:`, err);
-        // For descriptors detected by path, we should set an error state
-        if (componentPath.endsWith('.json') || componentPath.includes('/descriptors/')) {
-          setIsDescriptor(true);
-          // Set empty descriptor to show error
-          setDescriptor(null);
         }
       }
       
-      console.log(`[ExtensionRenderer] Not a descriptor, treating as component`);
-      setIsDescriptor(false);
+      // Only set as non-descriptor if we haven't already determined it's a descriptor
+      if (isDescriptor === null) {
+        console.log(`[ExtensionRenderer] Not a descriptor, treating as component`);
+        setIsDescriptor(false);
+      }
+      
+      setLoading(false);
     };
 
     checkIfDescriptor();
@@ -140,8 +155,8 @@ export function ExtensionRenderer({
       }
     };
 
-    if (!descriptor) {
-      console.log(`[ExtensionRenderer] No descriptor loaded yet, showing loading...`);
+    if (loading || !descriptor) {
+      console.log(`[ExtensionRenderer] Loading or no descriptor yet, showing loading...`);
       return <Loading />;
     }
     
@@ -167,8 +182,8 @@ export function ExtensionRenderer({
   }
 
   // If it's still being determined, show loading
-  if (isDescriptor === null) {
-    console.log(`[ExtensionRenderer] Still determining if descriptor or component...`);
+  if (isDescriptor === null || loading) {
+    console.log(`[ExtensionRenderer] Still determining if descriptor or component... loading=${loading}, isDescriptor=${isDescriptor}`);
     return <Loading />;
   }
 
