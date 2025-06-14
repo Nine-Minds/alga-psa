@@ -32,6 +32,9 @@ export function ExtensionRenderer({
   defaultProps = {},
   onError,
 }: ExtensionRendererProps) {
+  console.log(`[ExtensionRenderer] INIT - extensionId: ${extensionId}, componentPath: ${componentPath}`);
+  console.log(`[ExtensionRenderer] INIT - slotProps:`, slotProps);
+  
   const [descriptor, setDescriptor] = useState<UIDescriptor | PageDescriptor | null>(null);
   const [handlers, setHandlers] = useState<Record<string, Function>>({});
   const [isDescriptor, setIsDescriptor] = useState<boolean | null>(null);
@@ -41,6 +44,7 @@ export function ExtensionRenderer({
   useEffect(() => {
     const checkIfDescriptor = async () => {
       console.log(`[ExtensionRenderer] Checking component: ${componentPath} for extension: ${extensionId}`);
+      console.log(`[ExtensionRenderer] Current loading state: ${loading}, isDescriptor: ${isDescriptor}`);
       
       let shouldLoadAsDescriptor = false;
       
