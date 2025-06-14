@@ -87,9 +87,8 @@ export function ExtensionRouter({ basePath = '/ext' }: ExtensionRouterProps) {
   return (
     <ExtensionRenderer
       extensionId={currentRoute.extensionId}
-      component={currentRoute.component}
-      slot={currentRoute.slot || 'page'}
-      props={{
+      componentPath={currentRoute.component}
+      slotProps={{
         route: currentRoute.path,
         params: router.query
       }}
