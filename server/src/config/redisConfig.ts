@@ -92,26 +92,37 @@ export function getConsumerName(processId: string = process.pid.toString()): str
 
 // Create Redis client for general use
 export async function getRedisClient() {
-  const config = getRedisConfig();
-  const password = await getSecret('redis_password', 'REDIS_PASSWORD');
-  
-  if (!password) {
-    logger.warn('[Redis] No Redis password configured - this is not recommended for production');
-  }
-  
-  const client = createClient({
-    url: config.url,
-    password,
-    socket: {
-      reconnectStrategy: (retries) => {
-        if (retries > 20) {
-          return new Error('Max reconnection attempts reached');
-        }
-        return Math.min(500 * Math.pow(2, retries), 5000);
-      }
+  try {
+    const config = getRedisConfig();
+    const password = await getSecret('redis_password', 'REDIS_PASSWORD');
+    
+    if (!password) {
+      logger.warn('[Redis] No Redis password configured - attempting connection without auth');
     }
-  });
+    
+    const clientConfig: any = {
+      url: config.url,
+      socket: {
+        reconnectStrategy: (retries) => {
+          if (retries > 20) {
+            return new Error('Max reconnection attempts reached');
+          }
+          return Math.min(500 * Math.pow(2, retries), 5000);
+        }
+      }
+    };
+    
+    // Only add password if it exists
+    if (password) {
+      clientConfig.password = password;
+    }
+    
+    const client = createClient(clientConfig);
 
-  await client.connect();
-  return client;
+    await client.connect();
+    return client;
+  } catch (error) {
+    logger.error('[Redis] Failed to connect to Redis:', error);
+    throw error;
+  }
 }

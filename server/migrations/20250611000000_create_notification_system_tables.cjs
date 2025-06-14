@@ -4,11 +4,19 @@
  */
 exports.up = function(knex) {
   return knex.schema
+    // Notification types and categories (Global) - CREATE FIRST
+    .createTable('internal_notification_types', table => {
+      table.uuid('internal_notification_type_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      table.string('type_name', 50).notNullable().unique();
+      table.string('category_name', 50).notNullable();
+      table.timestamps(true, true);
+    })
+
     // Core notifications table for in-app notifications
     .createTable('internal_notifications', table => {
       table.uuid('internal_notification_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       table.uuid('tenant').notNullable();
-      table.integer('user_id').notNullable();
+      table.uuid('user_id').notNullable();
       table.uuid('type_id').notNullable();
       table.string('title', 255).notNullable();
       table.text('message');
@@ -31,8 +39,8 @@ exports.up = function(knex) {
     .createTable('direct_messages', table => {
       table.uuid('tenant').notNullable();
       table.uuid('direct_message_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
-      table.integer('sender_id').notNullable();
-      table.integer('recipient_id').notNullable();
+      table.uuid('sender_id').notNullable();
+      table.uuid('recipient_id').notNullable();
       table.uuid('thread_id');
       table.text('message').notNullable();
       table.jsonb('attachments');
@@ -48,18 +56,10 @@ exports.up = function(knex) {
       table.index(['recipient_id', 'read_at'], 'idx_direct_messages_recipient_unread');
     })
 
-    // Notification types and categories (Global)
-    .createTable('internal_notification_types', table => {
-      table.uuid('internal_notification_type_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
-      table.string('type_name', 50).notNullable().unique();
-      table.string('category_name', 50).notNullable();
-      table.timestamps(true, true);
-    })
-
     // Notification preferences (extends existing user_notification_preferences)
     .createTable('internal_notification_preferences', table => {
       table.uuid('tenant').notNullable();
-      table.integer('user_id').notNullable();
+      table.uuid('user_id').notNullable();
       table.uuid('internal_notification_type_id').notNullable();
       table.string('channel', 20).notNullable(); // 'in_app', 'email', 'sms'
       table.boolean('enabled').defaultTo(true);

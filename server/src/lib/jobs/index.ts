@@ -9,6 +9,7 @@ import { expiringCreditsNotificationHandler, ExpiringCreditsNotificationJobData 
 import { creditReconciliationHandler, CreditReconciliationJobData } from './handlers/creditReconciliationHandler';
 // Import the new handler
 import { handleReconcileBucketUsage, ReconcileBucketUsageJobData } from './handlers/reconcileBucketUsageHandler';
+import { initializeScheduledNotifications } from '../notifications/scheduledNotificationJobs';
 import { JobService } from '../../services/job.service';
 import { getConnection } from '../db/db';
 import { StorageService } from '../../lib/storage/StorageService';
@@ -72,6 +73,9 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       // Directly call the handler function
       await handleReconcileBucketUsage(job);
     });
+
+    // Initialize scheduled notification jobs
+    await initializeScheduledNotifications();
 
   }
   return jobScheduler;

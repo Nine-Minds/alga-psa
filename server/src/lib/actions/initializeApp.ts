@@ -17,6 +17,8 @@ import { initializeScheduler } from 'server/src/lib/jobs';
 // import { configDotenv } from 'dotenv';
 import { config } from 'dotenv';
 import { syncStandardTemplates } from '../startupTasks';
+import { registerNotificationSubscriber } from '../eventBus/subscribers/notificationSubscriber';
+import { scheduleAllNotificationJobs } from '../notifications/scheduledNotificationJobs';
 
 let isFunctionExecuted = false;
 
@@ -29,13 +31,22 @@ export async function initializeApp() {
     isFunctionExecuted = true;
     validateEnv();
 
-    // Initialize event bus first
+    // Initialize event bus and notification system
     try {
         await initializeEventBus();
         logger.info('Event bus initialized successfully');
+        
+        // Register notification subscriber to handle events
+        await registerNotificationSubscriber();
+        logger.info('Notification subscriber registered successfully');
+        
+        // Schedule notification jobs (SLA monitoring, task due dates, etc.)
+        await scheduleAllNotificationJobs();
+        logger.info('Notification scheduled jobs initialized successfully');
     } catch (error) {
-        logger.error('Failed to initialize event bus:', error);
-        throw error;
+        logger.warn('Failed to initialize event bus or notifications (Redis connection issue):', error);
+        // Don't throw error - continue with app initialization
+        // The notification system will fall back to database-only mode
     }
 
     // Initialize storage service

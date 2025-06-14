@@ -15,47 +15,69 @@ import { WorkflowEventBaseSchema } from '@shared/workflow/streams/workflowEventS
 
 // Redis client configuration
 const createRedisClient = async () => {
-  const config = getRedisConfig();
-  const password = await getSecret('redis_password', 'REDIS_PASSWORD');
-  if (!password) {
-    logger.warn('[EventBus] No Redis password configured - this is not recommended for production');
-  }
-  
-  const client = createClient({
-    url: config.url,
-    password,
-    socket: {
-      reconnectStrategy: (retries) => {
-        if (retries > config.eventBus.reconnectStrategy.retries) {
-          return new Error('Max reconnection attempts reached');
-        }
-        return Math.min(
-          config.eventBus.reconnectStrategy.initialDelay,
-          config.eventBus.reconnectStrategy.maxDelay
-        );
-      }
+  try {
+    const config = getRedisConfig();
+    const password = await getSecret('redis_password', 'REDIS_PASSWORD');
+    if (!password) {
+      logger.warn('[EventBus] No Redis password configured - attempting connection without auth');
     }
-  });
+    
+    const clientConfig: any = {
+      url: config.url,
+      socket: {
+        connectTimeout: 5000,
+        reconnectStrategy: (retries) => {
+          if (retries > config.eventBus.reconnectStrategy.retries) {
+            return new Error('Max reconnection attempts reached');
+          }
+          return Math.min(
+            config.eventBus.reconnectStrategy.initialDelay,
+            config.eventBus.reconnectStrategy.maxDelay
+          );
+        }
+      }
+    };
+    
+    // Only add password if it exists
+    if (password) {
+      clientConfig.password = password;
+    }
+    
+    const client = createClient(clientConfig);
 
-  client.on('error', (err) => {
-    logger.error('Redis Client Error:', err);
-  });
+    client.on('error', (err) => {
+      logger.error('Redis Client Error:', err);
+    });
 
-  client.on('connect', () => {
-    logger.info('Redis Client Connected');
-  });
+    client.on('connect', () => {
+      logger.info('Redis Client Connected');
+    });
 
-  return client;
+    return client;
+  } catch (error) {
+    logger.error('[EventBus] Failed to create Redis client:', error);
+    throw error;
+  }
 };
 
 // Singleton Redis client
 let client: Awaited<ReturnType<typeof createRedisClient>> | null = null;
+let redisConnected: boolean = false;
 
 async function getClient() {
-  if (!client) {
-    logger.debug('[EventBus] Creating new Redis client');
-    client = await createRedisClient();
-    await client.connect();
+  if (!client && !redisConnected) {
+    try {
+      logger.debug('[EventBus] Creating new Redis client');
+      client = await createRedisClient();
+      await client.connect();
+      redisConnected = true;
+      logger.info('[EventBus] Redis client connected successfully');
+    } catch (error) {
+      logger.warn('[EventBus] Failed to connect to Redis, EventBus will not work:', error);
+      redisConnected = false;
+      client = null;
+      throw error;
+    }
   }
   return client;
 }
@@ -109,16 +131,23 @@ export class EventBus {
 
   public async initialize() {
     if (!this.initialized) {
-      console.log('[EventBus] Initializing event bus');
-      const client = await getClient();
+      logger.info('[EventBus] Initializing event bus');
+      try {
+        const client = await getClient();
 
-      for (const eventType of Object.keys(EventSchemas)) {
-        const stream = getEventStream(eventType);
-        await this.ensureStreamAndGroup(stream);
+        for (const eventType of Object.keys(EventSchemas)) {
+          const stream = getEventStream(eventType);
+          await this.ensureStreamAndGroup(stream);
+        }
+
+        this.initialized = true;
+        this.startEventProcessing();
+        logger.info('[EventBus] Event bus initialized successfully with Redis');
+      } catch (error) {
+        logger.warn('[EventBus] Failed to initialize with Redis, running in disabled mode:', error);
+        this.initialized = false;
+        redisConnected = false;
       }
-
-      this.initialized = true;
-      this.startEventProcessing();
     }
   }
 
@@ -326,6 +355,14 @@ export class EventBus {
         eventType: event.eventType
       });
 
+      // Check if Redis is connected
+      if (!redisConnected) {
+        logger.warn('[EventBus] Cannot publish event - Redis not connected:', {
+          eventType: event.eventType
+        });
+        return;
+      }
+
       const fullEvent: Event = {
         ...event,
         id: uuidv4(),
@@ -428,7 +465,12 @@ export class EventBus {
       });
     } catch (error) {
       logger.error('Error publishing event:', error);
-      // throw error;
+      // Mark Redis as disconnected if we get connection errors
+      if (error.message && (error.message.includes('NOAUTH') || error.message.includes('Connection'))) {
+        redisConnected = false;
+        client = null;
+      }
+      // Don't throw error to prevent breaking the application
     }
   }
 
