@@ -6,29 +6,30 @@ import { HandlerContext } from './types';
 
 export function navigateToAgreements(event: MouseEvent, context: HandlerContext) {
   event.preventDefault();
-  context.navigate('/softwareone/agreements');
+  // Navigate to the correct extension URL format
+  context.navigate('/msp/extensions/63a7a0dc-7836-4a5f-aa08-ecdb31b064b5/agreements');
 }
 
 export function navigateToStatements(event: MouseEvent, context: HandlerContext) {
   event.preventDefault();
-  context.navigate('/softwareone/statements');
+  context.navigate('/msp/extensions/63a7a0dc-7836-4a5f-aa08-ecdb31b064b5/statements');
 }
 
 export function navigateToSettings(event: MouseEvent, context: HandlerContext) {
   event.preventDefault();
-  context.navigate('/settings/softwareone');
+  context.navigate('/msp/extensions/63a7a0dc-7836-4a5f-aa08-ecdb31b064b5/settings');
 }
 
 export function navigateToAgreementDetail(event: MouseEvent, context: HandlerContext, params?: { agreementId: string }) {
   event.preventDefault();
   if (params?.agreementId) {
-    context.navigate(`/softwareone/agreement/${params.agreementId}`);
+    context.navigate(`/msp/extensions/63a7a0dc-7836-4a5f-aa08-ecdb31b064b5/agreements/${params.agreementId}`);
   }
 }
 
 export function navigateToStatementDetail(event: MouseEvent, context: HandlerContext, params?: { statementId: string }) {
   event.preventDefault();
   if (params?.statementId) {
-    context.navigate(`/softwareone/statement/${params.statementId}`);
+    context.navigate(`/msp/extensions/63a7a0dc-7836-4a5f-aa08-ecdb31b064b5/statements/${params.statementId}`);
   }
 }
