@@ -51,6 +51,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     // Construct the file path
+    // When running from server directory, extensions are in ./extensions
     const extensionsDir = path.join(process.cwd(), 'extensions');
     const extensionDir = 'softwareone-ext'; // Hardcoded for now, should derive from extension ID
     const filePath = path.join(extensionsDir, extensionDir, 'dist', cleanPath);

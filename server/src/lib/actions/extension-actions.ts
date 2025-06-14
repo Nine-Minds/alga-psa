@@ -50,9 +50,9 @@ export async function getExtensionNavigationItems(): Promise<ExtensionNavigation
           // Add each navigation component with extension context
           navComponents.forEach((component: any) => {
            // Robustly clean the component path to handle stale data in the database
+           // Only remove 'dist/' prefix if present, but preserve 'components/' subdirectory
            const cleanedPath = component.component
-             ?.replace(/^dist\//, '')
-             ?.replace(/^components\//, '');
+             ?.replace(/^dist\//, '');
 
            console.log('[extension-actions] Original component path:', component.component);
            console.log('[extension-actions] Cleaned component path:', cleanedPath);
