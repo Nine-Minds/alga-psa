@@ -19,24 +19,21 @@ export default defineConfig({
       fileName: (format, entryName) => `${entryName}.js`,
     },
     rollupOptions: {
-      external: [],  // Bundle everything including React JSX runtime
+      // Mark React and ReactDOM as external - they'll be provided by the host
+      external: ['react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
       output: {
         format: 'es',
-        // Preserve imports for code splitting
-        preserveModules: false,
-        // Single file output
-        inlineDynamicImports: true,
+        // Use import maps to resolve React from the global scope
+        paths: {
+          'react': 'https://esm.sh/react@18',
+          'react-dom': 'https://esm.sh/react-dom@18',
+          'react/jsx-runtime': 'https://esm.sh/react@18/jsx-runtime',
+          'react/jsx-dev-runtime': 'https://esm.sh/react@18/jsx-dev-runtime'
+        }
       },
     },
     outDir: 'dist',
     sourcemap: true,
     emptyOutDir: true,
   },
-  resolve: {
-    alias: {
-      // Ensure we use the same React instance
-      'react': path.resolve('./node_modules/react'),
-      'react-dom': path.resolve('./node_modules/react-dom'),
-    }
-  }
 });
