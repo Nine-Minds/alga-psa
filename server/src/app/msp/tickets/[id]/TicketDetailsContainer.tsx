@@ -31,6 +31,7 @@ interface TicketDetailsContainerProps {
     };
     categories: any[];
     companies: any[];
+    locations: any[];
     agentSchedules: any[];
   };
 }
@@ -178,6 +179,7 @@ export default function TicketDetailsContainer({ ticketData }: TicketDetailsCont
         priorityOptions={ticketData.options.priority}
         initialCategories={ticketData.categories}
         initialCompanies={ticketData.companies}
+        initialLocations={ticketData.locations}
         initialAgentSchedules={ticketData.agentSchedules}
         // Pass optimized handlers
         onTicketUpdate={handleTicketUpdate}

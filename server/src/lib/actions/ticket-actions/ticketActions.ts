@@ -172,11 +172,13 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
           const category_id = data.get('category_id');
           const subcategory_id = data.get('subcategory_id');
           const description = data.get('description');
+          const location_id = data.get('location_id');
 
           const formData = {
             title: data.get('title'),
             channel_id: data.get('channel_id'),
             company_id: data.get('company_id'),
+            location_id: location_id === '' ? null : location_id,
             contact_name_id: contact_name_id === '' ? null : contact_name_id,
             status_id: data.get('status_id'),
             assigned_to: data.get('assigned_to'),
@@ -195,6 +197,7 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
             title: validatedData.title,
             channel_id: validatedData.channel_id,
             company_id: validatedData.company_id,
+            location_id: validatedData.location_id,
             contact_name_id: validatedData.contact_name_id,
             status_id: validatedData.status_id,
             entered_by: user.user_id,
@@ -208,6 +211,21 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
             },
             tenant: tenant
           };
+
+      // Validate location belongs to the company if provided
+      if (validatedData.location_id) {
+        const location = await trx('company_locations')
+          .where({
+            location_id: validatedData.location_id,
+            company_id: validatedData.company_id,
+            tenant: tenant
+          })
+          .first();
+        
+        if (!location) {
+          throw new Error('Invalid location: Location does not belong to the selected company');
+        }
+      }
 
       // Validate complete ticket data
       const validatedTicket = validateData(ticketSchema.partial(), ticketData);
@@ -320,12 +338,31 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
       // Clean up the data before update
       const updateData = { ...validatedData };
 
-      // Handle null values for category and subcategory
+      // Handle null values for category, subcategory, and location
       if ('category_id' in updateData && !updateData.category_id) {
         updateData.category_id = null;
       }
       if ('subcategory_id' in updateData && !updateData.subcategory_id) {
         updateData.subcategory_id = null;
+      }
+      if ('location_id' in updateData && !updateData.location_id) {
+        updateData.location_id = null;
+      }
+      
+      // Validate location belongs to the company if provided
+      if ('location_id' in updateData && updateData.location_id) {
+        const companyId = 'company_id' in updateData ? updateData.company_id : currentTicket.company_id;
+        const location = await trx('company_locations')
+          .where({
+            location_id: updateData.location_id,
+            company_id: companyId,
+            tenant: tenant
+          })
+          .first();
+        
+        if (!location) {
+          throw new Error('Invalid location: Location does not belong to the selected company');
+        }
       }
 
       // Check if we're updating the assigned_to field

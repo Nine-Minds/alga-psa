@@ -12,6 +12,7 @@ import {
     ITimePeriodView,
     ITimeEntry,
     ICompany,
+    ICompanyLocation,
     IContact,
     IUser,
     IUserWithRoles,
@@ -76,6 +77,7 @@ interface TicketDetailsProps {
     priorityOptions?: { value: string; label: string }[];
     initialCategories?: ITicketCategory[];
     initialCompanies?: ICompany[];
+    initialLocations?: ICompanyLocation[];
     initialAgentSchedules?: { userId: string; minutes: number }[];
     
     // Optimized handlers
@@ -107,6 +109,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     priorityOptions = [],
     initialCategories = [],
     initialCompanies = [],
+    initialLocations = [],
     initialAgentSchedules = [],
     // Optimized handlers
     onTicketUpdate,
@@ -130,6 +133,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [channel, setChannel] = useState<any>(initialChannel);
     const [companies, setCompanies] = useState<ICompany[]>(initialCompanies);
     const [contacts, setContacts] = useState<IContact[]>(initialContacts);
+    const [locations, setLocations] = useState<ICompanyLocation[]>(initialLocations);
 
     // Use pre-fetched options directly
     const [userMap, setUserMap] = useState<Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>>(initialUserMap);
@@ -806,7 +810,8 @@ const handleClose = () => {
 
             await updateTicket(ticket.ticket_id!, { 
                 company_id: newCompanyId,
-                contact_name_id: null // Reset contact when company changes
+                contact_name_id: null, // Reset contact when company changes
+                location_id: null // Reset location when company changes
             }, user);
             
             const [companyData, contactsData] = await Promise.all([
@@ -817,12 +822,44 @@ const handleClose = () => {
             setCompany(companyData);
             setContacts(contactsData || []);
             setContactInfo(null); // Reset contact info
+            
+            // Update locations for the new company
+            if (newCompanyId) {
+                // TODO: Fetch locations for the new company
+                // For now, we'll rely on the parent component to provide updated locations
+            }
 
             setIsChangeCompanyDialogOpen(false);
             toast.success('Client updated successfully');
         } catch (error) {
             console.error('Error updating company:', error);
             toast.error('Failed to update client');
+        }
+    };
+    
+    const handleLocationChange = async (newLocationId: string | null) => {
+        try {
+            const user = await getCurrentUser();
+            if (!user) {
+                toast.error('No user session found');
+                return;
+            }
+
+            await updateTicket(ticket.ticket_id!, { 
+                location_id: newLocationId
+            }, user);
+            
+            // Update the ticket state with the new location
+            setTicket(prevTicket => ({
+                ...prevTicket,
+                location_id: newLocationId,
+                location: newLocationId ? locations.find(l => l.location_id === newLocationId) : undefined
+            }));
+
+            toast.success('Location updated successfully');
+        } catch (error) {
+            console.error('Error updating location:', error);
+            toast.error('Failed to update location');
         }
     };
 
@@ -990,10 +1027,12 @@ const handleClose = () => {
                                 tenant={tenant}
                                 contacts={contacts}
                                 companies={companies}
+                                locations={locations}
                                 companyFilterState={companyFilterState}
                                 clientTypeFilter={clientTypeFilter}
                                 onChangeContact={handleContactChange}
                                 onChangeCompany={handleCompanyChange}
+                                onChangeLocation={handleLocationChange}
                                 onCompanyFilterStateChange={setCompanyFilterState}
                                 onClientTypeFilterChange={setClientTypeFilter}
                             />

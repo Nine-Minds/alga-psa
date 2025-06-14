@@ -68,16 +68,37 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
 
     try {
 
-    // Fetch ticket with status info
+    // Fetch ticket with status and location info
     const ticket = await trx('tickets as t')
       .select(
         't.*',
         's.name as status_name',
-        's.is_closed'
+        's.is_closed',
+        'cl.location_id as location_location_id',
+        'cl.location_name',
+        'cl.address_line1',
+        'cl.address_line2',
+        'cl.address_line3',
+        'cl.city',
+        'cl.state_province',
+        'cl.postal_code',
+        'cl.country_code',
+        'cl.country_name',
+        'cl.region_code',
+        'cl.phone as location_phone',
+        'cl.fax as location_fax',
+        'cl.email as location_email',
+        'cl.is_billing_address',
+        'cl.is_shipping_address',
+        'cl.is_default as location_is_default'
       )
       .leftJoin('statuses as s', function() {
         this.on('t.status_id', 's.status_id')
            .andOn('t.tenant', 's.tenant')
+      })
+      .leftJoin('company_locations as cl', function() {
+        this.on('t.location_id', 'cl.location_id')
+           .andOn('t.tenant', 'cl.tenant')
       })
       .where({
         't.ticket_id': ticketId,
@@ -229,9 +250,10 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
     let company = null;
     let contacts: IContact[] = [];
     let contactInfo = null;
+    let locations: any[] = [];
     
     if (ticket.company_id) {
-      [company, contacts] = await Promise.all([
+      [company, contacts, locations] = await Promise.all([
         trx('companies as c')
           .select(
             'c.*',
@@ -257,7 +279,16 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
             company_id: ticket.company_id,
             tenant: tenant
           })
-          .orderBy('full_name', 'asc')
+          .orderBy('full_name', 'asc'),
+          
+        trx('company_locations')
+          .where({
+            company_id: ticket.company_id,
+            tenant: tenant,
+            is_active: true
+          })
+          .orderBy('is_default', 'desc')
+          .orderBy('location_name', 'asc')
       ]);
       
       if (company) {
@@ -397,11 +428,55 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       minutes
     }));
 
+    // Process location data from ticket query
+    const location = ticket.location_location_id ? {
+      location_id: ticket.location_location_id,
+      location_name: ticket.location_name,
+      address_line1: ticket.address_line1,
+      address_line2: ticket.address_line2,
+      address_line3: ticket.address_line3,
+      city: ticket.city,
+      state_province: ticket.state_province,
+      postal_code: ticket.postal_code,
+      country_code: ticket.country_code,
+      country_name: ticket.country_name,
+      region_code: ticket.region_code,
+      phone: ticket.location_phone,
+      fax: ticket.location_fax,
+      email: ticket.location_email,
+      is_billing_address: ticket.is_billing_address,
+      is_shipping_address: ticket.is_shipping_address,
+      is_default: ticket.location_is_default
+    } : null;
+
+    // Remove location fields from ticket object
+    const {
+      location_location_id,
+      location_name,
+      address_line1,
+      address_line2,
+      address_line3,
+      city,
+      state_province,
+      postal_code,
+      country_code,
+      country_name,
+      region_code,
+      location_phone,
+      location_fax,
+      location_email,
+      is_billing_address,
+      is_shipping_address,
+      location_is_default,
+      ...ticketData
+    } = ticket;
+
     // Return all data in a single consolidated object
     return {
       ticket: {
-        ...convertDates(ticket),
-        tenant
+        ...convertDates(ticketData),
+        tenant,
+        location
       },
       comments,
       documents,
@@ -421,6 +496,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       },
       categories,
       companies: companiesWithLogos,
+      locations,
       agentSchedules: agentSchedulesList
     };
     } catch (error) {
