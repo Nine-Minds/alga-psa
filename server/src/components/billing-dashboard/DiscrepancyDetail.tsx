@@ -15,7 +15,7 @@ import { applyReconciliationFix } from 'server/src/lib/actions/creditReconciliat
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import RecommendedFixPanel from './RecommendedFixPanel';
 import { Badge } from 'server/src/components/ui/Badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTrigger } from 'server/src/components/ui/Dialog';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import BackNav from 'server/src/components/ui/BackNav';
@@ -738,20 +738,21 @@ const DiscrepancyDetail: React.FC = () => {
         </BackNav>
         
         {report.status !== 'resolved' && (
-          <Dialog isOpen={isResolutionDialogOpen} onClose={() => setIsResolutionDialogOpen(false)}>
+          <Dialog
+            isOpen={isResolutionDialogOpen}
+            onClose={() => setIsResolutionDialogOpen(false)}
+            title="Resolve Credit Discrepancy"
+          >
             <DialogTrigger asChild>
               <Button id="resolve-report-button">
                 Resolve Discrepancy
               </Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Resolve Credit Discrepancy</DialogTitle>
-                <DialogDescription>
-                  This will create a credit adjustment transaction to correct the balance discrepancy.
-                  Please provide notes explaining the reason for this correction.
-                </DialogDescription>
-              </DialogHeader>
+              <DialogDescription>
+                This will create a credit adjustment transaction to correct the balance discrepancy.
+                Please provide notes explaining the reason for this correction.
+              </DialogDescription>
               
               <div className="py-4">
                 <div className="space-y-2">

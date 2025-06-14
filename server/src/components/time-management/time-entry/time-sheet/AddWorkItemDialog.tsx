@@ -1,5 +1,5 @@
 'use client'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { WorkItemPicker } from './WorkItemPicker';
 import { ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
@@ -50,13 +50,11 @@ export function AddWorkItemDialog({ isOpen, onClose, onAdd, availableWorkItems, 
     <Dialog 
       isOpen={isOpen} 
       onClose={onClose}
+      title="Add Work Item"
       {...dialogProps}
     >
       <DialogContent className="z-[500]">
         <div className="max-w-2xl max-h-[80vh] flex flex-col overflow-visible">
-          <DialogHeader>
-            <DialogTitle>Add Work Item</DialogTitle>
-          </DialogHeader>
           <div className="flex-1 min-h-0 overflow-visible">
             <WorkItemPicker 
               onSelect={handleSelect} 

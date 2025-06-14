@@ -2,7 +2,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Input } from 'server/src/components/ui/Input';
@@ -454,25 +454,18 @@ export function QuickAddInteraction({
 
   return (
     <ReflectionContainer id={id} label="Quick Add Interaction">
-      <Dialog.Root open={isOpen} onOpenChange={onClose}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-          <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <Dialog.Title className="text-lg font-bold">
-                {isEditMode ? 'Edit Interaction' : 'Add New Interaction'}
-              </Dialog.Title>
-              <Dialog.Close asChild>
-                <Button 
-                  {...closeButtonProps}
-                  variant="ghost" 
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </Dialog.Close>
-            </div>
+      <Dialog 
+        isOpen={isOpen} 
+        onClose={() => {
+          setHasAttemptedSubmit(false);
+          setValidationErrors([]);
+          onClose();
+        }}
+        title={isEditMode ? 'Edit Interaction' : 'Add New Interaction'}
+        className="max-w-2xl"
+        hideCloseButton={false}
+      >
+        <DialogContent className="max-h-[80vh] overflow-y-auto">
             {hasAttemptedSubmit && validationErrors.length > 0 && (
               <Alert variant="destructive" className="mb-4">
                 <AlertDescription>
@@ -662,9 +655,8 @@ export function QuickAddInteraction({
                 </Button>
               </div>
             </form>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+          </DialogContent>
+      </Dialog>
     </ReflectionContainer>
   );
 }

@@ -45,7 +45,7 @@ import ClientBillingDashboard from '../billing-dashboard/ClientBillingDashboard'
 import { useToast } from 'server/src/hooks/use-toast';
 import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
 import { getTicketFormOptions } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 
 
 const SwitchDetailItem: React.FC<{
@@ -872,11 +872,12 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           }}
         />
 
-        <Dialog isOpen={isLocationsDialogOpen} onClose={() => setIsLocationsDialogOpen(false)}>
+        <Dialog 
+          isOpen={isLocationsDialogOpen} 
+          onClose={() => setIsLocationsDialogOpen(false)} 
+          title={`Manage Locations - ${editedCompany.company_name}`}
+        >
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Manage Locations - {editedCompany.company_name}</DialogTitle>
-            </DialogHeader>
             <CompanyLocations 
               companyId={editedCompany.company_id} 
               isEditing={true}

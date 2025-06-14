@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from 'server/src/components/ui/Table';
@@ -157,11 +157,13 @@ export function ServiceSelectionDialog({
   }, [services]);
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} id="service-selection-dialog">
+    <Dialog 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      id="service-selection-dialog" 
+      title="Add Services to Plan"
+    >
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Add Services to Plan</DialogTitle>
-        </DialogHeader>
         
         <div className="flex flex-col space-y-4 overflow-hidden">
           {/* Search and filters */}

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
@@ -80,14 +80,14 @@ const CreditExpirationModificationDialog: React.FC<CreditExpirationModificationD
   if (!credit) return null;
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose}>
+    <Dialog
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title="Modify Credit Expiration">
       <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Modify Credit Expiration</DialogTitle>
-          <DialogDescription>
-            Update the expiration date for this credit.
-          </DialogDescription>
-        </DialogHeader>
+        <DialogDescription>
+          Update the expiration date for this credit.
+        </DialogDescription>
         
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-2">

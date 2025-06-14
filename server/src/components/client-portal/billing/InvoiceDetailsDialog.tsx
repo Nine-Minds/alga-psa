@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from 'server/src/components/ui/Button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import type { InvoiceViewModel, IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
 import { Download, X, Mail } from 'lucide-react';
@@ -192,10 +192,12 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
   );
   
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} data-automation-id="invoice-details-dialog">
-      <DialogHeader>
-        <DialogTitle>Invoice Details</DialogTitle>
-      </DialogHeader>
+    <Dialog 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title="Invoice Details" 
+      data-automation-id="invoice-details-dialog"
+    >
       <DialogContent>
         {error && (
           <div className="text-red-500 mb-4">{error}</div>

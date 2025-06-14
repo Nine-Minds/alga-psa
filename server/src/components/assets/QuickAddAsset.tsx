@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
@@ -72,18 +71,6 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(companyId || null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
-
-  const updateDialog = useRegisterUIComponent({
-    id: 'quick-add-asset-dialog',
-    type: 'dialog',
-    label: 'Quick Add Asset',
-    open,
-    title: 'Add New Asset'
-  });
-
-  useEffect(() => {
-    updateDialog({ open });
-  }, [open, updateDialog]);
 
   // Initialize with minimum required fields
   const [formData, setFormData] = useState<FormData>({
@@ -433,15 +420,19 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
   };
 
   return (
-    <Dialog.Root open={open} onOpenChange={setOpen}>
-      <Dialog.Trigger asChild>
-        <Button {...withDataAutomationId({ id: 'quick-add-asset-button' })}>Add Asset</Button>
-      </Dialog.Trigger>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-[480px] max-h-[90vh] overflow-y-auto">
-          <Dialog.Title className="text-lg font-bold mb-4">Add New Asset</Dialog.Title>
-          
+    <>
+      <Button {...withDataAutomationId({ id: 'quick-add-asset-button' })} onClick={() => setOpen(true)}>
+        Add Asset
+      </Button>
+      
+      <Dialog
+        isOpen={open}
+        onClose={() => setOpen(false)}
+        title="Add New Asset"
+        className="max-w-[480px] max-h-[90vh] overflow-y-auto"
+        id="quick-add-asset"
+      >
+        <DialogContent>
           {hasAttemptedSubmit && error && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
@@ -567,8 +558,8 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
               </Button>
             </div>
           </form>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

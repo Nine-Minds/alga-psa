@@ -356,10 +356,8 @@ export function QuickAddTicket({
         isOpen={open}
         onClose={handleClose}
         className="max-w-2xl max-h-[90vh] overflow-y-auto"
+        title="Add Ticket"
       >
-        <DialogHeader>
-          <DialogTitle>Quick Add Ticket</DialogTitle>
-        </DialogHeader>
         <DialogContent>
           {isLoading ? (
             <div className="flex items-center justify-center p-6">

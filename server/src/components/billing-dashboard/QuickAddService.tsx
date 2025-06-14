@@ -1,6 +1,6 @@
 'use client'
 import React, { useState, useEffect } from 'react'
-import * as Dialog from '@radix-ui/react-dialog'
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog'
 import { Button } from 'server/src/components/ui/Button'
 import { Input } from 'server/src/components/ui/Input'
 import { Label } from 'server/src/components/ui/Label'
@@ -69,6 +69,7 @@ const BILLING_METHOD_OPTIONS = [
 
 export function QuickAddService({ onServiceAdded, allServiceTypes }: QuickAddServiceProps) { // Destructure new prop
   const [open, setOpen] = useState(false)
+  const [triggerButton, setTriggerButton] = useState<HTMLButtonElement | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [categories, setCategories] = useState<IServiceCategory[]>([]) // Keep for now, might be replaced
   // State for tax rates instead of regions
@@ -253,14 +254,25 @@ console.log('[QuickAddService] Service created successfully');
   // Removed regionMap creation
 
   return (
-    <Dialog.Root open={open} onOpenChange={setOpen}>
-      <Dialog.Trigger asChild>
-        <Button id='add-service'>Add Service</Button>
-      </Dialog.Trigger>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-[550px]">
-          <Dialog.Title className="text-lg font-bold mb-4">Add New Service</Dialog.Title>
+    <>
+      <Button 
+        ref={setTriggerButton}
+        id='add-service' 
+        onClick={() => setOpen(true)}
+      >
+        Add Service
+      </Button>
+      <Dialog 
+        isOpen={open} 
+        onClose={() => {
+          setOpen(false);
+          setHasAttemptedSubmit(false);
+          setValidationErrors([]);
+        }}
+        title="Add New Service"
+        className="max-w-[550px]"
+      >
+        <DialogContent>
           {error && <div className="text-red-500 mb-4">{error}</div>}
           {errorTaxRates && <div className="text-red-500 mb-4">{errorTaxRates}</div>} {/* Show tax rate error */}
           {hasAttemptedSubmit && validationErrors.length > 0 && (
@@ -465,8 +477,8 @@ console.log('[QuickAddService] Service created successfully');
               <Button id='save-button' type="submit" className={!serviceData.service_name || !serviceData.service_type_id || !serviceData.default_rate || !serviceData.billing_method ? 'opacity-50' : ''}>Save Service</Button>
             </div>
           </form>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

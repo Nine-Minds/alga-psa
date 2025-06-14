@@ -17,7 +17,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { TextArea } from 'server/src/components/ui/TextArea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Switch } from 'server/src/components/ui/Switch';

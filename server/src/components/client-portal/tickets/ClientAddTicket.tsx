@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import Spinner from 'server/src/components/ui/Spinner';
 import { AlertCircle } from 'lucide-react';
@@ -116,11 +116,12 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
   );
 
   return (
-    <Dialog isOpen={open} onClose={handleClose}>
+    <Dialog 
+      isOpen={open} 
+      onClose={handleClose} 
+      title="Create Support Ticket"
+    >
       <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Create Support Ticket</DialogTitle>
-        </DialogHeader>
         {isLoading ? (
           <div className="flex items-center justify-center p-6">
             <Spinner size="sm" />

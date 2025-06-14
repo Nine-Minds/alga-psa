@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
@@ -225,13 +225,13 @@ const BillingPlanServiceForm: React.FC<BillingPlanServiceFormProps> = ({
   };
 
   return (
-    <Dialog.Root open={true} onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-[800px] max-h-[90vh] overflow-y-auto">
-          <Dialog.Title className="text-lg font-medium text-gray-900 mb-4">
-            Edit Service Configuration
-          </Dialog.Title>
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      title="Edit Service Configuration"
+      className="max-w-4xl"
+    >
+      <DialogContent>
 
           {isLoading ? (
             <div className="py-8 text-center">Loading service configuration...</div>
@@ -258,9 +258,8 @@ const BillingPlanServiceForm: React.FC<BillingPlanServiceFormProps> = ({
               isSubmitting={isSubmitting}
             />
           )}
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+      </DialogContent>
+    </Dialog>
   );
 };
 

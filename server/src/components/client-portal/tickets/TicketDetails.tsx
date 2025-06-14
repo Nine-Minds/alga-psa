@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
-import { ChevronDown, X } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import RichTextViewer from 'server/src/components/editor/RichTextViewer';
 import { Card } from 'server/src/components/ui/Card';
 import TicketDocumentsSection from 'server/src/components/tickets/ticket/TicketDocumentsSection';
@@ -30,7 +30,7 @@ import toast from 'react-hot-toast';
 
 interface TicketDetailsProps {
   ticketId: string;
-  open: boolean;
+  isOpen: boolean;
   onClose: () => void;
 }
 
@@ -42,7 +42,7 @@ interface TicketWithDetails extends ITicket {
   userMap?: Record<string, { first_name: string; last_name: string; user_id: string; email?: string; user_type: string; avatarUrl: string | null }>;
 }
 
-export function TicketDetails({ ticketId, open, onClose }: TicketDetailsProps) {
+export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps) {
   const [ticket, setTicket] = useState<TicketWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +69,7 @@ export function TicketDetails({ ticketId, open, onClose }: TicketDetailsProps) {
 
   useEffect(() => {
     const loadTicketDetails = async () => {
-      if (!open) return;
+      if (!isOpen) return;
       
       setLoading(true);
       setError(null);
@@ -97,7 +97,7 @@ export function TicketDetails({ ticketId, open, onClose }: TicketDetailsProps) {
     };
 
     loadTicketDetails();
-  }, [ticketId, open]);
+  }, [ticketId, isOpen]);
 
   const handleNewCommentContentChange = (content: PartialBlock[]) => {
     setNewCommentContent(content);
@@ -263,14 +263,15 @@ export function TicketDetails({ ticketId, open, onClose }: TicketDetailsProps) {
   };
 
   return (
-    <Dialog.Root open={open} onOpenChange={onClose}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50 animate-fade-in" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-[800px] max-h-[80vh] overflow-y-auto animate-scale-in">
-          <Dialog.Title className="text-xl font-bold mb-4">
-            {loading ? 'Loading...' : ticket?.title}
-          </Dialog.Title>
-
+    <>
+      <Dialog
+        isOpen={isOpen}
+        onClose={onClose}
+        title={loading ? 'Loading...' : ticket?.title || ''}
+        className="max-w-[800px] max-h-[80vh] overflow-y-auto"
+        id="ticket-details"
+      >
+        <DialogContent>
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
               <p className="text-red-700 text-sm">{error}</p>
@@ -384,19 +385,9 @@ export function TicketDetails({ ticketId, open, onClose }: TicketDetailsProps) {
               )}
             </div>
           )}
-
-          <Dialog.Close>
-            <Button
-              id="close-ticket-details-button"
-              variant="ghost"
-              size="sm"
-              className="absolute top-4 right-4 p-0 w-6 h-6 flex items-center justify-center"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </Dialog.Close>
-        </Dialog.Content>
-      </Dialog.Portal>
+        </DialogContent>
+      </Dialog>
+      
       {/* Confirmation Dialog for Status Change */}
       <ConfirmationDialog
         isOpen={!!ticketToUpdateStatus}
@@ -407,6 +398,6 @@ export function TicketDetails({ ticketId, open, onClose }: TicketDetailsProps) {
         confirmLabel="Update"
         cancelLabel="Cancel"
       />
-    </Dialog.Root>
+    </>
   );
 }

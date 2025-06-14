@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from 'server/src/components/ui/Card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
@@ -295,11 +295,12 @@ const ServiceTypeSettings: React.FC = () => {
       </Card>
 
       {/* Add/Edit Dialog */}
-      <Dialog isOpen={isEditDialogOpen} onClose={handleCloseEditDialog}>
+      <Dialog 
+        isOpen={isEditDialogOpen} 
+        onClose={handleCloseEditDialog} 
+        title={`${editingType?.id ? 'Edit' : 'Add'} Custom Service Type`}
+      >
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingType?.id ? 'Edit' : 'Add'} Custom Service Type</DialogTitle>
-          </DialogHeader>
           <form onSubmit={(e) => { e.preventDefault(); handleSaveType(); }} noValidate>
           <div className="space-y-4 py-4">
             {hasAttemptedSubmit && validationErrors.length > 0 && (

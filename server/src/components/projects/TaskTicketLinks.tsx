@@ -18,7 +18,7 @@ import { IProjectTicketLinkWithDetails } from 'server/src/interfaces/project.int
 import { Button } from 'server/src/components/ui/Button';
 import { Link, Plus, ExternalLink, Trash2, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
@@ -565,26 +565,15 @@ export default function TaskTicketLinks({
       </div>
 
       {showLinkTicketDialog && (
-        <Dialog.Root 
-          open={showLinkTicketDialog} 
-          onOpenChange={(open) => !open && setShowLinkTicketDialog(false)}
-          modal={true}
+        <Dialog 
+          isOpen={showLinkTicketDialog} 
+          onClose={() => setShowLinkTicketDialog(false)}
+          title="Link Existing Ticket"
+          className="max-w-xl"
         >
-          <Dialog.Portal>
-            <Dialog.Overlay className="fixed inset-0 bg-black bg-opacity-50 z-[60]" />
-            <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 w-[580px] z-[70]">
-              <div className="relative">
-                <div className="[&_select]:z-[200] [&_[role=listbox]]:z-[200] [&_[role=presentation]]:z-[200] [&_.radix-select-content]:z-[200] [&_.radix-select-portal]:z-[200] [&_.radix-select-viewport]:z-[200]">
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-semibold">Link Existing Ticket</h2>
-                    <button
-                      id="close-dialog-button"
-                      onClick={() => setShowLinkTicketDialog(false)}
-                      className="text-gray-500 hover:text-gray-700"
-                    >
-                      <X className="h-5 w-5" />
-                    </button>
-                  </div>
+          <DialogContent>
+            <div className="relative">
+              <div className="[&_select]:z-[200] [&_[role=listbox]]:z-[200] [&_[role=presentation]]:z-[200] [&_.radix-select-content]:z-[200] [&_.radix-select-portal]:z-[200] [&_.radix-select-viewport]:z-[200]">
                   <div className="space-y-4">
                     {/* Top Section - Search and Category on same line */}
                     <div className="flex gap-4">
@@ -753,13 +742,12 @@ export default function TaskTicketLinks({
                       <Button id="confirm-link-button" onClick={onLinkTicket} disabled={!selectedTicketId}>
                         Link Ticket
                       </Button>
-                    </div>
                   </div>
                 </div>
               </div>
-            </Dialog.Content>
-          </Dialog.Portal>
-        </Dialog.Root>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
 
       {showCreateDialog && (

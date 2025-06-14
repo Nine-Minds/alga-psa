@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent, DialogDescription } from 'server/src/components/ui/Dialog';
 import { Label } from 'server/src/components/ui/Label';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
@@ -274,12 +274,9 @@ const TaxRates: React.FC = () => {
         setIsDialogOpen(false);
         setHasAttemptedSubmit(false);
         setValidationErrors([]);
-      }}>
+      }} title={isEditing ? 'Edit Tax Rate' : 'Add New Tax Rate'}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{isEditing ? 'Edit Tax Rate' : 'Add New Tax Rate'}</DialogTitle>
-            <DialogDescription>Enter the details for the tax rate.</DialogDescription>
-          </DialogHeader>
+          <DialogDescription>Enter the details for the tax rate.</DialogDescription>
           <form onSubmit={(e) => { e.preventDefault(); handleAddOrUpdateTaxRate(); }} noValidate>
             <div className="space-y-4">
               {hasAttemptedSubmit && validationErrors.length > 0 && (
@@ -381,14 +378,15 @@ const TaxRates: React.FC = () => {
       </Dialog>
 
       {/* Confirmation Dialog for Deletion */}
-      <Dialog isOpen={isConfirmDeleteDialogOpen} onClose={() => setIsConfirmDeleteDialogOpen(false)}>
+      <Dialog 
+        isOpen={isConfirmDeleteDialogOpen} 
+        onClose={() => setIsConfirmDeleteDialogOpen(false)}
+        title="Confirm Tax Rate Deletion"
+      >
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Tax Rate Deletion</DialogTitle>
-            <DialogDescription>
-              This tax rate is currently assigned to the following services. Deleting it will remove the tax rate assignment (set to non-taxable) for these services. Are you sure you want to proceed?
-            </DialogDescription>
-          </DialogHeader>
+          <DialogDescription>
+            This tax rate is currently assigned to the following services. Deleting it will remove the tax rate assignment (set to non-taxable) for these services. Are you sure you want to proceed?
+          </DialogDescription>
           <div className="my-4 max-h-48 overflow-y-auto">
             <ul className="list-disc pl-5 space-y-1">
               {affectedServicesForConfirmation.map(service => (

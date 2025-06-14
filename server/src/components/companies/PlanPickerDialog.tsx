@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { IBillingPlan, IServiceCategory } from 'server/src/interfaces/billing.interfaces';
@@ -57,10 +57,12 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
     };
 
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} className="sm:max-w-4xl">
-            <DialogHeader>
-                <DialogTitle>Select a Billing Plan</DialogTitle>
-            </DialogHeader>
+        <Dialog 
+          isOpen={isOpen} 
+          onClose={onClose} 
+          className="sm:max-w-4xl" 
+          title="Select a Billing Plan"
+        >
             <DialogContent>
                 <div className="mt-4 space-y-4">
                     <div>

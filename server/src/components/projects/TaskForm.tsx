@@ -21,7 +21,7 @@ import {
   getTaskDependencies
 } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { ListChecks, UserPlus, Trash2, Clock } from 'lucide-react';
@@ -105,6 +105,7 @@ export default function TaskForm({
   const [showDuplicateConfirm, setShowDuplicateConfirm] = useState(false); // State for duplicate dialog
   const [taskTypes, setTaskTypes] = useState<ITaskType[]>([]);
   const [selectedTaskType, setSelectedTaskType] = useState<string>(task?.task_type_key || 'task');
+  const [initialTaskType] = useState<string>(task?.task_type_key || 'task');
   const [allProjectTasks, setAllProjectTasks] = useState<IProjectTask[]>([]);
   const [duplicateTaskDetails, setDuplicateTaskDetails] = useState<{
     originalTaskId: string;
@@ -505,9 +506,23 @@ export default function TaskForm({
   };
 
   const hasChanges = (): boolean => {
-    if (mode === 'create') return true; // Always confirm for new tasks
+    if (mode === 'create') {
+      // For new tasks, only show confirmation if user has entered any data
+      if (taskName.trim() !== '') return true;
+      if (description.trim() !== '') return true;
+      if (assignedUser !== null && assignedUser !== currentUserId) return true; // Only if explicitly selected
+      if (checklistItems.length > 0) return true;
+      if (estimatedHours > 0) return true; // Only if actually entered a value
+      if (actualHours > 0) return true; // Only if actually entered a value
+      if (dueDate !== undefined) return true;
+      if (tempTaskResources.length > 0) return true;
+      if (pendingTicketLinks.length > 0) return true;
+      if (selectedPriorityId !== null) return true; // User explicitly selected a priority
+      if (selectedTaskType !== initialTaskType) return true; // Only if changed from initial value
+      return false; // No changes detected
+    }
     
-    // Compare all form fields with their original values
+    // Compare all form fields with their original values for edit mode
     if (!task) return false;
 
     if (taskName !== task.task_name) return true;
@@ -558,8 +573,22 @@ export default function TaskForm({
     return false;
   };
 
-  const handleCancelClick = (e?: React.MouseEvent) => {
-    e?.preventDefault();
+  const handleCancelClick = (e?: React.MouseEvent | boolean) => {
+    // If called from Dialog's onOpenChange, e will be false
+    if (typeof e === 'boolean' && !e) {
+      if (hasChanges()) {
+        setShowCancelConfirm(true);
+      } else {
+        onClose();
+      }
+      return;
+    }
+    
+    // Original mouse event handling
+    if (e && typeof e !== 'boolean') {
+      e.preventDefault();
+    }
+    
     if (hasChanges()) {
       setShowCancelConfirm(true);
     } else {
@@ -806,9 +835,6 @@ export default function TaskForm({
 
   const renderContent = () => (
     <div className="h-full">
-      <div className="text-lg font-medium mb-4">
-        {mode === 'edit' ? 'Edit Task' : 'Add New Task'}
-      </div>
       {mode === 'edit' && (
         <div className="flex justify-end mb-4">
           <Button
@@ -1158,16 +1184,16 @@ export default function TaskForm({
       {inDrawer ? (
         renderContent()
       ) : (
-        <Dialog.Root open={true} onOpenChange={handleDialogClose}>
-          <Dialog.Portal>
-            <Dialog.Overlay className="fixed inset-0 bg-black bg-opacity-50" />
-            <Dialog.Content 
-              className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-[800px] max-h-[90vh] overflow-y-auto"
-            >
-              {renderContent()}
-            </Dialog.Content>
-          </Dialog.Portal>
-        </Dialog.Root>
+        <Dialog 
+          isOpen={true} 
+          onClose={handleCancelClick}
+          className="max-w-2xl max-h-[90vh] overflow-y-auto"
+          title={mode === 'create' ? 'Add New Task' : 'Edit Task'}
+        >
+          <DialogContent>
+            {renderContent()}
+          </DialogContent>
+        </Dialog>
       )}
 
       <ConfirmationDialog
@@ -1244,11 +1270,13 @@ export default function TaskForm({
         />
       )}
 
-      <Dialog.Root open={showAgentPicker} onOpenChange={setShowAgentPicker}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black bg-opacity-50" />
-          <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-4 rounded-lg shadow-lg w-[400px]">
-            <Dialog.Title className="text-lg font-semibold mb-4">Add Additional Agent</Dialog.Title>
+      <Dialog 
+        isOpen={showAgentPicker} 
+        onClose={() => setShowAgentPicker(false)}
+        title="Add Additional Agent"
+        className="max-w-md"
+      >
+        <DialogContent>
             <div className="space-y-4">
               <UserPicker
                 value=""
@@ -1267,9 +1295,8 @@ export default function TaskForm({
                 </Button>
               </div>
             </div>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+          </DialogContent>
+      </Dialog>
     </>
   );
 }

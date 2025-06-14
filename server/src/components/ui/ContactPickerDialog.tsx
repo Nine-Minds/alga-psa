@@ -6,7 +6,7 @@ import { Search } from 'lucide-react';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
@@ -127,16 +127,14 @@ const ContactPickerDialog: React.FC<ContactPickerDialogProps & AutomationProps> 
   ];
 
   return (
-    <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-        <Dialog.Content 
-          className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 w-[800px] max-h-[80vh] overflow-y-auto"
-          {...withDataAutomationId({ id })}
-        >
-          <Dialog.Title className="text-xl font-bold mb-4">
-            Select Contact
-          </Dialog.Title>
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Select Contact"
+      className="max-w-2xl max-h-[80vh] overflow-y-auto"
+      id={id || 'contact-picker-dialog'}
+    >
+      <DialogContent>
           
           <div className="mb-4">
             <div className="flex items-center gap-2 border border-gray-300 rounded-md px-3 py-2">
@@ -170,9 +168,8 @@ const ContactPickerDialog: React.FC<ContactPickerDialogProps & AutomationProps> 
               Cancel
             </Button>
           </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+      </DialogContent>
+    </Dialog>
   );
 };
 

@@ -5,10 +5,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogFooter,
-  // DialogClose is not exported; use onClose prop for cancel button
 } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
@@ -132,10 +129,14 @@ export function QboMappingFormDialog({
 
   return (
     // Pass isOpen, onClose, and id directly to the Dialog wrapper
-    <Dialog isOpen={isOpen} onClose={onClose} id={dialogId} title={isEditing ? `Edit ${externalEntityLabel} Mapping` : `Add New ${externalEntityLabel} Mapping`}>
+    <Dialog 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      id={dialogId} 
+      title={isEditing ? `Edit ${externalEntityLabel} Mapping` : `Add New ${externalEntityLabel} Mapping`}
+    >
       {/* DialogContent does not take an id */}
       <DialogContent className="sm:max-w-[500px]">
-        {/* Remove DialogHeader and DialogTitle as title is handled by Dialog prop */}
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           {/* Alga Entity Select */}
           <div className="grid grid-cols-4 items-center gap-4">
@@ -212,7 +213,6 @@ export function QboMappingFormDialog({
           </DialogFooter>
         </form>
       </DialogContent>
-      {/* Remove DialogHeader/Title wrappers */}
     </Dialog>
   );
 }

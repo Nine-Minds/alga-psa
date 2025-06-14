@@ -2,7 +2,7 @@
 'use client'
 import React, { useState } from 'react';
 import { IProjectPhase } from 'server/src/interfaces/project.interfaces';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
@@ -67,13 +67,16 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
   };
 
   return (
-    <Dialog.Root open={true} onOpenChange={onClose}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black bg-opacity-50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-[600px] max-h-[90vh] overflow-y-auto">
-          <Dialog.Title className="text-xl font-semibold mb-4">
-            Add New Phase
-          </Dialog.Title>
+    <Dialog 
+      isOpen={true} 
+      onClose={() => {
+        setHasAttemptedSubmit(false);
+        onClose();
+      }}
+      title="Add New Phase"
+      className="max-w-2xl"
+    >
+      <DialogContent className="max-h-[80vh] overflow-y-auto">
           {hasAttemptedSubmit && !phaseName.trim() && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
@@ -82,12 +85,12 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
             </Alert>
           )}
           <form onSubmit={handleSubmit} className="flex flex-col">
-            <div className="space-y-4">
+            <div className="space-y-4 mb-2 mt-2">
               <TextArea
                 value={phaseName}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPhaseName(e.target.value)}
                 placeholder="Phase name... *"
-                className={`w-full p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg font-semibold ${hasAttemptedSubmit && !phaseName.trim() ? 'border-red-500' : 'border-gray-300'}`}
+                className={`w-full px-3 py-3 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg font-semibold ${hasAttemptedSubmit && !phaseName.trim() ? 'border-red-500' : 'border-gray-300'}`}
                 rows={1}
               />
               <TextArea
@@ -125,9 +128,8 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
               </div>
             </div>
           </form>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+        </DialogContent>
+    </Dialog>
   );
 };
 

@@ -26,7 +26,7 @@ import {
   DropdownMenuItem,
 } from 'server/src/components/ui/DropdownMenu';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 
 interface SettingSectionProps<T extends object> {
   title: string;
@@ -1358,13 +1358,14 @@ const TicketingSettings = (): JSX.Element => {
       />
       
       {/* Priority Add/Edit Dialog */}
-      <Dialog.Root open={showPriorityDialog} onOpenChange={setShowPriorityDialog}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-          <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg p-6 w-[500px] max-w-[90vw]">
-            <Dialog.Title className="text-lg font-semibold mb-4">
-              {editingPriority ? 'Edit Priority' : 'Add New Priority'}
-            </Dialog.Title>
+      <Dialog
+        isOpen={showPriorityDialog}
+        onClose={() => setShowPriorityDialog(false)}
+        title={editingPriority ? 'Edit Priority' : 'Add New Priority'}
+        className="max-w-lg max-w-[90vw]"
+        id="priority-dialog"
+      >
+        <DialogContent>
             
             <form onSubmit={async (e) => {
               e.preventDefault();
@@ -1446,11 +1447,11 @@ const TicketingSettings = (): JSX.Element => {
                 </div>
               </div>
               
-              <div className="flex justify-end gap-2 mt-6">
+              <DialogFooter>
                 <Button
                   id="cancel-priority-dialog"
                   type="button"
-                  variant="secondary"
+                  variant="outline"
                   onClick={() => {
                     setShowPriorityDialog(false);
                     setEditingPriority(null);
@@ -1465,11 +1466,10 @@ const TicketingSettings = (): JSX.Element => {
                 >
                   {editingPriority ? 'Update' : 'Add'} Priority
                 </Button>
-              </div>
+              </DialogFooter>
             </form>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

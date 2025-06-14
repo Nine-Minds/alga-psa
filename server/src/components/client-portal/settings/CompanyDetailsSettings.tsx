@@ -15,7 +15,7 @@ import CompanyLocations from 'server/src/components/companies/CompanyLocations';
 import { Text, Flex } from '@radix-ui/themes';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { FormFieldComponent } from 'server/src/types/ui-reflection/types';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 
 const TextDetailItem: React.FC<{
   label: string;
@@ -297,11 +297,12 @@ export function CompanyDetailsSettings() {
         </Button>
       </Flex>
 
-      <Dialog isOpen={isLocationsDialogOpen} onClose={() => setIsLocationsDialogOpen(false)}>
+      <Dialog 
+        isOpen={isLocationsDialogOpen} 
+        onClose={() => setIsLocationsDialogOpen(false)}
+        title={`Manage Locations - ${companyDetails.company_name}`}
+      >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Manage Locations - {companyDetails.company_name}</DialogTitle>
-          </DialogHeader>
           <CompanyLocations 
             companyId={companyDetails.company_id} 
             isEditing={true}
