@@ -27,6 +27,89 @@ Prefer radix components over other libraries
     - [Table](../server/src/components/ui/Table.tsx)
     - [TextArea](../server/src/components/ui/TextArea.tsx)
 
+## Dialog Component Usage
+
+When implementing dialogs in the application, follow these guidelines:
+
+1. **Use Custom Dialog Component**
+   - Always use the custom Dialog component from 'server/src/components/ui/Dialog'
+   - Never import Dialog directly from '@radix-ui/react-dialog'
+   ```tsx
+   // Good
+   import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
+   
+   // Bad
+   import * as Dialog from '@radix-ui/react-dialog';
+   ```
+
+2. **Dialog Structure**
+   ```tsx
+   <Dialog 
+     isOpen={isOpen} 
+     onClose={() => setIsOpen(false)}
+     title="Dialog Title"
+     className="max-w-lg"  // Use responsive width classes
+   >
+     <DialogContent>
+       {/* Dialog content */}
+     </DialogContent>
+     <DialogFooter>
+       {/* Action buttons */}
+     </DialogFooter>
+   </Dialog>
+   ```
+
+3. **Props and Features**
+   - `isOpen`: Boolean to control dialog visibility
+   - `onClose`: Callback function when dialog should close
+   - `title`: Dialog title shown in the draggable header
+   - `className`: Use responsive Tailwind classes (max-w-sm, max-w-md, max-w-lg, max-w-xl, max-w-2xl)
+   - `draggable`: Defaults to true, set to false to disable dragging
+   - `hideCloseButton`: Set to true to hide the X close button
+
+4. **Width Guidelines**
+   - Use responsive max-width classes instead of fixed pixel widths
+   - Common sizes:
+     - `max-w-sm` (384px) - Very small dialogs
+     - `max-w-md` (448px) - Small dialogs (confirmations, simple forms)
+     - `max-w-lg` (512px) - Medium dialogs (standard forms)
+     - `max-w-xl` (576px) - Large dialogs (complex forms)
+     - `max-w-2xl` (672px) - Extra large dialogs (multi-section forms)
+
+5. **Spacing and Padding**
+   - DialogContent automatically provides padding
+   - For forms with focus rings, add `mt-2` to the first form element container to prevent cut-off
+   - Example:
+   ```tsx
+   <DialogContent>
+     <form className="space-y-4 mt-2">
+       <Input className="..." />
+     </form>
+   </DialogContent>
+   ```
+
+6. **Handling Close Events**
+   - The Dialog's onClose is called with boolean false when the X button is clicked
+   - Handle both MouseEvent and boolean types if needed:
+   ```tsx
+   const handleClose = (e?: React.MouseEvent | boolean) => {
+     if (typeof e === 'boolean' && !e) {
+       // Handle close from Dialog's X button
+     }
+     // Your close logic
+   };
+   ```
+
+7. **Confirmation Dialogs**
+   - For simple confirmations, use the ConfirmationDialog component
+   - For custom confirmations with unsaved changes:
+   ```tsx
+   const hasChanges = () => {
+     // Only return true if user has actually entered data
+     return formField.trim() !== '' || otherField !== initialValue;
+   };
+   ```
+
 ## DataTable Action Menus
 
 When implementing action menus in DataTable components, follow these guidelines:

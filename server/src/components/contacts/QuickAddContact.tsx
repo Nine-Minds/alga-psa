@@ -4,7 +4,7 @@ import { X } from 'lucide-react';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { FormComponent, FormFieldComponent, ButtonComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from "server/src/components/ui/Button";
 import { Input } from "server/src/components/ui/Input";
 import { Label } from "server/src/components/ui/Label";
@@ -168,10 +168,12 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   };
 
   return (
-    <Dialog id="quick-add-contact-dialog" isOpen={isOpen} onClose={onClose}>
-      <DialogHeader>
-        <DialogTitle>Add New Contact</DialogTitle>
-      </DialogHeader>
+    <Dialog 
+      id="quick-add-contact-dialog" 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title="Add New Contact"
+    >
       <DialogContent>
         {hasAttemptedSubmit && validationErrors.length > 0 && (
           <Alert variant="destructive" className="mb-4">

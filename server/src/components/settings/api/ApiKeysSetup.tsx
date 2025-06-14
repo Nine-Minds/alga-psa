@@ -5,7 +5,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Card } from 'server/src/components/ui/Card';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import type { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { createApiKey, deactivateApiKey, listApiKeys } from 'server/src/lib/actions/apiKeyActions';
@@ -172,11 +172,12 @@ export default function ApiKeysSetup() {
         />
       </Card>
 
-      <Dialog isOpen={showNewKeyDialog} onClose={() => setShowNewKeyDialog(false)}>
+      <Dialog 
+        isOpen={showNewKeyDialog} 
+        onClose={() => setShowNewKeyDialog(false)} 
+        title="API Key Generated"
+      >
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>API Key Generated</DialogTitle>
-          </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-gray-500">
               Please copy your API key now. For security reasons, it will not be shown again.

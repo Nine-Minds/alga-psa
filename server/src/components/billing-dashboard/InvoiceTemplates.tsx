@@ -5,8 +5,6 @@ import {
   Dialog,
   DialogTrigger,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
 } from 'server/src/components/ui/Dialog'; // Added Dialog imports
@@ -237,18 +235,20 @@ return (
         </div>
       </CardContent>
       {/* Confirmation Dialog */}
-      <Dialog id="delete-template-dialog" isOpen={isDeleteDialogOpen} onClose={() => setIsDeleteDialogOpen(false)}>
+      <Dialog 
+        id="delete-template-dialog" 
+        isOpen={isDeleteDialogOpen} 
+        onClose={() => setIsDeleteDialogOpen(false)} 
+        title="Confirm Deletion"
+      >
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete the template "{invoiceTemplates.find(t => t.template_id === templateToDeleteId)?.name || 'this template'}"?
-              This action cannot be undone.
-              {deleteError && (
-                <p className="text-red-600 mt-2">{deleteError}</p>
-              )}
-            </DialogDescription>
-          </DialogHeader>
+          <DialogDescription>
+            Are you sure you want to delete the template "{invoiceTemplates.find(t => t.template_id === templateToDeleteId)?.name || 'this template'}"?
+            This action cannot be undone.
+            {deleteError && (
+              <p className="text-red-600 mt-2">{deleteError}</p>
+            )}
+          </DialogDescription>
           <DialogFooter>
             <Button
               id="cancel-delete-template-button"

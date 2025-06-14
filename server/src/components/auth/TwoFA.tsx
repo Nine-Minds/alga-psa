@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { LockClosedIcon } from '@radix-ui/react-icons';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types';
 import { Input } from 'server/src/components/ui/Input';
@@ -84,11 +84,15 @@ const TwoFactorInput: React.FC<TwoFactorInputProps> = ({ isOpen, onClose, onComp
   };
 
   return (
-    <Dialog.Root open={isOpen} onOpenChange={onClose}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-          <div className="bg-white p-8 rounded-2xl shadow-lg max-w-sm w-full">
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      className="max-w-sm"
+      id="2fa-dialog"
+      hideCloseButton={true}
+    >
+      <DialogContent className="p-0">
+        <div className="p-8">
             <div className="flex justify-center mb-4">
               <div className="bg-purple-100 p-3 rounded-full">
                 <LockClosedIcon className="h-6 w-6 text-purple-600" />
@@ -121,10 +125,9 @@ const TwoFactorInput: React.FC<TwoFactorInputProps> = ({ isOpen, onClose, onComp
             <div className="text-center text-sm text-gray-500">
               {6 - code.filter(d => d !== '').length} digits left
             </div>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

@@ -20,7 +20,7 @@ import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import { Input } from 'server/src/components/ui/Input';
 import { DateTimePicker } from 'server/src/components/ui/DateTimePicker';
 import { Button } from 'server/src/components/ui/Button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { ButtonComponent, FormFieldComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
@@ -303,10 +303,11 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
         )}
       </div>
 
-      <Dialog isOpen={isFilterDialogOpen} onClose={() => setIsFilterDialogOpen(false)}>
-        <DialogHeader>
-          <DialogTitle>Filter Interactions</DialogTitle>
-        </DialogHeader>
+      <Dialog 
+        isOpen={isFilterDialogOpen} 
+        onClose={() => setIsFilterDialogOpen(false)} 
+        title="Filter Interactions"
+      >
         <DialogContent>
           <div className="space-y-4">
             <CustomSelect

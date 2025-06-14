@@ -12,7 +12,7 @@ import InteractionDetails from 'server/src/components/interactions/InteractionDe
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { ButtonComponent, FormFieldComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
@@ -285,10 +285,11 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
         </CardContent>
       </Card>
 
-      <Dialog isOpen={isFilterDialogOpen} onClose={() => setIsFilterDialogOpen(false)}>
-        <DialogHeader>
-          <DialogTitle>Filter Interactions</DialogTitle>
-        </DialogHeader>
+      <Dialog 
+        isOpen={isFilterDialogOpen} 
+        onClose={() => setIsFilterDialogOpen(false)} 
+        title="Filter Interactions"
+      >
         <DialogContent>
           <div className="space-y-4">
             <CustomSelect

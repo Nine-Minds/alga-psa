@@ -7,8 +7,6 @@ import { CheckCircle, DollarSign, Clock, BarChart3, Package } from 'lucide-react
 import { 
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter
 } from 'server/src/components/ui/Dialog';
@@ -125,14 +123,15 @@ export function ConfigurationTypeSelector({
         </div>
 
         {/* Warning Dialog */}
-        <Dialog isOpen={showWarningDialog} onClose={() => setShowWarningDialog(false)}>
+        <Dialog 
+          isOpen={showWarningDialog} 
+          onClose={() => setShowWarningDialog(false)} 
+          title="Change Configuration Type?"
+          >
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Change Configuration Type?</DialogTitle>
-              <DialogDescription>
-                Changing the configuration type will reset any type-specific settings. This action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
+            <DialogDescription>
+              Changing the configuration type will reset any type-specific settings. This action cannot be undone.
+            </DialogDescription>
             <DialogFooter>
               <Button id="cancel-type-change" variant="outline" onClick={cancelTypeChange}>Cancel</Button>
               <Button id="confirm-type-change" variant="default" onClick={confirmTypeChange}>Change Type</Button>
@@ -166,14 +165,15 @@ export function ConfigurationTypeSelector({
       )}
 
       {/* Warning Dialog */}
-      <Dialog isOpen={showWarningDialog} onClose={() => setShowWarningDialog(false)}>
+      <Dialog 
+        isOpen={showWarningDialog} 
+        onClose={() => setShowWarningDialog(false)} 
+        title="Change Configuration Type?"
+      >
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Change Configuration Type?</DialogTitle>
-            <DialogDescription>
-              Changing the configuration type will reset any type-specific settings. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
+          <DialogDescription>
+            Changing the configuration type will reset any type-specific settings. This action cannot be undone.
+          </DialogDescription>
           <DialogFooter>
             <Button id="cancel-type-change-dropdown" variant="outline" onClick={cancelTypeChange}>Cancel</Button>
             <Button id="confirm-type-change-dropdown" variant="default" onClick={confirmTypeChange}>Change Type</Button>

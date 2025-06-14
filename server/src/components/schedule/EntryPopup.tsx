@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogTitle } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
@@ -422,10 +422,12 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       }`} noValidate
     >
       <div className="shrink-0 pb-4 border-b flex justify-between items-center">
-        <h2 className="text-xl font-bold">
-          {viewOnly ? 'View Entry' : (event ? 'Edit Entry' : 'New Entry')}
-        </h2>
-        <div className="flex gap-2">
+        {isInDrawer && (
+          <h2 className="text-xl font-bold">
+            {viewOnly ? 'View Entry' : (event ? 'Edit Entry' : 'New Entry')}
+          </h2>
+        )}
+        <div className={`flex gap-2 ${!isInDrawer ? 'ml-auto' : ''}`}>
           {event && event.work_item_type && (event.work_item_type === 'ticket' || event.work_item_type === 'project_task' || event.work_item_type === 'interaction') && event.work_item_id && (
             <OpenDrawerButton event={event} />
           )}
@@ -771,7 +773,12 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       {content}
     </EntryPopupContext.Provider>
   ) : (
-    <Dialog isOpen={true} onClose={onClose} hideCloseButton={false}>
+    <Dialog 
+      isOpen={true} 
+      onClose={onClose} 
+      hideCloseButton={false} 
+      title={viewOnly ? 'View Entry' : (event ? 'Edit Entry' : 'New Entry')}
+    >
       <DialogContent>
         <EntryPopupContext.Provider value={contextValue}>
           {content}

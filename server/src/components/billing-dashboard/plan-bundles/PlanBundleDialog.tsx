@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
@@ -106,30 +106,26 @@ export function PlanBundleDialog({ onBundleAdded, editingBundle, onClose, trigge
   };
 
   return (
-    <Dialog.Root
-      open={open || !!editingBundle}
-      onOpenChange={(isOpen) => {
-        if (!isOpen) {
-          handleClose();
-        } else if (editingBundle) {
-          setBundleName(editingBundle.bundle_name);
-          setBundleDescription(editingBundle.bundle_description || ''); // Use renamed state setter and field
-          setIsActive(editingBundle.is_active);
-        }
-        setOpen(isOpen);
-      }}
-    >
+    <>
       {triggerButton && (
-        <Dialog.Trigger asChild>
+        <div onClick={() => {
+          if (editingBundle) {
+            setBundleName(editingBundle.bundle_name);
+            setBundleDescription(editingBundle.bundle_description || '');
+            setIsActive(editingBundle.is_active);
+          }
+          setOpen(true);
+        }}>
           {triggerButton}
-        </Dialog.Trigger>
+        </div>
       )}
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-[500px] max-h-[90vh] overflow-y-auto">
-          <Dialog.Title className="text-lg font-medium text-gray-900 mb-4">
-            {editingBundle ? 'Edit Plan Bundle' : 'Add New Plan Bundle'}
-          </Dialog.Title>
+      <Dialog
+        isOpen={open || !!editingBundle}
+        onClose={handleClose}
+        title={editingBundle ? 'Edit Plan Bundle' : 'Add New Plan Bundle'}
+        className="max-w-lg"
+      >
+        <DialogContent>
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             {hasAttemptedSubmit && validationErrors.length > 0 && (
               <Alert variant="destructive" className="mb-4">
@@ -176,7 +172,7 @@ export function PlanBundleDialog({ onBundleAdded, editingBundle, onClose, trigge
               onCheckedChange={setIsActive}
             />
             
-            <div className="flex justify-end gap-2 pt-4">
+            <DialogFooter>
               <Button
                 id="cancel-bundle-btn"
                 type="button"
@@ -192,19 +188,10 @@ export function PlanBundleDialog({ onBundleAdded, editingBundle, onClose, trigge
               >
                 {editingBundle ? 'Update Bundle' : 'Create Bundle'}
               </Button>
-            </div>
+            </DialogFooter>
           </form>
-          <Dialog.Close asChild>
-            <button
-              className="absolute top-4 right-4 inline-flex h-6 w-6 appearance-none items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400"
-              aria-label="Close"
-              onClick={handleClose}
-            >
-              &times;
-            </button>
-          </Dialog.Close>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

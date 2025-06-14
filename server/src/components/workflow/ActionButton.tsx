@@ -4,8 +4,6 @@ import { Action } from '../../lib/workflow/forms/actionHandlerRegistry';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogFooter
 } from '../../components/ui/Dialog';
 

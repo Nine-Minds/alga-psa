@@ -11,7 +11,7 @@ import { parseISO } from 'date-fns';
 import { ICreditReconciliationReport, ITransaction, ICreditTracking } from 'server/src/interfaces/billing.interfaces';
 import { resolveReconciliationReport } from 'server/src/lib/actions/creditReconciliationActions';
 import { Badge } from 'server/src/components/ui/Badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTrigger } from 'server/src/components/ui/Dialog';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle, CheckCircle, XCircle, ArrowLeft, AlertTriangle, Info } from 'lucide-react';
@@ -1012,14 +1012,12 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
       <Dialog
         isOpen={!!isConfirmationDialogOpen}
         onClose={() => setIsConfirmationDialogOpen(false)}
+        title="Resolution Complete"
       >
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Resolution Complete</DialogTitle>
-            <DialogDescription>
-              The credit discrepancy has been successfully resolved.
-            </DialogDescription>
-          </DialogHeader>
+          <DialogDescription>
+            The credit discrepancy has been successfully resolved.
+          </DialogDescription>
           
           <div className="py-4">
             <div className="flex items-center justify-center mb-4">

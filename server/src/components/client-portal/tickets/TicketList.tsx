@@ -394,7 +394,7 @@ export function TicketList() {
       {selectedTicketId && (
         <TicketDetails
           ticketId={selectedTicketId}
-          open={!!selectedTicketId}
+          isOpen={!!selectedTicketId}
           onClose={() => setSelectedTicketId(null)}
         />
       )}

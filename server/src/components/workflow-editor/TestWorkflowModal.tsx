@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from 'server/src/components/ui/Tabs';
@@ -269,11 +269,12 @@ export default function TestWorkflowModal({ isOpen, onClose, workflowCode, workf
   };
   
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} id="test-workflow">
+    <Dialog 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      id="test-workflow" title="Test Workflow"
+    >
       <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>Test Workflow</DialogTitle>
-        </DialogHeader>
         
         <div className="py-4 space-y-4">
           <div className="space-y-2">

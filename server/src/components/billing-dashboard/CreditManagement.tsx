@@ -12,7 +12,7 @@ import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ICreditTracking } from 'server/src/interfaces/billing.interfaces';
 import { listCompanyCredits, getCreditDetails } from 'server/src/lib/actions/creditActions';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import {
   BarChart,
   Bar,
@@ -470,10 +470,11 @@ const CreditManagement: React.FC = () => {
       </Card>
       
       {/* Add Credit Modal */}
-      <Dialog isOpen={isAddCreditModalOpen} onClose={() => setIsAddCreditModalOpen(false)}>
-        <DialogHeader>
-          <DialogTitle>Add Credit</DialogTitle>
-        </DialogHeader>
+      <Dialog
+        isOpen={isAddCreditModalOpen}
+        onClose={() => setIsAddCreditModalOpen(false)}
+        title="Add Credit"
+      >
         <DialogContent>
           {/* Add credit form would go here */}
           <div className="py-4">

@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import CustomSelect from '../ui/CustomSelect';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Dialog, DialogContent, DialogFooter } from '../ui/Dialog';
 import { Button } from '../ui/Button';
 // Removed Tabs imports
 import { Label } from '../ui/Label';
@@ -154,18 +154,18 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
   // Removed handleOverlapConfirm and handleOverlapCancel
 
   return (<>
-    <Dialog.Root open={open} onOpenChange={setOpen}>
-      {triggerButton && (
-        <Dialog.Trigger asChild>
-          {triggerButton}
-        </Dialog.Trigger>
-      )}
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50 data-[state=open]:animate-overlayShow" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-[600px] max-h-[90vh] overflow-y-auto data-[state=open]:animate-contentShow">
-          <Dialog.Title className="text-lg font-medium text-gray-900 mb-4">
-            {editingPlan ? 'Edit Billing Plan Basics' : 'Add New Billing Plan'}
-          </Dialog.Title>
+    {triggerButton && (
+      <div onClick={() => setOpen(true)}>
+        {triggerButton}
+      </div>
+    )}
+    <Dialog
+      isOpen={open}
+      onClose={handleClose}
+      title={editingPlan ? 'Edit Billing Plan Basics' : 'Add New Billing Plan'}
+      className="max-w-2xl"
+    >
+      <DialogContent>
           <form onSubmit={handleSubmit} noValidate>
             {hasAttemptedSubmit && validationErrors.length > 0 && (
               <Alert variant="destructive" className="mb-4">
@@ -236,7 +236,7 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
 
             {/* Removed Config Tab Content and Service Selection */}
 
-            <div className="flex justify-end gap-2 mt-6">
+            <DialogFooter>
               <Button
                 id="cancel-billing-plan-button"
                 type="button"
@@ -253,24 +253,10 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
               <Button id='save-billing-plan-button' type="submit" disabled={isSaving} className={!planName.trim() || !billingFrequency ? 'opacity-50' : ''}>
                 {isSaving ? 'Saving...' : (editingPlan ? 'Update Plan Basics' : 'Save and Configure')}
               </Button>
-            </div>
+            </DialogFooter>
           </form>
-           <Dialog.Close asChild>
-                <button
-                className="absolute top-4 right-4 inline-flex h-6 w-6 appearance-none items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400"
-                aria-label="Close"
-                onClick={() => {
-                  setHasAttemptedSubmit(false);
-                  setValidationErrors([]);
-                  handleClose();
-                }}
-                >
-                 &times; {/* Simple X */}
-                </button>
-            </Dialog.Close>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+      </DialogContent>
+    </Dialog>
 
     {/* Removed OverlapWarningDialog */}
   </>

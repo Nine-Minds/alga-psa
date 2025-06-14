@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ITimeSheet } from 'server/src/interfaces/timeEntry.interfaces';
 import { Button } from 'server/src/components/ui/Button';
-import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { TextArea } from 'server/src/components/ui/TextArea';
 
 interface ApprovalActionsProps {
@@ -39,10 +39,11 @@ export function ApprovalActions({ timeSheet, onApprove, onReject, onRequestChang
       <Button id="reject-timesheet-btn" onClick={() => setIsRejectDialogOpen(true)}>Reject</Button>
       <Button id="request-changes-btn" onClick={() => setIsChangesDialogOpen(true)}>Request Changes</Button>
 
-      <Dialog isOpen={isRejectDialogOpen} onClose={() => setIsRejectDialogOpen(false)}>
-        <DialogHeader>
-          <DialogTitle>Reject Time Sheet</DialogTitle>
-        </DialogHeader>
+      <Dialog 
+        isOpen={isRejectDialogOpen} 
+        onClose={() => setIsRejectDialogOpen(false)} 
+        title="Reject Time Sheet"
+      >
         <DialogContent>
           <TextArea
             value={rejectReason}
@@ -57,10 +58,11 @@ export function ApprovalActions({ timeSheet, onApprove, onReject, onRequestChang
         </DialogFooter>
       </Dialog>
 
-      <Dialog isOpen={isChangesDialogOpen} onClose={() => setIsChangesDialogOpen(false)}>
-        <DialogHeader>
-          <DialogTitle>Request Changes</DialogTitle>
-        </DialogHeader>
+      <Dialog 
+        isOpen={isChangesDialogOpen} 
+        onClose={() => setIsChangesDialogOpen(false)} 
+        title="Request Changes"
+      >
         <DialogContent>
             <></>
           {/* Implement a form or interface for specifying change requests */}

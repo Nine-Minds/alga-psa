@@ -12,8 +12,6 @@ import { TextArea } from 'server/src/components/ui/TextArea';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
   DialogFooter
 } from 'server/src/components/ui/Dialog';
@@ -285,12 +283,10 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
     <Dialog
       id="quick-add-company-dialog"
       isOpen={open}
-      onClose={() => onOpenChange(false)}>
+      onClose={() => onOpenChange(false)}
+      title="Add New Client">
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Add New Client</DialogTitle>
-        </DialogHeader>
         <form onSubmit={handleSubmit} id="quick-add-company-form" noValidate>
           <div className="max-h-[60vh] overflow-y-auto px-1 py-4 space-y-6">
             

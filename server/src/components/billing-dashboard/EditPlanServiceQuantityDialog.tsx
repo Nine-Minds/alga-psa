@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogFooter
 } from '../ui/Dialog';
 import { Button } from '../ui/Button';
@@ -108,11 +106,14 @@ export function EditPlanServiceQuantityDialog({
   };
 
   return (
-    <Dialog isOpen={isOpen} onClose={handleDialogClose} id="edit-plan-service-quantity-dialog" className="sm:max-w-[425px]">
+    <Dialog
+      isOpen={isOpen} 
+      onClose={handleDialogClose} 
+      id="edit-plan-service-quantity-dialog" 
+      className="sm:max-w-[425px]" 
+      title={`Edit Quantity for ${serviceName}`}
+    >
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Edit Quantity for {serviceName}</DialogTitle>
-        </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="quantity-input" className="text-right">

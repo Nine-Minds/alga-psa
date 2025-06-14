@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from 'server/src/components/ui/Button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 
 export default function AddCreditButton() {
   const [isAddCreditModalOpen, setIsAddCreditModalOpen] = useState(false);
@@ -24,10 +24,11 @@ export default function AddCreditButton() {
       </Button>
       
       {/* Add Credit Modal */}
-      <Dialog isOpen={isAddCreditModalOpen} onClose={() => setIsAddCreditModalOpen(false)}>
-        <DialogHeader>
-          <DialogTitle>Add Credit</DialogTitle>
-        </DialogHeader>
+      <Dialog
+        isOpen={isAddCreditModalOpen} 
+        onClose={() => setIsAddCreditModalOpen(false)} 
+        title="Add Credit"
+      >
         <DialogContent>
           {/* Add credit form would go here */}
           <div className="py-4">
