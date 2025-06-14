@@ -1,0 +1,312 @@
+{
+  "type": "page",
+  "meta": {
+    "title": "SoftwareOne Settings",
+    "description": "Configure SoftwareOne integration settings"
+  },
+  "content": {
+    "type": "div",
+    "props": {
+      "className": "p-6 max-w-4xl mx-auto"
+    },
+    "children": [
+      {
+        "type": "h1",
+        "props": {
+          "className": "text-2xl font-bold mb-6"
+        },
+        "children": ["SoftwareOne Integration Settings"]
+      },
+      {
+        "type": "Card",
+        "children": [
+          {
+            "type": "CardContent",
+            "props": {
+              "className": "p-6"
+            },
+            "children": [
+              {
+                "type": "Tabs",
+                "props": {
+                  "defaultValue": "api",
+                  "className": "w-full"
+                },
+                "children": [
+                  {
+                    "type": "TabsList",
+                    "props": {
+                      "className": "grid w-full grid-cols-3"
+                    },
+                    "children": [
+                      {
+                        "type": "TabsTrigger",
+                        "props": {
+                          "value": "api"
+                        },
+                        "children": ["API Configuration"]
+                      },
+                      {
+                        "type": "TabsTrigger",
+                        "props": {
+                          "value": "sync"
+                        },
+                        "children": ["Sync Settings"]
+                      },
+                      {
+                        "type": "TabsTrigger",
+                        "props": {
+                          "value": "mapping"
+                        },
+                        "children": ["Service Mapping"]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "TabsContent",
+                    "props": {
+                      "value": "api"
+                    },
+                    "children": [
+                      {
+                        "type": "form",
+                        "id": "api-config-form",
+                        "handlers": {
+                          "submit": "saveApiConfig"
+                        },
+                        "children": [
+                          {
+                            "type": "div",
+                            "props": {
+                              "className": "space-y-4"
+                            },
+                            "children": [
+                              {
+                                "type": "div",
+                                "children": [
+                                  {
+                                    "type": "Label",
+                                    "props": {
+                                      "htmlFor": "apiEndpoint"
+                                    },
+                                    "children": ["API Endpoint"]
+                                  },
+                                  {
+                                    "type": "Input",
+                                    "props": {
+                                      "id": "apiEndpoint",
+                                      "name": "apiEndpoint",
+                                      "type": "url",
+                                      "placeholder": "https://api.softwareone.com",
+                                      "required": true
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "div",
+                                "children": [
+                                  {
+                                    "type": "Label",
+                                    "props": {
+                                      "htmlFor": "apiToken"
+                                    },
+                                    "children": ["API Token"]
+                                  },
+                                  {
+                                    "type": "Input",
+                                    "props": {
+                                      "id": "apiToken",
+                                      "name": "apiToken",
+                                      "type": "password",
+                                      "placeholder": "Enter your API token",
+                                      "required": true
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "div",
+                                "props": {
+                                  "className": "flex justify-end gap-2 pt-4"
+                                },
+                                "children": [
+                                  {
+                                    "type": "Button",
+                                    "props": {
+                                      "type": "button",
+                                      "variant": "outline"
+                                    },
+                                    "handlers": {
+                                      "click": "testConnection"
+                                    },
+                                    "children": ["Test Connection"]
+                                  },
+                                  {
+                                    "type": "Button",
+                                    "props": {
+                                      "type": "submit"
+                                    },
+                                    "children": ["Save Settings"]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "TabsContent",
+                    "props": {
+                      "value": "sync"
+                    },
+                    "children": [
+                      {
+                        "type": "form",
+                        "id": "sync-settings-form",
+                        "handlers": {
+                          "submit": "saveSyncSettings"
+                        },
+                        "children": [
+                          {
+                            "type": "div",
+                            "props": {
+                              "className": "space-y-4"
+                            },
+                            "children": [
+                              {
+                                "type": "div",
+                                "children": [
+                                  {
+                                    "type": "Label",
+                                    "props": {
+                                      "htmlFor": "syncInterval"
+                                    },
+                                    "children": ["Sync Interval (hours)"]
+                                  },
+                                  {
+                                    "type": "Input",
+                                    "props": {
+                                      "id": "syncInterval",
+                                      "name": "syncInterval",
+                                      "type": "number",
+                                      "min": "1",
+                                      "max": "24",
+                                      "defaultValue": "6"
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "div",
+                                "props": {
+                                  "className": "flex items-center space-x-2"
+                                },
+                                "children": [
+                                  {
+                                    "type": "Switch",
+                                    "props": {
+                                      "id": "autoSync",
+                                      "name": "autoSync"
+                                    }
+                                  },
+                                  {
+                                    "type": "Label",
+                                    "props": {
+                                      "htmlFor": "autoSync"
+                                    },
+                                    "children": ["Enable automatic synchronization"]
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "div",
+                                "props": {
+                                  "className": "flex justify-end gap-2 pt-4"
+                                },
+                                "children": [
+                                  {
+                                    "type": "Button",
+                                    "props": {
+                                      "type": "button",
+                                      "variant": "outline"
+                                    },
+                                    "handlers": {
+                                      "click": "syncNow"
+                                    },
+                                    "children": [
+                                      {
+                                        "type": "RefreshIcon",
+                                        "props": {
+                                          "className": "w-4 h-4 mr-2"
+                                        }
+                                      },
+                                      "Sync Now"
+                                    ]
+                                  },
+                                  {
+                                    "type": "Button",
+                                    "props": {
+                                      "type": "submit"
+                                    },
+                                    "children": ["Save Settings"]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "TabsContent",
+                    "props": {
+                      "value": "mapping"
+                    },
+                    "children": [
+                      {
+                        "type": "div",
+                        "children": [
+                          {
+                            "type": "p",
+                            "props": {
+                              "className": "text-sm text-gray-600 mb-4"
+                            },
+                            "children": ["Map SoftwareOne products to your service catalog items."]
+                          },
+                          {
+                            "type": "Button",
+                            "props": {
+                              "variant": "outline"
+                            },
+                            "handlers": {
+                              "click": "openMappingDialog"
+                            },
+                            "children": ["Configure Service Mappings"]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "data": [
+    {
+      "key": "config",
+      "source": "storage",
+      "endpoint": "softwareone/config"
+    }
+  ],
+  "handlers": {
+    "module": "handlers/settings"
+  }
+}

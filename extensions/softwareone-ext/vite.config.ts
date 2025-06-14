@@ -22,10 +22,8 @@ export default defineConfig({
       external: [],  // Bundle everything including React JSX runtime
       output: {
         format: 'es',
-        // Preserve imports for code splitting
-        preserveModules: false,
-        // Single file output
-        inlineDynamicImports: true,
+        // Don't inline dynamic imports with multiple entries
+        inlineDynamicImports: false,
       },
     },
     outDir: 'dist',
