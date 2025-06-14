@@ -12,6 +12,7 @@ import {
 } from './descriptors/types';
 import { ComponentRegistry } from './descriptors/ComponentRegistry';
 import { useRouter } from 'next/navigation';
+import { sanitizeProps, validateDescriptor } from '../security/propWhitelist';
 
 interface DescriptorRendererProps {
   descriptor: UIDescriptor | PageDescriptor;
@@ -188,6 +189,12 @@ export function DescriptorRenderer({
       return desc;
     }
 
+    // Validate descriptor for security
+    if (!validateDescriptor(desc)) {
+      console.error(`[DescriptorRenderer] Invalid descriptor detected, skipping render`);
+      return null;
+    }
+
     console.log(`[DescriptorRenderer] Rendering descriptor with type: ${desc.type}`);
 
     // Check conditions and permissions
@@ -208,16 +215,32 @@ export function DescriptorRenderer({
     const Component = ComponentRegistry.get(desc.type);
     if (!Component) {
       console.warn(`[DescriptorRenderer] Component type "${desc.type}" not found in registry`);
+      // For unknown types, try to render as a plain HTML element if it's an allowed element
+      const allowedElements = ['div', 'span', 'a', 'button', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'li', 'nav', 'section', 'article', 'header', 'footer', 'main'];
+      if (allowedElements.includes(desc.type)) {
+        const Element = desc.type as keyof JSX.IntrinsicElements;
+        const sanitizedProps = sanitizeProps(desc.props || {});
+        if (desc.children) {
+          const children = desc.children.map((child, index) => {
+            if (typeof child === 'string' || typeof child === 'number') {
+              return child;
+            }
+            return renderDescriptor({ ...child, id: `${desc.id}-child-${index}` });
+          });
+          return <Element {...sanitizedProps} key={desc.id}>{children}</Element>;
+        }
+        return <Element {...sanitizedProps} key={desc.id} />;
+      }
       return null;
     }
     
     console.log(`[DescriptorRenderer] Found component for type: ${desc.type}`);
 
-    // Build props
-    const props: any = {
+    // Build and sanitize props
+    const props: any = sanitizeProps({
       ...desc.props,
       key: desc.id
-    };
+    });
 
     // Handle styles
     if (desc.style) {
