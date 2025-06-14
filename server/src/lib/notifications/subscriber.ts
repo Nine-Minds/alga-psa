@@ -3,6 +3,7 @@ import { withTransaction } from '@shared/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 import { SSEEvent } from 'server/src/interfaces/notification.interfaces';
+import logger from '@shared/core/logger';
 
 interface SubscriberOptions {
   userId: string;
@@ -12,23 +13,54 @@ interface SubscriberOptions {
 }
 
 export class NotificationSubscriber {
-  private redis: Redis;
-  private pubsub: Redis;
+  private redis?: Redis;
+  private pubsub?: Redis;
   private heartbeatInterval?: NodeJS.Timeout;
   private channels: string[] = [];
   private isCleanedUp: boolean = false;
+  private redisConnected: boolean = false;
 
   constructor(private options: SubscriberOptions) {
-    // Use separate Redis connections for pub/sub
-    this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
-    this.pubsub = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
-    
     // Subscribe to user-specific and tenant-wide channels
     this.channels = [
       `notifications:user:${options.userId}`,
       `notifications:tenant:${options.tenantId}`,
       `notifications:broadcast`,
     ];
+    
+    // Try to initialize Redis connections
+    this.initializeRedis();
+  }
+
+  private async initializeRedis() {
+    try {
+      const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+      
+      // Use separate Redis connections for pub/sub
+      this.redis = new Redis(redisUrl, {
+        maxRetriesPerRequest: 1,
+        connectTimeout: 5000,
+        lazyConnect: true,
+      });
+      
+      this.pubsub = new Redis(redisUrl, {
+        maxRetriesPerRequest: 1,
+        connectTimeout: 5000,
+        lazyConnect: true,
+      });
+
+      // Test connection
+      await this.redis.ping();
+      await this.pubsub.ping();
+      
+      this.redisConnected = true;
+      logger.info('[NotificationSubscriber] Redis connected successfully');
+    } catch (error) {
+      logger.warn('[NotificationSubscriber] Failed to connect to Redis, falling back to database-only mode:', error);
+      this.redisConnected = false;
+      this.redis = undefined;
+      this.pubsub = undefined;
+    }
   }
 
   async start() {
@@ -38,11 +70,18 @@ export class NotificationSubscriber {
       // Send initial connection event
       await this.sendEvent({
         event: 'connected',
-        data: { userId: this.options.userId },
+        data: { 
+          userId: this.options.userId,
+          redisConnected: this.redisConnected 
+        },
       });
 
-      // Subscribe to Redis channels
-      await this.setupSubscriptions();
+      // Subscribe to Redis channels if available
+      if (this.redisConnected) {
+        await this.setupSubscriptions();
+      } else {
+        logger.info('[NotificationSubscriber] Running in database-only mode');
+      }
 
       // Send any pending notifications
       await this.sendPendingNotifications();
@@ -50,13 +89,13 @@ export class NotificationSubscriber {
       // Start heartbeat
       this.startHeartbeat();
     } catch (error) {
-      console.error('Failed to start notification subscriber:', error);
+      logger.error('Failed to start notification subscriber:', error);
       this.cleanup();
     }
   }
 
   private async setupSubscriptions() {
-    if (this.isCleanedUp) return;
+    if (this.isCleanedUp || !this.redisConnected || !this.pubsub) return;
 
     try {
       // Subscribe to channels
@@ -74,11 +113,11 @@ export class NotificationSubscriber {
             id: notification.id,
           });
         } catch (error) {
-          console.error('Failed to process notification:', error);
+          logger.error('Failed to process notification:', error);
         }
       });
     } catch (error) {
-      console.error('Failed to setup subscriptions:', error);
+      logger.error('Failed to setup subscriptions:', error);
       throw error;
     }
   }
@@ -95,8 +134,8 @@ export class NotificationSubscriber {
       }
 
       await withTransaction(knex, async (trx: Knex.Transaction) => {
-        // Fetch unread notifications from database
-        const notifications = await trx('notifications')
+        // Fetch unread notifications from database  
+        const notifications = await trx('internal_notifications')
           .where('user_id', this.options.userId)
           .where('tenant', tenant)
           .whereNull('read_at')
@@ -114,7 +153,7 @@ export class NotificationSubscriber {
         }
       });
     } catch (error) {
-      console.error('Failed to send pending notifications:', error);
+      logger.error('Failed to send pending notifications:', error);
     }
   }
 
@@ -147,7 +186,7 @@ export class NotificationSubscriber {
       await writer.write(encoder.encode(message));
     } catch (error) {
       // Client disconnected
-      console.log('Client disconnected:', error);
+      logger.debug('Client disconnected:', error);
       this.cleanup();
     }
   }
@@ -162,16 +201,24 @@ export class NotificationSubscriber {
       }
 
       // Unsubscribe and disconnect Redis connections
-      if (this.pubsub) {
-        this.pubsub.unsubscribe(...this.channels);
-        this.pubsub.disconnect();
+      if (this.pubsub && this.redisConnected) {
+        try {
+          this.pubsub.unsubscribe(...this.channels);
+          this.pubsub.disconnect();
+        } catch (redisError) {
+          logger.debug('Error cleaning up pubsub:', redisError);
+        }
       }
 
-      if (this.redis) {
-        this.redis.disconnect();
+      if (this.redis && this.redisConnected) {
+        try {
+          this.redis.disconnect();
+        } catch (redisError) {
+          logger.debug('Error cleaning up redis:', redisError);
+        }
       }
     } catch (error) {
-      console.error('Error during cleanup:', error);
+      logger.error('Error during cleanup:', error);
     }
   }
 }

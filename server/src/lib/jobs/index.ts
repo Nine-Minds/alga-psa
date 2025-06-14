@@ -10,6 +10,7 @@ import { creditReconciliationHandler, CreditReconciliationJobData } from './hand
 // Import the new handler
 import { handleReconcileBucketUsage, ReconcileBucketUsageJobData } from './handlers/reconcileBucketUsageHandler';
 import { cleanupTemporaryFormsJob } from '../../services/cleanupTemporaryFormsJob';
+import { initializeScheduledNotifications } from '../notifications/scheduledNotificationJobs';
 import { JobService } from '../../services/job.service';
 import { getConnection } from '../db/db';
 import { StorageService } from '../../lib/storage/StorageService';
@@ -78,6 +79,9 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     jobScheduler.registerJobHandler('cleanup-temporary-workflow-forms', async (job: Job<{ tenantId: string }>) => {
       await cleanupTemporaryFormsJob();
     });
+
+    // Initialize scheduled notification jobs
+    await initializeScheduledNotifications();
 
   }
   return jobScheduler;

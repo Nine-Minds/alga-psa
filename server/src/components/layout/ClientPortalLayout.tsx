@@ -11,6 +11,7 @@ import { getCurrentUser, getUserRolesWithPermissions } from 'server/src/lib/acti
 import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { useRouter } from 'next/navigation';
 import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
+import { NotificationBell } from 'server/src/components/notifications/NotificationBell';
 
 interface ClientPortalLayoutProps {
   children: ReactNode;
@@ -132,6 +133,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
 
             {/* Right side - Profile */}
             <div className="flex items-center">
+              <NotificationBell />
               <div className="flex items-center">
                 <DropdownMenu.Root>
                   <DropdownMenu.Trigger asChild>

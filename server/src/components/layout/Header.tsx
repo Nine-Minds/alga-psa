@@ -13,6 +13,7 @@ import { menuItems, bottomMenuItems, MenuItem } from 'server/src/config/menuConf
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getUserAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { useRouter } from 'next/navigation';
+import { NotificationBell } from 'server/src/components/notifications/NotificationBell';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -151,6 +152,7 @@ const Header: React.FC<HeaderProps> = ({
         >
           <QuestionMarkCircledIcon className="w-5 h-5" />
         </Link>
+        <NotificationBell />
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
             <button className="relative" aria-label="User menu">

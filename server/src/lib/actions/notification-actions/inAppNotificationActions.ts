@@ -58,7 +58,7 @@ export async function createNotificationAction(
     const targetUserId = notificationData.user_id !== undefined ? notificationData.user_id : currentUser.user_id;
     const dataToPublish: CreateNotificationData = {
       ...notificationData,
-      user_id: Number(targetUserId),
+      user_id: String(targetUserId),
     };
     const notification = await publisher.publishNotification(dataToPublish);
 
@@ -191,7 +191,7 @@ export async function markNotificationReadAction(notificationId: string): Promis
     // Broadcast read status update via Redis
     const publisher = new NotificationPublisher();
     try {
-      await publisher.publishNotificationRead(Number(currentUser.user_id), notificationId, tenant);
+      await publisher.publishNotificationRead(String(currentUser.user_id), notificationId, tenant);
     } finally {
       publisher.disconnect();
     }
@@ -252,7 +252,7 @@ export async function archiveNotificationAction(notificationId: string): Promise
  * Create notifications for multiple users (bulk operation)
  */
 export async function createBulkNotificationsAction(
-  userIds: number[],
+  userIds: string[],
   notificationData: CreateNotificationData
 ): Promise<InternalNotification[]> {
   const { knex, tenant } = await createTenantKnex();
@@ -264,7 +264,7 @@ export async function createBulkNotificationsAction(
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     const notificationsToInsert = userIds.map(userId => ({
       tenant,
-      user_id: userId,
+      user_id: String(userId),
       type_id: notificationData.type_id,
       title: notificationData.title,
       message: notificationData.message,

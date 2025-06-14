@@ -9,6 +9,7 @@ import {
   NotificationSseEvent, 
   NotificationTemplate 
 } from 'server/src/interfaces/notification.interfaces';
+import logger from '@shared/core/logger';
 
 // A simple template engine
 function compileTemplate(template: string, data: Record<string, any>): string {
@@ -16,10 +17,31 @@ function compileTemplate(template: string, data: Record<string, any>): string {
 }
 
 export class NotificationPublisher {
-  private redis: Redis;
+  private redis?: Redis;
+  private redisConnected: boolean = false;
 
   constructor() {
-    this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    this.initializeRedis();
+  }
+
+  private async initializeRedis() {
+    try {
+      const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+      this.redis = new Redis(redisUrl, {
+        maxRetriesPerRequest: 1,
+        connectTimeout: 5000,
+        lazyConnect: true,
+      });
+
+      // Test connection
+      await this.redis.ping();
+      this.redisConnected = true;
+      logger.info('[NotificationPublisher] Redis connected successfully');
+    } catch (error) {
+      logger.warn('[NotificationPublisher] Failed to connect to Redis, notifications will work without real-time updates:', error);
+      this.redisConnected = false;
+      this.redis = undefined;
+    }
   }
 
   async publishNotification(notificationData: CreateNotificationData): Promise<InternalNotification> {
@@ -72,19 +94,26 @@ export class NotificationPublisher {
     // 5. Fetch enriched data for SSE event
     const sseEventPayload = await this.createSsePayload(savedNotification.internal_notification_id);
 
-    // 6. Publish to Redis for real-time delivery
-    if (sseEventPayload) {
+    // 6. Publish to Redis for real-time delivery (if Redis is available)
+    if (sseEventPayload && this.redisConnected) {
       const channels = [
         `notifications:user:${savedNotification.user_id}`,
         `notifications:tenant:${tenant}`,
       ];
       await this.publishToChannels(channels, { event: 'notification', data: sseEventPayload });
+    } else if (sseEventPayload && !this.redisConnected) {
+      logger.debug('[NotificationPublisher] Notification saved to database but not published to Redis (Redis not connected)');
     }
 
     return savedNotification;
   }
 
-  async publishNotificationRead(userId: number, notificationId: string, tenantId: string) {
+  async publishNotificationRead(userId: string, notificationId: string, tenantId: string) {
+    if (!this.redisConnected) {
+      logger.debug('[NotificationPublisher] Notification read event not published (Redis not connected)');
+      return;
+    }
+
     const channels = [
       `notifications:user:${userId}`,
       `notifications:tenant:${tenantId}`,
@@ -142,13 +171,29 @@ export class NotificationPublisher {
   }
 
   private async publishToChannels(channels: string[], message: any) {
-    const publishPromises = channels.map(channel =>
-      this.redis.publish(channel, JSON.stringify(message))
-    );
-    await Promise.all(publishPromises);
+    if (!this.redisConnected || !this.redis) {
+      logger.debug('[NotificationPublisher] Cannot publish to channels (Redis not connected)');
+      return;
+    }
+
+    try {
+      const publishPromises = channels.map(channel =>
+        this.redis!.publish(channel, JSON.stringify(message))
+      );
+      await Promise.all(publishPromises);
+    } catch (error) {
+      logger.error('[NotificationPublisher] Failed to publish to Redis channels:', error);
+      this.redisConnected = false; // Mark as disconnected for future calls
+    }
   }
 
   disconnect() {
-    this.redis.disconnect();
+    if (this.redis && this.redisConnected) {
+      try {
+        this.redis.disconnect();
+      } catch (error) {
+        logger.debug('[NotificationPublisher] Error disconnecting Redis:', error);
+      }
+    }
   }
 }

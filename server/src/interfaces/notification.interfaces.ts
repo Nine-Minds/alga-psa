@@ -1,6 +1,6 @@
 // Represents the data needed to create a new notification.
 export interface CreateNotificationData {
-  user_id?: number; // Optional: defaults to the current user in the action
+  user_id?: string; // Optional: defaults to the current user in the action (UUID)
   type_id: string;
   title: string;
   message?: string;
@@ -14,7 +14,7 @@ export interface CreateNotificationData {
 export interface InternalNotification {
   internal_notification_id: string;
   tenant: string;
-  user_id: number;
+  user_id: string;
   type_id: string;
   title: string;
   message?: string;
@@ -45,7 +45,7 @@ export interface EnrichedNotification extends Omit<InternalNotification, 'type_i
 export interface Notification {
   internal_notification_id: string;
   tenant: string;
-  user_id: number;
+  user_id: string;
   title: string;
   message?: string;
   data?: Record<string, any>;
@@ -74,8 +74,8 @@ export interface NotificationListResult {
 export interface DirectMessage {
   direct_message_id: string;
   tenant: string;
-  sender_id: number;
-  recipient_id: number;
+  sender_id: string;
+  recipient_id: string;
   thread_id?: string;
   message: string;
   attachments?: Record<string, any>;
@@ -86,7 +86,7 @@ export interface DirectMessage {
 }
 
 export interface CreateDirectMessageData {
-  recipientId: number;
+  recipientId: string;
   message: string;
   threadId?: string;
   attachments?: Record<string, any>;
@@ -95,7 +95,7 @@ export interface CreateDirectMessageData {
 // Represents a record in the 'internal_notification_preferences' table.
 export interface NotificationPreference {
   tenant: string;
-  user_id: number;
+  user_id: string;
   internal_notification_type_id: string;
   channel: 'in_app' | 'email' | 'sms';
   enabled: boolean;
@@ -125,7 +125,7 @@ export interface SSEEvent {
 export interface NotificationSseEvent {
   internal_notification_id: string;
   tenant: string;
-  user_id: number;
+  user_id: string;
   title: string;
   message?: string;
   data?: Record<string, any>;
