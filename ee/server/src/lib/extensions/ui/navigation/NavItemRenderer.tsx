@@ -33,11 +33,24 @@ export function NavItemRenderer({
   const { id, label, icon, path } = props;
   const pathname = usePathname();
   
+  logger.debug('NavItemRenderer called with:', {
+    extensionId,
+    component,
+    props,
+    collapsed
+  });
+  
   // Check if this item is active
   const isActive = pathname === path;
   
   // If a custom component is provided, render it with ExtensionRenderer
   if (component) {
+    logger.debug('Rendering custom component with ExtensionRenderer', {
+      extensionId,
+      component,
+      itemId: id
+    });
+    
     return (
       <ExtensionRenderer
         extensionId={extensionId}

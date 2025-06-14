@@ -19,8 +19,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     const extensionId = req.query.extensionId as string;
     const componentPath = (req.query.path as string[]).join('/');
+    
+    logger.info('[Extension Component API] Request received', {
+      extensionId,
+      componentPath,
+      url: req.url,
+      query: req.query
+    });
 
     if (!extensionId || !componentPath) {
+      logger.error('[Extension Component API] Missing parameters', { extensionId, componentPath });
       return res.status(400).json({ error: 'Invalid request' });
     }
 

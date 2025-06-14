@@ -29,6 +29,9 @@ export function DescriptorRenderer({
   context: providedContext,
   data: providedData = {}
 }: DescriptorRendererProps) {
+  console.log(`[DescriptorRenderer] Initializing with descriptor:`, descriptor);
+  console.log(`[DescriptorRenderer] Available handlers:`, Object.keys(handlers));
+  
   const router = useRouter();
   const [data, setData] = useState<Record<string, any>>(providedData);
   const [loading, setLoading] = useState<Record<string, boolean>>({});
@@ -185,13 +188,17 @@ export function DescriptorRenderer({
       return desc;
     }
 
+    console.log(`[DescriptorRenderer] Rendering descriptor with type: ${desc.type}`);
+
     // Check conditions and permissions
     if (!checkCondition(desc) || !hasPermission(desc)) {
+      console.log(`[DescriptorRenderer] Skipping descriptor due to condition/permission check`);
       return null;
     }
 
     // Handle page descriptors
     if (isPageDescriptor(desc)) {
+      console.log(`[DescriptorRenderer] Rendering page descriptor`);
       const { content, layout = 'default' } = desc;
       // TODO: Apply layout
       return renderDescriptor(content);
@@ -200,9 +207,11 @@ export function DescriptorRenderer({
     // Get component from registry
     const Component = ComponentRegistry.get(desc.type);
     if (!Component) {
-      console.warn(`Component type "${desc.type}" not found in registry`);
+      console.warn(`[DescriptorRenderer] Component type "${desc.type}" not found in registry`);
       return null;
     }
+    
+    console.log(`[DescriptorRenderer] Found component for type: ${desc.type}`);
 
     // Build props
     const props: any = {
