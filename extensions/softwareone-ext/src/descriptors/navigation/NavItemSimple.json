@@ -1,7 +1,7 @@
 {
   "type": "a",
   "props": {
-    "href": "/softwareone/agreements",
+    "href": "/ext/softwareone/agreements",
     "className": "flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-gray-100 cursor-pointer text-gray-300 hover:text-white"
   },
   "children": [

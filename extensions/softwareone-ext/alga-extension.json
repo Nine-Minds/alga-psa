@@ -103,6 +103,28 @@
       }
     }
   ],
+  "routes": [
+    {
+      "path": "/agreements",
+      "component": "descriptors/pages/AgreementsList.json"
+    },
+    {
+      "path": "/agreements/:id",
+      "component": "descriptors/pages/AgreementDetail.json"
+    },
+    {
+      "path": "/statements",
+      "component": "descriptors/pages/StatementsList.json"
+    },
+    {
+      "path": "/statements/:id",
+      "component": "descriptors/pages/StatementDetail.json"
+    },
+    {
+      "path": "/settings",
+      "component": "descriptors/pages/SettingsPage.json"
+    }
+  ],
   "settings": [
     {
       "key": "apiEndpoint",
