@@ -1,4 +1,5 @@
 import React from 'react';
+import dynamic from 'next/dynamic';
 
 /**
  * Registry for mapping descriptor types to React components
@@ -55,45 +56,217 @@ class ComponentRegistryClass {
     // In a real implementation, these would map to the actual UI library components
     // This avoids import issues in the EE server
     
-    // Register UI components as placeholder elements
+    // Register UI components as placeholder elements with enhanced styling
     const uiComponents = [
+      // Core UI Components
       'Button', 'Card', 'CardHeader', 'CardTitle', 'CardDescription', 'CardContent', 'CardFooter',
       'Input', 'Label', 'Select', 'SelectContent', 'SelectItem', 'SelectTrigger', 'SelectValue',
       'Textarea', 'Checkbox', 'RadioGroup', 'RadioGroupItem', 'Switch',
+      
+      // Dialog Components
       'Dialog', 'DialogContent', 'DialogDescription', 'DialogFooter', 'DialogHeader', 'DialogTitle', 'DialogTrigger',
-      'Alert', 'AlertDescription', 'AlertTitle', 'Badge',
+      'Modal', 'ModalContent', 'ModalHeader', 'ModalBody', 'ModalFooter',
+      
+      // Alert & Notification Components
+      'Alert', 'AlertDescription', 'AlertTitle', 'Badge', 'Toast', 'Notification',
+      
+      // Navigation Components
       'Tabs', 'TabsContent', 'TabsList', 'TabsTrigger',
+      'Breadcrumb', 'BreadcrumbItem', 'BreadcrumbLink', 'BreadcrumbPage', 'BreadcrumbSeparator',
+      'NavigationMenu', 'NavigationMenuItem', 'NavigationMenuLink',
+      
+      // Data Display Components
       'Table', 'TableBody', 'TableCaption', 'TableCell', 'TableHead', 'TableHeader', 'TableRow',
-      'Skeleton', 'Progress', 'Separator', 'ScrollArea',
+      'DataGrid', 'DataTable', 'List', 'ListItem', 'DescriptionList', 'DescriptionTerm', 'DescriptionDetails',
+      
+      // Layout Components
+      'Container', 'Grid', 'GridItem', 'Flex', 'FlexItem', 'Stack', 'Box',
+      'Skeleton', 'Progress', 'Separator', 'ScrollArea', 'Spacer',
+      
+      // Overlay Components
       'Sheet', 'SheetContent', 'SheetDescription', 'SheetFooter', 'SheetHeader', 'SheetTitle', 'SheetTrigger',
-      'DataGrid', 'DataTable', 'LoadingSpinner', 'ErrorBoundary'
+      'Popover', 'PopoverContent', 'PopoverTrigger', 'Tooltip', 'TooltipContent', 'TooltipTrigger',
+      
+      // Form Components
+      'Form', 'FormField', 'FormItem', 'FormLabel', 'FormControl', 'FormDescription', 'FormMessage',
+      'FieldSet', 'Legend',
+      
+      // Utility Components
+      'LoadingSpinner', 'ErrorBoundary', 'Avatar', 'AvatarImage', 'AvatarFallback',
+      'Collapsible', 'CollapsibleContent', 'CollapsibleTrigger',
+      'Accordion', 'AccordionItem', 'AccordionTrigger', 'AccordionContent'
     ];
 
+    // Enhanced component registration with better default behaviors
     uiComponents.forEach(name => {
-      this.register(name, ((props: any) => 
-        React.createElement('div', { 
-          ...props, 
-          'data-component': name,
-          className: `ui-${name.toLowerCase()} ${props.className || ''}`
-        }, props.children)
-      ) as React.ComponentType<any>);
+      let element = 'div';
+      let defaultProps: any = {
+        'data-component': name
+      };
+      
+      // Map certain components to more appropriate HTML elements
+      if (['Button'].includes(name)) {
+        element = 'button';
+        defaultProps.type = 'button';
+      } else if (['Input'].includes(name)) {
+        element = 'input';
+        defaultProps.type = 'text';
+      } else if (['Textarea'].includes(name)) {
+        element = 'textarea';
+      } else if (['Label', 'FormLabel'].includes(name)) {
+        element = 'label';
+      } else if (['Select', 'SelectTrigger'].includes(name)) {
+        element = 'select';
+      } else if (['Table'].includes(name)) {
+        element = 'table';
+      } else if (['TableHead', 'TableHeader'].includes(name)) {
+        element = 'thead';
+      } else if (['TableBody'].includes(name)) {
+        element = 'tbody';
+      } else if (['TableRow'].includes(name)) {
+        element = 'tr';
+      } else if (['TableCell'].includes(name)) {
+        element = 'td';
+      } else if (['List'].includes(name)) {
+        element = 'ul';
+      } else if (['ListItem'].includes(name)) {
+        element = 'li';
+      } else if (['Form'].includes(name)) {
+        element = 'form';
+      } else if (['FieldSet'].includes(name)) {
+        element = 'fieldset';
+      } else if (['Legend'].includes(name)) {
+        element = 'legend';
+      } else if (['Progress'].includes(name)) {
+        element = 'progress';
+      } else if (['Container', 'CardContent', 'DialogContent', 'ModalContent'].includes(name)) {
+        element = 'section';
+      } else if (['CardHeader', 'DialogHeader', 'ModalHeader'].includes(name)) {
+        element = 'header';
+      } else if (['CardFooter', 'DialogFooter', 'ModalFooter'].includes(name)) {
+        element = 'footer';
+      } else if (name.includes('Title')) {
+        element = 'h3';
+      } else if (name.includes('Description')) {
+        element = 'p';
+      }
+      
+      // Generate appropriate CSS classes
+      const baseClass = name
+        .replace(/([A-Z])/g, '-$1')
+        .toLowerCase()
+        .substring(1);
+      
+      this.register(name, ((props: any) => {
+        const combinedProps = {
+          ...defaultProps,
+          ...props,
+          className: `ui-${baseClass} ${props.className || ''}`
+        };
+        
+        // Special handling for self-closing elements
+        if (['input', 'img', 'br', 'hr'].includes(element)) {
+          return React.createElement(element, combinedProps);
+        }
+        
+        return React.createElement(element, combinedProps, props.children);
+      }) as React.ComponentType<any>);
     });
 
-    // Register icon components
+    // Register icon components with emoji fallbacks
     const iconComponents = [
-      'Icon', 'CloudIcon', 'SettingsIcon', 'FileTextIcon', 'DollarSignIcon',
-      'CheckIcon', 'XIcon', 'AlertCircleIcon', 'InfoIcon', 'WarningIcon',
-      'ChevronRightIcon', 'ChevronLeftIcon', 'ChevronDownIcon', 'RefreshIcon',
-      'DownloadIcon', 'UploadIcon', 'SearchIcon', 'FilterIcon', 'CalendarIcon'
+      // Core Icons
+      { name: 'Icon', emoji: '📦' },
+      { name: 'CloudIcon', emoji: '☁️' },
+      { name: 'SettingsIcon', emoji: '⚙️' },
+      { name: 'FileTextIcon', emoji: '📄' },
+      { name: 'DollarSignIcon', emoji: '💲' },
+      
+      // Status Icons
+      { name: 'CheckIcon', emoji: '✅' },
+      { name: 'CheckCircleIcon', emoji: '✅' },
+      { name: 'XIcon', emoji: '❌' },
+      { name: 'XCircleIcon', emoji: '❌' },
+      { name: 'AlertCircleIcon', emoji: '⚠️' },
+      { name: 'InfoIcon', emoji: 'ℹ️' },
+      { name: 'WarningIcon', emoji: '⚠️' },
+      { name: 'ErrorIcon', emoji: '🚫' },
+      
+      // Navigation Icons
+      { name: 'ChevronRightIcon', emoji: '›' },
+      { name: 'ChevronLeftIcon', emoji: '‹' },
+      { name: 'ChevronDownIcon', emoji: '⌄' },
+      { name: 'ChevronUpIcon', emoji: '⌃' },
+      { name: 'ArrowRightIcon', emoji: '→' },
+      { name: 'ArrowLeftIcon', emoji: '←' },
+      { name: 'ArrowUpIcon', emoji: '↑' },
+      { name: 'ArrowDownIcon', emoji: '↓' },
+      { name: 'MenuIcon', emoji: '☰' },
+      { name: 'MoreVerticalIcon', emoji: '⋮' },
+      { name: 'MoreHorizontalIcon', emoji: '⋯' },
+      
+      // Action Icons
+      { name: 'RefreshIcon', emoji: '🔄' },
+      { name: 'DownloadIcon', emoji: '⬇️' },
+      { name: 'UploadIcon', emoji: '⬆️' },
+      { name: 'SearchIcon', emoji: '🔍' },
+      { name: 'FilterIcon', emoji: '🔽' },
+      { name: 'EditIcon', emoji: '✏️' },
+      { name: 'DeleteIcon', emoji: '🗑️' },
+      { name: 'TrashIcon', emoji: '🗑️' },
+      { name: 'SaveIcon', emoji: '💾' },
+      { name: 'CopyIcon', emoji: '📋' },
+      { name: 'ShareIcon', emoji: '🔗' },
+      { name: 'PrintIcon', emoji: '🖨️' },
+      { name: 'ExternalLinkIcon', emoji: '🔗' },
+      
+      // Object Icons
+      { name: 'CalendarIcon', emoji: '📅' },
+      { name: 'ClockIcon', emoji: '🕐' },
+      { name: 'UserIcon', emoji: '👤' },
+      { name: 'UsersIcon', emoji: '👥' },
+      { name: 'HomeIcon', emoji: '🏠' },
+      { name: 'FolderIcon', emoji: '📁' },
+      { name: 'FileIcon', emoji: '📄' },
+      { name: 'ImageIcon', emoji: '🖼️' },
+      { name: 'VideoIcon', emoji: '🎬' },
+      { name: 'MusicIcon', emoji: '🎵' },
+      { name: 'MailIcon', emoji: '✉️' },
+      { name: 'PhoneIcon', emoji: '📞' },
+      { name: 'MapIcon', emoji: '🗺️' },
+      { name: 'PinIcon', emoji: '📍' },
+      { name: 'StarIcon', emoji: '⭐' },
+      { name: 'HeartIcon', emoji: '❤️' },
+      { name: 'LockIcon', emoji: '🔒' },
+      { name: 'UnlockIcon', emoji: '🔓' },
+      { name: 'KeyIcon', emoji: '🔑' },
+      { name: 'BellIcon', emoji: '🔔' },
+      { name: 'BookmarkIcon', emoji: '🔖' },
+      { name: 'TagIcon', emoji: '🏷️' },
+      { name: 'FlagIcon', emoji: '🚩' },
+      { name: 'CommentIcon', emoji: '💬' },
+      { name: 'ChatIcon', emoji: '💬' },
+      { name: 'ShoppingCartIcon', emoji: '🛒' },
+      { name: 'CreditCardIcon', emoji: '💳' },
+      { name: 'GiftIcon', emoji: '🎁' },
+      { name: 'TrophyIcon', emoji: '🏆' }
     ];
 
-    iconComponents.forEach(name => {
+    iconComponents.forEach(({ name, emoji }) => {
       this.register(name, ((props: any) => 
         React.createElement('span', { 
           ...props, 
           'data-icon': name,
-          className: `icon icon-${name.toLowerCase()} ${props.className || ''}`
-        }, '🔷')
+          className: `icon icon-${name.toLowerCase().replace('icon', '')} ${props.className || ''}`,
+          'aria-hidden': 'true',
+          style: {
+            display: 'inline-block',
+            fontSize: '1.2em',
+            lineHeight: 1,
+            verticalAlign: 'middle',
+            ...props.style
+          }
+        }, emoji)
       ) as React.ComponentType<any>);
     });
   }
