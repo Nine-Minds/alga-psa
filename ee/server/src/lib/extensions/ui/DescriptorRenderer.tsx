@@ -268,9 +268,18 @@ export function DescriptorRenderer({
 
     // Handle children
     if (desc.children) {
-      const children = desc.children.map((child, index) => 
-        renderDescriptor(typeof child === 'object' && 'id' in child ? child : { ...child as any, id: `${desc.id}-child-${index}` })
-      );
+      const children = desc.children.map((child, index) => {
+        // If child is a primitive (string or number), pass it directly
+        if (typeof child === 'string' || typeof child === 'number') {
+          return renderDescriptor(child);
+        }
+        // If child is an object but doesn't have an id, add one
+        if (typeof child === 'object' && !('id' in child)) {
+          return renderDescriptor({ ...child, id: `${desc.id}-child-${index}` });
+        }
+        // Otherwise, render as is
+        return renderDescriptor(child);
+      });
       return <Component {...props}>{children}</Component>;
     }
 

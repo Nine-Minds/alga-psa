@@ -24,7 +24,7 @@
     {
       "type": "navigation",
       "slot": "main-navigation",
-      "component": "descriptors/navigation/NavItem.json",
+      "component": "descriptors/navigation/NavItemSimple.json",
       "props": {
         "id": "swone-nav",
         "label": "SoftwareOne",

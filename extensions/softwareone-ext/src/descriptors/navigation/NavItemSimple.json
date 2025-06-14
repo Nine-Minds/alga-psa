@@ -1,0 +1,19 @@
+{
+  "type": "a",
+  "props": {
+    "href": "/softwareone/agreements",
+    "className": "flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-gray-100 cursor-pointer text-gray-300 hover:text-white"
+  },
+  "children": [
+    {
+      "type": "CloudIcon",
+      "props": {
+        "className": "w-5 h-5 mr-3 text-gray-400"
+      }
+    },
+    {
+      "type": "span",
+      "children": ["SoftwareOne"]
+    }
+  ]
+}
