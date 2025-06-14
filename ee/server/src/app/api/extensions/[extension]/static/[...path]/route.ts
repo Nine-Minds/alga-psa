@@ -8,7 +8,14 @@ export async function GET(
 ) {
   try {
     const { extension, path } = params;
-    const filePath = join(process.cwd(), '../../extensions', `${extension}-ext`, 'dist', ...path);
+    
+    // Map database UUIDs to actual extension folder names
+    const extensionMapping: Record<string, string> = {
+      '63a7a0dc-7836-4a5f-aa08-ecdb31b064b5': 'softwareone'
+    };
+    
+    const extensionFolder = extensionMapping[extension] || extension;
+    const filePath = join(process.cwd(), '../../extensions', `${extensionFolder}-ext`, 'dist', ...path);
     
     console.log(`[Extension Static] Serving file: ${filePath}`);
     
