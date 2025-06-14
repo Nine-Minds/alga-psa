@@ -92,10 +92,25 @@ export function ExtensionRenderer({
                 }
               }
               console.log(`[ExtensionRenderer] Descriptor loading complete`);
+              setLoading(false);  // Set loading to false here
               return;
+            } else {
+              console.error(`[ExtensionRenderer] JSON data does not have descriptor structure:`, data);
+              if (shouldLoadAsDescriptor) {
+                setIsDescriptor(true);
+                setDescriptor(null);
+                setLoading(false);
+                return;
+              }
             }
           } else {
             console.error(`[ExtensionRenderer] Unexpected content type: ${contentType}`);
+            if (shouldLoadAsDescriptor) {
+              setIsDescriptor(true);
+              setDescriptor(null);
+              setLoading(false);
+              return;
+            }
           }
         } catch (err) {
           console.error(`[ExtensionRenderer] Error loading descriptor:`, err);
@@ -104,6 +119,7 @@ export function ExtensionRenderer({
             setIsDescriptor(true);
             // Set empty descriptor to show error
             setDescriptor(null);
+            setLoading(false);  // Set loading to false on error
             return;
           }
         }
@@ -168,6 +184,7 @@ export function ExtensionRenderer({
 
     console.log(`[ExtensionRenderer] Rendering DescriptorRenderer with descriptor:`, descriptor);
     console.log(`[ExtensionRenderer] Props:`, { ...defaultProps, ...slotProps });
+    console.log(`[ExtensionRenderer] Handlers:`, handlers);
 
     return (
       <ExtensionErrorBoundary extensionId={extensionId} onError={onError}>
