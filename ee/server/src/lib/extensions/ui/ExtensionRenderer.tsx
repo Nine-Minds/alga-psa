@@ -39,8 +39,11 @@ export function ExtensionRenderer({
   // Check if the component path is a descriptor (ends with .json or has descriptor in the path)
   useEffect(() => {
     const checkIfDescriptor = async () => {
+      console.log(`[ExtensionRenderer] Checking component: ${componentPath} for extension: ${extensionId}`);
+      
       // First, try to detect by file extension
       if (componentPath.endsWith('.json') || componentPath.includes('/descriptors/')) {
+        console.log(`[ExtensionRenderer] Detected as descriptor by path: ${componentPath}`);
         setIsDescriptor(true);
         return;
       }
@@ -48,29 +51,41 @@ export function ExtensionRenderer({
       // Try to load as descriptor first
       try {
         const descriptorUrl = `${window.location.origin}/api/extensions/${extensionId}/components/${componentPath}`;
+        console.log(`[ExtensionRenderer] Attempting to load from: ${descriptorUrl}`);
+        
         const response = await fetch(descriptorUrl);
+        console.log(`[ExtensionRenderer] Response status: ${response.status}`);
+        
         const contentType = response.headers.get('content-type');
+        console.log(`[ExtensionRenderer] Content-Type: ${contentType}`);
         
         if (contentType?.includes('application/json')) {
           const data = await response.json();
+          console.log(`[ExtensionRenderer] Loaded JSON data:`, data);
+          
           // Check if it has descriptor structure
           if (data.type && (typeof data.type === 'string')) {
+            console.log(`[ExtensionRenderer] Valid descriptor detected with type: ${data.type}`);
             setIsDescriptor(true);
             setDescriptor(data);
             
             // Load handlers if specified
             if (data.handlers?.module) {
+              console.log(`[ExtensionRenderer] Loading handlers from: ${data.handlers.module}`);
               const handlersUrl = `${window.location.origin}/api/extensions/${extensionId}/components/${data.handlers.module}`;
               const handlerModule = await import(/* webpackIgnore: true */ /* @vite-ignore */ handlersUrl);
+              console.log(`[ExtensionRenderer] Handlers loaded:`, handlerModule);
               setHandlers(handlerModule.default || handlerModule);
             }
             return;
           }
         }
       } catch (err) {
+        console.error(`[ExtensionRenderer] Error checking if descriptor:`, err);
         // Not a descriptor, fall back to component loading
       }
       
+      console.log(`[ExtensionRenderer] Not a descriptor, treating as component`);
       setIsDescriptor(false);
     };
 
@@ -79,15 +94,29 @@ export function ExtensionRenderer({
 
   // If it's a descriptor, render with DescriptorRenderer
   if (isDescriptor === true) {
+    console.log(`[ExtensionRenderer] Rendering descriptor`);
+    
     const context = {
       extension: {
         id: extensionId,
         version: '1.0.0', // TODO: Get from manifest
         storage: {
-          get: async (key: string) => Promise.resolve(null),
-          set: async (key: string, value: any) => Promise.resolve(),
-          delete: async (key: string) => Promise.resolve(),
-          list: async (prefix?: string) => Promise.resolve([])
+          get: async (key: string) => {
+            console.log(`[ExtensionRenderer] Storage.get called with key: ${key}`);
+            return Promise.resolve(null);
+          },
+          set: async (key: string, value: any) => {
+            console.log(`[ExtensionRenderer] Storage.set called with key: ${key}`, value);
+            return Promise.resolve();
+          },
+          delete: async (key: string) => {
+            console.log(`[ExtensionRenderer] Storage.delete called with key: ${key}`);
+            return Promise.resolve();
+          },
+          list: async (prefix?: string) => {
+            console.log(`[ExtensionRenderer] Storage.list called with prefix: ${prefix}`);
+            return Promise.resolve([]);
+          }
         }
       },
       user: {
@@ -98,8 +127,12 @@ export function ExtensionRenderer({
     };
 
     if (!descriptor) {
+      console.log(`[ExtensionRenderer] No descriptor loaded yet, showing loading...`);
       return <Loading />;
     }
+
+    console.log(`[ExtensionRenderer] Rendering DescriptorRenderer with descriptor:`, descriptor);
+    console.log(`[ExtensionRenderer] Props:`, { ...defaultProps, ...slotProps });
 
     return (
       <ExtensionErrorBoundary extensionId={extensionId} onError={onError}>
@@ -115,16 +148,24 @@ export function ExtensionRenderer({
 
   // If it's still being determined, show loading
   if (isDescriptor === null) {
+    console.log(`[ExtensionRenderer] Still determining if descriptor or component...`);
     return <Loading />;
   }
 
   // Otherwise, use the existing component loading logic
+  console.log(`[ExtensionRenderer] Loading as regular component: ${componentPath}`);
   const cacheKey = `${extensionId}:${componentPath}`;
 
   if (!componentCache.has(cacheKey)) {
+    console.log(`[ExtensionRenderer] Creating lazy component for: ${componentPath}`);
     const LazyComponent = React.lazy(() => {
         const componentUrl = `${window.location.origin}/api/extensions/${extensionId}/components/${componentPath}`;
+        console.log(`[ExtensionRenderer] Loading component from: ${componentUrl}`);
         return import(/* webpackIgnore: true */ /* @vite-ignore */ componentUrl)
+            .then(module => {
+                console.log(`[ExtensionRenderer] Component loaded successfully:`, module);
+                return module;
+            })
             .catch(err => {
                 console.error(`[ExtensionRenderer] Failed to load component: ${componentPath}`, err);
                 onError?.(err);
@@ -141,6 +182,8 @@ export function ExtensionRenderer({
     ...slotProps,
     extensionId,
   };
+
+  console.log(`[ExtensionRenderer] Rendering component with props:`, combinedProps);
 
   return (
     <ExtensionErrorBoundary extensionId={extensionId} onError={onError}>
