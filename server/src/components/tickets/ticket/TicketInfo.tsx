@@ -6,10 +6,12 @@ import TextEditor from 'server/src/components/editor/TextEditor';
 import { PartialBlock } from '@blocknote/core';
 import { ITicket, IComment, ITicketCategory } from 'server/src/interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
+import { TagManager } from 'server/src/components/tags';
 import styles from './TicketDetails.module.css';
 import { getTicketCategories } from 'server/src/lib/actions/ticketCategoryActions';
 import { Pencil, Check } from 'lucide-react';
@@ -28,6 +30,9 @@ interface TicketInfoProps {
   onUpdateDescription?: (content: string) => Promise<boolean>;
   isSubmitting?: boolean;
   users?: IUserWithRoles[];
+  tags?: ITag[];
+  allTagTexts?: string[];
+  onTagsChange?: (tags: ITag[]) => void;
 }
 
 const TicketInfo: React.FC<TicketInfoProps> = ({
@@ -42,6 +47,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   onUpdateDescription,
   isSubmitting = false,
   users = [],
+  tags = [],
+  allTagTexts = [],
+  onTagsChange,
 }) => {
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -347,6 +355,22 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   return <RichTextViewer content={descriptionText} />;
                 })()}
               </div>
+            )}
+          </div>
+          
+          {/* Tags Section */}
+          <div className="mt-6">
+            <h2 className="text-lg font-semibold mb-2">Tags</h2>
+            {onTagsChange && ticket.ticket_id ? (
+              <TagManager
+                entityId={ticket.ticket_id}
+                entityType="ticket"
+                initialTags={tags}
+                existingTags={allTagTexts}
+                onTagsChange={onTagsChange}
+              />
+            ) : (
+              <p className="text-sm text-gray-500">Tags cannot be managed</p>
             )}
           </div>
         </div>

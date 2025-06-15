@@ -1,7 +1,8 @@
 import { BillingCycleType, TenantEntity } from './index';
 import { ISO8601String } from 'server/src/types/types.d';
+import { ITaggable } from './tag.interfaces';
 
-export interface ICompany extends TenantEntity {
+export interface ICompany extends TenantEntity, ITaggable {
   company_id: string;
   company_name: string;
   phone_no: string;

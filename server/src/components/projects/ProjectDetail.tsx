@@ -4,9 +4,12 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { IProject, IProjectPhase, IProjectTask, IProjectTicketLink, IProjectTicketLinkWithDetails, ProjectStatus, ITaskType } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { getAllPrioritiesWithStandard } from 'server/src/lib/actions/priorityActions';
 import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTaskActions';
+import { findTagsByEntityId, findAllTagsByType } from 'server/src/lib/actions/tagActions';
+import { TagManager } from 'server/src/components/tags';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import TaskQuickAdd from './TaskQuickAdd';
 import TaskEdit from './TaskEdit';
@@ -98,6 +101,30 @@ export default function ProjectDetail({
   const [animatingTasks, setAnimatingTasks] = useState<Set<string>>(new Set());
   const [animatingPhases, setAnimatingPhases] = useState<Set<string>>(new Set());
   const [taskDraggingOverPhaseId, setTaskDraggingOverPhaseId] = useState<string | null>(null); // Added state
+  
+  // Tag-related state
+  const [projectTags, setProjectTags] = useState<ITag[]>([]);
+  const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
+  
+  // Fetch tags when component mounts
+  useEffect(() => {
+    const fetchTags = async () => {
+      if (!project.project_id) return;
+      
+      try {
+        const [tags, allTags] = await Promise.all([
+          findTagsByEntityId(project.project_id, 'project'),
+          findAllTagsByType('project')
+        ]);
+        
+        setProjectTags(tags);
+        setAllTagTexts(allTags);
+      } catch (error) {
+        console.error('Error fetching project tags:', error);
+      }
+    };
+    fetchTags();
+  }, [project.project_id]);
   const [duplicateTaskToggleDetails, setDuplicateTaskToggleDetails] = useState<{
       hasChecklist: boolean;
       hasPrimaryAssignee: boolean;
@@ -939,6 +966,23 @@ export default function ProjectDetail({
         className={styles.mainContent}
         onDragOver={handleDragOver}
       >
+        {/* Project Tags Section */}
+        <div className="bg-white p-4 mb-4 rounded-lg shadow-sm border">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Project Tags</h3>
+          </div>
+          <div className="mt-2">
+            <TagManager
+              id="project-tags"
+              entityId={project.project_id}
+              entityType="project"
+              initialTags={projectTags}
+              existingTags={allTagTexts}
+              onTagsChange={setProjectTags}
+            />
+          </div>
+        </div>
+        
         <div className={styles.contentWrapper}>
           <div className={styles.phasesList}>
             <ProjectPhases

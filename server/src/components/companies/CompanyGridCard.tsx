@@ -4,7 +4,9 @@ import { ReflectedDropdownMenu } from "server/src/components/ui/ReflectedDropdow
 import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { MouseEvent } from 'react';
 import { ICompany } from "server/src/interfaces/company.interfaces";
+import { ITag } from 'server/src/interfaces/tag.interfaces';
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
+import { TagManager } from 'server/src/components/tags';
 
 interface CompanyGridCardProps {
     company: ICompany;
@@ -12,6 +14,9 @@ interface CompanyGridCardProps {
     handleCheckboxChange: (companyId: string) => void;
     handleEditCompany: (companyId: string) => void;
     handleDeleteCompany: (company: ICompany) => void;
+    tags?: ITag[];
+    allUniqueTags?: string[];
+    onTagsChange?: (companyId: string, tags: ITag[]) => void;
 }
 
 const CompanyGridCard = ({
@@ -19,7 +24,10 @@ const CompanyGridCard = ({
     selectedCompanies,
     handleCheckboxChange,
     handleEditCompany,
-    handleDeleteCompany
+    handleDeleteCompany,
+    tags = [],
+    allUniqueTags = [],
+    onTagsChange
 }: CompanyGridCardProps) => {
     const router = useRouter();
 
@@ -101,6 +109,19 @@ const CompanyGridCard = ({
                                 <span className="ml-1">N/A</span>
                             )}
                         </div>
+                        
+                        {/* Tags */}
+                        {onTagsChange && (
+                            <div className="mt-2" onClick={stopPropagation}>
+                                <TagManager
+                                    entityId={company.company_id}
+                                    entityType="company"
+                                    initialTags={tags}
+                                    existingTags={allUniqueTags}
+                                    onTagsChange={(updatedTags) => onTagsChange(company.company_id, updatedTags)}
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
 

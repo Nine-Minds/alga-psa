@@ -1,6 +1,7 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
 import GenericDialog from '../ui/GenericDialog';
 import { Button } from '../ui/Button';
 import QuickAddCompany from './QuickAddCompany';
@@ -14,6 +15,8 @@ import {
   exportCompaniesToCSV,
   type PaginatedCompaniesResponse 
 } from 'server/src/lib/actions/company-actions/companyActions';
+import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
+import { TagFilter } from 'server/src/components/tags';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 import CompaniesGrid from './CompaniesGrid';
@@ -99,6 +102,22 @@ const Companies: React.FC = () => {
   const [multiDeleteError, setMultiDeleteError] = useState<string | null>(null);
   const [showDeactivateOption, setShowDeactivateOption] = useState(false);
   
+  // Tag-related state
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const companyTagsRef = useRef<Record<string, ITag[]>>({});
+  const [allUniqueTags, setAllUniqueTags] = useState<string[]>([]);
+  
+  const handleTagsChange = (companyId: string, tags: ITag[]) => {
+    companyTagsRef.current[companyId] = tags;
+    
+    // Update unique tags list
+    const allTags = new Set<string>();
+    Object.values(companyTagsRef.current).forEach(entityTags => {
+      entityTags.forEach(tag => allTags.add(tag.tag_text));
+    });
+    setAllUniqueTags(Array.from(allTags));
+  };
+  
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10); // Default to 10 for list view
@@ -130,7 +149,38 @@ const Companies: React.FC = () => {
   useEffect(() => {
     loadCompanies();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, pageSize, filterStatus, searchTerm, clientTypeFilter]);
+  }, [currentPage, pageSize, filterStatus, searchTerm, clientTypeFilter, selectedTags]);
+
+  // Fetch tags when companies change
+  useEffect(() => {
+    const fetchTags = async () => {
+      if (companies.length === 0) return;
+      
+      try {
+        const [companyTags, allTags] = await Promise.all([
+          findTagsByEntityIds(
+            companies.map((company: ICompany): string => company.company_id),
+            'company'
+          ),
+          findAllTagsByType('company')
+        ]);
+
+        const newCompanyTags: Record<string, ITag[]> = {};
+        companyTags.forEach(tag => {
+          if (!newCompanyTags[tag.tagged_id]) {
+            newCompanyTags[tag.tagged_id] = [];
+          }
+          newCompanyTags[tag.tagged_id].push(tag);
+        });
+
+        companyTagsRef.current = newCompanyTags;
+        setAllUniqueTags(allTags);
+      } catch (error) {
+        console.error('Error fetching tags:', error);
+      }
+    };
+    fetchTags();
+  }, [companies]);
 
   useEffect(() => {
     const initializeComponent = async () => {
@@ -202,8 +252,16 @@ const Companies: React.FC = () => {
     });
   };
   
-  // No need for client-side filtering anymore since we're filtering on the server
-  const filteredCompanies = companies;
+  // Filter companies by selected tags (client-side)
+  const filteredCompanies = companies.filter(company => {
+    if (selectedTags.length === 0) return true;
+    
+    const companyTags = companyTagsRef.current[company.company_id] || [];
+    const companyTagTexts = companyTags.map(tag => tag.tag_text);
+    
+    // Check if company has any of the selected tags
+    return selectedTags.some(selectedTag => companyTagTexts.includes(selectedTag));
+  });
 
   const handleEditCompany = (companyId: string) => {
     router.push(`/msp/companies/${companyId}`);
@@ -505,6 +563,20 @@ const Companies: React.FC = () => {
                 label="Client Type Filter"
               />
             </div>
+
+            {/* Tag Filter */}
+            <TagFilter
+              allTags={allUniqueTags}
+              selectedTags={selectedTags}
+              onTagSelect={(tag) => {
+                setSelectedTags(prev => 
+                  prev.includes(tag) 
+                    ? prev.filter(t => t !== tag)
+                    : [...prev, tag]
+                );
+                setCurrentPage(1); // Reset to first page when changing filter
+              }}
+            />
           </div>
 
           {/* Right side - Actions and View Switcher */}
@@ -595,6 +667,9 @@ const Companies: React.FC = () => {
               setPageSize(size);
               setCurrentPage(1); // Reset to first page when changing page size
             }}
+            companyTags={companyTagsRef.current}
+            allUniqueTags={allUniqueTags}
+            onTagsChange={handleTagsChange}
           />
         ) : (
           <CompaniesList
@@ -608,6 +683,9 @@ const Companies: React.FC = () => {
             pageSize={pageSize}
             totalCount={totalCount}
             onPageChange={setCurrentPage}
+            companyTags={companyTagsRef.current}
+            allUniqueTags={allUniqueTags}
+            onTagsChange={handleTagsChange}
           />
         )}
       </div>

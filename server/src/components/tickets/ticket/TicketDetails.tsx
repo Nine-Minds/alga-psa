@@ -19,6 +19,9 @@ import {
     ITicketResource,
     ITicketCategory
 } from "server/src/interfaces";
+import { ITag } from "server/src/interfaces/tag.interfaces";
+import { TagManager } from "server/src/components/tags";
+import { findTagsByEntityId, findAllTagsByType } from "server/src/lib/actions/tagActions";
 import TicketInfo from "server/src/components/tickets/ticket/TicketInfo";
 import TicketProperties from "server/src/components/tickets/ticket/TicketProperties";
 import TicketDocumentsSection from "server/src/components/tickets/ticket/TicketDocumentsSection";
@@ -157,6 +160,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [elapsedTime, setElapsedTime] = useState(0);
     const [isRunning, setIsRunning] = useState(true);
     const [timeDescription, setTimeDescription] = useState('');
+    const [tags, setTags] = useState<ITag[]>([]);
+    const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
     const [currentTimeSheet, setCurrentTimeSheet] = useState<ITimeSheet | null>(null);
     const [currentTimePeriod, setCurrentTimePeriod] = useState<ITimePeriodView | null>(null);
 
@@ -191,6 +196,26 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             }
         };
     }, [isRunning, tick]);
+
+    // Fetch tags when component mounts
+    useEffect(() => {
+        const fetchTags = async () => {
+            if (!ticket.ticket_id) return;
+            
+            try {
+                const [ticketTags, allTags] = await Promise.all([
+                    findTagsByEntityId(ticket.ticket_id, 'ticket'),
+                    findAllTagsByType('ticket')
+                ]);
+                
+                setTags(ticketTags);
+                setAllTagTexts(allTags);
+            } catch (error) {
+                console.error('Error fetching tags:', error);
+            }
+        };
+        fetchTags();
+    }, [ticket.ticket_id]);
     
     
     // Add automatic interval tracking using the custom hook
@@ -771,6 +796,10 @@ const handleClose = () => {
         setIsChangeCompanyDialogOpen(true);
     };
 
+    const handleTagsChange = (updatedTags: ITag[]) => {
+        setTags(updatedTags);
+    };
+
     const handleContactChange = async (newContactId: string | null) => {
         try {
             const user = await getCurrentUser();
@@ -919,6 +948,9 @@ const handleClose = () => {
                                     onUpdateDescription={handleUpdateDescription}
                                     isSubmitting={isSubmitting}
                                     users={availableAgents}
+                                    tags={tags}
+                                    allTagTexts={allTagTexts}
+                                    onTagsChange={handleTagsChange}
                                 />
                             </div>
                         </Suspense>
@@ -996,6 +1028,9 @@ const handleClose = () => {
                                 onChangeCompany={handleCompanyChange}
                                 onCompanyFilterStateChange={setCompanyFilterState}
                                 onClientTypeFilterChange={setClientTypeFilter}
+                                tags={tags}
+                                allTagTexts={allTagTexts}
+                                onTagsChange={handleTagsChange}
                             />
                         </Suspense>
                         

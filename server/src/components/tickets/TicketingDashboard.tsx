@@ -1,9 +1,10 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import Link from 'next/link';
 import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters } from 'server/src/interfaces/ticket.interfaces';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { QuickAddTicket } from './QuickAddTicket';
 import { CategoryPicker } from './CategoryPicker';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
@@ -12,6 +13,8 @@ import { Input } from 'server/src/components/ui/Input';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { ChannelPicker } from 'server/src/components/settings/general/ChannelPicker';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
+import { TagFilter, TagManager } from 'server/src/components/tags';
 import { IChannel, ICompany, IUser } from 'server/src/interfaces';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
@@ -96,10 +99,56 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isLoadingSelf, setIsLoadingSelf] = useState(false);
+  
+  // Tag-related state
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const ticketTagsRef = useRef<Record<string, ITag[]>>({});
+  const [allUniqueTags, setAllUniqueTags] = useState<string[]>([]);
+  
+  const handleTagsChange = (ticketId: string, tags: ITag[]) => {
+    ticketTagsRef.current[ticketId] = tags;
+    
+    // Update unique tags list
+    const allTags = new Set<string>();
+    Object.values(ticketTagsRef.current).forEach(entityTags => {
+      entityTags.forEach(tag => allTags.add(tag.tag_text));
+    });
+    setAllUniqueTags(Array.from(allTags));
+  };
 
   useEffect(() => {
     setTickets(initialTickets);
   }, [initialTickets]);
+
+  // Fetch tags when tickets change
+  useEffect(() => {
+    const fetchTags = async () => {
+      if (tickets.length === 0) return;
+      
+      try {
+        const ticketIds = tickets.map(ticket => ticket.ticket_id).filter((id): id is string => id !== undefined);
+        
+        const [ticketTags, allTags] = await Promise.all([
+          findTagsByEntityIds(ticketIds, 'ticket'),
+          findAllTagsByType('ticket')
+        ]);
+
+        const newTicketTags: Record<string, ITag[]> = {};
+        ticketTags.forEach(tag => {
+          if (!newTicketTags[tag.tagged_id]) {
+            newTicketTags[tag.tagged_id] = [];
+          }
+          newTicketTags[tag.tagged_id].push(tag);
+        });
+
+        ticketTagsRef.current = newTicketTags;
+        setAllUniqueTags(allTags);
+      } catch (error) {
+        console.error('Error fetching tags:', error);
+      }
+    };
+    fetchTags();
+  }, [tickets]);
 
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
@@ -234,6 +283,24 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       dataIndex: 'entered_by_name',
     },
     {
+      title: 'Tags',
+      dataIndex: 'tags',
+      width: '15%',
+      render: (value: string, record: ITicketListItem) => {
+        if (!record.ticket_id) return null;
+        
+        return (
+          <TagManager
+            entityId={record.ticket_id}
+            entityType="ticket"
+            initialTags={ticketTagsRef.current[record.ticket_id] || []}
+            existingTags={allUniqueTags}
+            onTagsChange={(tags) => handleTagsChange(record.ticket_id!, tags)}
+          />
+        );
+      },
+    },
+    {
       title: 'Actions',
       dataIndex: 'actions',
       width: '5%',
@@ -262,7 +329,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         </DropdownMenu>
       ),
     }
-  ], []);
+  ], [ticketTagsRef]);
 
   // Create columns with categories data
   const columns = useMemo(() => createTicketColumns(categories), [categories, createTicketColumns]);
@@ -278,12 +345,25 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
   };
 
+  // Filter tickets by selected tags
+  const filteredTickets = useMemo(() => {
+    if (selectedTags.length === 0) return tickets;
+    
+    return tickets.filter(ticket => {
+      const ticketTags = ticketTagsRef.current[ticket.ticket_id || ''] || [];
+      const ticketTagTexts = ticketTags.map(tag => tag.tag_text);
+      
+      // Check if ticket has any of the selected tags
+      return selectedTags.some(selectedTag => ticketTagTexts.includes(selectedTag));
+    });
+  }, [tickets, selectedTags]);
+
   // Add id to each ticket for DataTable keys
   const ticketsWithIds = useMemo(() =>
-    tickets.map((ticket): any => ({
+    filteredTickets.map((ticket): any => ({
       ...ticket,
       id: ticket.ticket_id 
-    })), [tickets]);
+    })), [filteredTickets]);
 
 
   const handleTicketAdded = useCallback((newTicket: ITicket) => {
@@ -377,6 +457,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setExcludedCategories([]);
     setSearchQuery(defaultSearchQuery);
     setChannelFilterState(defaultChannelFilterState);
+    setSelectedTags([]);
     
     setCompanyFilterState('active'); 
     setClientTypeFilter('all');
@@ -472,6 +553,17 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               onChange={(e) => setSearchQuery(e.target.value)}
               className="h-[38px] min-w-[200px] text-sm" // Applied to the <input> element itself
               containerClassName="" // Applied to the wrapping <div>, removes default mb-4
+            />
+            <TagFilter
+              allTags={allUniqueTags}
+              selectedTags={selectedTags}
+              onTagSelect={(tag) => {
+                setSelectedTags(prev => 
+                  prev.includes(tag) 
+                    ? prev.filter(t => t !== tag)
+                    : [...prev, tag]
+                );
+              }}
             />
             <Button
               variant="outline"

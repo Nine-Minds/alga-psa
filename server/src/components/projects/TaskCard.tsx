@@ -4,10 +4,13 @@ import { useEffect, useState } from 'react';
 import { IProjectTask, IProjectTicketLinkWithDetails, ITaskType } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { CheckSquare, Square, Ticket, Users, MoreVertical, Move, Copy, Edit, Trash2, Bug, Sparkles, TrendingUp, Flag, BookOpen } from 'lucide-react';
 import { findPriorityById } from 'server/src/lib/actions/priorityActions';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { getTaskTicketLinksAction, getTaskResourcesAction } from 'server/src/lib/actions/project-actions/projectTaskActions';
+import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
+import { TagList } from 'server/src/components/tags';
 import { Button } from 'server/src/components/ui/Button';
 import {
   DropdownMenu,
@@ -76,6 +79,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   );
   const [isDragging, setIsDragging] = useState(false);
   const [priority, setPriority] = useState<IPriority | IStandardPriority | null>(null);
+  const [taskTags, setTaskTags] = useState<ITag[]>([]);
   const Icon = taskTypeIcons[task.task_type_key || 'task'] || CheckSquare;
 
   useEffect(() => {
@@ -114,6 +118,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           setPriority(taskPriority);
         }
 
+        // Fetch tags
+        if (task.task_id) {
+          const tags = await findTagsByEntityId(task.task_id, 'project_task');
+          setTaskTags(tags);
+        }
 
       } catch (error) {
         console.error('Error fetching task data:', error);
@@ -319,6 +328,17 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           )}
         </div>
       </div>
+      
+      {/* Tags at the very bottom */}
+      {taskTags.length > 0 && (
+        <div className="mt-2">
+          <TagList 
+            id={`task-tags-${task.task_id}`}
+            tags={taskTags}
+            maxDisplay={3}
+          />
+        </div>
+      )}
       
       {/* Critical path indicator */}
       {hasCriticalPath && (

@@ -4,6 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { ICompany, ICompanyLocation } from 'server/src/interfaces/company.interfaces';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { TagManager } from 'server/src/components/tags';
+import { findAllTagsByType, createTag } from 'server/src/lib/actions/tagActions';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
@@ -106,6 +109,8 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [tags, setTags] = useState<ITag[]>([]);
+  const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
 
   useEffect(() => {
     if (open) {
@@ -137,8 +142,18 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
         }
       };
 
+      const fetchTags = async () => {
+        try {
+          const allTags = await findAllTagsByType('company');
+          setAllTagTexts(allTags);
+        } catch (error) {
+          console.error("Error fetching tags:", error);
+        }
+      };
+
       fetchUsers();
       fetchCountries();
+      fetchTags();
     } else {
       setFormData(initialFormData);
       setLocationData(initialLocationData);
@@ -147,6 +162,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       setError(null);
       setHasAttemptedSubmit(false);
       setValidationErrors([]);
+      setTags([]);
     }
   }, [open]);
 
@@ -210,6 +226,25 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
         } catch (contactError) {
           console.error("Error creating company contact:", contactError);
           toast.error("Company created but failed to add contact.");
+        }
+      }
+
+      // Create tags if any were added
+      if (tags.length > 0) {
+        try {
+          await Promise.all(
+            tags.map(tag => 
+              createTag({
+                tag_text: tag.tag_text,
+                tagged_id: newCompany.company_id,
+                tagged_type: 'company',
+                channel_id: tag.channel_id
+              })
+            )
+          );
+        } catch (tagError) {
+          console.error("Error creating tags:", tagError);
+          toast.error("Company created but failed to add tags.");
         }
       }
 
@@ -277,6 +312,10 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       country_code: countryCode,
       country_name: countryName
     }));
+  };
+
+  const handleTagsChange = (updatedTags: ITag[]) => {
+    setTags(updatedTags);
   };
 
   return (
@@ -502,6 +541,21 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                   />
                 </div>
               </div>
+            </div>
+
+            {/* Tags Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">
+                Tags
+              </h3>
+              <TagManager
+                id="company-tags"
+                entityId=""
+                entityType="company"
+                initialTags={tags}
+                existingTags={allTagTexts}
+                onTagsChange={handleTagsChange}
+              />
             </div>
 
             {/* Contact Information Section */}

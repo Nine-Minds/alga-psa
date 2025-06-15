@@ -5,6 +5,7 @@ import { IProject } from 'server/src/interfaces/project.interfaces';
 import { IStatus } from 'server/src/interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
 import { TextArea } from 'server/src/components/ui/TextArea';
@@ -12,9 +13,11 @@ import { Input } from 'server/src/components/ui/Input';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
+import { TagManager } from 'server/src/components/tags';
 import { updateProject, getProjectStatuses } from 'server/src/lib/actions/project-actions/projectActions';
 import { getContactsByCompany, getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { findTagsByEntityId, findAllTagsByType } from 'server/src/lib/actions/tagActions';
 import { toast } from 'react-hot-toast';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
@@ -51,6 +54,8 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   const [statuses, setStatuses] = useState<IStatus[]>([]);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [projectTags, setProjectTags] = useState<ITag[]>([]);
+  const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
 
   // Move these to component state to prevent re-renders
   const [filterState] = useState<'all' | 'active' | 'inactive'>('active');
@@ -59,18 +64,22 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [allUsers, projectStatuses] = await Promise.all([
+        const [allUsers, projectStatuses, tags, allTags] = await Promise.all([
           getAllUsers(),
-          getProjectStatuses()
+          getProjectStatuses(),
+          initialProject.project_id ? findTagsByEntityId(initialProject.project_id, 'project') : Promise.resolve([]),
+          findAllTagsByType('project')
         ]);
         setUsers(allUsers);
         setStatuses(projectStatuses);
+        setProjectTags(tags);
+        setAllTagTexts(allTags);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
     };
     fetchData();
-  }, []);
+  }, [initialProject.project_id]);
 
   useEffect(() => {
     const fetchContacts = async () => {
@@ -351,6 +360,21 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               min="0"
               step="0.25" // Allow quarter-hour increments
               placeholder="Enter budgeted hours"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+            <TagManager
+              id="project-tags-edit"
+              entityId={project.project_id}
+              entityType="project"
+              initialTags={projectTags}
+              existingTags={allTagTexts}
+              onTagsChange={(tags) => {
+                setProjectTags(tags);
+                setHasChanges(true);
+              }}
             />
           </div>
 

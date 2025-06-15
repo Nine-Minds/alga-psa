@@ -5,7 +5,10 @@ import { IDocument } from 'server/src/interfaces/document.interface';
 import { PartialBlock } from '@blocknote/core';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
 import UserPicker from 'server/src/components/ui/UserPicker';
+import { TagManager } from 'server/src/components/tags';
+import { findTagsByEntityId, findAllTagsByType } from 'server/src/lib/actions/tagActions';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { BillingCycleType } from 'server/src/interfaces/billing.interfaces';
 import Documents from 'server/src/components/documents/Documents';
@@ -167,6 +170,8 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     categories: ITicketCategory[];
   } | null>(null);
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
+  const [tags, setTags] = useState<ITag[]>([]);
+  const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -258,6 +263,24 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       fetchTicketFormOptions();
     }
   }, [currentUser]);
+
+  // Fetch tags when component mounts
+  useEffect(() => {
+    const fetchTags = async () => {
+      try {
+        const [companyTags, allTags] = await Promise.all([
+          findTagsByEntityId(company.company_id, 'company'),
+          findAllTagsByType('company')
+        ]);
+        
+        setTags(companyTags);
+        setAllTagTexts(allTags);
+      } catch (error) {
+        console.error('Error fetching tags:', error);
+      }
+    };
+    fetchTags();
+  }, [company.company_id]);
 
   // Load note content and document metadata when component mounts
   useEffect(() => {
@@ -420,6 +443,10 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     });
   };
 
+  const handleTagsChange = (updatedTags: ITag[]) => {
+    setTags(updatedTags);
+  };
+
   const handleContentChange = (blocks: PartialBlock[]) => {
     setCurrentContent(blocks);
     setHasUnsavedNoteChanges(true);
@@ -536,6 +563,19 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                 onEdit={(value) => handleFieldChange('properties.annual_revenue', value)}
                 automationId="annual-revenue-field"
               />
+
+              {/* Tags */}
+              <div className="space-y-2">
+                <Text as="label" size="2" className="text-gray-700 font-medium">Tags</Text>
+                <TagManager
+                  id={`${id}-tags`}
+                  entityId={editedCompany.company_id}
+                  entityType="company"
+                  initialTags={tags}
+                  existingTags={allTagTexts}
+                  onTagsChange={handleTagsChange}
+                />
+              </div>
               
               <SwitchDetailItem
                 value={!editedCompany.is_inactive || false}
