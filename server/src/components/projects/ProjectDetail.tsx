@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { IProject, IProjectPhase, IProjectTask, IProjectTicketLink, IProjectTicketLinkWithDetails, ProjectStatus, ITaskType } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
@@ -107,6 +107,7 @@ export default function ProjectDetail({
   // Tag-related state
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
   const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
+  const hasNotifiedParent = useRef(false);
   
   // Fetch tags when component mounts
   useEffect(() => {
@@ -122,16 +123,17 @@ export default function ProjectDetail({
         setProjectTags(tags);
         setAllTagTexts(allTags);
         
-        // Notify parent component of tags update
-        if (onTagsUpdate) {
+        // Notify parent component of tags update only once
+        if (onTagsUpdate && !hasNotifiedParent.current) {
           onTagsUpdate(tags, allTags);
+          hasNotifiedParent.current = true;
         }
       } catch (error) {
         console.error('Error fetching project tags:', error);
       }
     };
     fetchTags();
-  }, [project.project_id, onTagsUpdate]);
+  }, [project.project_id]); // Remove onTagsUpdate from dependencies to prevent infinite loop
   const [duplicateTaskToggleDetails, setDuplicateTaskToggleDetails] = useState<{
       hasChecklist: boolean;
       hasPrimaryAssignee: boolean;

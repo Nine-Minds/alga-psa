@@ -120,13 +120,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setTickets(initialTickets);
   }, [initialTickets]);
 
-  // Fetch tags when tickets change
+  // Fetch tags when initial tickets change
   useEffect(() => {
     const fetchTags = async () => {
-      if (tickets.length === 0) return;
+      if (initialTickets.length === 0) return;
       
       try {
-        const ticketIds = tickets.map(ticket => ticket.ticket_id).filter((id): id is string => id !== undefined);
+        const ticketIds = initialTickets.map(ticket => ticket.ticket_id).filter((id): id is string => id !== undefined);
         
         const [ticketTags, allTags] = await Promise.all([
           findTagsByEntityIds(ticketIds, 'ticket'),
@@ -148,7 +148,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       }
     };
     fetchTags();
-  }, [tickets]);
+  }, [initialTickets]); // Changed dependency to initialTickets to prevent cascade
 
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
@@ -171,8 +171,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     selectedCategories, 
     selectedCompany, 
     debouncedSearchQuery, 
-    channelFilterState,
-    onFiltersChanged
+    channelFilterState
+    // Removed onFiltersChanged from dependencies to prevent infinite loop
   ]);
 
   const handleDeleteTicket = (ticketId: string, ticketNameOrNumber: string) => {
