@@ -1,5 +1,6 @@
 // server/src/interfaces/ticket.interfaces.tsx
 import { TenantEntity } from ".";
+import { ICompanyLocation } from "./company.interfaces";
 
 export interface ITicket extends TenantEntity {
   ticket_id?: string;
@@ -8,6 +9,7 @@ export interface ITicket extends TenantEntity {
   url: string | null;
   channel_id: string;
   company_id: string;
+  location_id?: string | null;
   contact_name_id: string | null;
   status_id: string;
   category_id: string | null;
@@ -21,6 +23,7 @@ export interface ITicket extends TenantEntity {
   closed_at: string | null;  // Changed from Date to string
   attributes: Record<string, unknown> | null; // Changed from any to unknown
   priority_id: string;
+  location?: ICompanyLocation; // For populated location data
 }
 
 export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_id' | 'channel_id' | 'entered_by' | 'category_id' | 'subcategory_id'> {

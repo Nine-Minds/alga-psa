@@ -7,9 +7,10 @@ import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { addTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getContactsByCompany } from 'server/src/lib/actions/contact-actions/contactActions';
+import { getCompanyLocations } from 'server/src/lib/actions/company-actions/companyLocationActions';
 import { getTicketFormData } from 'server/src/lib/actions/ticket-actions/ticketFormActions';
 import { getTicketCategoriesByChannel } from 'server/src/lib/actions/categoryActions';
-import { IUser, IChannel, ITicketStatus, IPriority, IStandardPriority, ICompany, IContact, ITicket, ITicketCategory } from 'server/src/interfaces';
+import { IUser, IChannel, ITicketStatus, IPriority, IStandardPriority, ICompany, ICompanyLocation, IContact, ITicket, ITicketCategory } from 'server/src/interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ChannelPicker } from 'server/src/components/settings/general/ChannelPicker';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
@@ -25,6 +26,33 @@ import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionCo
 import { DialogComponent, FormFieldComponent, ButtonComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
+
+// Helper function to format location display
+const formatLocationDisplay = (location: ICompanyLocation): string => {
+  const parts = [];
+  
+  if (location.location_name) {
+    parts.push(location.location_name);
+  }
+  
+  if (location.address_line1) {
+    parts.push(location.address_line1);
+  }
+  
+  if (location.city && location.state_province) {
+    parts.push(`${location.city}, ${location.state_province}`);
+  } else if (location.city) {
+    parts.push(location.city);
+  } else if (location.state_province) {
+    parts.push(location.state_province);
+  }
+  
+  if (location.postal_code) {
+    parts.push(location.postal_code);
+  }
+  
+  return parts.join(' - ') || 'Unnamed Location';
+};
 
 interface QuickAddTicketProps {
   id?: string;
@@ -76,6 +104,8 @@ export function QuickAddTicket({
   const [priorities, setPriorities] = useState<(IPriority | IStandardPriority)[]>([]);
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
+  const [locations, setLocations] = useState<ICompanyLocation[]>([]);
+  const [locationId, setLocationId] = useState<string | null>(null);
   const [isPrefilledCompany, setIsPrefilledCompany] = useState(false);
   const [quickAddChannelFilterState, setQuickAddChannelFilterState] = useState<'active' | 'inactive' | 'all'>('active');
 
@@ -137,22 +167,28 @@ export function QuickAddTicket({
   }, [open, prefilledCompany?.id]);
 
   useEffect(() => {
-    const fetchContacts = async () => {
+    const fetchCompanyData = async () => {
       if (companyId && !isPrefilledCompany) {
         try {
-          const contactsData = await getContactsByCompany(companyId, 'all');
+          const [contactsData, locationsData] = await Promise.all([
+            getContactsByCompany(companyId, 'all'),
+            getCompanyLocations(companyId)
+          ]);
           setContacts(contactsData || []);
+          setLocations(locationsData || []);
         } catch (error) {
-          console.error('Error fetching contacts:', error);
+          console.error('Error fetching company data:', error);
           setContacts([]);
+          setLocations([]);
         }
       } else if (!isPrefilledCompany) {
         setContacts([]);
+        setLocations([]);
       }
     };
 
     if (companyId) {
-      fetchContacts();
+      fetchCompanyData();
     }
   }, [companyId, isPrefilledCompany]);
 
@@ -229,6 +265,8 @@ export function QuickAddTicket({
     setPriorityId('');
     setCompanyId(prefilledCompany?.id || '');
     setContactId(prefilledContact?.id || null);
+    setLocationId(null);
+    setLocations([]);
     if (prefilledCompany?.id) {
       const company = companies.find(c => c.company_id === prefilledCompany.id);
       setSelectedCompanyType(company?.client_type as 'company' | 'individual' || null);
@@ -286,6 +324,10 @@ export function QuickAddTicket({
 
       if (selectedCompanyType === 'company' && contactId) {
         formData.append('contact_name_id', contactId);
+      }
+
+      if (locationId) {
+        formData.append('location_id', locationId);
       }
 
       if (selectedCategories.length > 0) {
@@ -437,6 +479,26 @@ export function QuickAddTicket({
                     }
                     buttonWidth="full"
                   />
+
+                  {companyId && locations.length > 0 && (
+                    <CustomSelect
+                      id={`${id}-location`}
+                      value={locationId || 'none'}
+                      onValueChange={(value) => {
+                        setLocationId(value === 'none' ? null : value);
+                        clearErrorIfSubmitted();
+                      }}
+                      options={[
+                        { value: 'none', label: 'No specific location' },
+                        ...locations.map(location => ({
+                          value: location.location_id,
+                          label: formatLocationDisplay(location) + (location.is_default ? ' (Default)' : '')
+                        }))
+                      ]}
+                      placeholder="Select Location (Optional)"
+                      className=""
+                    />
+                  )}
 
                   <div className={hasAttemptedSubmit && !assignedTo ? 'ring-1 ring-red-500 rounded-lg' : ''}>
                     <UserPicker
