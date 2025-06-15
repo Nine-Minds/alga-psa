@@ -6,8 +6,7 @@
 'use client';
 
 import React from 'react';
-import { ExtensionErrorBoundaryProps, ExtensionErrorBoundaryState } from './types';
-import logger from '../../../../../../server/src/utils/logger';
+import { logger, ExtensionErrorBoundaryProps, ExtensionErrorBoundaryState } from '@shared/extension-utils';
 
 /**
  * Default fallback UI for extension errors

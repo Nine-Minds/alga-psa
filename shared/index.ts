@@ -9,3 +9,6 @@ export * from './workflow';
 
 // Re-export types
 export * from './types';
+
+// Re-export extension utilities
+export * from './extension-utils';

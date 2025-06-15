@@ -5,7 +5,7 @@
     "className": "w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors text-gray-300 hover:bg-[#2a2b32] hover:text-white"
   },
   "handlers": {
-    "module": "descriptors/handlers/navigation.ts",
+    "module": "descriptors/handlers/navigation.js",
     "onClick": "navigateToAgreements"
   },
   "children": ["SoftwareOne"]
