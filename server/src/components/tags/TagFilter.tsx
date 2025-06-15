@@ -24,7 +24,7 @@ export const TagFilter: React.FC<TagFilterProps> = ({
   return (
     <Popover.Root>
       <Popover.Trigger asChild>
-        <button className={`flex items-center gap-2 border border-gray-300 rounded-md p-2 hover:bg-gray-50 ${className}`}>
+        <button className={`flex items-center gap-2 bg-white border border-gray-300 rounded-md p-2 hover:bg-gray-50 ${className}`}>
           <TagIcon size={16} className="text-gray-400" />
           <span className="text-gray-400">Filter by tags</span>
           {selectedTags.length > 0 && (
@@ -34,8 +34,9 @@ export const TagFilter: React.FC<TagFilterProps> = ({
           )}
         </button>
       </Popover.Trigger>
-      <Popover.Content className="bg-white rounded-lg shadow-lg border border-gray-200 w-72">
-        <div className="p-2">
+      <Popover.Portal>
+        <Popover.Content className="bg-white rounded-lg shadow-lg border border-gray-200 w-72" style={{ backgroundColor: 'white', zIndex: 9999 }}>
+          <div className="p-2 bg-white">
           <Input
             type="text"
             placeholder="Search tags"
@@ -50,6 +51,7 @@ export const TagFilter: React.FC<TagFilterProps> = ({
           />
         </div>
       </Popover.Content>
+      </Popover.Portal>
     </Popover.Root>
   );
 };

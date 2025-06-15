@@ -195,10 +195,6 @@ export default function TaskForm({
           ]);
           setTaskTags(tags);
           setAllTagTexts(allTags);
-        } else {
-          // For new tasks, just fetch all available tags
-          const allTags = await findAllTagsByType('project_task');
-          setAllTagTexts(allTags);
         }
       } catch (error) {
         console.error('Error fetching initial data:', error);
@@ -491,19 +487,6 @@ export default function TaskForm({
               await addTicketLinkAction(phase.project_id, resultTask.task_id, link.ticket_id, phase.phase_id);
             }
 
-            // Create tags if any were added
-            if (taskTags.length > 0) {
-              await Promise.all(
-                taskTags.map(tag => 
-                  createTag({
-                    tag_text: tag.tag_text,
-                    tagged_id: resultTask.task_id,
-                    tagged_type: 'project_task',
-                    channel_id: tag.channel_id
-                  })
-                )
-              );
-            }
 
             // Only submit and close after everything is done
             onSubmit(resultTask);
@@ -1080,17 +1063,19 @@ export default function TaskForm({
                   </div>
                 </div>
 
-                <div>
-                  <h3 className="font-semibold mb-2">Tags</h3>
-                  <TagManager
-                    id="task-tags-edit"
-                    entityId={task?.task_id || ''}
-                    entityType="project_task"
-                    initialTags={taskTags}
-                    existingTags={allTagTexts}
-                    onTagsChange={setTaskTags}
-                  />
-                </div>
+                {mode === 'edit' && task?.task_id && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Tags</h3>
+                    <TagManager
+                      id="task-tags-edit"
+                      entityId={task.task_id}
+                      entityType="project_task"
+                      initialTags={taskTags}
+                      existingTags={allTagTexts}
+                      onTagsChange={setTaskTags}
+                    />
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between mb-2">
                   <h3 className='font-semibold'>Checklist</h3>

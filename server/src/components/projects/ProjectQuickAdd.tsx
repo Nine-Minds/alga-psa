@@ -6,15 +6,12 @@ import { Button } from 'server/src/components/ui/Button';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Input } from 'server/src/components/ui/Input';
 import { IProject, ICompany, IStatus } from 'server/src/interfaces';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { toast } from 'react-hot-toast';
 import { createProject, generateNextWbsCode, getProjectStatuses } from 'server/src/lib/actions/project-actions/projectActions';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { ContactPicker } from 'server/src/components/ui/ContactPicker'; // Import ContactPicker
-import { TagManager } from 'server/src/components/tags';
-import { findAllTagsByType, createTag } from 'server/src/lib/actions/tagActions';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { getContactsByCompany, getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
 import { IContact } from 'server/src/interfaces';
@@ -45,20 +42,16 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   const [budgetedHours, setBudgetedHours] = useState<string>('');
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [projectTags, setProjectTags] = useState<ITag[]>([]);
-  const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [allUsers, projectStatuses, projectTags] = await Promise.all([
+        const [allUsers, projectStatuses] = await Promise.all([
           getAllUsers(),
-          getProjectStatuses(),
-          findAllTagsByType('project')
+          getProjectStatuses()
         ]);
         setUsers(allUsers);
         setStatuses(projectStatuses);
-        setAllTagTexts(projectTags);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -129,24 +122,6 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
       // Create the project
       const newProject = await createProject(projectData);
       
-      // Create tags if any were added
-      if (projectTags.length > 0 && newProject.project_id) {
-        try {
-          await Promise.all(
-            projectTags.map(tag => 
-              createTag({
-                tag_text: tag.tag_text,
-                tagged_id: newProject.project_id,
-                tagged_type: 'project',
-                channel_id: tag.channel_id
-              })
-            )
-          );
-        } catch (tagError) {
-          console.error('Error creating tags:', tagError);
-          toast.error('Project created but failed to add tags.');
-        }
-      }
       
       onProjectAdded(newProject);
       
@@ -301,17 +276,6 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                     className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
-                <TagManager
-                  id="project-tags-quickadd"
-                  entityId=""
-                  entityType="project"
-                  initialTags={projectTags}
-                  existingTags={allTagTexts}
-                  onTagsChange={setProjectTags}
-                />
               </div>
               <div className="flex justify-between mt-6">
                 <Button id='cancel-button' variant="ghost" onClick={() => {

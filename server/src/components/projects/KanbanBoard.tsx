@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails, ITaskType } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import StatusColumn from './StatusColumn';
 import styles from './ProjectDetail.module.css';
@@ -18,6 +19,8 @@ interface KanbanBoardProps {
   selectedPhase: boolean;
   ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] };
   taskResources: { [taskId: string]: any[] };
+  taskTags?: Record<string, ITag[]>;
+  allTaskTagTexts?: string[];
   projectTreeData?: any[]; // Add projectTreeData prop
   animatingTasks: Set<string>;
   onDrop: (e: React.DragEvent, statusId: string, draggedTaskId: string, beforeTaskId: string | null, afterTaskId: string | null) => void;
@@ -32,6 +35,7 @@ interface KanbanBoardProps {
   onDuplicateTaskClick: (task: IProjectTask) => void;
   onEditTaskClick: (task: IProjectTask) => void;
   onDeleteTaskClick: (task: IProjectTask) => void;
+  onTaskTagsChange?: (taskId: string, tags: ITag[]) => void;
 }
 
 const statusIcons: { [key: string]: React.ReactNode } = {
@@ -55,6 +59,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   selectedPhase,
   ticketLinks,
   taskResources,
+  taskTags = {},
+  allTaskTagTexts = [],
   projectTreeData,
   animatingTasks,
   onDrop,
@@ -69,6 +75,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onDuplicateTaskClick,
   onEditTaskClick,
   onDeleteTaskClick,
+  onTaskTagsChange,
   taskTypes,
 }) => {
   // Ensure all tasks have ticket_links and resources initialized
@@ -124,6 +131,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             taskTypes={taskTypes}
             ticketLinks={ticketLinks}
             taskResources={taskResources}
+            taskTags={taskTags}
+            allTaskTagTexts={allTaskTagTexts}
             statusIcon={statusIcons[status.name] || <Circle className="w-4 h-4" />}
             backgroundColor={backgroundColor}
             darkBackgroundColor={darkBackgroundColor}
@@ -144,6 +153,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             onDuplicateTaskClick={onDuplicateTaskClick}
             onEditTaskClick={onEditTaskClick}
             onDeleteTaskClick={onDeleteTaskClick}
+            onTaskTagsChange={onTaskTagsChange}
           />
         );
       })}

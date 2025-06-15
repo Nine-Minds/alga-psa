@@ -290,13 +290,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         if (!record.ticket_id) return null;
         
         return (
-          <TagManager
-            entityId={record.ticket_id}
-            entityType="ticket"
-            initialTags={ticketTagsRef.current[record.ticket_id] || []}
-            existingTags={allUniqueTags}
-            onTagsChange={(tags) => handleTagsChange(record.ticket_id!, tags)}
-          />
+          <div onClick={(e) => e.stopPropagation()}>
+            <TagManager
+              entityId={record.ticket_id}
+              entityType="ticket"
+              initialTags={ticketTagsRef.current[record.ticket_id] || []}
+              existingTags={allUniqueTags}
+              onTagsChange={(tags) => handleTagsChange(record.ticket_id!, tags)}
+            />
+          </div>
         );
       },
     },
@@ -329,7 +331,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         </DropdownMenu>
       ),
     }
-  ], [ticketTagsRef]);
+  ], [ticketTagsRef, allUniqueTags]);
 
   // Create columns with categories data
   const columns = useMemo(() => createTicketColumns(categories), [categories, createTicketColumns]);

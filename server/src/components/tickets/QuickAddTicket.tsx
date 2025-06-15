@@ -11,9 +11,6 @@ import { getTicketFormData } from 'server/src/lib/actions/ticket-actions/ticketF
 import { getTicketCategoriesByChannel } from 'server/src/lib/actions/categoryActions';
 import { IUser, IChannel, ITicketStatus, IPriority, IStandardPriority, ICompany, IContact, ITicket, ITicketCategory } from 'server/src/interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { ITag } from 'server/src/interfaces/tag.interfaces';
-import { TagManager } from 'server/src/components/tags';
-import { findAllTagsByType, createTag } from 'server/src/lib/actions/tagActions';
 import { ChannelPicker } from 'server/src/components/settings/general/ChannelPicker';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import { CategoryPicker } from './CategoryPicker';
@@ -81,8 +78,6 @@ export function QuickAddTicket({
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [isPrefilledCompany, setIsPrefilledCompany] = useState(false);
   const [quickAddChannelFilterState, setQuickAddChannelFilterState] = useState<'active' | 'inactive' | 'all'>('active');
-  const [tags, setTags] = useState<ITag[]>([]);
-  const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
 
   const { automationIdProps: dialogProps, updateMetadata } = useAutomationIdAndRegister<DialogComponent>({
     id: 'quick-add-ticket-dialog',
@@ -132,9 +127,6 @@ export function QuickAddTicket({
           setDescription(prefilledDescription);
         }
 
-        // Fetch tag suggestions
-        const ticketTags = await findAllTagsByType('ticket');
-        setAllTagTexts(ticketTags);
       } catch (error) {
         console.error('Error fetching form data:', error);
       } finally {
@@ -247,7 +239,6 @@ export function QuickAddTicket({
     setSelectedCategories([]);
     setError(null);
     setHasAttemptedSubmit(false);
-    setTags([]);
   };
 
   const handleClose = () => {
@@ -255,9 +246,6 @@ export function QuickAddTicket({
     onOpenChange(false);
   };
 
-  const handleTagsChange = (updatedTags: ITag[]) => {
-    setTags(updatedTags);
-  };
 
   const validateForm = () => {
     const validationErrors = [];
@@ -318,24 +306,6 @@ export function QuickAddTicket({
         throw new Error('Failed to create ticket');
       }
 
-      // Create tags if any were added
-      if (tags.length > 0 && newTicket.ticket_id) {
-        try {
-          await Promise.all(
-            tags.map(tag => 
-              createTag({
-                tag_text: tag.tag_text,
-                tagged_id: newTicket.ticket_id!,
-                tagged_type: 'ticket',
-                channel_id: tag.channel_id
-              })
-            )
-          );
-        } catch (tagError) {
-          console.error('Error creating tags:', tagError);
-          toast.error('Ticket created but failed to add tags.');
-        }
-      }
 
       await onTicketAdded(newTicket);
       resetForm();
@@ -471,18 +441,6 @@ export function QuickAddTicket({
                     buttonWidth="full"
                   />
 
-                  {/* Tags */}
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Tags</label>
-                    <TagManager
-                      id={`${id}-tags`}
-                      entityId=""
-                      entityType="ticket"
-                      initialTags={tags}
-                      existingTags={allTagTexts}
-                      onTagsChange={handleTagsChange}
-                    />
-                  </div>
 
                   <div className={hasAttemptedSubmit && !assignedTo ? 'ring-1 ring-red-500 rounded-lg' : ''}>
                     <UserPicker

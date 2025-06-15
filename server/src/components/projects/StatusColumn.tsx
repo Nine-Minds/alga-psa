@@ -1,6 +1,7 @@
 'use client';
 
 import { IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails, ITaskType } from 'server/src/interfaces/project.interfaces';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import { Circle, Plus } from 'lucide-react';
 import TaskCard from './TaskCard';
@@ -16,6 +17,8 @@ interface StatusColumnProps {
   taskTypes: ITaskType[];
   ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] };
   taskResources: { [taskId: string]: any[] };
+  taskTags?: Record<string, ITag[]>;
+  allTaskTagTexts?: string[];
   statusIcon: React.ReactNode;
   backgroundColor: string;
   darkBackgroundColor: string;
@@ -36,6 +39,7 @@ interface StatusColumnProps {
   onDuplicateTaskClick: (task: IProjectTask) => void;
   onEditTaskClick: (task: IProjectTask) => void;
   onDeleteTaskClick: (task: IProjectTask) => void;
+  onTaskTagsChange?: (taskId: string, tags: ITag[]) => void;
 }
 
 export const StatusColumn: React.FC<StatusColumnProps> = ({
@@ -45,6 +49,8 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   users,
   ticketLinks,
   taskResources,
+  taskTags = {},
+  allTaskTagTexts = [],
   statusIcon,
   backgroundColor,
   darkBackgroundColor,
@@ -65,6 +71,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   onDuplicateTaskClick,
   onEditTaskClick,
   onDeleteTaskClick,
+  onTaskTagsChange,
   taskTypes,
 }) => {
   const [isDraggedOver, setIsDraggedOver] = useState(false);
@@ -310,6 +317,8 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
               users={users}
               ticketLinks={ticketLinks[task.task_id]}
               taskResources={taskResources[task.task_id]}
+              taskTags={taskTags[task.task_id] || []}
+              allTaskTagTexts={allTaskTagTexts}
               isAnimating={animatingTasks.has(task.task_id)}
               onTaskSelected={onTaskSelected}
               onAssigneeChange={onAssigneeChange}
@@ -320,6 +329,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
               onDuplicateTaskClick={onDuplicateTaskClick}
               onEditTaskClick={onEditTaskClick}
               onDeleteTaskClick={onDeleteTaskClick}
+              onTaskTagsChange={onTaskTagsChange}
             />
             {/* Animated drop placeholder after task */}
             {dragOverTaskId === task.task_id && dropPosition === 'after' && (
