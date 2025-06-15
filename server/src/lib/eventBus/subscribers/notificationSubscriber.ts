@@ -14,20 +14,24 @@ import {
   InvoiceGeneratedEvent,
   InvoiceFinalizedEvent,
   TimeEntrySubmittedEvent,
-  TimeEntryApprovedEvent
+  TimeEntryApprovedEvent,
+  ProjectClosedEvent
 } from '../events';
 import { NotificationPublisher } from '../../notifications/publisher';
 import logger from '@shared/core/logger';
 import { createTenantKnex } from '../../db';
+import { getUsersWithPermission } from 'server/src/lib/actions/user-actions/userActions';
+import { getUserInternalNotificationPreferences } from 'server/src/lib/actions/notification-actions/internalNotificationSettingsActions';
 
 /**
  * Configuration mapping event types to notification types and user determination logic
  */
 interface NotificationEventConfig {
   notificationType: string;
-  getUserIds: (event: any, tenantKnex: any) => Promise<string[]>;
+  permission: string;
   getTemplateData: (event: any, tenantKnex: any) => Promise<Record<string, any>>;
   getActionUrl?: (event: any, tenantKnex: any) => Promise<string | undefined>;
+  getAdditionalUsers?: (event: any, tenantKnex: any) => Promise<string[]>;
   priority?: 'low' | 'normal' | 'high' | 'urgent';
 }
 
@@ -65,15 +69,7 @@ async function getUserIdsFromMentions(mentions: string[], tenantId: string, tena
 const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfig>> = {
   'TICKET_CREATED': {
     notificationType: 'TICKET_CREATED',
-    getUserIds: async (event: TicketCreatedEvent, tenantKnex) => {
-      // Notify managers and team leads for new tickets
-      const managers = await tenantKnex('users')
-        .where('tenant', event.payload.tenantId)
-        .whereIn('role', ['admin', 'manager'])
-        .where('is_active', true)
-        .pluck('user_id');
-      return managers.map((id: any) => String(id));
-    },
+    permission: 'notification:ticket:create',
     getTemplateData: async (event: TicketCreatedEvent, tenantKnex) => {
       const ticket = await tenantKnex('tickets')
         .where('ticket_id', event.payload.ticketId)
@@ -91,13 +87,10 @@ const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfi
 
   'TICKET_ASSIGNED': {
     notificationType: 'TICKET_ASSIGNED',
-    getUserIds: async (event: TicketAssignedEvent, tenantKnex) => {
-      // Notify the assigned user
-      const ticket = await tenantKnex('tickets')
-        .where('ticket_id', event.payload.ticketId)
-        .first();
-      
-      return ticket?.assigned_to ? [String(ticket.assigned_to)] : [];
+    permission: 'notification:ticket:assign',
+    getAdditionalUsers: async (event: TicketAssignedEvent, tenantKnex) => {
+      const ticket = await tenantKnex('tickets').where('ticket_id', event.payload.ticketId).first();
+      return ticket?.assigned_to ? [ticket.assigned_to] : [];
     },
     getTemplateData: async (event: TicketAssignedEvent, tenantKnex) => {
       const ticket = await tenantKnex('tickets')
@@ -116,45 +109,19 @@ const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfi
 
   'TICKET_UPDATED': {
     notificationType: 'TICKET_STATUS_CHANGED',
-    getUserIds: async (event: TicketUpdatedEvent, tenantKnex) => {
-      // Check if this is a priority escalation
-      const priorityChange = event.payload.changes?.priority_id;
-      const isPriorityEscalation = priorityChange && typeof priorityChange === 'object' && priorityChange;
-      
-      if (isPriorityEscalation) {
-        // For priority escalations, notify managers and assigned user
-        const ticket = await tenantKnex('tickets')
-          .where('ticket_id', event.payload.ticketId)
-          .first();
-        
-        const userIds = [];
-        if (ticket?.assigned_to) {
-          userIds.push(String(ticket.assigned_to));
-        }
-        
-        // Notify managers for priority escalations
-        const managers = await tenantKnex('users')
-          .where('tenant', event.payload.tenantId)
-          .whereIn('role', ['admin', 'manager'])
-          .where('is_active', true)
-          .pluck('user_id');
-        userIds.push(...managers.map((id: any) => String(id)));
-        
-        return [...new Set(userIds)]; // Remove duplicates
-      } else {
-        // Regular update - notify assigned user and watchers
-        const ticket = await tenantKnex('tickets')
-          .where('ticket_id', event.payload.ticketId)
-          .first();
-        
-        const userIds = [];
-        if (ticket?.assigned_to) {
-          userIds.push(String(ticket.assigned_to));
-        }
-        
-        // TODO: Add watchers/followers when that feature exists
-        return userIds;
+    permission: 'notification:ticket:update',
+    getAdditionalUsers: async (event: TicketUpdatedEvent, tenantKnex) => {
+      const ticket = await tenantKnex('tickets').where('ticket_id', event.payload.ticketId).first();
+      const userIds = new Set<string>();
+      if (ticket?.assigned_to) {
+        userIds.add(ticket.assigned_to);
       }
+      const priorityChange = event.payload.changes?.priority_id;
+      if (priorityChange && typeof priorityChange === 'object' && priorityChange) {
+        const usersWithPerm = await getUsersWithPermission('notification:ticket:escalation', 'read', tenantKnex);
+        usersWithPerm.forEach(id => userIds.add(id));
+      }
+      return Array.from(userIds);
     },
     getTemplateData: async (event: TicketUpdatedEvent, tenantKnex) => {
       const ticket = await tenantKnex('tickets')
@@ -190,13 +157,10 @@ const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfi
 
   'PROJECT_TASK_ASSIGNED': {
     notificationType: 'PROJECT_TASK_ASSIGNED',
-    getUserIds: async (event: ProjectTaskAssignedEvent, tenantKnex) => {
-      // Notify the assigned user
-      const task = await tenantKnex('project_tasks')
-        .where('task_id', event.payload.taskId)
-        .first();
-      
-      return task?.assigned_to ? [String(task.assigned_to)] : [];
+    permission: 'notification:project:task_assign',
+    getAdditionalUsers: async (event: ProjectTaskAssignedEvent, tenantKnex) => {
+      const task = await tenantKnex('project_tasks').where('task_id', event.payload.taskId).first();
+      return task?.assigned_to ? [task.assigned_to] : [];
     },
     getTemplateData: async (event: ProjectTaskAssignedEvent, tenantKnex) => {
       const task = await tenantKnex('project_tasks as pt')
@@ -223,15 +187,7 @@ const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfi
 
   'INVOICE_GENERATED': {
     notificationType: 'INVOICE_GENERATED',
-    getUserIds: async (event: InvoiceGeneratedEvent, tenantKnex) => {
-      // Notify accounting staff and managers
-      const accountingUsers = await tenantKnex('users')
-        .where('tenant', event.payload.tenantId)
-        .whereIn('role', ['admin', 'manager', 'accountant'])
-        .where('is_active', true)
-        .pluck('user_id');
-      return accountingUsers.map(id => String(id));
-    },
+    permission: 'notification:invoice:generated',
     getTemplateData: async (event: InvoiceGeneratedEvent, tenantKnex) => {
       const invoice = await tenantKnex('invoices')
         .where('invoice_id', event.payload.invoiceId)
@@ -249,36 +205,19 @@ const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfi
 
   'TICKET_COMMENT_ADDED': {
     notificationType: 'TICKET_CLIENT_RESPONSE',
-    getUserIds: async (event: TicketCommentAddedEvent, tenantKnex) => {
-      // Notify assigned user and managers, exclude comment author
-      const ticket = await tenantKnex('tickets')
-        .where('ticket_id', event.payload.ticketId)
-        .first();
-      
-      const userIds = [];
+    permission: 'notification:ticket:client_response',
+    getAdditionalUsers: async (event: TicketCommentAddedEvent, tenantKnex) => {
+      const ticket = await tenantKnex('tickets').where('ticket_id', event.payload.ticketId).first();
+      const userIds = new Set<string>();
       if (ticket?.assigned_to && ticket.assigned_to !== event.payload.userId) {
-        userIds.push(String(ticket.assigned_to));
+        userIds.add(ticket.assigned_to);
       }
-      
-      // Notify managers if comment is from client (external)
-      if (!event.payload.comment?.isInternal) {
-        const managers = await tenantKnex('users')
-          .where('tenant', event.payload.tenantId)
-          .whereIn('role', ['admin', 'manager'])
-          .where('is_active', true)
-          .where('user_id', '!=', event.payload.userId)
-          .pluck('user_id');
-        userIds.push(...managers.map((id: any) => String(id)));
-      }
-      
-      // Check for @mentions in the comment
       if (event.payload.comment?.content) {
         const mentions = parseUserMentions(event.payload.comment.content);
         const mentionedUserIds = await getUserIdsFromMentions(mentions, event.payload.tenantId, tenantKnex);
-        userIds.push(...mentionedUserIds);
+        mentionedUserIds.forEach(id => userIds.add(id));
       }
-      
-      return [...new Set(userIds)]; // Remove duplicates
+      return Array.from(userIds);
     },
     getTemplateData: async (event: TicketCommentAddedEvent, tenantKnex) => {
       const ticket = await tenantKnex('tickets')
@@ -302,21 +241,17 @@ const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfi
 
   'TICKET_CLOSED': {
     notificationType: 'TICKET_STATUS_CHANGED',
-    getUserIds: async (event: TicketClosedEvent, tenantKnex) => {
-      // Notify assigned user and ticket creator
-      const ticket = await tenantKnex('tickets')
-        .where('ticket_id', event.payload.ticketId)
-        .first();
-      
-      const userIds = [];
+    permission: 'notification:ticket:close',
+    getAdditionalUsers: async (event: TicketClosedEvent, tenantKnex) => {
+      const ticket = await tenantKnex('tickets').where('ticket_id', event.payload.ticketId).first();
+      const userIds = new Set<string>();
       if (ticket?.assigned_to) {
-        userIds.push(String(ticket.assigned_to));
+        userIds.add(ticket.assigned_to);
       }
       if (ticket?.entered_by && ticket.entered_by !== ticket.assigned_to) {
-        userIds.push(String(ticket.entered_by));
+        userIds.add(ticket.entered_by);
       }
-      
-      return userIds;
+      return Array.from(userIds);
     },
     getTemplateData: async (event: TicketClosedEvent, tenantKnex) => {
       const ticket = await tenantKnex('tickets')
@@ -336,15 +271,7 @@ const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfi
 
   'PROJECT_CREATED': {
     notificationType: 'PROJECT_TASK_ASSIGNED', // Reusing for project notifications
-    getUserIds: async (event: ProjectCreatedEvent, tenantKnex) => {
-      // Notify project managers and team leads
-      const managers = await tenantKnex('users')
-        .where('tenant', event.payload.tenantId)
-        .whereIn('role', ['admin', 'manager', 'project_manager'])
-        .where('is_active', true)
-        .pluck('user_id');
-      return managers.map((id: any) => String(id));
-    },
+    permission: 'notification:project:create',
     getTemplateData: async (event: ProjectCreatedEvent, tenantKnex) => {
       const project = await tenantKnex('projects')
         .where('project_id', event.payload.projectId)
@@ -362,9 +289,9 @@ const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfi
 
   'PROJECT_ASSIGNED': {
     notificationType: 'PROJECT_TASK_ASSIGNED',
-    getUserIds: async (event: ProjectAssignedEvent, tenantKnex) => {
-      // Notify assigned user
-      return event.payload.assignedTo ? [String(event.payload.assignedTo)] : [];
+    permission: 'notification:project:assign',
+    getAdditionalUsers: async (event: ProjectAssignedEvent, tenantKnex) => {
+      return event.payload.assignedTo ? [event.payload.assignedTo] : [];
     },
     getTemplateData: async (event: ProjectAssignedEvent, tenantKnex) => {
       const project = await tenantKnex('projects')
@@ -383,19 +310,12 @@ const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfi
 
   'PROJECT_CLOSED': {
     notificationType: 'PROJECT_TASK_ASSIGNED', // Reusing for project notifications
-    getUserIds: async (event: ProjectClosedEvent, tenantKnex) => {
-      // Notify project team members and managers
+    permission: 'notification:project:close',
+    getAdditionalUsers: async (event: ProjectClosedEvent, tenantKnex) => {
       const projectUsers = await tenantKnex('project_team_members')
         .where('project_id', event.payload.projectId)
         .pluck('user_id');
-      
-      const managers = await tenantKnex('users')
-        .where('tenant', event.payload.tenantId)
-        .whereIn('role', ['admin', 'manager'])
-        .where('is_active', true)
-        .pluck('user_id');
-      
-      return [...new Set([...projectUsers, ...managers])].map(id => String(id));
+      return projectUsers.map((id: any) => String(id));
     },
     getTemplateData: async (event: ProjectClosedEvent, tenantKnex) => {
       const project = await tenantKnex('projects')
@@ -414,15 +334,7 @@ const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfi
 
   'TIME_ENTRY_SUBMITTED': {
     notificationType: 'PROJECT_TASK_DUE', // Reusing as approval needed
-    getUserIds: async (event: TimeEntrySubmittedEvent, tenantKnex) => {
-      // Notify managers for approval
-      const managers = await tenantKnex('users')
-        .where('tenant', event.payload.tenantId)
-        .whereIn('role', ['admin', 'manager'])
-        .where('is_active', true)
-        .pluck('user_id');
-      return managers.map((id: any) => String(id));
-    },
+    permission: 'notification:time_entry:submit',
     getTemplateData: async (event: TimeEntrySubmittedEvent, tenantKnex) => {
       const timeEntry = await tenantKnex('time_entries as te')
         .leftJoin('users as u', 'te.user_id', 'u.user_id')
@@ -443,13 +355,10 @@ const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfi
 
   'TIME_ENTRY_APPROVED': {
     notificationType: 'PROJECT_TASK_DUE', // Reusing for time entry notifications
-    getUserIds: async (event: TimeEntryApprovedEvent, tenantKnex) => {
-      // Notify the user who submitted the time entry
-      const timeEntry = await tenantKnex('time_entries')
-        .where('entry_id', event.payload.timeEntryId)
-        .first();
-      
-      return timeEntry?.user_id ? [String(timeEntry.user_id)] : [];
+    permission: 'notification:time_entry:approve',
+    getAdditionalUsers: async (event: TimeEntryApprovedEvent, tenantKnex) => {
+      const timeEntry = await tenantKnex('time_entries').where('entry_id', event.payload.timeEntryId).first();
+      return timeEntry?.user_id ? [timeEntry.user_id] : [];
     },
     getTemplateData: async (event: TimeEntryApprovedEvent, tenantKnex) => {
       const timeEntry = await tenantKnex('time_entries')
@@ -469,15 +378,7 @@ const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfi
 
   'INVOICE_FINALIZED': {
     notificationType: 'INVOICE_PAYMENT_RECEIVED', // Reusing for invoice finalization
-    getUserIds: async (event: InvoiceFinalizedEvent, tenantKnex) => {
-      // Notify accounting staff
-      const accountingUsers = await tenantKnex('users')
-        .where('tenant', event.payload.tenantId)
-        .whereIn('role', ['admin', 'manager', 'accountant'])
-        .where('is_active', true)
-        .pluck('user_id');
-      return accountingUsers.map(id => String(id));
-    },
+    permission: 'notification:invoice:finalized',
     getTemplateData: async (event: InvoiceFinalizedEvent, tenantKnex) => {
       const invoice = await tenantKnex('invoices')
         .where('invoice_id', event.payload.invoiceId)
@@ -521,10 +422,26 @@ async function handleNotificationEvent(event: BaseEvent): Promise<void> {
     }
 
     // Get user IDs to notify
-    const userIds = await config.getUserIds(event, tenantKnex);
-    if (userIds.length === 0) {
+    const usersWithPermission = await getUsersWithPermission(config.permission, 'read', tenantKnex);
+    const additionalUsers = config.getAdditionalUsers ? await config.getAdditionalUsers(event, tenantKnex) : [];
+    const allUserIds = [...new Set([...usersWithPermission, ...additionalUsers])];
+
+    if (allUserIds.length === 0) {
       logger.debug(`No users to notify for event ${event.eventType}`);
       return;
+    }
+
+    // Filter users based on their notification preferences
+    const userPreferences = await getUserInternalNotificationPreferences(allUserIds);
+    const userIdsToNotify = allUserIds
+        .filter(userId => {
+            const pref = userPreferences.find(p => p.internal_notification_type_id === notificationType.internal_notification_type_id && p.user_id === userId);
+            return pref ? pref.enabled : true; // Default to notify if no preference is set
+        });
+
+    if (userIdsToNotify.length === 0) {
+        logger.debug(`All users for event ${event.eventType} have disabled this notification`);
+        return;
     }
 
     // Get template data
@@ -546,7 +463,7 @@ async function handleNotificationEvent(event: BaseEvent): Promise<void> {
     // Create notifications for each user
     const publisher = new NotificationPublisher();
     try {
-      for (const userId of userIds) {
+      for (const userId of userIdsToNotify) {
         await publisher.publishNotification({
           user_id: userId,
           type_id: notificationType.internal_notification_type_id,
@@ -557,9 +474,9 @@ async function handleNotificationEvent(event: BaseEvent): Promise<void> {
         });
       }
       
-      logger.info(`Created ${userIds.length} notifications for event ${event.eventType}`, {
+      logger.info(`Created ${userIdsToNotify.length} notifications for event ${event.eventType}`, {
         eventId: event.id,
-        userIds,
+        userIds: userIdsToNotify,
         notificationType: config.notificationType
       });
     } finally {

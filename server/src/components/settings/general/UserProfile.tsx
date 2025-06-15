@@ -6,7 +6,9 @@ import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from 'server/src/components/ui/Tabs';
 import TimezonePicker from 'server/src/components/ui/TimezonePicker';
+import { CustomTabs } from 'server/src/components/ui/CustomTabs';
 import { getCurrentUser, updateUser } from 'server/src/lib/actions/user-actions/userActions';
 import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import type { NotificationCategory, NotificationSubtype, UserNotificationPreference } from 'server/src/lib/models/notification';
@@ -20,6 +22,7 @@ import ApiKeysSetup from '../api/ApiKeysSetup';
 import UserAvatarUpload from 'server/src/components/settings/profile/UserAvatarUpload';
 import { toast } from 'react-hot-toast';
 import { getUserAvatarUrlAction } from '@/lib/actions/avatar-actions';
+import InternalNotificationSettings from 'server/src/components/settings/profile/InternalNotificationSettings';
 
 interface UserProfileProps {
   userId?: string; // Optional - if not provided, uses current user
@@ -32,6 +35,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const [categories, setCategories] = useState<NotificationCategory[]>([]);
   const [subtypesByCategory, setSubtypesByCategory] = useState<Record<number, NotificationSubtype[]>>({});
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('profile');
 
   // Form fields
   const [firstName, setFirstName] = useState('');
@@ -187,118 +191,100 @@ export default function UserProfile({ userId }: UserProfileProps) {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Basic Info Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Basic Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {/* User Avatar Upload */}
-          <UserAvatarUpload
-            userId={user.user_id}
-            userName={`${user.first_name} ${user.last_name}`}
-            avatarUrl={avatarUrl}
-            onAvatarChange={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
-            className="mb-4"
-            size="xl"
-          />
-          
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-            <div>
-              <Label htmlFor="firstName">First Name</Label>
-              <Input
-                id="firstName"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="lastName">Last Name</Label>
-              <Input
-                id="lastName"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-              />
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="phone">Phone Number</Label>
-            <Input
-              id="phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="timezone">Time Zone</Label>
-            <TimezonePicker
-              value={timezone}
-              onValueChange={setTimezone}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Password Change Section */}
-      <PasswordChangeForm />
-
-      {/* API Keys Section */}
-      <ApiKeysSetup />
-
-      {/* Notification Preferences Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Notification Preferences</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            {categories.map((category: NotificationCategory): JSX.Element => (
-              <div key={category.id} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>{category.name}</Label>
-                  <Switch
-                    checked={category.is_enabled}
-                    onCheckedChange={(checked) => handleCategoryToggle(category.id, checked)}
-                  />
+    <CustomTabs
+      tabs={[
+        {
+          label: 'Profile',
+          content: (
+            <Card>
+              <CardHeader>
+                <CardTitle>Basic Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <UserAvatarUpload
+                  userId={user.user_id}
+                  userName={`${user.first_name} ${user.last_name}`}
+                  avatarUrl={avatarUrl}
+                  onAvatarChange={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
+                  className="mb-4"
+                  size="xl"
+                />
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                  <div>
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+                  </div>
                 </div>
-                <div className="ml-6 space-y-2">
-                  {subtypesByCategory[category.id]?.map((subtype: NotificationSubtype): JSX.Element => (
-                    <div key={subtype.id} className="flex items-center justify-between">
-                      <Label className="text-sm">{subtype.name}</Label>
-                      <Switch
-                        checked={subtype.is_enabled}
-                        disabled={!category.is_enabled}
-                        onCheckedChange={(checked) => handleSubtypeToggle(category.id, subtype.id, checked)}
-                      />
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="timezone">Time Zone</Label>
+                  <TimezonePicker value={timezone} onValueChange={setTimezone} />
+                </div>
+              </CardContent>
+            </Card>
+          ),
+        },
+        {
+          label: 'Password',
+          content: <PasswordChangeForm />,
+        },
+        {
+          label: 'Email Notifications',
+          content: (
+            <Card>
+              <CardHeader>
+                <CardTitle>Email Notification Preferences</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {categories.map((category: NotificationCategory): JSX.Element => (
+                    <div key={category.id} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>{category.name}</Label>
+                        <Switch
+                          checked={category.is_enabled}
+                          onCheckedChange={(checked) => handleCategoryToggle(category.id, checked)}
+                        />
+                      </div>
+                      <div className="ml-6 space-y-2">
+                        {subtypesByCategory[category.id]?.map((subtype: NotificationSubtype): JSX.Element => (
+                          <div key={subtype.id} className="flex items-center justify-between">
+                            <Label className="text-sm">{subtype.name}</Label>
+                            <Switch
+                              checked={subtype.is_enabled}
+                              disabled={!category.is_enabled}
+                              onCheckedChange={(checked) => handleSubtypeToggle(category.id, subtype.id, checked)}
+                            />
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Action Buttons */}
-      <div className="flex justify-end space-x-2">
-        <Button 
-          id="save-button"
-          onClick={handleSave}
-        >
-          Save Changes
-        </Button>
-      </div>
-    </div>
+              </CardContent>
+            </Card>
+          ),
+        },
+        {
+            label: 'Internal Notifications',
+            content: <InternalNotificationSettings />,
+        },
+        {
+          label: 'API Keys',
+          content: <ApiKeysSetup />,
+        },
+      ]}
+    />
   );
 }
