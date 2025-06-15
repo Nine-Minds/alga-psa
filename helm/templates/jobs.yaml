@@ -1,4 +1,4 @@
-{{- if not .Values.devEnv.enabled }}
+{{- if and (not .Values.devEnv.enabled) .Values.setup.runMigrations }}
 apiVersion: batch/v1
 kind: Job
 metadata:
