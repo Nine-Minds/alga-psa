@@ -19,9 +19,9 @@ Based on `server/src/config/menuConfig.ts`:
 
 ### Main Menu Items
 
-#### 1. Dashboard
-- **Route**: `/msp/dashboard`
-- **File**: `server/src/app/msp/dashboard/page.tsx`
+#### 1. Home
+- **Route**: `/msp/home`
+- **File**: `server/src/app/msp/home/page.tsx`
 - **Menu ID**: `menu-dashboard`
 
 #### 2. User Activities ⭐ (DOCUMENTED)
@@ -494,4 +494,4 @@ When documenting new screens, include:
 
 **Last Updated**: Based on codebase analysis as of current date
 **Documented Screens**: User Activities, Clients/Companies, Tickets (3/13+ screens)
-**Next to Document**: Dashboard, Projects, Contacts, Documents, etc.
+**Next to Document**: Home, Projects, Contacts, Documents, etc.

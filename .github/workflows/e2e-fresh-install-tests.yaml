@@ -465,11 +465,11 @@ jobs:
               // Wait for navigation to the dashboard (or other expected page)
               // Adjust the expected URL or path as necessary
               console.log(`Current URL before waiting for dashboard: ${page.url()}`);
-              console.log(`Waiting for URL: ${baseUrl}/msp/dashboard with 30s timeout.`);
-              await page.waitForURL(\`\${baseUrl}/msp/dashboard\`, { timeout: 30000 });
+              console.log(`Waiting for URL: ${baseUrl}/msp/home with 30s timeout.`);
+              await page.waitForURL(\`\${baseUrl}/msp/home\`, { timeout: 30000 });
 
               // Assert that the URL is the dashboard URL
-              expect(page.url()).toBe(\`\${baseUrl}/msp/dashboard\`);
+              expect(page.url()).toBe(\`\${baseUrl}/msp/home\`);
 
               // Optional: Add more assertions, e.g., check for a welcome message or specific element
               // await expect(page.locator('h1')).toContainText('Dashboard');

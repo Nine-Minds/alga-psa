@@ -37,8 +37,8 @@ export default function ExtensionPageLayout({
       <nav className="mb-4">
         <ol className="flex flex-wrap items-center text-sm text-gray-500">
           <li>
-            <Link href="/msp/dashboard" className="hover:text-primary-600">
-              Dashboard
+            <Link href="/msp/home" className="hover:text-primary-600">
+              Home
             </Link>
           </li>
           <li className="mx-2">

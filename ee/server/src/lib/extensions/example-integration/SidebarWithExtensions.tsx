@@ -38,9 +38,9 @@ export function SidebarWithExtensions({ sidebarOpen, setSidebarOpen }: SidebarPr
   // This would be provided by menuConfig.ts in real implementation
   const menuItems: MenuItem[] = [
     {
-      name: 'Dashboard',
+      name: 'Home',
       icon: RadixIcons.BarChartIcon,
-      href: '/msp/dashboard'
+      href: '/msp/home'
     },
     {
       name: 'Tickets',

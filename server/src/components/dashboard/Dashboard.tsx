@@ -68,7 +68,7 @@ const QuickStartCard = ({ icon: Icon, step, title, description, href }: { icon: 
 
 const WelcomeDashboard = () => {
   return (
-    <ReflectionContainer id="dashboard-main" label="MSP Dashboard">
+    <ReflectionContainer id="dashboard-main" label="MSP Home">
       <div className="p-6 min-h-screen" style={{ background: 'rgb(var(--background))' }}>
       {/* Welcome Banner */}
       <div className="rounded-lg mb-6 p-6" 

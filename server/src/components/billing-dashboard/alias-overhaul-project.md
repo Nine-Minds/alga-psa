@@ -67,7 +67,7 @@
  - [ ] server/src/app/msp/contacts/[id]/activity/page.tsx
  - [ ] server/src/app/msp/contacts/[id]/page.tsx
  - [ ] server/src/app/msp/contacts/page.tsx
- - [ ] server/src/app/msp/dashboard/page.tsx
+ - [ ] server/src/app/msp/home/page.tsx
  - [ ] server/src/app/msp/jobs/page.tsx
  - [ ] server/src/app/msp/layout.tsx
  - [ ] server/src/app/msp/profile/page.tsx
