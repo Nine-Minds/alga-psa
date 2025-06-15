@@ -28,6 +28,7 @@ export class NotificationPublisher {
     try {
       const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
       this.redis = new Redis(redisUrl, {
+        password: process.env.REDIS_PASSWORD,
         maxRetriesPerRequest: 1,
         connectTimeout: 5000,
         lazyConnect: true,

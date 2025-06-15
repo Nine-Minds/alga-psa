@@ -16,6 +16,7 @@ import { useTheme } from "server/src/context/ThemeContext";
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { NotificationBell } from 'server/src/components/notifications/NotificationBell';
+import { MessageEnvelope } from 'server/src/components/messaging/MessageEnvelope';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -164,6 +165,7 @@ const Header: React.FC<HeaderProps> = ({
           <MoonIcon className="w-5 h-5" />
         </button>
         <NotificationBell />
+        <MessageEnvelope />
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
             <button className="relative" aria-label="User menu">

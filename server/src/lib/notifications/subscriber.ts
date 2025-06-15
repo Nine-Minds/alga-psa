@@ -38,12 +38,14 @@ export class NotificationSubscriber {
       
       // Use separate Redis connections for pub/sub
       this.redis = new Redis(redisUrl, {
+        password: process.env.REDIS_PASSWORD,
         maxRetriesPerRequest: 1,
         connectTimeout: 5000,
         lazyConnect: true,
       });
       
       this.pubsub = new Redis(redisUrl, {
+        password: process.env.REDIS_PASSWORD,
         maxRetriesPerRequest: 1,
         connectTimeout: 5000,
         lazyConnect: true,
@@ -102,7 +104,7 @@ export class NotificationSubscriber {
       await this.pubsub.subscribe(...this.channels);
 
       // Handle incoming messages
-      this.pubsub.on('message', async (channel, message) => {
+      this.pubsub.on('message', async (channel: string, message: string) => {
         if (this.isCleanedUp) return;
 
         try {
