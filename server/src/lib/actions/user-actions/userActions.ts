@@ -337,6 +337,35 @@ export async function getMultipleUsersWithRoles(userIds: string[]): Promise<IUse
   }
 }
 
+export async function getUsersWithPermission(resource: string, action: string, knexConnection?: Knex | Knex.Transaction): Promise<string[]> {
+  try {
+    let knex: Knex | Knex.Transaction;
+    if (knexConnection) {
+      knex = knexConnection;
+    } else {
+      const result = await createTenantKnex();
+      knex = result.knex;
+    }
+
+    const users = await knex('users as u')
+      .distinct('u.user_id')
+      .join('user_roles as ur', 'u.user_id', 'ur.user_id')
+      .join('roles as r', 'ur.role_id', 'r.role_id')
+      .join('role_permissions as rp', 'r.role_id', 'rp.role_id')
+      .join('permissions as p', 'rp.permission_id', 'p.permission_id')
+      .where({
+        'p.resource': resource,
+        'p.action': action,
+        'u.is_inactive': false
+      });
+
+    return users.map((user: { user_id: string }) => user.user_id);
+  } catch (error) {
+    console.error(`Failed to fetch users with permission ${resource}:${action}:`, error);
+    throw new Error('Failed to fetch users with permission');
+  }
+}
+
 // User Preferences Actions
 export async function getUserPreference(userId: string, settingName: string): Promise<any> {
   try {
