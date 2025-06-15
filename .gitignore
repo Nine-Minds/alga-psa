@@ -12,6 +12,12 @@ node_modules/
 build/
 dist/
 
+# Enterprise Edition - copied files (generated during build)
+/server/src/app/msp/extensions/
+/server/src/lib/extensions/
+/server/src/lib/actions/extension-actions/
+/server/src/app/msp/layout.tsx
+
 # Environment files
 .env
 .env.local

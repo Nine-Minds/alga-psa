@@ -12,7 +12,8 @@
     "./workflow": "./workflow/index.js",
     "./workflow/core": "./workflow/core/index.js",
     "./workflow/persistence": "./workflow/persistence/index.js",
-    "./workflow/streams": "./workflow/streams/index.js"
+    "./workflow/streams": "./workflow/streams/index.js",
+    "./extension-utils": "./extension-utils/index.js"
   },
   "scripts": {
     "build": "tsc",
@@ -28,7 +29,11 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/react": "^18.0.0",
     "@types/uuid": "^9.0.7",
     "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0"
   }
 }
