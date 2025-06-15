@@ -411,7 +411,7 @@
     {
       "key": "agreement",
       "source": "api",
-      "endpoint": "/api/extensions/softwareone/agreements/{{params.id}}"
+      "endpoint": "/api/extensions/{{extensionId}}/agreements/{{params.id}}"
     }
   ],
   "handlers": {
