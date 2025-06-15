@@ -316,9 +316,10 @@ export class PDFGenerationService {
 
 // Factory function to create a PDF generation service with the specified tenant
 export const createPDFGenerationService = (tenant: string) => {
-  // Create a new instance with the StorageService singleton
+  // Create a new instance using the StorageService class
+  const storageService = new StorageService();
   return new PDFGenerationService(
-    StorageService as any,
+    storageService,
     browserPoolService,
     { tenant }
   );
