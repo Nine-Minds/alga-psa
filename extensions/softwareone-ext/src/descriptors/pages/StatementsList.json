@@ -273,6 +273,6 @@
     ]
   },
   "handlers": {
-    "module": "handlers/statements"
+    "module": "descriptors/handlers/statements.js"
   }
 }

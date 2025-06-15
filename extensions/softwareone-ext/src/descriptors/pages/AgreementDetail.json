@@ -415,6 +415,6 @@
     }
   ],
   "handlers": {
-    "module": "handlers/agreements"
+    "module": "descriptors/handlers/agreements.js"
   }
 }

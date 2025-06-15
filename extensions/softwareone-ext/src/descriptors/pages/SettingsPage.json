@@ -307,6 +307,6 @@
     }
   ],
   "handlers": {
-    "module": "descriptors/handlers/settings.ts"
+    "module": "descriptors/handlers/settings.js"
   }
 }
