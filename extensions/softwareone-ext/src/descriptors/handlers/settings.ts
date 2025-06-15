@@ -57,7 +57,7 @@ export async function testConnection(event: MouseEvent, context: HandlerContext)
     }
 
     // Test the connection
-    const response = await context.api.post('/api/extensions/softwareone/test-connection', {
+    const response = await context.api.post(`/api/extensions/${context.extension.id}/test-connection`, {
       endpoint: config.apiEndpoint,
       token: config.apiToken
     });
@@ -78,7 +78,7 @@ export async function syncNow(event: MouseEvent, context: HandlerContext) {
     context.ui.toast('Starting synchronization...', 'info');
     
     // Trigger sync via API
-    const response = await context.api.post('/api/extensions/softwareone/sync', {
+    const response = await context.api.post(`/api/extensions/${context.extension.id}/sync`, {
       syncAgreements: true,
       syncStatements: true
     });

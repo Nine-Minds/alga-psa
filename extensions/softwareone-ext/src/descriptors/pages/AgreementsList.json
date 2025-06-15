@@ -99,7 +99,7 @@
                     "data": {
                       "key": "agreements",
                       "source": "api",
-                      "endpoint": "/api/extensions/softwareone/agreements"
+                      "endpoint": "/api/extensions/{{extensionId}}/agreements"
                     },
                     "columns": [
                       {

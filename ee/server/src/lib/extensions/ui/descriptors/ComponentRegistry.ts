@@ -1,5 +1,9 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { Button } from 'server/src/components/ui/Button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from 'server/src/components/ui/Card';
+import { Badge } from 'server/src/components/ui/Badge';
 
 /**
  * Registry for mapping descriptor types to React components
@@ -269,6 +273,18 @@ class ComponentRegistryClass {
         }, emoji)
       ) as React.ComponentType<any>);
     });
+
+    // Register real UI components for better functionality
+    this.register('DataTable', DataTable);
+    this.register('table', DataTable); // Also map 'table' type to DataTable
+    this.register('Button', Button);
+    this.register('Card', Card);
+    this.register('CardContent', CardContent);
+    this.register('CardHeader', CardHeader);
+    this.register('CardTitle', CardTitle);
+    this.register('CardDescription', CardDescription);
+    this.register('CardFooter', CardFooter);
+    this.register('Badge', Badge);
   }
 
   /**
