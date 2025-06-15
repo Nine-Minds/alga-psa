@@ -57,26 +57,17 @@ export function ExtensionRenderer({
       // Try to load as descriptor if we think it might be one
       if (shouldLoadAsDescriptor || isDescriptor === null) {
         try {
-          // For development, load directly from extension dist directory
-          const descriptorUrl = `/extensions/${extensionId}/dist/${componentPath}`;
-          console.log(`[ExtensionRenderer] Attempting to load from: ${descriptorUrl}`);
+          console.log(`[ExtensionRenderer] Attempting to load descriptor via server action`);
           
-          const response = await fetch(descriptorUrl);
-          console.log(`[ExtensionRenderer] Response status: ${response.status}`);
-          console.log(`[ExtensionRenderer] Response OK: ${response.ok}`);
+          // Import the server action dynamically to avoid SSR issues
+          const { loadExtensionDescriptor } = await import('../../actions/extension-actions/extensionActions');
+          const result = await loadExtensionDescriptor(extensionId, componentPath);
           
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`[ExtensionRenderer] Failed to load descriptor: ${response.status} - ${errorText}`);
-            throw new Error(`Failed to load descriptor: ${response.status}`);
-          }
+          console.log(`[ExtensionRenderer] Server action result:`, result);
           
-          const contentType = response.headers.get('content-type');
-          console.log(`[ExtensionRenderer] Content-Type: ${contentType}`);
-          
-          if (contentType?.includes('application/json')) {
-            const data = await response.json();
-            console.log(`[ExtensionRenderer] Loaded JSON data:`, data);
+          if (result.success && result.descriptor) {
+            const data = result.descriptor;
+            console.log(`[ExtensionRenderer] Loaded descriptor data:`, data);
             
             // Check if it has descriptor structure
             if (data.type && (typeof data.type === 'string')) {
@@ -87,20 +78,41 @@ export function ExtensionRenderer({
               // Load handlers if specified
               if (data.handlers?.module) {
                 console.log(`[ExtensionRenderer] Loading handlers from: ${data.handlers.module}`);
-                const handlersUrl = `/extensions/${extensionId}/dist/${data.handlers.module}`;
                 try {
-                  const handlerModule = await import(/* webpackIgnore: true */ /* @vite-ignore */ handlersUrl);
-                  console.log(`[ExtensionRenderer] Handlers loaded:`, handlerModule);
-                  setHandlers(handlerModule.default || handlerModule);
+                  // Import the server action for loading handlers
+                  const { loadExtensionHandlers } = await import('../../actions/extension-actions/extensionActions');
+                  const handlerResult = await loadExtensionHandlers(extensionId, data.handlers.module);
+                  
+                  if (handlerResult.success && handlerResult.moduleContent) {
+                    console.log(`[ExtensionRenderer] Handler module content loaded, creating blob URL`);
+                    
+                    // Create a blob URL for the module content to enable dynamic import
+                    const blob = new Blob([handlerResult.moduleContent], { type: 'application/javascript' });
+                    const blobUrl = URL.createObjectURL(blob);
+                    
+                    try {
+                      const handlerModule = await import(/* webpackIgnore: true */ blobUrl);
+                      console.log(`[ExtensionRenderer] Handlers loaded:`, handlerModule);
+                      setHandlers(handlerModule.default || handlerModule);
+                      
+                      // Clean up blob URL to prevent memory leaks
+                      URL.revokeObjectURL(blobUrl);
+                    } catch (importErr) {
+                      console.error(`[ExtensionRenderer] Failed to import handler module:`, importErr);
+                      URL.revokeObjectURL(blobUrl);
+                    }
+                  } else {
+                    console.error(`[ExtensionRenderer] Failed to load handler module:`, handlerResult.error);
+                  }
                 } catch (handlerErr) {
                   console.error(`[ExtensionRenderer] Failed to load handlers:`, handlerErr);
                 }
               }
               console.log(`[ExtensionRenderer] Descriptor loading complete`);
-              setLoading(false);  // Set loading to false here
+              setLoading(false);
               return;
             } else {
-              console.error(`[ExtensionRenderer] JSON data does not have descriptor structure:`, data);
+              console.error(`[ExtensionRenderer] Descriptor does not have valid structure:`, data);
               if (shouldLoadAsDescriptor) {
                 setIsDescriptor(true);
                 setDescriptor(null);
@@ -109,7 +121,7 @@ export function ExtensionRenderer({
               }
             }
           } else {
-            console.error(`[ExtensionRenderer] Unexpected content type: ${contentType}`);
+            console.error(`[ExtensionRenderer] Failed to load descriptor:`, result.error);
             if (shouldLoadAsDescriptor) {
               setIsDescriptor(true);
               setDescriptor(null);
