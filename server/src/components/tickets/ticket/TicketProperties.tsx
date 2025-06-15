@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getScheduledHoursForTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
-import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule, ICompany } from 'server/src/interfaces'; // Added ICompany
+import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule, ICompany, ICompanyLocation } from 'server/src/interfaces'; // Added ICompany and ICompanyLocation
 import { IUserWithRoles, ITeam } from 'server/src/interfaces/auth.interfaces';
 import { ITicketResource } from 'server/src/interfaces/ticketResource.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
@@ -10,6 +10,7 @@ import { TagManager } from 'server/src/components/tags';
 import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Clock, Edit2, Play, Pause, StopCircle, UserPlus, X, AlertCircle } from 'lucide-react';
 import { formatMinutesAsHoursAndMinutes } from 'server/src/lib/utils/dateTimeUtils';
 import styles from './TicketDetails.module.css';
@@ -44,6 +45,7 @@ interface TicketPropertiesProps {
   tenant: string;
   contacts: any[];
   companies: ICompany[];
+  locations?: ICompanyLocation[];
   companyFilterState: 'all' | 'active' | 'inactive';
   clientTypeFilter: 'all' | 'company' | 'individual';
   onStart: () => void;
@@ -58,12 +60,40 @@ interface TicketPropertiesProps {
   onRemoveAgent: (assignmentId: string) => Promise<void>;
   onChangeContact: (contactId: string | null) => void;
   onChangeCompany: (companyId: string) => void;
+  onChangeLocation?: (locationId: string | null) => void;
   onCompanyFilterStateChange: (state: 'all' | 'active' | 'inactive') => void;
   onClientTypeFilterChange: (type: 'all' | 'company' | 'individual') => void;
   tags?: ITag[];
   allTagTexts?: string[];
   onTagsChange?: (tags: ITag[]) => void;
 }
+
+// Helper function to format location display
+const formatLocationDisplay = (location: ICompanyLocation): string => {
+  const parts = [];
+  
+  if (location.location_name) {
+    parts.push(location.location_name);
+  }
+  
+  if (location.address_line1) {
+    parts.push(location.address_line1);
+  }
+  
+  if (location.city && location.state_province) {
+    parts.push(`${location.city}, ${location.state_province}`);
+  } else if (location.city) {
+    parts.push(location.city);
+  } else if (location.state_province) {
+    parts.push(location.state_province);
+  }
+  
+  if (location.postal_code) {
+    parts.push(location.postal_code);
+  }
+  
+  return parts.join(' - ') || 'Unnamed Location';
+};
 
 const TicketProperties: React.FC<TicketPropertiesProps> = ({
   id = 'ticket-properties',
@@ -84,6 +114,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   tenant,
   contacts,
   companies,
+  locations = [],
   companyFilterState,
   clientTypeFilter,
   onStart,
@@ -98,6 +129,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   onRemoveAgent,
   onChangeContact,
   onChangeCompany,
+  onChangeLocation,
   onCompanyFilterStateChange,
   onClientTypeFilterChange,
   tags = [],
@@ -107,9 +139,11 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const [showAgentPicker, setShowAgentPicker] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [showCompanyPicker, setShowCompanyPicker] = useState(false);
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [contactFilterState, setContactFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [agentSchedules, setAgentSchedules] = useState<IAgentSchedule[]>([]);
   const [primaryAgentAvatarUrl, setPrimaryAgentAvatarUrl] = useState<string | null>(null);
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
@@ -446,6 +480,83 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               )}
             </div>
           </div>
+          {company && locations.length > 0 && (
+            <div>
+              <h5 className="font-bold">Location</h5>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <p className="text-sm">
+                    {(() => {
+                      // If ticket has a location, show it
+                      if (ticket.location) {
+                        return formatLocationDisplay(ticket.location);
+                      }
+                      // Otherwise, show the default location if one exists
+                      const defaultLocation = locations.find(l => l.is_default);
+                      if (defaultLocation) {
+                        return `${formatLocationDisplay(defaultLocation)} (Default)`;
+                      }
+                      // Otherwise show no location
+                      return 'No location specified';
+                    })()}
+                  </p>
+                  <Button
+                    {...withDataAutomationId({ id: `${id}-show-location-picker-btn` })}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowLocationPicker(!showLocationPicker)}
+                    className="p-1 h-auto"
+                  >
+                    <Edit2 className="h-3 w-3" />
+                  </Button>
+                </div>
+                {showLocationPicker && (
+                  <div className="space-y-2">
+                    <CustomSelect
+                      {...withDataAutomationId({ id: `${id}-location-select` })}
+                      value={selectedLocationId || ticket.location?.location_id || 'none'}
+                      onValueChange={(value) => setSelectedLocationId(value === 'none' ? null : value)}
+                      options={[
+                        { value: 'none', label: 'No specific location' },
+                        ...locations.map((location) => ({
+                          value: location.location_id,
+                          label: formatLocationDisplay(location) + (location.is_default ? ' (Default)' : '')
+                        }))
+                      ]}
+                      placeholder="Select location"
+                      className="w-full"
+                    />
+                    <div className="flex justify-end space-x-2">
+                      <Button
+                        {...withDataAutomationId({ id: `${id}-cancel-location-picker-btn` })}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setShowLocationPicker(false);
+                          setSelectedLocationId(null);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        {...withDataAutomationId({ id: `${id}-save-location-picker-btn` })}
+                        variant="default"
+                        size="sm"
+                        onClick={() => {
+                          if (onChangeLocation) {
+                            onChangeLocation(selectedLocationId);
+                          }
+                          setShowLocationPicker(false);
+                        }}
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           <div>
             <h5 className="font-bold">{contactInfo ? 'Contact Phone' : 'Company Phone'}</h5>
             <p className="text-sm">
