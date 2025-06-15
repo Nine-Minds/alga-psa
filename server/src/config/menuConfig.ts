@@ -169,7 +169,7 @@ export const menuItems: MenuItem[] = [
   },
   {
     name: 'System',
-    icon: RadixIcons.GearIcon,
+    icon: RadixIcons.DesktopIcon,
     subItems: [
       {
         name: 'Job Monitoring',
