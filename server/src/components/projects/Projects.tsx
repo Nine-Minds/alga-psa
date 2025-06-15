@@ -1,16 +1,19 @@
 'use client'
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { IProject, ICompany } from 'server/src/interfaces';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import ProjectQuickAdd from './ProjectQuickAdd';
 import { deleteProject } from 'server/src/lib/actions/project-actions/projectActions';
 import { getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
 import { findUserById } from 'server/src/lib/actions/user-actions/userActions';
+import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
+import { TagFilter, TagManager } from 'server/src/components/tags';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
 import { Search, MoreVertical, Pen, Trash2 } from 'lucide-react';
@@ -32,15 +35,74 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<IProject | null>(null);
   const { openDrawer, closeDrawer } = useDrawer();
+  
+  // Tag-related state
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const projectTagsRef = useRef<Record<string, ITag[]>>({});
+  const [allUniqueTags, setAllUniqueTags] = useState<string[]>([]);
+  
+  const handleTagsChange = (projectId: string, tags: ITag[]) => {
+    projectTagsRef.current[projectId] = tags;
+    
+    // Update unique tags list
+    const allTags = new Set<string>();
+    Object.values(projectTagsRef.current).forEach(entityTags => {
+      entityTags.forEach(tag => allTags.add(tag.tag_text));
+    });
+    setAllUniqueTags(Array.from(allTags));
+  };
+
+  // Fetch tags when projects change
+  useEffect(() => {
+    const fetchTags = async () => {
+      if (projects.length === 0) return;
+      
+      try {
+        const projectIds = projects.map(project => project.project_id).filter((id): id is string => id !== undefined);
+        
+        const [projectTags, allTags] = await Promise.all([
+          findTagsByEntityIds(projectIds, 'project'),
+          findAllTagsByType('project')
+        ]);
+
+        const newProjectTags: Record<string, ITag[]> = {};
+        projectTags.forEach(tag => {
+          if (!newProjectTags[tag.tagged_id]) {
+            newProjectTags[tag.tagged_id] = [];
+          }
+          newProjectTags[tag.tagged_id].push(tag);
+        });
+
+        projectTagsRef.current = newProjectTags;
+        setAllUniqueTags(allTags);
+      } catch (error) {
+        console.error('Error fetching tags:', error);
+      }
+    };
+    fetchTags();
+  }, [projects]);
 
   const filteredProjects = useMemo(() => {
-    return projects.filter(project =>
+    let filtered = projects.filter(project =>
       project.project_name.toLowerCase().includes(searchTerm.toLowerCase()) &&
       (filterStatus === 'all' || 
        (filterStatus === 'active' && !project.is_inactive) ||
        (filterStatus === 'inactive' && project.is_inactive))
     );
-  }, [projects, searchTerm, filterStatus]);
+
+    // Apply tag filter if tags are selected
+    if (selectedTags.length > 0) {
+      filtered = filtered.filter(project => {
+        const projectTags = projectTagsRef.current[project.project_id || ''] || [];
+        const projectTagTexts = projectTags.map(tag => tag.tag_text);
+        
+        // Check if project has any of the selected tags
+        return selectedTags.some(selectedTag => projectTagTexts.includes(selectedTag));
+      });
+    }
+
+    return filtered;
+  }, [projects, searchTerm, filterStatus, selectedTags]);
 
   const handleEditProject = (project: IProject) => {
     openDrawer(
@@ -87,7 +149,7 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
     {
       title: 'Project Name',
       dataIndex: 'project_name',
-      width: '25%',
+      width: '20%',
       render: (text: string, record: IProject) => (
         <Link href={`/msp/projects/${record.project_id}`} className="text-blue-600 hover:text-blue-800 block truncate">
           {text}
@@ -97,7 +159,7 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
     {
       title: 'Client',
       dataIndex: 'company_id',
-      width: '20%',
+      width: '15%',
       render: (value, record) => {
         const company = companies.find(c => c.company_id === value);
         return company ? company.company_name : 'No Client';
@@ -106,7 +168,7 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
     {
       title: 'Contact',
       dataIndex: 'contact_name',
-      width: '20%',
+      width: '15%',
       render: (name: string | null) => name || 'No Contact',
     },
     {
@@ -122,7 +184,7 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
     {
       title: 'Deadline',
       dataIndex: 'end_date',
-      width: '15%',
+      width: '10%',
       render: (value: string | null) => value ? new Date(value).toLocaleDateString() : 'N/A',
     },
     {
@@ -134,6 +196,24 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
         const user = record.assigned_user;
         return user ? `${user.first_name} ${user.last_name}` : 'Unassigned';
       }
+    },
+    {
+      title: 'Tags',
+      dataIndex: 'tags',
+      width: '20%',
+      render: (value: string, record: IProject) => {
+        if (!record.project_id) return null;
+        
+        return (
+          <TagManager
+            entityId={record.project_id}
+            entityType="project"
+            initialTags={projectTagsRef.current[record.project_id] || []}
+            existingTags={allUniqueTags}
+            onTagsChange={(tags) => handleTagsChange(record.project_id!, tags)}
+          />
+        );
+      },
     },
     {
       title: 'Actions',
@@ -242,6 +322,17 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
               }}
             />
           </div>
+          <TagFilter
+            allTags={allUniqueTags}
+            selectedTags={selectedTags}
+            onTagSelect={(tag) => {
+              setSelectedTags(prev => 
+                prev.includes(tag) 
+                  ? prev.filter(t => t !== tag)
+                  : [...prev, tag]
+              );
+            }}
+          />
           <Button id='add-project-button' onClick={() => setShowQuickAdd(true)}>
             Add Project
           </Button>

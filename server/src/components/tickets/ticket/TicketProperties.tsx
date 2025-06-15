@@ -5,6 +5,8 @@ import { getScheduledHoursForTicket } from 'server/src/lib/actions/ticket-action
 import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule, ICompany, ICompanyLocation } from 'server/src/interfaces'; // Added ICompany and ICompanyLocation
 import { IUserWithRoles, ITeam } from 'server/src/interfaces/auth.interfaces';
 import { ITicketResource } from 'server/src/interfaces/ticketResource.interfaces';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { TagManager } from 'server/src/components/tags';
 import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
@@ -61,6 +63,9 @@ interface TicketPropertiesProps {
   onChangeLocation?: (locationId: string | null) => void;
   onCompanyFilterStateChange: (state: 'all' | 'active' | 'inactive') => void;
   onClientTypeFilterChange: (type: 'all' | 'company' | 'individual') => void;
+  tags?: ITag[];
+  allTagTexts?: string[];
+  onTagsChange?: (tags: ITag[]) => void;
 }
 
 // Helper function to format location display
@@ -127,6 +132,9 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   onChangeLocation,
   onCompanyFilterStateChange,
   onClientTypeFilterChange,
+  tags = [],
+  allTagTexts = [],
+  onTagsChange,
 }) => {
   const [showAgentPicker, setShowAgentPicker] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
@@ -692,6 +700,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
           </div>
         </div>
       </div>
+
     </div>
   );
 };

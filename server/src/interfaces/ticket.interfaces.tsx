@@ -1,8 +1,9 @@
 // server/src/interfaces/ticket.interfaces.tsx
 import { TenantEntity } from ".";
+import { ITaggable } from './tag.interfaces';
 import { ICompanyLocation } from "./company.interfaces";
 
-export interface ITicket extends TenantEntity {
+export interface ITicket extends TenantEntity, ITaggable {
   ticket_id?: string;
   ticket_number: string;
   title: string;

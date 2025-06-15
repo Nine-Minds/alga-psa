@@ -11,18 +11,27 @@ interface TagListProps {
   tags: ITag[];
   onRemoveTag?: (tagId: string) => Promise<void>;
   className?: string;
+  maxDisplay?: number;
 }
 
 export const TagList: React.FC<TagListProps> = ({ 
   id = 'tag-list',
   tags, 
   onRemoveTag,
-  className = ''
+  className = '',
+  maxDisplay
 }) => {
+  const displayTags = maxDisplay && tags.length > maxDisplay 
+    ? tags.slice(0, maxDisplay) 
+    : tags;
+  const remainingCount = maxDisplay && tags.length > maxDisplay 
+    ? tags.length - maxDisplay 
+    : 0;
+
   return (
     <ReflectionContainer id={id} label="Tag List">
       <div className={`flex flex-wrap gap-1 ${className}`}>
-        {tags.map((tag):JSX.Element => {
+        {displayTags.map((tag):JSX.Element => {
           const colors = generateEntityColor(tag.tag_text);
           return (
             <span
@@ -50,6 +59,22 @@ export const TagList: React.FC<TagListProps> = ({
             </span>
           );
         })}
+        {remainingCount > 0 && (
+          <span
+            style={{
+              backgroundColor: '#e5e7eb',
+              color: '#6b7280',
+              padding: '2px 6px',
+              borderRadius: '9999px',
+              fontSize: '0.75rem',
+              fontWeight: '600',
+              display: 'inline-flex',
+              alignItems: 'center',
+            }}
+          >
+            +{remainingCount} more
+          </span>
+        )}
       </div>
     </ReflectionContainer>
   );

@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { IProject, IProjectPhase, IProjectTask, IProjectTicketLinkWithDetails, ProjectStatus } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
 
 interface ProjectDetails {
   project: IProject;
@@ -23,6 +24,8 @@ interface ProjectDetails {
 export default function ProjectPage({ params }: { params: { id: string } }) {
   const { id } = params;
   const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
+  const [projectTags, setProjectTags] = useState<ITag[]>([]);
+  const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchProjectDetails = async () => {
@@ -68,6 +71,11 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       console.error('Error updating project:', error);
     }
   };
+  
+  const handleTagsUpdate = (tags: ITag[], allTags: string[]) => {
+    setProjectTags(tags);
+    setAllTagTexts(allTags);
+  };
 
   if (!projectDetails) {
     return <div>Loading...</div>;
@@ -84,6 +92,9 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         onAssignedUserChange={handleAssignedUserChange}
         onContactChange={handleContactChange}
         onProjectUpdate={handleProjectUpdate}
+        projectTags={projectTags}
+        allTagTexts={allTagTexts}
+        onTagsChange={setProjectTags}
       />
       <ProjectDetail
         project={projectDetails.project}
@@ -93,6 +104,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         statuses={projectDetails.statuses}
         users={projectDetails.users}
         companies={projectDetails.companies}
+        onTagsUpdate={handleTagsUpdate}
       />
     </div>
   );

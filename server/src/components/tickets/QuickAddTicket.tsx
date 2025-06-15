@@ -156,6 +156,7 @@ export function QuickAddTicket({
         if (prefilledDescription) {
           setDescription(prefilledDescription);
         }
+
       } catch (error) {
         console.error('Error fetching form data:', error);
       } finally {
@@ -283,6 +284,7 @@ export function QuickAddTicket({
     onOpenChange(false);
   };
 
+
   const validateForm = () => {
     const validationErrors = [];
     if (!title.trim()) validationErrors.push('Title');
@@ -345,6 +347,7 @@ export function QuickAddTicket({
       if (!newTicket) {
         throw new Error('Failed to create ticket');
       }
+
 
       await onTicketAdded(newTicket);
       resetForm();
@@ -479,7 +482,6 @@ export function QuickAddTicket({
                     }
                     buttonWidth="full"
                   />
-
                   {companyId && locations.length > 0 && (
                     <CustomSelect
                       id={`${id}-location`}
@@ -499,7 +501,6 @@ export function QuickAddTicket({
                       className=""
                     />
                   )}
-
                   <div className={hasAttemptedSubmit && !assignedTo ? 'ring-1 ring-red-500 rounded-lg' : ''}>
                     <UserPicker
                       value={assignedTo}

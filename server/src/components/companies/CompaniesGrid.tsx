@@ -1,4 +1,5 @@
 import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
 import CompanyGridCard from "./CompanyGridCard";
 import Pagination from 'server/src/components/ui/Pagination';
 import { useState } from 'react';
@@ -14,6 +15,9 @@ interface CompaniesGridProps {
     totalCount: number;
     onPageChange: (page: number) => void;
     onPageSizeChange: (size: number) => void;
+    companyTags?: Record<string, ITag[]>;
+    allUniqueTags?: string[];
+    onTagsChange?: (companyId: string, tags: ITag[]) => void;
 }
 
 type ItemsPerPage = 9 | 18 | 27 | 36;
@@ -28,7 +32,10 @@ const CompaniesGrid = ({
     pageSize,
     totalCount,
     onPageChange,
-    onPageSizeChange
+    onPageSizeChange,
+    companyTags = {},
+    allUniqueTags = [],
+    onTagsChange
 }: CompaniesGridProps) => {
     
     const itemsPerPageOptions = [
@@ -49,6 +56,9 @@ const CompaniesGrid = ({
                             handleCheckboxChange={handleCheckboxChange}
                             handleEditCompany={handleEditCompany}
                             handleDeleteCompany={handleDeleteCompany}
+                            tags={companyTags[company.company_id] || []}
+                            allUniqueTags={allUniqueTags}
+                            onTagsChange={onTagsChange}
                         />
                     </div>
                 ))}

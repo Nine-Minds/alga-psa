@@ -4,10 +4,13 @@ import { useEffect, useState } from 'react';
 import { IProjectTask, IProjectTicketLinkWithDetails, ITaskType } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { CheckSquare, Square, Ticket, Users, MoreVertical, Move, Copy, Edit, Trash2, Bug, Sparkles, TrendingUp, Flag, BookOpen } from 'lucide-react';
 import { findPriorityById } from 'server/src/lib/actions/priorityActions';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { getTaskTicketLinksAction, getTaskResourcesAction } from 'server/src/lib/actions/project-actions/projectTaskActions';
+import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
+import { TagList, TagManager } from 'server/src/components/tags';
 import { Button } from 'server/src/components/ui/Button';
 import {
   DropdownMenu,
@@ -24,6 +27,8 @@ interface TaskCardProps {
   hasCriticalPath?: boolean;
   ticketLinks?: IProjectTicketLinkWithDetails[];
   taskResources?: any[];
+  taskTags?: ITag[];
+  allTaskTagTexts?: string[];
   isAnimating?: boolean;
   onTaskSelected: (task: IProjectTask) => void;
   onAssigneeChange: (taskId: string, newAssigneeId: string, newTaskName?: string) => void;
@@ -34,6 +39,7 @@ interface TaskCardProps {
   onDuplicateTaskClick: (task: IProjectTask) => void;
   onEditTaskClick: (task: IProjectTask) => void;
   onDeleteTaskClick: (task: IProjectTask) => void;
+  onTaskTagsChange?: (taskId: string, tags: ITag[]) => void;
 }
 
 const taskTypeIcons: Record<string, React.ComponentType<any>> = {
@@ -52,6 +58,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   hasCriticalPath = false,
   ticketLinks,
   taskResources: providedTaskResources,
+  taskTags: providedTaskTags = [],
+  allTaskTagTexts = [],
   isAnimating = false,
   onTaskSelected,
   onAssigneeChange,
@@ -62,6 +70,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   onDuplicateTaskClick,
   onEditTaskClick,
   onDeleteTaskClick,
+  onTaskTagsChange,
 }) => {
   // Initialize states based on whether data is already available (empty array) or not yet loaded (null)
   const [taskTickets, setTaskTickets] = useState<IProjectTicketLinkWithDetails[] | null>(
@@ -76,6 +85,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   );
   const [isDragging, setIsDragging] = useState(false);
   const [priority, setPriority] = useState<IPriority | IStandardPriority | null>(null);
+  const [taskTags, setTaskTags] = useState<ITag[]>(providedTaskTags);
   const Icon = taskTypeIcons[task.task_type_key || 'task'] || CheckSquare;
 
   useEffect(() => {
@@ -114,6 +124,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           setPriority(taskPriority);
         }
 
+        // Fetch tags only if not provided
+        if (task.task_id && providedTaskTags.length === 0) {
+          const tags = await findTagsByEntityId(task.task_id, 'project_task');
+          setTaskTags(tags);
+        }
 
       } catch (error) {
         console.error('Error fetching task data:', error);
@@ -318,6 +333,31 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             </div>
           )}
         </div>
+      </div>
+      
+      {/* Tags at the very bottom */}
+      <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+        {onTaskTagsChange && task.task_id ? (
+          <TagManager
+            id={`task-tags-${task.task_id}`}
+            entityId={task.task_id}
+            entityType="project_task"
+            initialTags={taskTags}
+            existingTags={allTaskTagTexts}
+            onTagsChange={(tags) => {
+              setTaskTags(tags);
+              onTaskTagsChange(task.task_id, tags);
+            }}
+          />
+        ) : (
+          taskTags.length > 0 && (
+            <TagList 
+              id={`task-tags-${task.task_id}`}
+              tags={taskTags}
+              maxDisplay={3}
+            />
+          )
+        )}
       </div>
       
       {/* Critical path indicator */}

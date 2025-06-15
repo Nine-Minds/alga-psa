@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { IProject, IProjectPhase, IProjectTask, IProjectTicketLink, IProjectTicketLinkWithDetails, ProjectStatus, ITaskType } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { getAllPrioritiesWithStandard } from 'server/src/lib/actions/priorityActions';
 import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTaskActions';
+import { findTagsByEntityId, findAllTagsByType, findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
+import { TagManager, TagFilter } from 'server/src/components/tags';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import TaskQuickAdd from './TaskQuickAdd';
 import TaskEdit from './TaskEdit';
@@ -37,6 +40,7 @@ interface ProjectDetailProps {
   companies: ICompany[];
   contact?: { full_name: string };
   assignedUser?: IUserWithRoles;
+  onTagsUpdate?: (tags: ITag[], allTagTexts: string[]) => void;
 }
 
 export default function ProjectDetail({ 
@@ -48,7 +52,8 @@ export default function ProjectDetail({
   users,
   companies,
   contact,
-  assignedUser
+  assignedUser,
+  onTagsUpdate
 }: ProjectDetailProps) {
   const [selectedTask, setSelectedTask] = useState<IProjectTask | null>(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
@@ -98,6 +103,37 @@ export default function ProjectDetail({
   const [animatingTasks, setAnimatingTasks] = useState<Set<string>>(new Set());
   const [animatingPhases, setAnimatingPhases] = useState<Set<string>>(new Set());
   const [taskDraggingOverPhaseId, setTaskDraggingOverPhaseId] = useState<string | null>(null); // Added state
+  
+  // Tag-related state
+  const [projectTags, setProjectTags] = useState<ITag[]>([]);
+  const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
+  const hasNotifiedParent = useRef(false);
+  
+  // Fetch tags when component mounts
+  useEffect(() => {
+    const fetchTags = async () => {
+      if (!project.project_id) return;
+      
+      try {
+        const [tags, allTags] = await Promise.all([
+          findTagsByEntityId(project.project_id, 'project'),
+          findAllTagsByType('project')
+        ]);
+        
+        setProjectTags(tags);
+        setAllTagTexts(allTags);
+        
+        // Notify parent component of tags update only once
+        if (onTagsUpdate && !hasNotifiedParent.current) {
+          onTagsUpdate(tags, allTags);
+          hasNotifiedParent.current = true;
+        }
+      } catch (error) {
+        console.error('Error fetching project tags:', error);
+      }
+    };
+    fetchTags();
+  }, [project.project_id]); // Remove onTagsUpdate from dependencies to prevent infinite loop
   const [duplicateTaskToggleDetails, setDuplicateTaskToggleDetails] = useState<{
       hasChecklist: boolean;
       hasPrimaryAssignee: boolean;
@@ -109,6 +145,9 @@ export default function ProjectDetail({
   const [priorities, setPriorities] = useState<(IPriority | IStandardPriority)[]>([]);
   const [taskTypes, setTaskTypes] = useState<ITaskType[]>([]);
   const [selectedPriorityFilter, setSelectedPriorityFilter] = useState<string>('all');
+  const [selectedTaskTags, setSelectedTaskTags] = useState<string[]>([]);
+  const [taskTags, setTaskTags] = useState<Record<string, ITag[]>>({});
+  const [allTaskTagTexts, setAllTaskTagTexts] = useState<string[]>([]);
 
   const filteredTasks = useMemo(() => {
     if (!selectedPhase) return [];
@@ -119,8 +158,17 @@ export default function ProjectDetail({
       tasks = tasks.filter(task => task.priority_id === selectedPriorityFilter);
     }
     
+    // Apply tag filter
+    if (selectedTaskTags.length > 0) {
+      tasks = tasks.filter(task => {
+        const tags = taskTags[task.task_id] || [];
+        const tagTexts = tags.map(tag => tag.tag_text);
+        return selectedTaskTags.some(selectedTag => tagTexts.includes(selectedTag));
+      });
+    }
+    
     return tasks;
-  }, [projectTasks, selectedPhase, selectedPriorityFilter]);
+  }, [projectTasks, selectedPhase, selectedPriorityFilter, selectedTaskTags, taskTags]);
 
   const completedTasksCount = useMemo(() => {
     return filteredTasks.filter(task =>
@@ -138,6 +186,29 @@ export default function ProjectDetail({
       }
     };
   }, [scrollInterval]);
+  
+  // Handle tag changes
+  const handleProjectTagsChange = (tags: ITag[]) => {
+    setProjectTags(tags);
+    if (onTagsUpdate) {
+      onTagsUpdate(tags, allTagTexts);
+    }
+  };
+  
+  // Handle task tag changes
+  const handleTaskTagsChange = (taskId: string, tags: ITag[]) => {
+    setTaskTags(prev => ({
+      ...prev,
+      [taskId]: tags
+    }));
+    
+    // Update all unique tags
+    const allTags = new Set<string>();
+    Object.entries({ ...taskTags, [taskId]: tags }).forEach(([_, tags]) => {
+      tags.forEach(tag => allTags.add(tag.tag_text));
+    });
+    setAllTaskTagTexts(Array.from(allTags));
+  };
   
   // Fetch project completion metrics and project tree data
   useEffect(() => {
@@ -172,6 +243,37 @@ export default function ProjectDetail({
     
     fetchInitialData();
   }, [project.project_id]);
+  
+  // Fetch tags for all tasks
+  useEffect(() => {
+    const fetchTaskTags = async () => {
+      if (projectTasks.length === 0) return;
+      
+      try {
+        const taskIds = projectTasks.map(task => task.task_id);
+        const [tags, allTags] = await Promise.all([
+          findTagsByEntityIds(taskIds, 'project_task'),
+          findAllTagsByType('project_task')
+        ]);
+        
+        // Group tags by task
+        const tagsByTask: Record<string, ITag[]> = {};
+        tags.forEach(tag => {
+          if (!tagsByTask[tag.tagged_id]) {
+            tagsByTask[tag.tagged_id] = [];
+          }
+          tagsByTask[tag.tagged_id].push(tag);
+        });
+        
+        setTaskTags(tagsByTask);
+        setAllTaskTagTexts(allTags);
+      } catch (error) {
+        console.error('Error fetching task tags:', error);
+      }
+    };
+    
+    fetchTaskTags();
+  }, [projectTasks]);
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     e.dataTransfer.setData('text/plain', taskId);
@@ -857,8 +959,21 @@ export default function ProjectDetail({
               )}
             </div>
             
-            {/* Section 2: Priority Filter and Donut Chart */}
+            {/* Section 2: Tag Filter, Priority Filter and Donut Chart */}
             <div className="flex items-center gap-4">
+              {/* Tag Filter */}
+              <TagFilter
+                allTags={allTaskTagTexts}
+                selectedTags={selectedTaskTags}
+                onTagSelect={(tag) => {
+                  setSelectedTaskTags(prev => 
+                    prev.includes(tag) 
+                      ? prev.filter(t => t !== tag)
+                      : [...prev, tag]
+                  );
+                }}
+              />
+              
               {/* Priority Filter */}
               <div className="flex items-center gap-2">
                 <label className="text-sm font-medium text-gray-700">Filter by Priority:</label>
@@ -912,6 +1027,8 @@ export default function ProjectDetail({
               }
               return acc;
             }, {} as { [taskId: string]: any[] })}
+            taskTags={taskTags}
+            allTaskTagTexts={allTaskTagTexts}
             projectTreeData={projectTreeData} // Pass project tree data
             animatingTasks={animatingTasks}
             onDrop={handleDrop}
@@ -926,6 +1043,7 @@ export default function ProjectDetail({
             onDuplicateTaskClick={handleDuplicateTaskClick}
             onEditTaskClick={handleTaskSelected}
             onDeleteTaskClick={handleDeleteTaskClick}
+            onTaskTagsChange={handleTaskTagsChange}
           />
         </div>
       </div>

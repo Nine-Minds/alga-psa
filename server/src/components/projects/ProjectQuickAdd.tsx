@@ -122,6 +122,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
       // Create the project
       const newProject = await createProject(projectData);
       
+      
       onProjectAdded(newProject);
       
       onClose();

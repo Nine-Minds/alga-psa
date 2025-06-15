@@ -137,6 +137,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
         }
       };
 
+
       fetchUsers();
       fetchCountries();
     } else {
@@ -213,6 +214,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
         }
       }
 
+
       toast.success(`Company "${newCompany.company_name}" created successfully.`);
       onCompanyAdded(newCompany);
       onOpenChange(false);
@@ -278,6 +280,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       country_name: countryName
     }));
   };
+
 
   return (
     <Dialog
@@ -503,6 +506,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                 </div>
               </div>
             </div>
+
 
             {/* Contact Information Section */}
             <div className="space-y-4">

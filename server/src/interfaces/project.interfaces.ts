@@ -2,6 +2,7 @@
 import { TenantEntity } from ".";
 import { IUserWithRoles } from "./auth.interfaces";
 import { ItemType, IStatus, IStandardStatus } from "./status.interface";
+import { ITaggable } from './tag.interfaces';
 
 export interface IProjectStatusMapping extends TenantEntity {
   project_status_mapping_id: string;
@@ -15,7 +16,7 @@ export interface IProjectStatusMapping extends TenantEntity {
 }
 
 
-export interface IProject extends TenantEntity {
+export interface IProject extends TenantEntity, ITaggable {
   project_id: string;
   company_id: string;
   project_name: string;
@@ -52,7 +53,7 @@ export interface IProjectPhase extends TenantEntity {
   wbs_code: string;  
 }
 
-export interface IProjectTask extends TenantEntity {
+export interface IProjectTask extends TenantEntity, ITaggable {
   task_id: string;
   phase_id: string;
   task_name: string;

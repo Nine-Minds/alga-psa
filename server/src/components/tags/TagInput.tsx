@@ -30,6 +30,7 @@ export const TagInput: React.FC<TagInputProps> = ({
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (inputValue.trim()) {
@@ -45,20 +46,25 @@ export const TagInput: React.FC<TagInputProps> = ({
 
   // Update dropdown position when suggestions change or input is focused
   useLayoutEffect(() => {
-    if (suggestions.length > 0 && inputValue.trim() && inputRef.current) {
+    if (suggestions.length > 0 && inputValue.trim() && inputRef.current && isEditing) {
       const rect = inputRef.current.getBoundingClientRect();
+      // Use fixed positioning based on viewport, not document scroll
       setDropdownPosition({
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
+        top: rect.bottom,
+        left: rect.left,
         width: rect.width
       });
     }
-  }, [suggestions, inputValue]);
+  }, [suggestions, inputValue, isEditing]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      // Check if click is outside the container
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        cancelEdit();
+        // Also check if the dropdown exists and if click is outside it
+        if (!dropdownRef.current || !dropdownRef.current.contains(event.target as Node)) {
+          cancelEdit();
+        }
       }
     };
 
@@ -124,7 +130,7 @@ export const TagInput: React.FC<TagInputProps> = ({
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyPress}
-                className="rounded-l-md px-2 py-1 text-sm w-24 focus:ring-offset-0 focus:z-10"
+                className="rounded-l-md px-2 py-1 text-sm w-32 focus:ring-offset-0 focus:z-10"
                 placeholder={placeholder}
                 autoFocus
                 autoComplete="off"
@@ -149,10 +155,12 @@ export const TagInput: React.FC<TagInputProps> = ({
       {suggestions.length > 0 && inputValue.trim() && isEditing && typeof document !== 'undefined' &&
         createPortal(
           <div 
-            className="fixed z-[10000] w-48 bg-white border border-gray-200 rounded-md shadow-lg"
+            ref={dropdownRef}
+            className="fixed z-[10000] bg-white border border-gray-200 rounded-md shadow-lg"
             style={{ 
               top: `${dropdownPosition.top}px`,
               left: `${dropdownPosition.left}px`,
+              minWidth: '200px',
               maxHeight: '200px',
               overflowY: 'auto'
             }}
@@ -171,14 +179,11 @@ export const TagInput: React.FC<TagInputProps> = ({
                 <button
                   key={index}
                   className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center border-b border-gray-100 last:border-b-0 transition-colors"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleSave(suggestion);
-                  }}
                   onMouseDown={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    // Handle the save on mousedown to prevent click outside from firing
+                    handleSave(suggestion);
                   }}
                 >
                   <span

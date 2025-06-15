@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { IProjectPhase, IProjectTask, ITaskChecklistItem, ProjectStatus, IProjectTicketLinkWithDetails, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
 import AvatarIcon from 'server/src/components/ui/AvatarIcon';
 import { getProjectTreeData, getProjectDetails } from 'server/src/lib/actions/project-actions/projectActions';
 import { getAllPrioritiesWithStandard } from 'server/src/lib/actions/priorityActions';
@@ -21,6 +22,8 @@ import {
   getTaskDependencies
 } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { findTagsByEntityId, findAllTagsByType, createTag } from 'server/src/lib/actions/tagActions';
+import { TagManager } from 'server/src/components/tags';
 import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { TextArea } from 'server/src/components/ui/TextArea';
@@ -98,6 +101,8 @@ export default function TaskForm({
   const [taskResources, setTaskResources] = useState<any[]>(task?.task_id ? [] : []);
   const [tempTaskResources, setTempTaskResources] = useState<any[]>([]);
   const [showAgentPicker, setShowAgentPicker] = useState(false);
+  const [taskTags, setTaskTags] = useState<ITag[]>([]);
+  const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
   const [pendingTicketLinks, setPendingTicketLinks] = useState<IProjectTicketLinkWithDetails[]>(task?.ticket_links || []);
   const [editingChecklistItemId, setEditingChecklistItemId] = useState<string | null>(null);
   const [isCrossProjectMove, setIsCrossProjectMove] = useState<boolean>(false);
@@ -183,6 +188,13 @@ export default function TaskForm({
             setTaskResources(resources);
           }
 
+          // Fetch tags
+          const [tags, allTags] = await Promise.all([
+            findTagsByEntityId(task.task_id, 'project_task'),
+            findAllTagsByType('project_task')
+          ]);
+          setTaskTags(tags);
+          setAllTagTexts(allTags);
         }
       } catch (error) {
         console.error('Error fetching initial data:', error);
@@ -474,6 +486,7 @@ export default function TaskForm({
             for (const link of pendingTicketLinks) {
               await addTicketLinkAction(phase.project_id, resultTask.task_id, link.ticket_id, phase.phase_id);
             }
+
 
             // Only submit and close after everything is done
             onSubmit(resultTask);
@@ -1049,6 +1062,20 @@ export default function TaskForm({
                     </div>
                   </div>
                 </div>
+
+                {mode === 'edit' && task?.task_id && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Tags</h3>
+                    <TagManager
+                      id="task-tags-edit"
+                      entityId={task.task_id}
+                      entityType="project_task"
+                      initialTags={taskTags}
+                      existingTags={allTagTexts}
+                      onTagsChange={setTaskTags}
+                    />
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between mb-2">
                   <h3 className='font-semibold'>Checklist</h3>
