@@ -99,7 +99,7 @@
                     "data": {
                       "key": "statements",
                       "source": "api",
-                      "endpoint": "/api/extensions/softwareone/statements"
+                      "endpoint": "/api/extensions/{{extensionId}}/statements"
                     },
                     "columns": [
                       {

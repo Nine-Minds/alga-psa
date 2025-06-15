@@ -23,7 +23,7 @@ export async function refreshStatements(event: MouseEvent, context: HandlerConte
     context.ui.toast('Refreshing statements...', 'info');
     
     // Trigger refresh via API
-    const response = await context.api.post('/api/extensions/softwareone/sync', {
+    const response = await context.api.post(`/api/extensions/${context.extension.id}/sync`, {
       syncAgreements: false,
       syncStatements: true
     });
@@ -55,7 +55,7 @@ export async function importStatement(event: MouseEvent, context: HandlerContext
     if (!confirmed) return;
     
     // Call import API
-    const response = await context.api.post(`/api/extensions/softwareone/statements/${params.statementId}/import`);
+    const response = await context.api.post(`/api/extensions/${context.extension.id}/statements/${params.statementId}/import`);
     
     if (response.data.success) {
       context.ui.toast(`Statement imported successfully. Invoice #${response.data.invoiceNumber} created.`, 'success');
@@ -149,7 +149,7 @@ export async function importSelectedStatements(event: MouseEvent, context: Handl
     
     // Call bulk import API
     const statementIds = context.table.selectedRows.map(row => row.id);
-    const response = await context.api.post('/api/extensions/softwareone/statements/import-bulk', {
+    const response = await context.api.post(`/api/extensions/${context.extension.id}/statements/import-bulk`, {
       statementIds
     });
     
@@ -182,7 +182,7 @@ export async function downloadStatement(event: MouseEvent, context: HandlerConte
   if (!params?.statementId) return;
   
   try {
-    const response = await context.api.get(`/api/extensions/softwareone/statements/${params.statementId}/download`, {
+    const response = await context.api.get(`/api/extensions/${context.extension.id}/statements/${params.statementId}/download`, {
       responseType: 'blob'
     });
     

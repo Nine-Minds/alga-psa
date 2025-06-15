@@ -16,7 +16,7 @@ export async function refreshAgreements(event: MouseEvent, context: HandlerConte
     context.ui.toast('Refreshing agreements...', 'info');
     
     // Trigger refresh via API
-    const response = await context.api.post('/api/extensions/softwareone/sync', {
+    const response = await context.api.post(`/api/extensions/${context.extension.id}/sync`, {
       syncAgreements: true,
       syncStatements: false
     });
@@ -39,7 +39,7 @@ export async function refreshAgreements(event: MouseEvent, context: HandlerConte
 export async function exportAgreements(event: MouseEvent, context: HandlerContext) {
   try {
     // Get current filtered data
-    const response = await context.api.get('/api/extensions/softwareone/agreements/export');
+    const response = await context.api.get(`/api/extensions/${context.extension.id}/agreements/export`);
     
     // Create download
     const blob = new Blob([response.data], { type: 'text/csv' });
@@ -88,7 +88,7 @@ export async function activateAgreement(event: MouseEvent, context: HandlerConte
     if (!confirmed) return;
     
     // Call activation API
-    const response = await context.api.post(`/api/extensions/softwareone/agreements/${params.agreementId}/activate`);
+    const response = await context.api.post(`/api/extensions/${context.extension.id}/agreements/${params.agreementId}/activate`);
     
     if (response.data.success) {
       context.ui.toast('Agreement activated successfully', 'success');
@@ -117,7 +117,7 @@ export async function deactivateAgreement(event: MouseEvent, context: HandlerCon
     if (!confirmed) return;
     
     // Call deactivation API
-    const response = await context.api.post(`/api/extensions/softwareone/agreements/${params.agreementId}/deactivate`);
+    const response = await context.api.post(`/api/extensions/${context.extension.id}/agreements/${params.agreementId}/deactivate`);
     
     if (response.data.success) {
       context.ui.toast('Agreement deactivated successfully', 'success');
@@ -150,7 +150,7 @@ export async function exportAgreement(event: MouseEvent, context: HandlerContext
   if (!params?.agreementId) return;
   
   try {
-    const response = await context.api.get(`/api/extensions/softwareone/agreements/${params.agreementId}/export`);
+    const response = await context.api.get(`/api/extensions/${context.extension.id}/agreements/${params.agreementId}/export`);
     
     // Create download
     const blob = new Blob([response.data], { type: 'text/csv' });

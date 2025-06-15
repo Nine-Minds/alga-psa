@@ -107,12 +107,56 @@ export function DescriptorRenderer({
     };
   }, [router, providedContext]);
 
-  // Handle data fetching for page descriptors
+  // Helper function to find all table descriptors recursively
+  const findTableDescriptors = (desc: any): TableDescriptor[] => {
+    const tables: TableDescriptor[] = [];
+    
+    if (isTableDescriptor(desc)) {
+      tables.push(desc);
+    }
+    
+    if (desc.children && Array.isArray(desc.children)) {
+      for (const child of desc.children) {
+        if (typeof child === 'object') {
+          tables.push(...findTableDescriptors(child));
+        }
+      }
+    }
+    
+    if (desc.content) {
+      tables.push(...findTableDescriptors(desc.content));
+    }
+    
+    return tables;
+  };
+
+  // Handle data fetching for page descriptors and tables
   useEffect(() => {
+    const dataToLoad: DataDescriptor[] = [];
+    
+    // Load page-level data
     if (isPageDescriptor(descriptor) && descriptor.data) {
-      fetchData(descriptor.data);
+      dataToLoad.push(...descriptor.data);
+    }
+    
+    // Find and load table data
+    const tableDescriptors = findTableDescriptors(descriptor);
+    for (const tableDesc of tableDescriptors) {
+      dataToLoad.push(tableDesc.data);
+    }
+    
+    if (dataToLoad.length > 0) {
+      fetchData(dataToLoad);
     }
   }, [descriptor]);
+
+  // Helper function to substitute template variables
+  const substituteTemplate = (template: string, variables: Record<string, any>): string => {
+    return template.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+      const value = variables[key.trim()];
+      return value !== undefined ? String(value) : match;
+    });
+  };
 
   const fetchData = async (dataDescriptors: DataDescriptor[]) => {
     for (const dataDesc of dataDescriptors) {
@@ -123,7 +167,16 @@ export function DescriptorRenderer({
         switch (dataDesc.source) {
           case 'api':
             if (dataDesc.endpoint) {
-              const response = await context.api.get(dataDesc.endpoint, dataDesc.params);
+              // Substitute template variables in endpoint
+              const templateVars = {
+                extensionId: context.extension.id,
+                ...providedData,
+                ...(providedData.params || {})
+              };
+              const endpoint = substituteTemplate(dataDesc.endpoint, templateVars);
+              console.log(`[DescriptorRenderer] API call: ${dataDesc.endpoint} -> ${endpoint}`);
+              
+              const response = await context.api.get(endpoint, dataDesc.params);
               result = response.data;
             }
             break;
@@ -148,7 +201,12 @@ export function DescriptorRenderer({
           result = await handlers[dataDesc.transform](result, context);
         }
 
-        setData(prev => ({ ...prev, [dataDesc.key]: result }));
+        console.log(`[DescriptorRenderer] Setting data for key '${dataDesc.key}':`, result);
+        
+        setData(prev => ({ 
+          ...prev, 
+          [dataDesc.key]: result?.data || result  // Handle both {data: [...]} and [...] formats
+        }));
       } catch (error) {
         console.error(`Error fetching data for ${dataDesc.key}:`, error);
         setErrors(prev => ({ ...prev, [dataDesc.key]: error as Error }));
@@ -359,6 +417,13 @@ export function DescriptorRenderer({
     const [selectedRows, setSelectedRows] = useState<any[]>([]);
     const tableData = data[desc.data.key] || [];
 
+    console.log(`[DescriptorRenderer] Rendering table with data:`, {
+      key: desc.data.key,
+      dataKeys: Object.keys(data),
+      tableData,
+      loading: loading[desc.data.key]
+    });
+
     const tableContext: HandlerContext = {
       ...context,
       table: {
@@ -368,31 +433,153 @@ export function DescriptorRenderer({
       }
     };
 
-    // TODO: Implement full table rendering with sorting, filtering, pagination
-    return (
-      <div>
-        <table>
-          <thead>
-            <tr>
-              {desc.columns.map(col => (
-                <th key={col.key}>{col.header}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {tableData.map((row: any, index: number) => (
-              <tr key={row.id || index}>
-                {desc.columns.map(col => (
-                  <td key={col.key}>
-                    {col.cell ? renderDescriptor(col.cell) : row[col.key]}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
+    // Convert descriptor columns to DataTable format
+    const dataTableColumns = desc.columns.map(col => ({
+      title: col.header,
+      dataIndex: col.key,
+      width: col.width,
+      sortable: col.sortable,
+      render: col.cell ? (value: any, record: any, index: number) => {
+        // Create a context with the current row data for template substitution
+        const cellContext = {
+          row: record,
+          value,
+          index,
+          ...providedData
+        };
+        
+        // If cell has template variables, substitute them
+        let cellDescriptor = col.cell;
+        if (typeof cellDescriptor === 'object') {
+          console.log(`[DescriptorRenderer] Before substitution:`, JSON.stringify(cellDescriptor));
+          console.log(`[DescriptorRenderer] Cell context:`, cellContext);
+          
+          cellDescriptor = JSON.parse(JSON.stringify(cellDescriptor).replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+            const expression = key.trim();
+            console.log(`[DescriptorRenderer] Processing template: ${match}, expression: '${expression}'`);
+            
+            try {
+              // Create a safe evaluation context
+              const evalContext = {
+                row: record,
+                value,
+                index,
+                ...providedData
+              };
+              
+              // For simple property access, use direct access for safety
+              if (expression.match(/^row\.\w+$/)) {
+                const propPath = expression.substring(4); // Remove 'row.'
+                const result = record[propPath];
+                console.log(`[DescriptorRenderer] Simple property '${propPath}' = ${result}`);
+                return result !== undefined ? String(result) : match;
+              }
+              
+              // For method calls and complex expressions, use Function constructor for safe evaluation
+              // Replace 'row' with 'evalContext.row' in the expression
+              const safeExpression = expression.replace(/\brow\b/g, 'evalContext.row');
+              console.log(`[DescriptorRenderer] Safe expression: ${safeExpression}`);
+              
+              // Create a function that evaluates the expression in the given context
+              const func = new Function('evalContext', `
+                try {
+                  return ${safeExpression};
+                } catch (e) {
+                  console.warn('Template evaluation error:', e.message);
+                  return undefined;
+                }
+              `);
+              
+              const result = func(evalContext);
+              console.log(`[DescriptorRenderer] Expression result: ${result}`);
+              return result !== undefined ? String(result) : match;
+              
+            } catch (error) {
+              console.warn(`[DescriptorRenderer] Failed to evaluate template ${match}:`, error);
+              return match; // Return original template if evaluation fails
+            }
+          }));
+          
+          console.log(`[DescriptorRenderer] After substitution:`, JSON.stringify(cellDescriptor));
+        }
+        
+        return renderDescriptor({
+          ...cellDescriptor,
+          handlers: cellDescriptor.handlers ? Object.entries(cellDescriptor.handlers).reduce((acc, [event, handler]) => {
+            if (typeof handler === 'string') {
+              acc[event] = (e: any) => {
+                if (handlers[handler]) {
+                  handlers[handler](e, tableContext, { ...record });
+                }
+              };
+            } else if (typeof handler === 'object' && handler.handler) {
+              acc[event] = (e: any) => {
+                if (handler.preventDefault) e.preventDefault();
+                if (handler.stopPropagation) e.stopPropagation();
+                
+                if (handlers[handler.handler]) {
+                  // Substitute template variables in params
+                  const params = handler.params ? JSON.parse(JSON.stringify(handler.params).replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+                    const value = cellContext[key.trim()];
+                    return value !== undefined ? String(value) : match;
+                  })) : record;
+                  
+                  handlers[handler.handler](e, tableContext, params);
+                }
+              };
+            }
+            return acc;
+          }, {} as any) : undefined
+        });
+      } : undefined
+    }));
+
+    // Get the DataTable component from registry
+    const DataTableComponent = ComponentRegistry.get('DataTable');
+    
+    if (!DataTableComponent) {
+      console.error('[DescriptorRenderer] DataTable component not found in registry');
+      return <div className="text-red-500">DataTable component not available</div>;
+    }
+
+    const dataTableProps = {
+      columns: dataTableColumns,
+      data: tableData,
+      pagination: desc.pagination?.enabled !== false,
+      pageSize: desc.pagination?.pageSize || 10,
+      initialSorting: desc.sorting?.defaultSort ? [{
+        id: desc.sorting.defaultSort.field,
+        desc: desc.sorting.defaultSort.order === 'desc'
+      }] : undefined,
+      onRowClick: (record: any) => {
+        // Handle row click if defined in table descriptor
+        console.log('Row clicked:', record);
+      }
+    };
+
+    console.log(`[DescriptorRenderer] DataTable props:`, dataTableProps);
+
+    // Show loading state if data is being fetched
+    if (loading[desc.data.key]) {
+      return (
+        <div className="p-4 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-2"></div>
+          <div className="text-gray-600">Loading data...</div>
+        </div>
+      );
+    }
+
+    // Show error state if there was an error
+    if (errors[desc.data.key]) {
+      return (
+        <div className="p-4 text-center text-red-600">
+          <div className="mb-2">❌ Failed to load data</div>
+          <div className="text-sm">{errors[desc.data.key].message}</div>
+        </div>
+      );
+    }
+
+    return <DataTableComponent {...dataTableProps} />;
   };
 
   // Handle both UIDescriptor and PageDescriptor types

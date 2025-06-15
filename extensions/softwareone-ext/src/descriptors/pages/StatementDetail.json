@@ -277,7 +277,7 @@
                         "data": {
                           "key": "charges",
                           "source": "api",
-                          "endpoint": "/api/extensions/softwareone/statements/{{params.id}}/charges"
+                          "endpoint": "/api/extensions/{{extensionId}}/statements/{{params.id}}/charges"
                         },
                         "columns": [
                           {
@@ -454,12 +454,12 @@
     {
       "key": "statement",
       "source": "api",
-      "endpoint": "/api/extensions/softwareone/statements/{{params.id}}"
+      "endpoint": "/api/extensions/{{extensionId}}/statements/{{params.id}}"
     },
     {
       "key": "charges",
       "source": "api",
-      "endpoint": "/api/extensions/softwareone/statements/{{params.id}}/charges"
+      "endpoint": "/api/extensions/{{extensionId}}/statements/{{params.id}}/charges"
     }
   ],
   "handlers": {
