@@ -1,6 +1,6 @@
-# Alga PSA Extension Development Guide
+# Alga PSA Extension Development Guide - Descriptor Architecture
 
-This guide provides a comprehensive overview of how to develop extensions for Alga PSA. It covers the setup process, development workflow, and best practices.
+This guide provides a comprehensive overview of how to develop extensions for Alga PSA using the **descriptor-based architecture**. This approach eliminates module resolution issues, improves security, and reduces bundle sizes while providing a declarative interface for extension development.
 
 ## Getting Started
 
@@ -8,8 +8,11 @@ This guide provides a comprehensive overview of how to develop extensions for Al
 
 - Node.js 18.x or higher
 - Yarn or npm package manager
-- Basic knowledge of TypeScript and React
+- Basic knowledge of TypeScript and JSON
+- Understanding of declarative UI patterns
 - Local instance of Alga PSA (for testing)
+
+**Note**: React knowledge is helpful but not required since extensions use JSON descriptors instead of React components.
 
 ### Setting Up Your Development Environment
 
@@ -39,16 +42,21 @@ npm install
 
 ### Project Structure
 
-A newly created extension has the following structure:
+A descriptor-based extension has the following structure:
 
 ```
 my-extension/
 ├── dist/                      # Compiled output (generated)
 ├── src/
-│   ├── components/            # UI components
-│   │   └── HelloWorld.tsx     # Sample component
-│   ├── handlers/              # API and workflow handlers
-│   ├── index.ts               # Extension entry point
+│   ├── descriptors/           # JSON descriptors
+│   │   ├── navigation/        # Navigation descriptors
+│   │   │   └── NavItem.json
+│   │   ├── pages/             # Page descriptors
+│   │   │   └── HomePage.json
+│   │   └── handlers/          # TypeScript handler modules
+│   │       ├── navigation.ts
+│   │       └── pageHandlers.ts
+│   ├── index.ts               # Extension entry point (minimal)
 │   └── types.ts               # TypeScript type definitions
 ├── alga-extension.json        # Extension manifest
 ├── package.json               # Node.js package file
@@ -60,138 +68,178 @@ my-extension/
 
 ### 1. Define Your Extension Manifest
 
-The `alga-extension.json` file is the heart of your extension. It defines metadata, required permissions, and extension points. Here's a simple example:
+The `alga-extension.json` file is the heart of your descriptor-based extension. It defines metadata, required permissions, and descriptor components. Here's an example:
 
 ```json
 {
   "id": "com.example.my-extension",
   "name": "My Extension",
   "version": "1.0.0",
-  "description": "A sample extension for Alga PSA",
+  "description": "A sample descriptor-based extension for Alga PSA",
   "author": {
     "name": "Example, Inc.",
     "email": "dev@example.com"
   },
   "minAppVersion": "1.5.0",
-  "editions": ["community", "enterprise"],
   "tenantMode": "specific",
-  "main": "dist/index.js",
-  "permissions": {
-    "api": ["tickets:read", "companies:read"],
-    "ui": {
-      "navigation": ["main"],
-      "dashboards": ["main"]
+  "main": "index.js",
+  "autoEnable": true,
+  "permissions": [
+    "ui:view",
+    "company:read",
+    "storage:read",
+    "storage:write"
+  ],
+  "components": [
+    {
+      "type": "navigation",
+      "slot": "main-navigation",
+      "component": "descriptors/navigation/NavItem.json",
+      "props": {
+        "id": "my-extension-nav",
+        "label": "My Extension",
+        "icon": "StarIcon",
+        "path": "/my-extension/home",
+        "priority": 50
+      }
+    },
+    {
+      "type": "custom-page",
+      "slot": "custom-pages",
+      "component": "descriptors/pages/HomePage.json",
+      "props": {
+        "id": "my-extension-home",
+        "path": "/my-extension/home",
+        "title": "My Extension Home"
+      }
     }
+  ],
+  "routes": [
+    {
+      "path": "/home",
+      "component": "descriptors/pages/HomePage.json"
+    }
+  ]
+}
+```
+
+### 2. Create Descriptor Files
+
+Descriptor-based extensions use JSON files to define UI structure. Here's a navigation descriptor:
+
+```json
+// descriptors/navigation/NavItem.json
+{
+  "type": "button",
+  "props": {
+    "className": "w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors text-gray-300 hover:bg-gray-700 hover:text-white"
   },
-  "extensionPoints": {
-    "ui": {
-      "navItems": [
-        {
-          "id": "my-extension-nav",
-          "displayName": "My Extension",
-          "icon": "star",
-          "component": "dist/components/NavItem.js"
-        }
-      ],
-      "dashboardWidgets": [
-        {
-          "id": "my-extension-widget",
-          "displayName": "My Widget",
-          "description": "A sample dashboard widget",
-          "defaultWidth": "medium",
-          "defaultHeight": "medium",
-          "component": "dist/components/DashboardWidget.js",
-          "supportedDashboards": ["main"]
-        }
-      ]
-    }
+  "handlers": {
+    "module": "descriptors/handlers/navigation.js",
+    "onClick": "navigateToHome"
+  },
+  "children": [
+    {
+      "type": "StarIcon",
+      "props": { "className": "w-5 h-5" }
+    },
+    "My Extension"
+  ]
+}
+```
+
+And a page descriptor:
+
+```json
+// descriptors/pages/HomePage.json
+{
+  "type": "page",
+  "meta": {
+    "title": "My Extension Home",
+    "description": "Welcome to my extension"
+  },
+  "content": {
+    "type": "div",
+    "props": { "className": "p-6" },
+    "children": [
+      {
+        "type": "h1",
+        "props": { "className": "text-2xl font-bold mb-4" },
+        "children": ["Welcome to My Extension"]
+      },
+      {
+        "type": "Card",
+        "children": [
+          {
+            "type": "CardContent",
+            "props": { "className": "p-4" },
+            "children": [
+              {
+                "type": "p",
+                "children": ["This is a descriptor-based extension page."]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "handlers": {
+    "module": "handlers/pageHandlers"
   }
 }
 ```
 
-### 2. Implement Your Extension
+### 3. Implement Handler Modules
 
-The `src/index.ts` file is your extension's entry point. It must export `initialize` and `deactivate` functions:
+Handler modules contain the business logic for your descriptors. They're written in TypeScript and compiled to JavaScript:
 
 ```typescript
-import { ExtensionContext } from '@algapsa/extension-sdk';
+// descriptors/handlers/navigation.ts
+import { HandlerContext } from './types';
 
-export async function initialize(context: ExtensionContext) {
-  // Set up your extension here
-  context.logger.info('My extension initialized!');
-  
-  // Register event handlers
-  context.events.subscribe('ticket:created', async (data) => {
-    context.logger.info('New ticket created:', data);
-  });
-  
-  // Return your extension's API (optional)
-  return {
-    getInfo: () => {
-      return {
-        name: 'My Extension',
-        version: '1.0.0',
-      };
-    },
-  };
+export function navigateToHome(event: MouseEvent, context: HandlerContext) {
+  event.preventDefault();
+  // Use the extension context to navigate
+  context.navigate('/msp/extensions/my-extension/home');
 }
 
-export async function deactivate() {
-  // Clean up resources when the extension is disabled or uninstalled
-  console.log('My extension deactivated');
+export function navigateToSettings(event: MouseEvent, context: HandlerContext) {
+  event.preventDefault();
+  context.navigate('/msp/extensions/my-extension/settings');
 }
 ```
 
-### 3. Develop UI Components
+And page handlers:
 
-UI components are React components that will be rendered in the Alga PSA interface. Here's an example dashboard widget:
+```typescript
+// descriptors/handlers/pageHandlers.ts
+import { HandlerContext } from './types';
 
-```tsx
-// src/components/DashboardWidget.tsx
-import React, { useState, useEffect } from 'react';
-import { ExtensionComponentProps } from '@algapsa/extension-sdk';
-
-// The SDK provides typed props for all extension point components
-interface DashboardWidgetProps extends ExtensionComponentProps {
-  // Widget-specific props
+export async function loadData(context: HandlerContext) {
+  try {
+    const response = await context.api.get('/api/tickets/count');
+    return response.data;
+  } catch (error) {
+    context.ui.toast('Failed to load data', 'error');
+    return null;
+  }
 }
 
-const DashboardWidget: React.FC<DashboardWidgetProps> = ({ context }) => {
-  const [ticketCount, setTicketCount] = useState<number>(0);
-  const [loading, setLoading] = useState<boolean>(true);
+export async function saveSettings(event: SubmitEvent, context: HandlerContext) {
+  event.preventDefault();
+  const formData = new FormData(event.target as HTMLFormElement);
   
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Use the extension's API client to fetch data
-        const response = await context.apiClient.get('/api/tickets/count');
-        setTicketCount(response.data.count);
-      } catch (error) {
-        context.logger.error('Failed to fetch ticket count', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadData();
-  }, []);
-  
-  if (loading) {
-    return <div>Loading...</div>;
+  try {
+    await context.storage.set('settings', {
+      apiEndpoint: formData.get('apiEndpoint'),
+      refreshInterval: formData.get('refreshInterval')
+    });
+    context.ui.toast('Settings saved successfully', 'success');
+  } catch (error) {
+    context.ui.toast('Failed to save settings', 'error');
   }
-  
-  return (
-    <div className="dashboard-widget">
-      <h3>Ticket Overview</h3>
-      <div className="ticket-count">
-        <span className="count">{ticketCount}</span>
-        <span className="label">Active Tickets</span>
-      </div>
-    </div>
-  );
-};
-
-export default DashboardWidget;
+}
 ```
 
 ### 4. Implement API Handlers
