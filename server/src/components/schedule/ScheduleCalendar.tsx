@@ -302,10 +302,13 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
           return;
         }
       } else {
-        const result = await addScheduleEntry({
-          ...entryData,
-          recurrence_pattern: entryData.recurrence_pattern || null,
-        });
+        const result = await addScheduleEntry(
+          {
+            ...entryData,
+            recurrence_pattern: entryData.recurrence_pattern || null,
+          },
+          { assignedUserIds: entryData.assigned_user_ids }
+        );
         if (result.success && result.entry) {
           updatedEntry = result.entry;
           console.log('Added new entry:', updatedEntry);
