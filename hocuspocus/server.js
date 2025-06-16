@@ -20,7 +20,8 @@ const server = Server.configure({
             host: process.env.DB_HOST ||  'localhost',
             port: process.env.DB_PORT || 5432,
             database: process.env.DB_NAME_HOCUSPOCUS || 'hocuspocus',
-            username: process.env.DB_USER_HOCUSPOCUS || 'postrgres',
+            // Use a sane default username for local development
+            username: process.env.DB_USER_HOCUSPOCUS || 'postgres',
             password: process.env.DB_PASSWORD_HOCUSPOCUS || 'sebastian123',
         }),
         new Logger({
