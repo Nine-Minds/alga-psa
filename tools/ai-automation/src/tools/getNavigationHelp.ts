@@ -14,9 +14,9 @@ class GetNavigationHelpTool implements Tool {
         overview: "Read docs/ui_navigation_structure.md for complete navigation hierarchy",
         
         commonScreens: {
-          "dashboard": {
-            route: "/msp/dashboard",
-            navigation: "Click 'Dashboard' in sidebar (menu-dashboard)"
+          "home": {
+            route: "/msp/home",
+            navigation: "Click 'Home' in sidebar (menu-dashboard)"
           },
           "user-activities": {
             route: "/msp/user-activities", 
