@@ -19,6 +19,13 @@ export async function authenticateUser( email: string, password: string): Promis
         logger.warn(`No user found with email ${email}`);
         return null;
     }
+    
+    // Check if user is inactive
+    if (user.is_inactive) {
+        logger.warn(`Inactive user attempted to login: ${email}`);
+        return null; // Return null just like wrong password
+    }
+    
     const isValid = await verifyPassword(password, user.hashed_password);
     if (!isValid) {
         logger.warn(`Invalid password for email ${email}`);
