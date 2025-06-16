@@ -9,7 +9,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Card, CardContent } from 'server/src/components/ui/Card';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import ClientPasswordChangeForm from './ClientPasswordChangeForm';
 
 interface ClientUserDetailsProps {
@@ -35,6 +35,7 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
+  const [isAdminPasswordExpanded, setIsAdminPasswordExpanded] = useState(false);
 
   useEffect(() => {
     fetchUserDetails();
@@ -129,6 +130,11 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
       if (result.success) {
         setPasswordSuccess('Password changed successfully');
         setAdminNewPassword('');
+        // Collapse the form after successful password change
+        setTimeout(() => {
+          setIsAdminPasswordExpanded(false);
+          setPasswordSuccess(null);
+        }, 2000);
       } else {
         setPasswordError(result.error || 'Failed to change password');
       }
@@ -215,18 +221,18 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
         </div>
 
         <div className="flex items-center justify-between py-3">
-          <div>
+          <div className="flex-1">
             <div className="text-sm font-medium">Status</div>
-            <div className="text-sm text-gray-500">Set user account status</div>
+            <div className="text-sm text-gray-500 block">Set user account status</div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <div className="text-sm text-gray-500">
               {isActive ? 'Active' : 'Inactive'}
             </div>
             <Switch
-              checked={!isActive}
-              onCheckedChange={(checked) => setIsActive(!checked)}
-              className="data-[state=checked]:bg-primary-500"
+              checked={isActive}
+              onCheckedChange={(checked) => setIsActive(checked)}
+              className="data-[state=checked]:bg-green-500"
             />
           </div>
         </div>
@@ -238,41 +244,56 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
         
         {/* Admin Password Reset Section - shown for users with permission when viewing other users */}
         {canResetPassword && !isOwnProfile && (
-          <Card className="p-4 mt-4">
-            <CardContent>
-              <h3 className="text-md font-medium mb-4">Reset User Password</h3>
-              <form onSubmit={handleAdminResetPassword} className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">
-                    New Password
-                  </label>
-                  <div className="relative">
-                    <Input
-                      id="admin-new-password"
-                      type={showAdminNewPassword ? "text" : "password"}
-                      value={adminNewPassword}
-                      onChange={(e) => setAdminNewPassword(e.target.value)}
-                      className="w-full pr-10"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowAdminNewPassword(!showAdminNewPassword)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                    >
-                      {showAdminNewPassword ? (
-                        <Eye className="h-5 w-5 text-gray-400" />
-                      ) : (
-                        <EyeOff className="h-5 w-5 text-gray-400" />
-                      )}
-                    </button>
+          <Card className="mt-4">
+            <div className="p-4">
+              <button
+                type="button"
+                onClick={() => setIsAdminPasswordExpanded(!isAdminPasswordExpanded)}
+                className="w-full flex items-center justify-between text-left hover:bg-gray-50 p-2 rounded-md transition-colors"
+              >
+                <span className="text-base font-medium">Reset User Password</span>
+                {isAdminPasswordExpanded ? (
+                  <ChevronUp className="h-5 w-5 text-gray-500" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-gray-500" />
+                )}
+              </button>
+            </div>
+            {isAdminPasswordExpanded && (
+              <CardContent className="pt-0">
+                <form onSubmit={handleAdminResetPassword} className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      New Password
+                    </label>
+                    <div className="relative">
+                      <Input
+                        id="admin-new-password"
+                        type={showAdminNewPassword ? "text" : "password"}
+                        value={adminNewPassword}
+                        onChange={(e) => setAdminNewPassword(e.target.value)}
+                        className="w-full pr-10"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowAdminNewPassword(!showAdminNewPassword)}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                      >
+                        {showAdminNewPassword ? (
+                          <Eye className="h-5 w-5 text-gray-400" />
+                        ) : (
+                          <EyeOff className="h-5 w-5 text-gray-400" />
+                        )}
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <Button id='reset-password-btn' type="submit" variant="default">
-                  Reset Password
-                </Button>
-              </form>
-            </CardContent>
+                  <Button id='reset-password-btn' type="submit" variant="default">
+                    Reset Password
+                  </Button>
+                </form>
+              </CardContent>
+            )}
           </Card>
         )}
 

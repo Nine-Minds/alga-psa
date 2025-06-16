@@ -61,28 +61,31 @@ exports.up = async function(knex) {
       await knex('permissions').insert(permissionsToAdd);
     }
 
-    // Check if client_admin role exists before inserting
-    const existingRole = await knex('roles')
-      .where({ tenant, role_name: 'client_admin' })
-      .first();
+    // Check if Client_Admin role exists (case-insensitive)
+    const roles = await knex('roles').where({ tenant });
+    const existingRole = roles.find(r => 
+      r.role_name && r.role_name.toLowerCase() === 'client_admin'
+    );
     
     if (!existingRole) {
       await knex('roles').insert({
         tenant,
         role_id: knex.raw('gen_random_uuid()'),
-        role_name: 'client_admin',
+        role_name: 'Client_Admin',
         description: 'Client administrator role'
       });
     }
 
-    // Get client role
-    const clientRole = await knex('roles')
-      .where({ tenant, role_name: 'client' })
-      .first();
+    // Get Client role (case-insensitive)
+    const clientRole = roles.find(r => 
+      r.role_name && r.role_name.toLowerCase() === 'client'
+    );
 
-    // Get client_admin role
-    const clientAdminRole = await knex('roles')
-      .where({ tenant, role_name: 'client_admin' })
+    // Get Client_Admin role (case-insensitive) 
+    const clientAdminRole = roles.find(r => 
+      r.role_name && r.role_name.toLowerCase() === 'client_admin'
+    ) || await knex('roles')
+      .where({ tenant, role_name: 'Client_Admin' })
       .first();
 
     if (clientRole) {
@@ -182,15 +185,18 @@ exports.down = async function(knex) {
   if (!tenants.length) return;
 
   for (const { tenant } of tenants) {
-    // Remove role permissions
-    await knex('role_permissions')
-      .where('tenant', tenant)
-      .whereIn('role_id', function() {
-        this.select('role_id')
-          .from('roles')
-          .where('tenant', tenant)
-          .whereIn('role_name', ['client', 'client_admin']);
-      })
+    // Get all roles for case-insensitive matching
+    const roles = await knex('roles').where({ tenant });
+    const clientRoles = roles.filter(r => 
+      r.role_name && ['client', 'client_admin'].includes(r.role_name.toLowerCase())
+    );
+    const roleIds = clientRoles.map(r => r.role_id);
+
+    if (roleIds.length > 0) {
+      // Remove role permissions
+      await knex('role_permissions')
+        .where('tenant', tenant)
+        .whereIn('role_id', roleIds)
       .whereIn('permission_id', function() {
         this.select('permission_id')
           .from('permissions')
@@ -223,6 +229,7 @@ exports.down = async function(knex) {
           });
       })
       .delete();
+    }
 
     // Remove new permissions
     await knex('permissions')
@@ -255,10 +262,16 @@ exports.down = async function(knex) {
       })
       .delete();
 
-    // Remove client_admin role
-    await knex('roles')
-      .where('tenant', tenant)
-      .where('role_name', 'client_admin')
-      .delete();
+    // Remove Client_Admin role (case-insensitive)
+    const clientAdminRole = roles.find(r => 
+      r.role_name && r.role_name.toLowerCase() === 'client_admin'
+    );
+    
+    if (clientAdminRole) {
+      await knex('roles')
+        .where('tenant', tenant)
+        .where('role_id', clientAdminRole.role_id)
+        .delete();
+    }
   }
 };

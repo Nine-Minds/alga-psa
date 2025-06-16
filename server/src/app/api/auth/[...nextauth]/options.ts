@@ -39,6 +39,13 @@ export const options: NextAuthOptions = {
                     logger.warn("User not found with email", profile.email);
                     throw new Error("User not found");
                 }
+                
+                // Check if user is inactive
+                if (user.is_inactive) {
+                    logger.warn(`Inactive user attempted to login via Google: ${profile.email}`);
+                    throw new Error("User not found");
+                }
+                
                 logger.info("User sign in successful with email", profile.email);
                 return {
                     id: user.user_id.toString(),
