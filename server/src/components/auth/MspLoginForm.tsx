@@ -18,6 +18,7 @@ interface MspLoginFormProps {
 }
 
 export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired }: MspLoginFormProps) {
+  const targetCallbackUrl = callbackUrl || '/msp/home';
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -37,7 +38,7 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
         email,
         password,
         redirect: false,
-        callbackUrl,
+        callbackUrl: targetCallbackUrl,
       });
 
       if (result?.error === '2FA_REQUIRED') {
@@ -66,8 +67,8 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
   const handleGoogleSignIn = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     try {
-      await signIn('google', { 
-        callbackUrl,
+      await signIn('google', {
+        callbackUrl: targetCallbackUrl,
         redirect: true
       });
     } catch (error) {

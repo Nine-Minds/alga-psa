@@ -12,9 +12,9 @@ export interface MenuItem {
 
 export const menuItems: MenuItem[] = [
   {
-    name: 'Dashboard',
+    name: 'Home',
     icon: RadixIcons.BarChartIcon,
-    href: '/msp/dashboard'  // Updated to point to our new dashboard page
+    href: '/msp/home'  // Updated to point to our new home page
   },
   {
     name: 'User Activities',

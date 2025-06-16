@@ -25,7 +25,7 @@ interface HeaderProps {
 }
 
 const getMenuItemNameByPath = (path: string | null | undefined): string => {
-  if (!path) return 'Dashboard';
+  if (!path) return 'Home';
   
   const allMenuItems = [...menuItems, ...bottomMenuItems];
   
@@ -47,7 +47,7 @@ const getMenuItemNameByPath = (path: string | null | undefined): string => {
     return null;
   };
 
-  return findMenuItem(allMenuItems) || 'Dashboard';
+  return findMenuItem(allMenuItems) || 'Home';
 };
 
 const Header: React.FC<HeaderProps> = ({
