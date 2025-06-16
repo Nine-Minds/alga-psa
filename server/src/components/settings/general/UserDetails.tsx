@@ -10,8 +10,8 @@ import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Card } from 'server/src/components/ui/Card';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { Eye, EyeOff } from 'lucide-react';
-import PasswordChangeForm from './PasswordChangeForm';
+import { Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
+import CollapsiblePasswordChangeForm from './CollapsiblePasswordChangeForm';
 
 interface UserDetailsProps {
   userId: string;
@@ -38,6 +38,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
   const [showAdminNewPassword, setShowAdminNewPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [isAdminPasswordExpanded, setIsAdminPasswordExpanded] = useState(false);
 
   useEffect(() => {
     fetchUserDetails();
@@ -161,6 +162,11 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
       if (result.success) {
         setPasswordSuccess('Password changed successfully');
         setAdminNewPassword('');
+        // Collapse the form after successful password change
+        setTimeout(() => {
+          setIsAdminPasswordExpanded(false);
+          setPasswordSuccess(null);
+        }, 2000);
       } else {
         setPasswordError(result.error || 'Failed to change password');
       }
@@ -273,70 +279,88 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
               className="flex-1"
               placeholder="Select role to add"
             />
-            <Button
-              id={`add-role-btn`}
-              onClick={handleAddRole}
-              variant="outline"
-              disabled={!selectedRole}
-            >
-              Add Role
-            </Button>
+            {selectedRole && (
+              <Button
+                id={`add-role-btn`}
+                onClick={handleAddRole}
+                variant="default"
+              >
+                Add Role
+              </Button>
+            )}
           </div>
         </div>
 
         <div className="flex items-center justify-between py-3">
-          <div>
+          <div className="flex-1">
             <Text size="2" weight="medium">Status</Text>
-            <Text size="2" color="gray">Set user account status</Text>
+            <Text size="2" color="gray" className="block">Set user account status</Text>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Text size="2" color="gray">
               {isActive ? 'Active' : 'Inactive'}
             </Text>
             <Switch
-              checked={!isActive}
-              onCheckedChange={(checked) => setIsActive(!checked)}
-              className="data-[state=checked]:bg-primary-500"
+              checked={isActive}
+              onCheckedChange={(checked) => setIsActive(checked)}
+              className="data-[state=checked]:bg-green-500"
             />
           </div>
         </div>
 
       {/* Password Change Section */}
       {isOwnProfile ? (
-        <PasswordChangeForm />
+        <CollapsiblePasswordChangeForm />
       ) : isAdmin && (
-        <Card className="p-4 mt-4">
-          <Text size="3" weight="medium" className="mb-4">Set User Password (Admin)</Text>
-          <form onSubmit={handleAdminChangePassword} className="space-y-4">
-            <div>
-              <Text as="label" size="2" weight="medium" className="mb-2 block">
-                New Password
-              </Text>
-              <div className="relative">
-                <Input
-                  type={showAdminNewPassword ? "text" : "password"}
-                  value={adminNewPassword}
-                  onChange={(e) => setAdminNewPassword(e.target.value)}
-                  className="w-full pr-10"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowAdminNewPassword(!showAdminNewPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                >
-                  {showAdminNewPassword ? (
-                    <Eye className="h-5 w-5 text-gray-400" />
-                  ) : (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
-                  )}
-                </button>
-              </div>
+        <Card className="mt-4">
+          <div className="p-4">
+            <button
+              type="button"
+              onClick={() => setIsAdminPasswordExpanded(!isAdminPasswordExpanded)}
+              className="w-full flex items-center justify-between text-left hover:bg-gray-50 p-2 rounded-md transition-colors"
+            >
+              <span className="text-base font-medium">Set User Password (Admin)</span>
+              {isAdminPasswordExpanded ? (
+                <ChevronUp className="h-5 w-5 text-gray-500" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-gray-500" />
+              )}
+            </button>
+          </div>
+          {isAdminPasswordExpanded && (
+            <div className="px-4 pb-4">
+              <form onSubmit={handleAdminChangePassword} className="space-y-4">
+                <div>
+                  <Text as="label" size="2" weight="medium" className="mb-2 block">
+                    New Password
+                  </Text>
+                  <div className="relative">
+                    <Input
+                      type={showAdminNewPassword ? "text" : "password"}
+                      value={adminNewPassword}
+                      onChange={(e) => setAdminNewPassword(e.target.value)}
+                      className="w-full pr-10"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowAdminNewPassword(!showAdminNewPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    >
+                      {showAdminNewPassword ? (
+                        <Eye className="h-5 w-5 text-gray-400" />
+                      ) : (
+                        <EyeOff className="h-5 w-5 text-gray-400" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+                <Button id='set-password-btn' type="submit" variant="default">
+                  Set Password
+                </Button>
+              </form>
             </div>
-            <Button id='set-password-btn' type="submit" variant="default">
-              Set Password
-            </Button>
-          </form>
+          )}
         </Card>
       )}
 
