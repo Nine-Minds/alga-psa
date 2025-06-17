@@ -68,6 +68,8 @@ services:
         condition: service_started
       hocuspocus:
         condition: service_started
+      setup:
+        condition: service_completed_successfully
 
   setup:
     build:
