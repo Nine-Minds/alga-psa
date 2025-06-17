@@ -70,6 +70,13 @@ const Invoices: React.FC = () => {
   const handleTabChange = (value: string) => {
     setActiveTab(value as 'Draft' | 'Finalized');
     setSelectedInvoices(new Set());
+    // Clear the invoice preview when switching tabs
+    setDetailedInvoiceData(null); // Clear the preview data immediately
+    updateUrlParams({
+      invoiceId: null,
+      templateId: null,
+      managingInvoiceId: null
+    });
   };
   const selectedTemplateId = searchParams?.get('templateId');
   const managingInvoiceId = searchParams?.get('managingInvoiceId');
