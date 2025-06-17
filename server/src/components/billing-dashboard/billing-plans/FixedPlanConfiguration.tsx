@@ -101,8 +101,9 @@ export function FixedPlanConfiguration({
     fetchServices(); // Fetch services initially
   }, [fetchPlanData, fetchServices]);
 
-  // Validate inputs
+  // Validate inputs only after initial data loads
   useEffect(() => {
+    if (loading) return; // avoid showing errors before data is fetched
     const errors: { baseRate?: string } = {};
     if (baseRate === undefined || baseRate === null) {
       errors.baseRate = 'Base rate is required';
@@ -110,7 +111,7 @@ export function FixedPlanConfiguration({
       errors.baseRate = 'Base rate cannot be negative';
     }
     setValidationErrors(errors);
-  }, [baseRate]);
+  }, [baseRate, loading]);
 
   const handleBaseRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value === '' ? undefined : Number(e.target.value);
