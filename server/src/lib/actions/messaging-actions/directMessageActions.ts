@@ -60,14 +60,106 @@ export async function getMessageThreadsAction(page: number = 1, pageSize: number
 
   const { knex, tenant } = await createTenantKnex();
 
-  // For now, return empty threads - full implementation would query database
+  const offset = (page - 1) * pageSize;
+
+  // Get distinct thread IDs where user is participant
+  const threadQuery = knex('direct_messages')
+    .select('thread_id')
+    .where(function() {
+      this.where('sender_id', user.user_id)
+        .orWhere('recipient_id', user.user_id);
+    })
+    .where('tenant', tenant)
+    .whereNull('deleted_at')
+    .groupBy('thread_id')
+    .orderByRaw('MAX(created_at) DESC')
+    .limit(pageSize)
+    .offset(offset);
+
+  const threadIds = await threadQuery;
+  
+  if (threadIds.length === 0) {
+    return {
+      threads: [],
+      pagination: {
+        page,
+        pageSize,
+        total: 0,
+        pages: 0,
+      },
+    };
+  }
+
+  // Get thread details with last message and participant info
+  const threads: MessageThread[] = [];
+  
+  for (const threadRow of threadIds) {
+    const threadId = threadRow.thread_id;
+    
+    // Get last message in thread
+    const lastMessage = await knex('direct_messages')
+      .where('thread_id', threadId)
+      .where('tenant', tenant)
+      .whereNull('deleted_at')
+      .orderBy('created_at', 'desc')
+      .first();
+
+    // Get participants (users involved in this thread)
+    const participantQuery = await knex('direct_messages')
+      .select('sender_id', 'recipient_id')
+      .where('thread_id', threadId)
+      .where('tenant', tenant)
+      .first();
+
+    if (!participantQuery) continue;
+
+    const participants = [
+      participantQuery.sender_id,
+      participantQuery.recipient_id,
+    ].filter(Boolean);
+
+    // Count unread messages for current user
+    const unreadCountQuery = await knex('direct_messages')
+      .count('direct_message_id as count')
+      .where('thread_id', threadId)
+      .where('recipient_id', user.user_id)
+      .where('tenant', tenant)
+      .whereNull('read_at')
+      .whereNull('deleted_at')
+      .first();
+
+    const unreadCount = parseInt(unreadCountQuery?.count as string) || 0;
+
+    threads.push({
+      thread_id: threadId,
+      participants,
+      last_message: lastMessage as DirectMessage,
+      unread_count: unreadCount,
+      created_at: lastMessage?.created_at || new Date(),
+      updated_at: lastMessage?.created_at || new Date(),
+    });
+  }
+
+  // Get total count for pagination
+  const totalCountQuery = await knex('direct_messages')
+    .countDistinct('thread_id as count')
+    .where(function() {
+      this.where('sender_id', user.user_id)
+        .orWhere('recipient_id', user.user_id);
+    })
+    .where('tenant', tenant)
+    .whereNull('deleted_at')
+    .first();
+
+  const total = parseInt(totalCountQuery?.count as string) || 0;
+
   return {
-    threads: [],
+    threads,
     pagination: {
       page,
       pageSize,
-      total: 0,
-      pages: 0,
+      total,
+      pages: Math.ceil(total / pageSize),
     },
   };
 }

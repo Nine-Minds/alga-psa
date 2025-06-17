@@ -319,7 +319,15 @@ export async function getUserWithRoles(userId: string): Promise<IUserWithRoles |
   try {
     const {knex} = await createTenantKnex();
     const user = await User.getUserWithRoles(knex, userId);
-    return user || null;
+    
+    if (!user) {
+      return null;
+    }
+    
+    // Add avatar URL similar to getCurrentUser function
+    const avatarUrl = await getUserAvatarUrl(user.user_id, user.tenant);
+    
+    return { ...user, avatarUrl };
   } catch (error) {
     console.error(`Failed to fetch user with roles for id ${userId}:`, error);
     throw new Error('Failed to fetch user with roles');

@@ -90,8 +90,9 @@ async function handleApiRequest(request: NextRequest) {
 export async function middleware(req: NextRequest) {
   // Handle API routes separately
   if (req.nextUrl.pathname.startsWith('/api')) {
-    // Skip validation for auth endpoints
-    if (req.nextUrl.pathname.startsWith('/api/auth/')) {
+    // Skip validation for auth endpoints and SSE endpoints
+    if (req.nextUrl.pathname.startsWith('/api/auth/') || 
+        req.nextUrl.pathname === '/api/notifications/sse') {
       return NextResponse.next();
     }
     return handleApiRequest(req);

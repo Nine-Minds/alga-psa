@@ -5,6 +5,10 @@ import UserAvatar from 'server/src/components/ui/UserAvatar';
 import { Badge } from 'server/src/components/ui/Badge';
 import { formatDistanceToNow } from 'date-fns';
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { getUserWithRoles } from 'server/src/lib/actions/user-actions/userActions';
+import { useDrawer } from 'server/src/context/DrawerContext';
+import { ConversationDrawerContent } from './ConversationDrawer';
 
 interface MessageThreadItemProps {
   thread: MessageThread;
@@ -12,22 +16,69 @@ interface MessageThreadItemProps {
 }
 
 export function MessageThreadItem({ thread, onClose }: MessageThreadItemProps) {
+  const { data: session } = useSession();
   const [participantInfo, setParticipantInfo] = useState<any>(null);
+  const { openDrawer } = useDrawer();
 
-  // TODO: Load participant user info
+  // Load participant user info
   useEffect(() => {
-    // This would fetch user details for the other participant
-    // For now, using placeholder data
-    setParticipantInfo({
-      full_name: 'Team Member',
-      avatar_url: null,
-    });
-  }, [thread.participants]);
+    const loadParticipantInfo = async () => {
+      if (!session?.user?.id || !thread.participants) return;
+      
+      // Find the other participant (not the current user)
+      const otherParticipantId = thread.participants.find(id => id !== session.user.id);
+      
+      if (otherParticipantId) {
+        // Set default info immediately to avoid "Unknown User"
+        setParticipantInfo({
+          user_id: otherParticipantId,
+          full_name: 'Loading...',
+          avatar_url: null,
+        });
+        
+        try {
+          const user = await getUserWithRoles(otherParticipantId);
+          if (user) {
+            setParticipantInfo({
+              user_id: user.user_id,
+              full_name: `${user.first_name} ${user.last_name}`.trim() || 'Team Member',
+              avatar_url: user.avatarUrl,
+            });
+          } else {
+            // Fallback if user not found
+            setParticipantInfo({
+              user_id: otherParticipantId,
+              full_name: 'Team Member',
+              avatar_url: null,
+            });
+          }
+        } catch (error) {
+          console.error('Failed to load participant info:', error);
+          setParticipantInfo({
+            user_id: otherParticipantId,
+            full_name: 'Team Member',
+            avatar_url: null,
+          });
+        }
+      }
+    };
+    
+    loadParticipantInfo();
+  }, [thread.participants, session]);
 
   const handleThreadClick = () => {
-    // Navigate to full thread view
-    window.location.href = `/msp/messages/thread/${thread.thread_id}`;
+    const otherParticipantId = thread.participants.find(id => id !== session?.user?.id);
+    
+    // Close the popover first
     onClose();
+    
+    openDrawer(
+      <ConversationDrawerContent 
+        threadId={thread.thread_id}
+        participantId={otherParticipantId}
+      />,
+      undefined // no onMount needed
+    );
   };
 
   const truncateMessage = (message: string, maxLength: number = 50) => {
@@ -42,7 +93,7 @@ export function MessageThreadItem({ thread, onClose }: MessageThreadItemProps) {
     >
       <div className="flex items-start gap-3">
         <UserAvatar 
-          userId="participant"
+          userId={participantInfo?.user_id || 'unknown'}
           userName={participantInfo?.full_name || 'Team Member'}
           avatarUrl={participantInfo?.avatar_url || null}
           size="sm"

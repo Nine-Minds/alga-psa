@@ -80,21 +80,6 @@ export function MessageThreadList({ threads, isLoading, onClose }: MessageThread
         </div>
       </div>
 
-      <div className="p-3 border-t bg-gray-50">
-        <Button
-          id="view-all-messages-button"
-          variant="ghost"
-          size="sm"
-          className="w-full"
-          onClick={() => {
-            onClose();
-            // Navigate to full messages page
-            window.location.href = '/msp/messages';
-          }}
-        >
-          View all messages
-        </Button>
-      </div>
 
       <NewConversationDialog
         open={showNewConversationDialog}
