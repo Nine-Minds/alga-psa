@@ -23,7 +23,10 @@ COPY server/package.json ./server/
 
 COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/assemblyscript
 
-RUN npm install
+RUN npm install && \
+    cd server/src/invoice-templates/assemblyscript && \
+    npm install && \
+    cd /app
 
 COPY tsconfig.base.json ./
 

@@ -54,6 +54,16 @@ if [ -f "tools/ai-automation/package.json" ]; then
     fi
 fi
 
+# Install AssemblyScript template dependencies if they exist
+if [ -f "server/src/invoice-templates/assemblyscript/package.json" ]; then
+    if [ ! -d "server/src/invoice-templates/assemblyscript/node_modules" ] || [ "server/src/invoice-templates/assemblyscript/package.json" -nt "server/src/invoice-templates/assemblyscript/node_modules" ]; then
+        echo "📄 Installing/updating AssemblyScript template dependencies..."
+        cd server/src/invoice-templates/assemblyscript && npm install && cd ../../../..
+    else
+        echo "✅ AssemblyScript template dependencies already installed"
+    fi
+fi
+
 # Start code-server
 echo "🖥️  Starting code-server..."
 exec /usr/bin/entrypoint.sh --bind-addr 0.0.0.0:8080 /home/coder/alga-psa
