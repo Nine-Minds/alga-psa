@@ -14,6 +14,17 @@ export default function DefaultLayout({ children }: Readonly<{ children: React.R
   const [drawerContent] = useState<React.ReactNode>(null);
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('sidebarOpen');
+    if (stored !== null) {
+      setSidebarOpen(stored === 'true');
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('sidebarOpen', sidebarOpen.toString());
+  }, [sidebarOpen]);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
 
   // Add state for Chat component props
