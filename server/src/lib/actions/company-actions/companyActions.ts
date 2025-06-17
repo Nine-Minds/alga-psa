@@ -293,6 +293,13 @@ export interface CompanyPaginationParams {
   searchTerm?: string;
   clientTypeFilter?: 'all' | 'company' | 'individual';
   loadLogos?: boolean; // Option to load logos or not
+  /**
+   * Optional status filter. Overrides includeInactive if provided.
+   *  - 'active'   -> only active companies
+   *  - 'inactive' -> only inactive companies
+   *  - 'all'      -> include both active and inactive
+   */
+  statusFilter?: 'all' | 'active' | 'inactive';
 }
 
 export interface PaginatedCompaniesResponse {
@@ -310,7 +317,8 @@ export async function getAllCompaniesPaginated(params: CompanyPaginationParams =
     includeInactive = true,
     searchTerm,
     clientTypeFilter = 'all',
-    loadLogos = true
+    loadLogos = true,
+    statusFilter
   } = params;
 
   const {knex: db, tenant} = await createTenantKnex();
@@ -331,7 +339,11 @@ export async function getAllCompaniesPaginated(params: CompanyPaginationParams =
         })
         .where({ 'c.tenant': tenant });
 
-      if (!includeInactive) {
+      if (statusFilter === 'active') {
+        baseQuery = baseQuery.andWhere('c.is_inactive', false);
+      } else if (statusFilter === 'inactive') {
+        baseQuery = baseQuery.andWhere('c.is_inactive', true);
+      } else if (!statusFilter && !includeInactive) {
         baseQuery = baseQuery.andWhere('c.is_inactive', false);
       }
 
