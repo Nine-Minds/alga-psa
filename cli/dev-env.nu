@@ -96,6 +96,8 @@ export def dev-env-create [
     --use-latest = false # Use 'latest' tag instead of unique tag
     --checkout = true  # Checkout the branch locally
     --from-tag: string = "latest" # Deploy from existing image tag instead of building
+    --author-name: string = "" # Git author name (e.g., "John Doe")
+    --author-email: string = "" # Git author email (e.g., "john@example.com")
 ] {
     let project_root = find-project-root
     
@@ -295,6 +297,10 @@ export def dev-env-create [
         print $"($env.ALGA_COLOR_YELLOW)Set the environment variable in your .env file or export CUSTOM_OPENAI_API_KEY=your-key-here($env.ALGA_COLOR_RESET)"
     }
     
+    # Use default values if author info not provided
+    let git_author_name = if ($author_name | str length) > 0 { $author_name } else { "Dev Environment" }
+    let git_author_email = if ($author_email | str length) > 0 { $author_email } else { "dev@alga.local" }
+    
     let values_content = $"
 # Generated values for branch ($branch) development environment
 devEnv:
@@ -305,6 +311,9 @@ devEnv:
   repository:
     url: \"https://github.com/Nine-Minds/alga-psa.git\"
     branch: \"($branch)\"
+  git:
+    authorName: \"($git_author_name)\"
+    authorEmail: \"($git_author_email)\"
   codeServer:
     enabled: true
   aiAutomation:

@@ -27,13 +27,16 @@ def --wrapped main [
        print "  nu main.nu -- dev-up [--detached] [--edition ce|ee]  # Start development environment"
        print "  nu main.nu dev-down               # Stop development environment"
        print ""
-       print "  nu main.nu dev-env-create <branch> [--edition ce|ee] [--use-latest] [--checkout] [--from-tag <tag>]"
+       print "  nu main.nu dev-env-create <branch> [--edition ce|ee] [--use-latest] [--checkout] [--from-tag <tag>] [--author-name <name>] [--author-email <email>]"
        print "    Create on-demand development environment for branch"
        print "    --use-latest: Use 'latest' tag instead of unique tag (avoids cache issues by default)"
        print "    --checkout: Checkout the branch locally (default: true)"
        print "    --from-tag: Deploy from existing image tag instead of building (mutually exclusive with --use-latest)"
+       print "    --author-name: Git author name for commits (e.g., \"John Doe\")"
+       print "    --author-email: Git author email for commits (e.g., \"john@example.com\")"
        print "    Example: nu main.nu dev-env-create my-feature --edition ee"
        print "    Example: nu main.nu dev-env-create my-feature --from-tag v1.2.3"
+       print "    Example: nu main.nu dev-env-create my-feature --author-name \"John Doe\" --author-email \"john@example.com\""
        print "  nu main.nu dev-env-list           # List active development environments"
        print "  nu main.nu dev-env-connect <branch>"
        print "    Connect to development environment with port forwarding"
@@ -112,13 +115,16 @@ def --wrapped main [
        print "  nu main.nu -- dev-up [--detached] [--edition ce|ee]  # Start development environment"
        print "  nu main.nu dev-down               # Stop development environment"
        print ""
-       print "  nu main.nu dev-env-create <branch> [--edition ce|ee] [--use-latest] [--checkout] [--from-tag <tag>]"
+       print "  nu main.nu dev-env-create <branch> [--edition ce|ee] [--use-latest] [--checkout] [--from-tag <tag>] [--author-name <name>] [--author-email <email>]"
        print "    Create on-demand development environment for branch"
        print "    --use-latest: Use 'latest' tag instead of unique tag (avoids cache issues by default)"
        print "    --checkout: Checkout the branch locally (default: true)"
        print "    --from-tag: Deploy from existing image tag instead of building (mutually exclusive with --use-latest)"
+       print "    --author-name: Git author name for commits (e.g., \"John Doe\")"
+       print "    --author-email: Git author email for commits (e.g., \"john@example.com\")"
        print "    Example: nu main.nu dev-env-create my-feature --edition ee"
        print "    Example: nu main.nu dev-env-create my-feature --from-tag v1.2.3"
+       print "    Example: nu main.nu dev-env-create my-feature --author-name \"John Doe\" --author-email \"john@example.com\""
        print "  nu main.nu dev-env-list           # List active development environments"
        print "  nu main.nu dev-env-connect <branch>"
        print "    Connect to development environment with port forwarding"
@@ -242,11 +248,25 @@ def --wrapped main [
                "latest"
            }
            
+           let author_name_idx = ($command_args | enumerate | where {|item| $item.item == "--author-name"} | get 0?.index | default null)
+           let author_name = if $author_name_idx != null { 
+               ($command_args | get ($author_name_idx + 1) | default "")
+           } else {
+               ""
+           }
+           
+           let author_email_idx = ($command_args | enumerate | where {|item| $item.item == "--author-email"} | get 0?.index | default null)
+           let author_email = if $author_email_idx != null { 
+               ($command_args | get ($author_email_idx + 1) | default "")
+           } else {
+               ""
+           }
+           
            let use_latest = ($command_args | any { |arg| $arg == "--use-latest" })
            let checkout = not ($command_args | any { |arg| $arg == "--no-checkout" })
            
            # Call the dev-env-create command
-           dev-env-create $branch --edition $edition --use-latest=$use_latest --checkout=$checkout --from-tag $from_tag
+           dev-env-create $branch --edition $edition --use-latest=$use_latest --checkout=$checkout --from-tag $from_tag --author-name $author_name --author-email $author_email
        }
        "dev-env-list" => {
            dev-env-list
