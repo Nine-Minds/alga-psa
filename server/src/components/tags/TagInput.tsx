@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus } from 'lucide-react';
-import { generateEntityColor } from '../../utils/colorUtils';
-import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
-import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
-import { ButtonComponent, FormFieldComponent } from '../../types/ui-reflection/types';
+import { generateEntityColor } from 'server/src/utils/colorUtils';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { ButtonComponent, FormFieldComponent } from 'server/src/types/ui-reflection/types';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
 
 interface TagInputProps {
   id?: string; // Made optional to maintain backward compatibility
   existingTags: string[];
+  currentTags?: ITag[];
   onAddTag: (tagText: string) => Promise<void>;
   className?: string;
   placeholder?: string;
@@ -19,6 +21,7 @@ interface TagInputProps {
 export const TagInput: React.FC<TagInputProps> = ({
   id = 'tag-input',
   existingTags,
+  currentTags = [],
   onAddTag,
   className = '',
   placeholder = 'New tag'
@@ -34,15 +37,21 @@ export const TagInput: React.FC<TagInputProps> = ({
 
   useEffect(() => {
     if (inputValue.trim()) {
-      // Filter existing tags that include the input value
+      // Get current tag texts (case-insensitive for comparison)
+      const currentTagTexts = currentTags.map(tag => tag.tag_text.toLowerCase());
+      
+      // Filter existing tags that:
+      // 1. Include the input value
+      // 2. Are not already on the current entity
       const filtered = existingTags.filter(tag => 
-        tag.toLowerCase().includes(inputValue.toLowerCase())
+        tag.toLowerCase().includes(inputValue.toLowerCase()) &&
+        !currentTagTexts.includes(tag.toLowerCase())
       );
       setSuggestions(filtered);
     } else {
       setSuggestions([]);
     }
-  }, [inputValue, existingTags]);
+  }, [inputValue, existingTags, currentTags]);
 
   // Update dropdown position when suggestions change or input is focused
   useLayoutEffect(() => {
