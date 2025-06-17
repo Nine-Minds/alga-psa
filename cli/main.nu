@@ -9,6 +9,7 @@ use "migrate.nu" *
 use "workflows.nu" *
 use "dev-env.nu" *
 use "build.nu" *
+use "config.nu" *
 
 # Main CLI entry point function
 def --wrapped main [
@@ -92,6 +93,15 @@ def --wrapped main [
        print "    Build all AI Docker images (API and Web)"
        print "    Example: nu main.nu build-ai-all --push"
        print "    Example: nu main.nu build-ai-all --use-latest --push"
+       print ""
+       print "  nu main.nu config init [--force]  # Initialize CLI configuration"
+       print "    Set up default author information and preferences"
+       print "    Example: nu main.nu config init"
+       print "  nu main.nu config show            # Display current configuration"
+       print "  nu main.nu config get <key>       # Get a specific config value"
+       print "    Example: nu main.nu config get dev_env.author.name"
+       print "  nu main.nu config set <key> <value>  # Set a specific config value"
+       print "    Example: nu main.nu config set dev_env.author.email \"john@example.com\""
        print ""
        print "Alternatively, source the script ('source main.nu') and run commands directly:"
        print "  run-migrate <action>"
@@ -180,6 +190,15 @@ def --wrapped main [
        print "    Build all AI Docker images (API and Web)"
        print "    Example: nu main.nu build-ai-all --push"
        print "    Example: nu main.nu build-ai-all --use-latest --push"
+       print ""
+       print "  nu main.nu config init [--force]  # Initialize CLI configuration"
+       print "    Set up default author information and preferences"
+       print "    Example: nu main.nu config init"
+       print "  nu main.nu config show            # Display current configuration"
+       print "  nu main.nu config get <key>       # Get a specific config value"
+       print "    Example: nu main.nu config get dev_env.author.name"
+       print "  nu main.nu config set <key> <value>  # Set a specific config value"
+       print "    Example: nu main.nu config set dev_env.author.email \"john@example.com\""
        print "\nAlternatively, source the script ('source main.nu') and run commands directly:"
        print "  run-migrate <action>"
        print "  dev-up [--detached] [--edition ce|ee]"
@@ -188,6 +207,7 @@ def --wrapped main [
        print "  register-workflow <workflow_name>"
        print "  dev-env-create <branch> [options]"
        print "  dev-env-list, dev-env-connect, dev-env-destroy, dev-env-status"
+       print "  init-config, show-config, get-config-value, set-config-value"
        return # Exit if arguments are missing
    }
    
@@ -483,8 +503,56 @@ def --wrapped main [
                build-ai-all --tag $tag
            }
        }
+       "config" => {
+           let subcommand = ($args | get 1? | default null)
+           
+           if $subcommand == null {
+               print $"($env.ALGA_COLOR_RED)config command requires a subcommand: init, show, get, set($env.ALGA_COLOR_RESET)"
+               return
+           }
+           
+           match $subcommand {
+               "init" => {
+                   let force = ($args | skip 2 | any { |arg| $arg == "--force" })
+                   if $force {
+                       init-config --force
+                   } else {
+                       init-config
+                   }
+               }
+               "show" => {
+                   show-config
+               }
+               "get" => {
+                   let key = ($args | get 2? | default null)
+                   if $key == null {
+                       error make { msg: $"($env.ALGA_COLOR_RED)config get requires a key argument($env.ALGA_COLOR_RESET)" }
+                   }
+                   
+                   let value = get-config-value $key
+                   if $value == null {
+                       print $"($env.ALGA_COLOR_YELLOW)Config key '($key)' not found($env.ALGA_COLOR_RESET)"
+                   } else {
+                       print $value
+                   }
+               }
+               "set" => {
+                   let key = ($args | get 2? | default null)
+                   let value = ($args | get 3? | default null)
+                   
+                   if $key == null or $value == null {
+                       error make { msg: $"($env.ALGA_COLOR_RED)config set requires key and value arguments($env.ALGA_COLOR_RESET)" }
+                   }
+                   
+                   set-config-value $key $value
+               }
+               _ => {
+                   error make { msg: $"($env.ALGA_COLOR_RED)Unknown config subcommand: '($subcommand)'. Must be 'init', 'show', 'get', or 'set'.($env.ALGA_COLOR_RESET)" }
+               }
+           }
+       }
        _ => {
-           error make { msg: $"($env.ALGA_COLOR_RED)Unknown command: '($command)'. Must be 'migrate', 'dev-up', 'dev-down', 'dev-env-*', 'dev-env-force-cleanup', 'update-workflow', 'register-workflow', 'build-image', 'build-all-images', 'build-code-server', 'build-ai-api', 'build-ai-web', 'build-ai-web-k8s', or 'build-ai-all'.($env.ALGA_COLOR_RESET)" }
+           error make { msg: $"($env.ALGA_COLOR_RED)Unknown command: '($command)'. Must be 'migrate', 'dev-up', 'dev-down', 'dev-env-*', 'dev-env-force-cleanup', 'update-workflow', 'register-workflow', 'build-image', 'build-all-images', 'build-code-server', 'build-ai-api', 'build-ai-web', 'build-ai-web-k8s', 'build-ai-all', or 'config'.($env.ALGA_COLOR_RESET)" }
        }
    }
 }

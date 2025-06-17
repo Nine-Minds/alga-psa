@@ -1,3 +1,5 @@
+use "config.nu" *
+
 # Helper function to sanitize branch names for Kubernetes resources
 def sanitize-branch-name [branch: string] {
     # Sanitize branch name for Kubernetes namespace (lowercase, alphanumeric and hyphens only)
@@ -297,9 +299,30 @@ export def dev-env-create [
         print $"($env.ALGA_COLOR_YELLOW)Set the environment variable in your .env file or export CUSTOM_OPENAI_API_KEY=your-key-here($env.ALGA_COLOR_RESET)"
     }
     
-    # Use default values if author info not provided
-    let git_author_name = if ($author_name | str length) > 0 { $author_name } else { "Dev Environment" }
-    let git_author_email = if ($author_email | str length) > 0 { $author_email } else { "dev@alga.local" }
+    # Load configuration defaults
+    let config = load-config
+    
+    # Use provided values, fall back to config, then to defaults
+    let git_author_name = if ($author_name | str length) > 0 { 
+        $author_name 
+    } else if ($config.dev_env.author.name | str length) > 0 {
+        $config.dev_env.author.name
+    } else { 
+        "Dev Environment" 
+    }
+    
+    let git_author_email = if ($author_email | str length) > 0 { 
+        $author_email 
+    } else if ($config.dev_env.author.email | str length) > 0 {
+        $config.dev_env.author.email
+    } else { 
+        "dev@alga.local" 
+    }
+    
+    # Show what author info is being used
+    if ($config.dev_env.author.name | str length) > 0 and ($author_name | str length) == 0 {
+        print $"($env.ALGA_COLOR_CYAN)Using git author from config: ($git_author_name) <($git_author_email)>($env.ALGA_COLOR_RESET)"
+    }
     
     let values_content = $"
 # Generated values for branch ($branch) development environment
