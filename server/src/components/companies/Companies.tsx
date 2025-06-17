@@ -130,7 +130,7 @@ const Companies: React.FC = () => {
       const response = await getAllCompaniesPaginated({
         page: currentPage,
         pageSize,
-        includeInactive: filterStatus !== 'active',
+        statusFilter: filterStatus,
         searchTerm: searchTerm || undefined,
         clientTypeFilter,
         loadLogos: true // Load logos for displayed companies only
