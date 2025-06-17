@@ -50,17 +50,6 @@ export default function DefaultLayout({ children }: Readonly<{ children: React.R
     };
   }, []);
 
-  const handleThemeMode = (mode: string) => {
-    const root = window.document.documentElement;
-    if (mode === "dark") {
-      root.classList.remove("light");
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-      root.classList.add("light");
-    }
-    localStorage.setItem('theme', mode);
-  };
 
   const handleSelectAccount = (account: string) => {
     setSelectedAccount(account);
@@ -85,7 +74,6 @@ export default function DefaultLayout({ children }: Readonly<{ children: React.R
             setSidebarOpen={setSidebarOpen}
             rightSidebarOpen={rightSidebarOpen}
             setRightSidebarOpen={setRightSidebarOpen}
-            handleThemeMode={handleThemeMode}
           />
           <main className="flex-1 overflow-hidden flex pt-2 px-3">
             <Body>{children}</Body>
