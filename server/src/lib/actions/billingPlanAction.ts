@@ -1,13 +1,56 @@
 // server/src/lib/actions/billingPlanActions.ts
 'use server'
 import BillingPlan from 'server/src/lib/models/billingPlan';
-import { IBillingPlan, IBillingPlanFixedConfig } from 'server/src/interfaces/billing.interfaces'; // Added IBillingPlanFixedConfig
+import { IBillingPlan, IBillingPlanFixedConfig } from 'server/src/interfaces/billing.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
-import { Knex } from 'knex'; // Import Knex type
+import { Knex } from 'knex';
 import { PlanServiceConfigurationService } from 'server/src/lib/services/planServiceConfigurationService';
-import { IPlanServiceFixedConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces'; // This might be removable if not used elsewhere after refactor
-import BillingPlanFixedConfig from 'server/src/lib/models/billingPlanFixedConfig'; // Added import for new model
+import { IPlanServiceFixedConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import BillingPlanFixedConfig from 'server/src/lib/models/billingPlanFixedConfig';
 import { withTransaction } from '../../../../shared/db';
+
+// Helper to collect association details for a billing plan
+async function getPlanAssociationDetails(knex: Knex, tenant: string, planId: string): Promise<string[]> {
+    const details: string[] = [];
+
+    // Services linked to this plan
+    const serviceRows = await knex('plan_services as ps')
+        .join('service_catalog as sc', function() {
+            this.on('ps.service_id', '=', 'sc.service_id')
+                .andOn('sc.tenant', '=', 'ps.tenant');
+        })
+        .where({ 'ps.plan_id': planId, 'ps.tenant': tenant })
+        .select('sc.service_name');
+
+    if (serviceRows.length > 0) {
+        const names = serviceRows.map(r => r.service_name);
+        const displayLimit = 5;
+        const displayNames = names.length > displayLimit
+            ? names.slice(0, displayLimit).join(', ') + ` and ${names.length - displayLimit} more`
+            : names.join(', ');
+        details.push(`services: ${displayNames}`);
+    }
+
+    // Companies using this plan
+    const companyRows = await knex('company_billing_plans as cbp')
+        .join('companies as c', function() {
+            this.on('cbp.company_id', '=', 'c.company_id')
+                .andOn('c.tenant', '=', 'cbp.tenant');
+        })
+        .where({ 'cbp.plan_id': planId, 'cbp.tenant': tenant })
+        .select('c.company_name');
+
+    if (companyRows.length > 0) {
+        const names = companyRows.map(r => r.company_name);
+        const displayLimit = 5;
+        const displayNames = names.length > displayLimit
+            ? names.slice(0, displayLimit).join(', ') + ` and ${names.length - displayLimit} more`
+            : names.join(', ');
+        details.push(`companies: ${displayNames}`);
+    }
+
+    return details;
+}
 
 export async function getBillingPlans(): Promise<IBillingPlan[]> {
     try {
@@ -129,18 +172,11 @@ export async function deleteBillingPlan(planId: string): Promise<void> {
     }
 
     try {
-        // Check if plan is in use by companies before attempting to delete
-        const isInUse = await BillingPlan.isInUse(knex, planId); // This check might be redundant now, but keep for clarity or remove if desired
-        if (isInUse) {
-             // This specific error might be superseded by the detailed one below if the FK constraint is hit
-             // Consider if this pre-check is still necessary or if relying on the DB error is sufficient
-            // throw new Error(`Cannot delete plan that is currently in use by companies in tenant ${tenant}`);
-        }
-
-        // Check if plan has associated services before attempting to delete
-        const hasServices = await BillingPlan.hasAssociatedServices(knex, planId);
-        if (hasServices) {
-            throw new Error(`Cannot delete plan that has associated services. Please remove all services from this plan before deleting.`);
+        // Collect any existing associations (services, companies)
+        const associations = await getPlanAssociationDetails(knex, tenant, planId);
+        if (associations.length > 0) {
+            const detail = associations.join('; ');
+            throw new Error(`Cannot delete billing plan: it is still linked to ${detail}.`);
         }
 
         await BillingPlan.delete(knex, planId);
@@ -183,12 +219,7 @@ export async function deleteBillingPlan(planId: string): Promise<void> {
                  throw new Error(errorMessage);
             }
 
-            // Preserve the user-friendly error from the hasAssociatedServices pre-check
-            if (error.message.includes('associated services')) {
-                throw error;
-            }
-
-            // Preserve other specific error messages (including the one from the 'isInUse' pre-check)
+            // Preserve other specific error messages
             throw error;
         }
         // Fallback for non-Error objects
