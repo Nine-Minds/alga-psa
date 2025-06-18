@@ -1,7 +1,6 @@
 import Redis from 'ioredis';
 import { withTransaction } from '@shared/db';
-import { createTenantKnex } from 'server/src/lib/db';
-import { getConnection } from '@shared/db/connection';
+import { getConnection } from 'server/src/lib/db/db';
 import { Knex } from 'knex';
 import { 
   CreateNotificationData, 
@@ -45,12 +44,13 @@ export class NotificationPublisher {
     }
   }
 
-  async publishNotification(notificationData: CreateNotificationData): Promise<InternalNotification> {
-    const { knex: tenantKnex, tenant } = await createTenantKnex();
-
-    if (!tenant) {
-      throw new Error('Tenant not found');
+  async publishNotification(notificationData: CreateNotificationData, tenantId?: string): Promise<InternalNotification> {
+    if (!tenantId) {
+      throw new Error('Tenant ID is required for background operations');
     }
+    
+    const tenantKnex = await getConnection(tenantId);
+    const tenant = tenantId;
 
     // 1. Fetch the template (using a generic connection for global table)
     const genericKnex = await getConnection();
@@ -93,7 +93,7 @@ export class NotificationPublisher {
     });
 
     // 5. Fetch enriched data for SSE event
-    const sseEventPayload = await this.createSsePayload(savedNotification.internal_notification_id);
+    const sseEventPayload = await this.createSsePayload(savedNotification.internal_notification_id, tenantId);
 
     // 6. Publish to Redis for real-time delivery (if Redis is available)
     if (sseEventPayload && this.redisConnected) {
@@ -129,9 +129,9 @@ export class NotificationPublisher {
     await this.publishToChannels(channels, message);
   }
 
-  private async createSsePayload(notificationId: string): Promise<NotificationSseEvent | null> {
+  private async createSsePayload(notificationId: string, tenantId: string): Promise<NotificationSseEvent | null> {
     // Use tenant-specific knex to fetch tenant-data
-    const { knex: tenantKnex } = await createTenantKnex();
+    const tenantKnex = await getConnection(tenantId);
     
     const notification = await tenantKnex('internal_notifications as n')
       .where('n.internal_notification_id', notificationId)

@@ -65,11 +65,16 @@ let client: Awaited<ReturnType<typeof createRedisClient>> | null = null;
 let redisConnected: boolean = false;
 
 async function getClient() {
-  if (!client && !redisConnected) {
+  if (!client || !redisConnected) {
     try {
       logger.debug('[EventBus] Creating new Redis client');
       client = await createRedisClient();
-      await client.connect();
+      
+      // Check if client is already connected (some Redis clients auto-connect)
+      if (!client.isOpen) {
+        await client.connect();
+      }
+      
       redisConnected = true;
       logger.info('[EventBus] Redis client connected successfully');
     } catch (error) {
@@ -79,6 +84,22 @@ async function getClient() {
       throw error;
     }
   }
+  
+  // Double-check connection status before returning
+  if (client && !client.isOpen) {
+    redisConnected = false;
+    logger.warn('[EventBus] Redis client was disconnected, attempting reconnection');
+    try {
+      await client.connect();
+      redisConnected = true;
+    } catch (error) {
+      logger.error('[EventBus] Failed to reconnect Redis client:', error);
+      client = null;
+      redisConnected = false;
+      throw error;
+    }
+  }
+  
   return client;
 }
 
@@ -222,22 +243,36 @@ export class EventBus {
                   // Check if event has already been processed
                   const isProcessed = await this.isEventProcessed(event);
                   if (!isProcessed) {
-                    // Process event with first available handler
-                    const handler = handlers.values().next().value;
-                    if (handler) {
+                    // Process event with ALL handlers (not just the first one)
+                    let handlerSuccesses = 0;
+                    for (const handler of handlers) {
                       try {
                         await handler(event);
-                        // Mark event as processed after successful handling
-                        await this.markEventProcessed(event);
+                        handlerSuccesses++;
+                        logger.debug('[EventBus] Handler processed successfully:', {
+                          eventType: baseEvent.eventType,
+                          handler: handler.name
+                        });
                       } catch (error) {
                         logger.error('[EventBus] Error in event handler:', {
                           error,
                           eventType: baseEvent.eventType,
                           handler: handler.name
                         });
-                        // Don't acknowledge message on error to allow retry
-                        continue;
+                        // Continue to next handler even if this one fails
                       }
+                    }
+                    
+                    // Mark event as processed if at least one handler succeeded
+                    if (handlerSuccesses > 0) {
+                      await this.markEventProcessed(event);
+                    } else {
+                      // Don't acknowledge message if all handlers failed
+                      logger.warn('[EventBus] All handlers failed for event:', {
+                        eventType: baseEvent.eventType,
+                        eventId: event.id
+                      });
+                      continue;
                     }
                   } else {
                     logger.info('[EventBus] Skipping already processed event:', {
@@ -355,13 +390,11 @@ export class EventBus {
         eventType: event.eventType
       });
 
-      // Check if Redis is connected
-      if (!redisConnected) {
-        logger.warn('[EventBus] Cannot publish event - Redis not connected:', {
-          eventType: event.eventType
-        });
-        return;
-      }
+      // Ensure EventBus is initialized before publishing
+      await this.initialize();
+
+      // Ensure we have a valid Redis client
+      const client = await getClient();
 
       const fullEvent: Event = {
         ...event,
@@ -379,8 +412,6 @@ export class EventBus {
       }
 
       eventSchema.parse(fullEvent);
-
-      const client = await getClient();
 
       // 1. Publish to the global workflow events stream (for workflows)
       const globalStream = 'workflow:events:global';
@@ -466,7 +497,7 @@ export class EventBus {
     } catch (error) {
       logger.error('Error publishing event:', error);
       // Mark Redis as disconnected if we get connection errors
-      if (error.message && (error.message.includes('NOAUTH') || error.message.includes('Connection'))) {
+      if (error instanceof Error && (error.message.includes('NOAUTH') || error.message.includes('Connection'))) {
         redisConnected = false;
         client = null;
       }
@@ -476,10 +507,14 @@ export class EventBus {
 
   public async close(): Promise<void> {
     this.processingEvents = false;
-    const currentClient = await getClient();
-    if (currentClient) {
-      await currentClient.quit();
+    if (client && redisConnected) {
+      try {
+        await client.quit();
+      } catch (error) {
+        logger.error('[EventBus] Error closing Redis client:', error);
+      }
       client = null;
+      redisConnected = false;
     }
     this.initialized = false;
   }

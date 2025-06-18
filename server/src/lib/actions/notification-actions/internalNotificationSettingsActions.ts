@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex } from 'server/src/lib/db';
+import { getConnection } from 'server/src/lib/db/db';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
@@ -12,11 +12,13 @@ interface InternalNotificationPreference {
   enabled: boolean;
 }
 
-export async function getUserInternalNotificationPreferences(userIds: string[]): Promise<InternalNotificationPreference[]> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant not found');
+export async function getUserInternalNotificationPreferences(userIds: string[], tenantId?: string): Promise<InternalNotificationPreference[]> {
+  if (!tenantId) {
+    throw new Error('Tenant ID is required for background operations');
   }
+  
+  const knex = await getConnection(tenantId);
+  const tenant = tenantId;
 
   const preferences = await knex('internal_notification_preferences')
     .whereIn('user_id', userIds)
@@ -29,12 +31,15 @@ export async function getUserInternalNotificationPreferences(userIds: string[]):
 export async function setUserInternalNotificationPreference(
   userId: string,
   typeId: string,
-  enabled: boolean
+  enabled: boolean,
+  tenantId?: string
 ): Promise<void> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant not found');
+  if (!tenantId) {
+    throw new Error('Tenant ID is required for background operations');
   }
+  
+  const knex = await getConnection(tenantId);
+  const tenant = tenantId;
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     const preference = {
@@ -52,8 +57,12 @@ export async function setUserInternalNotificationPreference(
   });
 }
 
-export async function getAllInternalNotificationTypes(): Promise<{ internal_notification_type_id: string; type_name: string; category_name: string }[]> {
-    const { knex } = await createTenantKnex();
+export async function getAllInternalNotificationTypes(tenantId?: string): Promise<{ internal_notification_type_id: string; type_name: string; category_name: string }[]> {
+    if (!tenantId) {
+      throw new Error('Tenant ID is required for background operations');
+    }
+    
+    const knex = await getConnection(tenantId);
     const types = await knex('internal_notification_types')
         .select('internal_notification_type_id', 'type_name', 'category_name')
         .orderBy('category_name', 'asc')

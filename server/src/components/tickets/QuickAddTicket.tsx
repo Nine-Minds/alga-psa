@@ -427,7 +427,7 @@ export function QuickAddTicket({
                     companyId={companyId}
                     placeholder={
                       !companyId || selectedCompanyType !== 'company'
-                        ? "Select client first"
+                        ? "Select Contact"
                         : contacts.length === 0
                         ? "No contacts for selected client"
                         : "Select Contact"

@@ -19,7 +19,8 @@ import {
 } from '../events';
 import { NotificationPublisher } from '../../notifications/publisher';
 import logger from '@shared/core/logger';
-import { createTenantKnex } from '../../db';
+import { getConnection } from 'server/src/lib/db/db';
+import { withTransaction } from '@shared/db';
 import { getUsersWithPermission } from 'server/src/lib/actions/user-actions/userActions';
 import { getUserInternalNotificationPreferences } from 'server/src/lib/actions/notification-actions/internalNotificationSettingsActions';
 
@@ -69,7 +70,11 @@ async function getUserIdsFromMentions(mentions: string[], tenantId: string, tena
 const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfig>> = {
   'TICKET_CREATED': {
     notificationType: 'TICKET_CREATED',
-    permission: 'notification:ticket:create',
+    permission: 'user:read', // Only managers/supervisors get notified about all new tickets
+    getAdditionalUsers: async (event: TicketCreatedEvent, tenantKnex) => {
+      // Only notify managers - you could make this configurable
+      return []; // For now, disable general ticket creation notifications
+    },
     getTemplateData: async (event: TicketCreatedEvent, tenantKnex) => {
       const ticket = await tenantKnex('tickets')
         .where('ticket_id', event.payload.ticketId)
@@ -87,8 +92,9 @@ const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfi
 
   'TICKET_ASSIGNED': {
     notificationType: 'TICKET_ASSIGNED',
-    permission: 'notification:ticket:assign',
+    permission: 'nonexistent:permission', // Don't notify based on general permissions
     getAdditionalUsers: async (event: TicketAssignedEvent, tenantKnex) => {
+      // Only notify the specifically assigned user
       const ticket = await tenantKnex('tickets').where('ticket_id', event.payload.ticketId).first();
       return ticket?.assigned_to ? [ticket.assigned_to] : [];
     },
@@ -109,7 +115,7 @@ const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfi
 
   'TICKET_UPDATED': {
     notificationType: 'TICKET_STATUS_CHANGED',
-    permission: 'notification:ticket:update',
+    permission: 'ticket:read', // Users who can read tickets can be notified about updates
     getAdditionalUsers: async (event: TicketUpdatedEvent, tenantKnex) => {
       const ticket = await tenantKnex('tickets').where('ticket_id', event.payload.ticketId).first();
       const userIds = new Set<string>();
@@ -157,7 +163,7 @@ const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfi
 
   'PROJECT_TASK_ASSIGNED': {
     notificationType: 'PROJECT_TASK_ASSIGNED',
-    permission: 'notification:project:task_assign',
+    permission: 'project:read', // Users who can read projects can be notified about task assignments
     getAdditionalUsers: async (event: ProjectTaskAssignedEvent, tenantKnex) => {
       const task = await tenantKnex('project_tasks').where('task_id', event.payload.taskId).first();
       return task?.assigned_to ? [task.assigned_to] : [];
@@ -187,7 +193,7 @@ const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfi
 
   'INVOICE_GENERATED': {
     notificationType: 'INVOICE_GENERATED',
-    permission: 'notification:invoice:generated',
+    permission: 'billing:read', // Users who can read billing can be notified about invoices
     getTemplateData: async (event: InvoiceGeneratedEvent, tenantKnex) => {
       const invoice = await tenantKnex('invoices')
         .where('invoice_id', event.payload.invoiceId)
@@ -205,7 +211,7 @@ const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfi
 
   'TICKET_COMMENT_ADDED': {
     notificationType: 'TICKET_CLIENT_RESPONSE',
-    permission: 'notification:ticket:client_response',
+    permission: 'ticket:read', // Users who can read tickets can be notified about client responses
     getAdditionalUsers: async (event: TicketCommentAddedEvent, tenantKnex) => {
       const ticket = await tenantKnex('tickets').where('ticket_id', event.payload.ticketId).first();
       const userIds = new Set<string>();
@@ -241,7 +247,7 @@ const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfi
 
   'TICKET_CLOSED': {
     notificationType: 'TICKET_STATUS_CHANGED',
-    permission: 'notification:ticket:close',
+    permission: 'ticket:read', // Users who can read tickets can be notified about closures
     getAdditionalUsers: async (event: TicketClosedEvent, tenantKnex) => {
       const ticket = await tenantKnex('tickets').where('ticket_id', event.payload.ticketId).first();
       const userIds = new Set<string>();
@@ -271,7 +277,7 @@ const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfi
 
   'PROJECT_CREATED': {
     notificationType: 'PROJECT_TASK_ASSIGNED', // Reusing for project notifications
-    permission: 'notification:project:create',
+    permission: 'project:read', // Users who can read projects can be notified about new projects
     getTemplateData: async (event: ProjectCreatedEvent, tenantKnex) => {
       const project = await tenantKnex('projects')
         .where('project_id', event.payload.projectId)
@@ -289,7 +295,7 @@ const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfi
 
   'PROJECT_ASSIGNED': {
     notificationType: 'PROJECT_TASK_ASSIGNED',
-    permission: 'notification:project:assign',
+    permission: 'project:read', // Users who can read projects can be notified about assignments
     getAdditionalUsers: async (event: ProjectAssignedEvent, tenantKnex) => {
       return event.payload.assignedTo ? [event.payload.assignedTo] : [];
     },
@@ -310,7 +316,7 @@ const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfi
 
   'PROJECT_CLOSED': {
     notificationType: 'PROJECT_TASK_ASSIGNED', // Reusing for project notifications
-    permission: 'notification:project:close',
+    permission: 'project:read', // Users who can read projects can be notified about closures
     getAdditionalUsers: async (event: ProjectClosedEvent, tenantKnex) => {
       const projectUsers = await tenantKnex('project_team_members')
         .where('project_id', event.payload.projectId)
@@ -334,7 +340,7 @@ const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfi
 
   'TIME_ENTRY_SUBMITTED': {
     notificationType: 'PROJECT_TASK_DUE', // Reusing as approval needed
-    permission: 'notification:time_entry:submit',
+    permission: 'user:read', // Managers who can read users can be notified about time submissions
     getTemplateData: async (event: TimeEntrySubmittedEvent, tenantKnex) => {
       const timeEntry = await tenantKnex('time_entries as te')
         .leftJoin('users as u', 'te.user_id', 'u.user_id')
@@ -355,7 +361,7 @@ const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfi
 
   'TIME_ENTRY_APPROVED': {
     notificationType: 'PROJECT_TASK_DUE', // Reusing for time entry notifications
-    permission: 'notification:time_entry:approve',
+    permission: 'user:read', // Users can be notified about their time entry approvals
     getAdditionalUsers: async (event: TimeEntryApprovedEvent, tenantKnex) => {
       const timeEntry = await tenantKnex('time_entries').where('entry_id', event.payload.timeEntryId).first();
       return timeEntry?.user_id ? [timeEntry.user_id] : [];
@@ -378,7 +384,7 @@ const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfi
 
   'INVOICE_FINALIZED': {
     notificationType: 'INVOICE_PAYMENT_RECEIVED', // Reusing for invoice finalization
-    permission: 'notification:invoice:finalized',
+    permission: 'billing:read', // Users who can read billing can be notified about finalized invoices
     getTemplateData: async (event: InvoiceFinalizedEvent, tenantKnex) => {
       const invoice = await tenantKnex('invoices')
         .where('invoice_id', event.payload.invoiceId)
@@ -398,25 +404,39 @@ const eventNotificationConfigs: Partial<Record<EventType, NotificationEventConfi
 /**
  * Handle notification events by creating appropriate in-app notifications
  */
-async function handleNotificationEvent(event: BaseEvent): Promise<void> {
+export async function handleNotificationEvent(event: BaseEvent): Promise<void> {
   try {
-    logger.info(`Processing notification event: ${event.eventType}`, { eventId: event.id });
+    console.log('🔔 [NOTIFICATION SUBSCRIBER] Event received!', {
+      eventType: event.eventType,
+      eventId: event.id,
+      payload: event.payload
+    });
+    
+    logger.info(`[NOTIFICATION DEBUG] Processing event: ${event.eventType}`, { 
+      eventId: event.id, 
+      payload: event.payload 
+    });
 
     const config = eventNotificationConfigs[event.eventType];
     if (!config) {
-      logger.debug(`No notification configuration for event type: ${event.eventType}`);
+      logger.info(`[NOTIFICATION DEBUG] No configuration for event type: ${event.eventType}`);
       return;
     }
+    
+    logger.info(`[NOTIFICATION DEBUG] Found config for ${event.eventType}`, { 
+      notificationType: config.notificationType,
+      permission: config.permission 
+    });
 
     // Extract tenant from event payload
-    const tenantId = (event.payload as any)?.tenantId || event.tenantId;
+    const tenantId = (event.payload as any)?.tenantId;
     if (!tenantId) {
       logger.error(`No tenant information in event ${event.eventType}`, { eventId: event.id });
       return;
     }
 
     // Set up tenant-specific database connection
-    const { knex: tenantKnex } = await createTenantKnex(tenantId);
+    const tenantKnex = await getConnection(tenantId);
     
     // Get the notification type ID
     const notificationType = await tenantKnex('internal_notification_types')
@@ -429,17 +449,25 @@ async function handleNotificationEvent(event: BaseEvent): Promise<void> {
     }
 
     // Get user IDs to notify
-    const usersWithPermission = await getUsersWithPermission(config.permission, 'read', tenantKnex);
+    const [resource, action] = config.permission.split(':');
+    const usersWithPermission = await getUsersWithPermission(resource, action, tenantKnex);
     const additionalUsers = config.getAdditionalUsers ? await config.getAdditionalUsers(event, tenantKnex) : [];
     const allUserIds = [...new Set([...usersWithPermission, ...additionalUsers])];
 
+    logger.info(`[NOTIFICATION DEBUG] Users to notify for ${event.eventType}`, {
+      usersWithPermission: usersWithPermission.length,
+      additionalUsers: additionalUsers.length,
+      totalUsers: allUserIds.length,
+      userIds: allUserIds
+    });
+
     if (allUserIds.length === 0) {
-      logger.debug(`No users to notify for event ${event.eventType}`);
+      logger.info(`[NOTIFICATION DEBUG] No users to notify for event ${event.eventType}`);
       return;
     }
 
     // Filter users based on their notification preferences
-    const userPreferences = await getUserInternalNotificationPreferences(allUserIds);
+    const userPreferences = await getUserInternalNotificationPreferences(allUserIds, tenantId);
     const userIdsToNotify = allUserIds
         .filter(userId => {
             const pref = userPreferences.find(p => p.internal_notification_type_id === notificationType.internal_notification_type_id && p.user_id === userId);
@@ -478,7 +506,7 @@ async function handleNotificationEvent(event: BaseEvent): Promise<void> {
           data: templateData,
           action_url: actionUrl,
           priority_id: priorityId
-        });
+        }, tenantId);
       }
       
       logger.info(`Created ${userIdsToNotify.length} notifications for event ${event.eventType}`, {

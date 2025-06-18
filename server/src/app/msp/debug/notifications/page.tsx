@@ -6,8 +6,14 @@ import { Button } from 'server/src/components/ui/Button';
 import { 
   debugNotificationSystem, 
   createTestNotification, 
-  checkNotificationPreferences 
+  checkNotificationPreferences,
+  testTicketAssignmentFlow,
+  traceNotificationFlow,
+  testNotificationHandlerDirectly,
+  testEventBusInitialization
 } from 'server/src/lib/actions/notification-actions/debugNotificationActions';
+import { testNotificationSubscriberRegistrationDetailed } from 'server/src/lib/actions/notification-actions/debugNotificationActionsNew';
+import { forceRegisterAndTestNotifications } from 'server/src/lib/actions/notification-actions/forceRegisterNotifications';
 
 export default function NotificationDebugPage() {
   const [results, setResults] = useState<any>(null);
@@ -21,7 +27,7 @@ export default function NotificationDebugPage() {
     } catch (error) {
       setResults({ 
         name, 
-        result: { success: false, error: error.message }, 
+        result: { success: false, error: error instanceof Error ? error.message : String(error) }, 
         timestamp: new Date().toISOString() 
       });
     } finally {
@@ -33,8 +39,9 @@ export default function NotificationDebugPage() {
     <div className="container mx-auto p-6 space-y-6">
       <h1 className="text-2xl font-bold">Notification System Debug</h1>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
         <Button
+          id="system-debug-button"
           onClick={() => runDebug(debugNotificationSystem, 'System Debug')}
           disabled={loading}
           className="h-20"
@@ -43,6 +50,7 @@ export default function NotificationDebugPage() {
         </Button>
         
         <Button
+          id="test-notification-button"
           onClick={() => runDebug(createTestNotification, 'Test Notification')}
           disabled={loading}
           className="h-20"
@@ -51,11 +59,68 @@ export default function NotificationDebugPage() {
         </Button>
         
         <Button
+          id="check-preferences-button"
           onClick={() => runDebug(checkNotificationPreferences, 'Check Preferences')}
           disabled={loading}
           className="h-20"
         >
           ⚙️ Check User Preferences
+        </Button>
+        
+        <Button
+          id="test-real-assignment-button"
+          onClick={() => runDebug(testTicketAssignmentFlow, 'Test Real Assignment')}
+          disabled={loading}
+          className="h-20"
+        >
+          🎯 Test Real Assignment
+        </Button>
+        
+        <Button
+          id="trace-flow-button"
+          onClick={() => runDebug(traceNotificationFlow, 'Trace Flow')}
+          disabled={loading}
+          className="h-20"
+        >
+          🔍 Trace Notification Flow
+        </Button>
+        
+        <Button
+          id="test-handler-directly-button"
+          onClick={() => runDebug(testNotificationHandlerDirectly, 'Test Handler Directly')}
+          disabled={loading}
+          className="h-20"
+        >
+          🔧 Test Handler Directly
+        </Button>
+        
+        <Button
+          id="test-eventbus-init-button"
+          onClick={() => runDebug(testEventBusInitialization, 'Test EventBus Init')}
+          disabled={loading}
+          className="h-20"
+        >
+          🚀 Test EventBus Init
+        </Button>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Button
+          id="test-subscriber-registration-button"
+          onClick={() => runDebug(testNotificationSubscriberRegistrationDetailed, 'Test Subscriber Registration')}
+          disabled={loading}
+          className="h-20"
+        >
+          🔧 Debug Subscriber Registration
+        </Button>
+        
+        <Button
+          id="force-register-button"
+          onClick={() => runDebug(forceRegisterAndTestNotifications, 'Force Register & Test')}
+          disabled={loading}
+          className="h-20"
+        >
+          🚀 Force Register & Test
         </Button>
       </div>
 
@@ -111,6 +176,13 @@ export default function NotificationDebugPage() {
             <h4 className="font-semibold">Check Preferences</h4>
             <p className="text-sm text-gray-600">
               Shows current user&apos;s notification preferences and settings.
+            </p>
+          </div>
+          
+          <div>
+            <h4 className="font-semibold">Test Real Assignment</h4>
+            <p className="text-sm text-gray-600">
+              Creates a real ticket, assigns it using the actual action, and verifies if notification is created.
             </p>
           </div>
         </CardContent>
