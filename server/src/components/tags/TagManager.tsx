@@ -27,7 +27,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
   existingTags,
   onTagsChange,
   className = '',
-  allowColorEdit = false
+  allowColorEdit = true
 }) => {
   const [tags, setTags] = useState<ITag[]>(initialTags);
 

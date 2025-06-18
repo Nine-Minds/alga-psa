@@ -25,7 +25,7 @@ export const TagList: React.FC<TagListProps> = ({
   onColorUpdate,
   className = '',
   maxDisplay,
-  allowColorEdit = false
+  allowColorEdit = true
 }) => {
   const displayTags = maxDisplay && tags.length > maxDisplay 
     ? tags.slice(0, maxDisplay) 
