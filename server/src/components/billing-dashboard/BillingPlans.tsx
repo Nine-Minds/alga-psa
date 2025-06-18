@@ -13,7 +13,16 @@ import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { BillingPlanDialog } from './BillingPlanDialog';
 import { UnitOfMeasureInput } from './UnitOfMeasureInput';
-import { getBillingPlans, getBillingPlanById, updateBillingPlan, deleteBillingPlan } from 'server/src/lib/actions/billingPlanAction';
+import {
+  getBillingPlans,
+  getBillingPlanById,
+  updateBillingPlan,
+  deleteBillingPlan,
+} from 'server/src/lib/actions/billingPlanAction';
+import {
+  PlanDeletionError,
+  PlanAssociationDetails,
+} from 'server/src/types/billingPlan.types';
 import { getPlanServices, addServiceToPlan, updatePlanService, removeServiceFromPlan } from 'server/src/lib/actions/planServiceActions';
 // Import new action and type
 import { getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions';
@@ -21,6 +30,7 @@ import { IBillingPlan, IPlanService, IService, IServiceType } from 'server/src/i
 import { useTenant } from '../TenantProvider';
 import { toast } from 'react-hot-toast';
 import { DataTable } from 'server/src/components/ui/DataTable';
+import GenericDialog from 'server/src/components/ui/GenericDialog';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { PLAN_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY } from 'server/src/constants/billing';
 import { add } from 'date-fns';
@@ -40,6 +50,9 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
   const [editingPlan, setEditingPlan] = useState<IBillingPlan | null>(null);
   // Add state for all service types (standard + tenant-specific)
   const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]>([]);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteAssociations, setDeleteAssociations] = useState<PlanAssociationDetails | null>(null);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
   const tenant = useTenant();
 
   useEffect(() => {
@@ -208,21 +221,17 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
                   fetchBillingPlans();
                   toast.success('Billing plan deleted successfully');
                 } catch (error) {
-                  if (error instanceof Error) {
-                    // Display user-friendly error message using toast
-                    // Check for the specific error message for plans assigned to companies
-                    if (error.message === "Cannot delete billing plan: It is currently assigned to one or more companies.") {
-                        toast.error(error.message);
-                    // Check for the specific error message for plans with associated services (from pre-check)
-                    } else if (error.message.includes('associated services')) {
-                      toast.error(error.message); // Use the exact message from the action
-                    } else {
-                      // Display other specific error messages directly
-                      toast.error(error.message);
-                    }
-                  } else {
-                    toast.error('Failed to delete plan');
+                  let message = 'Failed to delete plan';
+                  let associations: PlanAssociationDetails | null = null;
+                  if (error instanceof PlanDeletionError) {
+                    message = error.message;
+                    associations = error.associations;
+                  } else if (error instanceof Error) {
+                    message = error.message;
                   }
+                  setDeleteError(message);
+                  setDeleteAssociations(associations);
+                  setShowErrorDialog(true);
                 }
               }}
             >
@@ -422,6 +431,60 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
           </Box>
         </Card>
       </div>
+      <GenericDialog
+        isOpen={showErrorDialog}
+        onClose={() => {
+          setShowErrorDialog(false);
+          setDeleteAssociations(null);
+        }}
+        title="Cannot Delete Plan"
+        id="delete-plan-error"
+        preventOutsideClose
+        showCloseButton={false}
+      >
+        <p className="mb-4 whitespace-pre-line">{deleteError}</p>
+        {deleteAssociations && (
+          <div className="space-y-4">
+            {Object.entries(deleteAssociations.servicesByCategory).map(([cat, services]) => (
+              <div key={cat}>
+                <h4 className="font-semibold mt-2">{cat}</h4>
+                <ul className="list-disc pl-5">
+                  {services.map(s => (
+                    <li key={s.id}>
+                      <a
+                        href={`/msp/billing?tab=service-catalog#service-${s.id}`}
+                        className="text-blue-600 underline"
+                      >
+                        {s.name}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+            {deleteAssociations.companies.length > 0 && (
+              <div>
+                <h4 className="font-semibold mt-2">Companies</h4>
+                <ul className="list-disc pl-5">
+                  {deleteAssociations.companies.map(c => (
+                    <li key={c}>{c}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+        <div className="flex justify-end mt-4">
+          <Button
+            onClick={() => {
+              setShowErrorDialog(false);
+              setDeleteAssociations(null);
+            }}
+          >
+            OK
+          </Button>
+        </div>
+      </GenericDialog>
     </div>
   );
 };
