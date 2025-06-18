@@ -629,9 +629,10 @@ export default function TaskForm({
     setIsEditingChecklist(!isEditingChecklist);
   };
 
-  const addChecklistItem = () => {
+  const addChecklistItem = (): string => {
+    const newItemId = `temp-${Date.now()}`;
     const newItem: Omit<ITaskChecklistItem, 'tenant'> = {
-      checklist_item_id: `temp-${Date.now()}`,
+      checklist_item_id: newItemId,
       task_id: task?.task_id || tempTaskId,
       item_name: '',
       description: null,
@@ -642,7 +643,18 @@ export default function TaskForm({
       updated_at: new Date(),
       order_number: checklistItems.length + 1,
     };
-    setChecklistItems([...checklistItems, newItem]);
+    setChecklistItems((items) => [...items, newItem]);
+    return newItemId;
+  };
+
+  const handleChecklistItemKeyDown = (
+    e: React.KeyboardEvent<HTMLTextAreaElement>
+  ) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      const newId = addChecklistItem();
+      setEditingChecklistItemId(newId);
+    }
   };
 
   const updateChecklistItem = (index: number, field: keyof ITaskChecklistItem, value: any) => {
@@ -1105,6 +1117,8 @@ export default function TaskForm({
                               placeholder="Checklist item"
                               className="w-full"
                               onBlur={() => setEditingChecklistItemId(null)} // Stop editing when focus is lost
+                              autoFocus={editingChecklistItemId === item.checklist_item_id}
+                              onKeyDown={handleChecklistItemKeyDown}
                             />
                           </div>
                           <button
