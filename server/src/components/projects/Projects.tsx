@@ -16,7 +16,7 @@ import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/t
 import { TagFilter, TagManager } from 'server/src/components/tags';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
-import { Search, MoreVertical, Pen, Trash2 } from 'lucide-react';
+import { Search, MoreVertical, Pen, Trash2, XCircle } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useDrawer } from "server/src/context/DrawerContext";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
@@ -25,6 +25,7 @@ import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
+import { DeadlineFilter, DeadlineFilterValue } from './DeadlineFilter';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
@@ -53,7 +54,7 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
   const [filterCompanyId, setFilterCompanyId] = useState<string | null>(null);
   const [filterContactId, setFilterContactId] = useState<string | null>(null);
   const [filterManagerId, setFilterManagerId] = useState<string | null>(null);
-  const [filterDeadlineDate, setFilterDeadlineDate] = useState<Date | undefined>(undefined);
+  const [filterDeadline, setFilterDeadline] = useState<DeadlineFilterValue | undefined>(undefined);
   const [companyFilterState, setCompanyFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [companyClientTypeFilter, setCompanyClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   
@@ -154,12 +155,27 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
     }
 
     // Apply deadline filter
-    if (filterDeadlineDate) {
-      const deadlineDay = filterDeadlineDate.toISOString().split('T')[0];
+    if (filterDeadline && filterDeadline.date) {
       filtered = filtered.filter(project => {
         if (!project.end_date) return false;
-        const projectDeadline = new Date(project.end_date).toISOString().split('T')[0];
-        return projectDeadline === deadlineDay;
+        const projectDeadline = new Date(project.end_date);
+        const filterDate = filterDeadline.date!;
+        
+        switch (filterDeadline.type) {
+          case 'before':
+            return projectDeadline < filterDate;
+          case 'after':
+            return projectDeadline > filterDate;
+          case 'on':
+            const projectDay = projectDeadline.toISOString().split('T')[0];
+            const filterDay = filterDate.toISOString().split('T')[0];
+            return projectDay === filterDay;
+          case 'between':
+            if (!filterDeadline.endDate) return false;
+            return projectDeadline >= filterDate && projectDeadline <= filterDeadline.endDate;
+          default:
+            return true;
+        }
       });
     }
 
@@ -169,7 +185,7 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
     });
 
     return filtered;
-  }, [projects, searchTerm, filterStatus, selectedTags, filterCompanyId, filterContactId, filterManagerId, filterDeadlineDate]);
+  }, [projects, searchTerm, filterStatus, selectedTags, filterCompanyId, filterContactId, filterManagerId, filterDeadline]);
 
   const handleEditProject = (project: IProject) => {
     openDrawer(
@@ -436,10 +452,10 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
         />
 
         {/* Deadline filter */}
-        <DatePicker
+        <DeadlineFilter
           id="project-deadline-filter"
-          value={filterDeadlineDate}
-          onChange={(date) => setFilterDeadlineDate(date)}
+          value={filterDeadline}
+          onChange={setFilterDeadline}
           placeholder="Filter by deadline"
         />
 
@@ -458,7 +474,7 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
 
         {/* Clear filters button */}
         {(searchTerm || filterStatus !== 'active' || selectedTags.length > 0 || 
-          filterCompanyId || filterContactId || filterManagerId || filterDeadlineDate) && (
+          filterCompanyId || filterContactId || filterManagerId || filterDeadline) && (
           <Button
             id="clear-all-filters-button"
             variant="outline"
@@ -470,12 +486,14 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
               setFilterCompanyId(null);
               setFilterContactId(null);
               setFilterManagerId(null);
-              setFilterDeadlineDate(undefined);
+              setFilterDeadline(undefined);
               setCompanyFilterState('all');
               setCompanyClientTypeFilter('all');
             }}
+            className="flex items-center gap-1 bg-white"
           >
-            Clear all filters
+            <XCircle className="h-4 w-4" />
+            <span>Clear all filters</span>
           </Button>
         )}
       </div>

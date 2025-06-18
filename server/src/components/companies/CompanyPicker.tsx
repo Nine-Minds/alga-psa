@@ -239,7 +239,7 @@ export const CompanyPicker: React.FC<CompanyPickerProps & AutomationProps> = ({
             e.stopPropagation();
             setIsOpen(!isOpen);
           }}
-          className="w-full justify-between px-2"
+          className="w-full justify-between px-2 bg-white"
           label={selectedCompany ? selectedCompany.company_name : 'Select Client'}
           {...companyPickerProps}
           id={`${id}-toggle`}
