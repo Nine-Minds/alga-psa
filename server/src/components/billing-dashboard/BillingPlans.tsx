@@ -18,9 +18,11 @@ import {
   getBillingPlanById,
   updateBillingPlan,
   deleteBillingPlan,
+} from 'server/src/lib/actions/billingPlanAction';
+import {
   PlanDeletionError,
   PlanAssociationDetails,
-} from 'server/src/lib/actions/billingPlanAction';
+} from 'server/src/types/billingPlan.types';
 import { getPlanServices, addServiceToPlan, updatePlanService, removeServiceFromPlan } from 'server/src/lib/actions/planServiceActions';
 // Import new action and type
 import { getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions';
@@ -437,6 +439,8 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
         }}
         title="Cannot Delete Plan"
         id="delete-plan-error"
+        preventOutsideClose
+        showCloseButton={false}
       >
         <p className="mb-4 whitespace-pre-line">{deleteError}</p>
         {deleteAssociations && (

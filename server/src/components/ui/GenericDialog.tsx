@@ -20,6 +20,10 @@ interface GenericDialogProps {
   initialPosition?: { x?: number; y?: number };
   /** Whether to constrain dragging within viewport */
   constrainToViewport?: boolean;
+  /** Prevent closing the dialog via escape key or outside click */
+  preventOutsideClose?: boolean;
+  /** Hide the built-in close (X) button */
+  showCloseButton?: boolean;
 }
 
 const GenericDialog: React.FC<GenericDialogProps & AutomationProps> = ({ 
@@ -30,7 +34,9 @@ const GenericDialog: React.FC<GenericDialogProps & AutomationProps> = ({
   id = 'dialog',
   draggable = true,
   initialPosition,
-  constrainToViewport = true
+  constrainToViewport = true,
+  preventOutsideClose = false,
+  showCloseButton = true
 }) => {
   // Register dialog with UI reflection system
   const { automationIdProps: dialogProps } = useAutomationIdAndRegister<DialogComponent>({
@@ -140,15 +146,24 @@ const GenericDialog: React.FC<GenericDialogProps & AutomationProps> = ({
   };
 
   return (
-    <Dialog.Root open={isOpen} onOpenChange={onClose}>
+    <Dialog.Root
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open && !preventOutsideClose) {
+          onClose();
+        }
+      }}
+    >
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-        <Dialog.Content 
+        <Dialog.Content
           ref={dialogRef}
           {...dialogProps}
           className="fixed top-1/2 left-1/2 bg-white rounded-lg shadow-lg w-full max-w-md focus-within:ring-2 focus-within:ring-purple-100 focus-within:ring-offset-2"
           style={dialogStyle}
           onMouseDown={handleMouseDown}
+          onEscapeKeyDown={preventOutsideClose ? (e) => e.preventDefault() : undefined}
+          onInteractOutside={preventOutsideClose ? (e) => e.preventDefault() : undefined}
         >
           <div 
             data-drag-handle
@@ -161,15 +176,17 @@ const GenericDialog: React.FC<GenericDialogProps & AutomationProps> = ({
               {children}
             </ReflectionContainer>
           </div>
-          <Dialog.Close asChild>
-            <button
-              {...closeButtonProps}
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-              aria-label="Close"
-            >
-              <Cross2Icon />
-            </button>
-          </Dialog.Close>
+          {showCloseButton && (
+            <Dialog.Close asChild>
+              <button
+                {...closeButtonProps}
+                className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
+                aria-label="Close"
+              >
+                <Cross2Icon />
+              </button>
+            </Dialog.Close>
+          )}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

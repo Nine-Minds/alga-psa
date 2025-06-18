@@ -8,21 +8,10 @@ import { PlanServiceConfigurationService } from 'server/src/lib/services/planSer
 import { IPlanServiceFixedConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import BillingPlanFixedConfig from 'server/src/lib/models/billingPlanFixedConfig';
 import { withTransaction } from '../../../../shared/db';
-
-// Structure describing existing links for a billing plan
-export interface PlanAssociationDetails {
-    servicesByCategory: Record<string, { id: string; name: string }[]>;
-    companies: string[];
-}
-
-export class PlanDeletionError extends Error {
-    associations: PlanAssociationDetails;
-    constructor(message: string, associations: PlanAssociationDetails) {
-        super(message);
-        this.name = 'PlanDeletionError';
-        this.associations = associations;
-    }
-}
+import {
+    PlanAssociationDetails,
+    PlanDeletionError,
+} from 'server/src/types/billingPlan.types';
 
 // Helper to collect association details for a billing plan
 async function getPlanAssociationDetails(
