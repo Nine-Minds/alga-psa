@@ -189,7 +189,9 @@ export async function deleteBillingPlan(planId: string): Promise<void> {
             const parts: string[] = [];
             if (hasServices) {
                 const serviceDetails = Object.entries(associations.servicesByCategory)
-                    .map(([category, names]) => `${category}: ${names.join(', ')}`);
+                    .map(([category, services]) =>
+                        `${category}: ${services.map(s => s.name).join(', ')}`
+                    );
                 parts.push(`services - ${serviceDetails.join('; ')}`);
             }
             if (hasCompanies) {
