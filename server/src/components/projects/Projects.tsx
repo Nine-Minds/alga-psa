@@ -16,11 +16,20 @@ import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/t
 import { TagFilter, TagManager } from 'server/src/components/tags';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
-import { Search, MoreVertical, Pen, Trash2 } from 'lucide-react';
+import { Search, MoreVertical, Pen, Trash2, XCircle } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useDrawer } from "server/src/context/DrawerContext";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
 import { Input } from 'server/src/components/ui/Input';
+import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import { ContactPicker } from 'server/src/components/ui/ContactPicker';
+import UserPicker from 'server/src/components/ui/UserPicker';
+import { DatePicker } from 'server/src/components/ui/DatePicker';
+import { DeadlineFilter, DeadlineFilterValue } from './DeadlineFilter';
+import { IContact } from 'server/src/interfaces/contact.interfaces';
+import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
+import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 
 interface ProjectsProps {
   initialProjects: IProject[];
@@ -40,6 +49,18 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const projectTagsRef = useRef<Record<string, ITag[]>>({});
   const [allUniqueTags, setAllUniqueTags] = useState<string[]>([]);
+  
+  // New filter states
+  const [filterCompanyId, setFilterCompanyId] = useState<string | null>(null);
+  const [filterContactId, setFilterContactId] = useState<string | null>(null);
+  const [filterManagerId, setFilterManagerId] = useState<string | null>(null);
+  const [filterDeadline, setFilterDeadline] = useState<DeadlineFilterValue | undefined>(undefined);
+  const [companyFilterState, setCompanyFilterState] = useState<'all' | 'active' | 'inactive'>('all');
+  const [companyClientTypeFilter, setCompanyClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  
+  // Data for pickers
+  const [contacts, setContacts] = useState<IContact[]>([]);
+  const [users, setUsers] = useState<IUserWithRoles[]>([]);
   
   const handleTagsChange = (projectId: string, tags: ITag[]) => {
     projectTagsRef.current[projectId] = tags;
@@ -82,6 +103,23 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
     fetchTags();
   }, [projects]);
 
+  // Fetch contacts and users
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [contactsData, usersData] = await Promise.all([
+          getAllContacts('all'),
+          getAllUsers(true)
+        ]);
+        setContacts(contactsData || []);
+        setUsers(usersData || []);
+      } catch (error) {
+        console.error('Error fetching contacts and users:', error);
+      }
+    };
+    fetchData();
+  }, []);
+
   const filteredProjects = useMemo(() => {
     let filtered = projects.filter(project =>
       project.project_name.toLowerCase().includes(searchTerm.toLowerCase()) &&
@@ -101,8 +139,53 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
       });
     }
 
+    // Apply company filter
+    if (filterCompanyId) {
+      filtered = filtered.filter(project => project.company_id === filterCompanyId);
+    }
+
+    // Apply contact filter
+    if (filterContactId) {
+      filtered = filtered.filter(project => project.contact_name_id === filterContactId);
+    }
+
+    // Apply project manager filter
+    if (filterManagerId) {
+      filtered = filtered.filter(project => project.assigned_to === filterManagerId);
+    }
+
+    // Apply deadline filter
+    if (filterDeadline && filterDeadline.date) {
+      filtered = filtered.filter(project => {
+        if (!project.end_date) return false;
+        const projectDeadline = new Date(project.end_date);
+        const filterDate = filterDeadline.date!;
+        
+        switch (filterDeadline.type) {
+          case 'before':
+            return projectDeadline < filterDate;
+          case 'after':
+            return projectDeadline > filterDate;
+          case 'on':
+            const projectDay = projectDeadline.toISOString().split('T')[0];
+            const filterDay = filterDate.toISOString().split('T')[0];
+            return projectDay === filterDay;
+          case 'between':
+            if (!filterDeadline.endDate) return false;
+            return projectDeadline >= filterDate && projectDeadline <= filterDeadline.endDate;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Sort projects with case-insensitive alphabetical sorting
+    filtered.sort((a, b) => {
+      return a.project_name.toLowerCase().localeCompare(b.project_name.toLowerCase());
+    });
+
     return filtered;
-  }, [projects, searchTerm, filterStatus, selectedTags]);
+  }, [projects, searchTerm, filterStatus, selectedTags, filterCompanyId, filterContactId, filterManagerId, filterDeadline]);
 
   const handleEditProject = (project: IProject) => {
     openDrawer(
@@ -301,42 +384,118 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Projects</h1>
         <div className="flex items-center space-x-4">
-          <div className="relative">
-            <Input
-              type="text"
-              placeholder="Search projects"
-              className="pl-10 pr-4 py-2 w-64"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          </div>
-          <div className="relative z-10">
-            <CustomSelect
-              options={statusOptions}
-              value={filterStatus}
-              onValueChange={(value) => setFilterStatus(value as 'all' | 'active' | 'inactive')}
-              placeholder="Select status"
-              customStyles={{
-                content: 'mt-1'
-              }}
-            />
-          </div>
-          <TagFilter
-            allTags={allUniqueTags}
-            selectedTags={selectedTags}
-            onTagSelect={(tag) => {
-              setSelectedTags(prev => 
-                prev.includes(tag) 
-                  ? prev.filter(t => t !== tag)
-                  : [...prev, tag]
-              );
-            }}
-          />
           <Button id='add-project-button' onClick={() => setShowQuickAdd(true)}>
             Add Project
           </Button>
         </div>
+      </div>
+
+      {/* Filter section */}
+      <div className="mb-6 flex flex-wrap items-center gap-2">
+        {/* Search bar */}
+        <div className="relative">
+          <Input
+            type="text"
+            placeholder="Search projects"
+            className="pl-10 pr-4 py-2 w-64"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+        </div>
+
+        {/* Status filter */}
+        <div className="relative z-10">
+          <CustomSelect
+            options={statusOptions}
+            value={filterStatus}
+            onValueChange={(value) => setFilterStatus(value as 'all' | 'active' | 'inactive')}
+            placeholder="Select status"
+            customStyles={{
+              content: 'mt-1'
+            }}
+          />
+        </div>
+
+        {/* Company filter */}
+        <CompanyPicker
+          id="project-company-filter"
+          companies={companies}
+          onSelect={(companyId) => setFilterCompanyId(companyId)}
+          selectedCompanyId={filterCompanyId}
+          filterState={companyFilterState}
+          onFilterStateChange={setCompanyFilterState}
+          clientTypeFilter={companyClientTypeFilter}
+          onClientTypeFilterChange={setCompanyClientTypeFilter}
+          fitContent={true}
+        />
+
+        {/* Contact filter */}
+        <ContactPicker
+          id="project-contact-filter"
+          contacts={contacts}
+          value={filterContactId || ''}
+          onValueChange={(value) => setFilterContactId(value || null)}
+          companyId={filterCompanyId || undefined}
+          placeholder="Filter by contact"
+          buttonWidth="fit"
+        />
+
+        {/* Project Manager filter */}
+        <UserPicker
+          value={filterManagerId || ''}
+          onValueChange={(value) => setFilterManagerId(value || null)}
+          users={users}
+          placeholder="All managers"
+          buttonWidth="fit"
+          labelStyle="none"
+        />
+
+        {/* Deadline filter */}
+        <DeadlineFilter
+          id="project-deadline-filter"
+          value={filterDeadline}
+          onChange={setFilterDeadline}
+          placeholder="Filter by deadline"
+        />
+
+        {/* Tag filter */}
+        <TagFilter
+          allTags={allUniqueTags}
+          selectedTags={selectedTags}
+          onTagSelect={(tag) => {
+            setSelectedTags(prev => 
+              prev.includes(tag) 
+                ? prev.filter(t => t !== tag)
+                : [...prev, tag]
+            );
+          }}
+        />
+
+        {/* Clear filters button */}
+        {(searchTerm || filterStatus !== 'active' || selectedTags.length > 0 || 
+          filterCompanyId || filterContactId || filterManagerId || filterDeadline) && (
+          <Button
+            id="clear-all-filters-button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setSearchTerm('');
+              setFilterStatus('active');
+              setSelectedTags([]);
+              setFilterCompanyId(null);
+              setFilterContactId(null);
+              setFilterManagerId(null);
+              setFilterDeadline(undefined);
+              setCompanyFilterState('all');
+              setCompanyClientTypeFilter('all');
+            }}
+            className="flex items-center gap-1 bg-white"
+          >
+            <XCircle className="h-4 w-4" />
+            <span>Clear all filters</span>
+          </Button>
+        )}
       </div>
 
       <div className="bg-white shadow rounded-lg p-4">
