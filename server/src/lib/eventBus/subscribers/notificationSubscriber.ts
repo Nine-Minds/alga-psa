@@ -408,8 +408,15 @@ async function handleNotificationEvent(event: BaseEvent): Promise<void> {
       return;
     }
 
+    // Extract tenant from event payload
+    const tenantId = (event.payload as any)?.tenantId || event.tenantId;
+    if (!tenantId) {
+      logger.error(`No tenant information in event ${event.eventType}`, { eventId: event.id });
+      return;
+    }
+
     // Set up tenant-specific database connection
-    const { knex: tenantKnex } = await createTenantKnex();
+    const { knex: tenantKnex } = await createTenantKnex(tenantId);
     
     // Get the notification type ID
     const notificationType = await tenantKnex('internal_notification_types')
