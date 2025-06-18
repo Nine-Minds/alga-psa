@@ -648,8 +648,7 @@ export default function TaskForm({
   };
 
   const handleChecklistItemKeyDown = (
-    e: React.KeyboardEvent<HTMLTextAreaElement>,
-    index: number
+    e: React.KeyboardEvent<HTMLTextAreaElement>
   ) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -1118,7 +1117,8 @@ export default function TaskForm({
                               placeholder="Checklist item"
                               className="w-full"
                               onBlur={() => setEditingChecklistItemId(null)} // Stop editing when focus is lost
-                              onKeyDown={(e) => handleChecklistItemKeyDown(e, index)}
+                              autoFocus={editingChecklistItemId === item.checklist_item_id}
+                              onKeyDown={handleChecklistItemKeyDown}
                             />
                           </div>
                           <button
