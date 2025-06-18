@@ -10,9 +10,18 @@ import BillingPlanFixedConfig from 'server/src/lib/models/billingPlanFixedConfig
 import { withTransaction } from '../../../../shared/db';
 
 // Structure describing existing links for a billing plan
-interface PlanAssociationDetails {
-    servicesByCategory: Record<string, string[]>;
+export interface PlanAssociationDetails {
+    servicesByCategory: Record<string, { id: string; name: string }[]>;
     companies: string[];
+}
+
+export class PlanDeletionError extends Error {
+    associations: PlanAssociationDetails;
+    constructor(message: string, associations: PlanAssociationDetails) {
+        super(message);
+        this.name = 'PlanDeletionError';
+        this.associations = associations;
+    }
 }
 
 // Helper to collect association details for a billing plan
@@ -38,7 +47,7 @@ async function getPlanAssociationDetails(
                 .andOn('st.tenant', '=', 'ps.tenant');
         })
         .where({ 'ps.plan_id': planId, 'ps.tenant': tenant })
-        .select('sc.service_name')
+        .select('sc.service_id', 'sc.service_name')
         .select(knex.raw('COALESCE(sst.name, st.name) as service_type_name'));
 
     for (const row of serviceRows) {
@@ -46,7 +55,7 @@ async function getPlanAssociationDetails(
         if (!details.servicesByCategory[category]) {
             details.servicesByCategory[category] = [];
         }
-        details.servicesByCategory[category].push(row.service_name);
+        details.servicesByCategory[category].push({ id: row.service_id, name: row.service_name });
     }
 
     // Companies using this plan
@@ -202,7 +211,10 @@ export async function deleteBillingPlan(planId: string): Promise<void> {
                 parts.push(`companies - ${displayNames}`);
             }
             const detail = parts.join('; ');
-            throw new Error(`Cannot delete billing plan: it is still linked to ${detail}.`);
+            throw new PlanDeletionError(
+                `Cannot delete billing plan: it is still linked to ${detail}.`,
+                associations
+            );
         }
 
         await BillingPlan.delete(knex, planId);

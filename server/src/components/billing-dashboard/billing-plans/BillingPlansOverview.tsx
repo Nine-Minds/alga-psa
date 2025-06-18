@@ -14,7 +14,12 @@ import {
   DropdownMenuTrigger,
 } from 'server/src/components/ui/DropdownMenu';
 import { BillingPlanDialog } from '../BillingPlanDialog';
-import { getBillingPlans, deleteBillingPlan } from 'server/src/lib/actions/billingPlanAction';
+import {
+  getBillingPlans,
+  deleteBillingPlan,
+  PlanDeletionError,
+  PlanAssociationDetails,
+} from 'server/src/lib/actions/billingPlanAction';
 import { IBillingPlan, IServiceType } from 'server/src/interfaces/billing.interfaces'; // Added IServiceType
 import { getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions'; // Added import for fetching types
 import { DataTable } from 'server/src/components/ui/DataTable';
@@ -27,6 +32,7 @@ const BillingPlansOverview: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]>([]); // Added state for service types
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteAssociations, setDeleteAssociations] = useState<PlanAssociationDetails | null>(null);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const router = useRouter();
 
@@ -63,8 +69,16 @@ const BillingPlansOverview: React.FC = () => {
       fetchBillingPlans();
     } catch (error) {
       console.error('Error deleting billing plan:', error); // Keep console log for debugging
-      const message = error instanceof Error ? error.message : 'An unexpected error occurred while deleting the plan.';
+      let message = 'An unexpected error occurred while deleting the plan.';
+      let associations: PlanAssociationDetails | null = null;
+      if (error instanceof PlanDeletionError) {
+        message = error.message;
+        associations = error.associations;
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
       setDeleteError(message);
+      setDeleteAssociations(associations);
       setShowErrorDialog(true);
     }
   };
@@ -180,13 +194,54 @@ const BillingPlansOverview: React.FC = () => {
         />
         <GenericDialog
           isOpen={showErrorDialog}
-          onClose={() => setShowErrorDialog(false)}
+          onClose={() => {
+            setShowErrorDialog(false);
+            setDeleteAssociations(null);
+          }}
           title="Cannot Delete Plan"
           id="delete-plan-error"
         >
           <p className="mb-4 whitespace-pre-line">{deleteError}</p>
-          <div className="flex justify-end">
-            <Button onClick={() => setShowErrorDialog(false)}>OK</Button>
+          {deleteAssociations && (
+            <div className="space-y-4">
+              {Object.entries(deleteAssociations.servicesByCategory).map(([cat, services]) => (
+                <div key={cat}>
+                  <h4 className="font-semibold mt-2">{cat}</h4>
+                  <ul className="list-disc pl-5">
+                    {services.map(s => (
+                      <li key={s.id}>
+                        <a
+                          href={`/msp/billing?tab=service-catalog#service-${s.id}`}
+                          className="text-blue-600 underline"
+                        >
+                          {s.name}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+              {deleteAssociations.companies.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mt-2">Companies</h4>
+                  <ul className="list-disc pl-5">
+                    {deleteAssociations.companies.map(c => (
+                      <li key={c}>{c}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+          <div className="flex justify-end mt-4">
+            <Button
+              onClick={() => {
+                setShowErrorDialog(false);
+                setDeleteAssociations(null);
+              }}
+            >
+              OK
+            </Button>
           </div>
         </GenericDialog>
       </Box>
