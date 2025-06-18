@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { signOut } from "next-auth/react";
 import Link from 'next/link';
-import { QuestionMarkCircledIcon, SunIcon, MoonIcon, ExitIcon, ChevronRightIcon, HomeIcon, PersonIcon } from '@radix-ui/react-icons';
+import { QuestionMarkCircledIcon, ExitIcon, ChevronRightIcon, HomeIcon, PersonIcon } from '@radix-ui/react-icons';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
@@ -12,8 +12,6 @@ import { usePathname } from 'next/navigation';
 import { menuItems, bottomMenuItems, MenuItem } from 'server/src/config/menuConfig';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
-import { useTheme } from "server/src/context/ThemeContext";
-import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 
 interface HeaderProps {
@@ -21,7 +19,6 @@ interface HeaderProps {
   setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
   rightSidebarOpen: boolean;
   setRightSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  handleThemeMode: (mode: string) => void;
 }
 
 const getMenuItemNameByPath = (path: string | null | undefined): string => {
@@ -51,9 +48,11 @@ const getMenuItemNameByPath = (path: string | null | undefined): string => {
 };
 
 const Header: React.FC<HeaderProps> = ({
-  handleThemeMode
+  sidebarOpen,
+  setSidebarOpen,
+  rightSidebarOpen,
+  setRightSidebarOpen,
 }) => {
-  const { themeStatus, setThemeStatus } = useTheme();
   const [userData, setUserData] = useState<IUserWithRoles | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const router = useRouter();
@@ -103,14 +102,6 @@ const Header: React.FC<HeaderProps> = ({
   const pathname = usePathname();
   const breadcrumbItems = getBreadcrumbItems(pathname);  
 
-  const handleThemeToggle = () => {
-    if (themeStatus === "light") {
-      toast.success("Dark mode is coming soon! 🌙", {
-        duration: 3000,
-        position: "top-right"
-      });
-    }
-  };
 
   return (
     <header className="bg-transparent py-4 flex items-center justify-between border-b border-main-300 shadow-[0_5px_10px_rgba(0,0,0,0.1)] p-2">
@@ -155,13 +146,6 @@ const Header: React.FC<HeaderProps> = ({
         >
           <QuestionMarkCircledIcon className="w-5 h-5" />
         </Link>
-        <button
-          className="text-main-500 hover:text-gray-700 mr-3"
-          aria-label="Toggle theme"
-          onClick={handleThemeToggle}
-        >
-          <MoonIcon className="w-5 h-5" />
-        </button>
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
             <button className="relative" aria-label="User menu">
