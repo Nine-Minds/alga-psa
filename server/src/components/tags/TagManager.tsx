@@ -16,6 +16,7 @@ interface TagManagerProps {
   existingTags: string[];
   onTagsChange?: (tags: ITag[]) => void;
   className?: string;
+  allowColorEdit?: boolean;
 }
 
 export const TagManager: React.FC<TagManagerProps> = ({
@@ -25,7 +26,8 @@ export const TagManager: React.FC<TagManagerProps> = ({
   initialTags,
   existingTags,
   onTagsChange,
-  className = ''
+  className = '',
+  allowColorEdit = false
 }) => {
   const [tags, setTags] = useState<ITag[]>(initialTags);
 
@@ -72,6 +74,17 @@ export const TagManager: React.FC<TagManagerProps> = ({
     }
   };
 
+  const handleColorUpdate = async (tagId: string, backgroundColor: string | null, textColor: string | null) => {
+    // Update the local state to reflect the color change
+    const updatedTags = tags.map(tag => 
+      tag.tag_id === tagId 
+        ? { ...tag, background_color: backgroundColor, text_color: textColor }
+        : tag
+    );
+    setTags(updatedTags);
+    onTagsChange?.(updatedTags);
+  };
+
   return (
     <ReflectionContainer id={id} label="Tag Manager">
       <div className={`flex flex-wrap gap-1 ${className}`}>
@@ -79,6 +92,8 @@ export const TagManager: React.FC<TagManagerProps> = ({
           id={`${id}-list`}
           tags={tags} 
           onRemoveTag={handleRemoveTag}
+          onColorUpdate={handleColorUpdate}
+          allowColorEdit={allowColorEdit}
         />
         <TagInput
           id={`${id}-input`}

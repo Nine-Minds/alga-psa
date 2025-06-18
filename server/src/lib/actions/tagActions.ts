@@ -114,3 +114,28 @@ export async function findAllTagsByType(entityType: TaggedEntityType): Promise<s
     throw new Error(`Failed to find all tag texts for type: ${entityType}`);
   }
 }
+
+export async function updateTagColor(tagId: string, backgroundColor: string | null, textColor: string | null): Promise<void> {
+  const { knex: db } = await createTenantKnex();
+  
+  // Validate hex color codes if provided
+  const hexColorRegex = /^#[0-9A-F]{6}$/i;
+  if (backgroundColor && !hexColorRegex.test(backgroundColor)) {
+    throw new Error('Invalid background color format. Must be a valid hex color code (e.g., #FF0000)');
+  }
+  if (textColor && !hexColorRegex.test(textColor)) {
+    throw new Error('Invalid text color format. Must be a valid hex color code (e.g., #FFFFFF)');
+  }
+  
+  try {
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      await Tag.update(trx, tagId, {
+        background_color: backgroundColor,
+        text_color: textColor
+      });
+    });
+  } catch (error) {
+    console.error(`Error updating tag color for tag id ${tagId}:`, error);
+    throw new Error(`Failed to update tag color for tag id ${tagId}`);
+  }
+}
