@@ -1,30 +1,56 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import Body from "./Body";
 import RightSidebar from "./RightSidebar";
 import Drawer from 'server/src/components/ui/Drawer';
 import { DrawerProvider } from "server/src/context/DrawerContext";
+import { getCurrentUser, getUserPreference, setUserPreference } from 'server/src/lib/actions/user-actions/userActions';
 
 
 export default function DefaultLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerContent] = useState<React.ReactNode>(null);
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, _setSidebarOpen] = useState(true);
+
+  const SIDEBAR_PREF = 'sidebarOpen';
 
   useEffect(() => {
-    const stored = localStorage.getItem('sidebarOpen');
-    if (stored !== null) {
-      setSidebarOpen(stored === 'true');
-    }
+    const loadPreference = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (user) {
+          const pref = await getUserPreference(user.user_id, SIDEBAR_PREF);
+          if (typeof pref === 'boolean') {
+            _setSidebarOpen(pref);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load sidebar preference:', error);
+      }
+    };
+    loadPreference();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('sidebarOpen', sidebarOpen.toString());
-  }, [sidebarOpen]);
+  const setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>> = useCallback((value) => {
+    _setSidebarOpen(prev => {
+      const newValue = typeof value === 'function' ? value(prev) : value;
+      (async () => {
+        try {
+          const user = await getCurrentUser();
+          if (user) {
+            await setUserPreference(user.user_id, SIDEBAR_PREF, newValue);
+          }
+        } catch (error) {
+          console.error('Failed to save sidebar preference:', error);
+        }
+      })();
+      return newValue;
+    });
+  }, []);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
 
   // Add state for Chat component props
