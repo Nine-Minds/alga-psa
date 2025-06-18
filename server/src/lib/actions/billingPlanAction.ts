@@ -9,26 +9,44 @@ import { IPlanServiceFixedConfig } from 'server/src/interfaces/planServiceConfig
 import BillingPlanFixedConfig from 'server/src/lib/models/billingPlanFixedConfig';
 import { withTransaction } from '../../../../shared/db';
 
-// Helper to collect association details for a billing plan
-async function getPlanAssociationDetails(knex: Knex, tenant: string, planId: string): Promise<string[]> {
-    const details: string[] = [];
+// Structure describing existing links for a billing plan
+interface PlanAssociationDetails {
+    servicesByCategory: Record<string, string[]>;
+    companies: string[];
+}
 
-    // Services linked to this plan
+// Helper to collect association details for a billing plan
+async function getPlanAssociationDetails(
+    knex: Knex,
+    tenant: string,
+    planId: string
+): Promise<PlanAssociationDetails> {
+    const details: PlanAssociationDetails = {
+        servicesByCategory: {},
+        companies: []
+    };
+
+    // Services linked to this plan with their service type name
     const serviceRows = await knex('plan_services as ps')
         .join('service_catalog as sc', function() {
             this.on('ps.service_id', '=', 'sc.service_id')
                 .andOn('sc.tenant', '=', 'ps.tenant');
         })
+        .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
+        .leftJoin('service_types as st', function() {
+            this.on('sc.custom_service_type_id', '=', 'st.id')
+                .andOn('st.tenant', '=', 'ps.tenant');
+        })
         .where({ 'ps.plan_id': planId, 'ps.tenant': tenant })
-        .select('sc.service_name');
+        .select('sc.service_name')
+        .select(knex.raw('COALESCE(sst.name, st.name) as service_type_name'));
 
-    if (serviceRows.length > 0) {
-        const names = serviceRows.map(r => r.service_name);
-        const displayLimit = 5;
-        const displayNames = names.length > displayLimit
-            ? names.slice(0, displayLimit).join(', ') + ` and ${names.length - displayLimit} more`
-            : names.join(', ');
-        details.push(`services: ${displayNames}`);
+    for (const row of serviceRows) {
+        const category = row.service_type_name || 'Uncategorized';
+        if (!details.servicesByCategory[category]) {
+            details.servicesByCategory[category] = [];
+        }
+        details.servicesByCategory[category].push(row.service_name);
     }
 
     // Companies using this plan
@@ -40,14 +58,7 @@ async function getPlanAssociationDetails(knex: Knex, tenant: string, planId: str
         .where({ 'cbp.plan_id': planId, 'cbp.tenant': tenant })
         .select('c.company_name');
 
-    if (companyRows.length > 0) {
-        const names = companyRows.map(r => r.company_name);
-        const displayLimit = 5;
-        const displayNames = names.length > displayLimit
-            ? names.slice(0, displayLimit).join(', ') + ` and ${names.length - displayLimit} more`
-            : names.join(', ');
-        details.push(`companies: ${displayNames}`);
-    }
+    details.companies = companyRows.map(r => r.company_name);
 
     return details;
 }
@@ -174,8 +185,23 @@ export async function deleteBillingPlan(planId: string): Promise<void> {
     try {
         // Collect any existing associations (services, companies)
         const associations = await getPlanAssociationDetails(knex, tenant, planId);
-        if (associations.length > 0) {
-            const detail = associations.join('; ');
+        const hasServices = Object.keys(associations.servicesByCategory).length > 0;
+        const hasCompanies = associations.companies.length > 0;
+        if (hasServices || hasCompanies) {
+            const parts: string[] = [];
+            if (hasServices) {
+                const serviceDetails = Object.entries(associations.servicesByCategory)
+                    .map(([category, names]) => `${category}: ${names.join(', ')}`);
+                parts.push(`services - ${serviceDetails.join('; ')}`);
+            }
+            if (hasCompanies) {
+                const displayLimit = 5;
+                const displayNames = associations.companies.length > displayLimit
+                    ? associations.companies.slice(0, displayLimit).join(', ') + ` and ${associations.companies.length - displayLimit} more`
+                    : associations.companies.join(', ');
+                parts.push(`companies - ${displayNames}`);
+            }
+            const detail = parts.join('; ');
             throw new Error(`Cannot delete billing plan: it is still linked to ${detail}.`);
         }
 

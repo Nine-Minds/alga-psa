@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Card, Heading } from '@radix-ui/themes';
-import { toast } from 'react-hot-toast'; // Import toast
+import { toast } from 'react-hot-toast';
 import { Button } from 'server/src/components/ui/Button';
+import GenericDialog from 'server/src/components/ui/GenericDialog';
 import { MoreVertical, Plus } from 'lucide-react';
 import {
   DropdownMenu,
@@ -25,6 +26,8 @@ const BillingPlansOverview: React.FC = () => {
   const [editingPlan, setEditingPlan] = useState<IBillingPlan | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]>([]); // Added state for service types
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -60,21 +63,9 @@ const BillingPlansOverview: React.FC = () => {
       fetchBillingPlans();
     } catch (error) {
       console.error('Error deleting billing plan:', error); // Keep console log for debugging
-      if (error instanceof Error) {
-        // Check for the specific error message for plans assigned to companies
-        if (error.message === "Cannot delete billing plan: It is currently assigned to one or more companies.") {
-            toast.error(error.message);
-        // Check for the specific error message for plans with associated services (from pre-check)
-        } else if (error.message.includes('associated services')) {
-          toast.error(error.message); // Use the exact message from the action
-        } else {
-          // Display other specific error messages directly
-          toast.error(error.message);
-        }
-      } else {
-        // Fallback for non-Error objects
-        toast.error('An unexpected error occurred while deleting the plan.');
-      }
+      const message = error instanceof Error ? error.message : 'An unexpected error occurred while deleting the plan.';
+      setDeleteError(message);
+      setShowErrorDialog(true);
     }
   };
 
@@ -187,6 +178,17 @@ const BillingPlansOverview: React.FC = () => {
           onRowClick={handleBillingPlanClick}
           rowClassName={() => "cursor-pointer"}
         />
+        <GenericDialog
+          isOpen={showErrorDialog}
+          onClose={() => setShowErrorDialog(false)}
+          title="Cannot Delete Plan"
+          id="delete-plan-error"
+        >
+          <p className="mb-4 whitespace-pre-line">{deleteError}</p>
+          <div className="flex justify-end">
+            <Button onClick={() => setShowErrorDialog(false)}>OK</Button>
+          </div>
+        </GenericDialog>
       </Box>
     </Card>
   );

@@ -21,6 +21,7 @@ import { IBillingPlan, IPlanService, IService, IServiceType } from 'server/src/i
 import { useTenant } from '../TenantProvider';
 import { toast } from 'react-hot-toast';
 import { DataTable } from 'server/src/components/ui/DataTable';
+import GenericDialog from 'server/src/components/ui/GenericDialog';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { PLAN_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY } from 'server/src/constants/billing';
 import { add } from 'date-fns';
@@ -40,6 +41,8 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
   const [editingPlan, setEditingPlan] = useState<IBillingPlan | null>(null);
   // Add state for all service types (standard + tenant-specific)
   const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]>([]);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
   const tenant = useTenant();
 
   useEffect(() => {
@@ -208,21 +211,9 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
                   fetchBillingPlans();
                   toast.success('Billing plan deleted successfully');
                 } catch (error) {
-                  if (error instanceof Error) {
-                    // Display user-friendly error message using toast
-                    // Check for the specific error message for plans assigned to companies
-                    if (error.message === "Cannot delete billing plan: It is currently assigned to one or more companies.") {
-                        toast.error(error.message);
-                    // Check for the specific error message for plans with associated services (from pre-check)
-                    } else if (error.message.includes('associated services')) {
-                      toast.error(error.message); // Use the exact message from the action
-                    } else {
-                      // Display other specific error messages directly
-                      toast.error(error.message);
-                    }
-                  } else {
-                    toast.error('Failed to delete plan');
-                  }
+                  const message = error instanceof Error ? error.message : 'Failed to delete plan';
+                  setDeleteError(message);
+                  setShowErrorDialog(true);
                 }
               }}
             >
@@ -422,6 +413,17 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
           </Box>
         </Card>
       </div>
+      <GenericDialog
+        isOpen={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title="Cannot Delete Plan"
+        id="delete-plan-error"
+      >
+        <p className="mb-4 whitespace-pre-line">{deleteError}</p>
+        <div className="flex justify-end">
+          <Button onClick={() => setShowErrorDialog(false)}>OK</Button>
+        </div>
+      </GenericDialog>
     </div>
   );
 };
