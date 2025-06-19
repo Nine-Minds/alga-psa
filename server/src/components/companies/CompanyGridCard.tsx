@@ -117,7 +117,6 @@ const CompanyGridCard = ({
                                     entityId={company.company_id}
                                     entityType="company"
                                     initialTags={tags}
-                                    existingTags={allUniqueTags}
                                     onTagsChange={(updatedTags) => onTagsChange(company.company_id, updatedTags)}
                                 />
                             </div>

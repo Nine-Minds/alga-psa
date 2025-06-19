@@ -127,7 +127,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
         });
 
         contactTagsRef.current = newContactTags;
-        setAllUniqueTags(allTags);
+        setAllUniqueTags(allTags.map(tag => tag.tag_text));
         
       } catch (error) {
         console.error('Error fetching tags:', error);
@@ -418,7 +418,6 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
             entityId={record.contact_name_id}
             entityType="contact"
             initialTags={contactTagsRef.current[record.contact_name_id] || []}
-            existingTags={allUniqueTags}
             onTagsChange={(tags) => handleTagsChange(record.contact_name_id, tags)}
           />
         );

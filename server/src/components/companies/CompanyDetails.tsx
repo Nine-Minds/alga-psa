@@ -8,7 +8,8 @@ import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { TagManager } from 'server/src/components/tags';
-import { findTagsByEntityId, findAllTagsByType } from 'server/src/lib/actions/tagActions';
+import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
+import { useTags } from 'server/src/context/TagContext';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { BillingCycleType } from 'server/src/interfaces/billing.interfaces';
 import Documents from 'server/src/components/documents/Documents';
@@ -171,7 +172,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   } | null>(null);
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
   const [tags, setTags] = useState<ITag[]>([]);
-  const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
+  const { tags: allTags } = useTags();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -268,13 +269,8 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   useEffect(() => {
     const fetchTags = async () => {
       try {
-        const [companyTags, allTags] = await Promise.all([
-          findTagsByEntityId(company.company_id, 'company'),
-          findAllTagsByType('company')
-        ]);
-        
+        const companyTags = await findTagsByEntityId(company.company_id, 'company');
         setTags(companyTags);
-        setAllTagTexts(allTags);
       } catch (error) {
         console.error('Error fetching tags:', error);
       }
@@ -572,7 +568,6 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                   entityId={editedCompany.company_id}
                   entityType="company"
                   initialTags={tags}
-                  existingTags={allTagTexts}
                   onTagsChange={handleTagsChange}
                 />
               </div>

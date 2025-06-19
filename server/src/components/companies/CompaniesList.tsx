@@ -192,7 +192,6 @@ const CompaniesList = ({
                             entityId={record.company_id}
                             entityType="company"
                             initialTags={companyTags[record.company_id] || []}
-                            existingTags={allUniqueTags}
                             onTagsChange={(tags) => onTagsChange(record.company_id, tags)}
                         />
                     </div>

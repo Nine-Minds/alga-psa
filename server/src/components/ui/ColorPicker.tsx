@@ -18,14 +18,27 @@ interface ColorPickerProps {
 }
 
 const PRESET_COLORS = [
-  { background: '#FEE2E2', text: '#991B1B' }, // Red
-  { background: '#FED7AA', text: '#9A3412' }, // Orange
-  { background: '#FEF3C7', text: '#92400E' }, // Yellow
-  { background: '#D1FAE5', text: '#065F46' }, // Green
-  { background: '#DBEAFE', text: '#1E40AF' }, // Blue
-  { background: '#E9D5FF', text: '#6B21A8' }, // Purple
-  { background: '#FCE7F3', text: '#9D174D' }, // Pink
-  { background: '#F3F4F6', text: '#374151' }, // Gray
+  // Bright and distinct colors (Row 1)
+  { background: '#FFE6E6', text: '#CC0000' }, // Bright Red
+  { background: '#FFE0B3', text: '#FF6600' }, // Bright Orange
+  { background: '#FFFF99', text: '#666600' }, // Bright Yellow
+  { background: '#E6FFE6', text: '#008000' }, // Bright Green
+  { background: '#E6F3FF', text: '#0066CC' }, // Bright Blue
+  { background: '#F0E6FF', text: '#6600CC' }, // Bright Purple
+  
+  // Medium saturation colors (Row 2)
+  { background: '#FFB3B3', text: '#990000' }, // Medium Red
+  { background: '#FFCC99', text: '#CC4400' }, // Medium Orange
+  { background: '#B3FFB3', text: '#004400' }, // Medium Green
+  { background: '#99CCFF', text: '#003399' }, // Medium Blue
+  { background: '#D9B3FF', text: '#4400AA' }, // Medium Purple
+  { background: '#FFB3E6', text: '#990044' }, // Medium Pink
+  
+  // Professional colors (Row 3)
+  { background: '#E8F5E8', text: '#2D5016' }, // Forest Green
+  { background: '#E8F4FD', text: '#1B4F72' }, // Steel Blue
+  { background: '#FFF8E7', text: '#8B4513' }, // Warm Brown
+  { background: '#F5F5F5', text: '#333333' }, // Light Gray
 ];
 
 const ColorPicker: React.FC<ColorPickerProps> = ({
@@ -108,23 +121,29 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
           {/* Preset colors */}
           <div>
             <Label className="text-xs text-gray-700 mb-2 block">Quick Select</Label>
-            <div className="grid grid-cols-4 gap-2">
-              {PRESET_COLORS.map((preset, index) => (
-                <button
-                  key={index}
-                  className="w-full h-8 rounded border border-gray-300 hover:border-gray-400 transition-colors"
-                  style={{ backgroundColor: preset.background }}
-                  onClick={() => handlePresetClick(preset)}
-                  aria-label={`Select preset color ${index + 1}`}
-                >
-                  <span
-                    className="text-xs font-medium"
-                    style={{ color: preset.text }}
+            <div className="grid grid-cols-6 gap-2">
+              {PRESET_COLORS.map((preset, index) => {
+                const isSelected = backgroundColor === preset.background && textColor === preset.text;
+                return (
+                  <button
+                    key={index}
+                    className={`w-full h-8 rounded border-2 hover:border-gray-400 transition-colors ${
+                      isSelected ? 'border-gray-600 ring-2 ring-gray-300' : 'border-gray-300'
+                    }`}
+                    style={{ backgroundColor: preset.background }}
+                    onClick={() => handlePresetClick(preset)}
+                    aria-label={`Select preset color ${index + 1}`}
+                    title={`Background: ${preset.background}, Text: ${preset.text}`}
                   >
-                    Aa
-                  </span>
-                </button>
-              ))}
+                    <span
+                      className="text-xs font-medium"
+                      style={{ color: preset.text }}
+                    >
+                      Aa
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -142,12 +161,13 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
                   placeholder="#FF0000"
                   className="flex-1"
                 />
-                {backgroundColor && (
-                  <div
-                    className="w-10 h-10 rounded border border-gray-300"
-                    style={{ backgroundColor: validateColor(backgroundColor) ? backgroundColor : '#FFF' }}
-                  />
-                )}
+                <input
+                  type="color"
+                  value={backgroundColor || '#FF0000'}
+                  onChange={(e) => handleBackgroundChange(e.target.value)}
+                  className="w-10 h-10 rounded border border-gray-300 cursor-pointer"
+                  title="Pick background color"
+                />
               </div>
               {backgroundError && (
                 <p className="text-xs text-red-600 mt-1">{backgroundError}</p>
@@ -166,16 +186,13 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
                   placeholder="#FFFFFF"
                   className="flex-1"
                 />
-                {textColor && (
-                  <div
-                    className="w-10 h-10 rounded border border-gray-300 flex items-center justify-center"
-                    style={{ backgroundColor: validateColor(textColor) ? textColor : '#FFF' }}
-                  >
-                    <span className="text-xs font-bold" style={{ color: textColor === '#FFFFFF' ? '#000' : '#FFF' }}>
-                      Aa
-                    </span>
-                  </div>
-                )}
+                <input
+                  type="color"
+                  value={textColor || '#000000'}
+                  onChange={(e) => handleTextChange(e.target.value)}
+                  className="w-10 h-10 rounded border border-gray-300 cursor-pointer"
+                  title="Pick text color"
+                />
               </div>
               {textError && (
                 <p className="text-xs text-red-600 mt-1">{textError}</p>
@@ -202,6 +219,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
           {/* Action buttons */}
           <div className="flex justify-between pt-2">
             <Button
+              id="color-picker-reset"
               variant="outline"
               size="sm"
               onClick={handleReset}
@@ -210,6 +228,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
             </Button>
             <div className="space-x-2">
               <Button
+                id="color-picker-cancel"
                 variant="outline"
                 size="sm"
                 onClick={() => setIsOpen(false)}
@@ -217,6 +236,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
                 Cancel
               </Button>
               <Button
+                id="color-picker-save"
                 size="sm"
                 onClick={handleSave}
                 disabled={!!backgroundError || !!textError}

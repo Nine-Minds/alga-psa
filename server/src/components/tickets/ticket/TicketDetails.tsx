@@ -22,7 +22,8 @@ import {
 } from "server/src/interfaces";
 import { ITag } from "server/src/interfaces/tag.interfaces";
 import { TagManager } from "server/src/components/tags";
-import { findTagsByEntityId, findAllTagsByType } from "server/src/lib/actions/tagActions";
+import { findTagsByEntityId } from "server/src/lib/actions/tagActions";
+import { useTags } from "server/src/context/TagContext";
 import TicketInfo from "server/src/components/tickets/ticket/TicketInfo";
 import TicketProperties from "server/src/components/tickets/ticket/TicketProperties";
 import TicketDocumentsSection from "server/src/components/tickets/ticket/TicketDocumentsSection";
@@ -165,7 +166,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isRunning, setIsRunning] = useState(true);
     const [timeDescription, setTimeDescription] = useState('');
     const [tags, setTags] = useState<ITag[]>([]);
-    const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
+    const { tags: allTags } = useTags();
     const [currentTimeSheet, setCurrentTimeSheet] = useState<ITimeSheet | null>(null);
     const [currentTimePeriod, setCurrentTimePeriod] = useState<ITimePeriodView | null>(null);
 
@@ -207,13 +208,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             if (!ticket.ticket_id) return;
             
             try {
-                const [ticketTags, allTags] = await Promise.all([
-                    findTagsByEntityId(ticket.ticket_id, 'ticket'),
-                    findAllTagsByType('ticket')
-                ]);
-                
+                const ticketTags = await findTagsByEntityId(ticket.ticket_id, 'ticket');
                 setTags(ticketTags);
-                setAllTagTexts(allTags);
             } catch (error) {
                 console.error('Error fetching tags:', error);
             }
@@ -986,7 +982,7 @@ const handleClose = () => {
                                     isSubmitting={isSubmitting}
                                     users={availableAgents}
                                     tags={tags}
-                                    allTagTexts={allTagTexts}
+                                    allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
                                     onTagsChange={handleTagsChange}
                                 />
                             </div>
@@ -1068,7 +1064,7 @@ const handleClose = () => {
                                 onCompanyFilterStateChange={setCompanyFilterState}
                                 onClientTypeFilterChange={setClientTypeFilter}
                                 tags={tags}
-                                allTagTexts={allTagTexts}
+                                allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
                                 onTagsChange={handleTagsChange}
                             />
                         </Suspense>

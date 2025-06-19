@@ -8,13 +8,12 @@ import { Button } from 'server/src/components/ui/Button';
 import { Pen, Plus, ArrowLeft, ExternalLink } from 'lucide-react';
 import { useDrawer } from 'server/src/context/DrawerContext';
 import ContactDetailsEdit from 'server/src/components/contacts/ContactDetailsEdit';
-import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import CompanyDetails from 'server/src/components/companies/CompanyDetails';
 import InteractionsFeed from 'server/src/components/interactions/InteractionsFeed';
 import { IInteraction } from 'server/src/interfaces/interaction.interfaces';
-import { TagList } from 'server/src/components/tags';
+import { TagManager } from 'server/src/components/tags';
 import { getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
 import Documents from 'server/src/components/documents/Documents';
 import { IDocument } from 'server/src/interfaces/document.interface';
@@ -69,8 +68,6 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   onDocumentCreated
 }) => {
   const [contact, setContact] = useState<IContact>(initialContact);
-  const [tags, setTags] = useState<ITag[]>([]);
-  const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
   const [error, setError] = useState<string | null>(null);
@@ -81,13 +78,6 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
     const fetchData = async () => {
       try {
         setError(null);
-        const [fetchedTags, allTags] = await Promise.all([
-          findTagsByEntityIds([contact.contact_name_id], 'contact'),
-          findAllTagsByType('contact')
-        ]);
-        
-        setTags(fetchedTags);
-        setAllTagTexts(allTags);
         
         // Fetch contact avatar URL
         if (userId && contact.tenant) {
@@ -177,9 +167,6 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
     );
   };
 
-  const handleTagsChange = (updatedTags: ITag[]) => {
-    setTags(updatedTags);
-  };
 
   const getCompanyName = (companyId: string) => {
     const company = companies.find(c => c.company_id === companyId);
@@ -316,10 +303,11 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
             <tr>
               <td className="py-2 font-semibold">Tags:</td>
               <td className="py-2">
-                <TagList
+                <TagManager
                   id={`${id}-tags`}
-                  tags={tags}
-                  className="mt-1"
+                  entityId={contact.contact_name_id}
+                  entityType="contact"
+                  initialTags={contact.tags || []}
                 />
               </td>
             </tr>

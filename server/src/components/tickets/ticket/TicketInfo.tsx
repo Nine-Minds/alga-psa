@@ -366,7 +366,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 entityId={ticket.ticket_id}
                 entityType="ticket"
                 initialTags={tags}
-                existingTags={allTagTexts}
                 onTagsChange={onTagsChange}
               />
             ) : (

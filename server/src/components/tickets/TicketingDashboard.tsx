@@ -142,7 +142,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         });
 
         ticketTagsRef.current = newTicketTags;
-        setAllUniqueTags(allTags);
+        setAllUniqueTags(allTags.map(tag => tag.tag_text));
       } catch (error) {
         console.error('Error fetching tags:', error);
       }
@@ -295,7 +295,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               entityId={record.ticket_id}
               entityType="ticket"
               initialTags={ticketTagsRef.current[record.ticket_id] || []}
-              existingTags={allUniqueTags}
               onTagsChange={(tags) => handleTagsChange(record.ticket_id!, tags)}
             />
           </div>

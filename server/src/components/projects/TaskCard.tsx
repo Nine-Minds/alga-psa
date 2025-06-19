@@ -9,7 +9,6 @@ import { CheckSquare, Square, Ticket, Users, MoreVertical, Move, Copy, Edit, Tra
 import { findPriorityById } from 'server/src/lib/actions/priorityActions';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { getTaskTicketLinksAction, getTaskResourcesAction } from 'server/src/lib/actions/project-actions/projectTaskActions';
-import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
 import { TagList, TagManager } from 'server/src/components/tags';
 import { Button } from 'server/src/components/ui/Button';
 import {
@@ -28,7 +27,6 @@ interface TaskCardProps {
   ticketLinks?: IProjectTicketLinkWithDetails[];
   taskResources?: any[];
   taskTags?: ITag[];
-  allTaskTagTexts?: string[];
   isAnimating?: boolean;
   onTaskSelected: (task: IProjectTask) => void;
   onAssigneeChange: (taskId: string, newAssigneeId: string, newTaskName?: string) => void;
@@ -59,7 +57,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   ticketLinks,
   taskResources: providedTaskResources,
   taskTags: providedTaskTags = [],
-  allTaskTagTexts = [],
   isAnimating = false,
   onTaskSelected,
   onAssigneeChange,
@@ -85,7 +82,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   );
   const [isDragging, setIsDragging] = useState(false);
   const [priority, setPriority] = useState<IPriority | IStandardPriority | null>(null);
-  const [taskTags, setTaskTags] = useState<ITag[]>(providedTaskTags);
   const Icon = taskTypeIcons[task.task_type_key || 'task'] || CheckSquare;
 
   useEffect(() => {
@@ -125,10 +121,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         }
 
         // Fetch tags only if not provided
-        if (task.task_id && providedTaskTags.length === 0) {
-          const tags = await findTagsByEntityId(task.task_id, 'project_task');
-          setTaskTags(tags);
-        }
 
       } catch (error) {
         console.error('Error fetching task data:', error);
@@ -342,19 +334,17 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             id={`task-tags-${task.task_id}`}
             entityId={task.task_id}
             entityType="project_task"
-            initialTags={taskTags}
-            existingTags={allTaskTagTexts}
+            initialTags={providedTaskTags || task.tags || []}
             onTagsChange={(tags) => {
-              setTaskTags(tags);
               onTaskTagsChange(task.task_id, tags);
             }}
           />
         ) : (
-          taskTags.length > 0 && (
-            <TagList 
-              id={`task-tags-${task.task_id}`}
-              tags={taskTags}
+          (providedTaskTags || task.tags) && (providedTaskTags || task.tags)!.length > 0 && (
+            <TagList
+              tags={providedTaskTags || task.tags || []}
               maxDisplay={3}
+              allowColorEdit={false}
             />
           )
         )}
