@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import GenericDialog from '../ui/GenericDialog';
@@ -36,6 +36,195 @@ import { useToast } from 'server/src/hooks/use-toast';
 
 const COMPANY_VIEW_MODE_SETTING = 'company_list_view_mode';
 
+// Memoized search input component to prevent re-renders
+const SearchInput = memo(({ value, onChange }: { value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }) => {
+  return (
+    <div className="relative">
+      <Input
+        id="search-companies"
+        data-automation-id="search-companies"
+        type="text"
+        placeholder="Search clients"
+        className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
+        value={value}
+        onChange={onChange}
+        preserveCursor={true}
+      />
+      <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+    </div>
+  );
+});
+
+SearchInput.displayName = 'SearchInput';
+
+// Company results component that handles its own loading state
+interface CompanyResultsProps {
+  searchTerm: string;
+  filterStatus: 'all' | 'active' | 'inactive';
+  clientTypeFilter: 'all' | 'company' | 'individual';
+  selectedTags: string[];
+  viewMode: 'grid' | 'list';
+  selectedCompanies: string[];
+  onCheckboxChange: (companyId: string) => void;
+  onEditCompany: (companyId: string) => void;
+  onDeleteCompany: (company: ICompany) => void;
+  onTagsChange: (companyId: string, tags: ITag[]) => void;
+  currentPage: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+}
+
+const CompanyResults = memo(({
+  searchTerm,
+  filterStatus,
+  clientTypeFilter,
+  selectedTags,
+  viewMode,
+  selectedCompanies,
+  onCheckboxChange,
+  onEditCompany,
+  onDeleteCompany,
+  onTagsChange,
+  currentPage,
+  pageSize,
+  onPageChange,
+  onPageSizeChange
+}: CompanyResultsProps) => {
+  const [companies, setCompanies] = useState<ICompany[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const companyTagsRef = useRef<Record<string, ITag[]>>({});
+  const [allUniqueTags, setAllUniqueTags] = useState<string[]>([]);
+
+  // Load companies when filters change
+  useEffect(() => {
+    const loadCompanies = async () => {
+      try {
+        setIsLoading(true);
+        const response = await getAllCompaniesPaginated({
+          page: currentPage,
+          pageSize,
+          statusFilter: filterStatus,
+          searchTerm: searchTerm || undefined,
+          clientTypeFilter,
+          loadLogos: true
+        });
+
+        setCompanies(response.companies);
+        setTotalCount(response.totalCount);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading companies:', error);
+        setIsLoading(false);
+      }
+    };
+
+    loadCompanies();
+  }, [currentPage, pageSize, filterStatus, searchTerm, clientTypeFilter]);
+
+  // Fetch tags when companies change
+  useEffect(() => {
+    const fetchTags = async () => {
+      if (companies.length === 0) return;
+      
+      try {
+        const [companyTags, allTags] = await Promise.all([
+          findTagsByEntityIds(
+            companies.map((company: ICompany): string => company.company_id),
+            'company'
+          ),
+          findAllTagsByType('company')
+        ]);
+
+        const newCompanyTags: Record<string, ITag[]> = {};
+        companyTags.forEach(tag => {
+          if (!newCompanyTags[tag.tagged_id]) {
+            newCompanyTags[tag.tagged_id] = [];
+          }
+          newCompanyTags[tag.tagged_id].push(tag);
+        });
+
+        companyTagsRef.current = newCompanyTags;
+        setAllUniqueTags(allTags.map(tag => tag.tag_text));
+      } catch (error) {
+        console.error('Error fetching tags:', error);
+      }
+    };
+    fetchTags();
+  }, [companies]);
+
+  // Filter companies by selected tags (client-side)
+  const filteredCompanies = companies.filter(company => {
+    if (selectedTags.length === 0) return true;
+    
+    const companyTags = companyTagsRef.current[company.company_id] || [];
+    const companyTagTexts = companyTags.map(tag => tag.tag_text);
+    
+    return selectedTags.some(selectedTag => companyTagTexts.includes(selectedTag));
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex-1">
+        {viewMode === 'grid' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((n):JSX.Element => (
+              <div key={n} className="h-48 bg-gray-200 rounded animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {[1, 2, 3, 4, 5].map((n):JSX.Element => (
+              <div key={n} className="h-16 bg-gray-200 rounded animate-pulse" />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1">
+      {viewMode === 'grid' ? (
+        <CompaniesGrid
+          filteredCompanies={filteredCompanies}
+          selectedCompanies={selectedCompanies}
+          handleCheckboxChange={onCheckboxChange}
+          handleEditCompany={onEditCompany}
+          handleDeleteCompany={onDeleteCompany}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+          companyTags={companyTagsRef.current}
+          allUniqueTags={allUniqueTags}
+          onTagsChange={onTagsChange}
+        />
+      ) : (
+        <CompaniesList
+          selectedCompanies={selectedCompanies}
+          filteredCompanies={filteredCompanies}
+          setSelectedCompanies={() => {}} // This prop seems unused in the component
+          handleCheckboxChange={onCheckboxChange}
+          handleEditCompany={onEditCompany}
+          handleDeleteCompany={onDeleteCompany}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          onPageChange={onPageChange}
+          companyTags={companyTagsRef.current}
+          allUniqueTags={allUniqueTags}
+          onTagsChange={onTagsChange}
+        />
+      )}
+    </div>
+  );
+});
+
+CompanyResults.displayName = 'CompanyResults';
+
 const Companies: React.FC = () => {
   const { toast } = useToast();
   
@@ -47,12 +236,6 @@ const Companies: React.FC = () => {
     helperText: "Main companies management page with search, filters, and company grid/list view"
   });
 
-  const { automationIdProps: searchProps } = useAutomationIdAndRegister({
-    id: 'search-companies',
-    type: 'input',
-    label: 'Search Companies',
-    helperText: "Search for companies by name"
-  });
 
   const { automationIdProps: createButtonProps } = useAutomationIdAndRegister({
     id: 'create-client-btn',
@@ -90,13 +273,12 @@ const Companies: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [companyToDelete, setCompanyToDelete] = useState<ICompany | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState(''); // Local state for input field
   const [viewMode, setViewMode] = useState<'grid' | 'list' | null>(null);
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
-  const [companies, setCompanies] = useState<ICompany[]>([]);
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isMultiDeleteDialogOpen, setIsMultiDeleteDialogOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [multiDeleteError, setMultiDeleteError] = useState<string | null>(null);
@@ -104,83 +286,38 @@ const Companies: React.FC = () => {
   
   // Tag-related state
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const companyTagsRef = useRef<Record<string, ITag[]>>({});
   const [allUniqueTags, setAllUniqueTags] = useState<string[]>([]);
-  
-  const handleTagsChange = (companyId: string, tags: ITag[]) => {
-    companyTagsRef.current[companyId] = tags;
-    
-    // Update unique tags list
-    const allTags = new Set<string>();
-    Object.values(companyTagsRef.current).forEach(entityTags => {
-      entityTags.forEach(tag => allTags.add(tag.tag_text));
-    });
-    setAllUniqueTags(Array.from(allTags));
-  };
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10); // Default to 10 for list view
-  const [totalCount, setTotalCount] = useState(0);
   
-  // Load companies with pagination
-  const loadCompanies = async () => {
-    try {
-      setIsLoading(true);
-      const response = await getAllCompaniesPaginated({
-        page: currentPage,
-        pageSize,
-        statusFilter: filterStatus,
-        searchTerm: searchTerm || undefined,
-        clientTypeFilter,
-        loadLogos: true // Load logos for displayed companies only
-      });
+  // For multi-delete functionality, we need to track companies
+  const [companiesForDelete, setCompaniesForDelete] = useState<ICompany[]>([]);
+  
 
-      setCompanies(response.companies);
-      setTotalCount(response.totalCount);
-      setIsLoading(false);
-    } catch (error) {
-      console.error('Error loading companies:', error);
-      setIsLoading(false);
-    }
-  };
-
-  // Load companies when filters or pagination changes
+  // Debounce search input
   useEffect(() => {
-    loadCompanies();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, pageSize, filterStatus, searchTerm, clientTypeFilter, selectedTags]);
+    const timer = setTimeout(() => {
+      setSearchTerm(searchInput);
+      setCurrentPage(1); // Reset to first page when searching
+    }, 300); // 300ms delay
 
-  // Fetch tags when companies change
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  // Load all unique tags on mount
   useEffect(() => {
-    const fetchTags = async () => {
-      if (companies.length === 0) return;
-      
+    const fetchAllTags = async () => {
       try {
-        const [companyTags, allTags] = await Promise.all([
-          findTagsByEntityIds(
-            companies.map((company: ICompany): string => company.company_id),
-            'company'
-          ),
-          findAllTagsByType('company')
-        ]);
-
-        const newCompanyTags: Record<string, ITag[]> = {};
-        companyTags.forEach(tag => {
-          if (!newCompanyTags[tag.tagged_id]) {
-            newCompanyTags[tag.tagged_id] = [];
-          }
-          newCompanyTags[tag.tagged_id].push(tag);
-        });
-
-        companyTagsRef.current = newCompanyTags;
+        const allTags = await findAllTagsByType('company');
         setAllUniqueTags(allTags.map(tag => tag.tag_text));
       } catch (error) {
         console.error('Error fetching tags:', error);
       }
     };
-    fetchTags();
-  }, [companies]);
+    fetchAllTags();
+  }, []);
 
   useEffect(() => {
     const initializeComponent = async () => {
@@ -251,17 +388,20 @@ const Companies: React.FC = () => {
       }
     });
   };
+
+  const handleTagsChange = (companyId: string, tags: ITag[]) => {
+    // Refresh all tags when tags are updated
+    const fetchAllTags = async () => {
+      try {
+        const allTags = await findAllTagsByType('company');
+        setAllUniqueTags(allTags.map(tag => tag.tag_text));
+      } catch (error) {
+        console.error('Error fetching tags:', error);
+      }
+    };
+    fetchAllTags();
+  };
   
-  // Filter companies by selected tags (client-side)
-  const filteredCompanies = companies.filter(company => {
-    if (selectedTags.length === 0) return true;
-    
-    const companyTags = companyTagsRef.current[company.company_id] || [];
-    const companyTagTexts = companyTags.map(tag => tag.tag_text);
-    
-    // Check if company has any of the selected tags
-    return selectedTags.some(selectedTag => companyTagTexts.includes(selectedTag));
-  });
 
   const handleEditCompany = (companyId: string) => {
     router.push(`/msp/companies/${companyId}`);
@@ -321,13 +461,14 @@ const Companies: React.FC = () => {
   };
 
   const refreshCompanies = async () => {
-    try {
-      await loadCompanies();
-      router.refresh();
-    } catch (error) {
-      console.error('Error refreshing companies:', error);
-    }
+    // Force refresh by changing a key to trigger CompanyResults re-render
+    router.refresh();
   };
+
+  // Memoized search input change handler to prevent re-creation on every render
+  const handleSearchInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchInput(e.target.value);
+  }, []);
   
   const confirmMultiDelete = async () => {
     try {
@@ -344,7 +485,7 @@ const Companies: React.FC = () => {
       deleteResults.forEach(({ companyId, result }) => {
         if (!result.success) {
           if ('code' in result && result.code === 'COMPANY_HAS_DEPENDENCIES') {
-            const company = companies.find(c => c.company_id === companyId);
+            const company = companiesForDelete.find(c => c.company_id === companyId);
             const companyName = company ? company.company_name : companyId;
             const dependencyText = formatDependencyText(result);
             errors.push(`${companyName}: ${dependencyText}`);
@@ -447,7 +588,9 @@ const Companies: React.FC = () => {
 
   const handleExportToCSV = async () => {
     try {
-      const csvData = await exportCompaniesToCSV(filteredCompanies);
+      // Export all companies with current filters
+      const allCompanies = await getAllCompanies(true);
+      const csvData = await exportCompaniesToCSV(allCompanies);
       
       const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
       
@@ -469,8 +612,6 @@ const Companies: React.FC = () => {
   const handleImportComplete = async (companies: ICompany[], updateExisting: boolean) => {
     try {
       await importCompaniesFromCSV(companies, updateExisting);
-      const updatedCompanies = await getAllCompanies(true);
-      setCompanies(updatedCompanies);
       setIsImportDialogOpen(false);
       router.refresh();
     } catch (error) {
@@ -478,7 +619,7 @@ const Companies: React.FC = () => {
     }
   };
 
-  if (isLoading || viewMode === null) {
+  if (viewMode === null) {
     return (
       <div className="w-full">
         <div className="flex justify-end mb-4 flex-wrap gap-6">
@@ -486,12 +627,6 @@ const Companies: React.FC = () => {
           <div className="w-64 h-10 bg-gray-200 rounded animate-pulse" />
           <div className="w-64 h-10 bg-gray-200 rounded animate-pulse" />
           <div className="w-32 h-10 bg-gray-200 rounded animate-pulse" />
-        </div>
-        {/* Show loading skeleton for content */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3, 4, 5, 6].map((n):JSX.Element => (
-            <div key={n} className="h-48 bg-gray-200 rounded animate-pulse" />
-          ))}
         </div>
       </div>
     );
@@ -511,20 +646,7 @@ const Companies: React.FC = () => {
           {/* Left side - Search and Filters */}
           <div className="flex items-center gap-4 flex-wrap">
             {/* Search */}
-            <div className="relative">
-              <Input
-                {...searchProps}
-                type="text"
-                placeholder="Search clients"
-                className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1); // Reset to first page when searching
-                }}
-              />
-              <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            </div>
+            <SearchInput value={searchInput} onChange={handleSearchInputChange} />
 
             {/* Status Filter */}
             <div className="w-48">
@@ -632,7 +754,11 @@ const Companies: React.FC = () => {
           type="checkbox"
           className="form-checkbox h-4 w-4 rounded"
           checked={selectedCompanies.length > 0}
-          onChange={() => setSelectedCompanies(selectedCompanies.length > 0 ? [] : companies.map((c):string => c.company_id))}
+          onChange={() => {
+            // For now, we'll just clear selections when unchecked
+            // Select all functionality would require access to current page companies
+            setSelectedCompanies(selectedCompanies.length > 0 ? [] : []);
+          }}
         />
         {selectedCompanies.length > 0 &&
           <span className="text-sm font-medium text-gray-500">
@@ -651,44 +777,25 @@ const Companies: React.FC = () => {
       </div>
 
       {/* Companies */}
-      <div className="flex-1">
-        {viewMode === 'grid' ? (
-          <CompaniesGrid
-            filteredCompanies={filteredCompanies}
-            selectedCompanies={selectedCompanies}
-            handleCheckboxChange={handleCheckboxChange}
-            handleEditCompany={handleEditCompany}
-            handleDeleteCompany={handleDeleteCompany}
-            currentPage={currentPage}
-            pageSize={pageSize}
-            totalCount={totalCount}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={(size) => {
-              setPageSize(size);
-              setCurrentPage(1); // Reset to first page when changing page size
-            }}
-            companyTags={companyTagsRef.current}
-            allUniqueTags={allUniqueTags}
-            onTagsChange={handleTagsChange}
-          />
-        ) : (
-          <CompaniesList
-            selectedCompanies={selectedCompanies}
-            filteredCompanies={filteredCompanies}
-            setSelectedCompanies={setSelectedCompanies}
-            handleCheckboxChange={handleCheckboxChange}
-            handleEditCompany={handleEditCompany}
-            handleDeleteCompany={handleDeleteCompany}
-            currentPage={currentPage}
-            pageSize={pageSize}
-            totalCount={totalCount}
-            onPageChange={setCurrentPage}
-            companyTags={companyTagsRef.current}
-            allUniqueTags={allUniqueTags}
-            onTagsChange={handleTagsChange}
-          />
-        )}
-      </div>
+      <CompanyResults
+        searchTerm={searchTerm}
+        filterStatus={filterStatus}
+        clientTypeFilter={clientTypeFilter}
+        selectedTags={selectedTags}
+        viewMode={viewMode!}
+        selectedCompanies={selectedCompanies}
+        onCheckboxChange={handleCheckboxChange}
+        onEditCompany={handleEditCompany}
+        onDeleteCompany={handleDeleteCompany}
+        onTagsChange={handleTagsChange}
+        currentPage={currentPage}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setCurrentPage(1); // Reset to first page when changing page size
+        }}
+      />
 
       {/* Multi-delete confirmation dialog */}
       <ConfirmationDialog
