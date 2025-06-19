@@ -39,20 +39,56 @@ export const CalendarStyleProvider: React.FC = () => {
       .rbc-event-label {
         font-size: 0.75rem;
       }
-      .rbc-toolbar button {
+      
+      /* Exclude our custom view switcher from rbc-toolbar button styles */
+      .rbc-toolbar button:not([id^="schedule-view-"]):not([id$="-view-btn"]) {
         color: rgb(var(--color-text-700));
         border: 1px solid rgb(var(--color-border-200));
         border-radius: 6px;
         padding: 8px 12px;
         font-weight: 500;
       }
-      .rbc-toolbar button:hover {
+      
+      .rbc-toolbar button:not([id^="schedule-view-"]):not([id$="-view-btn"]):hover {
         background-color: rgb(var(--color-border-100));
       }
-      .rbc-toolbar button.rbc-active {
+      
+      .rbc-toolbar button:not([id^="schedule-view-"]):not([id$="-view-btn"]).rbc-active {
         background-color: rgb(var(--color-primary-500));
         color: white;
         border-color: rgb(var(--color-primary-600));
+      }
+      
+      /* Force purple background for active ViewSwitcher buttons */
+      .rbc-toolbar button[id$="-view-btn"][aria-pressed="true"] {
+        background-color: rgb(var(--color-primary-500)) !important;
+        color: white !important;
+        border-color: rgb(var(--color-primary-500)) !important;
+      }
+      
+      .rbc-toolbar button[id$="-view-btn"][aria-pressed="false"] {
+        background-color: transparent !important;
+        color: rgb(var(--color-text-700)) !important;
+        border-color: rgb(var(--color-border-200)) !important;
+      }
+      
+      /* Custom border radius for grouped buttons */
+      .rbc-toolbar button[id="month-view-btn"] {
+        border-top-left-radius: 0.375rem !important;
+        border-bottom-left-radius: 0.375rem !important;
+        border-top-right-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
+      }
+      
+      .rbc-toolbar button[id="week-view-btn"] {
+        border-radius: 0 !important;
+      }
+      
+      .rbc-toolbar button[id="day-view-btn"] {
+        border-top-left-radius: 0 !important;
+        border-bottom-left-radius: 0 !important;
+        border-top-right-radius: 0.375rem !important;
+        border-bottom-right-radius: 0.375rem !important;
       }
       .rbc-time-content {
         border-top: 1px solid rgb(var(--color-border-200));
