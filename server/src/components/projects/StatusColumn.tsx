@@ -318,7 +318,6 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
               ticketLinks={ticketLinks[task.task_id]}
               taskResources={taskResources[task.task_id]}
               taskTags={taskTags[task.task_id] || []}
-              allTaskTagTexts={allTaskTagTexts}
               isAnimating={animatingTasks.has(task.task_id)}
               onTaskSelected={onTaskSelected}
               onAssigneeChange={onAssigneeChange}
