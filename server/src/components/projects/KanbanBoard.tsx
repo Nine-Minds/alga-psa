@@ -132,7 +132,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             ticketLinks={ticketLinks}
             taskResources={taskResources}
             taskTags={taskTags}
-            allTaskTagTexts={allTaskTagTexts}
             statusIcon={statusIcons[status.name] || <Circle className="w-4 h-4" />}
             backgroundColor={backgroundColor}
             darkBackgroundColor={darkBackgroundColor}
