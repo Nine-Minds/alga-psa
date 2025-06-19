@@ -174,7 +174,7 @@ const Companies: React.FC = () => {
         });
 
         companyTagsRef.current = newCompanyTags;
-        setAllUniqueTags(allTags);
+        setAllUniqueTags(allTags.map(tag => tag.tag_text));
       } catch (error) {
         console.error('Error fetching tags:', error);
       }

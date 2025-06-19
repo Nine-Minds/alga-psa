@@ -8,8 +8,9 @@ import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { getAllPrioritiesWithStandard } from 'server/src/lib/actions/priorityActions';
 import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTaskActions';
-import { findTagsByEntityId, findAllTagsByType, findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
+import { findTagsByEntityId, findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
 import { TagManager, TagFilter } from 'server/src/components/tags';
+import { useTags } from 'server/src/context/TagContext';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import TaskQuickAdd from './TaskQuickAdd';
 import TaskEdit from './TaskEdit';
@@ -106,7 +107,7 @@ export default function ProjectDetail({
   
   // Tag-related state
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
-  const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
+  const { tags: allTags } = useTags();
   const hasNotifiedParent = useRef(false);
   
   // Fetch tags when component mounts
@@ -115,17 +116,14 @@ export default function ProjectDetail({
       if (!project.project_id) return;
       
       try {
-        const [tags, allTags] = await Promise.all([
-          findTagsByEntityId(project.project_id, 'project'),
-          findAllTagsByType('project')
-        ]);
+        const tags = await findTagsByEntityId(project.project_id, 'project');
         
         setProjectTags(tags);
-        setAllTagTexts(allTags);
         
         // Notify parent component of tags update only once
         if (onTagsUpdate && !hasNotifiedParent.current) {
-          onTagsUpdate(tags, allTags);
+          const projectTagTexts = allTags.filter(tag => tag.tagged_type === 'project').map(tag => tag.tag_text);
+          onTagsUpdate(tags, projectTagTexts);
           hasNotifiedParent.current = true;
         }
       } catch (error) {
@@ -191,7 +189,8 @@ export default function ProjectDetail({
   const handleProjectTagsChange = (tags: ITag[]) => {
     setProjectTags(tags);
     if (onTagsUpdate) {
-      onTagsUpdate(tags, allTagTexts);
+      const projectTagTexts = allTags.filter(tag => tag.tagged_type === 'project').map(tag => tag.tag_text);
+      onTagsUpdate(tags, projectTagTexts);
     }
   };
   
@@ -251,14 +250,11 @@ export default function ProjectDetail({
       
       try {
         const taskIds = projectTasks.map(task => task.task_id);
-        const [tags, allTags] = await Promise.all([
-          findTagsByEntityIds(taskIds, 'project_task'),
-          findAllTagsByType('project_task')
-        ]);
+        const tags = await findTagsByEntityIds(taskIds, 'project_task');
         
         // Group tags by task
         const tagsByTask: Record<string, ITag[]> = {};
-        tags.forEach(tag => {
+        tags.forEach((tag: ITag) => {
           if (!tagsByTask[tag.tagged_id]) {
             tagsByTask[tag.tagged_id] = [];
           }
@@ -266,14 +262,39 @@ export default function ProjectDetail({
         });
         
         setTaskTags(tagsByTask);
-        setAllTaskTagTexts(allTags);
+        const taskTagTexts = allTags.filter(tag => tag.tagged_type === 'project_task').map(tag => tag.tag_text);
+        setAllTaskTagTexts(taskTagTexts);
       } catch (error) {
         console.error('Error fetching task tags:', error);
       }
     };
     
     fetchTaskTags();
-  }, [projectTasks]);
+  }, [projectTasks, allTags]);
+
+  // Update task tags when global tags change (for color updates)
+  useEffect(() => {
+    if (Object.keys(taskTags).length > 0 && allTags.length > 0) {
+      const updatedTaskTags: Record<string, ITag[]> = {};
+      let hasChanges = false;
+      
+      Object.entries(taskTags).forEach(([taskId, tags]) => {
+        const updatedTags = tags.map(localTag => {
+          const globalTag = allTags.find(gt => gt.tag_text === localTag.tag_text && gt.tagged_type === 'project_task');
+          if (globalTag && (globalTag.background_color !== localTag.background_color || globalTag.text_color !== localTag.text_color)) {
+            hasChanges = true;
+            return { ...localTag, background_color: globalTag.background_color, text_color: globalTag.text_color };
+          }
+          return localTag;
+        });
+        updatedTaskTags[taskId] = updatedTags;
+      });
+      
+      if (hasChanges) {
+        setTaskTags(updatedTaskTags);
+      }
+    }
+  }, [allTags]);
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     e.dataTransfer.setData('text/plain', taskId);

@@ -22,7 +22,7 @@ import {
   getTaskDependencies
 } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { findTagsByEntityId, findAllTagsByType, createTag } from 'server/src/lib/actions/tagActions';
+import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
 import { TagManager } from 'server/src/components/tags';
 import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
@@ -102,7 +102,6 @@ export default function TaskForm({
   const [tempTaskResources, setTempTaskResources] = useState<any[]>([]);
   const [showAgentPicker, setShowAgentPicker] = useState(false);
   const [taskTags, setTaskTags] = useState<ITag[]>([]);
-  const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
   const [pendingTicketLinks, setPendingTicketLinks] = useState<IProjectTicketLinkWithDetails[]>(task?.ticket_links || []);
   const [editingChecklistItemId, setEditingChecklistItemId] = useState<string | null>(null);
   const [isCrossProjectMove, setIsCrossProjectMove] = useState<boolean>(false);
@@ -189,12 +188,8 @@ export default function TaskForm({
           }
 
           // Fetch tags
-          const [tags, allTags] = await Promise.all([
-            findTagsByEntityId(task.task_id, 'project_task'),
-            findAllTagsByType('project_task')
-          ]);
+          const tags = await findTagsByEntityId(task.task_id, 'project_task');
           setTaskTags(tags);
-          setAllTagTexts(allTags);
         }
       } catch (error) {
         console.error('Error fetching initial data:', error);
@@ -1083,7 +1078,6 @@ export default function TaskForm({
                       entityId={task.task_id}
                       entityType="project_task"
                       initialTags={taskTags}
-                      existingTags={allTagTexts}
                       onTagsChange={setTaskTags}
                     />
                   </div>

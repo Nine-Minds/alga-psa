@@ -95,7 +95,7 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
         });
 
         projectTagsRef.current = newProjectTags;
-        setAllUniqueTags(allTags);
+        setAllUniqueTags(allTags.map(tag => tag.tag_text));
       } catch (error) {
         console.error('Error fetching tags:', error);
       }
@@ -292,7 +292,6 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
             entityId={record.project_id}
             entityType="project"
             initialTags={projectTagsRef.current[record.project_id] || []}
-            existingTags={allUniqueTags}
             onTagsChange={(tags) => handleTagsChange(record.project_id!, tags)}
           />
         );

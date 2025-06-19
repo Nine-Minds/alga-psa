@@ -17,7 +17,8 @@ import { TagManager } from 'server/src/components/tags';
 import { updateProject, getProjectStatuses } from 'server/src/lib/actions/project-actions/projectActions';
 import { getContactsByCompany, getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
-import { findTagsByEntityId, findAllTagsByType } from 'server/src/lib/actions/tagActions';
+import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
+// import { useTags } from 'server/src/context/TagContext';
 import { toast } from 'react-hot-toast';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
@@ -55,25 +56,21 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
-  const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
-
-  // Move these to component state to prevent re-renders
-  const [filterState] = useState<'all' | 'active' | 'inactive'>('active');
-  const [clientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  
+  // TagContext is available if needed for tag-related features in the future
+  // const { tags } = useTags();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [allUsers, projectStatuses, tags, allTags] = await Promise.all([
+        const [allUsers, projectStatuses, projectTagsData] = await Promise.all([
           getAllUsers(),
           getProjectStatuses(),
-          initialProject.project_id ? findTagsByEntityId(initialProject.project_id, 'project') : Promise.resolve([]),
-          findAllTagsByType('project')
+          initialProject.project_id ? findTagsByEntityId(initialProject.project_id, 'project') : Promise.resolve([])
         ]);
         setUsers(allUsers);
         setStatuses(projectStatuses);
-        setProjectTags(tags);
-        setAllTagTexts(allTags);
+        setProjectTags(projectTagsData);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -370,7 +367,6 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               entityId={project.project_id}
               entityType="project"
               initialTags={projectTags}
-              existingTags={allTagTexts}
               onTagsChange={(tags) => {
                 setProjectTags(tags);
                 setHasChanges(true);

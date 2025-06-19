@@ -122,7 +122,7 @@ const Tag = {
     }
   },
 
-  getAllUniqueTagTextsByType: async (knexOrTrx: Knex | Knex.Transaction, tagged_type: TaggedEntityType): Promise<string[]> => {
+  getAllUniqueTagsByType: async (knexOrTrx: Knex | Knex.Transaction, tagged_type: TaggedEntityType): Promise<ITag[]> => {
     try {
       const tenant = await getCurrentTenantId();
       if (!tenant) {
@@ -131,14 +131,39 @@ const Tag = {
       const tags = await knexOrTrx<ITag>('tags')
         .where('tagged_type', tagged_type)
         .where('tenant', tenant)
-        .distinct('tag_text')
+        .distinctOn('tag_text')
         .orderBy('tag_text');
-      return tags.map((t):string => t.tag_text);
+      return tags;
     } catch (error) {
-      console.error(`Error getting unique tag texts for type ${tagged_type}:`, error);
+      console.error(`Error getting unique tags for type ${tagged_type}:`, error);
       throw error;
     }
   },
+
+  getAllUniqueTagTextsByType: async (knexOrTrx: Knex | Knex.Transaction, tagged_type: TaggedEntityType): Promise<string[]> => {
+    const tags = await Tag.getAllUniqueTagsByType(knexOrTrx, tagged_type);
+    return tags.map((t) => t.tag_text);
+  },
+
+  updateColorByText: async (knexOrTrx: Knex | Knex.Transaction, tag_text: string, tagged_type: TaggedEntityType, background_color: string | null, text_color: string | null): Promise<void> => {
+    try {
+      const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required for tag operations');
+      }
+      await knexOrTrx<ITag>('tags')
+        .where('tag_text', tag_text)
+        .where('tagged_type', tagged_type)
+        .where('tenant', tenant)
+        .update({
+          background_color,
+          text_color,
+        });
+    } catch (error) {
+      console.error(`Error updating color for tags with text "${tag_text}" and type "${tagged_type}":`, error);
+      throw error;
+    }
+  }
 };
 
 export default Tag;

@@ -8,10 +8,11 @@ import { ButtonComponent, FormFieldComponent } from 'server/src/types/ui-reflect
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { useTags } from 'server/src/context/TagContext';
 
 interface TagInputProps {
   id?: string; // Made optional to maintain backward compatibility
-  existingTags: string[];
+  existingTags: ITag[];
   currentTags?: ITag[];
   onAddTag: (tagText: string) => Promise<void>;
   className?: string;
@@ -28,7 +29,7 @@ export const TagInput: React.FC<TagInputProps> = ({
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState('');
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<ITag[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const inputRef = useRef<HTMLInputElement>(null);
@@ -43,11 +44,21 @@ export const TagInput: React.FC<TagInputProps> = ({
       // Filter existing tags that:
       // 1. Include the input value
       // 2. Are not already on the current entity
-      const filtered = existingTags.filter(tag => 
-        tag.toLowerCase().includes(inputValue.toLowerCase()) &&
-        !currentTagTexts.includes(tag.toLowerCase())
+      const filtered = existingTags.filter(tag =>
+        tag && tag.tag_text && tag.tag_text.toLowerCase().includes(inputValue.toLowerCase()) &&
+        !currentTagTexts.includes(tag.tag_text.toLowerCase())
       );
-      setSuggestions(filtered);
+      
+      // Remove duplicates by tag_text (case-insensitive)
+      const uniqueSuggestions = filtered.reduce((acc: ITag[], current) => {
+        const exists = acc.find(tag => tag.tag_text.toLowerCase() === current.tag_text.toLowerCase());
+        if (!exists) {
+          acc.push(current);
+        }
+        return acc;
+      }, []);
+      
+      setSuggestions(uniqueSuggestions);
     } else {
       setSuggestions([]);
     }
@@ -120,44 +131,46 @@ export const TagInput: React.FC<TagInputProps> = ({
   return (
     <>
       <ReflectionContainer id={id} label="Tag Input">
-        {!isEditing ? (
-          <Button
-            id="tag-add-button"
-            onClick={() => setIsEditing(true)}
-            className="text-gray-500 hover:text-gray-700"
-            variant="icon"
-            size="icon"
-          >
-            <Plus size={16} />
-          </Button>
-        ) : (
-          <div ref={containerRef} className={`relative flex items-center ${className}`}>
-            <div className="relative flex">
-              <Input
-                ref={inputRef}
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleKeyPress}
-                className="rounded-l-md px-2 py-1 text-sm w-32 focus:ring-offset-0 focus:z-10"
-                placeholder={placeholder}
-                autoFocus
-                autoComplete="off"
-                containerClassName="m-0.5"
-              />
-              <Button
-                id="tag-save-button"
-                onClick={() => handleSave()}
-                disabled={isSaving || !inputValue.trim()}
-                className="rounded-r-md px-3 py-1 text-sm font-medium ml-px"
-                variant={isSaving || !inputValue.trim() ? "outline" : "default"}
-                size="sm"
-              >
-                {isSaving ? '...' : 'Save'}
-              </Button>
+        <div className="inline-flex items-center">
+          {!isEditing ? (
+            <Button
+              id="tag-add-button"
+              onClick={() => setIsEditing(true)}
+              className="text-gray-500 hover:text-gray-700"
+              variant="icon"
+              size="icon"
+            >
+              <Plus size={16} />
+            </Button>
+          ) : (
+            <div ref={containerRef} className={`relative flex items-center ${className}`}>
+              <div className="relative flex">
+                <Input
+                  ref={inputRef}
+                  type="text"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={handleKeyPress}
+                  className="rounded-l-md px-2 py-1 text-sm w-32 focus:ring-offset-0 focus:z-10"
+                  placeholder={placeholder}
+                  autoFocus
+                  autoComplete="off"
+                  containerClassName="m-0.5"
+                />
+                <Button
+                  id="tag-save-button"
+                  onClick={() => handleSave()}
+                  disabled={isSaving || !inputValue.trim()}
+                  className="rounded-r-md px-3 py-1 text-sm font-medium ml-px"
+                  variant={isSaving || !inputValue.trim() ? "outline" : "default"}
+                  size="sm"
+                >
+                  {isSaving ? '...' : 'Save'}
+                </Button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </ReflectionContainer>
       
       {/* Render suggestions dropdown using a portal to avoid table event interference */}
@@ -183,7 +196,7 @@ export const TagInput: React.FC<TagInputProps> = ({
             }}
           >
             {suggestions.map((suggestion, index): JSX.Element => {
-              const colors = generateEntityColor(suggestion);
+              const colors = generateEntityColor(suggestion.tag_text);
               return (
                 <button
                   key={index}
@@ -192,17 +205,17 @@ export const TagInput: React.FC<TagInputProps> = ({
                     e.preventDefault();
                     e.stopPropagation();
                     // Handle the save on mousedown to prevent click outside from firing
-                    handleSave(suggestion);
+                    handleSave(suggestion.tag_text);
                   }}
                 >
                   <span
                     className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold"
                     style={{
-                      backgroundColor: colors.background,
-                      color: colors.text
+                      backgroundColor: suggestion.background_color || colors.background,
+                      color: suggestion.text_color || colors.text
                     }}
                   >
-                    {suggestion}
+                    {suggestion.tag_text}
                   </span>
                 </button>
               );

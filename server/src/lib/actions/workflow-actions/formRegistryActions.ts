@@ -437,7 +437,8 @@ export async function getAllCategoriesAction(): Promise<string[]> {
  */
 export async function getAllFormTagsAction(): Promise<string[]> {
   try {
-    return findAllTagsByType('workflow_form');
+    const tags = await findAllTagsByType('workflow_form');
+    return tags.map(tag => tag.tag_text);
   } catch (error) {
     console.error('Error getting form tags:', error);
     throw error;

@@ -108,7 +108,6 @@ export default function ProjectInfo({
               entityId={project.project_id}
               entityType="project"
               initialTags={projectTags}
-              existingTags={allTagTexts}
               onTagsChange={onTagsChange}
             />
           )}
