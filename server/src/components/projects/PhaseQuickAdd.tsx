@@ -107,6 +107,7 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
                     value={startDate}
                     onChange={setStartDate}
                     placeholder="Select start date"
+                    clearable={true}
                   />
                 </div>
                 <div>
@@ -115,6 +116,7 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
                     value={endDate}
                     onChange={setEndDate}
                     placeholder="Select end date"
+                    clearable={true}
                   />
                 </div>
               </div>
