@@ -10,6 +10,7 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 import { Button } from 'server/src/components/ui/Button';
+import { BillingPlanDialog } from '../BillingPlanDialog';
 import Spinner from 'server/src/components/ui/Spinner';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { getServices } from 'server/src/lib/actions/serviceActions';
@@ -195,8 +196,16 @@ export function FixedPlanConfiguration({
   return (
     <div className={`space-y-6 ${className}`}>
       <Card>
-        <CardHeader>
+        <CardHeader className="flex items-center justify-between">
           <CardTitle>Edit Plan: {plan?.plan_name || '...'} (Fixed)</CardTitle>
+          {plan && (
+            <BillingPlanDialog
+              editingPlan={plan}
+              onPlanAdded={() => fetchPlanData()}
+              triggerButton={<Button variant="outline" size="sm">Edit Plan Basics</Button>}
+              allServiceTypes={[]}
+            />
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           {saveError && (
