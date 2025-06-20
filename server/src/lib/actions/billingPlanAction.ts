@@ -42,6 +42,7 @@ export async function getBillingPlans(): Promise<IBillingPlan[]> {
 
 // New function to get a single billing plan by ID
 export async function getBillingPlanById(planId: string): Promise<IBillingPlan | null> {
+    let tenant_copy: string = '';
     try {
         const currentUser = await getCurrentUser();
         if (!currentUser) {
@@ -52,6 +53,7 @@ export async function getBillingPlanById(planId: string): Promise<IBillingPlan |
         if (!tenant) {
             throw new Error("tenant context not found");
         }
+        tenant_copy = tenant;
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(currentUser, 'billing', 'read', trx)) {
@@ -73,7 +75,7 @@ export async function getBillingPlanById(planId: string): Promise<IBillingPlan |
             }
             throw error;
         }
-        throw new Error(`Failed to fetch billing plan ${planId} in tenant ${tenant}: ${error}`);
+        throw new Error(`Failed to fetch billing plan ${planId} in tenant ${tenant_copy}: ${error}`);
     }
 }
 
@@ -106,7 +108,7 @@ export async function createBillingPlan(
         if (error instanceof Error) {
             throw error; // Preserve specific error messages
         }
-        throw new Error(`Failed to create billing plan in tenant ${tenant}: ${error}`);
+        throw new Error(`Failed to create billing plan: ${error}`);
     }
 }
 
@@ -164,7 +166,7 @@ export async function updateBillingPlan(
             }
             throw error; // Preserve other specific error messages
         }
-        throw new Error(`Failed to update billing plan ${planId} in tenant ${tenant}: ${error}`);
+        throw new Error(`Failed to update billing plan ${planId}: ${error}`);
     }
 }
 
@@ -209,21 +211,22 @@ export async function deleteBillingPlan(planId: string): Promise<void> {
             // We cast to 'any' to access potential driver-specific properties like 'code'
             if ((error as any).code === '23503') {
                  // Fetch company IDs associated with the plan
-                 const companyPlanLinks = await withTransaction(knex, async (trx: Knex.Transaction) => {
+                 const { knex: queryKnex, tenant: queryTenant } = await createTenantKnex();
+                 const companyPlanLinks = await withTransaction(queryKnex, async (trx: Knex.Transaction) => {
                      return await trx('company_billing_plans')
                          .select('company_id')
-                         .where({ plan_id: planId, tenant: tenant });
+                         .where({ plan_id: planId, tenant: queryTenant });
                  });
 
                  const companyIds = companyPlanLinks.map(link => link.company_id);
 
                  let companyNames: string[] = [];
                  if (companyIds.length > 0) {
-                     const companies = await withTransaction(knex, async (trx: Knex.Transaction) => {
+                     const companies = await withTransaction(queryKnex, async (trx: Knex.Transaction) => {
                          return await trx('companies')
                              .select('company_name')
                              .whereIn('company_id', companyIds)
-                             .andWhere({ tenant: tenant });
+                             .andWhere({ tenant: queryTenant });
                      });
                      companyNames = companies.map(c => c.company_name);
                  }
@@ -249,7 +252,7 @@ export async function deleteBillingPlan(planId: string): Promise<void> {
             throw error;
         }
         // Fallback for non-Error objects
-        throw new Error(`Failed to delete billing plan in tenant ${tenant}: ${error}`);
+        throw new Error(`Failed to delete billing plan: ${error}`);
     }
 }
 
@@ -322,7 +325,7 @@ export async function getCombinedFixedPlanConfiguration(
         if (error instanceof Error) {
             throw error; // Preserve specific error messages
         }
-        throw new Error(`Failed to fetch combined fixed plan configuration for plan ${planId}, service ${serviceId} in tenant ${tenant}: ${error}`);
+        throw new Error(`Failed to fetch combined fixed plan configuration for plan ${planId}, service ${serviceId}: ${error}`);
     }
 }
 
@@ -355,7 +358,7 @@ export async function getBillingPlanFixedConfig(planId: string): Promise<IBillin
         if (error instanceof Error) {
             throw error;
         }
-        throw new Error(`Failed to fetch billing_plan_fixed_config for plan ${planId} in tenant ${tenant}: ${error}`);
+        throw new Error(`Failed to fetch billing_plan_fixed_config for plan ${planId}: ${error}`);
     }
 }
 
@@ -412,7 +415,7 @@ export async function updateBillingPlanFixedConfig(
         if (error instanceof Error) {
             throw error;
         }
-        throw new Error(`Failed to upsert billing_plan_fixed_config for plan ${planId} in tenant ${tenant}: ${error}`);
+        throw new Error(`Failed to upsert billing_plan_fixed_config for plan ${planId}: ${error}`);
     }
 }
 
@@ -498,6 +501,6 @@ export async function updatePlanServiceFixedConfigRate(
         if (error instanceof Error) {
             throw error; // Preserve specific error messages
         }
-        throw new Error(`Failed to update fixed plan service config rate for plan ${planId}, service ${serviceId} in tenant ${tenant}: ${error}`);
+        throw new Error(`Failed to update fixed plan service config rate for plan ${planId}, service ${serviceId}: ${error}`);
     }
 }

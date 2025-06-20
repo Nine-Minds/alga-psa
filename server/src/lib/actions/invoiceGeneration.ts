@@ -700,12 +700,27 @@ export async function createInvoiceFromBillingResult(
     // Just use currentUser that we already validated
 
     // Persist all items (including fixed details) using the dedicated service function
+    const sessionObject: Session = {
+      user: {
+        id: currentUser.user_id,
+        email: currentUser.email,
+        name: `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || currentUser.username,
+        username: currentUser.username,
+        image: currentUser.image,
+        proToken: '', // Not available in currentUser, using empty string
+        tenant: currentUser.tenant,
+        user_type: currentUser.user_type,
+        companyId: undefined, // Not available in currentUser
+        contactId: currentUser.contact_id
+      },
+      expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours from now
+    };
     const calculatedSubtotal = await persistInvoiceItems(
       trx,
       newInvoice!.invoice_id,
       billingResult.charges,
       company,
-      { user: { id: currentUser.user_id } }, // Pass session-like object
+      sessionObject,
       tenant
     );
 
