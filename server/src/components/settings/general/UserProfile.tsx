@@ -19,6 +19,7 @@ import PasswordChangeForm from './PasswordChangeForm';
 import ApiKeysSetup from '../api/ApiKeysSetup';
 import UserAvatarUpload from 'server/src/components/settings/profile/UserAvatarUpload';
 import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { toast } from 'react-hot-toast';
 
 interface UserProfileProps {
   userId?: string; // Optional - if not provided, uses current user
@@ -134,6 +135,9 @@ export default function UserProfile({ userId }: UserProfileProps) {
           );
         })
       );
+
+      // Show success confirmation
+      toast.success('Profile updated successfully');
 
     } catch (err) {
       console.error('Error saving profile:', err);
