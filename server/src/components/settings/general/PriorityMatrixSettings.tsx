@@ -82,7 +82,7 @@ const PriorityMatrixSettings: React.FC = () => {
                   {LEVELS.map(urgency => (
                     <td key={urgency} className="p-2 border">
                       <CustomSelect
-                        value={matrix[impact][urgency] || ''}
+                        value={matrix?.[impact]?.[urgency] || ''}
                         onValueChange={(val) => handleSelect(impact, urgency, val)}
                         options={priorityOptions}
                         className="w-32"
