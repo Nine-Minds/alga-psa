@@ -8,12 +8,10 @@ import { AlertCircle } from 'lucide-react';
 import { Button } from 'server/src/components/ui/Button';
 import { BillingPlanDialog } from '../BillingPlanDialog';
 import Spinner from 'server/src/components/ui/Spinner';
-import { getServices } from 'server/src/lib/actions/serviceActions';
 import {
   getBillingPlanById
 } from 'server/src/lib/actions/billingPlanAction';
-import { getPlanServices } from 'server/src/lib/actions/planServiceActions';
-import { IService, IBillingPlan } from 'server/src/interfaces/billing.interfaces';
+import { IBillingPlan } from 'server/src/interfaces/billing.interfaces';
 import FixedPlanServicesList from '../FixedPlanServicesList'; // Import the actual component
 
 interface FixedPlanConfigurationProps {
@@ -26,10 +24,7 @@ export function FixedPlanConfiguration({
   className = '',
 }: FixedPlanConfigurationProps) {
   const [plan, setPlan] = useState<IBillingPlan | null>(null);
-
-  const [services, setServices] = useState<IService[]>([]);
   const [planLoading, setPlanLoading] = useState(true);
-  const [servicesLoading, setServicesLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchPlanData = useCallback(async () => {
@@ -51,31 +46,9 @@ export function FixedPlanConfiguration({
     }
   }, [planId]);
 
-  const fetchServices = useCallback(async () => {
-    // Fetch services for the service list component
-    setServicesLoading(true);
-    try {
-        const response = await getServices();
-        // Extract the services array from the paginated response
-        setServices(Array.isArray(response) ? response : (response.services || []));
-    } catch (err) {
-        console.error('Error fetching services:', err);
-        setError(prev => prev ? `${prev}\nFailed to load services.` : 'Failed to load services.');
-    } finally {
-        setServicesLoading(false);
-    }
-  }, []); // No dependencies needed
-
   useEffect(() => {
     fetchPlanData();
-    fetchServices(); // Fetch services initially
-  }, [fetchPlanData, fetchServices]);
-
-
-
-
-
-
+  }, [fetchPlanData]);
 
   if (planLoading && !plan) {
     return <div className="flex justify-center items-center p-8"><Spinner size="sm" /></div>;
@@ -115,7 +88,7 @@ export function FixedPlanConfiguration({
         </CardContent>
       </Card>
 
-      {/* Placeholder for Services List */}
+      {/* Services List */}
       <Card>
           <CardHeader>
               <CardTitle>Associated Services</CardTitle>
