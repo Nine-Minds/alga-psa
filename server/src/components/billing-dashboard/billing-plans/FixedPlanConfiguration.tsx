@@ -2,7 +2,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Input } from 'server/src/components/ui/Input';
+import { CurrencyInput } from 'server/src/components/ui/CurrencyInput';
 import { Label } from 'server/src/components/ui/Label';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Switch } from 'server/src/components/ui/Switch';
@@ -40,7 +40,8 @@ export function FixedPlanConfiguration({
 
   const [services, setServices] = useState<IService[]>([]);
   const [planServices, setPlanServices] = useState<IPlanService[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [planLoading, setPlanLoading] = useState(true);
+  const [servicesLoading, setServicesLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -51,7 +52,7 @@ export function FixedPlanConfiguration({
   }>({});
 
   const fetchPlanData = useCallback(async () => {
-    setLoading(true);
+    setPlanLoading(true);
     setError(null);
     try {
       // Fetch the basic plan data
@@ -83,13 +84,13 @@ export function FixedPlanConfiguration({
       console.error('Error fetching plan data:', err);
       setError('Failed to load plan configuration. Please try again.');
     } finally {
-      setLoading(false);
+      setPlanLoading(false);
     }
   }, [planId]);
 
   const fetchServices = useCallback(async () => {
     // Fetch services for the service list component
-    setLoading(true); // Consider separate loading state for services
+    setServicesLoading(true);
     try {
         const response = await getServices();
         // Extract the services array from the paginated response
@@ -98,7 +99,7 @@ export function FixedPlanConfiguration({
         console.error('Error fetching services:', err);
         setError(prev => prev ? `${prev}\nFailed to load services.` : 'Failed to load services.');
     } finally {
-        setLoading(false); // Adjust loading state management
+        setServicesLoading(false);
     }
   }, []); // No dependencies needed
 
@@ -107,8 +108,9 @@ export function FixedPlanConfiguration({
     fetchServices(); // Fetch services initially
   }, [fetchPlanData, fetchServices]);
 
-  // Validate inputs
+  // Validate inputs only after plan data loads
   useEffect(() => {
+    if (planLoading) return; // avoid showing errors before data is fetched
     const errors: { baseRate?: string; services?: string } = {};
     if (baseRate === undefined || baseRate === null) {
       errors.baseRate = 'Base rate is required';
@@ -119,10 +121,9 @@ export function FixedPlanConfiguration({
       errors.services = 'At least one service must be added to the plan';
     }
     setValidationErrors(errors);
-  }, [baseRate, planServices]);
+  }, [baseRate, planServices, planLoading]);
 
-  const handleBaseRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value === '' ? undefined : Number(e.target.value);
+  const handleBaseRateChange = (value: number | undefined) => {
     setBaseRate(value);
   };
 
@@ -183,7 +184,7 @@ export function FixedPlanConfiguration({
     label: service.service_name
   })) : [];
 
-  if (loading && !plan) {
+  if (planLoading && !plan) {
     return <div className="flex justify-center items-center p-8"><Spinner size="sm" /></div>;
   }
 
@@ -231,15 +232,12 @@ export function FixedPlanConfiguration({
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <Label htmlFor="fixed-plan-base-rate">Base Rate</Label>
-              <Input
+              <CurrencyInput
                 id="fixed-plan-base-rate"
-                type="number"
-                value={baseRate?.toString() || ''}
+                value={baseRate}
                 onChange={handleBaseRateChange}
                 placeholder="Enter base rate"
                 disabled={saving}
-                min={0}
-                step={0.01}
               />
               <p className="text-sm text-muted-foreground mt-1">
                 The base rate for this fixed plan. This rate will be applied to all services associated with this plan.
