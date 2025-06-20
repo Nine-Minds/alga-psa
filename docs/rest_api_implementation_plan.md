@@ -163,16 +163,19 @@ This document outlines the comprehensive implementation plan for creating REST A
   - ✅ `GET /api/v1/contacts/stats` - Contact statistics
 
 #### Week 4: Tickets & Support
-- [ ] **API-009**: Tickets API
-  - `GET /api/v1/tickets` - List tickets with advanced filtering
-  - `POST /api/v1/tickets` - Create new ticket
-  - `GET /api/v1/tickets/{id}` - Get ticket details
-  - `PUT /api/v1/tickets/{id}` - Update ticket
-  - `DELETE /api/v1/tickets/{id}` - Delete ticket
-  - `GET /api/v1/tickets/{id}/comments` - List ticket comments
-  - `POST /api/v1/tickets/{id}/comments` - Add comment to ticket
-  - `PUT /api/v1/tickets/{id}/status` - Update ticket status
-  - `PUT /api/v1/tickets/{id}/assignment` - Assign ticket
+- [x] **API-009**: Tickets API ✅
+  - ✅ `GET /api/v1/tickets` - List tickets with advanced filtering
+  - ✅ `POST /api/v1/tickets` - Create new ticket
+  - ✅ `GET /api/v1/tickets/{id}` - Get ticket details
+  - ✅ `PUT /api/v1/tickets/{id}` - Update ticket
+  - ✅ `DELETE /api/v1/tickets/{id}` - Delete ticket
+  - ✅ `GET /api/v1/tickets/search` - Advanced ticket search
+  - ✅ `GET /api/v1/tickets/stats` - Ticket statistics
+  - ✅ `POST /api/v1/tickets/from-asset` - Create ticket from asset
+  - ✅ `GET /api/v1/tickets/{id}/comments` - Get ticket comments
+  - ✅ `POST /api/v1/tickets/{id}/comments` - Add ticket comment
+  - ✅ `PUT /api/v1/tickets/{id}/status` - Update ticket status
+  - ✅ `PUT /api/v1/tickets/{id}/assignment` - Update ticket assignment
 
 - [ ] **API-010**: Ticket Configuration APIs
   - `GET /api/v1/tickets/categories` - List ticket categories
