@@ -26,6 +26,15 @@ const monthOptions = monthNames.map((name, index): { value: string; label: strin
   label: name
 }));
 
+const weekDayNames = [
+  'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
+];
+
+const weekDayOptions = weekDayNames.map((name, index): { value: string; label: string } => ({
+  value: (index + 1).toString(),
+  label: name
+}));
+
 const frequencyUnitOptions: Array<{ value: FrequencyUnit; label: string }> = [
   { value: 'day', label: 'Day' },
   { value: 'week', label: 'Week' },
@@ -245,7 +254,9 @@ const NewTimePeriodSettingForm: React.FC<NewTimePeriodSettingFormProps> = ({ new
   const handleSelectChange = (name: string) => (value: string) => {
     if (name === 'frequency_unit') {
       setNewSetting({ ...newSetting, [name]: value as FrequencyUnit });
-    } else if (name === 'start_month' || name === 'end_month') {
+    } else if (name === 'start_month' || name === 'end_month' ||
+               name === 'start_day' || name === 'end_day' ||
+               name === 'start_day_of_month' || name === 'end_day_of_month') {
       setNewSetting({ ...newSetting, [name]: parseInt(value, 10) });
     }
   };
@@ -297,17 +308,28 @@ const NewTimePeriodSettingForm: React.FC<NewTimePeriodSettingFormProps> = ({ new
         <>
           <div className="space-y-2">
             <Label htmlFor="start_day">Start Day *</Label>
-            <Input
-              id="start_day"
-              name="start_day"
-              type="number"
-              min={1}
-              max={newSetting.frequency_unit === 'week' ? 7 : 31}
-              value={newSetting.start_day}
-              onChange={handleInputChange}
-              placeholder="Enter start day"
-              className={hasAttemptedSubmit && !newSetting.start_day ? 'border-red-500' : ''}
-            />
+            {newSetting.frequency_unit === 'week' ? (
+              <CustomSelect
+                id="start_day"
+                value={newSetting.start_day?.toString()}
+                onValueChange={handleSelectChange('start_day')}
+                options={weekDayOptions}
+                placeholder="Select day"
+                className={hasAttemptedSubmit && !newSetting.start_day ? 'border-red-500' : ''}
+              />
+            ) : (
+              <Input
+                id="start_day"
+                name="start_day"
+                type="number"
+                min={1}
+                max={31}
+                value={newSetting.start_day}
+                onChange={handleInputChange}
+                placeholder="Enter start day"
+                className={hasAttemptedSubmit && !newSetting.start_day ? 'border-red-500' : ''}
+              />
+            )}
           </div>
 
           <div className="space-y-2">
@@ -323,17 +345,28 @@ const NewTimePeriodSettingForm: React.FC<NewTimePeriodSettingFormProps> = ({ new
             {!useEndOfPeriod && (
               <div className="space-y-2">
                 <Label htmlFor="end_day">End Day *</Label>
-                <Input
-                  id="end_day"
-                  name="end_day"
-                  type="number"
-                  min={1}
-                  max={newSetting.frequency_unit === 'week' ? 7 : 31}
-                  value={newSetting.end_day === END_OF_PERIOD ? '' : newSetting.end_day}
-                  onChange={handleInputChange}
-                  placeholder="Enter end day"
-                  className={hasAttemptedSubmit && (newSetting.end_day === undefined || newSetting.end_day === null) ? 'border-red-500' : ''}
-                />
+                {newSetting.frequency_unit === 'week' ? (
+                  <CustomSelect
+                    id="end_day"
+                    value={newSetting.end_day === END_OF_PERIOD ? '' : newSetting.end_day?.toString()}
+                    onValueChange={handleSelectChange('end_day')}
+                    options={weekDayOptions}
+                    placeholder="Select day"
+                    className={hasAttemptedSubmit && (newSetting.end_day === undefined || newSetting.end_day === null) ? 'border-red-500' : ''}
+                  />
+                ) : (
+                  <Input
+                    id="end_day"
+                    name="end_day"
+                    type="number"
+                    min={1}
+                    max={31}
+                    value={newSetting.end_day === END_OF_PERIOD ? '' : newSetting.end_day}
+                    onChange={handleInputChange}
+                    placeholder="Enter end day"
+                    className={hasAttemptedSubmit && (newSetting.end_day === undefined || newSetting.end_day === null) ? 'border-red-500' : ''}
+                  />
+                )}
               </div>
             )}
           </div>
@@ -460,7 +493,9 @@ const TimePeriodSettingItem: React.FC<TimePeriodSettingItemProps> = ({ setting, 
   const handleSelectChange = (name: string) => (value: string) => {
     if (name === 'frequency_unit') {
       setEditedSetting({ ...editedSetting, [name]: value as FrequencyUnit });
-    } else if (name === 'start_month' || name === 'end_month') {
+    } else if (name === 'start_month' || name === 'end_month' ||
+               name === 'start_day' || name === 'end_day' ||
+               name === 'start_day_of_month' || name === 'end_day_of_month') {
       setEditedSetting({ ...editedSetting, [name]: parseInt(value, 10) });
     }
   };
@@ -506,6 +541,9 @@ const TimePeriodSettingItem: React.FC<TimePeriodSettingItemProps> = ({ setting, 
   const formatEndDay = (day: number | undefined, frequencyUnit: string): string => {
     if (day === END_OF_PERIOD) {
       return `End of ${frequencyUnit}`;
+    }
+    if (frequencyUnit === 'week' && day) {
+      return weekDayNames[day - 1];
     }
     return day?.toString() || 'Not set';
   };
@@ -556,17 +594,28 @@ const TimePeriodSettingItem: React.FC<TimePeriodSettingItemProps> = ({ setting, 
               <>
                 <div className="space-y-2">
                   <Label htmlFor="start_day">Start Day *</Label>
-                  <Input
-                    id="start_day"
-                    name="start_day"
-                    type="number"
-                    min={1}
-                    max={editedSetting.frequency_unit === 'week' ? 7 : 31}
-                    value={editedSetting.start_day}
-                    onChange={handleInputChange}
-                    placeholder="Enter start day"
-                    className={hasAttemptedSubmit && !editedSetting.start_day ? 'border-red-500' : ''}
-                  />
+                  {editedSetting.frequency_unit === 'week' ? (
+                    <CustomSelect
+                      id="start_day"
+                      value={editedSetting.start_day?.toString()}
+                      onValueChange={handleSelectChange('start_day')}
+                      options={weekDayOptions}
+                      placeholder="Select day"
+                      className={hasAttemptedSubmit && !editedSetting.start_day ? 'border-red-500' : ''}
+                    />
+                  ) : (
+                    <Input
+                      id="start_day"
+                      name="start_day"
+                      type="number"
+                      min={1}
+                      max={31}
+                      value={editedSetting.start_day}
+                      onChange={handleInputChange}
+                      placeholder="Enter start day"
+                      className={hasAttemptedSubmit && !editedSetting.start_day ? 'border-red-500' : ''}
+                    />
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -582,17 +631,28 @@ const TimePeriodSettingItem: React.FC<TimePeriodSettingItemProps> = ({ setting, 
                   {!useEndOfPeriod && (
                     <div className="space-y-2">
                       <Label htmlFor="end_day">End Day *</Label>
-                      <Input
-                        id="end_day"
-                        name="end_day"
-                        type="number"
-                        min={1}
-                        max={editedSetting.frequency_unit === 'week' ? 7 : 31}
-                        value={editedSetting.end_day === END_OF_PERIOD ? '' : editedSetting.end_day}
-                        onChange={handleInputChange}
-                        placeholder="Enter end day"
-                        className={hasAttemptedSubmit && (editedSetting.end_day === undefined || editedSetting.end_day === null) ? 'border-red-500' : ''}
-                      />
+                      {editedSetting.frequency_unit === 'week' ? (
+                        <CustomSelect
+                          id="end_day"
+                          value={editedSetting.end_day === END_OF_PERIOD ? '' : editedSetting.end_day?.toString()}
+                          onValueChange={handleSelectChange('end_day')}
+                          options={weekDayOptions}
+                          placeholder="Select day"
+                          className={hasAttemptedSubmit && (editedSetting.end_day === undefined || editedSetting.end_day === null) ? 'border-red-500' : ''}
+                        />
+                      ) : (
+                        <Input
+                          id="end_day"
+                          name="end_day"
+                          type="number"
+                          min={1}
+                          max={31}
+                          value={editedSetting.end_day === END_OF_PERIOD ? '' : editedSetting.end_day}
+                          onChange={handleInputChange}
+                          placeholder="Enter end day"
+                          className={hasAttemptedSubmit && (editedSetting.end_day === undefined || editedSetting.end_day === null) ? 'border-red-500' : ''}
+                        />
+                      )}
                     </div>
                   )}
                 </div>
@@ -692,7 +752,7 @@ const TimePeriodSettingItem: React.FC<TimePeriodSettingItemProps> = ({ setting, 
           <p>Frequency: {setting.frequency} {setting.frequency_unit}(s)</p>
           {(setting.frequency_unit === 'week' || setting.frequency_unit === 'month') && (
             <>
-              <p>Start Day: {setting.start_day}</p>
+              <p>Start Day: {setting.frequency_unit === 'week' ? weekDayNames[setting.start_day - 1] : setting.start_day}</p>
               <p>End Day: {formatEndDay(setting.end_day, setting.frequency_unit)}</p>
             </>
           )}

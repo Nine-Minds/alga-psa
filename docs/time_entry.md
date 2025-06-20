@@ -127,6 +127,7 @@ To create semi-monthly periods (from the 1st to the 15th and from the 16th to th
 - The `end_day` field specifies the day on which the period ends.
 - If `end_day` is less than `start_day`, the period rolls over to the next month.
 - Using `end_day` as 0 or 31 indicates the period ends on the last day of the month, accommodating months with different lengths.
+- For **weekly** periods, the settings UI provides calendar-style dropdowns for selecting `start_day` and `end_day` (Monday through Sunday).
 
 #### Constraints and Validation
 
