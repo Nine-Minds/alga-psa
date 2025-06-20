@@ -185,16 +185,30 @@ This document outlines the comprehensive implementation plan for creating REST A
   - `GET /api/v1/tickets/statuses` - List ticket statuses
 
 #### Week 5: Projects & Assets
-- [ ] **API-011**: Projects API
-  - `GET /api/v1/projects` - List projects with filtering
-  - `POST /api/v1/projects` - Create new project
-  - `GET /api/v1/projects/{id}` - Get project details
-  - `PUT /api/v1/projects/{id}` - Update project
-  - `DELETE /api/v1/projects/{id}` - Delete project
-  - `GET /api/v1/projects/{id}/tasks` - List project tasks
-  - `POST /api/v1/projects/{id}/tasks` - Create project task
-  - `GET /api/v1/projects/{id}/phases` - List project phases
-  - `POST /api/v1/projects/{id}/phases` - Create project phase
+- [x] **API-011**: Projects API ✅
+  - ✅ `GET /api/v1/projects` - List projects with filtering
+  - ✅ `POST /api/v1/projects` - Create new project
+  - ✅ `GET /api/v1/projects/{id}` - Get project details
+  - ✅ `PUT /api/v1/projects/{id}` - Update project
+  - ✅ `DELETE /api/v1/projects/{id}` - Delete project
+  - ✅ `GET /api/v1/projects/{id}/tasks` - List project tasks
+  - ✅ `POST /api/v1/projects/{projectId}/phases/{phaseId}/tasks` - Create project task
+  - ✅ `GET /api/v1/projects/{id}/phases` - List project phases
+  - ✅ `POST /api/v1/projects/{id}/phases` - Create project phase
+  - ✅ `PUT /api/v1/projects/{projectId}/phases/{phaseId}` - Update project phase
+  - ✅ `DELETE /api/v1/projects/{projectId}/phases/{phaseId}` - Delete project phase
+  - ✅ `PUT /api/v1/projects/tasks/{taskId}` - Update project task
+  - ✅ `DELETE /api/v1/projects/tasks/{taskId}` - Delete project task
+  - ✅ `GET /api/v1/projects/tasks/{taskId}/checklist` - Get task checklist items
+  - ✅ `POST /api/v1/projects/tasks/{taskId}/checklist` - Create checklist item
+  - ✅ `GET /api/v1/projects/{id}/tickets` - List project ticket links
+  - ✅ `POST /api/v1/projects/{id}/tickets` - Create project ticket link
+  - ✅ `GET /api/v1/projects/search` - Search projects
+  - ✅ `GET /api/v1/projects/export` - Export projects
+  - ✅ `GET /api/v1/projects/stats` - Get project statistics
+  - ✅ `PUT /api/v1/projects/bulk-update` - Bulk update projects
+  - ✅ `PUT /api/v1/projects/bulk-assign` - Bulk assign projects
+  - ✅ `PUT /api/v1/projects/bulk-status` - Bulk update project status
 
 - [ ] **API-012**: Assets API
   - `GET /api/v1/assets` - List assets with filtering
