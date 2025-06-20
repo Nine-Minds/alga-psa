@@ -32,7 +32,8 @@ import { NextResponse } from 'next/server';
 import { deleteDocumentContent } from './documentContentActions';
 import { deleteBlockContent } from './documentBlockContentActions';
 import { DocumentHandlerRegistry } from 'server/src/lib/document-handlers/DocumentHandlerRegistry';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '../user-actions/userActions';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 
 // Add new document
 export async function addDocument(data: DocumentInput) {
@@ -46,6 +47,11 @@ export async function addDocument(data: DocumentInput) {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
       throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document creation
+    if (!await hasPermission(currentUser, 'document', 'create')) {
+      throw new Error('Permission denied: Cannot create documents');
     }
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -86,6 +92,16 @@ export async function addDocument(data: DocumentInput) {
 // Update document
 export async function updateDocument(documentId: string, data: Partial<IDocument>) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document updates
+    if (!await hasPermission(currentUser, 'document', 'update')) {
+      throw new Error('Permission denied: Cannot update documents');
+    }
+
     const { tenant, knex } = await createTenantKnex();
     if (!tenant) {
       throw new Error('No tenant found');
@@ -108,6 +124,16 @@ export async function updateDocument(documentId: string, data: Partial<IDocument
 // Delete document
 export async function deleteDocument(documentId: string, userId: string) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document deletion
+    if (!await hasPermission(currentUser, 'document', 'delete')) {
+      throw new Error('Permission denied: Cannot delete documents');
+    }
+
     const { tenant, knex } = await createTenantKnex();
     if (!tenant) {
       throw new Error('No tenant found');
@@ -172,6 +198,16 @@ export async function deleteDocument(documentId: string, userId: string) {
 // Get single document
 export async function getDocument(documentId: string) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document reading
+    if (!await hasPermission(currentUser, 'document', 'read')) {
+      throw new Error('Permission denied: Cannot read documents');
+    }
+
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error('No tenant found');
@@ -242,6 +278,16 @@ export async function getDocument(documentId: string) {
 // Get documents by ticket
 export async function getDocumentByTicketId(ticketId: string) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document reading
+    if (!await hasPermission(currentUser, 'document', 'read')) {
+      throw new Error('Permission denied: Cannot read documents');
+    }
+
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error('No tenant found');
@@ -266,6 +312,16 @@ export async function getDocumentByTicketId(ticketId: string) {
 // Get documents by company
 export async function getDocumentByCompanyId(companyId: string) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document reading
+    if (!await hasPermission(currentUser, 'document', 'read')) {
+      throw new Error('Permission denied: Cannot read documents');
+    }
+
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error('No tenant found');
@@ -290,6 +346,16 @@ export async function getDocumentByCompanyId(companyId: string) {
 // Get documents by contact
 export async function getDocumentByContactNameId(contactNameId: string) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document reading
+    if (!await hasPermission(currentUser, 'document', 'read')) {
+      throw new Error('Permission denied: Cannot read documents');
+    }
+
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error('No tenant found');
@@ -366,6 +432,16 @@ export async function getDocumentPreview(
 ): Promise<PreviewResponse> {
   console.log(`[getDocumentPreview] Received identifier: ${identifier}`);
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document reading
+    if (!await hasPermission(currentUser, 'document', 'read')) {
+      throw new Error('Permission denied: Cannot read documents');
+    }
+
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
       console.error("[getDocumentPreview] No tenant found");
@@ -434,12 +510,32 @@ export async function getDocumentPreview(
 
 // Get document download URL
 export async function getDocumentDownloadUrl(file_id: string): Promise<string> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document reading/download
+    if (!await hasPermission(currentUser, 'document', 'read')) {
+      throw new Error('Permission denied: Cannot read documents');
+    }
+
     return `/api/documents/download/${file_id}`;
 }
 
 // Download document
 export async function downloadDocument(file_id: string) {
     try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser) {
+          throw new Error('No authenticated user found');
+        }
+
+        // Check permission for document reading/download
+        if (!await hasPermission(currentUser, 'document', 'read')) {
+          throw new Error('Permission denied: Cannot read documents');
+        }
+
         const { knex, tenant } = await createTenantKnex();
         if (!tenant) {
             throw new Error('No tenant found');
@@ -489,6 +585,16 @@ export async function getDocumentsByEntity(
   limit: number = 15
 ): Promise<PaginatedDocumentsResponse> {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document reading
+    if (!await hasPermission(currentUser, 'document', 'read')) {
+      throw new Error('Permission denied: Cannot read documents');
+    }
+
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error('No tenant found');
@@ -688,6 +794,16 @@ export async function getAllDocuments(
   limit: number = 10
 ): Promise<PaginatedDocumentsResponse> {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document reading
+    if (!await hasPermission(currentUser, 'document', 'read')) {
+      throw new Error('Permission denied: Cannot read documents');
+    }
+
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error('No tenant found');
@@ -1130,6 +1246,16 @@ export async function createDocumentAssociations(
   document_ids: string[]
 ): Promise<{ success: boolean }> {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document updates (associating documents is an update operation)
+    if (!await hasPermission(currentUser, 'document', 'update')) {
+      throw new Error('Permission denied: Cannot update document associations');
+    }
+
     const { knex: db, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error('No tenant found');
@@ -1165,6 +1291,16 @@ export async function removeDocumentAssociations(
   document_ids?: string[]
 ) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document updates (removing associations is an update operation)
+    if (!await hasPermission(currentUser, 'document', 'update')) {
+      throw new Error('Permission denied: Cannot update document associations');
+    }
+
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error('No tenant found');
@@ -1205,6 +1341,16 @@ export async function uploadDocument(
   | { success: false; error: string }
 > {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document creation/upload
+    if (!await hasPermission(currentUser, 'document', 'create')) {
+      throw new Error('Permission denied: Cannot create documents');
+    }
+
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error('No tenant found');
@@ -1329,6 +1475,16 @@ async function validateDocumentUpload(file: File): Promise<void> {
 
 // Get document type ID
 export async function getDocumentTypeId(mimeType: string): Promise<{ typeId: string, isShared: boolean }> { // Export this function
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Check permission for document reading
+  if (!await hasPermission(currentUser, 'document', 'read')) {
+    throw new Error('Permission denied: Cannot read document types');
+  }
+
   const { knex, tenant } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -1393,6 +1549,16 @@ export async function getDocumentTypeId(mimeType: string): Promise<{ typeId: str
  */
 export async function getImageUrl(file_id: string): Promise<string | null> {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document reading
+    if (!await hasPermission(currentUser, 'document', 'read')) {
+      throw new Error('Permission denied: Cannot read documents');
+    }
+
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
       console.error('getImageUrl: No tenant found');
@@ -1448,6 +1614,16 @@ export async function getImageUrl(file_id: string): Promise<string | null> {
 
 export async function getDistinctEntityTypes(): Promise<string[]> {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for document reading
+    if (!await hasPermission(currentUser, 'document', 'read')) {
+      throw new Error('Permission denied: Cannot read document associations');
+    }
+
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error('No tenant found');

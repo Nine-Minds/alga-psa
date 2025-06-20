@@ -2,6 +2,8 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { OrderingService } from 'server/src/lib/services/orderingService';
 import { IProjectTask, IProjectPhase } from 'server/src/interfaces/project.interfaces';
 import { Knex } from 'knex';
+import { getCurrentUser } from '../user-actions/userActions';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 
 /**
  * Regenerates order keys for all tasks in a phase/status to ensure they follow proper fractional indexing
@@ -10,9 +12,17 @@ export async function regenerateOrderKeysForStatus(
     phaseId: string,
     statusId: string
 ): Promise<void> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
     const { knex: db, tenant } = await createTenantKnex();
     
     await db.transaction(async (trx: Knex.Transaction) => {
+        if (!await hasPermission(currentUser, 'project', 'update', trx)) {
+            throw new Error('Permission denied: Cannot update project');
+        }
         // Get all tasks in this status, ordered by current order_key
         const tasks = await trx<IProjectTask>('project_tasks')
             .where('phase_id', phaseId)
@@ -47,7 +57,16 @@ export async function validateAndFixOrderKeys(
     phaseId: string,
     statusId: string
 ): Promise<boolean> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
     const { knex: db, tenant } = await createTenantKnex();
+    
+    if (!await hasPermission(currentUser, 'project', 'update', db)) {
+        throw new Error('Permission denied: Cannot update project');
+    }
     
     const tasks = await db<IProjectTask>('project_tasks')
         .where('phase_id', phaseId)
@@ -98,9 +117,17 @@ export async function validateAndFixOrderKeys(
 export async function regenerateOrderKeysForPhases(
     projectId: string
 ): Promise<void> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
     const { knex: db, tenant } = await createTenantKnex();
     
     await db.transaction(async (trx: Knex.Transaction) => {
+        if (!await hasPermission(currentUser, 'project', 'update', trx)) {
+            throw new Error('Permission denied: Cannot update project');
+        }
         // Get all phases in this project, ordered by current order_key (or fallback to end_date)
         const phases = await trx<IProjectPhase>('project_phases')
             .where('project_id', projectId)
@@ -140,7 +167,16 @@ export async function regenerateOrderKeysForPhases(
 export async function validateAndFixPhaseOrderKeys(
     projectId: string
 ): Promise<boolean> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
     const { knex: db, tenant } = await createTenantKnex();
+    
+    if (!await hasPermission(currentUser, 'project', 'update', db)) {
+        throw new Error('Permission denied: Cannot update project');
+    }
     
     const phases = await db<IProjectPhase>('project_phases')
         .where('project_id', projectId)

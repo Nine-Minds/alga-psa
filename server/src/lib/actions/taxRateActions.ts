@@ -6,6 +6,8 @@ import { TaxService } from 'server/src/lib/services/taxService';
 import { v4 as uuid4 } from 'uuid';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
+import { getCurrentUser } from './user-actions/userActions';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 
 export type DeleteTaxRateResult = {
   deleted: boolean;
@@ -14,6 +16,15 @@ export type DeleteTaxRateResult = {
 
 export async function getTaxRates(): Promise<ITaxRate[]> {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    if (!await hasPermission(currentUser, 'tax', 'read')) {
+      throw new Error('Permission denied: Cannot read tax rates');
+    }
+
     const { knex: db, tenant } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
       return await trx('tax_rates')
@@ -28,6 +39,15 @@ export async function getTaxRates(): Promise<ITaxRate[]> {
 
 export async function addTaxRate(taxRateData: Omit<ITaxRate, 'tax_rate_id'>): Promise<ITaxRate> {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    if (!await hasPermission(currentUser, 'tax', 'create')) {
+      throw new Error('Permission denied: Cannot create tax rates');
+    }
+
     const { knex: db, tenant } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
       const taxService = new TaxService();
@@ -59,6 +79,15 @@ export async function addTaxRate(taxRateData: Omit<ITaxRate, 'tax_rate_id'>): Pr
 
 export async function updateTaxRate(taxRateData: ITaxRate): Promise<ITaxRate> {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    if (!await hasPermission(currentUser, 'tax', 'update')) {
+      throw new Error('Permission denied: Cannot update tax rates');
+    }
+
     const { knex: db, tenant } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
       const taxService = new TaxService();
@@ -118,6 +147,20 @@ export async function updateTaxRate(taxRateData: ITaxRate): Promise<ITaxRate> {
 
 export async function deleteTaxRate(taxRateId: string): Promise<DeleteTaxRateResult> {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Need both read and delete permissions since we're checking for affected services and potentially deleting
+    if (!await hasPermission(currentUser, 'tax', 'read')) {
+      throw new Error('Permission denied: Cannot read tax rate information');
+    }
+
+    if (!await hasPermission(currentUser, 'tax', 'delete')) {
+      throw new Error('Permission denied: Cannot delete tax rates');
+    }
+
     const { knex: db, tenant } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
 
@@ -152,6 +195,16 @@ export async function deleteTaxRate(taxRateId: string): Promise<DeleteTaxRateRes
 
 export async function confirmDeleteTaxRate(taxRateId: string): Promise<void> {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Need delete permission for tax rates and update permission for services
+    if (!await hasPermission(currentUser, 'tax', 'delete')) {
+      throw new Error('Permission denied: Cannot delete tax rates');
+    }
+
     const { knex: db, tenant } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
       await trx('service_catalog')
