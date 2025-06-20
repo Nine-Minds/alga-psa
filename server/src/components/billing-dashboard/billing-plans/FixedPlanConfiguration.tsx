@@ -39,7 +39,8 @@ export function FixedPlanConfiguration({
   const [billingCycleAlignment, setBillingCycleAlignment] = useState<string>('start');
 
   const [services, setServices] = useState<IService[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [planLoading, setPlanLoading] = useState(true);
+  const [servicesLoading, setServicesLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -49,7 +50,7 @@ export function FixedPlanConfiguration({
   }>({});
 
   const fetchPlanData = useCallback(async () => {
-    setLoading(true);
+    setPlanLoading(true);
     setError(null);
     try {
       // Fetch the basic plan data
@@ -77,13 +78,13 @@ export function FixedPlanConfiguration({
       console.error('Error fetching plan data:', err);
       setError('Failed to load plan configuration. Please try again.');
     } finally {
-      setLoading(false);
+      setPlanLoading(false);
     }
   }, [planId]);
 
   const fetchServices = useCallback(async () => {
     // Fetch services for the service list component
-    setLoading(true); // Consider separate loading state for services
+    setServicesLoading(true);
     try {
         const response = await getServices();
         // Extract the services array from the paginated response
@@ -92,7 +93,7 @@ export function FixedPlanConfiguration({
         console.error('Error fetching services:', err);
         setError(prev => prev ? `${prev}\nFailed to load services.` : 'Failed to load services.');
     } finally {
-        setLoading(false); // Adjust loading state management
+        setServicesLoading(false);
     }
   }, []); // No dependencies needed
 
@@ -101,8 +102,9 @@ export function FixedPlanConfiguration({
     fetchServices(); // Fetch services initially
   }, [fetchPlanData, fetchServices]);
 
-  // Validate inputs
+  // Validate inputs only after plan data loads
   useEffect(() => {
+    if (planLoading) return; // avoid showing errors before data is fetched
     const errors: { baseRate?: string } = {};
     if (baseRate === undefined || baseRate === null) {
       errors.baseRate = 'Base rate is required';
@@ -110,7 +112,7 @@ export function FixedPlanConfiguration({
       errors.baseRate = 'Base rate cannot be negative';
     }
     setValidationErrors(errors);
-  }, [baseRate]);
+  }, [baseRate, planLoading]);
 
   const handleBaseRateChange = (value: number | undefined) => {
     setBaseRate(value);
@@ -173,7 +175,7 @@ export function FixedPlanConfiguration({
     label: service.service_name
   })) : [];
 
-  if (loading && !plan) {
+  if (planLoading && !plan) {
     return <div className="flex justify-center items-center p-8"><Spinner size="sm" /></div>;
   }
 
