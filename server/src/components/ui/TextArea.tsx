@@ -115,7 +115,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps & Automati
             px-3 
             py-2 
             border 
-            border-gray-200 
+            border-[rgb(var(--color-border-400))] 
             rounded-md 
             shadow-sm 
             focus:outline-none 
@@ -125,6 +125,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps & Automati
             resize-none 
             overflow-hidden 
             whitespace-pre-wrap break-words
+            placeholder:text-gray-400
             ${className}
           `}
           onChange={handleInput}

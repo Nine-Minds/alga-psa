@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from 'server/src/components/ui/TreeSelect';
 import { toast } from 'react-hot-toast';
@@ -68,14 +68,16 @@ export default function MoveTaskDialog({
   };
 
   return (
-    <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black bg-opacity-50 z-40" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-[500px] max-h-[90vh] overflow-y-auto z-50">
-          <Dialog.Title className="text-lg font-semibold mb-4">Move Task</Dialog.Title>
-          <Dialog.Description className="mb-2 text-sm text-gray-600">
-            Move task <span className="font-medium">"{task.task_name}"</span> to a new phase/status:
-          </Dialog.Description>
+    <Dialog 
+      isOpen={isOpen} 
+      onClose={onClose}
+      title="Move Task"
+      className="max-w-lg max-h-[90vh] overflow-y-auto"
+    >
+      <DialogContent>
+        <div className="mb-2 text-sm text-gray-600">
+          Move task <span className="font-medium">"{task.task_name}"</span> to a new phase/status:
+        </div>
 
           <div className="mb-6"> {/* Increased bottom margin */}
             <TreeSelect<'project' | 'phase' | 'status'>
@@ -92,22 +94,21 @@ export default function MoveTaskDialog({
             />
           </div>
 
-          {/* No switches needed for move */}
+        {/* No switches needed for move */}
 
-          <div className="flex justify-end space-x-2">
-            <Button id='cancel-move-button' variant="ghost" onClick={onClose} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button
-              id='confirm-move-button'
-              onClick={handleConfirm}
-              disabled={!selectedTargetPath?.['phase'] || selectedTargetPath?.['phase'] === task.phase_id}
-            >
-              Confirm Move
-            </Button>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+        <div className="flex justify-end space-x-2">
+          <Button id='cancel-move-button' variant="ghost" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button
+            id='confirm-move-button'
+            onClick={handleConfirm}
+            disabled={!selectedTargetPath?.['phase'] || selectedTargetPath?.['phase'] === task.phase_id}
+          >
+            Confirm Move
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -127,7 +127,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
         });
 
         contactTagsRef.current = newContactTags;
-        setAllUniqueTags(allTags);
+        setAllUniqueTags(allTags.map(tag => tag.tag_text));
         
       } catch (error) {
         console.error('Error fetching tags:', error);
@@ -269,7 +269,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
           const message = err.message.replace('VALIDATION_ERROR:', '').trim();
           if (message.includes('associated records:')) {
             setDeleteError(
-              `Cannot delete contact\n${message}\n\nTo maintain data integrity, you can edit the contact and set its status to inactive instead.`
+              `Cannot delete contact\n${message}\n\nTo maintain data integrity, you can edit the contact and mark it as inactive instead.`
             );
           } else {
             setDeleteError(message);
@@ -418,7 +418,6 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
             entityId={record.contact_name_id}
             entityType="contact"
             initialTags={contactTagsRef.current[record.contact_name_id] || []}
-            existingTags={allUniqueTags}
             onTagsChange={(tags) => handleTagsChange(record.contact_name_id, tags)}
           />
         );

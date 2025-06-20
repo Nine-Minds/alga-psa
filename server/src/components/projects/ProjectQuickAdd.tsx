@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Input } from 'server/src/components/ui/Input';
@@ -12,6 +12,7 @@ import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { ContactPicker } from 'server/src/components/ui/ContactPicker'; // Import ContactPicker
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { getContactsByCompany, getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
 import { IContact } from 'server/src/interfaces';
 import { getCurrentUser, getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
@@ -39,6 +40,8 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   const [statuses, setStatuses] = useState<IStatus[]>([]);
   const [selectedStatusId, setSelectedStatusId] = useState<string | null>(null);
   const [budgetedHours, setBudgetedHours] = useState<string>('');
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -49,9 +52,6 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
         ]);
         setUsers(allUsers);
         setStatuses(projectStatuses);
-        if (projectStatuses.length > 0) {
-          setSelectedStatusId(projectStatuses[0].status_id);
-        }
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -76,12 +76,34 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (projectName.trim() === '') return;
-    if (!selectedCompanyId || !selectedStatusId) return;
+    setHasAttemptedSubmit(true);
+    
+    const errors: string[] = [];
+    if (projectName.trim() === '') {
+      errors.push('Project name is required');
+    }
+    if (!selectedCompanyId) {
+      errors.push('Client is required');
+    }
+    if (!selectedStatusId) {
+      errors.push('Status is required');
+    }
+    
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    
+    setValidationErrors([]);
 
     setIsSubmitting(true);
 
     try {
+      // These checks are redundant since we validate above, but TypeScript needs them
+      if (!selectedCompanyId || !selectedStatusId) {
+        return;
+      }
+      
       const wbsCode = await generateNextWbsCode();
       const projectData: Omit<IProject, 'project_id' | 'created_at' | 'updated_at' | 'tenant'> = {
         project_name: projectName,
@@ -100,6 +122,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
       // Create the project
       const newProject = await createProject(projectData);
       
+      
       onProjectAdded(newProject);
       
       onClose();
@@ -116,20 +139,36 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   };
 
   return (
-    <Dialog.Root open={true} onOpenChange={onClose}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black bg-opacity-50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-[600px]">
-          <Dialog.Title className="text-xl font-semibold mb-4">
-            Add New Project
-          </Dialog.Title>
+    <Dialog 
+      isOpen={true} 
+      onClose={() => {
+        setHasAttemptedSubmit(false);
+        setValidationErrors([]);
+        onClose();
+      }}
+      title="Add New Project"
+      className="max-w-[600px]"
+    >
+      <DialogContent>
+          {hasAttemptedSubmit && validationErrors.length > 0 && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>
+                Please fix the following errors:
+                <ul className="list-disc pl-5 mt-1 text-sm">
+                  {validationErrors.map((err, index) => (
+                    <li key={index}>{err}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
           <form onSubmit={handleSubmit} className="flex flex-col">
             <div className="space-y-4">
               <TextArea
                 value={projectName}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setProjectName(e.target.value)}
-                placeholder="Project Name..."
-                className="w-full text-lg font-semibold p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="Project Name *"
+                className={`w-full text-lg font-semibold p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 ${hasAttemptedSubmit && projectName.trim() === '' ? 'border-red-500' : 'border-gray-300'}`}
                 rows={1}
                 autoFocus
               />
@@ -141,7 +180,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                 rows={3}
               />
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status *</label>
                 <CustomSelect
                   value={selectedStatusId || ''}
                   onValueChange={setSelectedStatusId}
@@ -150,10 +189,11 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                     label: status.name
                   }))}
                   placeholder="Select Status"
+                  className={hasAttemptedSubmit && !selectedStatusId ? 'ring-1 ring-red-500' : ''}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Client *</label>
                 <CompanyPicker
                   id='company-picker'
                   companies={companies}
@@ -163,6 +203,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                   onFilterStateChange={setFilterState}
                   clientTypeFilter={clientTypeFilter}
                   onClientTypeFilterChange={setClientTypeFilter}
+                  className={hasAttemptedSubmit && !selectedCompanyId ? 'ring-1 ring-red-500' : ''}
                 />
               </div>
               <div>
@@ -237,18 +278,21 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                 </div>
               </div>
               <div className="flex justify-between mt-6">
-                <Button id='cancel-button' variant="ghost" onClick={onClose} disabled={isSubmitting}>
+                <Button id='cancel-button' variant="ghost" onClick={() => {
+                  setHasAttemptedSubmit(false);
+                  setValidationErrors([]);
+                  onClose();
+                }} disabled={isSubmitting}>
                   Cancel
                 </Button>
-                <Button id='create-button' type="submit" disabled={isSubmitting || !selectedCompanyId || !selectedStatusId}>
+                <Button id='create-button' type="submit" disabled={isSubmitting} className={!projectName.trim() || !selectedCompanyId || !selectedStatusId ? 'opacity-50' : ''}>
                   {isSubmitting ? 'Creating...' : 'Create Project'}
                 </Button>
               </div>
             </div>
           </form>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+        </DialogContent>
+    </Dialog>
   );
 };
 

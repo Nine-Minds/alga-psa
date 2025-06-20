@@ -6,6 +6,7 @@ import { BlockNoteDocumentHandler } from './BlockNoteDocumentHandler';
 import { PDFDocumentHandler } from './PDFDocumentHandler';
 import { ImageDocumentHandler } from './ImageDocumentHandler';
 import { OfficeDocumentHandler } from './OfficeDocumentHandler';
+import { VideoDocumentHandler } from './VideoDocumentHandler';
 import { GenericFileDocumentHandler } from './GenericFileDocumentHandler';
 
 /**
@@ -47,6 +48,7 @@ export class DocumentHandlerRegistry {
     // File-based document handlers
     this.handlers.push(new PDFDocumentHandler());
     this.handlers.push(new ImageDocumentHandler());
+    this.handlers.push(new VideoDocumentHandler());
     this.handlers.push(new OfficeDocumentHandler());
     
     // Generic handler should be last as it's a fallback

@@ -12,8 +12,6 @@ import { TextArea } from 'server/src/components/ui/TextArea';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
   DialogFooter
 } from 'server/src/components/ui/Dialog';
@@ -106,6 +104,8 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
   const [isLoadingCountries, setIsLoadingCountries] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   useEffect(() => {
     if (open) {
@@ -137,6 +137,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
         }
       };
 
+
       fetchUsers();
       fetchCountries();
     } else {
@@ -145,6 +146,8 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       setContactData(initialContactData);
       setIsSubmitting(false);
       setError(null);
+      setHasAttemptedSubmit(false);
+      setValidationErrors([]);
     }
   }, [open]);
 
@@ -152,8 +155,22 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
     e.preventDefault();
     if (isSubmitting) return;
 
+    setHasAttemptedSubmit(true);
+    const errors: string[] = [];
+    
+    // Validate required fields
+    if (!formData.company_name.trim()) {
+      errors.push('Company name');
+    }
+    
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
+    setValidationErrors([]);
     try {
       const dataToSend = {
         ...formData,
@@ -197,6 +214,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
         }
       }
 
+
       toast.success(`Company "${newCompany.company_name}" created successfully.`);
       onCompanyAdded(newCompany);
       onOpenChange(false);
@@ -205,6 +223,12 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       const errorMessage = error.message || "Failed to create company. Please try again.";
       setError(errorMessage);
       setIsSubmitting(false);
+    }
+  };
+
+  const clearErrorIfSubmitted = () => {
+    if (hasAttemptedSubmit) {
+      setValidationErrors([]);
     }
   };
 
@@ -257,18 +281,31 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
     }));
   };
 
+
   return (
     <Dialog
       id="quick-add-company-dialog"
       isOpen={open}
-      onClose={() => onOpenChange(false)}>
+      onClose={() => onOpenChange(false)}
+      title="Add New Client">
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Add New Client</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} id="quick-add-company-form">
+        <form onSubmit={handleSubmit} id="quick-add-company-form" noValidate>
           <div className="max-h-[60vh] overflow-y-auto px-1 py-4 space-y-6">
+            
+            {/* Validation Errors */}
+            {hasAttemptedSubmit && validationErrors.length > 0 && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertDescription>
+                  <p className="font-medium mb-2">Please fill in the required fields:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    {validationErrors.map((err, index) => (
+                      <li key={index}>{err}</li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
             
             {/* Error Alert */}
             {error && (
@@ -292,10 +329,13 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                 <Input
                   data-automation-id="company-name-input"
                   value={formData.company_name}
-                  onChange={(e) => handleCompanyChange('company_name', e.target.value)}
-                  required
+                  onChange={(e) => {
+                    handleCompanyChange('company_name', e.target.value);
+                    clearErrorIfSubmitted();
+                  }}
+                  placeholder="Enter company name"
                   disabled={isSubmitting}
-                  className="w-full text-lg font-semibold p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className={`w-full text-lg font-semibold p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 ${hasAttemptedSubmit && !formData.company_name.trim() ? 'border-red-500' : 'border-gray-300'}`}
                 />
               </div>
 
@@ -467,6 +507,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               </div>
             </div>
 
+
             {/* Contact Information Section */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">
@@ -543,7 +584,11 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               type="button"
               variant="ghost"
               disabled={isSubmitting}
-              onClick={() => onOpenChange(false)}
+              onClick={() => {
+                setHasAttemptedSubmit(false);
+                setValidationErrors([]);
+                onOpenChange(false);
+              }}
             >
               Cancel
             </Button>
@@ -551,7 +596,8 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               id="create-company-btn"
               type="submit"
               form="quick-add-company-form"
-              disabled={isSubmitting || !formData.company_name}
+              disabled={isSubmitting}
+              className={!formData.company_name.trim() ? 'opacity-50' : ''}
             >
               {isSubmitting ? 'Creating...' : 'Create Client'}
             </Button>

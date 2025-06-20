@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { getEligibleBillingPlansForUI } from 'server/src/lib/utils/planDisambiguation';
 import { Button } from 'server/src/components/ui/Button';
 import { Card, CardContent, CardHeader } from 'server/src/components/ui/Card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
@@ -414,11 +414,9 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
           resetForm();
         }}
         id="usage-form-dialog"
+        title={editingUsage ? 'Edit Usage Record' : 'Add Usage Record'}
       >
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingUsage ? 'Edit Usage Record' : 'Add Usage Record'}</DialogTitle>
-          </DialogHeader>
           <div className="space-y-4">
             <div>
               <Label htmlFor="company-select">Company</Label>

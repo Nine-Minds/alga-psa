@@ -9,6 +9,7 @@ use "migrate.nu" *
 use "workflows.nu" *
 use "dev-env.nu" *
 use "build.nu" *
+use "config.nu" *
 
 # Main CLI entry point function
 def --wrapped main [
@@ -27,13 +28,16 @@ def --wrapped main [
        print "  nu main.nu -- dev-up [--detached] [--edition ce|ee]  # Start development environment"
        print "  nu main.nu dev-down               # Stop development environment"
        print ""
-       print "  nu main.nu dev-env-create <branch> [--edition ce|ee] [--use-latest] [--checkout] [--from-tag <tag>]"
+       print "  nu main.nu dev-env-create <branch> [--edition ce|ee] [--use-latest] [--checkout] [--from-tag <tag>] [--author-name <name>] [--author-email <email>]"
        print "    Create on-demand development environment for branch"
        print "    --use-latest: Use 'latest' tag instead of unique tag (avoids cache issues by default)"
        print "    --checkout: Checkout the branch locally (default: true)"
        print "    --from-tag: Deploy from existing image tag instead of building (mutually exclusive with --use-latest)"
+       print "    --author-name: Git author name for commits (e.g., \"John Doe\")"
+       print "    --author-email: Git author email for commits (e.g., \"john@example.com\")"
        print "    Example: nu main.nu dev-env-create my-feature --edition ee"
        print "    Example: nu main.nu dev-env-create my-feature --from-tag v1.2.3"
+       print "    Example: nu main.nu dev-env-create my-feature --author-name \"John Doe\" --author-email \"john@example.com\""
        print "  nu main.nu dev-env-list           # List active development environments"
        print "  nu main.nu dev-env-connect <branch>"
        print "    Connect to development environment with port forwarding"
@@ -89,6 +93,15 @@ def --wrapped main [
        print "    Build all AI Docker images (API and Web)"
        print "    Example: nu main.nu build-ai-all --push"
        print "    Example: nu main.nu build-ai-all --use-latest --push"
+       print ""
+       print "  nu main.nu config init [--force]  # Initialize CLI configuration"
+       print "    Set up default author information and preferences"
+       print "    Example: nu main.nu config init"
+       print "  nu main.nu config show            # Display current configuration"
+       print "  nu main.nu config get <key>       # Get a specific config value"
+       print "    Example: nu main.nu config get dev_env.author.name"
+       print "  nu main.nu config set <key> <value>  # Set a specific config value"
+       print "    Example: nu main.nu config set dev_env.author.email \"john@example.com\""
        print ""
        print "Alternatively, source the script ('source main.nu') and run commands directly:"
        print "  run-migrate <action>"
@@ -112,13 +125,16 @@ def --wrapped main [
        print "  nu main.nu -- dev-up [--detached] [--edition ce|ee]  # Start development environment"
        print "  nu main.nu dev-down               # Stop development environment"
        print ""
-       print "  nu main.nu dev-env-create <branch> [--edition ce|ee] [--use-latest] [--checkout] [--from-tag <tag>]"
+       print "  nu main.nu dev-env-create <branch> [--edition ce|ee] [--use-latest] [--checkout] [--from-tag <tag>] [--author-name <name>] [--author-email <email>]"
        print "    Create on-demand development environment for branch"
        print "    --use-latest: Use 'latest' tag instead of unique tag (avoids cache issues by default)"
        print "    --checkout: Checkout the branch locally (default: true)"
        print "    --from-tag: Deploy from existing image tag instead of building (mutually exclusive with --use-latest)"
+       print "    --author-name: Git author name for commits (e.g., \"John Doe\")"
+       print "    --author-email: Git author email for commits (e.g., \"john@example.com\")"
        print "    Example: nu main.nu dev-env-create my-feature --edition ee"
        print "    Example: nu main.nu dev-env-create my-feature --from-tag v1.2.3"
+       print "    Example: nu main.nu dev-env-create my-feature --author-name \"John Doe\" --author-email \"john@example.com\""
        print "  nu main.nu dev-env-list           # List active development environments"
        print "  nu main.nu dev-env-connect <branch>"
        print "    Connect to development environment with port forwarding"
@@ -174,6 +190,15 @@ def --wrapped main [
        print "    Build all AI Docker images (API and Web)"
        print "    Example: nu main.nu build-ai-all --push"
        print "    Example: nu main.nu build-ai-all --use-latest --push"
+       print ""
+       print "  nu main.nu config init [--force]  # Initialize CLI configuration"
+       print "    Set up default author information and preferences"
+       print "    Example: nu main.nu config init"
+       print "  nu main.nu config show            # Display current configuration"
+       print "  nu main.nu config get <key>       # Get a specific config value"
+       print "    Example: nu main.nu config get dev_env.author.name"
+       print "  nu main.nu config set <key> <value>  # Set a specific config value"
+       print "    Example: nu main.nu config set dev_env.author.email \"john@example.com\""
        print "\nAlternatively, source the script ('source main.nu') and run commands directly:"
        print "  run-migrate <action>"
        print "  dev-up [--detached] [--edition ce|ee]"
@@ -182,6 +207,7 @@ def --wrapped main [
        print "  register-workflow <workflow_name>"
        print "  dev-env-create <branch> [options]"
        print "  dev-env-list, dev-env-connect, dev-env-destroy, dev-env-status"
+       print "  init-config, show-config, get-config-value, set-config-value"
        return # Exit if arguments are missing
    }
    
@@ -242,11 +268,25 @@ def --wrapped main [
                "latest"
            }
            
+           let author_name_idx = ($command_args | enumerate | where {|item| $item.item == "--author-name"} | get 0?.index | default null)
+           let author_name = if $author_name_idx != null { 
+               ($command_args | get ($author_name_idx + 1) | default "")
+           } else {
+               ""
+           }
+           
+           let author_email_idx = ($command_args | enumerate | where {|item| $item.item == "--author-email"} | get 0?.index | default null)
+           let author_email = if $author_email_idx != null { 
+               ($command_args | get ($author_email_idx + 1) | default "")
+           } else {
+               ""
+           }
+           
            let use_latest = ($command_args | any { |arg| $arg == "--use-latest" })
            let checkout = not ($command_args | any { |arg| $arg == "--no-checkout" })
            
            # Call the dev-env-create command
-           dev-env-create $branch --edition $edition --use-latest=$use_latest --checkout=$checkout --from-tag $from_tag
+           dev-env-create $branch --edition $edition --use-latest=$use_latest --checkout=$checkout --from-tag $from_tag --author-name $author_name --author-email $author_email
        }
        "dev-env-list" => {
            dev-env-list
@@ -463,8 +503,56 @@ def --wrapped main [
                build-ai-all --tag $tag
            }
        }
+       "config" => {
+           let subcommand = ($args | get 1? | default null)
+           
+           if $subcommand == null {
+               print $"($env.ALGA_COLOR_RED)config command requires a subcommand: init, show, get, set($env.ALGA_COLOR_RESET)"
+               return
+           }
+           
+           match $subcommand {
+               "init" => {
+                   let force = ($args | skip 2 | any { |arg| $arg == "--force" })
+                   if $force {
+                       init-config --force
+                   } else {
+                       init-config
+                   }
+               }
+               "show" => {
+                   show-config
+               }
+               "get" => {
+                   let key = ($args | get 2? | default null)
+                   if $key == null {
+                       error make { msg: $"($env.ALGA_COLOR_RED)config get requires a key argument($env.ALGA_COLOR_RESET)" }
+                   }
+                   
+                   let value = get-config-value $key
+                   if $value == null {
+                       print $"($env.ALGA_COLOR_YELLOW)Config key '($key)' not found($env.ALGA_COLOR_RESET)"
+                   } else {
+                       print $value
+                   }
+               }
+               "set" => {
+                   let key = ($args | get 2? | default null)
+                   let value = ($args | get 3? | default null)
+                   
+                   if $key == null or $value == null {
+                       error make { msg: $"($env.ALGA_COLOR_RED)config set requires key and value arguments($env.ALGA_COLOR_RESET)" }
+                   }
+                   
+                   set-config-value $key $value
+               }
+               _ => {
+                   error make { msg: $"($env.ALGA_COLOR_RED)Unknown config subcommand: '($subcommand)'. Must be 'init', 'show', 'get', or 'set'.($env.ALGA_COLOR_RESET)" }
+               }
+           }
+       }
        _ => {
-           error make { msg: $"($env.ALGA_COLOR_RED)Unknown command: '($command)'. Must be 'migrate', 'dev-up', 'dev-down', 'dev-env-*', 'dev-env-force-cleanup', 'update-workflow', 'register-workflow', 'build-image', 'build-all-images', 'build-code-server', 'build-ai-api', 'build-ai-web', 'build-ai-web-k8s', or 'build-ai-all'.($env.ALGA_COLOR_RESET)" }
+           error make { msg: $"($env.ALGA_COLOR_RED)Unknown command: '($command)'. Must be 'migrate', 'dev-up', 'dev-down', 'dev-env-*', 'dev-env-force-cleanup', 'update-workflow', 'register-workflow', 'build-image', 'build-all-images', 'build-code-server', 'build-ai-api', 'build-ai-web', 'build-ai-web-k8s', 'build-ai-all', or 'config'.($env.ALGA_COLOR_RESET)" }
        }
    }
 }

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { signOut } from 'next-auth/react';
-import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogDescription, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 
 interface SignOutDialogProps {
@@ -19,13 +19,14 @@ export default function SignOutDialog({ isOpen, onClose }: SignOutDialogProps) {
   };
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose}>
-      <DialogHeader>
-        <DialogTitle>Sign Out</DialogTitle>
-        <DialogDescription>
-          Are you sure you want to sign out?
-        </DialogDescription>
-      </DialogHeader>
+    <Dialog 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title="Sign Out"
+    >
+      <DialogDescription>
+        Are you sure you want to sign out?
+      </DialogDescription>
       <DialogFooter>
         <Button
           id='cancel-button'

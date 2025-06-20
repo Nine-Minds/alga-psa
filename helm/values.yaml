@@ -15,6 +15,7 @@ setup:
     credentials: harbor-credentials
     tag: "latest"
   pullPolicy: Always
+  runMigrations: true
 
 server:
   image: 

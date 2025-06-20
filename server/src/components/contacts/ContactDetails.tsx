@@ -31,7 +31,8 @@ import { IChannel } from 'server/src/interfaces/channel.interface';
 import { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import { TagManager } from 'server/src/components/tags';
-import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
+import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
+import { useTags } from 'server/src/context/TagContext';
 import ContactAvatarUpload from 'server/src/components/client-portal/contacts/ContactAvatarUpload';
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
 import { getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
@@ -141,7 +142,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   const [currentUser, setCurrentUser] = useState<IUserWithRoles | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [tags, setTags] = useState<ITag[]>([]);
-  const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
+  const { tags: allTags } = useTags();
   const [ticketFormOptions, setTicketFormOptions] = useState<{
     statusOptions: SelectOption[];
     priorityOptions: SelectOption[];
@@ -222,15 +223,13 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     const fetchAvatarAndTags = async () => {
       if (userId && contact.tenant) {
         try {
-          const [contactAvatarUrl, fetchedTags, allTags] = await Promise.all([
+          const [contactAvatarUrl, fetchedTags] = await Promise.all([
             getContactAvatarUrl(contact.contact_name_id, contact.tenant),
-            findTagsByEntityIds([contact.contact_name_id], 'contact'),
-            findAllTagsByType('contact')
+            findTagsByEntityIds([contact.contact_name_id], 'contact')
           ]);
           
           setAvatarUrl(contactAvatarUrl);
           setTags(fetchedTags);
-          setAllTagTexts(allTags);
         } catch (error) {
           console.error('Error fetching avatar and tags:', error);
         }
@@ -405,7 +404,6 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               entityId={editedContact.contact_name_id}
               entityType="contact"
               initialTags={tags}
-              existingTags={allTagTexts}
               onTagsChange={handleTagsChange}
             />
           </div>

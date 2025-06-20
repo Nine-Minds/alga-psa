@@ -5,7 +5,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { UnitOfMeasureInput } from './UnitOfMeasureInput';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/Dialog';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { ConfirmationDialog } from '../ui/ConfirmationDialog';
 // Import new action and types
 import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse } from 'server/src/lib/actions/serviceActions';
@@ -526,11 +526,12 @@ const ServiceCatalogManager: React.FC = () => {
           </div>
         </CardContent>
       </Card>
-      <Dialog isOpen={isEditDialogOpen} onClose={() => setIsEditDialogOpen(false)}>
+      <Dialog 
+        isOpen={isEditDialogOpen} 
+        onClose={() => setIsEditDialogOpen(false)} 
+        title="Edit Service"
+      >
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Service</DialogTitle>
-          </DialogHeader>
           <div className="space-y-4">
             <Input
               placeholder="Service Name"

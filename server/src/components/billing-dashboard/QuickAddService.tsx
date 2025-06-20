@@ -1,12 +1,13 @@
 'use client'
 import React, { useState, useEffect } from 'react'
-import * as Dialog from '@radix-ui/react-dialog'
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog'
 import { Button } from 'server/src/components/ui/Button'
 import { Input } from 'server/src/components/ui/Input'
 import { Label } from 'server/src/components/ui/Label'
 import CustomSelect from 'server/src/components/ui/CustomSelect'
 import { SearchableSelect } from 'server/src/components/ui/SearchableSelect'
 import { Switch } from 'server/src/components/ui/Switch'
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert'
 import { createService } from 'server/src/lib/actions/serviceActions'
 // Import getTaxRates and ITaxRate instead
 import { getTaxRates } from 'server/src/lib/actions/taxSettingsActions'; // Removed getActiveTaxRegions
@@ -24,9 +25,11 @@ interface QuickAddServiceProps {
 
 // Updated interface to use standard_service_type_id or custom_service_type_id
 // and tax_rate_id instead of old tax fields
-interface ServiceFormData extends Omit<IService, 'service_id' | 'tenant' | 'category_id'> { // Removed is_taxable, region_code from Omit
+interface ServiceFormData extends Omit<IService, 'service_id' | 'tenant' | 'category_id' | 'billing_method'> { // Added billing_method to Omit
   // Temporary field for UI selection - not sent to API
   service_type_id: string;
+  // Override billing_method to allow empty string for form state
+  billing_method: 'fixed' | 'per_unit' | '';
   // Fields that will be sent to API
   standard_service_type_id?: string;
   custom_service_type_id?: string;
@@ -66,6 +69,7 @@ const BILLING_METHOD_OPTIONS = [
 
 export function QuickAddService({ onServiceAdded, allServiceTypes }: QuickAddServiceProps) { // Destructure new prop
   const [open, setOpen] = useState(false)
+  const [triggerButton, setTriggerButton] = useState<HTMLButtonElement | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [categories, setCategories] = useState<IServiceCategory[]>([]) // Keep for now, might be replaced
   // State for tax rates instead of regions
@@ -73,6 +77,8 @@ export function QuickAddService({ onServiceAdded, allServiceTypes }: QuickAddSer
   // Renamed states back to focus only on tax rates
   const [isLoadingTaxRates, setIsLoadingTaxRates] = useState(true);
   const [errorTaxRates, setErrorTaxRates] = useState<string | null>(null);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const tenant = useTenant()
 
   // Initialize service state with service_type_id for UI selection
@@ -81,7 +87,7 @@ export function QuickAddService({ onServiceAdded, allServiceTypes }: QuickAddSer
     service_type_id: '', // Used for UI selection only
     standard_service_type_id: undefined,
     custom_service_type_id: undefined,
-    billing_method: 'fixed',
+    billing_method: '',
     default_rate: 0,
     unit_of_measure: '',
     // is_taxable and region_code removed
@@ -131,12 +137,30 @@ export function QuickAddService({ onServiceAdded, allServiceTypes }: QuickAddSer
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setHasAttemptedSubmit(true)
+    const errors: string[] = []
+    
     try {
       // Validate required fields
+      if (!serviceData.service_name.trim()) {
+        errors.push('Service name is required')
+      }
       if (!serviceData.service_type_id) { // Check ID
-        setError('Service Type is required') // Updated label
+        errors.push('Service type is required') // Updated label
+      }
+      if (!serviceData.default_rate || serviceData.default_rate === 0) {
+        errors.push('Default rate is required')
+      }
+      if (!serviceData.billing_method) {
+        errors.push('Billing method is required')
+      }
+      
+      if (errors.length > 0) {
+        setValidationErrors(errors)
         return
       }
+      
+      setValidationErrors([])
       // Removed category_id validation
 
       // Find the selected service type name for conditional checks
@@ -168,7 +192,7 @@ if (!selectedServiceType) {
 // Create base data without the service type IDs
 const baseData = {
   service_name: serviceData.service_name,
-  billing_method: serviceData.billing_method,
+  billing_method: serviceData.billing_method as 'fixed' | 'per_unit', // Cast to remove empty string type
   default_rate: serviceData.default_rate,
   unit_of_measure: serviceData.unit_of_measure,
   // is_taxable and region_code removed
@@ -204,7 +228,7 @@ console.log('[QuickAddService] Service created successfully');
         service_type_id: '', // Reset UI selection ID
         standard_service_type_id: undefined,
         custom_service_type_id: undefined,
-        billing_method: 'fixed',
+        billing_method: '',
         default_rate: 0,
         unit_of_measure: '',
         description: '',
@@ -217,6 +241,8 @@ console.log('[QuickAddService] Service created successfully');
         license_term: 'monthly'
       })
       setError(null)
+      setHasAttemptedSubmit(false)
+      setValidationErrors([])
     } catch (error) {
       console.error('[QuickAddService] Error creating service:', error)
       setError('Failed to create service')
@@ -228,31 +254,55 @@ console.log('[QuickAddService] Service created successfully');
   // Removed regionMap creation
 
   return (
-    <Dialog.Root open={open} onOpenChange={setOpen}>
-      <Dialog.Trigger asChild>
-        <Button id='add-service'>Add Service</Button>
-      </Dialog.Trigger>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-[550px]">
-          <Dialog.Title className="text-lg font-bold mb-4">Add New Service</Dialog.Title>
+    <>
+      <Button 
+        ref={setTriggerButton}
+        id='add-service' 
+        onClick={() => setOpen(true)}
+      >
+        Add Service
+      </Button>
+      <Dialog 
+        isOpen={open} 
+        onClose={() => {
+          setOpen(false);
+          setHasAttemptedSubmit(false);
+          setValidationErrors([]);
+        }}
+        title="Add New Service"
+        className="max-w-[550px]"
+      >
+        <DialogContent>
           {error && <div className="text-red-500 mb-4">{error}</div>}
           {errorTaxRates && <div className="text-red-500 mb-4">{errorTaxRates}</div>} {/* Show tax rate error */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {hasAttemptedSubmit && validationErrors.length > 0 && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>
+                Please fix the following errors:
+                <ul className="list-disc pl-5 mt-1 text-sm">
+                  {validationErrors.map((err, index) => (
+                    <li key={index}>{err}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             <div>
-              <Label htmlFor="serviceName" className="block text-sm font-medium text-gray-700 mb-1">Service Name</Label>
+              <Label htmlFor="serviceName" className="block text-sm font-medium text-gray-700 mb-1">Service Name *</Label>
               <Input
                 id="serviceName"
                 value={serviceData.service_name}
                 onChange={(e) => setServiceData({ ...serviceData, service_name: e.target.value })}
                 placeholder="Service Name"
                 required
+                className={hasAttemptedSubmit && !serviceData.service_name.trim() ? 'border-red-500' : ''}
               />
             </div>
 
             {/* Updated to Service Type dropdown using allServiceTypes */}
             <div>
-              <Label htmlFor="serviceType" className="block text-sm font-medium text-gray-700 mb-1">Service Type</Label>
+              <Label htmlFor="serviceType" className="block text-sm font-medium text-gray-700 mb-1">Service Type *</Label>
               <SearchableSelect
                 id="serviceType"
                 options={allServiceTypes.map(type => ({ value: type.id, label: type.name }))}
@@ -277,18 +327,18 @@ console.log('[QuickAddService] Service created successfully');
                 }}
                 placeholder="Select service type..."
                 emptyMessage="No service types found"
-                className="w-full"
+                className={`w-full ${hasAttemptedSubmit && !serviceData.service_type_id ? 'ring-1 ring-red-500' : ''}`}
               />
             </div>
 
             <div>
-              <Label htmlFor="billingMethod" className="block text-sm font-medium text-gray-700 mb-1">Billing Method</Label>
+              <Label htmlFor="billingMethod" className="block text-sm font-medium text-gray-700 mb-1">Billing Method *</Label>
               <CustomSelect
                 options={BILLING_METHOD_OPTIONS}
                 value={serviceData.billing_method}
-                onValueChange={(value) => setServiceData({ ...serviceData, billing_method: value as 'fixed' | 'per_unit' })}
+                onValueChange={(value) => setServiceData({ ...serviceData, billing_method: value as 'fixed' | 'per_unit' | '' })}
                 placeholder="Select billing method..."
-                className="w-full"
+                className={`w-full ${hasAttemptedSubmit && !serviceData.billing_method ? 'ring-1 ring-red-500' : ''}`}
               />
             </div>
 
@@ -303,15 +353,16 @@ console.log('[QuickAddService] Service created successfully');
             </div>
 
             <div>
-              <Label htmlFor="defaultRate" className="block text-sm font-medium text-gray-700 mb-1">Default Rate</Label>
+              <Label htmlFor="defaultRate" className="block text-sm font-medium text-gray-700 mb-1">Default Rate *</Label>
               <Input
                 id="defaultRate"
                 type="number"
                 step="0.01" // Allow cents
                 value={serviceData.default_rate / 100} // Display in dollars
                 onChange={(e) => setServiceData({ ...serviceData, default_rate: Math.round(parseFloat(e.target.value) * 100) || 0 })} // Store in cents, default to 0 if invalid
-                placeholder="Default Rate"
+                placeholder="Default Rate ($) *"
                 required
+                className={hasAttemptedSubmit && (!serviceData.default_rate || serviceData.default_rate === 0) ? 'border-red-500' : ''}
               />
             </div>
             {/* Conditional Unit of Measure */}
@@ -339,7 +390,7 @@ console.log('[QuickAddService] Service created successfully');
               <CustomSelect
                   id="quick-add-service-tax-rate-select"
                   value={serviceData.tax_rate_id || ''} // Bind to tax_rate_id
-                  placeholder={isLoadingTaxRates ? "Loading tax rates..." : "Select Tax Rate (or leave blank for Non-Taxable)"}
+                  placeholder={isLoadingTaxRates ? "Loading tax rates..." : "Select Tax Rate (optional)"}
                   onValueChange={(value) => setServiceData({ ...serviceData, tax_rate_id: value || null })} // Set null if cleared
                   // Populate with fetched tax rates, construct label using regionMap
                   // Use description or region_code directly from the rate object
@@ -416,14 +467,18 @@ console.log('[QuickAddService] Service created successfully');
             )}
 
             <div className="flex justify-end space-x-2 pt-4">
-              <Button id='cancel-button' type="button" variant="outline" onClick={() => setOpen(false)}>
+              <Button id='cancel-button' type="button" variant="outline" onClick={() => {
+                setOpen(false);
+                setHasAttemptedSubmit(false);
+                setValidationErrors([]);
+              }}>
                 Cancel
               </Button>
-              <Button id='save-button' type="submit">Save Service</Button>
+              <Button id='save-button' type="submit" className={!serviceData.service_name || !serviceData.service_type_id || !serviceData.default_rate || !serviceData.billing_method ? 'opacity-50' : ''}>Save Service</Button>
             </div>
           </form>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

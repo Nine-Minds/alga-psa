@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Button } from 'server/src/components/ui/Button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import type { ICompanyBillingPlan } from 'server/src/interfaces/billing.interfaces';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
 import { X, Package } from 'lucide-react';
@@ -99,15 +99,13 @@ const PlanDetailsDialog: React.FC<PlanDetailsDialogProps> = React.memo(({
   );
   
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} data-automation-id="plan-details-dialog">
-      <DialogHeader>
-        <DialogTitle>
-          <div className="flex items-center">
-            <Package className="mr-2 h-5 w-5" />
-            Plan Details
-          </div>
-        </DialogTitle>
-      </DialogHeader>
+    <Dialog 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title="Plan Details" 
+      data-automation-id="
+      plan-details-dialog"
+    >
       <DialogContent>
         <div data-automation-id="plan-details-content">
           {isLoading ? loadingSkeleton : planContent}

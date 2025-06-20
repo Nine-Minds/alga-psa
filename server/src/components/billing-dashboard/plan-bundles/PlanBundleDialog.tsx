@@ -1,14 +1,13 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { AlertCircle } from 'lucide-react';
 import { IPlanBundle } from 'server/src/interfaces/planBundle.interfaces';
 import { createPlanBundle, updatePlanBundle } from 'server/src/lib/actions/planBundleActions';
 import { useTenant } from 'server/src/components/TenantProvider';
@@ -25,8 +24,8 @@ export function PlanBundleDialog({ onBundleAdded, editingBundle, onClose, trigge
   const [bundleName, setBundleName] = useState(editingBundle?.bundle_name || '');
   const [bundleDescription, setBundleDescription] = useState(editingBundle?.bundle_description || ''); // Renamed state and field
   const [isActive, setIsActive] = useState<boolean>(editingBundle?.is_active ?? true);
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const [showValidationSummary, setShowValidationSummary] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const tenant = useTenant()!;
 
   // Update form when editingBundle changes
@@ -39,28 +38,28 @@ export function PlanBundleDialog({ onBundleAdded, editingBundle, onClose, trigge
     }
   }, [editingBundle]);
 
-  // Validate form
-  const validateForm = (): Record<string, string> => {
-    const errors: Record<string, string> = {};
-
-    if (!bundleName.trim()) {
-      errors.bundleName = 'Bundle name is required';
+  const clearErrorIfSubmitted = () => {
+    if (hasAttemptedSubmit) {
+      setValidationErrors([]);
     }
-
-    return errors;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setHasAttemptedSubmit(true);
 
     // Validate form
-    const errors = validateForm();
-    setValidationErrors(errors);
+    const errors: string[] = [];
+    if (!bundleName.trim()) {
+      errors.push('Bundle name');
+    }
 
-    if (Object.keys(errors).length > 0) {
-      setShowValidationSummary(true);
+    if (errors.length > 0) {
+      setValidationErrors(errors);
       return;
     }
+    
+    setValidationErrors([]);
 
     try {
       const bundleData = {
@@ -85,7 +84,8 @@ export function PlanBundleDialog({ onBundleAdded, editingBundle, onClose, trigge
       }
     } catch (error) {
       console.error('Error saving plan bundle:', error);
-      // Handle error (e.g., show error message to user)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save plan bundle';
+      setValidationErrors([errorMessage]);
     }
   };
 
@@ -93,6 +93,8 @@ export function PlanBundleDialog({ onBundleAdded, editingBundle, onClose, trigge
     setBundleName('');
     setBundleDescription(''); // Use renamed state setter
     setIsActive(true);
+    setHasAttemptedSubmit(false);
+    setValidationErrors([]);
   };
 
   const handleClose = () => {
@@ -104,58 +106,53 @@ export function PlanBundleDialog({ onBundleAdded, editingBundle, onClose, trigge
   };
 
   return (
-    <Dialog.Root
-      open={open || !!editingBundle}
-      onOpenChange={(isOpen) => {
-        if (!isOpen) {
-          handleClose();
-        } else if (editingBundle) {
-          setBundleName(editingBundle.bundle_name);
-          setBundleDescription(editingBundle.bundle_description || ''); // Use renamed state setter and field
-          setIsActive(editingBundle.is_active);
-        }
-        setOpen(isOpen);
-      }}
-    >
+    <>
       {triggerButton && (
-        <Dialog.Trigger asChild>
+        <div onClick={() => {
+          if (editingBundle) {
+            setBundleName(editingBundle.bundle_name);
+            setBundleDescription(editingBundle.bundle_description || '');
+            setIsActive(editingBundle.is_active);
+          }
+          setOpen(true);
+        }}>
           {triggerButton}
-        </Dialog.Trigger>
+        </div>
       )}
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-[500px] max-h-[90vh] overflow-y-auto">
-          <Dialog.Title className="text-lg font-medium text-gray-900 mb-2">
-            {editingBundle ? 'Edit Plan Bundle' : 'Add New Plan Bundle'}
-            {showValidationSummary && Object.keys(validationErrors).length > 0 && (
-              <Alert variant="destructive" className="mt-2">
-                <AlertCircle className="h-4 w-4" />
+      <Dialog
+        isOpen={open || !!editingBundle}
+        onClose={handleClose}
+        title={editingBundle ? 'Edit Plan Bundle' : 'Add New Plan Bundle'}
+        className="max-w-lg"
+      >
+        <DialogContent>
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            {hasAttemptedSubmit && validationErrors.length > 0 && (
+              <Alert variant="destructive" className="mb-4">
                 <AlertDescription>
-                  Please fix the following errors:
-                  <ul className="list-disc pl-5 mt-1 text-sm">
-                    {Object.entries(validationErrors).map(([field, message]) => (
-                      <li key={field}>{message}</li>
+                  <p className="font-medium mb-2">Please fill in the required fields:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    {validationErrors.map((err, index) => (
+                      <li key={index}>{err}</li>
                     ))}
                   </ul>
                 </AlertDescription>
               </Alert>
             )}
-          </Dialog.Title>
-          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="bundle-name">Bundle Name</Label>
+              <Label htmlFor="bundle-name">Bundle Name *</Label>
               <Input
                 id="bundle-name"
                 type="text"
                 value={bundleName}
-                onChange={(e) => setBundleName(e.target.value)}
+                onChange={(e) => {
+                  setBundleName(e.target.value);
+                  clearErrorIfSubmitted();
+                }}
                 placeholder="Enter bundle name"
                 required
-                className={validationErrors.bundleName ? 'border-red-500' : ''}
+                className={hasAttemptedSubmit && !bundleName.trim() ? 'border-red-500' : ''}
               />
-              {validationErrors.bundleName && (
-                <p className="text-red-500 text-xs mt-1">{validationErrors.bundleName}</p>
-              )}
             </div>
             
             <div>
@@ -175,7 +172,7 @@ export function PlanBundleDialog({ onBundleAdded, editingBundle, onClose, trigge
               onCheckedChange={setIsActive}
             />
             
-            <div className="flex justify-end gap-2 pt-4">
+            <DialogFooter>
               <Button
                 id="cancel-bundle-btn"
                 type="button"
@@ -187,13 +184,14 @@ export function PlanBundleDialog({ onBundleAdded, editingBundle, onClose, trigge
               <Button
                 id="save-bundle-btn"
                 type="submit"
+                className={!bundleName.trim() ? 'opacity-50' : ''}
               >
                 {editingBundle ? 'Update Bundle' : 'Create Bundle'}
               </Button>
-            </div>
+            </DialogFooter>
           </form>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

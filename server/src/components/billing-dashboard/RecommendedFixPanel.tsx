@@ -9,7 +9,7 @@ import { formatCurrency } from 'server/src/lib/utils/formatters';
 import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
 import { parseISO } from 'date-fns';
 import { ICreditReconciliationReport } from 'server/src/interfaces/billing.interfaces';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter } from 'server/src/components/ui/Dialog';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
@@ -395,14 +395,12 @@ const RecommendedFixPanel: React.FC<RecommendedFixPanelProps> = ({ report, onApp
       <Dialog 
         isOpen={isDialogOpen} 
         onClose={() => setIsDialogOpen(false)}
+        title={getFixDialogTitle()}
       >
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{getFixDialogTitle()}</DialogTitle>
-            <DialogDescription>
-              {getFixDialogDescription()}
-            </DialogDescription>
-          </DialogHeader>
+          <DialogDescription>
+            {getFixDialogDescription()}
+          </DialogDescription>
           
           {renderFixDialogContent()}
           

@@ -5,7 +5,7 @@ import { Button } from './Button';
 export interface ViewSwitcherOption<T extends string> {
   value: T;
   label: string;
-  icon: React.ComponentType<{ size?: number | string; className?: string }>;
+  icon?: React.ComponentType<{ size?: number | string; className?: string }>;
 }
 
 interface ViewSwitcherProps<T extends string> {
@@ -37,7 +37,7 @@ const ViewSwitcher = <T extends string>({
             aria-pressed={isActive}
             title={`Switch to ${option.label} view`}
           >
-            <IconComponent className="h-4 w-4 mr-2" />
+            {IconComponent && <IconComponent className="h-4 w-4 mr-2" />}
             {option.label}
           </Button>
         );

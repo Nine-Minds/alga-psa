@@ -133,6 +133,8 @@ services:
       hocuspocus:
         condition: service_started
         required: false
+      setup:
+        condition: service_completed_successfully
 
   setup:
     build:

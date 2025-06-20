@@ -1,3 +1,4 @@
+{{- if .Values.setup.runMigrations }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -94,3 +95,4 @@ spec:
               value: {{ .Values.config.db.server_password | quote }}
               {{- end }}
             {{- end }}
+{{- end }}

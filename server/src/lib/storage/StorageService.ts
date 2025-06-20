@@ -35,7 +35,7 @@ function changeFileExtension(filename: string, newExtension: string): string {
 }
  
 export class StorageService {
-  async getFileReadStream(fileId: string): Promise<Readable> {
+  async getFileReadStream(fileId: string, range?: { start: number; end: number }): Promise<Readable> {
     const { knex } = await createTenantKnex();
     const file = await FileStoreModel.findById(knex, fileId);
     if (!file) {
@@ -43,7 +43,7 @@ export class StorageService {
     }
     
     const provider = await StorageProviderFactory.createProvider();
-    return provider.getReadStream(file.storage_path);
+    return provider.getReadStream(file.storage_path, range);
   }
     private static getTypedProviderConfig<T>(providerType: string): T {
         const config = getStorageConfig();

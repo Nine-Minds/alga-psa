@@ -8,6 +8,8 @@ import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { Button } from '../ui/Button';
+import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
+import Spinner from 'server/src/components/ui/Spinner';
 import EntryPopup from './EntryPopup';
 import { CalendarStyleProvider } from './CalendarStyleProvider';
 import TechnicianSidebar from './TechnicianSidebar';
@@ -18,11 +20,12 @@ import { produce } from 'immer';
 import { Dialog } from 'server/src/components/ui/Dialog';
 import { WorkItemType, IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { useUsers } from 'server/src/hooks/useUsers';
-import { getCurrentUser, getCurrentUserPermissions } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser, getCurrentUserPermissions, getUserPreference, setUserPreference } from 'server/src/lib/actions/user-actions/userActions';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { WorkItemDrawer } from 'server/src/components/time-management/time-entry/time-sheet/WorkItemDrawer';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { Trash, ChevronLeft, ChevronRight, CalendarDays, Layers, Layers2 } from 'lucide-react';
+import ViewSwitcher from 'server/src/components/ui/ViewSwitcher';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Label } from 'server/src/components/ui/Label';
 
@@ -37,6 +40,7 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
   const [selectedEvent, setSelectedEvent] = useState<IScheduleEntry | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [date, setDate] = useState(new Date());
   const [focusedTechnicianId, setFocusedTechnicianId] = useState<string | null>(null);
@@ -47,6 +51,7 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
   const { openDrawer, closeDrawer } = useDrawer();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
+  const [showInactiveUsers, setShowInactiveUsers] = useState<boolean>(false);
   const calendarRef = useRef<HTMLDivElement>(null);
   const [hasScrolled, setHasScrolled] = useState(false);
   
@@ -94,22 +99,64 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
   };
 
   const Legend = () => (
-    <div className="flex justify-center space-x-4 mb-4 p-2 rounded-lg bg-opacity-50">
-      {Object.entries(workItemColors).map(([type, color]): JSX.Element => (
-        <div key={type} className="flex items-center">
-          <div
-            className="w-4 h-4 mr-2 rounded"
-            style={{ backgroundColor: color }}
-          ></div>
-          <span className="capitalize text-sm font-medium text-[rgb(var(--color-text-900))]">
-            {type === 'ad_hoc' ? 'Ad-hoc Entry' : type.replace('_', ' ')}
-          </span>
+    <div className="flex justify-between items-center mb-4 p-2 rounded-lg bg-opacity-50">
+      <div className="flex justify-center space-x-4 flex-1">
+        {Object.entries(workItemColors).map(([type, color]): JSX.Element => (
+          <div key={type} className="flex items-center">
+            <div
+              className="w-4 h-4 mr-2 rounded"
+              style={{ backgroundColor: color }}
+            ></div>
+            <span className="capitalize text-sm font-medium text-[rgb(var(--color-text-900))]">
+              {type === 'ad_hoc' ? 'Ad-hoc Entry' : type.replace('_', ' ')}
+            </span>
+          </div>
+        ))}
+      </div>
+      {canViewOthers && (
+        <div className="flex items-center">
+          <SwitchWithLabel
+            label="Show Inactive Users"
+            checked={showInactiveUsers}
+            onCheckedChange={setShowInactiveUsers}
+          />
         </div>
-      ))}
+      )}
     </div>
   );
 
   const { users: allTechnicians, loading: usersLoading, error: usersError } = useUsers();
+
+  // Filter technicians based on showInactiveUsers toggle
+  const displayedTechnicians = useMemo(() => {
+    if (!allTechnicians) return [];
+    
+    let filteredTechnicians = allTechnicians;
+    
+    // Filter out inactive users unless showInactiveUsers is true
+    if (!showInactiveUsers) {
+      filteredTechnicians = filteredTechnicians.filter(user => !user.is_inactive);
+    }
+    
+    // Sort technicians alphabetically by first name, then last name
+    return filteredTechnicians.sort((a, b) => {
+      // First sort by first name
+      const firstNameA = (a.first_name || '').toLowerCase();
+      const firstNameB = (b.first_name || '').toLowerCase();
+      
+      if (firstNameA < firstNameB) return -1;
+      if (firstNameA > firstNameB) return 1;
+      
+      // If first names are the same, sort by last name
+      const lastNameA = (a.last_name || '').toLowerCase();
+      const lastNameB = (b.last_name || '').toLowerCase();
+      
+      if (lastNameA < lastNameB) return -1;
+      if (lastNameA > lastNameB) return 1;
+      
+      return 0;
+    });
+  }, [allTechnicians, showInactiveUsers]);
 
   useEffect(() => {
     async function fetchUserDataAndPermissions() {
@@ -127,15 +174,29 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
           const canReadBroadly = fetchedPermissions.some((p: string) => p === 'user_schedule:read:all' || p === 'user_schedule:update');
           // Initialize with empty comparison list
           setComparisonTechnicianIds([]);
+
+          // Load saved view preference
+          try {
+            const savedView = await getUserPreference(user.user_id, 'defaultScheduleView');
+            if (savedView && ['month', 'week', 'day'].includes(savedView)) {
+              setView(savedView as View);
+            }
+          } catch (err) {
+            console.log('No saved view preference found, using default');
+          } finally {
+            setIsLoadingPreferences(false);
+          }
         } catch (err: any) {
            console.error("Failed to fetch user permissions:", err);
            setError(err.message || "Failed to load permissions.");
            setUserPermissions([]);
            setComparisonTechnicianIds([]);
+           setIsLoadingPreferences(false);
         }
       } else {
         setError("Failed to load current user.");
         setComparisonTechnicianIds([]);
+        setIsLoadingPreferences(false);
       }
     }
     fetchUserDataAndPermissions();
@@ -342,7 +403,7 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
         canModifySchedule={canModifySchedule}
         focusedTechnicianId={focusedTechnicianId}
         canAssignOthers={canAssignOthers}
-        users={usersLoading ? [] : (allTechnicians || [])}
+        users={usersLoading ? [] : displayedTechnicians}
         loading={usersLoading}
         error={usersError}
       />
@@ -514,8 +575,8 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
   };
 
   const handleSelectAll = () => {
-    const techIds = allTechnicians
-      ?.filter(tech => tech.user_id !== focusedTechnicianId && !tech.is_inactive)
+    const techIds = displayedTechnicians
+      ?.filter(tech => tech.user_id !== focusedTechnicianId)
       .map(tech => tech.user_id) || [];
     
     setComparisonTechnicianIds(techIds);
@@ -540,8 +601,16 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
       onNavigate(action);
     };
 
-    const handleViewChange = (newView: string) => {
+    const handleViewChange = async (newView: string) => {
       onView(newView as View);
+      // Save the view preference
+      if (currentUserId) {
+        try {
+          await setUserPreference(currentUserId, 'defaultScheduleView', newView);
+        } catch (err) {
+          console.error('Failed to save view preference:', err);
+        }
+      }
     }
 
     return (
@@ -574,20 +643,16 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
 
         <span className="rbc-toolbar-label text-lg font-semibold text-[rgb(var(--color-text-800))]">{label}</span>
 
-        <div className="rbc-btn-group space-x-1">
-          {(['month', 'week', 'day'] as View[]).map(v => (
-            <Button
-              id={`schedule-view-${v}`}
-              key={v}
-              variant={currentView === v ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => handleViewChange(v)}
-              className="capitalize"
-            >
-              {v}
-            </Button>
-          ))}
-        </div>
+        <ViewSwitcher
+          currentView={currentView}
+          onChange={handleViewChange}
+          options={[
+            { value: 'month', label: 'Month' },
+            { value: 'week', label: 'Week' },
+            { value: 'day', label: 'Day' }
+          ]}
+          className="border-[rgb(var(--color-border-200))]"
+        />
       </div>
     );
   };
@@ -740,16 +805,32 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
   }, [view, focusedTechnicianId, comparisonTechnicianIds, hoveredEventId, canModifySchedule, currentUserId, technicianMap, handleResizeStart, handleSelectEvent]);
 
 
+  // Show loading state until preferences are loaded
+  if (isLoadingPreferences) {
+    return (
+      <div className="h-full flex flex-col bg-[rgb(var(--color-background-50))]">
+        <CalendarStyleProvider />
+        <div className="flex-grow flex items-center justify-center">
+          <div className="text-center">
+            <Spinner size="lg" color="border-[rgb(var(--color-primary-500))]" className="mb-4" />
+            <div className="text-[rgb(var(--color-text-600))]">Loading schedule...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col bg-[rgb(var(--color-background-50))]">
       <CalendarStyleProvider />
+      
       <Legend />
       {/* Main content with sidebar and calendar */}
       <div className="flex-grow flex overflow-hidden">
         {/* Technician sidebar */}
         {canViewOthers && (
           <TechnicianSidebar
-            technicians={allTechnicians || []}
+            technicians={displayedTechnicians}
             focusedTechnicianId={focusedTechnicianId}
             comparisonTechnicianIds={comparisonTechnicianIds}
             onSetFocus={handleFocusTechnicianChange}
@@ -787,7 +868,17 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
                 view={view}
                 date={date}
                 scrollToTime={scrollToTime}
-                onView={(newView) => setView(newView)}
+                onView={async (newView) => {
+                  setView(newView);
+                  // Save the view preference when changed via calendar navigation
+                  if (currentUserId) {
+                    try {
+                      await setUserPreference(currentUserId, 'defaultScheduleView', newView);
+                    } catch (err) {
+                      console.error('Failed to save view preference:', err);
+                    }
+                  }
+                }}
                 onNavigate={handleNavigate}
                 selectable
                 onSelectSlot={handleSelectSlot}

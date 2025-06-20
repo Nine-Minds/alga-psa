@@ -2,11 +2,12 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Input } from 'server/src/components/ui/Input';
 import TextEditor from '../editor/TextEditor';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { DateTimePicker } from 'server/src/components/ui/DateTimePicker';
 import { PartialBlock } from '@blocknote/core';
 import InteractionIcon from 'server/src/components/ui/InteractionIcon';
@@ -70,6 +71,8 @@ export function QuickAddInteraction({
   const [contacts, setContacts] = useState<IContact[]>([]);
   const tenant = useTenant()!;
   const { data: session } = useSession();
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   
   const isEditMode = !!editingInteraction;
 
@@ -340,15 +343,28 @@ export function QuickAddInteraction({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setHasAttemptedSubmit(true);
+    
+    const errors: string[] = [];
+    
     if (!session?.user?.id) {
       console.error('User not authenticated');
       return;
     }
 
     if (!typeId) {
-      alert('Please select an interaction type');
+      errors.push('Please select an interaction type');
+    }
+    if (!title.trim()) {
+      errors.push('Title is required');
+    }
+    
+    if (errors.length > 0) {
+      setValidationErrors(errors);
       return;
     }
+    
+    setValidationErrors([]);
   
     try {
       const interactionData: Partial<IInteraction> = {
@@ -415,6 +431,8 @@ export function QuickAddInteraction({
         setSelectedContactId('');
         setSelectedCompanyId('');
         setIsNotesContentReady(false);
+        setHasAttemptedSubmit(false);
+        setValidationErrors([]);
       }
     } catch (error) {
       console.error(`Error ${isEditMode ? 'updating' : 'adding'} interaction:`, error);
@@ -436,26 +454,31 @@ export function QuickAddInteraction({
 
   return (
     <ReflectionContainer id={id} label="Quick Add Interaction">
-      <Dialog.Root open={isOpen} onOpenChange={onClose}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-          <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <Dialog.Title className="text-lg font-bold">
-                {isEditMode ? 'Edit Interaction' : 'Add New Interaction'}
-              </Dialog.Title>
-              <Dialog.Close asChild>
-                <Button 
-                  {...closeButtonProps}
-                  variant="ghost" 
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </Dialog.Close>
-            </div>
-            <form onSubmit={handleSubmit} className="space-y-4">
+      <Dialog 
+        isOpen={isOpen} 
+        onClose={() => {
+          setHasAttemptedSubmit(false);
+          setValidationErrors([]);
+          onClose();
+        }}
+        title={isEditMode ? 'Edit Interaction' : 'Add New Interaction'}
+        className="max-w-2xl"
+        hideCloseButton={false}
+      >
+        <DialogContent className="max-h-[80vh] overflow-y-auto">
+            {hasAttemptedSubmit && validationErrors.length > 0 && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertDescription>
+                  Please fix the following errors:
+                  <ul className="list-disc pl-5 mt-1 text-sm">
+                    {validationErrors.map((err, index) => (
+                      <li key={index}>{err}</li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
+            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
               <CustomSelect
                 {...typeSelectProps}
                 options={interactionTypes.map((type) => ({ 
@@ -464,8 +487,8 @@ export function QuickAddInteraction({
                 }))}
                 value={typeId}
                 onValueChange={setTypeId}
-                placeholder="Select Interaction Type *"
-                className="w-fit"
+                placeholder="Select Interaction Type"
+                className={`w-fit ${hasAttemptedSubmit && !typeId ? 'ring-1 ring-red-500' : ''}`}
                 required
               />
               <Input
@@ -475,6 +498,7 @@ export function QuickAddInteraction({
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Title"
                 required
+                className={hasAttemptedSubmit && !title.trim() ? 'border-red-500' : ''}
               />
               
               {/* Notes right under title */}
@@ -613,22 +637,26 @@ export function QuickAddInteraction({
                   type="button"
                   variant="outline"
                   className="flex-1"
-                  onClick={onClose}
+                  onClick={() => {
+                    setHasAttemptedSubmit(false);
+                    setValidationErrors([]);
+                    onClose();
+                  }}
                 >
                   Cancel
                 </Button>
                 <Button 
                   id="save-interaction-button"
                   type="submit" 
-                  className="flex-1"
+                  className={`flex-1 ${!typeId || !title.trim() ? 'opacity-50' : ''}`}
+                  disabled={false}
                 >
                   {isEditMode ? 'Update Interaction' : 'Save Interaction'}
                 </Button>
               </div>
             </form>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+          </DialogContent>
+      </Dialog>
     </ReflectionContainer>
   );
 }

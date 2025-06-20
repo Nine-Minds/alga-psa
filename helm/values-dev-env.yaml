@@ -80,11 +80,11 @@ devEnv:
         port: 4000
       resources:
         limits:
-          cpu: "1"
-          memory: "2Gi"
+          cpu: "4"
+          memory: "8Gi"
         requests:
-          cpu: "500m"
-          memory: "1Gi"
+          cpu: "4000m"
+          memory: "8Gi"
   
   # Persistence for dev environments
   persistence:
@@ -120,10 +120,7 @@ devEnv:
     tls:
       enabled: true
       secretName: "alga-dev-tls"
-  
-  # Node selector and tolerations for dev environments
-  nodeSelector: 
-    kubernetes.io/hostname: cloudlab-26
+
   tolerations: []
   affinity: {}
 

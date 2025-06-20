@@ -20,7 +20,7 @@ import { generateInvoice, previewInvoice } from '../../lib/actions/invoiceGenera
 import { WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
 import { getInvoicedBillingCycles, removeBillingCycle, hardDeleteBillingCycle } from '../../lib/actions/billingCycleActions';
 import { ISO8601String } from '../../types/types.d';
-import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogFooter, DialogDescription } from '../ui/Dialog';
+import { Dialog, DialogContent, DialogFooter, DialogDescription } from '../ui/Dialog';
 import { formatCurrency } from '../../lib/utils/formatters';
 // Added imports for DropdownMenu
 import {
@@ -60,6 +60,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
   const [companyFilter, setCompanyFilter] = useState<string>('');
   const [invoicedPeriods, setInvoicedPeriods] = useState<Period[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [currentReadyPage, setCurrentReadyPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [showReverseDialog, setShowReverseDialog] = useState(false);
   const [selectedCycleToReverse, setSelectedCycleToReverse] = useState<{
@@ -436,7 +437,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                 }
               }
             ]}
-            pagination={false}
+            pagination={true}
+            currentPage={currentReadyPage}
+            onPageChange={setCurrentReadyPage}
+            pageSize={itemsPerPage}
+            totalItems={filteredPeriods.length}
             // Fixed rowClassName prop - removed cursor-pointer since row click is disabled
             rowClassName={() => "hover:bg-muted/50"}
           />
@@ -517,17 +522,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
       <Dialog
         isOpen={showReverseDialog}
         onClose={() => setShowReverseDialog(false)}
+        title="Reverse Billing Cycle"
       >
-        <DialogHeader>
-          <DialogTitle>
-            <div className="flex items-center gap-2 text-red-600">
-              <AlertTriangle className="h-5 w-5" />
-              <span>Warning: Reverse Billing Cycle</span>
-            </div>
-          </DialogTitle>
-        </DialogHeader>
-
         <DialogContent>
+          <div className="flex items-center gap-2 text-red-600 mb-4">
+            <AlertTriangle className="h-5 w-5" />
+            <span className="font-semibold">Warning: Reverse Billing Cycle</span>
+          </div>
           <div className="text-sm space-y-2">
             <p className="font-semibold">You are about to reverse the billing cycle for:</p>
             <p>Company: {selectedCycleToReverse?.company}</p>
@@ -573,17 +574,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
           setPreviewState({ data: null, billingCycleId: null });
           setErrors({}); // Clear preview-specific errors on close
         }}
+        title="Invoice Preview"
       >
-        <DialogHeader>
-          <DialogTitle>
-            Invoice Preview
-          </DialogTitle>
+        <DialogContent>
           <DialogDescription>
             This is a preview of how the invoice will look when finalized.
           </DialogDescription>
-        </DialogHeader>
-
-        <DialogContent>
           {errors.preview ? (
             <div className="text-center py-8">
               {/* Display error message if present */}

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { IProjectPhase, IProjectTask, ITaskChecklistItem, ProjectStatus, IProjectTicketLinkWithDetails, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
 import AvatarIcon from 'server/src/components/ui/AvatarIcon';
 import { getProjectTreeData, getProjectDetails } from 'server/src/lib/actions/project-actions/projectActions';
 import { getAllPrioritiesWithStandard } from 'server/src/lib/actions/priorityActions';
@@ -21,7 +22,9 @@ import {
   getTaskDependencies
 } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import * as Dialog from '@radix-ui/react-dialog';
+import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
+import { TagManager } from 'server/src/components/tags';
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { ListChecks, UserPlus, Trash2, Clock } from 'lucide-react';
@@ -34,6 +37,7 @@ import { toast } from 'react-hot-toast';
 import { TaskTypeSelector } from './TaskTypeSelector';
 import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import { ITaskType } from 'server/src/interfaces/project.interfaces';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import TaskTicketLinks from './TaskTicketLinks';
 import { TaskDependencies } from './TaskDependencies';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
@@ -97,6 +101,7 @@ export default function TaskForm({
   const [taskResources, setTaskResources] = useState<any[]>(task?.task_id ? [] : []);
   const [tempTaskResources, setTempTaskResources] = useState<any[]>([]);
   const [showAgentPicker, setShowAgentPicker] = useState(false);
+  const [taskTags, setTaskTags] = useState<ITag[]>([]);
   const [pendingTicketLinks, setPendingTicketLinks] = useState<IProjectTicketLinkWithDetails[]>(task?.ticket_links || []);
   const [editingChecklistItemId, setEditingChecklistItemId] = useState<string | null>(null);
   const [isCrossProjectMove, setIsCrossProjectMove] = useState<boolean>(false);
@@ -104,6 +109,7 @@ export default function TaskForm({
   const [showDuplicateConfirm, setShowDuplicateConfirm] = useState(false); // State for duplicate dialog
   const [taskTypes, setTaskTypes] = useState<ITaskType[]>([]);
   const [selectedTaskType, setSelectedTaskType] = useState<string>(task?.task_type_key || 'task');
+  const [initialTaskType] = useState<string>(task?.task_type_key || 'task');
   const [allProjectTasks, setAllProjectTasks] = useState<IProjectTask[]>([]);
   const [duplicateTaskDetails, setDuplicateTaskDetails] = useState<{
     originalTaskId: string;
@@ -130,6 +136,8 @@ export default function TaskForm({
     defaultStatus?.project_status_mapping_id ||
     projectStatuses[0]?.project_status_mapping_id
   );
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -179,6 +187,9 @@ export default function TaskForm({
             setTaskResources(resources);
           }
 
+          // Fetch tags
+          const tags = await findTagsByEntityId(task.task_id, 'project_task');
+          setTaskTags(tags);
         }
       } catch (error) {
         console.error('Error fetching initial data:', error);
@@ -381,9 +392,25 @@ export default function TaskForm({
     }
   };
 
+  const clearErrorIfSubmitted = () => {
+    if (hasAttemptedSubmit) {
+      setValidationErrors([]);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (taskName.trim() === '') return;
+    setHasAttemptedSubmit(true);
+    
+    const errors: string[] = [];
+    if (!taskName.trim()) errors.push('Task name');
+    
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    
+    setValidationErrors([]);
 
     setIsSubmitting(true);
 
@@ -455,6 +482,7 @@ export default function TaskForm({
               await addTicketLinkAction(phase.project_id, resultTask.task_id, link.ticket_id, phase.phase_id);
             }
 
+
             // Only submit and close after everything is done
             onSubmit(resultTask);
             onClose();
@@ -486,9 +514,23 @@ export default function TaskForm({
   };
 
   const hasChanges = (): boolean => {
-    if (mode === 'create') return true; // Always confirm for new tasks
+    if (mode === 'create') {
+      // For new tasks, only show confirmation if user has entered any data
+      if (taskName.trim() !== '') return true;
+      if (description.trim() !== '') return true;
+      if (assignedUser !== null && assignedUser !== currentUserId) return true; // Only if explicitly selected
+      if (checklistItems.length > 0) return true;
+      if (estimatedHours > 0) return true; // Only if actually entered a value
+      if (actualHours > 0) return true; // Only if actually entered a value
+      if (dueDate !== undefined) return true;
+      if (tempTaskResources.length > 0) return true;
+      if (pendingTicketLinks.length > 0) return true;
+      if (selectedPriorityId !== null) return true; // User explicitly selected a priority
+      if (selectedTaskType !== initialTaskType) return true; // Only if changed from initial value
+      return false; // No changes detected
+    }
     
-    // Compare all form fields with their original values
+    // Compare all form fields with their original values for edit mode
     if (!task) return false;
 
     if (taskName !== task.task_name) return true;
@@ -539,8 +581,22 @@ export default function TaskForm({
     return false;
   };
 
-  const handleCancelClick = (e?: React.MouseEvent) => {
-    e?.preventDefault();
+  const handleCancelClick = (e?: React.MouseEvent | boolean) => {
+    // If called from Dialog's onOpenChange, e will be false
+    if (typeof e === 'boolean' && !e) {
+      if (hasChanges()) {
+        setShowCancelConfirm(true);
+      } else {
+        onClose();
+      }
+      return;
+    }
+    
+    // Original mouse event handling
+    if (e && typeof e !== 'boolean') {
+      e.preventDefault();
+    }
+    
     if (hasChanges()) {
       setShowCancelConfirm(true);
     } else {
@@ -568,9 +624,10 @@ export default function TaskForm({
     setIsEditingChecklist(!isEditingChecklist);
   };
 
-  const addChecklistItem = () => {
+  const addChecklistItem = (): string => {
+    const newItemId = `temp-${Date.now()}`;
     const newItem: Omit<ITaskChecklistItem, 'tenant'> = {
-      checklist_item_id: `temp-${Date.now()}`,
+      checklist_item_id: newItemId,
       task_id: task?.task_id || tempTaskId,
       item_name: '',
       description: null,
@@ -581,7 +638,18 @@ export default function TaskForm({
       updated_at: new Date(),
       order_number: checklistItems.length + 1,
     };
-    setChecklistItems([...checklistItems, newItem]);
+    setChecklistItems((items) => [...items, newItem]);
+    return newItemId;
+  };
+
+  const handleChecklistItemKeyDown = (
+    e: React.KeyboardEvent<HTMLTextAreaElement>
+  ) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      const newId = addChecklistItem();
+      setEditingChecklistItemId(newId);
+    }
   };
 
   const updateChecklistItem = (index: number, field: keyof ITaskChecklistItem, value: any) => {
@@ -787,9 +855,6 @@ export default function TaskForm({
 
   const renderContent = () => (
     <div className="h-full">
-      <div className="text-lg font-medium mb-4">
-        {mode === 'edit' ? 'Edit Task' : 'Add New Task'}
-      </div>
       {mode === 'edit' && (
         <div className="flex justify-end mb-4">
           <Button
@@ -804,13 +869,30 @@ export default function TaskForm({
           </Button>
         </div>
       )}
-      <form onSubmit={handleSubmit} className="flex flex-col h-full">
+      <form onSubmit={handleSubmit} className="flex flex-col h-full" noValidate>
+        {hasAttemptedSubmit && validationErrors.length > 0 && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>
+              <p className="font-medium mb-2">Please fill in the required fields:</p>
+              <ul className="list-disc list-inside space-y-1">
+                {validationErrors.map((err, index) => (
+                  <li key={index}>{err}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
         <div className="space-y-4">
           <TextArea
                   value={taskName}
-                  onChange={(e) => setTaskName(e.target.value)}
-                  placeholder="Title..."
-                  className="w-full text-2xl font-bold p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  onChange={(e) => {
+                    setTaskName(e.target.value);
+                    clearErrorIfSubmitted();
+                  }}
+                  placeholder="Title... *"
+                  className={`w-full text-2xl font-bold p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                    hasAttemptedSubmit && !taskName.trim() ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   rows={1}
                 />
 
@@ -988,6 +1070,19 @@ export default function TaskForm({
                   </div>
                 </div>
 
+                {mode === 'edit' && task?.task_id && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Tags</h3>
+                    <TagManager
+                      id="task-tags-edit"
+                      entityId={task.task_id}
+                      entityType="project_task"
+                      initialTags={taskTags}
+                      onTagsChange={setTaskTags}
+                    />
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between mb-2">
                   <h3 className='font-semibold'>Checklist</h3>
                   <button 
@@ -1016,6 +1111,8 @@ export default function TaskForm({
                               placeholder="Checklist item"
                               className="w-full"
                               onBlur={() => setEditingChecklistItemId(null)} // Stop editing when focus is lost
+                              autoFocus={editingChecklistItemId === item.checklist_item_id}
+                              onKeyDown={handleChecklistItemKeyDown}
                             />
                           </div>
                           <button
@@ -1107,7 +1204,7 @@ export default function TaskForm({
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Button id='save-button' type="submit" disabled={isSubmitting}>
+                    <Button id='save-button' type="submit" disabled={isSubmitting} className={!taskName.trim() ? 'opacity-50' : ''}>
                       {isSubmitting ? (mode === 'edit' ? 'Updating...' : 'Adding...') : (mode === 'edit' ? 'Update' : 'Save')}
                     </Button>
                   </div>
@@ -1122,16 +1219,16 @@ export default function TaskForm({
       {inDrawer ? (
         renderContent()
       ) : (
-        <Dialog.Root open={true} onOpenChange={handleDialogClose}>
-          <Dialog.Portal>
-            <Dialog.Overlay className="fixed inset-0 bg-black bg-opacity-50" />
-            <Dialog.Content 
-              className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-[800px] max-h-[90vh] overflow-y-auto"
-            >
-              {renderContent()}
-            </Dialog.Content>
-          </Dialog.Portal>
-        </Dialog.Root>
+        <Dialog 
+          isOpen={true} 
+          onClose={handleCancelClick}
+          className="max-w-2xl max-h-[90vh] overflow-y-auto"
+          title={mode === 'create' ? 'Add New Task' : 'Edit Task'}
+        >
+          <DialogContent>
+            {renderContent()}
+          </DialogContent>
+        </Dialog>
       )}
 
       <ConfirmationDialog
@@ -1208,11 +1305,13 @@ export default function TaskForm({
         />
       )}
 
-      <Dialog.Root open={showAgentPicker} onOpenChange={setShowAgentPicker}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black bg-opacity-50" />
-          <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-4 rounded-lg shadow-lg w-[400px]">
-            <Dialog.Title className="text-lg font-semibold mb-4">Add Additional Agent</Dialog.Title>
+      <Dialog 
+        isOpen={showAgentPicker} 
+        onClose={() => setShowAgentPicker(false)}
+        title="Add Additional Agent"
+        className="max-w-md"
+      >
+        <DialogContent>
             <div className="space-y-4">
               <UserPicker
                 value=""
@@ -1231,9 +1330,8 @@ export default function TaskForm({
                 </Button>
               </div>
             </div>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+          </DialogContent>
+      </Dialog>
     </>
   );
 }

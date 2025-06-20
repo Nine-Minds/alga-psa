@@ -11,7 +11,7 @@ import { IUser, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import WorkItemListPanel from './WorkItemListPanel';
 import ScheduleViewPanel from './ScheduleViewPanel';
 import WorkItemCard from './WorkItemCard';
-import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { getAllUsers, getUserPreference, setUserPreference } from 'server/src/lib/actions/user-actions/userActions';
 import { searchDispatchWorkItems, getWorkItemById, DispatchSearchOptions } from 'server/src/lib/actions/workItemActions';
 import { addScheduleEntry, updateScheduleEntry, getScheduleEntries, deleteScheduleEntry, ScheduleActionResult } from 'server/src/lib/actions/scheduleActions';
 import { getWorkItemStatusOptions, StatusOption } from 'server/src/lib/actions/status-actions/statusActions';
@@ -204,6 +204,18 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
         const currentUser = await getCurrentUser();
         const userIsAdmin = currentUser ? currentUser.roles.some(role => role.role_name.toLowerCase() === 'admin') : false;
         setIsAdmin(userIsAdmin);
+
+        // Load saved dispatch view preference
+        if (currentUser?.user_id) {
+          try {
+            const savedView = await getUserPreference(currentUser.user_id, 'defaultDispatchView');
+            if (savedView && (savedView === 'day' || savedView === 'week')) {
+              setViewMode(savedView as 'day' | 'week');
+            }
+          } catch (err) {
+            console.log('No saved dispatch view preference found, using default');
+          }
+        }
         
         // If admin, grant all permissions
         if (userIsAdmin) {
@@ -481,8 +493,16 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
     }
   }, []);
 
-  const handleViewChange = (newViewMode: 'day' | 'week') => {
+  const handleViewChange = async (newViewMode: 'day' | 'week') => {
     setViewMode(newViewMode);
+    // Save the view preference
+    if (currentUser?.id) {
+      try {
+        await setUserPreference(currentUser.id, 'defaultDispatchView', newViewMode);
+      } catch (err) {
+        console.error('Failed to save dispatch view preference:', err);
+      }
+    }
   };
 
   useEffect(() => {

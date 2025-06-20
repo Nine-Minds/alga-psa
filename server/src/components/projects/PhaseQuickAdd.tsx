@@ -2,12 +2,13 @@
 'use client'
 import React, { useState } from 'react';
 import { IProjectPhase } from 'server/src/interfaces/project.interfaces';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { toast } from 'react-hot-toast';
 import { addProjectPhase } from 'server/src/lib/actions/project-actions/projectActions';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 interface PhaseQuickAddProps {
   projectId: string;
@@ -28,9 +29,11 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setHasAttemptedSubmit(true);
     if (phaseName.trim() === '') return;
 
     setIsSubmitting(true);
@@ -64,20 +67,30 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
   };
 
   return (
-    <Dialog.Root open={true} onOpenChange={onClose}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black bg-opacity-50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-[600px] max-h-[90vh] overflow-y-auto">
-          <Dialog.Title className="text-xl font-semibold mb-4">
-            Add New Phase
-          </Dialog.Title>
+    <Dialog 
+      isOpen={true} 
+      onClose={() => {
+        setHasAttemptedSubmit(false);
+        onClose();
+      }}
+      title="Add New Phase"
+      className="max-w-2xl"
+    >
+      <DialogContent className="max-h-[80vh] overflow-y-auto">
+          {hasAttemptedSubmit && !phaseName.trim() && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>
+                Phase name is required
+              </AlertDescription>
+            </Alert>
+          )}
           <form onSubmit={handleSubmit} className="flex flex-col">
-            <div className="space-y-4">
+            <div className="space-y-4 mb-2 mt-2">
               <TextArea
                 value={phaseName}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPhaseName(e.target.value)}
-                placeholder="Phase name..."
-                className="w-full p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg font-semibold"
+                placeholder="Phase name... *"
+                className={`w-full px-3 py-3 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg font-semibold ${hasAttemptedSubmit && !phaseName.trim() ? 'border-red-500' : 'border-gray-300'}`}
                 rows={1}
               />
               <TextArea
@@ -109,15 +122,14 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
                 <Button id="cancel-phase-button" variant="ghost" onClick={handleCancel} disabled={isSubmitting}>
                   Cancel
                 </Button>
-                <Button id="save-phase-button" type="submit" disabled={isSubmitting}>
+                <Button id="save-phase-button" type="submit" disabled={isSubmitting} className={!phaseName.trim() ? 'opacity-50' : ''}>
                   {isSubmitting ? 'Adding...' : 'Save'}
                 </Button>
               </div>
             </div>
           </form>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+        </DialogContent>
+    </Dialog>
   );
 };
 

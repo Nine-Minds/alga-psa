@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Search, X, Check } from 'lucide-react';
 import Spinner from 'server/src/components/ui/Spinner';
@@ -166,11 +166,13 @@ export default function DocumentSelector({
     if (!id || !entityId || !entityType) {
         console.error('DocumentSelector: Missing required props', { id, entityId, entityType });
         return (
-            <Dialog isOpen={isOpen} onClose={onClose} data-testid="document-selector-dialog">
+            <Dialog 
+              isOpen={isOpen} 
+              onClose={onClose} 
+              data-testid="document-selector-dialog" 
+              title="Configuration Error"
+            >
                 <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Configuration Error</DialogTitle>
-                    </DialogHeader>
                     <div className="p-4 text-red-500">
                         Missing required configuration. Please contact support.
                     </div>
@@ -180,11 +182,12 @@ export default function DocumentSelector({
     }
 
     return (
-        <Dialog isOpen={isOpen} onClose={onClose}>
+        <Dialog 
+          isOpen={isOpen} 
+          onClose={onClose} 
+          title="Select Documents"
+        >
             <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Select Documents</DialogTitle>
-                </DialogHeader>
                 <ReflectionContainer id={id} label="Document Selector">
                     <div className="space-y-4">
                         {/* Search Bar */}

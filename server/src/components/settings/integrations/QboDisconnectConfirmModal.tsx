@@ -4,11 +4,8 @@ import React from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
-  DialogFooter,
-  // Removed DialogClose import
+  DialogFooter
 } from '../../ui/Dialog'; // Use relative path
 import { Button } from '../../ui/Button'; // Use relative path
 import { AlertTriangle } from 'lucide-react'; // Icons
@@ -32,17 +29,12 @@ const QboDisconnectConfirmModal: React.FC<QboDisconnectConfirmModalProps> = ({
   }
 
   return (
-    // Moved ID here, using the correct prop names 'isOpen' and 'onClose' from DialogProps
-    <Dialog isOpen={isOpen} onClose={onClose} id="qbo-disconnect-confirm-dialog">
-      {/* Removed DialogContent wrapper, content goes directly in Dialog */}
-        {/* Removed className from DialogHeader */}
-        <DialogHeader>
-          {/* Added a div inside DialogHeader for flex layout */}
-          <div className="flex flex-row items-center space-x-2">
-            <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0" /> {/* Warning Icon */}
-            <DialogTitle>Confirm Disconnection</DialogTitle>
-          </div>
-        </DialogHeader>
+    <Dialog isOpen={isOpen} onClose={onClose} id="qbo-disconnect-confirm-dialog" title="Confirm Disconnection">
+      <DialogContent>
+        <div className="flex flex-row items-center space-x-2 mb-4">
+          <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0" /> {/* Warning Icon */}
+          <h2 className="text-lg font-semibold">Confirm Disconnection</h2>
+        </div>
         <DialogDescription>
           Are you sure you want to disconnect from QuickBooks Online? This will stop all automatic data synchronization for invoices and customers. You can reconnect at any time.
         </DialogDescription>
@@ -69,7 +61,7 @@ const QboDisconnectConfirmModal: React.FC<QboDisconnectConfirmModalProps> = ({
             )}
           </Button>
         </DialogFooter>
-      {/* Removed closing DialogContent tag */}
+      </DialogContent>
     </Dialog>
   );
 };

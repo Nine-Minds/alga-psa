@@ -97,6 +97,7 @@ RUN chmod +x /usr/local/bin/start-dev-env.sh
 COPY --chown=coder:coder package*.json /home/coder/alga-psa/
 COPY --chown=coder:coder server/package*.json /home/coder/alga-psa/server/
 COPY --chown=coder:coder tools/ai-automation/package*.json /home/coder/alga-psa/tools/ai-automation/
+COPY --chown=coder:coder server/src/invoice-templates/assemblyscript/package*.json /home/coder/alga-psa/server/src/invoice-templates/assemblyscript/
 
 # Ensure coder owns the entire directory structure
 RUN chown -R coder:coder /home/coder/alga-psa
@@ -115,7 +116,10 @@ RUN echo "📦 Pre-installing root dependencies..." && \
     cd .. && \
     echo "🤖 Pre-installing AI automation dependencies..." && \
     cd tools/ai-automation && npm ci --prefer-offline --no-audit && \
-    cd ..
+    cd ../.. && \
+    echo "📄 Pre-installing AssemblyScript template dependencies..." && \
+    cd server/src/invoice-templates/assemblyscript && npm ci --prefer-offline --no-audit && \
+    cd ../..
 
 # Switch back to root for final setup
 USER root

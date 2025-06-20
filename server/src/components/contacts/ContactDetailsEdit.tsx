@@ -7,11 +7,12 @@ import { Input } from '../ui/Input';
 import { TextArea } from '../ui/TextArea';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { updateContact } from '../../lib/actions/contact-actions/contactActions';
-import { findTagsByEntityIds, findAllTagsByType } from '../../lib/actions/tagActions';
+import { findTagsByEntityIds } from '../../lib/actions/tagActions';
 import { ITag } from '../../interfaces/tag.interfaces';
 import { CompanyPicker } from '../companies/CompanyPicker';
 import { ICompany } from '../../interfaces/company.interfaces';
 import { TagManager } from '../tags';
+import { useTags } from '../../context/TagContext';
 import { ArrowLeft } from 'lucide-react';
 import { Switch } from '../ui/Switch';
 import CustomSelect from '../ui/CustomSelect';
@@ -40,7 +41,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
 }) => {
   const [contact, setContact] = useState<IContact>(initialContact);
   const [tags, setTags] = useState<ITag[]>([]);
-  const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
+  const { tags: allTags } = useTags();
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [error, setError] = useState<string | null>(null);
@@ -49,13 +50,8 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [fetchedTags, allTags] = await Promise.all([
-          findTagsByEntityIds([contact.contact_name_id], 'contact'),
-          findAllTagsByType('contact')
-        ]);
-        
+        const fetchedTags = await findTagsByEntityIds([contact.contact_name_id], 'contact');
         setTags(fetchedTags);
-        setAllTagTexts(allTags);
         
         if (contact.tenant) {
           const contactAvatarUrl = await getContactAvatarUrl(contact.contact_name_id, contact.tenant);
@@ -231,7 +227,6 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
                   entityId={contact.contact_name_id}
                   entityType="contact"
                   initialTags={tags}
-                  existingTags={allTagTexts}
                   onTagsChange={handleTagsChange}
                 />
               </td>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Label } from 'server/src/components/ui/Label';
@@ -116,14 +116,16 @@ export default function DuplicateTaskDialog({
   };
 
   return (
-    <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black bg-opacity-50 z-40" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-[500px] max-h-[90vh] overflow-y-auto z-50">
-          <Dialog.Title className="text-lg font-semibold mb-4">Duplicate Task</Dialog.Title>
-          <Dialog.Description className="mb-2 text-sm text-gray-600">
-            Duplicate task <span className="font-medium">"{taskDetails.originalTaskName}"</span> to:
-          </Dialog.Description>
+    <Dialog 
+      isOpen={isOpen} 
+      onClose={onClose}
+      title="Duplicate Task"
+      className="max-w-lg max-h-[90vh] overflow-y-auto"
+    >
+      <DialogContent>
+        <div className="mb-2 text-sm text-gray-600">
+          Duplicate task <span className="font-medium">"{taskDetails.originalTaskName}"</span> to:
+        </div>
  
           <div className="mb-4">
             <TreeSelect<'project' | 'phase' | 'status'>
@@ -201,16 +203,15 @@ export default function DuplicateTaskDialog({
             )}
           </div>
 
-          <div className="flex justify-end space-x-2">
-            <Button id='cancel-duplicate-button' variant="ghost" onClick={onClose} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button id='confirm-duplicate-button' onClick={handleConfirm} disabled={isSubmitting || !selectedTargetPath?.['phase']}>
-              {isSubmitting ? 'Duplicating...' : 'Confirm Duplicate'}
-            </Button>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+        <div className="flex justify-end space-x-2">
+          <Button id='cancel-duplicate-button' variant="ghost" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button id='confirm-duplicate-button' onClick={handleConfirm} disabled={isSubmitting || !selectedTargetPath?.['phase']}>
+            {isSubmitting ? 'Duplicating...' : 'Confirm Duplicate'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

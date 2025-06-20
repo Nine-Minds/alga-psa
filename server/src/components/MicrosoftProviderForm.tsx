@@ -15,7 +15,7 @@ import { Label } from './ui/Label';
 import { Switch } from './ui/Switch';
 import { Alert, AlertDescription } from './ui/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
-import { ExternalLink, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
+import { ExternalLink, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
 
 const microsoftProviderSchema = z.object({
@@ -379,7 +379,6 @@ export function MicrosoftProviderForm({
       {/* Error Display */}
       {error && (
         <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}

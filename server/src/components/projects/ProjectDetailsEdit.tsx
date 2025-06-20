@@ -5,6 +5,7 @@ import { IProject } from 'server/src/interfaces/project.interfaces';
 import { IStatus } from 'server/src/interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
 import { TextArea } from 'server/src/components/ui/TextArea';
@@ -12,10 +13,14 @@ import { Input } from 'server/src/components/ui/Input';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
+import { TagManager } from 'server/src/components/tags';
 import { updateProject, getProjectStatuses } from 'server/src/lib/actions/project-actions/projectActions';
 import { getContactsByCompany, getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
+// import { useTags } from 'server/src/context/TagContext';
 import { toast } from 'react-hot-toast';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 interface ProjectDetailsEditProps {
   initialProject: IProject;
@@ -48,26 +53,30 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   const [contacts, setContacts] = useState<{ value: string; label: string }[]>([]);
   const [users, setUsers] = useState<IUserWithRoles[]>([]);
   const [statuses, setStatuses] = useState<IStatus[]>([]);
-
-  // Move these to component state to prevent re-renders
-  const [filterState] = useState<'all' | 'active' | 'inactive'>('active');
-  const [clientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [projectTags, setProjectTags] = useState<ITag[]>([]);
+  
+  // TagContext is available if needed for tag-related features in the future
+  // const { tags } = useTags();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [allUsers, projectStatuses] = await Promise.all([
+        const [allUsers, projectStatuses, projectTagsData] = await Promise.all([
           getAllUsers(),
-          getProjectStatuses()
+          getProjectStatuses(),
+          initialProject.project_id ? findTagsByEntityId(initialProject.project_id, 'project') : Promise.resolve([])
         ]);
         setUsers(allUsers);
         setStatuses(projectStatuses);
+        setProjectTags(projectTagsData);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
     };
     fetchData();
-  }, []);
+  }, [initialProject.project_id]);
 
   useEffect(() => {
     const fetchContacts = async () => {
@@ -87,8 +96,34 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
     fetchContacts();
   }, [project.company_id]);
 
+  const clearErrorIfSubmitted = () => {
+    if (hasAttemptedSubmit) {
+      setValidationErrors([]);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setHasAttemptedSubmit(true);
+
+    // Validate required fields
+    const errors: string[] = [];
+    if (!project.project_name?.trim()) {
+      errors.push('Project name');
+    }
+    if (!project.status) {
+      errors.push('Status');
+    }
+    if (!project.company_id) {
+      errors.push('Client');
+    }
+
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+
+    setValidationErrors([]);
     setIsSubmitting(true);
 
     try {
@@ -115,7 +150,9 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
       onSave(updatedProject);
     } catch (error) {
       console.error('Error updating project:', error);
-      toast.error('Failed to update project');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update project';
+      setValidationErrors([errorMessage]);
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -137,6 +174,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
       }));
     }
     setHasChanges(true);
+    clearErrorIfSubmitted();
   };
 
   const handleCompanySelect = (companyId: string | null) => {
@@ -148,6 +186,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
       contact_name: null,
     }));
     setHasChanges(true);
+    clearErrorIfSubmitted();
   };
 
   return (
@@ -155,11 +194,23 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Edit Project</h2>
       </div>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        {hasAttemptedSubmit && validationErrors.length > 0 && (
+          <Alert variant="destructive">
+            <AlertDescription>
+              <p className="font-medium mb-2">Please fill in the required fields:</p>
+              <ul className="list-disc list-inside space-y-1">
+                {validationErrors.map((err, index) => (
+                  <li key={index}>{err}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
         <div className="space-y-3">
           <div>
             <label htmlFor="project_name" className="block text-sm font-medium text-gray-700 mb-1">
-              Project Name
+              Project Name *
             </label>
             <TextArea
               id="project_name"
@@ -167,31 +218,35 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               value={project.project_name}
               onChange={handleInputChange}
               placeholder="Enter project name..."
-              className="w-full text-base font-medium p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className={`w-full text-base font-medium p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                hasAttemptedSubmit && !project.project_name?.trim() ? 'border-red-500' : 'border-gray-300'
+              }`}
               rows={1}
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Status *</label>
             <CustomSelect
               value={project.status}
               onValueChange={(value) => {
                 setProject(prev => ({ ...prev, status: value }));
                 setHasChanges(true);
+                clearErrorIfSubmitted();
               }}
               options={statuses.map((status): SelectOption => ({
                 value: status.status_id,
                 label: status.name
               }))}
               placeholder="Select Status"
+              className={hasAttemptedSubmit && !project.status ? 'ring-1 ring-red-500' : ''}
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Client
+              Client *
             </label>
             <CompanyPicker
               id='company-picker'
@@ -202,6 +257,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               onFilterStateChange={() => {}}
               clientTypeFilter="all"
               onClientTypeFilterChange={() => {}}
+              className={hasAttemptedSubmit && !project.company_id ? 'ring-1 ring-red-500 rounded-md' : ''}
             />
           </div>
 
@@ -212,6 +268,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               onValueChange={(value) => {
                 setProject(prev => ({ ...prev, contact_name_id: value }));
                 setHasChanges(true);
+                clearErrorIfSubmitted();
               }}
               options={contacts}
               placeholder="Select Contact"
@@ -227,6 +284,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               onValueChange={(value) => {
                 setProject(prev => ({ ...prev, assigned_to: value || null }));
                 setHasChanges(true);
+                clearErrorIfSubmitted();
               }}
               users={users}
               size="sm"
@@ -287,6 +345,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
                     [name]: minutesValue,
                   }));
                   setHasChanges(true);
+                  clearErrorIfSubmitted();
                 }
               }}
               onKeyDown={(e) => {
@@ -301,6 +360,20 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+            <TagManager
+              id="project-tags-edit"
+              entityId={project.project_id}
+              entityType="project"
+              initialTags={projectTags}
+              onTagsChange={(tags) => {
+                setProjectTags(tags);
+                setHasChanges(true);
+              }}
+            />
+          </div>
+
           <div className="flex items-center space-x-2">
             <span className={`px-2 py-1 rounded text-sm ${project.is_inactive ? 'text-gray-800' : 'text-gray-800'}`}>
               {project.is_inactive ? 'Inactive' : 'Active'}
@@ -311,6 +384,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               onCheckedChange={(checked) => {
                 setProject(prev => ({ ...prev, is_inactive: !checked }));
                 setHasChanges(true);
+                clearErrorIfSubmitted();
               }}
             />
           </div>
@@ -395,6 +469,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
             type="button"
             onClick={() => setShowSaveConfirm(true)}
             disabled={isSubmitting}
+            className={!project.project_name?.trim() || !project.status || !project.company_id ? 'opacity-50' : ''}
           >
             {isSubmitting ? 'Saving...' : 'Save Changes'}
           </Button>

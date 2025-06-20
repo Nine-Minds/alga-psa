@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ICompany, IProject, IUserWithRoles } from 'server/src/interfaces';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
 import HoursProgressBar from './HoursProgressBar';
 import { calculateProjectCompletion } from 'server/src/lib/utils/projectUtils';
 import { Edit2 } from 'lucide-react';
@@ -9,6 +10,7 @@ import BackNav from 'server/src/components/ui/BackNav';
 import { Button } from 'server/src/components/ui/Button';
 import { useDrawer } from "server/src/context/DrawerContext";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
+import { TagManager } from 'server/src/components/tags';
 
 interface ProjectInfoProps {
   project: IProject;
@@ -21,6 +23,9 @@ interface ProjectInfoProps {
   onContactChange?: (contactId: string | null) => void;
   onAssignedUserChange?: (userId: string | null) => void;
   onProjectUpdate?: (project: IProject) => void;
+  projectTags?: ITag[];
+  allTagTexts?: string[];
+  onTagsChange?: (tags: ITag[]) => void;
 }
 
 export default function ProjectInfo({
@@ -31,7 +36,10 @@ export default function ProjectInfo({
   companies,
   onContactChange,
   onAssignedUserChange,
-  onProjectUpdate
+  onProjectUpdate,
+  projectTags = [],
+  allTagTexts = [],
+  onTagsChange
 }: ProjectInfoProps) {
   const { openDrawer, closeDrawer } = useDrawer();
 
@@ -88,55 +96,20 @@ export default function ProjectInfo({
   };
 
   return (
-    <div className="space-y-4 mb-4">
+    <div className="space-y-2 mb-4">
+      {/* First line: Back nav, title, tags, and edit button */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center flex-1">
-          <div className="flex items-center space-x-5">
-            <BackNav href="/msp/projects">Back to Projects</BackNav>
-            <h1 className="text-xl font-bold">{currentProject.project_name}</h1>
-            <div className="flex items-center space-x-8">
-              {/* Client Section */}
-              <div className="flex items-center space-x-2">
-                <h5 className="font-bold text-gray-800">Client:</h5>
-                <p className="text-base text-gray-800">
-                  {currentProject.client_name || 'N/A'}
-                </p>
-              </div>
-
-              {/* Contact Section */}
-              <div className="flex items-center space-x-2">
-                <h5 className="font-bold text-gray-800">Contact:</h5>
-                <p className="text-base text-gray-800">
-                  {contact?.full_name || 'N/A'}
-                </p>
-              </div>
-            </div>
-          </div>
-          {projectMetrics && (
-            <div className="flex flex-col flex-1 ml-8 px-4 py-2">
-              <div className="flex justify-between mb-1">
-                <span className="text-sm font-medium">Project Budget:</span>
-                <span className="text-sm text-gray-800">
-                  {/* Display hours directly from state */}
-                  {projectMetrics ? `${projectMetrics.spentHours.toFixed(1)} of ${projectMetrics.budgetedHours.toFixed(1)} hours` : 'Loading...'}
-                </span>
-              </div>
-              <HoursProgressBar 
-                percentage={projectMetrics ? projectMetrics.hoursCompletionPercentage : 0}
-                width="100%"
-                height={8}
-                showTooltip={true}
-                tooltipContent={
-                  <div className="p-2">
-                    <p className="font-medium">Hours Usage</p>
-                    {/* Display hours directly from state */}
-                    <p className="text-sm">{projectMetrics ? `${projectMetrics.spentHours.toFixed(1)} of ${projectMetrics.budgetedHours.toFixed(1)} hours used` : 'Loading...'}</p>
-                    <p className="text-sm">{projectMetrics ? `${projectMetrics.remainingHours.toFixed(1)} hours remaining` : 'Loading...'}</p>
-                    <p className="text-sm text-gray-300 mt-1">Shows budget hours usage for the entire project</p>
-                  </div>
-                }
-              />
-            </div>
+        <div className="flex items-center space-x-5">
+          <BackNav href="/msp/projects">Back to Projects</BackNav>
+          <h1 className="text-xl font-bold">{currentProject.project_name}</h1>
+          {/* Tags using TagManager for inline editing */}
+          {onTagsChange && (
+            <TagManager
+              entityId={project.project_id}
+              entityType="project"
+              initialTags={projectTags}
+              onTagsChange={onTagsChange}
+            />
           )}
         </div>
         <Button
@@ -144,11 +117,57 @@ export default function ProjectInfo({
           variant="outline"
           size="sm"
           onClick={handleEditClick}
-          className="ml-4"
         >
           <Edit2 className="h-4 w-4 mr-2" />
           Edit
         </Button>
+      </div>
+      
+      {/* Second line: Project metadata */}
+      <div className="flex items-center space-x-8">
+        {/* Client Section */}
+        <div className="flex items-center space-x-2">
+          <h5 className="font-bold text-gray-800">Client:</h5>
+          <p className="text-base text-gray-800">
+            {currentProject.client_name || 'N/A'}
+          </p>
+        </div>
+
+        {/* Contact Section */}
+        <div className="flex items-center space-x-2">
+          <h5 className="font-bold text-gray-800">Contact:</h5>
+          <p className="text-base text-gray-800">
+            {contact?.full_name || 'N/A'}
+          </p>
+        </div>
+        
+        {/* Project Budget Section - takes remaining space */}
+        {projectMetrics && (
+          <div className="flex items-center space-x-2 flex-1">
+            <h5 className="font-bold text-gray-800">Budget:</h5>
+            <div className="flex items-center space-x-3 flex-1">
+              <span className="text-base text-gray-800 whitespace-nowrap">
+                {projectMetrics.spentHours.toFixed(1)} of {projectMetrics.budgetedHours.toFixed(1)} hours
+              </span>
+              <div className="flex-1">
+                <HoursProgressBar 
+                  percentage={projectMetrics.hoursCompletionPercentage}
+                  width="100%"
+                  height={8}
+                  showTooltip={true}
+                  tooltipContent={
+                    <div className="p-2">
+                      <p className="font-medium">Hours Usage</p>
+                      <p className="text-sm">{projectMetrics.spentHours.toFixed(1)} of {projectMetrics.budgetedHours.toFixed(1)} hours used</p>
+                      <p className="text-sm">{projectMetrics.remainingHours.toFixed(1)} hours remaining</p>
+                      <p className="text-sm text-gray-300 mt-1">Shows budget hours usage for the entire project</p>
+                    </div>
+                  }
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

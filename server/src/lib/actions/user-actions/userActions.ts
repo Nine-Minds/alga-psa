@@ -491,33 +491,34 @@ export async function registerClientUser(
         .returning('*');
 
       // Get the default client role
-      const [clientRole] = await trx('roles')
-        .where({ role_name: 'client', tenant: contact.tenant })
-        .returning('*');
+      let clientRole = await trx('roles')
+        .where({ tenant: contact.tenant })
+        .whereRaw('LOWER(role_name) = ?', ['client'])
+        .first();
 
       if (!clientRole) {
-        // Create default client role if it doesn't exist
-        const [newRole] = await trx('roles')
+        // If role doesn't exist, create it. This is a fallback.
+        // The primary mechanism should be the migration.
+        [clientRole] = await trx('roles')
           .insert({
-            role_name: 'client',
+            role_name: 'Client', // Store with capitalization
             description: 'Default client user role',
             tenant: contact.tenant
           })
           .returning('*');
+      }
 
-        // Assign the new role to the user
-        await trx('user_roles').insert({
-          user_id: user.user_id,
-          role_id: newRole.role_id,
-          tenant: contact.tenant
-        });
-      } else {
-        // Assign existing client role to the user
+      // Assign the role to the user
+      if (clientRole) {
         await trx('user_roles').insert({
           user_id: user.user_id,
           role_id: clientRole.role_id,
           tenant: contact.tenant
         });
+      } else {
+        // This case should ideally not be reached if the migration and fallback work.
+        console.error(`Critical: Could not find or create a client role for tenant ${contact.tenant}`);
+        throw new Error('Client role could not be assigned.');
       }
 
       return { success: true };
@@ -539,9 +540,15 @@ export async function changeOwnPassword(
       return { success: false, error: 'User not found' };
     }
 
-    // TODO: Implement password verification and update
-    // These methods need to be implemented in the User model or use direct database operations
-    return { success: false, error: 'Password change functionality not implemented' };
+    // Verify current password
+    const isValidPassword = await User.verifyPassword(currentUser.user_id, currentPassword);
+    if (!isValidPassword) {
+      return { success: false, error: 'Current password is incorrect' };
+    }
+
+    // Hash the new password and update
+    const hashedPassword = await hashPassword(newPassword);
+    await User.updatePassword(currentUser.email, hashedPassword);
 
     return { success: true };
   } catch (error) {
@@ -655,9 +662,9 @@ export async function adminChangeUserPassword(
       return { success: false, error: 'Unauthorized: Admin privileges required' };
     }
 
-    // TODO: Implement password update
-    // This method needs to be implemented in the User model or use direct database operations
-    return { success: false, error: 'Admin password change functionality not implemented' };
+    // Hash the new password and update
+    const hashedPassword = await hashPassword(newPassword);
+    await User.updatePassword(targetUser.email, hashedPassword);
 
     return { success: true };
   } catch (error) {

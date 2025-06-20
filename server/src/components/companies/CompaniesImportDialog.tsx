@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
@@ -310,10 +310,11 @@ const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
 
   return (
     <>
-      <Dialog isOpen={isOpen} onClose={handleClose}>
-        <DialogHeader>
-          <DialogTitle>Import Companies</DialogTitle>
-        </DialogHeader>
+      <Dialog
+        isOpen={isOpen} 
+        onClose={handleClose} 
+        title="Import Companies"
+      >
         <DialogContent>
           {errors.length > 0 && (
             <div className="mb-4 p-4 border border-red-300 bg-red-50 rounded-md">

@@ -3,13 +3,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
-import { AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { addTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getContactsByCompany } from 'server/src/lib/actions/contact-actions/contactActions';
+import { getCompanyLocations } from 'server/src/lib/actions/company-actions/companyLocationActions';
 import { getTicketFormData } from 'server/src/lib/actions/ticket-actions/ticketFormActions';
 import { getTicketCategoriesByChannel } from 'server/src/lib/actions/categoryActions';
-import { IUser, IChannel, ITicketStatus, IPriority, IStandardPriority, ICompany, IContact, ITicket, ITicketCategory } from 'server/src/interfaces';
+import { IUser, IChannel, ITicketStatus, IPriority, IStandardPriority, ICompany, ICompanyLocation, IContact, ITicket, ITicketCategory } from 'server/src/interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ChannelPicker } from 'server/src/components/settings/general/ChannelPicker';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
@@ -25,6 +26,33 @@ import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionCo
 import { DialogComponent, FormFieldComponent, ButtonComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
+
+// Helper function to format location display
+const formatLocationDisplay = (location: ICompanyLocation): string => {
+  const parts = [];
+  
+  if (location.location_name) {
+    parts.push(location.location_name);
+  }
+  
+  if (location.address_line1) {
+    parts.push(location.address_line1);
+  }
+  
+  if (location.city && location.state_province) {
+    parts.push(`${location.city}, ${location.state_province}`);
+  } else if (location.city) {
+    parts.push(location.city);
+  } else if (location.state_province) {
+    parts.push(location.state_province);
+  }
+  
+  if (location.postal_code) {
+    parts.push(location.postal_code);
+  }
+  
+  return parts.join(' - ') || 'Unnamed Location';
+};
 
 interface QuickAddTicketProps {
   id?: string;
@@ -76,6 +104,8 @@ export function QuickAddTicket({
   const [priorities, setPriorities] = useState<(IPriority | IStandardPriority)[]>([]);
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
+  const [locations, setLocations] = useState<ICompanyLocation[]>([]);
+  const [locationId, setLocationId] = useState<string | null>(null);
   const [isPrefilledCompany, setIsPrefilledCompany] = useState(false);
   const [quickAddChannelFilterState, setQuickAddChannelFilterState] = useState<'active' | 'inactive' | 'all'>('active');
 
@@ -108,12 +138,6 @@ export function QuickAddTicket({
 
         if (Array.isArray(formData.statuses) && formData.statuses.length > 0) {
           setStatuses(formData.statuses);
-          if (!statusId) {
-            const defaultStatus = formData.statuses.find(s => !s.is_closed);
-            if (defaultStatus) {
-              setStatusId(defaultStatus.status_id);
-            }
-          }
         }
 
         if (formData.selectedCompany) {
@@ -132,6 +156,7 @@ export function QuickAddTicket({
         if (prefilledDescription) {
           setDescription(prefilledDescription);
         }
+
       } catch (error) {
         console.error('Error fetching form data:', error);
       } finally {
@@ -143,22 +168,28 @@ export function QuickAddTicket({
   }, [open, prefilledCompany?.id]);
 
   useEffect(() => {
-    const fetchContacts = async () => {
+    const fetchCompanyData = async () => {
       if (companyId && !isPrefilledCompany) {
         try {
-          const contactsData = await getContactsByCompany(companyId, 'all');
+          const [contactsData, locationsData] = await Promise.all([
+            getContactsByCompany(companyId, 'all'),
+            getCompanyLocations(companyId)
+          ]);
           setContacts(contactsData || []);
+          setLocations(locationsData || []);
         } catch (error) {
-          console.error('Error fetching contacts:', error);
+          console.error('Error fetching company data:', error);
           setContacts([]);
+          setLocations([]);
         }
       } else if (!isPrefilledCompany) {
         setContacts([]);
+        setLocations([]);
       }
     };
 
     if (companyId) {
-      fetchContacts();
+      fetchCompanyData();
     }
   }, [companyId, isPrefilledCompany]);
 
@@ -235,6 +266,8 @@ export function QuickAddTicket({
     setPriorityId('');
     setCompanyId(prefilledCompany?.id || '');
     setContactId(prefilledContact?.id || null);
+    setLocationId(null);
+    setLocations([]);
     if (prefilledCompany?.id) {
       const company = companies.find(c => c.company_id === prefilledCompany.id);
       setSelectedCompanyType(company?.client_type as 'company' | 'individual' || null);
@@ -251,32 +284,35 @@ export function QuickAddTicket({
     onOpenChange(false);
   };
 
+
   const validateForm = () => {
     const validationErrors = [];
-    if (!title.trim()) validationErrors.push('Title is required');
-    if (!description.trim()) validationErrors.push('Description is required');
-    if (!assignedTo) validationErrors.push('Please assign the ticket to someone');
-    if (!channelId) validationErrors.push('Please select a channel');
-    if (!statusId) validationErrors.push('Please select a status');
-    if (!priorityId) validationErrors.push('Please select a priority');
-    if (!companyId) validationErrors.push('Please select a company');
+    if (!title.trim()) validationErrors.push('Title');
+    if (!description.trim()) validationErrors.push('Description');
+    if (!assignedTo) validationErrors.push('Assigned To');
+    if (!channelId) validationErrors.push('Channel');
+    if (!statusId) validationErrors.push('Status');
+    if (!priorityId) validationErrors.push('Priority');
+    if (!companyId) validationErrors.push('Client');
     return validationErrors;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
     setHasAttemptedSubmit(true);
+
+    const validationErrors = validateForm();
+    if (validationErrors.length > 0) {
+      setError(validationErrors.join('\n'));
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
       const user = await getCurrentUser();
       if (!user) {
         throw new Error('You must be logged in to create a ticket');
-      }
-
-      const validationErrors = validateForm();
-      if (validationErrors.length > 0) {
-        throw new Error(validationErrors.join('\n'));
       }
 
       const formData = new FormData();
@@ -290,6 +326,10 @@ export function QuickAddTicket({
 
       if (selectedCompanyType === 'company' && contactId) {
         formData.append('contact_name_id', contactId);
+      }
+
+      if (locationId) {
+        formData.append('location_id', locationId);
       }
 
       if (selectedCategories.length > 0) {
@@ -307,6 +347,7 @@ export function QuickAddTicket({
       if (!newTicket) {
         throw new Error('Failed to create ticket');
       }
+
 
       await onTicketAdded(newTicket);
       resetForm();
@@ -360,10 +401,8 @@ export function QuickAddTicket({
         isOpen={open}
         onClose={handleClose}
         className="max-w-2xl max-h-[90vh] overflow-y-auto"
+        title="Add Ticket"
       >
-        <DialogHeader>
-          <DialogTitle>Quick Add Ticket</DialogTitle>
-        </DialogHeader>
         <DialogContent>
           {isLoading ? (
             <div className="flex items-center justify-center p-6">
@@ -372,10 +411,16 @@ export function QuickAddTicket({
           ) : (
             <>
               {hasAttemptedSubmit && error && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-start space-x-2">
-                  <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                  <span className="text-red-700 text-sm">{error}</span>
-                </div>
+                <Alert variant="destructive" className="mb-4">
+                  <AlertDescription>
+                    <p className="font-medium mb-2">Please fill in the required fields:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      {error.split('\n').map((err, index) => (
+                        <li key={index}>{err}</li>
+                      ))}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
               )}
 
               <ReflectionContainer id={`${id}-form`} label="Quick Add Ticket Form">
@@ -387,7 +432,8 @@ export function QuickAddTicket({
                       setTitle(e.target.value);
                       clearErrorIfSubmitted();
                     }}
-                    placeholder="Ticket Title"
+                    placeholder="Ticket Title *"
+                    className={hasAttemptedSubmit && !title.trim() ? 'border-red-500' : ''}
                   />
                   <TextArea
                     id={`${id}-description`}
@@ -396,19 +442,22 @@ export function QuickAddTicket({
                       setDescription(e.target.value);
                       clearErrorIfSubmitted();
                     }}
-                    placeholder="Description"
+                    placeholder="Description *"
+                    className={hasAttemptedSubmit && !description.trim() ? 'border-red-500' : ''}
                   />
 
-                  <CompanyPicker
-                    id={`${id}-company`}
-                    companies={filteredCompanies}
-                    onSelect={handleCompanyChange}
-                    selectedCompanyId={companyId}
-                    filterState={companyFilterState}
-                    onFilterStateChange={setCompanyFilterState}
-                    clientTypeFilter={clientTypeFilter}
-                    onClientTypeFilterChange={setClientTypeFilter}
-                  />
+                  <div className={hasAttemptedSubmit && !companyId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
+                    <CompanyPicker
+                      id={`${id}-company`}
+                      companies={filteredCompanies}
+                      onSelect={handleCompanyChange}
+                      selectedCompanyId={companyId}
+                      filterState={companyFilterState}
+                      onFilterStateChange={setCompanyFilterState}
+                      clientTypeFilter={clientTypeFilter}
+                      onClientTypeFilterChange={setClientTypeFilter}
+                    />
+                  </div>
 
                   <ContactPicker
                     id={`${id}-contact`}
@@ -433,30 +482,52 @@ export function QuickAddTicket({
                     }
                     buttonWidth="full"
                   />
+                  {companyId && locations.length > 0 && (
+                    <CustomSelect
+                      id={`${id}-location`}
+                      value={locationId || 'none'}
+                      onValueChange={(value) => {
+                        setLocationId(value === 'none' ? null : value);
+                        clearErrorIfSubmitted();
+                      }}
+                      options={[
+                        { value: 'none', label: 'No specific location' },
+                        ...locations.map(location => ({
+                          value: location.location_id,
+                          label: formatLocationDisplay(location) + (location.is_default ? ' (Default)' : '')
+                        }))
+                      ]}
+                      placeholder="Select Location (Optional)"
+                      className=""
+                    />
+                  )}
+                  <div className={hasAttemptedSubmit && !assignedTo ? 'ring-1 ring-red-500 rounded-lg' : ''}>
+                    <UserPicker
+                      value={assignedTo}
+                      onValueChange={(value) => {
+                        setAssignedTo(value);
+                        clearErrorIfSubmitted();
+                      }}
+                      users={users.map(user => ({
+                        ...user,
+                        roles: []
+                      }))}
+                      buttonWidth="full"
+                      size="sm"
+                      placeholder="Assign To *"
+                    />
+                  </div>
 
-                  <UserPicker
-                    value={assignedTo}
-                    onValueChange={(value) => {
-                      setAssignedTo(value);
-                      clearErrorIfSubmitted();
-                    }}
-                    users={users.map(user => ({
-                      ...user,
-                      roles: []
-                    }))}
-                    buttonWidth="full"
-                    size="sm"
-                    placeholder="Assign To"
-                  />
-
-                  <ChannelPicker
-                    id={`${id}-channel-picker`}
-                    channels={channels}
-                    onSelect={handleChannelChange}
-                    selectedChannelId={channelId}
-                    onFilterStateChange={setQuickAddChannelFilterState}
-                    filterState={quickAddChannelFilterState}
-                  />
+                  <div className={hasAttemptedSubmit && !channelId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
+                    <ChannelPicker
+                      id={`${id}-channel-picker`}
+                      channels={channels}
+                      onSelect={handleChannelChange}
+                      selectedChannelId={channelId}
+                      onFilterStateChange={setQuickAddChannelFilterState}
+                      filterState={quickAddChannelFilterState}
+                    />
+                  </div>
 
                   <CategoryPicker
                     id={`${id}-category-picker`}
@@ -469,6 +540,7 @@ export function QuickAddTicket({
                     placeholder={channelId ? "Select category" : "Select a channel first"}
                     multiSelect={false}
                     className="w-full"
+                    disabled={!channelId}
                   />
 
                   <CustomSelect
@@ -479,7 +551,8 @@ export function QuickAddTicket({
                       clearErrorIfSubmitted();
                     }}
                     options={memoizedStatusOptions}
-                    placeholder="Select Status"
+                    placeholder="Select Status *"
+                    className={hasAttemptedSubmit && !statusId ? 'border-red-500' : ''}
                   />
 
                   <CustomSelect
@@ -490,7 +563,8 @@ export function QuickAddTicket({
                       clearErrorIfSubmitted();
                     }}
                     options={memoizedPriorityOptions}
-                    placeholder="Select Priority"
+                    placeholder="Select Priority *"
+                    className={hasAttemptedSubmit && !priorityId ? 'border-red-500' : ''}
                   />
 
                   <DialogFooter>
@@ -507,6 +581,7 @@ export function QuickAddTicket({
                       type="submit"
                       variant="default"
                       disabled={isSubmitting}
+                      className={!title.trim() || !description.trim() || !assignedTo || !channelId || !statusId || !priorityId || !companyId ? 'opacity-50' : ''}
                     >
                       {isSubmitting ? 'Saving...' : 'Save Ticket'}
                     </Button>

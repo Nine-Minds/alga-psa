@@ -28,11 +28,7 @@ import {
   IEventCatalogEntry,
   IWorkflowEventAttachment
 } from '@shared/workflow/types/eventCatalog';
-import { Dialog } from 'server/src/components/ui/Dialog';
-import { DialogContent } from 'server/src/components/ui/Dialog';
-import { DialogHeader } from 'server/src/components/ui/Dialog';
-import { DialogTitle } from 'server/src/components/ui/Dialog';
-import { DialogFooter } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import EventTriggerDialog from 'server/src/components/events-catalog/EventTriggerDialog';
 
 export default function EventsCatalog() {
@@ -407,11 +403,12 @@ export default function EventsCatalog() {
       )}
       
       {/* Detach Workflow Confirmation Dialog */}
-      <Dialog isOpen={isDetachDialogOpen} onClose={() => setIsDetachDialogOpen(false)}>
+      <Dialog 
+        isOpen={isDetachDialogOpen} 
+        onClose={() => setIsDetachDialogOpen(false)} 
+        title="Detach Workflow"
+      >
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Detach Workflow</DialogTitle>
-          </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-gray-500">
               Are you sure you want to detach this workflow from the event? This will remove the trigger and any parameter mappings.

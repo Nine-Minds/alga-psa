@@ -7,6 +7,7 @@ import { TenantProvider } from "../components/TenantProvider";
 import { Suspense } from "react";
 import { Theme } from '@radix-ui/themes';
 import { ThemeProvider } from '../context/ThemeContext';
+import { TagProvider } from '../context/TagContext';
 import { ClientUIStateProvider } from '../types/ui-reflection/ClientUIStateProvider';
 import { DynamicExtensionProvider } from '../components/extensions/DynamicExtensionProvider';
 

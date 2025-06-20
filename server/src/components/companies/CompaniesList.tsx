@@ -1,11 +1,13 @@
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { useRouter } from 'next/navigation';
 import { MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { ReflectedDropdownMenu } from 'server/src/components/ui/ReflectedDropdownMenu';
 import { Button } from 'server/src/components/ui/Button';
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
+import { TagManager } from 'server/src/components/tags';
 import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
 import { useRegisterChild } from 'server/src/types/ui-reflection/useRegisterChild';
 import { FormFieldComponent, ButtonComponent } from 'server/src/types/ui-reflection/types';
@@ -21,6 +23,9 @@ interface CompaniesListProps {
     pageSize?: number;
     totalCount?: number;
     onPageChange?: (page: number) => void;
+    companyTags?: Record<string, ITag[]>;
+    allUniqueTags?: string[];
+    onTagsChange?: (companyId: string, tags: ITag[]) => void;
 }
 
 // Component for company selection checkbox
@@ -91,7 +96,10 @@ const CompaniesList = ({
   currentPage,
   pageSize,
   totalCount,
-  onPageChange
+  onPageChange,
+  companyTags = {},
+  allUniqueTags = [],
+  onTagsChange
 }: CompaniesListProps) => {
   const router = useRouter(); // Get router instance
 
@@ -137,32 +145,32 @@ const CompaniesList = ({
         {
             title: 'Type',
             dataIndex: 'client_type',
-            width: '10%',
+            width: '8%',
             render: (text: string | null, record: ICompany) => record.client_type || 'N/A',
         },
         {
             title: 'Phone',
             dataIndex: 'phone_no',
-            width: '15%',
+            width: '12%',
             render: (text: string | null, record: ICompany) => record.phone_no || 'N/A',
         },
         {
             title: 'Address',
             dataIndex: 'address',
-            width: '20%',
+            width: '18%',
             render: (text: string | null, record: ICompany) => <span className="truncate" title={record.address ?? ''}>{record.address || 'N/A'}</span>,
         },
         {
             title: 'Account Manager',
             dataIndex: 'account_manager_full_name',
-            width: '10%',
+            width: '9%',
             render: (text: string | undefined, record: ICompany) =>
                 <span className="truncate" title={record.account_manager_full_name ?? ''}>{record.account_manager_full_name || 'N/A'}</span>,
         },
         {
             title: 'URL',
             dataIndex: 'url',
-            width: '12%',
+            width: '10%',
             render: (text: string | null, record: ICompany) => (
                 record.url && record.url.trim() !== '' ? (
                     <a href={record.url.startsWith('http') ? record.url : `https://${record.url}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate block" title={record.url}>
@@ -170,6 +178,25 @@ const CompaniesList = ({
                     </a>
                 ) : 'N/A'
             ),
+        },
+        {
+            title: 'Tags',
+            dataIndex: 'tags',
+            width: '20%',
+            render: (value: string, record: ICompany) => {
+                if (!record.company_id || !onTagsChange) return null;
+                
+                return (
+                    <div onClick={(e) => e.stopPropagation()}>
+                        <TagManager
+                            entityId={record.company_id}
+                            entityType="company"
+                            initialTags={companyTags[record.company_id] || []}
+                            onTagsChange={(tags) => onTagsChange(record.company_id, tags)}
+                        />
+                    </div>
+                );
+            },
         },
         {
             title: 'Actions',

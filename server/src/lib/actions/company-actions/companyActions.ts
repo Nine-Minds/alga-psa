@@ -10,7 +10,28 @@ import { getCompanyLogoUrl, getCompanyLogoUrlsBatch } from 'server/src/lib/utils
 import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/EntityImageService';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
+import { addCompanyEmailSetting } from '../company-settings/emailSettings';
 
+// Helper function to extract domain from URL
+function extractDomainFromUrl(url: string): string | null {
+  if (!url) return null;
+  
+  try {
+    // Add protocol if missing
+    let urlWithProtocol = url;
+    if (!url.match(/^https?:\/\//)) {
+      urlWithProtocol = `https://${url}`;
+    }
+    
+    const urlObj = new URL(urlWithProtocol);
+    // Remove 'www.' prefix if present
+    return urlObj.hostname.replace(/^www\./, '');
+  } catch (error) {
+    // If URL parsing fails, try basic extraction
+    const match = url.match(/(?:https?:\/\/)?(?:www\.)?([^\/\s]+)/);
+    return match ? match[1] : null;
+  }
+}
 
 export async function getCompanyById(companyId: string): Promise<ICompany | null> {
   const { knex, tenant } = await createTenantKnex();
@@ -134,6 +155,26 @@ export async function updateCompany(companyId: string, updateData: Partial<Omit<
       }
     });
 
+    // If URL was updated, try to add the domain as email suffix
+    if (updateData.url !== undefined || updateData.properties?.website !== undefined) {
+      const websiteUrl = updateData.url || updateData.properties?.website;
+      if (websiteUrl) {
+        const domain = extractDomainFromUrl(websiteUrl);
+        if (domain) {
+          try {
+            await addCompanyEmailSetting(
+              companyId,
+              domain,
+              true // self-registration enabled by default
+            );
+          } catch (error) {
+            // Log error but don't fail company update
+            console.error('Failed to add website domain as email suffix:', error);
+          }
+        }
+      }
+    }
+
     // Fetch and return the updated company data including logoUrl
     const updatedCompanyWithLogo = await getCompanyById(companyId);
     if (!updatedCompanyWithLogo) {
@@ -191,6 +232,24 @@ export async function createCompany(company: Omit<ICompany, 'company_id' | 'crea
     // Create default tax settings for the new company
     await createDefaultTaxSettings(createdCompany.company_id);
 
+    // Add website domain as email suffix if available
+    const websiteUrl = createdCompany.url || createdCompany.properties?.website;
+    if (websiteUrl) {
+      const domain = extractDomainFromUrl(websiteUrl);
+      if (domain) {
+        try {
+          await addCompanyEmailSetting(
+            createdCompany.company_id,
+            domain,
+            true // self-registration enabled by default
+          );
+        } catch (error) {
+          // Log error but don't fail company creation
+          console.error('Failed to add website domain as email suffix:', error);
+        }
+      }
+    }
+
     return { success: true, data: createdCompany };
   } catch (error: any) {
     console.error('Error creating company:', error);
@@ -234,6 +293,13 @@ export interface CompanyPaginationParams {
   searchTerm?: string;
   clientTypeFilter?: 'all' | 'company' | 'individual';
   loadLogos?: boolean; // Option to load logos or not
+  /**
+   * Optional status filter. Overrides includeInactive if provided.
+   *  - 'active'   -> only active companies
+   *  - 'inactive' -> only inactive companies
+   *  - 'all'      -> include both active and inactive
+   */
+  statusFilter?: 'all' | 'active' | 'inactive';
 }
 
 export interface PaginatedCompaniesResponse {
@@ -251,7 +317,8 @@ export async function getAllCompaniesPaginated(params: CompanyPaginationParams =
     includeInactive = true,
     searchTerm,
     clientTypeFilter = 'all',
-    loadLogos = true
+    loadLogos = true,
+    statusFilter
   } = params;
 
   const {knex: db, tenant} = await createTenantKnex();
@@ -272,7 +339,11 @@ export async function getAllCompaniesPaginated(params: CompanyPaginationParams =
         })
         .where({ 'c.tenant': tenant });
 
-      if (!includeInactive) {
+      if (statusFilter === 'active') {
+        baseQuery = baseQuery.andWhere('c.is_inactive', false);
+      } else if (statusFilter === 'inactive') {
+        baseQuery = baseQuery.andWhere('c.is_inactive', true);
+      } else if (!statusFilter && !includeInactive) {
         baseQuery = baseQuery.andWhere('c.is_inactive', false);
       }
 

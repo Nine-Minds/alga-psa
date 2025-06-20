@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import CustomSelect from '../ui/CustomSelect';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Dialog, DialogContent, DialogFooter } from '../ui/Dialog';
 import { Button } from '../ui/Button';
 // Removed Tabs imports
 import { Label } from '../ui/Label';
@@ -16,7 +16,6 @@ import { IBillingPlan, IServiceType } from 'server/src/interfaces/billing.interf
 // Removed planServiceActions imports
 import { useTenant } from '../TenantProvider';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { AlertCircle } from 'lucide-react';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing'; // Removed PLAN_TYPE_OPTIONS
 // Removed getServices, getPlanServices imports
 // Removed OverlapWarningDialog import
@@ -39,9 +38,9 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
   const [isCustom, setIsCustom] = useState(false);
   const tenant = useTenant()!;
   // Removed activeTab state
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const [showValidationSummary, setShowValidationSummary] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false); // Added saving state
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
   // Removed all plan type specific state variables (baseRate, hourlyRate, totalHours, etc.)
   // Removed service selection state (selectedServices, availableServices, isLoading)
@@ -64,24 +63,28 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
   }, [editingPlan, open]);
 
 
+  const clearErrorIfSubmitted = () => {
+    if (hasAttemptedSubmit) {
+      setValidationErrors([]);
+    }
+  };
+
   // Simplified validation
-  const validateForm = (): Record<string, string> => {
-    const errors: Record<string, string> = {};
-    if (!planName.trim()) errors.planName = 'Plan name is required';
-    if (!billingFrequency) errors.billingFrequency = 'Billing frequency is required';
+  const validateForm = (): string[] => {
+    const errors: string[] = [];
+    if (!planName.trim()) errors.push('Plan name');
+    if (!billingFrequency) errors.push('Billing frequency');
     // No type-specific validation needed here
     return errors;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setShowValidationSummary(false); // Reset validation summary display
+    setHasAttemptedSubmit(true);
 
     const errors = validateForm();
-    setValidationErrors(errors);
-
-    if (Object.keys(errors).length > 0) {
-      setShowValidationSummary(true);
+    if (errors.length > 0) {
+      setValidationErrors(errors);
       return;
     }
 
@@ -92,7 +95,7 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
   // Simplified savePlan
   const savePlan = async () => {
     setIsSaving(true); // Set saving state
-    setValidationErrors({}); // Clear previous errors
+    setValidationErrors([]); // Clear previous errors
 
     try {
       const planData: Partial<IBillingPlan> = { // Use Partial for update
@@ -123,10 +126,7 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
       onPlanAdded(savedPlanId); // Pass the ID back
     } catch (error) {
       console.error('Error saving billing plan:', error);
-      setValidationErrors({
-        general: `Failed to save billing plan: ${error instanceof Error ? error.message : String(error)}`
-      });
-      setShowValidationSummary(true);
+      setValidationErrors([`Failed to save billing plan: ${error instanceof Error ? error.message : String(error)}`]);
     } finally {
         setIsSaving(false); // Reset saving state
     }
@@ -137,8 +137,8 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
     setBillingFrequency('');
     setPlanType('Fixed');
     setIsCustom(false);
-    setValidationErrors({});
-    setShowValidationSummary(false);
+    setValidationErrors([]);
+    setHasAttemptedSubmit(false);
     // No other state to reset
   };
 
@@ -154,63 +154,62 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
   // Removed handleOverlapConfirm and handleOverlapCancel
 
   return (<>
-    <Dialog.Root open={open} onOpenChange={setOpen}>
-      {triggerButton && (
-        <Dialog.Trigger asChild>
-          {triggerButton}
-        </Dialog.Trigger>
-      )}
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50 data-[state=open]:animate-overlayShow" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-[600px] max-h-[90vh] overflow-y-auto data-[state=open]:animate-contentShow">
-          <Dialog.Title className="text-lg font-medium text-gray-900 mb-4">
-            {editingPlan ? 'Edit Billing Plan Basics' : 'Add New Billing Plan'}
-          </Dialog.Title>
-           {showValidationSummary && Object.keys(validationErrors).length > 0 && (
+    {triggerButton && (
+      <div onClick={() => setOpen(true)}>
+        {triggerButton}
+      </div>
+    )}
+    <Dialog
+      isOpen={open}
+      onClose={handleClose}
+      title={editingPlan ? 'Edit Billing Plan Basics' : 'Add New Billing Plan'}
+      className="max-w-2xl"
+    >
+      <DialogContent>
+          <form onSubmit={handleSubmit} noValidate>
+            {hasAttemptedSubmit && validationErrors.length > 0 && (
               <Alert variant="destructive" className="mb-4">
-                <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  Please fix the following errors:
-                  <ul className="list-disc pl-5 mt-1 text-sm">
-                    {Object.entries(validationErrors).map(([field, message]) => (
-                      <li key={field}>{message}</li>
+                  <p className="font-medium mb-2">Please fill in the required fields:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    {validationErrors.map((err, index) => (
+                      <li key={index}>{err}</li>
                     ))}
                   </ul>
                 </AlertDescription>
               </Alert>
             )}
-          <form onSubmit={handleSubmit}>
             {/* Removed Tabs - Only show basic info */}
             <div className="space-y-4">
               <div>
-                <Label htmlFor="plan-name">Plan Name</Label>
+                <Label htmlFor="plan-name">Plan Name *</Label>
                 <Input
                   id="plan-name"
                   type="text"
                   value={planName}
-                  onChange={(e) => setPlanName(e.target.value)}
+                  onChange={(e) => {
+                    setPlanName(e.target.value);
+                    clearErrorIfSubmitted();
+                  }}
                   placeholder="Enter plan name"
                   required
-                  className={validationErrors.planName ? 'border-red-500' : ''}
+                  className={hasAttemptedSubmit && !planName.trim() ? 'border-red-500' : ''}
                 />
-                {validationErrors.planName && (
-                  <p className="text-red-500 text-xs mt-1">{validationErrors.planName}</p>
-                )}
               </div>
               <div>
-                <Label htmlFor="billing-frequency">Billing Frequency</Label>
+                <Label htmlFor="billing-frequency">Billing Frequency *</Label>
                 <CustomSelect
                   id="billing-frequency"
                   options={BILLING_FREQUENCY_OPTIONS}
-                  onValueChange={setBillingFrequency}
+                  onValueChange={(value) => {
+                    setBillingFrequency(value);
+                    clearErrorIfSubmitted();
+                  }}
                   value={billingFrequency}
                   placeholder="Select billing frequency"
-                  className={`w-full ${validationErrors.billingFrequency ? 'border-red-500' : ''}`}
+                  className={`w-full ${hasAttemptedSubmit && !billingFrequency ? 'ring-1 ring-red-500' : ''}`}
                   required
                 />
-                {validationErrors.billingFrequency && (
-                  <p className="text-red-500 text-xs mt-1">{validationErrors.billingFrequency}</p>
-                )}
               </div>
               <div>
                 {/* Use PlanTypeSelector with cards */}
@@ -237,33 +236,27 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
 
             {/* Removed Config Tab Content and Service Selection */}
 
-            <div className="flex justify-end gap-2 mt-6">
+            <DialogFooter>
               <Button
                 id="cancel-billing-plan-button"
                 type="button"
                 variant="outline"
-                onClick={handleClose}
+                onClick={() => {
+                  setHasAttemptedSubmit(false);
+                  setValidationErrors([]);
+                  handleClose();
+                }}
                 className="bg-white hover:bg-gray-50"
               >
                 Cancel
               </Button>
-              <Button id='save-billing-plan-button' type="submit" disabled={isSaving}>
+              <Button id='save-billing-plan-button' type="submit" disabled={isSaving} className={!planName.trim() || !billingFrequency ? 'opacity-50' : ''}>
                 {isSaving ? 'Saving...' : (editingPlan ? 'Update Plan Basics' : 'Save and Configure')}
               </Button>
-            </div>
+            </DialogFooter>
           </form>
-           <Dialog.Close asChild>
-                <button
-                className="absolute top-4 right-4 inline-flex h-6 w-6 appearance-none items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400"
-                aria-label="Close"
-                onClick={handleClose} // Ensure reset/close logic runs
-                >
-                 &times; {/* Simple X */}
-                </button>
-            </Dialog.Close>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+      </DialogContent>
+    </Dialog>
 
     {/* Removed OverlapWarningDialog */}
   </>

@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent, DialogDescription } from 'server/src/components/ui/Dialog';
 import { Label } from 'server/src/components/ui/Label';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { getTaxRates, addTaxRate, updateTaxRate, deleteTaxRate, confirmDeleteTaxRate, DeleteTaxRateResult } from 'server/src/lib/actions/taxRateActions';
 import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions';
 import { ITaxRate, IService } from 'server/src/interfaces/billing.interfaces';
@@ -34,6 +35,8 @@ const TaxRates: React.FC = () => {
   const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] = useState(false);
   const [taxRateIdToDelete, setTaxRateIdToDelete] = useState<string | null>(null);
   const [affectedServicesForConfirmation, setAffectedServicesForConfirmation] = useState<Pick<IService, 'service_id' | 'service_name'>[]>([]);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   useEffect(() => {
     fetchTaxRates();
@@ -67,23 +70,34 @@ const TaxRates: React.FC = () => {
    }
   };
 
+  const clearErrorIfSubmitted = () => {
+    if (hasAttemptedSubmit) {
+      setValidationErrors([]);
+    }
+  };
+
   const handleAddOrUpdateTaxRate = async () => {
+    setHasAttemptedSubmit(true);
+    const errors: string[] = [];
+    
     // Basic validation - Changed region to region_code
     if (!currentTaxRate.region_code) {
-      setError('Tax Region is required');
-      return;
+      errors.push('Tax Region');
     }
-
     if (!currentTaxRate.tax_percentage) {
-      setError('Tax percentage is required');
-      return;
+      errors.push('Tax percentage');
     }
     if (!currentTaxRate.start_date) {
-      setError('Start date is required');
+      errors.push('Start date');
+    }
+    
+    if (errors.length > 0) {
+      setValidationErrors(errors);
       return;
     }
 
     try {
+      setValidationErrors([]);
       if (isEditing) {
         await updateTaxRate(currentTaxRate as ITaxRate);
       } else {
@@ -120,6 +134,8 @@ const TaxRates: React.FC = () => {
     });
     setIsEditing(true);
     setIsDialogOpen(true);
+    setHasAttemptedSubmit(false);
+    setValidationErrors([]);
   };
 
   const handleDeleteTaxRate = async (taxRateId: string) => {
@@ -239,6 +255,8 @@ const TaxRates: React.FC = () => {
                 setIsEditing(false);
                 setCurrentTaxRate({}); // Reverted: Clear state
                 setError(null);
+                setHasAttemptedSubmit(false);
+                setValidationErrors([]);
               }}
             >
               Add New Tax Rate
@@ -252,31 +270,47 @@ const TaxRates: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Dialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)}>
+      <Dialog isOpen={isDialogOpen} onClose={() => {
+        setIsDialogOpen(false);
+        setHasAttemptedSubmit(false);
+        setValidationErrors([]);
+      }} title={isEditing ? 'Edit Tax Rate' : 'Add New Tax Rate'}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{isEditing ? 'Edit Tax Rate' : 'Add New Tax Rate'}</DialogTitle>
-            <DialogDescription>Enter the details for the tax rate.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
+          <DialogDescription>Enter the details for the tax rate.</DialogDescription>
+          <form onSubmit={(e) => { e.preventDefault(); handleAddOrUpdateTaxRate(); }} noValidate>
+            <div className="space-y-4">
+              {hasAttemptedSubmit && validationErrors.length > 0 && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertDescription>
+                    <p className="font-medium mb-2">Please fill in the required fields:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      {validationErrors.map((err, index) => (
+                        <li key={index}>{err}</li>
+                      ))}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              )}
             {/* Replaced Input with CustomSelect for Region */}
             <div>
-              <Label htmlFor="tax-rate-region-field">Tax Region</Label>
+              <Label htmlFor="tax-rate-region-field">Tax Region *</Label>
               <CustomSelect
                 id="tax-rate-region-field"
                 value={currentTaxRate.region_code || ''}
                 onValueChange={(value) => {
                   setCurrentTaxRate({ ...currentTaxRate, region_code: value });
                   setError(null);
+                  clearErrorIfSubmitted();
                 }}
                 options={taxRegions.map(r => ({ value: r.region_code, label: r.region_name }))}
                 placeholder={isLoadingTaxRegions ? "Loading regions..." : "Select Tax Region"}
                 disabled={isLoadingTaxRegions}
                 required={true} // Make region selection required
+                className={hasAttemptedSubmit && !currentTaxRate.region_code ? 'ring-1 ring-red-500' : ''}
               />
             </div>
             <div>
-              <Label htmlFor="tax-rate-percentage-field">Tax Percentage</Label>
+              <Label htmlFor="tax-rate-percentage-field">Tax Percentage *</Label>
               <Input
                 id="tax-rate-percentage-field"
                 type="number"
@@ -286,7 +320,10 @@ const TaxRates: React.FC = () => {
                   // Reverted: Parse float directly into state
                   setCurrentTaxRate({ ...currentTaxRate, tax_percentage: parseFloat(e.target.value) });
                   setError(null);
+                  clearErrorIfSubmitted();
                 }}
+                placeholder="Enter percentage"
+                className={hasAttemptedSubmit && !currentTaxRate.tax_percentage ? 'border-red-500' : ''}
               />
             </div>
             <div>
@@ -301,7 +338,7 @@ const TaxRates: React.FC = () => {
               />
             </div>
             <div>
-              <Label htmlFor="tax-rate-start-date-field">Start Date</Label>
+              <Label htmlFor="tax-rate-start-date-field">Start Date *</Label>
               <Input
                 id="tax-rate-start-date-field"
                 type="date"
@@ -309,7 +346,9 @@ const TaxRates: React.FC = () => {
                 onChange={(e) => {
                   setCurrentTaxRate({ ...currentTaxRate, start_date: e.target.value });
                   setError(null);
+                  clearErrorIfSubmitted();
                 }}
+                className={hasAttemptedSubmit && !currentTaxRate.start_date ? 'border-red-500' : ''}
               />
             </div>
             <div>
@@ -324,25 +363,30 @@ const TaxRates: React.FC = () => {
                 }}
               />
             </div>
-            <Button
+            <div className="flex justify-end">
+              <Button
               id="save-tax-rate-button"
-              onClick={handleAddOrUpdateTaxRate}
+              type="submit"
+              className={!currentTaxRate.region_code || !currentTaxRate.tax_percentage || !currentTaxRate.start_date ? 'opacity-50' : ''}
             >
               {isEditing ? 'Update' : 'Add'} Tax Rate
-            </Button>
-          </div>
+            </Button>  
+            </div>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
 
       {/* Confirmation Dialog for Deletion */}
-      <Dialog isOpen={isConfirmDeleteDialogOpen} onClose={() => setIsConfirmDeleteDialogOpen(false)}>
+      <Dialog 
+        isOpen={isConfirmDeleteDialogOpen} 
+        onClose={() => setIsConfirmDeleteDialogOpen(false)}
+        title="Confirm Tax Rate Deletion"
+      >
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Tax Rate Deletion</DialogTitle>
-            <DialogDescription>
-              This tax rate is currently assigned to the following services. Deleting it will remove the tax rate assignment (set to non-taxable) for these services. Are you sure you want to proceed?
-            </DialogDescription>
-          </DialogHeader>
+          <DialogDescription>
+            This tax rate is currently assigned to the following services. Deleting it will remove the tax rate assignment (set to non-taxable) for these services. Are you sure you want to proceed?
+          </DialogDescription>
           <div className="my-4 max-h-48 overflow-y-auto">
             <ul className="list-disc pl-5 space-y-1">
               {affectedServicesForConfirmation.map(service => (

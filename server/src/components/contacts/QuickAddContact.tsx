@@ -4,7 +4,7 @@ import { X } from 'lucide-react';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { FormComponent, FormFieldComponent, ButtonComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from "server/src/components/ui/Button";
 import { Input } from "server/src/components/ui/Input";
 import { Label } from "server/src/components/ui/Label";
@@ -14,6 +14,7 @@ import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { Switch } from 'server/src/components/ui/Switch';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 interface QuickAddContactProps {
   isOpen: boolean;
@@ -57,6 +58,8 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   const [role, setRole] = useState('');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
 
   // Set initial company ID when the component mounts or when selectedCompanyId changes
@@ -83,6 +86,8 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       setIsInactive(false);
       setRole('');
       setNotes('');
+      setHasAttemptedSubmit(false);
+      setValidationErrors([]);
     }
   }, [isOpen, selectedCompanyId]);
 
@@ -96,6 +101,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   const handleSubmit = async (e: React.FormEvent | React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    setHasAttemptedSubmit(true);
 
     // If the click target is inside the company picker, don't submit
     const target = e.target as HTMLElement;
@@ -104,14 +110,20 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
     }
 
     // Validate required fields
+    const errors: string[] = [];
     if (!fullName.trim()) {
-      setError('Full name is required');
-      return;
+      errors.push('Full name is required');
     }
     if (!email.trim()) {
-      setError('Email address is required');
+      errors.push('Email address is required');
+    }
+    
+    if (errors.length > 0) {
+      setValidationErrors(errors);
       return;
     }
+    
+    setValidationErrors([]);
 
     try {
       setError(null); // Clear any existing errors
@@ -156,11 +168,25 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   };
 
   return (
-    <Dialog id="quick-add-contact-dialog" isOpen={isOpen} onClose={onClose}>
-      <DialogHeader>
-        <DialogTitle>Add New Contact</DialogTitle>
-      </DialogHeader>
+    <Dialog 
+      id="quick-add-contact-dialog" 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title="Add New Contact"
+    >
       <DialogContent>
+        {hasAttemptedSubmit && validationErrors.length > 0 && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>
+              Please fix the following errors:
+              <ul className="list-disc pl-5 mt-1 text-sm">
+                {validationErrors.map((err, index) => (
+                  <li key={index}>{err}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
             <button
@@ -195,22 +221,24 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
         }}>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="fullName">Full Name</Label>
+              <Label htmlFor="fullName">Full Name *</Label>
               <Input
                 id="quick-add-contact-name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
+                className={hasAttemptedSubmit && !fullName.trim() ? 'border-red-500' : ''}
               />
             </div>
             <div>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email *</Label>
               <Input
                 id="quick-add-contact-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className={hasAttemptedSubmit && !email.trim() ? 'border-red-500' : ''}
               />
             </div>
             <div>
@@ -273,6 +301,8 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                setHasAttemptedSubmit(false);
+                setValidationErrors([]);
                 onClose();
               }}
             >
@@ -282,7 +312,8 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
               id="quick-add-contact-submit" 
               type="button"
               onClick={handleSubmit}
-              disabled={!fullName.trim() || !email.trim()}
+              disabled={false}
+              className={!fullName.trim() || !email.trim() ? 'opacity-50' : ''}
             >
               Add Contact
             </Button>

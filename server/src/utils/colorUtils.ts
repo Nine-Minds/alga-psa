@@ -17,7 +17,17 @@ const hashString = (str: string): number => {
   return Math.abs(hash);
 };
 
-export const generateEntityColor = (str: string): ColorResult => {
+export const generateEntityColor = (tagOrString: string | ITag): ColorResult => {
+  // If it's a tag object with custom colors, use them
+  if (typeof tagOrString === 'object' && tagOrString.background_color && tagOrString.text_color) {
+    return {
+      background: tagOrString.background_color,
+      text: tagOrString.text_color
+    };
+  }
+  
+  // Otherwise, generate colors from the tag text
+  const str = typeof tagOrString === 'string' ? tagOrString : tagOrString.tag_text;
   const hue = hashString(str) % 360;
   const baseColor = tinycolor({ h: hue, s: 85, l: 45 });
   

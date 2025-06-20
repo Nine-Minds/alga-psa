@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
@@ -42,13 +42,13 @@ export function BundlePlanRateDialog({ plan, onClose, onSave }: BundlePlanRateDi
   };
 
   return (
-    <Dialog.Root open={true} onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-[400px]">
-          <Dialog.Title className="text-lg font-medium text-gray-900 mb-2">
-            Set Custom Rate for {plan.plan_name}
-          </Dialog.Title>
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      title={`Set Custom Rate for ${plan.plan_name}`}
+      className="max-w-md"
+    >
+      <DialogContent>
           
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
@@ -88,7 +88,7 @@ export function BundlePlanRateDialog({ plan, onClose, onSave }: BundlePlanRateDi
               </div>
             </div>
             
-            <div className="flex justify-end gap-2 pt-4">
+            <DialogFooter>
               <Button
                 id="cancel-rate-btn"
                 type="button"
@@ -103,10 +103,9 @@ export function BundlePlanRateDialog({ plan, onClose, onSave }: BundlePlanRateDi
               >
                 Save Rate
               </Button>
-            </div>
+            </DialogFooter>
           </form>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+      </DialogContent>
+    </Dialog>
   );
 }

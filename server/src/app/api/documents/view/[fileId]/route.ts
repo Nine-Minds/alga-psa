@@ -130,23 +130,69 @@ export async function GET(
     // Get the storage provider instance
     const provider = await StorageProviderFactory.createProvider();
 
-    // Get the readable stream for the file
-    const stream = await provider.getReadStream(fileRecord.storage_path);
+    // Handle HTTP Range requests for video files (needed for video seeking and previews)
+    const range = request.headers.get('range');
+    const isVideoFile = fileRecord.mime_type?.startsWith('video/');
 
-    // Set headers
-    const headers = new Headers();
-    headers.set('Content-Type', fileRecord.mime_type);
-    // Cache for 1 hour (adjust as needed)
-    headers.set('Cache-Control', 'public, max-age=3600');
-    // Optional: Content-Length if easily available, but streaming usually handles this
-    // headers.set('Content-Length', fileRecord.file_size.toString());
+    if (range && isVideoFile) {
+      // Parse range header (e.g., "bytes=0-1023" or "bytes=1024-")
+      const rangeMatch = range.match(/bytes=(\d+)-(\d*)/);
+      if (!rangeMatch) {
+        return new NextResponse('Invalid Range', { status: 416 });
+      }
 
-    // Return the stream response
-    // Note: NextResponse can directly handle ReadableStream
-    return new NextResponse(stream as any, { // Cast needed for NextResponse type compatibility
-      status: 200,
-      headers,
-    });
+      const start = parseInt(rangeMatch[1], 10);
+      const end = rangeMatch[2] ? parseInt(rangeMatch[2], 10) : fileRecord.file_size - 1;
+      const fileSize = fileRecord.file_size;
+
+      // Validate range
+      if (start >= fileSize || end >= fileSize || start > end) {
+        const headers = new Headers();
+        headers.set('Content-Range', `bytes */${fileSize}`);
+        return new NextResponse('Range Not Satisfiable', { status: 416, headers });
+      }
+
+      const contentLength = end - start + 1;
+
+      // Get the readable stream for the file range
+      const stream = await provider.getReadStream(fileRecord.storage_path, { start, end });
+
+      // Set headers for partial content
+      const headers = new Headers();
+      headers.set('Content-Type', fileRecord.mime_type);
+      headers.set('Accept-Ranges', 'bytes');
+      headers.set('Content-Range', `bytes ${start}-${end}/${fileSize}`);
+      headers.set('Content-Length', contentLength.toString());
+      headers.set('Cache-Control', 'public, max-age=3600');
+
+      // Return partial content (206)
+      return new NextResponse(stream as any, {
+        status: 206, // Partial Content
+        headers,
+      });
+    } else {
+      // Get the full readable stream for the file
+      const stream = await provider.getReadStream(fileRecord.storage_path);
+
+      // Set headers for full content
+      const headers = new Headers();
+      headers.set('Content-Type', fileRecord.mime_type);
+      headers.set('Content-Length', fileRecord.file_size.toString());
+      
+      // Add Accept-Ranges header for video files to indicate range support
+      if (isVideoFile) {
+        headers.set('Accept-Ranges', 'bytes');
+      }
+      
+      // Cache for 1 hour (adjust as needed)
+      headers.set('Cache-Control', 'public, max-age=3600');
+
+      // Return the full stream response
+      return new NextResponse(stream as any, {
+        status: 200,
+        headers,
+      });
+    }
 
   } catch (error) {
     console.error(`Error serving file ${fileId}:`, error);
