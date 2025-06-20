@@ -94,3 +94,18 @@ export interface IAgentSchedule {
   userId: string;
   minutes: number;
 }
+
+export type PriorityLevel = 'low' | 'medium' | 'high';
+
+export interface IPriorityMatrixEntry {
+  impact: PriorityLevel;
+  urgency: PriorityLevel;
+  priority_id: string;
+}
+
+export interface ITicketPrioritySettings extends TenantEntity {
+  use_priority_matrix: boolean;
+  priority_matrix: IPriorityMatrixEntry[];
+  created_at?: Date;
+  updated_at?: Date;
+}

@@ -14,6 +14,7 @@ import { IStatus, ItemType } from 'server/src/interfaces/status.interface';
 import { IPriority, IStandardPriority, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import NumberingSettings from './NumberingSettings';
+import PriorityMatrixSettings from './PriorityMatrixSettings';
 import { Switch } from 'server/src/components/ui/Switch';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
@@ -1202,6 +1203,16 @@ const TicketingSettings = (): JSX.Element => {
                 <Plus className="h-4 w-4 mr-2" /> Add Priority
               </Button>
             </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      label: "Priority Matrix",
+      content: (
+        <div>
+          <div className="bg-white p-6 rounded-lg shadow-sm">
+            <PriorityMatrixSettings />
           </div>
         </div>
       )
