@@ -87,8 +87,16 @@ export async function getProjects(): Promise<IProject[]> {
 
 export async function getProjectPhase(phaseId: string): Promise<IProjectPhase | null> {
     try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser) {
+            throw new Error('No authenticated user found');
+        }
+
         const {knex} = await createTenantKnex();
         const phase = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            if (!await hasPermission(currentUser, 'project', 'read', trx)) {
+                throw new Error('Permission denied: Cannot read project');
+            }
             return await ProjectModel.getPhaseById(trx, phaseId);
         });
         return phase;
@@ -452,8 +460,16 @@ async function getStandardProjectTaskStatuses(): Promise<IStandardStatus[]> {
 
 export async function getProjectStatuses(): Promise<IStatus[]> {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
     const {knex} = await createTenantKnex();
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+        if (!await hasPermission(currentUser, 'project', 'read', trx)) {
+            throw new Error('Permission denied: Cannot read project');
+        }
         return await ProjectModel.getStatusesByType(trx, 'project');
     });
   } catch (error) {
@@ -464,8 +480,16 @@ export async function getProjectStatuses(): Promise<IStatus[]> {
 
 export async function generateNextWbsCode(): Promise<string> {
     try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser) {
+            throw new Error('No authenticated user found');
+        }
+
         const {knex} = await createTenantKnex();
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
+            if (!await hasPermission(currentUser, 'project', 'read', trx)) {
+                throw new Error('Permission denied: Cannot read project');
+            }
             return await ProjectModel.generateNextWbsCode(trx, '');
         });
     } catch (error) {
@@ -789,9 +813,17 @@ export async function updateProjectStructure(projectId: string, updates: { phase
 
 export async function getProjectTaskStatuses(projectId: string): Promise<ProjectStatus[]> {
     try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser) {
+            throw new Error('No authenticated user found');
+        }
+
         const {knex} = await createTenantKnex();
         
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
+            if (!await hasPermission(currentUser, 'project', 'read', trx)) {
+                throw new Error('Permission denied: Cannot read project');
+            }
             const statusMappings = await ProjectModel.getProjectStatusMappings(trx, projectId);
             if (!statusMappings || statusMappings.length === 0) {
                 console.warn(`No status mappings found for project ${projectId}`);

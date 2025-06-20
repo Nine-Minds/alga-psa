@@ -1,5 +1,6 @@
 import { IUser, IRole, IPermission, IRoleWithPermissions } from 'server/src/interfaces/auth.interfaces';
-import { getUserRolesWithPermissions } from 'server/src/lib/actions/user-actions/userActions';
+import User from 'server/src/lib/models/user';
+import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 
 export class Role implements IRole {
@@ -49,7 +50,17 @@ export class Permission implements IPermission {
 }
 
 export async function hasPermission(user: IUser, resource: string, action: string, knexConnection?: Knex | Knex.Transaction): Promise<boolean> {
-  const rolesWithPermissions = await getUserRolesWithPermissions(user.user_id, knexConnection);
+  let rolesWithPermissions: IRoleWithPermissions[];
+  
+  if (knexConnection) {
+    // Use provided connection (transaction or regular knex instance)
+    rolesWithPermissions = await User.getUserRolesWithPermissions(knexConnection, user.user_id);
+  } else {
+    // Create new connection if none provided
+    const { knex } = await createTenantKnex();
+    rolesWithPermissions = await User.getUserRolesWithPermissions(knex, user.user_id);
+  }
+  
   for (const role of rolesWithPermissions) {
     for (const permission of role.permissions) {
       if (permission.resource === resource && permission.action === action) {
@@ -79,8 +90,16 @@ export async function checkMultiplePermissions(
   permissionChecks: PermissionCheck[],
   knexConnection?: Knex | Knex.Transaction
 ): Promise<PermissionResult[]> {
-  // Get all roles and permissions in a single database query
-  const rolesWithPermissions = await getUserRolesWithPermissions(user.user_id, knexConnection);
+  let rolesWithPermissions: IRoleWithPermissions[];
+  
+  if (knexConnection) {
+    // Use provided connection (transaction or regular knex instance)
+    rolesWithPermissions = await User.getUserRolesWithPermissions(knexConnection, user.user_id);
+  } else {
+    // Create new connection if none provided
+    const { knex } = await createTenantKnex();
+    rolesWithPermissions = await User.getUserRolesWithPermissions(knex, user.user_id);
+  }
   
   const userPermissions = new Set<string>();
   

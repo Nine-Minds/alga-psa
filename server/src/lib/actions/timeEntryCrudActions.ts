@@ -11,6 +11,8 @@ import {
 import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { getServerSession } from "next-auth/next";
 import { options } from "server/src/app/api/auth/[...nextauth]/options";
+import { getCurrentUser } from './user-actions/userActions';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 import { v4 as uuidv4 } from 'uuid';
 import { formatISO } from 'date-fns';
 import { validateData } from 'server/src/lib/utils/validation';
@@ -23,6 +25,16 @@ import {
 import { getCompanyIdForWorkItem } from './timeEntryHelpers'; // Import helper
 
 export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise<ITimeEntryWithWorkItem[]> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Check permission for time entry reading
+  if (!await hasPermission(currentUser, 'timeentry', 'read')) {
+    throw new Error('Permission denied: Cannot read time entries');
+  }
+
   // Validate input
   const validatedParams = validateData<FetchTimeEntriesParams>(fetchTimeEntriesParamsSchema, { timeSheetId });
 
@@ -185,6 +197,24 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
 }
 
 export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Promise<ITimeEntryWithWorkItem> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Check permission based on whether this is a create or update operation
+  if (timeEntry.entry_id) {
+    // Update operation
+    if (!await hasPermission(currentUser, 'timeentry', 'update')) {
+      throw new Error('Permission denied: Cannot update time entries');
+    }
+  } else {
+    // Create operation
+    if (!await hasPermission(currentUser, 'timeentry', 'create')) {
+      throw new Error('Permission denied: Cannot create time entries');
+    }
+  }
+
   // Validate input
   const validatedTimeEntry = validateData<SaveTimeEntryParams>(saveTimeEntryParamsSchema, timeEntry);
 
@@ -706,6 +736,16 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
 }
 
 export async function deleteTimeEntry(entryId: string): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Check permission for time entry deletion
+  if (!await hasPermission(currentUser, 'timeentry', 'delete')) {
+    throw new Error('Permission denied: Cannot delete time entries');
+  }
+
   const {knex: db, tenant} = await createTenantKnex();
   const session = await getServerSession(options);
   if (!session?.user?.id) {
@@ -829,6 +869,16 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
  * @returns The time entry with work item details, or null if not found.
  */
   export async function getTimeEntryById(entryId: string): Promise<ITimeEntryWithWorkItem | null> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Check permission for time entry reading
+    if (!await hasPermission(currentUser, 'timeentry', 'read')) {
+      throw new Error('Permission denied: Cannot read time entries');
+    }
+
     const { knex: db, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error("Tenant context not found");

@@ -5,6 +5,8 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { getServerSession } from "next-auth/next";
 import { options } from "server/src/app/api/auth/[...nextauth]/options";
+import { getCurrentUser } from './user-actions/userActions';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 import { validateData } from 'server/src/lib/utils/validation';
 import {
   fetchTimeEntriesParamsSchema, // Re-use for fetching work items based on time sheet
@@ -14,6 +16,16 @@ import {
 } from './timeEntrySchemas'; // Import schemas
 
 export async function fetchWorkItemsForTimeSheet(timeSheetId: string): Promise<IWorkItem[]> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Check permission for time entry reading (reading work items for time entries)
+  if (!await hasPermission(currentUser, 'timeentry', 'read')) {
+    throw new Error('Permission denied: Cannot read time entry work items');
+  }
+
   // Validate input
   const validatedParams = validateData<FetchTimeEntriesParams>(fetchTimeEntriesParamsSchema, { timeSheetId });
 
@@ -129,6 +141,16 @@ export async function fetchWorkItemsForTimeSheet(timeSheetId: string): Promise<I
 }
 
 export async function addWorkItem(workItem: Omit<IWorkItem, 'tenant'>): Promise<IWorkItem> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Check permission for time entry creation (adding work items for time entries)
+  if (!await hasPermission(currentUser, 'timeentry', 'create')) {
+    throw new Error('Permission denied: Cannot add work items for time entries');
+  }
+
   // Validate input
   const validatedWorkItem = validateData<AddWorkItemParams>(addWorkItemParamsSchema, workItem);
 
@@ -158,6 +180,16 @@ export async function addWorkItem(workItem: Omit<IWorkItem, 'tenant'>): Promise<
 
 
 export async function deleteWorkItem(workItemId: string): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Check permission for time entry deletion (deleting work items affects time entries)
+  if (!await hasPermission(currentUser, 'timeentry', 'delete')) {
+    throw new Error('Permission denied: Cannot delete work items for time entries');
+  }
+
   const {knex: db, tenant} = await createTenantKnex();
   const session = await getServerSession(options);
   if (!session?.user?.id) {

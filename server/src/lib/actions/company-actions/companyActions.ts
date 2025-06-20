@@ -6,6 +6,7 @@ import { unparseCSV } from 'server/src/lib/utils/csvParser';
 import { createDefaultTaxSettings } from '../taxSettingsActions';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 import { getCompanyLogoUrl, getCompanyLogoUrlsBatch } from 'server/src/lib/utils/avatarUtils';
 import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/EntityImageService';
 import { withTransaction } from '@shared/db';
@@ -34,6 +35,16 @@ function extractDomainFromUrl(url: string): string | null {
 }
 
 export async function getCompanyById(companyId: string): Promise<ICompany | null> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Check permission for company reading
+  if (!await hasPermission(currentUser, 'company', 'read')) {
+    throw new Error('Permission denied: Cannot read companies');
+  }
+
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
@@ -68,6 +79,16 @@ export async function getCompanyById(companyId: string): Promise<ICompany | null
 }
 
 export async function updateCompany(companyId: string, updateData: Partial<Omit<ICompany, 'account_manager_full_name'>>): Promise<ICompany> { // Omit joined field from update type
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Check permission for company updating
+  if (!await hasPermission(currentUser, 'company', 'update')) {
+    throw new Error('Permission denied: Cannot update companies');
+  }
+
   const {knex: db, tenant} = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
@@ -190,6 +211,16 @@ export async function updateCompany(companyId: string, updateData: Partial<Omit<
 }
 
 export async function createCompany(company: Omit<ICompany, 'company_id' | 'created_at' | 'updated_at' | 'account_manager_full_name'>): Promise<{ success: true; data: ICompany } | { success: false; error: string }> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Check permission for company creation
+  if (!await hasPermission(currentUser, 'company', 'create')) {
+    throw new Error('Permission denied: Cannot create companies');
+  }
+
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
@@ -311,6 +342,16 @@ export interface PaginatedCompaniesResponse {
 }
 
 export async function getAllCompaniesPaginated(params: CompanyPaginationParams = {}): Promise<PaginatedCompaniesResponse> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Check permission for company reading
+  if (!await hasPermission(currentUser, 'company', 'read')) {
+    throw new Error('Permission denied: Cannot read companies');
+  }
+
   const {
     page = 1,
     pageSize = 10,
@@ -412,6 +453,16 @@ export async function getAllCompaniesPaginated(params: CompanyPaginationParams =
 }
 
 export async function getAllCompanies(includeInactive: boolean = true): Promise<ICompany[]> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Check permission for company reading
+  if (!await hasPermission(currentUser, 'company', 'read')) {
+    throw new Error('Permission denied: Cannot read companies');
+  }
+
   const {knex: db, tenant} = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
@@ -499,6 +550,16 @@ export async function deleteCompany(companyId: string): Promise<{
   dependencies?: string[];
   counts?: Record<string, number>;
 }> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Check permission for company deletion
+  if (!await hasPermission(currentUser, 'company', 'delete')) {
+    throw new Error('Permission denied: Cannot delete companies');
+  }
+
   try {
     const {knex: db, tenant} = await createTenantKnex();
     if (!tenant) {
@@ -717,6 +778,16 @@ export async function deleteCompany(companyId: string): Promise<{
 
 
 export async function exportCompaniesToCSV(companies: ICompany[]): Promise<string> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Check permission for company reading (export is a read operation)
+  if (!await hasPermission(currentUser, 'company', 'read')) {
+    throw new Error('Permission denied: Cannot export companies');
+  }
+
   const fields = [
     'company_name',
     'phone_no',
@@ -743,6 +814,16 @@ export async function exportCompaniesToCSV(companies: ICompany[]): Promise<strin
 export async function checkExistingCompanies(
   companyNames: string[]
 ): Promise<ICompany[]> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Check permission for company reading
+  if (!await hasPermission(currentUser, 'company', 'read')) {
+    throw new Error('Permission denied: Cannot read companies');
+  }
+
   const {knex: db, tenant} = await createTenantKnex();
   
   if (!tenant) {
@@ -770,6 +851,20 @@ export async function importCompaniesFromCSV(
   companiesData: Array<Partial<Omit<ICompany, 'account_manager_full_name'>>>,
   updateExisting: boolean = false
 ): Promise<ImportCompanyResult[]> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Check permissions for both create and update operations since import can do both
+  if (!await hasPermission(currentUser, 'company', 'create')) {
+    throw new Error('Permission denied: Cannot create companies');
+  }
+  
+  if (updateExisting && !await hasPermission(currentUser, 'company', 'update')) {
+    throw new Error('Permission denied: Cannot update companies');
+  }
+
   const results: ImportCompanyResult[] = [];
   const {knex: db, tenant} = await createTenantKnex();
   
@@ -906,7 +1001,10 @@ export async function uploadCompanyLogo(
     return { success: false, message: 'No logo file provided' };
   }
 
-  // TODO: Add permission check here if needed, verifying user can modify this companyId
+  // Check permission for company updating (logo upload is an update operation)
+  if (!await hasPermission(currentUser, 'company', 'update')) {
+    return { success: false, message: 'Permission denied: Cannot update company logo' };
+  }
 
   try {
     const result = await uploadEntityImage(
@@ -953,7 +1051,10 @@ export async function deleteCompanyLogo(
     return { success: false, message: 'User not authenticated' };
   }
 
-  // TODO: Add permission check here if needed
+  // Check permission for company deletion (logo deletion is a delete operation)
+  if (!await hasPermission(currentUser, 'company', 'delete')) {
+    return { success: false, message: 'Permission denied: Cannot delete company logo' };
+  }
 
   try {
     console.log(`[deleteCompanyLogo] Starting deletion process for company ${companyId}, tenant: ${tenant}`);

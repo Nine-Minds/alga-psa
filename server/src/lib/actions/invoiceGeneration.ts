@@ -15,8 +15,6 @@ import {
 import { WasmInvoiceViewModel } from '../invoice-renderer/types';
 import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, BillingCycleType } from 'server/src/interfaces/billing.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
-import { getServerSession } from "next-auth/next";
-import { options } from "server/src/app/api/auth/[...nextauth]/options";
 import Invoice from 'server/src/lib/models/invoice';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Temporal } from '@js-temporal/polyfill';
@@ -30,6 +28,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { auditLog } from 'server/src/lib/logging/auditLog';
 import { getCompanyLogoUrl } from '../utils/avatarUtils';
 import { getCompanyDetails, persistInvoiceItems, updateInvoiceTotalsAndRecordTransaction } from 'server/src/lib/services/invoiceService';
+import { getCurrentUser } from './user-actions/userActions';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 // TODO: Import these from billingAndTax.ts once created
 import { getNextBillingDate, getDueDate } from './billingAndTax'; // Updated import
 import { getCompanyDefaultTaxRegionCode } from './company-actions/companyTaxRateActions';
@@ -211,33 +211,46 @@ async function adaptToWasmViewModel(
 
 
 export async function previewInvoice(billing_cycle_id: string): Promise<PreviewInvoiceResponse> {
-  const { knex, tenant } = await createTenantKnex();
-
-  // Get billing cycle details
-  const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('company_billing_cycles')
-      .where({
-        billing_cycle_id,
-        tenant
-      })
-      .first();
-  });
-
-  if (!billingCycle) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
     return {
       success: false,
-      error: 'Invalid billing cycle'
+      error: 'Unauthorized: No authenticated user found'
     };
   }
 
-  const { company_id, effective_date } = billingCycle;
+  const { knex, tenant } = await createTenantKnex();
 
-  // Calculate cycle dates
-  const cycleStart = toISODate(toPlainDate(effective_date));
-  const cycleEnd = await getNextBillingDate(company_id, effective_date); // Uses temporary import
-
-  const billingEngine = new BillingEngine();
   try {
+    // Get billing cycle details
+    const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Check permissions within transaction
+      if (!await hasPermission(currentUser, 'invoice', 'create', trx) && !await hasPermission(currentUser, 'invoice', 'generate', trx)) {
+        throw new Error('Permission denied: Cannot preview invoices');
+      }
+
+      return await trx('company_billing_cycles')
+        .where({
+          billing_cycle_id,
+          tenant
+        })
+        .first();
+    });
+
+    if (!billingCycle) {
+      return {
+        success: false,
+        error: 'Invalid billing cycle'
+      };
+    }
+
+    const { company_id, effective_date } = billingCycle;
+
+    // Calculate cycle dates
+    const cycleStart = toISODate(toPlainDate(effective_date));
+    const cycleEnd = await getNextBillingDate(company_id, effective_date); // Uses temporary import
+
+    const billingEngine = new BillingEngine();
     const billingResult = await billingEngine.calculateBilling(company_id, cycleStart, cycleEnd, billing_cycle_id);
 
     // Add this check first: If the billing engine returned a specific error, return it.
@@ -388,9 +401,9 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
 
 // Update return type to the interface InvoiceViewModel
 export async function generateInvoice(billing_cycle_id: string): Promise<InvoiceViewModel | null> {
-  const session = await getServerSession(options);
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized: No authenticated user found');
   }
 
   // Get billing cycle details
@@ -401,6 +414,11 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
   }
 
   const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    // Check permissions within transaction
+    if (!await hasPermission(currentUser, 'invoice', 'create', trx) && !await hasPermission(currentUser, 'invoice', 'generate', trx)) {
+      throw new Error('Permission denied: Cannot generate invoices');
+    }
+
     return await trx('company_billing_cycles')
       .where({
         billing_cycle_id,
@@ -483,12 +501,12 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
       cycleStart,
       cycleEnd,
       billing_cycle_id,
-      session.user.id
+      currentUser.user_id
     );
 
     if (settings.zero_dollar_invoice_handling === 'finalized') {
       // TODO: Import finalizeInvoiceWithKnex from invoiceModification.ts once created
-      // await finalizeInvoiceWithKnex(createdInvoice.invoice_id, knex, tenant, session.user.id);
+      // await finalizeInvoiceWithKnex(createdInvoice.invoice_id, knex, tenant, currentUser.user_id);
       console.warn('finalizeInvoiceWithKnex needs to be imported and called here for zero-dollar finalized invoices.');
     }
 
@@ -512,7 +530,7 @@ console.log(`[generateInvoice] Zero-dollar invoice created (${createdInvoice.inv
     cycleStart,
     cycleEnd,
     billing_cycle_id,
-    session.user.id
+    currentUser.user_id
   );
 
   // Get the next billing date as a PlainDate string (YYYY-MM-DD)
@@ -530,28 +548,54 @@ console.log(`[generateInvoice] Regular invoice created (${createdInvoice.invoice
 }
 
 export async function generateInvoiceNumber(_trx?: Knex.Transaction): Promise<string> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized: No authenticated user found');
+  }
+
+  // If transaction is provided, check permissions within it
+  if (_trx) {
+    if (!await hasPermission(currentUser, 'invoice', 'create', _trx) && !await hasPermission(currentUser, 'invoice', 'generate', _trx)) {
+      throw new Error('Permission denied: Cannot generate invoice numbers');
+    }
+  } else {
+    // If no transaction provided, create a temporary one for permission check
+    const { knex } = await createTenantKnex();
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(currentUser, 'invoice', 'create', trx) && !await hasPermission(currentUser, 'invoice', 'generate', trx)) {
+        throw new Error('Permission denied: Cannot generate invoice numbers');
+      }
+    });
+  }
+
   const numberingService = new NumberingService();
   return numberingService.getNextNumber('INVOICE');
 }
 
 export async function generateInvoicePDF(invoiceId: string): Promise<{ file_id: string }> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized: No authenticated user found');
+  }
+
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('No tenant found');
   }
 
-  // Get the current user session
-  const session = await getServerSession(options);
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
+  // Check permissions within transaction
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    if (!await hasPermission(currentUser, 'invoice', 'create', trx) && !await hasPermission(currentUser, 'invoice', 'generate', trx)) {
+      throw new Error('Permission denied: Cannot generate invoice PDFs');
+    }
+  });
 
   // Use the factory function to create the PDF generation service
   const pdfGenerationService = createPDFGenerationService(tenant);
 
   const fileRecord = await pdfGenerationService.generateAndStore({
     invoiceId,
-    userId: session.user.id
+    userId: currentUser.user_id
   });
 
   return { file_id: fileRecord.file_id };
@@ -565,6 +609,16 @@ export async function createInvoiceFromBillingResult(
   billing_cycle_id: string,
   userId: string
 ): Promise<IInvoice> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized: No authenticated user found');
+  }
+
+  // Verify that the userId matches the current user
+  if (currentUser.user_id !== userId) {
+    throw new Error('Permission denied: User ID mismatch');
+  }
+
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('No tenant found');
@@ -612,6 +666,11 @@ export async function createInvoiceFromBillingResult(
       const invoiceNumber = await generateInvoiceNumber(); // Uses local function
       invoiceData.invoice_number = invoiceNumber;
       const [insertedInvoice] = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        // Check permissions within transaction
+        if (!await hasPermission(currentUser, 'invoice', 'create', trx) && !await hasPermission(currentUser, 'invoice', 'generate', trx)) {
+          throw new Error('Permission denied: Cannot create invoices');
+        }
+
         return await trx('invoices').insert(invoiceData).returning('*');
       });
       newInvoice = insertedInvoice;
@@ -637,19 +696,31 @@ export async function createInvoiceFromBillingResult(
   }
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // Get session within transaction context if needed by persistInvoiceItems
-    const session = await getServerSession(options);
-    if (!session?.user?.id) {
-      throw new Error('Unauthorized within transaction');
-    }
+    // Permission already checked in previous transaction, no need to recheck
+    // Just use currentUser that we already validated
 
     // Persist all items (including fixed details) using the dedicated service function
+    const sessionObject: Session = {
+      user: {
+        id: currentUser.user_id,
+        email: currentUser.email,
+        name: `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || currentUser.username,
+        username: currentUser.username,
+        image: currentUser.image,
+        proToken: '', // Not available in currentUser, using empty string
+        tenant: currentUser.tenant,
+        user_type: currentUser.user_type,
+        companyId: undefined, // Not available in currentUser
+        contactId: currentUser.contact_id
+      },
+      expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours from now
+    };
     const calculatedSubtotal = await persistInvoiceItems(
       trx,
       newInvoice!.invoice_id,
       billingResult.charges,
       company,
-      session, // Pass session
+      sessionObject,
       tenant
     );
 
