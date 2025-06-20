@@ -222,16 +222,6 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
                 />
                 {/* Removed CustomSelect */}
               </div>
-              <div className="flex items-center space-x-2 pt-2">
-                <Checkbox
-                  id="is-custom"
-                  checked={isCustom}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setIsCustom(e.target.checked)}
-                />
-                <Label htmlFor="is-custom" className="cursor-pointer">
-                  Is Custom Plan
-                </Label>
-              </div>
             </div>
 
             {/* Removed Config Tab Content and Service Selection */}
