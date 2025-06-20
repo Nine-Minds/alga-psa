@@ -50,6 +50,29 @@
   .month-year-option.selected {
     background-color: rgb(var(--color-primary-100)) !important;
   }
+
+  /* Sidebar scrollbar styles */
+  .sidebar-nav {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--color-border-300)) var(--color-sidebar-bg);
+  }
+
+  .sidebar-nav::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .sidebar-nav::-webkit-scrollbar-track {
+    background: var(--color-sidebar-bg);
+  }
+
+  .sidebar-nav::-webkit-scrollbar-thumb {
+    background: rgb(var(--color-border-300));
+    border-radius: 4px;
+  }
+
+  .sidebar-nav::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--color-border-400));
+  }
 }
 
 html,
