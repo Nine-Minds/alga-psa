@@ -141,12 +141,15 @@ This document outlines the comprehensive implementation plan for creating REST A
 ### Phase 2: Core Business Entity APIs (Weeks 3-5)
 
 #### Week 3: Companies & Contacts
-- [ ] **API-007**: Companies API
-  - `GET /api/v1/companies` - List companies with filtering
-  - `POST /api/v1/companies` - Create new company
-  - `GET /api/v1/companies/{id}` - Get company details
-  - `PUT /api/v1/companies/{id}` - Update company
-  - `DELETE /api/v1/companies/{id}` - Delete company
+- [x] **API-007**: Companies API ✅
+  - ✅ `GET /api/v1/companies` - List companies with filtering
+  - ✅ `POST /api/v1/companies` - Create new company
+  - ✅ `GET /api/v1/companies/{id}` - Get company details
+  - ✅ `PUT /api/v1/companies/{id}` - Update company
+  - ✅ `DELETE /api/v1/companies/{id}` - Delete company
+  - ✅ `GET /api/v1/companies/{id}/locations` - List company locations
+  - ✅ `POST /api/v1/companies/{id}/locations` - Create company location
+  - ✅ `GET /api/v1/companies/stats` - Get company statistics
   - `GET /api/v1/companies/{id}/contacts` - List company contacts
   - `POST /api/v1/companies/{id}/contacts` - Add contact to company
 
