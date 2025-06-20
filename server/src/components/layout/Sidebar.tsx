@@ -117,8 +117,10 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }): JSX.E
         {sidebarOpen && <span className="text-xl font-semibold truncate">AlgaPSA</span>}
       </div>
 
+      {/* Temporarily hide the search bar since it is non-functional */}
+      {/*
       <div className="px-3 py-4">
-        <div 
+        <div
           className="relative w-full bg-[#2a2b32] text-gray-300 rounded-md"
           onClick={() => !sidebarOpen && setSidebarOpen(true)}
           style={{ cursor: sidebarOpen ? 'default' : 'pointer' }}
@@ -135,6 +137,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }): JSX.E
           )}
         </div>
       </div>
+      */}
 
       <nav className="mt-4 flex-grow overflow-y-auto sidebar-nav">
         <ul className="space-y-1">
