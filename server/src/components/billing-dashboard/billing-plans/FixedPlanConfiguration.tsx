@@ -2,7 +2,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Input } from 'server/src/components/ui/Input';
+import { CurrencyInput } from 'server/src/components/ui/CurrencyInput';
 import { Label } from 'server/src/components/ui/Label';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Switch } from 'server/src/components/ui/Switch';
@@ -112,8 +112,7 @@ export function FixedPlanConfiguration({
     setValidationErrors(errors);
   }, [baseRate]);
 
-  const handleBaseRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value === '' ? undefined : Number(e.target.value);
+  const handleBaseRateChange = (value: number | undefined) => {
     setBaseRate(value);
   };
 
@@ -222,15 +221,12 @@ export function FixedPlanConfiguration({
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <Label htmlFor="fixed-plan-base-rate">Base Rate</Label>
-              <Input
+              <CurrencyInput
                 id="fixed-plan-base-rate"
-                type="number"
-                value={baseRate?.toString() || ''}
+                value={baseRate}
                 onChange={handleBaseRateChange}
                 placeholder="Enter base rate"
                 disabled={saving}
-                min={0}
-                step={0.01}
               />
               <p className="text-sm text-muted-foreground mt-1">
                 The base rate for this fixed plan. This rate will be applied to all services associated with this plan.
