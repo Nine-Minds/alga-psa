@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, X } from 'lucide-react';
 import * as Popover from '@radix-ui/react-popover';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { DatePickerComponent } from 'server/src/types/ui-reflection/types';
@@ -8,7 +8,7 @@ import { Calendar } from 'server/src/components/ui/Calendar';
 
 export interface DatePickerProps {
   value?: Date;
-  onChange: (date: Date) => void;
+  onChange: (date: Date | undefined) => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
@@ -18,10 +18,12 @@ export interface DatePickerProps {
   label?: string;
   /** Whether the field is required */
   required?: boolean;
+  /** Whether the value can be cleared */
+  clearable?: boolean;
 }
 
 export const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(
-  ({ value, onChange, placeholder = 'Select date', className, disabled, id, label, required }, ref) => {
+  ({ value, onChange, placeholder = 'Select date', className, disabled, id, label, required, clearable = false }, ref) => {
     const [open, setOpen] = React.useState(false);
     
     // Register with UI reflection system if id is provided
@@ -65,6 +67,19 @@ export const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(
             <span className="flex-1 text-left">
               {value ? format(value, 'MM/dd/yyyy') : placeholder}
             </span>
+            {clearable && value && !disabled && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onChange(undefined);
+                }}
+                className="mr-2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
             <CalendarIcon className="h-4 w-4 opacity-50" />
           </Popover.Trigger>
 
@@ -82,6 +97,8 @@ export const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(
                     if (date) {
                       onChange(new Date(date)); // Ensure we pass a new Date object
                       setOpen(false);
+                    } else {
+                      onChange(undefined);
                     }
                   }}
                   defaultMonth={value}

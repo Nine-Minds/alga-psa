@@ -120,10 +120,12 @@ export default function DocumentFilters({
           </label>
           <DatePicker
             value={filters.updated_at_start ? new Date(filters.updated_at_start) : undefined}
-            onChange={(date: Date | null) => onFiltersChange({ 
-              ...filters, 
-              updated_at_start: date ? date.toISOString().split('T')[0] : '' 
-            })}
+            onChange={(date: Date | undefined) =>
+              onFiltersChange({
+                ...filters,
+                updated_at_start: date ? date.toISOString().split('T')[0] : ''
+              })
+            }
             placeholder="Select start date"
             className="w-full"
           />
@@ -135,10 +137,12 @@ export default function DocumentFilters({
           </label>
           <DatePicker
             value={filters.updated_at_end ? new Date(filters.updated_at_end) : undefined}
-            onChange={(date: Date | null) => onFiltersChange({ 
-              ...filters, 
-              updated_at_end: date ? date.toISOString().split('T')[0] : '' 
-            })}
+            onChange={(date: Date | undefined) =>
+              onFiltersChange({
+                ...filters,
+                updated_at_end: date ? date.toISOString().split('T')[0] : ''
+              })
+            }
             placeholder="Select end date"
             className="w-full"
           />
