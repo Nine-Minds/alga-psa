@@ -262,6 +262,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                 onChange={(date: Date | undefined) => onStartDateChange?.(date)}
                 placeholder="Start date"
                 className="w-full"
+                clearable={true}
               />
             </div>
             {/* End Date Input */}
@@ -272,6 +273,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                 onChange={(date: Date | undefined) => onEndDateChange?.(date)}
                 placeholder="End date"
                 className="w-full"
+                clearable={true}
               />
             </div>
           </div>
