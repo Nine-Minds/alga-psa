@@ -39,6 +39,7 @@ export function FixedPlanConfiguration({
   const [billingCycleAlignment, setBillingCycleAlignment] = useState<string>('start');
 
   const [services, setServices] = useState<IService[]>([]);
+  const [planServices, setPlanServices] = useState<IPlanService[]>([]);
   const [planLoading, setPlanLoading] = useState(true);
   const [servicesLoading, setServicesLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -47,6 +48,7 @@ export function FixedPlanConfiguration({
   const [validationErrors, setValidationErrors] = useState<{
     baseRate?: string;
     serviceCatalogId?: string;
+    services?: string;
   }>({});
 
   const fetchPlanData = useCallback(async () => {
@@ -71,6 +73,10 @@ export function FixedPlanConfiguration({
           setEnableProration(false);
           setBillingCycleAlignment('start');
         }
+        
+        // Fetch plan services to check if any services are associated
+        const services = await getPlanServices(planId);
+        setPlanServices(services);
       } else {
         setError('Invalid plan type or plan not found.');
       }
@@ -105,14 +111,17 @@ export function FixedPlanConfiguration({
   // Validate inputs only after plan data loads
   useEffect(() => {
     if (planLoading) return; // avoid showing errors before data is fetched
-    const errors: { baseRate?: string } = {};
+    const errors: { baseRate?: string; services?: string } = {};
     if (baseRate === undefined || baseRate === null) {
       errors.baseRate = 'Base rate is required';
     } else if (baseRate < 0) {
       errors.baseRate = 'Base rate cannot be negative';
     }
+    if (planServices.length === 0) {
+      errors.services = 'At least one service must be added to the plan';
+    }
     setValidationErrors(errors);
-  }, [baseRate, planLoading]);
+  }, [baseRate, planServices, planLoading]);
 
   const handleBaseRateChange = (value: number | undefined) => {
     setBaseRate(value);
@@ -284,9 +293,10 @@ export function FixedPlanConfiguration({
           <CardContent>
               <FixedPlanServicesList
                   planId={planId}
-                  onServiceAdded={() => {
-                      // Refresh the plan data when a service is added
-                      fetchPlanData();
+                  onServiceAdded={async () => {
+                      // Refresh the plan services count for validation
+                      const services = await getPlanServices(planId);
+                      setPlanServices(services);
                   }}
               />
           </CardContent>
