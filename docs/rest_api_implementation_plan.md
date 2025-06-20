@@ -150,15 +150,17 @@ This document outlines the comprehensive implementation plan for creating REST A
   - ✅ `GET /api/v1/companies/{id}/locations` - List company locations
   - ✅ `POST /api/v1/companies/{id}/locations` - Create company location
   - ✅ `GET /api/v1/companies/stats` - Get company statistics
-  - `GET /api/v1/companies/{id}/contacts` - List company contacts
-  - `POST /api/v1/companies/{id}/contacts` - Add contact to company
+  - ✅ `GET /api/v1/companies/{id}/contacts` - List company contacts
 
-- [ ] **API-008**: Contacts API
-  - `GET /api/v1/contacts` - List contacts with filtering
-  - `POST /api/v1/contacts` - Create new contact
-  - `GET /api/v1/contacts/{id}` - Get contact details
-  - `PUT /api/v1/contacts/{id}` - Update contact
-  - `DELETE /api/v1/contacts/{id}` - Delete contact
+- [x] **API-008**: Contacts API ✅
+  - ✅ `GET /api/v1/contacts` - List contacts with filtering
+  - ✅ `POST /api/v1/contacts` - Create new contact
+  - ✅ `GET /api/v1/contacts/{id}` - Get contact details
+  - ✅ `PUT /api/v1/contacts/{id}` - Update contact
+  - ✅ `DELETE /api/v1/contacts/{id}` - Delete contact
+  - ✅ `GET /api/v1/contacts/search` - Advanced contact search
+  - ✅ `GET /api/v1/contacts/export` - Export contacts to CSV/JSON
+  - ✅ `GET /api/v1/contacts/stats` - Contact statistics
 
 #### Week 4: Tickets & Support
 - [ ] **API-009**: Tickets API
