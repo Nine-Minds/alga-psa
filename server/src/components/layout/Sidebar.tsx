@@ -135,7 +135,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }): JSX.E
         </div>
       </div>
 
-      <nav className="mt-4 flex-grow overflow-y-auto">
+      <nav className="mt-4 flex-grow overflow-y-auto sidebar-nav">
         <ul className="space-y-1">
           {menuItems.map(renderMenuItem)}
         </ul>
