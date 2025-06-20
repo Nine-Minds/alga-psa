@@ -255,9 +255,12 @@ export class CompanyController extends BaseController {
     return middleware(async (req: ApiRequest) => {
       const companyId = this.extractIdFromPath(req);
       
-      // This would integrate with the ContactService when implemented
-      // For now, return a placeholder
-      return createSuccessResponse([]);
+      // Import ContactService dynamically to avoid circular dependency
+      const { ContactService } = await import('../services/ContactService');
+      const contactService = new ContactService();
+      
+      const contacts = await contactService.getContactsByCompany(companyId, req.context!);
+      return createSuccessResponse(contacts);
     });
   }
 
