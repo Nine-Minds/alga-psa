@@ -1,7 +1,7 @@
 import React from 'react';
 import { GetServerSideProps } from 'next';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { options } from '../../../../server/src/app/api/auth/[...nextauth]/options';
 import DefaultLayout from '@/components/layout/DefaultLayout';
 
 export default function SoftwareOneSettingsPage() {
@@ -42,7 +42,7 @@ export default function SoftwareOneSettingsPage() {
 }
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  const session = await getServerSession(context.req, context.res, authOptions);
+  const session = await getServerSession(context.req, context.res, options);
 
   if (!session) {
     return {

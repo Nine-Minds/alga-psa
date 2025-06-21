@@ -47,7 +47,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         name: extension.name,
         version: extension.version,
         is_enabled: extension.is_enabled,
-        installed_at: extension.installed_at,
+        installed_at: extension.created_at,
         updated_at: extension.updated_at,
         navigationComponents: navComponents.map((c: any) => ({
           id: c.id,
