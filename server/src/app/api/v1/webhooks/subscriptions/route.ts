@@ -1,0 +1,28 @@
+/**
+ * Webhook Global Subscriptions API Routes
+ * GET /api/v1/webhooks/subscriptions - List all subscriptions
+ * POST /api/v1/webhooks/subscriptions - Create new subscription
+ */
+
+import { WebhookController } from 'server/src/lib/api/controllers/WebhookController';
+import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+
+const controller = new WebhookController();
+
+export async function GET(request: Request) {
+  try {
+    return await controller.getSubscriptions()(request as any);
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    return await controller.createSubscription()(request as any);
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+export const runtime = 'nodejs';
