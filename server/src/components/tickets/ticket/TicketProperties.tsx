@@ -23,7 +23,7 @@ import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAut
 import { IntervalManagement } from 'server/src/components/time-management/interval-tracking/IntervalManagement';
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
-import { getUserAvatarUrl, getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { getUserAvatarUrlAction, getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { getUserContactId } from 'server/src/lib/actions/user-actions/userActions';
 
 interface TicketPropertiesProps {
@@ -190,7 +190,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
       // Fetch primary agent avatar URL
       if (ticket.assigned_to) {
         try {
-          const avatarUrl = await getUserAvatarUrl(ticket.assigned_to, tenant);
+          const avatarUrl = await getUserAvatarUrlAction(ticket.assigned_to, tenant);
           setPrimaryAgentAvatarUrl(avatarUrl);
         } catch (error) {
           console.error('Error fetching primary agent avatar URL:', error);
@@ -202,7 +202,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
       for (const agent of additionalAgents) {
         if (agent.additional_user_id) {
           try {
-            const avatarUrl = await getUserAvatarUrl(agent.additional_user_id, tenant);
+            const avatarUrl = await getUserAvatarUrlAction(agent.additional_user_id, tenant);
             avatarUrls[agent.additional_user_id] = avatarUrl;
           } catch (error) {
             console.error(`Error fetching avatar URL for agent ${agent.additional_user_id}:`, error);
@@ -221,7 +221,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
       if (!tenant || !contactInfo?.contact_name_id) return;
 
       try {
-        const avatarUrl = await getContactAvatarUrl(contactInfo.contact_name_id, tenant);
+        const avatarUrl = await getContactAvatarUrlAction(contactInfo.contact_name_id, tenant);
         setContactAvatarUrl(avatarUrl);
       } catch (error) {
         console.error('Error fetching contact avatar URL:', error);
