@@ -98,7 +98,10 @@
     "uuid": "^11.0.5",
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0",
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.2",
+    "tailwindcss": "^3.3.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
@@ -116,14 +119,12 @@
     "@typescript-eslint/parser": "^8.19.1",
     "as-json": "^1.0.2",
     "assemblyscript": "^0.27.36",
-    "autoprefixer": "^10.4.21",
     "copy-webpack-plugin": "^13.0.0",
     "eslint": "^9.18.0",
     "eslint-plugin-react": "^7.37.3",
     "globals": "^15.14.0",
     "null-loader": "^4.0.1",
-    "postcss": "^8.5.2",
-    "tailwindcss": "^3.3.0",
+    "ts-morph": "^26.0.0",
     "typescript-eslint": "^8.19.1",
     "vitest": "^3.0.7"
   }

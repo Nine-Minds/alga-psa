@@ -18,6 +18,7 @@ WORKDIR /app
 # Copy only package files first for npm install
 COPY package.json package-lock.json ./
 COPY server/package.json ./server/
+COPY ee/server/package.json ./ee/server/
 
 # Install dependencies (cached unless package files change)
 
