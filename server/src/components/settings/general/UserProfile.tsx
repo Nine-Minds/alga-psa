@@ -18,7 +18,7 @@ import {
 import PasswordChangeForm from './PasswordChangeForm';
 import ApiKeysSetup from '../api/ApiKeysSetup';
 import UserAvatarUpload from 'server/src/components/settings/profile/UserAvatarUpload';
-import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { getUserAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 
 interface UserProfileProps {
   userId?: string; // Optional - if not provided, uses current user
@@ -56,7 +56,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
         setTimezone(currentUser.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
         
         // Get user avatar URL
-        const userAvatarUrl = await getUserAvatarUrl(currentUser.user_id, currentUser.tenant);
+        const userAvatarUrl = await getUserAvatarUrlAction(currentUser.user_id, currentUser.tenant);
         setAvatarUrl(userAvatarUrl);
 
         // Get notification categories and subtypes
