@@ -72,7 +72,7 @@ export class ExtensionErrorBoundary extends React.Component<
       // If a custom fallback is provided, use it
       if (fallback) {
         if (typeof fallback === 'function') {
-          return fallback(error);
+          return (fallback as any)({ error });
         }
         return fallback;
       }

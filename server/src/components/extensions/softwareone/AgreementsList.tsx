@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/router';
 
 // Dummy data directly in the component to avoid import issues
 const dummyAgreements = [

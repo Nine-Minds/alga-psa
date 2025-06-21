@@ -25,3 +25,10 @@ export default function SoftwareOneStatementDetailPage() {
 
   return <StatementDetailPageContent statementId={id} />;
 }
+
+// Disable static optimization to prevent pre-render errors
+export const getServerSideProps = async () => {
+  return {
+    props: {}
+  };
+};

@@ -5,6 +5,7 @@ import {
   FormDescriptor, 
   TableDescriptor,
   HandlerContext,
+  HandlerDescriptor,
   isPageDescriptor,
   isFormDescriptor,
   isTableDescriptor,
@@ -503,28 +504,41 @@ export function DescriptorRenderer({
           console.log(`[DescriptorRenderer] After substitution:`, JSON.stringify(cellDescriptor));
         }
         
+        // Add type guard to ensure cellDescriptor is an object
+        if (!cellDescriptor || typeof cellDescriptor !== 'object') {
+          return String(cellDescriptor || value);
+        }
+        
+        const typedCellDescriptor = cellDescriptor as UIDescriptor;
+        
         return renderDescriptor({
-          ...cellDescriptor,
-          handlers: cellDescriptor.handlers ? Object.entries(cellDescriptor.handlers).reduce((acc, [event, handler]) => {
+          ...typedCellDescriptor,
+          handlers: typedCellDescriptor.handlers ? Object.entries(typedCellDescriptor.handlers).reduce((acc, [event, handler]) => {
             if (typeof handler === 'string') {
               acc[event] = (e: any) => {
                 if (handlers[handler]) {
                   handlers[handler](e, tableContext, { ...record });
                 }
               };
-            } else if (typeof handler === 'object' && handler.handler) {
+            } else if (typeof handler === 'object' && handler !== null && 'handler' in handler) {
+              const handlerDescriptor = handler as HandlerDescriptor;
               acc[event] = (e: any) => {
-                if (handler.preventDefault) e.preventDefault();
-                if (handler.stopPropagation) e.stopPropagation();
+                const event = e as Event;
+                if (handlerDescriptor.preventDefault && event.preventDefault) {
+                  event.preventDefault();
+                }
+                if (handlerDescriptor.stopPropagation && event.stopPropagation) {
+                  event.stopPropagation();
+                }
                 
-                if (handlers[handler.handler]) {
+                if (handlerDescriptor.handler && handlers[handlerDescriptor.handler]) {
                   // Substitute template variables in params
-                  const params = handler.params ? JSON.parse(JSON.stringify(handler.params).replace(/\{\{([^}]+)\}\}/g, (match, key) => {
-                    const value = cellContext[key.trim()];
+                  const params = handlerDescriptor.params ? JSON.parse(JSON.stringify(handlerDescriptor.params).replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+                    const value = (cellContext as any)[key.trim()];
                     return value !== undefined ? String(value) : match;
                   })) : record;
                   
-                  handlers[handler.handler](e, tableContext, params);
+                  handlers[handlerDescriptor.handler](e, tableContext, params);
                 }
               };
             }

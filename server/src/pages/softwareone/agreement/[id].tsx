@@ -25,3 +25,10 @@ export default function SoftwareOneAgreementDetailPage() {
 
   return <AgreementDetailPageContent agreementId={id} />;
 }
+
+// Disable static optimization to prevent pre-render errors
+export const getServerSideProps = async () => {
+  return {
+    props: {}
+  };
+};
