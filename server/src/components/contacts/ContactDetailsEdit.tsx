@@ -20,7 +20,7 @@ import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomat
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 import { ButtonComponent, FormFieldComponent } from '../../types/ui-reflection/types';
 import ContactAvatarUpload from 'server/src/components/client-portal/contacts/ContactAvatarUpload';
-import { getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 
 interface ContactDetailsEditProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -54,7 +54,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
         setTags(fetchedTags);
         
         if (contact.tenant) {
-          const contactAvatarUrl = await getContactAvatarUrl(contact.contact_name_id, contact.tenant);
+          const contactAvatarUrl = await getContactAvatarUrlAction(contact.contact_name_id, contact.tenant);
           setAvatarUrl(contactAvatarUrl);
         }
       } catch (err) {

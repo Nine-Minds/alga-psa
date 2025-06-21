@@ -9,3 +9,8 @@ export * from './workflow';
 
 // Re-export types
 export * from './types';
+
+export { default as logger } from '@shared/core/logger.js';
+
+// Re-export extension utilities
+export * from './extension-utils';

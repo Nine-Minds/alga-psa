@@ -1,9 +1,9 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import ServiceRateTier from 'server/src/lib/models/serviceRateTier'
-import { IServiceRateTier, ICreateServiceRateTier, IUpdateServiceRateTier } from 'server/src/interfaces/serviceTier.interfaces'
-import { withTransaction } from 'shared/db'
+import ServiceRateTier from '@/lib/models/serviceRateTier'
+import { IServiceRateTier, ICreateServiceRateTier, IUpdateServiceRateTier } from '@/interfaces/serviceTier.interfaces'
+import { withTransaction } from '@shared/db'
 import { createTenantKnex } from '../db'
 import { Knex } from 'knex'
 

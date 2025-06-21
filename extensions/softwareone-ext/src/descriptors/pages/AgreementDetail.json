@@ -1,0 +1,420 @@
+{
+  "type": "page",
+  "meta": {
+    "title": "Agreement Details",
+    "description": "View detailed information about a SoftwareOne agreement"
+  },
+  "content": {
+    "type": "div",
+    "props": {
+      "className": "min-h-screen bg-gray-50"
+    },
+    "children": [
+      {
+        "type": "header",
+        "props": {
+          "className": "bg-white shadow-sm border-b"
+        },
+        "children": [
+          {
+            "type": "div",
+            "props": {
+              "className": "px-4 sm:px-6 lg:px-8 py-4"
+            },
+            "children": [
+              {
+                "type": "div",
+                "props": {
+                  "className": "flex items-center justify-between"
+                },
+                "children": [
+                  {
+                    "type": "div",
+                    "props": {
+                      "className": "flex items-center gap-4"
+                    },
+                    "children": [
+                      {
+                        "type": "Button",
+                        "props": {
+                          "variant": "ghost",
+                          "size": "sm"
+                        },
+                        "handlers": {
+                          "click": "navigateToAgreements"
+                        },
+                        "children": [
+                          {
+                            "type": "ChevronLeftIcon",
+                            "props": {
+                              "className": "w-4 h-4 mr-1"
+                            }
+                          },
+                          "Back"
+                        ]
+                      },
+                      {
+                        "type": "h1",
+                        "props": {
+                          "className": "text-xl font-semibold text-gray-900"
+                        },
+                        "children": ["{{agreement.name}}"]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "div",
+                    "props": {
+                      "className": "flex gap-2"
+                    },
+                    "children": [
+                      {
+                        "type": "Button",
+                        "props": {
+                          "variant": "outline",
+                          "size": "sm"
+                        },
+                        "condition": {
+                          "path": "agreement.status",
+                          "operator": "neq",
+                          "value": "active"
+                        },
+                        "handlers": {
+                          "click": {
+                            "handler": "activateAgreement",
+                            "params": {
+                              "agreementId": "{{agreement.id}}"
+                            }
+                          }
+                        },
+                        "children": ["Activate"]
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "variant": "outline",
+                          "size": "sm"
+                        },
+                        "condition": {
+                          "path": "agreement.status",
+                          "operator": "eq",
+                          "value": "active"
+                        },
+                        "handlers": {
+                          "click": {
+                            "handler": "deactivateAgreement",
+                            "params": {
+                              "agreementId": "{{agreement.id}}"
+                            }
+                          }
+                        },
+                        "children": ["Deactivate"]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "main",
+        "props": {
+          "className": "p-6"
+        },
+        "children": [
+          {
+            "type": "div",
+            "props": {
+              "className": "grid grid-cols-1 lg:grid-cols-3 gap-6"
+            },
+            "children": [
+              {
+                "type": "div",
+                "props": {
+                  "className": "lg:col-span-2"
+                },
+                "children": [
+                  {
+                    "type": "Card",
+                    "children": [
+                      {
+                        "type": "CardHeader",
+                        "children": [
+                          {
+                            "type": "CardTitle",
+                            "children": ["Agreement Information"]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "CardContent",
+                        "children": [
+                          {
+                            "type": "Tabs",
+                            "props": {
+                              "defaultValue": "details"
+                            },
+                            "children": [
+                              {
+                                "type": "TabsList",
+                                "children": [
+                                  {
+                                    "type": "TabsTrigger",
+                                    "props": { "value": "details" },
+                                    "children": ["Details"]
+                                  },
+                                  {
+                                    "type": "TabsTrigger",
+                                    "props": { "value": "pricing" },
+                                    "children": ["Pricing"]
+                                  },
+                                  {
+                                    "type": "TabsTrigger",
+                                    "props": { "value": "history" },
+                                    "children": ["History"]
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "TabsContent",
+                                "props": { "value": "details" },
+                                "children": [
+                                  {
+                                    "type": "dl",
+                                    "props": {
+                                      "className": "grid grid-cols-1 sm:grid-cols-2 gap-4"
+                                    },
+                                    "children": [
+                                      {
+                                        "type": "div",
+                                        "children": [
+                                          {
+                                            "type": "dt",
+                                            "props": { "className": "text-sm font-medium text-gray-500" },
+                                            "children": ["Product"]
+                                          },
+                                          {
+                                            "type": "dd",
+                                            "props": { "className": "mt-1 text-sm text-gray-900" },
+                                            "children": ["{{agreement.product}}"]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "type": "div",
+                                        "children": [
+                                          {
+                                            "type": "dt",
+                                            "props": { "className": "text-sm font-medium text-gray-500" },
+                                            "children": ["Vendor"]
+                                          },
+                                          {
+                                            "type": "dd",
+                                            "props": { "className": "mt-1 text-sm text-gray-900" },
+                                            "children": ["{{agreement.vendor}}"]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "type": "div",
+                                        "children": [
+                                          {
+                                            "type": "dt",
+                                            "props": { "className": "text-sm font-medium text-gray-500" },
+                                            "children": ["Consumer"]
+                                          },
+                                          {
+                                            "type": "dd",
+                                            "props": { "className": "mt-1 text-sm text-gray-900" },
+                                            "children": ["{{agreement.consumer}}"]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "type": "div",
+                                        "children": [
+                                          {
+                                            "type": "dt",
+                                            "props": { "className": "text-sm font-medium text-gray-500" },
+                                            "children": ["Status"]
+                                          },
+                                          {
+                                            "type": "dd",
+                                            "props": { "className": "mt-1" },
+                                            "children": [
+                                              {
+                                                "type": "Badge",
+                                                "props": {
+                                                  "variant": "{{agreement.status === 'active' ? 'success' : agreement.status === 'pending' ? 'warning' : 'secondary'}}"
+                                                },
+                                                "children": ["{{agreement.status}}"]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "TabsContent",
+                                "props": { "value": "pricing" },
+                                "children": [
+                                  {
+                                    "type": "dl",
+                                    "props": {
+                                      "className": "grid grid-cols-1 sm:grid-cols-2 gap-4"
+                                    },
+                                    "children": [
+                                      {
+                                        "type": "div",
+                                        "children": [
+                                          {
+                                            "type": "dt",
+                                            "props": { "className": "text-sm font-medium text-gray-500" },
+                                            "children": ["Currency"]
+                                          },
+                                          {
+                                            "type": "dd",
+                                            "props": { "className": "mt-1 text-sm text-gray-900" },
+                                            "children": ["{{agreement.currency}}"]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "type": "div",
+                                        "children": [
+                                          {
+                                            "type": "dt",
+                                            "props": { "className": "text-sm font-medium text-gray-500" },
+                                            "children": ["SPXY"]
+                                          },
+                                          {
+                                            "type": "dd",
+                                            "props": { "className": "mt-1 text-sm text-gray-900" },
+                                            "children": ["{{agreement.currency}} {{agreement.spxy.toLocaleString()}}"]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "type": "div",
+                                        "children": [
+                                          {
+                                            "type": "dt",
+                                            "props": { "className": "text-sm font-medium text-gray-500" },
+                                            "children": ["Margin %"]
+                                          },
+                                          {
+                                            "type": "dd",
+                                            "props": { "className": "mt-1 text-sm text-gray-900" },
+                                            "children": ["{{agreement.marginRpxy}}%"]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "TabsContent",
+                                "props": { "value": "history" },
+                                "children": [
+                                  {
+                                    "type": "p",
+                                    "props": { "className": "text-sm text-gray-600" },
+                                    "children": ["Activity history will be displayed here"]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "div",
+                "props": {
+                  "className": "space-y-6"
+                },
+                "children": [
+                  {
+                    "type": "Card",
+                    "children": [
+                      {
+                        "type": "CardHeader",
+                        "children": [
+                          {
+                            "type": "CardTitle",
+                            "children": ["Quick Actions"]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "CardContent",
+                        "props": {
+                          "className": "space-y-2"
+                        },
+                        "children": [
+                          {
+                            "type": "Button",
+                            "props": {
+                              "variant": "outline",
+                              "className": "w-full justify-start"
+                            },
+                            "handlers": {
+                              "click": "viewStatements"
+                            },
+                            "children": [
+                              {
+                                "type": "FileTextIcon",
+                                "props": { "className": "w-4 h-4 mr-2" }
+                              },
+                              "View Statements"
+                            ]
+                          },
+                          {
+                            "type": "Button",
+                            "props": {
+                              "variant": "outline",
+                              "className": "w-full justify-start"
+                            },
+                            "handlers": {
+                              "click": "exportAgreement"
+                            },
+                            "children": [
+                              {
+                                "type": "DownloadIcon",
+                                "props": { "className": "w-4 h-4 mr-2" }
+                              },
+                              "Export Details"
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "data": [
+    {
+      "key": "agreement",
+      "source": "api",
+      "endpoint": "/api/extensions/{{extensionId}}/agreements/{{params.id}}"
+    }
+  ],
+  "handlers": {
+    "module": "descriptors/handlers/agreements.js"
+  }
+}

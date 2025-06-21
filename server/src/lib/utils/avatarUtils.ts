@@ -1,5 +1,3 @@
-'use server';
-
 import { createTenantKnex } from 'server/src/lib/db';
 import { getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
 import { withTransaction } from '@shared/db';

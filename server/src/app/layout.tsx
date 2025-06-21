@@ -9,6 +9,7 @@ import { Theme } from '@radix-ui/themes';
 import { ThemeProvider } from '../context/ThemeContext';
 import { TagProvider } from '../context/TagContext';
 import { ClientUIStateProvider } from '../types/ui-reflection/ClientUIStateProvider';
+import { DynamicExtensionProvider } from '../components/extensions/DynamicExtensionProvider';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -45,9 +46,9 @@ async function MainContent({ children }: { children: React.ReactNode }) {
   const tenant = await getCurrentTenant();
   return (
     <TenantProvider tenant={tenant}>
-      <TagProvider>
-        <ThemeProvider>
-          <Theme>
+      <ThemeProvider>
+        <Theme>
+          <DynamicExtensionProvider>
             <ClientUIStateProvider
               initialPageState={{
                 id: 'msp-application',
@@ -59,9 +60,9 @@ async function MainContent({ children }: { children: React.ReactNode }) {
                 {children}
               </div>
             </ClientUIStateProvider>
-          </Theme>
-        </ThemeProvider>
-      </TagProvider>
+          </DynamicExtensionProvider>
+        </Theme>
+      </ThemeProvider>
     </TenantProvider>
   );
 }

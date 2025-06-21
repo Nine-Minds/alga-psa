@@ -1,0 +1,468 @@
+{
+  "type": "page",
+  "meta": {
+    "title": "Statement Details",
+    "description": "View detailed information about a SoftwareOne statement"
+  },
+  "content": {
+    "type": "div",
+    "props": {
+      "className": "min-h-screen bg-gray-50"
+    },
+    "children": [
+      {
+        "type": "header",
+        "props": {
+          "className": "bg-white shadow-sm border-b"
+        },
+        "children": [
+          {
+            "type": "div",
+            "props": {
+              "className": "px-4 sm:px-6 lg:px-8 py-4"
+            },
+            "children": [
+              {
+                "type": "div",
+                "props": {
+                  "className": "flex items-center justify-between"
+                },
+                "children": [
+                  {
+                    "type": "div",
+                    "props": {
+                      "className": "flex items-center gap-4"
+                    },
+                    "children": [
+                      {
+                        "type": "Button",
+                        "props": {
+                          "variant": "ghost",
+                          "size": "sm"
+                        },
+                        "handlers": {
+                          "click": "navigateToStatements"
+                        },
+                        "children": [
+                          {
+                            "type": "ChevronLeftIcon",
+                            "props": {
+                              "className": "w-4 h-4 mr-1"
+                            }
+                          },
+                          "Back"
+                        ]
+                      },
+                      {
+                        "type": "h1",
+                        "props": {
+                          "className": "text-xl font-semibold text-gray-900"
+                        },
+                        "children": ["Statement {{statement.statementNumber}}"]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "div",
+                    "props": {
+                      "className": "flex gap-2"
+                    },
+                    "children": [
+                      {
+                        "type": "Button",
+                        "props": {
+                          "variant": "outline",
+                          "size": "sm"
+                        },
+                        "handlers": {
+                          "click": "downloadStatement"
+                        },
+                        "children": [
+                          {
+                            "type": "DownloadIcon",
+                            "props": {
+                              "className": "w-4 h-4 mr-2"
+                            }
+                          },
+                          "Download"
+                        ]
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "variant": "primary",
+                          "size": "sm"
+                        },
+                        "condition": {
+                          "path": "statement.status",
+                          "operator": "eq",
+                          "value": "pending"
+                        },
+                        "handlers": {
+                          "click": {
+                            "handler": "importStatement",
+                            "params": {
+                              "statementId": "{{statement.id}}"
+                            }
+                          }
+                        },
+                        "children": ["Import to Billing"]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "main",
+        "props": {
+          "className": "p-6"
+        },
+        "children": [
+          {
+            "type": "div",
+            "props": {
+              "className": "space-y-6"
+            },
+            "children": [
+              {
+                "type": "Card",
+                "children": [
+                  {
+                    "type": "CardHeader",
+                    "children": [
+                      {
+                        "type": "CardTitle",
+                        "children": ["Statement Summary"]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "CardContent",
+                    "children": [
+                      {
+                        "type": "div",
+                        "props": {
+                          "className": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+                        },
+                        "children": [
+                          {
+                            "type": "div",
+                            "children": [
+                              {
+                                "type": "p",
+                                "props": {
+                                  "className": "text-sm font-medium text-gray-500"
+                                },
+                                "children": ["Period"]
+                              },
+                              {
+                                "type": "p",
+                                "props": {
+                                  "className": "mt-1 text-lg font-semibold"
+                                },
+                                "children": ["{{statement.period}}"]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "div",
+                            "children": [
+                              {
+                                "type": "p",
+                                "props": {
+                                  "className": "text-sm font-medium text-gray-500"
+                                },
+                                "children": ["Consumer"]
+                              },
+                              {
+                                "type": "p",
+                                "props": {
+                                  "className": "mt-1 text-lg font-semibold"
+                                },
+                                "children": ["{{statement.consumer}}"]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "div",
+                            "children": [
+                              {
+                                "type": "p",
+                                "props": {
+                                  "className": "text-sm font-medium text-gray-500"
+                                },
+                                "children": ["Total Amount"]
+                              },
+                              {
+                                "type": "p",
+                                "props": {
+                                  "className": "mt-1 text-lg font-semibold"
+                                },
+                                "children": ["{{statement.currency}} {{statement.totalAmount.toLocaleString()}}"]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "div",
+                            "children": [
+                              {
+                                "type": "p",
+                                "props": {
+                                  "className": "text-sm font-medium text-gray-500"
+                                },
+                                "children": ["Status"]
+                              },
+                              {
+                                "type": "p",
+                                "props": {
+                                  "className": "mt-1"
+                                },
+                                "children": [
+                                  {
+                                    "type": "Badge",
+                                    "props": {
+                                      "variant": "{{statement.status === 'processed' ? 'success' : statement.status === 'imported' ? 'default' : 'warning'}}"
+                                    },
+                                    "children": ["{{statement.status}}"]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "Card",
+                "children": [
+                  {
+                    "type": "CardHeader",
+                    "children": [
+                      {
+                        "type": "div",
+                        "props": {
+                          "className": "flex justify-between items-center"
+                        },
+                        "children": [
+                          {
+                            "type": "CardTitle",
+                            "children": ["Statement Line Items"]
+                          },
+                          {
+                            "type": "p",
+                            "props": {
+                              "className": "text-sm text-gray-500"
+                            },
+                            "children": ["{{charges.length}} items"]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "CardContent",
+                    "props": {
+                      "className": "p-0"
+                    },
+                    "children": [
+                      {
+                        "type": "table",
+                        "data": {
+                          "key": "charges",
+                          "source": "api",
+                          "endpoint": "/api/extensions/{{extensionId}}/statements/{{params.id}}/charges"
+                        },
+                        "columns": [
+                          {
+                            "key": "description",
+                            "header": "Description",
+                            "sortable": true
+                          },
+                          {
+                            "key": "product",
+                            "header": "Product",
+                            "sortable": true
+                          },
+                          {
+                            "key": "quantity",
+                            "header": "Quantity",
+                            "sortable": true,
+                            "cell": {
+                              "type": "span",
+                              "props": {
+                                "className": "text-right"
+                              },
+                              "children": ["{{row.quantity}}"]
+                            }
+                          },
+                          {
+                            "key": "unitPrice",
+                            "header": "Unit Price",
+                            "sortable": true,
+                            "cell": {
+                              "type": "span",
+                              "props": {
+                                "className": "text-right"
+                              },
+                              "children": ["{{statement.currency}} {{row.unitPrice.toLocaleString()}}"]
+                            }
+                          },
+                          {
+                            "key": "totalAmount",
+                            "header": "Total",
+                            "sortable": true,
+                            "cell": {
+                              "type": "span",
+                              "props": {
+                                "className": "text-right font-medium"
+                              },
+                              "children": ["{{statement.currency}} {{row.totalAmount.toLocaleString()}}"]
+                            }
+                          },
+                          {
+                            "key": "agreementId",
+                            "header": "Agreement",
+                            "cell": {
+                              "type": "span",
+                              "condition": {
+                                "path": "row.agreementId",
+                                "operator": "exists"
+                              },
+                              "children": [
+                                {
+                                  "type": "a",
+                                  "props": {
+                                    "className": "text-blue-600 hover:underline cursor-pointer text-sm"
+                                  },
+                                  "handlers": {
+                                    "click": {
+                                      "handler": "navigateToAgreement",
+                                      "params": {
+                                        "agreementId": "{{row.agreementId}}"
+                                      }
+                                    }
+                                  },
+                                  "children": ["View"]
+                                }
+                              ]
+                            }
+                          }
+                        ],
+                        "pagination": {
+                          "enabled": true,
+                          "pageSize": 20
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "Card",
+                "condition": {
+                  "path": "statement.importedAt",
+                  "operator": "exists"
+                },
+                "children": [
+                  {
+                    "type": "CardHeader",
+                    "children": [
+                      {
+                        "type": "CardTitle",
+                        "children": ["Import Information"]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "CardContent",
+                    "children": [
+                      {
+                        "type": "dl",
+                        "props": {
+                          "className": "grid grid-cols-1 sm:grid-cols-2 gap-4"
+                        },
+                        "children": [
+                          {
+                            "type": "div",
+                            "children": [
+                              {
+                                "type": "dt",
+                                "props": {
+                                  "className": "text-sm font-medium text-gray-500"
+                                },
+                                "children": ["Imported Date"]
+                              },
+                              {
+                                "type": "dd",
+                                "props": {
+                                  "className": "mt-1 text-sm text-gray-900"
+                                },
+                                "children": ["{{new Date(statement.importedAt).toLocaleString()}}"]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "div",
+                            "children": [
+                              {
+                                "type": "dt",
+                                "props": {
+                                  "className": "text-sm font-medium text-gray-500"
+                                },
+                                "children": ["Invoice Number"]
+                              },
+                              {
+                                "type": "dd",
+                                "props": {
+                                  "className": "mt-1 text-sm text-gray-900"
+                                },
+                                "children": [
+                                  {
+                                    "type": "a",
+                                    "props": {
+                                      "className": "text-blue-600 hover:underline"
+                                    },
+                                    "handlers": {
+                                      "click": "viewInvoice"
+                                    },
+                                    "children": ["{{statement.invoiceNumber}}"]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "data": [
+    {
+      "key": "statement",
+      "source": "api",
+      "endpoint": "/api/extensions/{{extensionId}}/statements/{{params.id}}"
+    },
+    {
+      "key": "charges",
+      "source": "api",
+      "endpoint": "/api/extensions/{{extensionId}}/statements/{{params.id}}/charges"
+    }
+  ],
+  "handlers": {
+    "module": "descriptors/handlers/statements.js"
+  }
+}

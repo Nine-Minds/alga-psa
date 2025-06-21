@@ -12,5 +12,8 @@
     "@huggingface/inference": "^3.3.3",
     "gm": "^1.25.0",
     "uuid": "^11.0.5"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.21"
   }
 }

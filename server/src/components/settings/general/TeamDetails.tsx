@@ -5,7 +5,7 @@ import { getAllUsers, getMultipleUsersWithRoles } from 'server/src/lib/actions/u
 import { ITeam, IUser, IRole, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import UserAvatar from '../../ui/UserAvatar';
-import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { getUserAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { Input } from 'server/src/components/ui/Input';
 
 interface TeamDetailsProps {
@@ -65,7 +65,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): JSX.Elem
             return { userId, avatarUrl: null };
           }
           
-          const avatarUrl = await getUserAvatarUrl(userId, user.tenant);
+          const avatarUrl = await getUserAvatarUrlAction(userId, user.tenant);
           return { userId, avatarUrl };
         } catch (error) {
           console.error(`Error fetching avatar for user ${userId}:`, error);

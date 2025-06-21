@@ -1,11 +1,13 @@
 // server/src/components/ui/MultiUserPicker.tsx
+'use client';
+
 import React, { useState, useEffect, useRef } from 'react';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
 import { IUserWithRoles } from '../../interfaces/auth.interfaces';
 import * as RadixSelect from '@radix-ui/react-select';
 import { ChevronDown, X } from 'lucide-react';
 import { AutomationProps } from '../../types/ui-reflection/types';
-import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { getUserAvatarUrlsBatchAction } from 'server/src/lib/actions/avatar-actions';
 
 interface MultiUserPickerProps {
   label?: string;
@@ -59,7 +61,9 @@ const MultiUserPicker: React.FC<MultiUserPickerProps & AutomationProps> = ({
       const urlPromises = userIdsToFetch.map(async (userId) => {
         try {
           fetchedUserIdsRef.current.add(userId);
-          const url = await getUserAvatarUrl(userId, tenant);
+          // Use batch fetching for better performance
+          const avatarUrlsMap = await getUserAvatarUrlsBatchAction([userId], tenant);
+          const url = avatarUrlsMap.get(userId) || null;
           return { userId, url };
         } catch (error) {
           console.error(`Error fetching avatar URL for user ${userId}:`, error);

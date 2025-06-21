@@ -31,6 +31,8 @@
       "@shared/core/*": ["shared/core/*"],
       "@shared/types": ["shared/types"],
       "@shared/types/*": ["shared/types/*"],
+      "@shared/extension-utils": ["shared/extension-utils"],
+      "@shared/extension-utils/*": ["shared/extension-utils/*"],
       "@ee": ["ee/server/src", "server/src/empty"],
       "@ee/*": ["ee/server/src/*", "server/src/empty/*"]
     }

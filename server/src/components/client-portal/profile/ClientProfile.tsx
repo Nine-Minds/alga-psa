@@ -18,7 +18,7 @@ import type { IUserWithRoles } from 'server/src/types';
 import PasswordChangeForm from 'server/src/components/settings/general/PasswordChangeForm';
 import { toast } from 'react-hot-toast';
 import ContactAvatarUpload from 'server/src/components/client-portal/contacts/ContactAvatarUpload';
-import { getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 
 export function ClientProfile() {
   const [user, setUser] = useState<IUserWithRoles | null>(null);
@@ -53,7 +53,7 @@ export function ClientProfile() {
               
         // If this is a client user with a linked contact, get the contact avatar URL
         if (currentUser.user_type === 'client' && currentUser.contact_id) {
-          const contactAvatar = await getContactAvatarUrl(currentUser.contact_id, currentUser.tenant);
+          const contactAvatar = await getContactAvatarUrlAction(currentUser.contact_id, currentUser.tenant);
           setContactAvatarUrl(contactAvatar);
         }
 

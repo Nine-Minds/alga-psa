@@ -4,7 +4,7 @@ import UserAvatar from 'server/src/components/ui/UserAvatar';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ChevronDown, Search } from 'lucide-react';
 import { AutomationProps, ButtonComponent, ContainerComponent } from '../../types/ui-reflection/types';
-import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { getUserAvatarUrlsBatchAction } from 'server/src/lib/actions/avatar-actions';
 import { Input } from './Input';
 import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
@@ -149,30 +149,30 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
       
       if (userIdsToFetch.length === 0) return;
       
-      // Fetch avatar URLs for all needed users
-      const urlPromises = userIdsToFetch.map(async (userId): Promise<{ userId: string; url: string | null }> => {
-        try {
-          fetchedUserIdsRef.current.add(userId);
-          const url = await getUserAvatarUrl(userId, tenant);
-          return { userId, url };
-        } catch (error) {
-          console.error(`Error fetching avatar URL for user ${userId}:`, error);
-          return { userId, url: null };
-        }
-      });
+      // Mark all user IDs as being fetched to prevent duplicate requests
+      userIdsToFetch.forEach(userId => fetchedUserIdsRef.current.add(userId));
       
-      const results = await Promise.all(urlPromises);
+      // Fetch avatar URLs for all needed users using batch action
+      try {
+        const avatarUrlsMap = await getUserAvatarUrlsBatchAction(userIdsToFetch, tenant);
+        const results = userIdsToFetch.map(userId => ({
+          userId,
+          url: avatarUrlsMap.get(userId) || null
+        }));
       
-      if (results.length > 0) {
-        setAvatarUrls(prev => {
-          const newUrls = { ...prev };
-          results.forEach(result => {
-            if (result && result.userId) {
-              newUrls[result.userId] = result.url;
-            }
+        if (results.length > 0) {
+          setAvatarUrls(prev => {
+            const newUrls = { ...prev };
+            results.forEach(result => {
+              if (result && result.userId) {
+                newUrls[result.userId] = result.url;
+              }
+            });
+            return newUrls;
           });
-          return newUrls;
-        });
+        }
+      } catch (error) {
+        console.error('Error fetching avatar URLs:', error);
       }
     };
     

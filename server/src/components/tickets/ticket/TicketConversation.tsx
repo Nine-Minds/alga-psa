@@ -15,7 +15,7 @@ import { Button } from 'server/src/components/ui/Button';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
-import { getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { getUserContactId } from 'server/src/lib/actions/user-actions/userActions';
 import { createTenantKnex } from 'server/src/lib/db';
 
@@ -133,7 +133,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             const contactId = await getUserContactId(conversation.user_id);
             
             if (contactId) {
-              const avatarUrl = await getContactAvatarUrl(contactId, ticket.tenant);
+              const avatarUrl = await getContactAvatarUrlAction(contactId, ticket.tenant);
               if (avatarUrl) {
                 newContactAvatarUrls[conversation.user_id] = avatarUrl;
                 

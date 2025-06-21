@@ -8,6 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig = {
   reactStrictMode: true,
+  output: 'standalone', // Disable static generation entirely
   transpilePackages: ['@blocknote/core', '@blocknote/react', '@blocknote/mantine'],
   webpack: (config, { isServer }) => {
     // Disable webpack cache
@@ -22,6 +23,7 @@ const nextConfig = {
       },
       alias: {
         ...config.resolve.alias,
+        '@': path.join(__dirname, 'src'),
         '@ee': process.env.NEXT_PUBLIC_EDITION === 'enterprise'
           ? path.join(__dirname, '../ee/server/src')
           : path.join(__dirname, 'src/empty'), // Point to empty implementations for CE builds
@@ -36,7 +38,7 @@ const nextConfig = {
       }
     };
 
-    // Exclude database dialects we don't use
+    // Exclude database dialects we don't use and heavy dev dependencies
     config.externals = [
       ...config.externals || [],
       'oracledb',
@@ -46,6 +48,11 @@ const nextConfig = {
       'better-sqlite3',
       'tedious'
     ];
+
+    // For server-side builds, externalize ts-morph to prevent bundling issues
+    if (isServer) {
+      config.externals.push('ts-morph');
+    }
 
     // Rule to handle .wasm files as assets
     config.module.rules.push({
@@ -66,12 +73,19 @@ const nextConfig = {
       },
     });
 
-    // Enable WebAssembly experiments
-    config.experiments = {
-      ...config.experiments,
-      asyncWebAssembly: true,
-      // layers: true, // Might be needed depending on the setup
-    };
+    // Exclude flow components CSS files to prevent autoprefixer issues during build
+    config.module.rules.push({
+      test: /\.module\.css$/,
+      include: path.resolve(__dirname, '../ee/server/src/components/flow'),
+      use: 'null-loader',
+    });
+
+    // Enable WebAssembly experiments (temporarily disabled for debugging)
+    // config.experiments = {
+    //   ...config.experiments,
+    //   asyncWebAssembly: true,
+    //   // layers: true, // Might be needed depending on the setup
+    // };
 
     // If running on serverless target, ensure wasm files are copied
     if (!isServer) {
@@ -114,7 +128,7 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '5mb', // Increase limit for WASM uploads
     },
-    instrumentationHook: true // Enable instrumentation for app initialization
+    instrumentationHook: true
   }
 };
 

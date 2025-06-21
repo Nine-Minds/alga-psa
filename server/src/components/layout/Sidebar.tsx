@@ -10,6 +10,7 @@ import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSubMenuItem from './SidebarSubMenuItem';
 import SidebarBottomMenuItem from './SidebarBottomMenuItem';
 import { Button } from 'server/src/components/ui/Button';
+import { DynamicNavigationSlot } from '../extensions/DynamicNavigationSlot';
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -139,6 +140,11 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }): JSX.E
         <ul className="space-y-1">
           {menuItems.map(renderMenuItem)}
         </ul>
+        
+        {/* Extension navigation items */}
+        <div className="mt-4 border-t border-gray-700 pt-4 px-2">
+          <DynamicNavigationSlot collapsed={!sidebarOpen} />
+        </div>
       </nav>
 
       <div className="mt-auto">

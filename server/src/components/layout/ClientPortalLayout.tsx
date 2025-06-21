@@ -10,7 +10,7 @@ import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import { getCurrentUser, getUserRolesWithPermissions } from 'server/src/lib/actions/user-actions/userActions';
 import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { useRouter } from 'next/navigation';
-import { getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 
 interface ClientPortalLayoutProps {
   children: ReactNode;
@@ -50,7 +50,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
         if (user.contact_id) {
           try {
             // For client users, use the contact avatar
-            const contactAvatarUrl = await getContactAvatarUrl(user.contact_id, user.tenant);
+            const contactAvatarUrl = await getContactAvatarUrlAction(user.contact_id, user.tenant);
             setAvatarUrl(contactAvatarUrl);
           } catch (error) {
             console.error('Error fetching contact avatar:', error);

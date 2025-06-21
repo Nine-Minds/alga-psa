@@ -1,15 +1,17 @@
-# Alga PSA Client Extension System - 80/20 Approach
+# Alga PSA Client Extension System - Descriptor Architecture
 
 ## Overview
 
-The Alga PSA Client Extension System allows developers to extend and customize the functionality of Alga PSA through a structured, secure, and maintainable API. This document outlines the core architecture and focused implementation approach for building the extension system with maximum value for minimum effort.
+The Alga PSA Client Extension System allows developers to extend and customize the functionality of Alga PSA through a structured, secure, and maintainable API using a **descriptor-based architecture**. This approach eliminates module resolution issues, improves security, and reduces bundle sizes while providing a clear declarative interface for extension development.
 
 ## Goals
 
 - Enable third-party developers to extend Alga PSA functionality without modifying core code
-- Provide a stable, focused API for essential extension points
+- Provide a stable, descriptor-based API that eliminates module import/resolution issues
 - Maintain security, performance, and multi-tenancy across all extensions
 - Support both Community Edition (CE) and Enterprise Edition (EE) with appropriate feature sets
+- Use declarative descriptors instead of React components for better isolation and security
+- Reduce extension bundle sizes from ~45kb to ~5kb through descriptor approach
 
 ## Core Architecture
 
@@ -21,17 +23,19 @@ The extension system will use a centralized registry that manages the lifecycle 
 - **Initialization**: System initializes extensions with proper context and configuration
 - **Activation/Deactivation**: Enable or disable extensions as needed
 
-### Priority Extension Points
+### Priority Extension Points (Descriptor-Based)
 
-We'll focus on these high-value extension points first:
+We focus on these high-value extension points using descriptors:
 
 1. **Core UI Extension Points**
-   - Navigation menu additions
-   - Dashboard widgets
-   - Custom standalone pages
+   - Navigation menu additions (JSON descriptors)
+   - Dashboard widgets (descriptor-based components)
+   - Custom standalone pages (declarative page descriptors)
 
 2. **Basic API Extension Points**
-   - Simple custom API endpoints
+   - Simple custom API endpoints (handler modules)
+   - Storage service integration
+   - Extension context and services
 
 ### Security Model
 
@@ -83,98 +87,105 @@ Extensions will operate within a straightforward security model:
 
 ## Technical Implementation Details
 
-### Simplified Extension SDK
+### Descriptor-Based Extension Architecture
 
 ```typescript
-// Core extension definition (simplified)
-export interface AlgaExtension {
-  id: string;                                 // Unique identifier
-  name: string;                               // Display name
-  version: string;                            // Semantic version
-  description: string;                        // Description
-  author: string;                             // Author information
-  permissions: string[];                      // Required permissions
-  tenantMode: 'all' | 'specific' | 'none';    // Tenant applicability
-  
-  // Lifecycle methods
-  initialize: (context: ExtensionContext) => Promise<void>;
-  deactivate: () => Promise<void>;
-  
-  // Extension points (focused set)
-  extensionPoints: {
-    ui?: {
-      navItems?: NavExtension[];
-      dashboardWidgets?: DashboardWidgetExtension[];
-      pages?: PageExtension[];
-    };
-    api?: {
-      endpoints?: APIEndpointExtension[];
-    };
-  };
+// Core descriptor interface
+export interface BaseDescriptor {
+  id?: string;
+  type: string;                               // Component type or HTML element
+  props?: Record<string, any>;               // Properties to pass to component
+  children?: (Descriptor | string | number)[];  // Child descriptors or content
+  handlers?: Record<string, string>;          // Event handler mapping
 }
 
-// Extension context provided at initialization (simplified)
+// Extension manifest (simplified for descriptors)
+export interface AlgaExtensionManifest {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  author: { name: string; email: string };
+  permissions: string[];
+  tenantMode: 'all' | 'specific' | 'none';
+  
+  // Descriptor-based components
+  components: ComponentDefinition[];
+  routes?: RouteDefinition[];
+  settings?: SettingDefinition[];
+}
+
+// Extension context provided to descriptors
 export interface ExtensionContext {
-  tenant: string | null;                      // Current tenant or null for system-wide
-  apiClient: AlgaApiClient;                   // API client with extension's permissions
-  logger: ExtensionLogger;                    // Simple logging facility
-  storage: ExtensionStorage;                  // Basic extension-specific storage
+  navigation: NavigationService;
+  api: ApiService;
+  storage: StorageService;
+  ui: UIService;
+  tenantId: string;
+  user: UserInfo;
 }
 ```
 
-### UI Extension System (Focused)
+### Descriptor-Based UI Components
 
 ```typescript
-// Navigation Extension
-export interface NavExtension {
-  id: string;
-  displayName: string;
-  icon: React.ComponentType;
-  position?: number;                        // Ordering hint
-  permissions?: string[];                   // Required permissions to see this item
-  component: React.ComponentType<NavExtensionProps>;
+// Navigation descriptor example
+{
+  "type": "button",
+  "props": {
+    "className": "nav-item"
+  },
+  "handlers": {
+    "module": "handlers/navigation.js",
+    "onClick": "navigateToPage"
+  },
+  "children": ["Menu Item"]
 }
 
-// Dashboard Widget Extension
-export interface DashboardWidgetExtension {
-  id: string;
-  displayName: string;
-  width: 'small' | 'medium' | 'large';
-  height: 'small' | 'medium' | 'large';
-  permissions?: string[];
-  component: React.ComponentType<DashboardWidgetProps>;
+// Page descriptor example
+{
+  "type": "page",
+  "meta": {
+    "title": "Extension Page",
+    "description": "Custom extension page"
+  },
+  "content": {
+    "type": "div",
+    "props": { "className": "page-container" },
+    "children": [
+      { "type": "h1", "children": ["Page Title"] },
+      { "type": "DataGrid", "props": { "data": "{{agreements}}" } }
+    ]
+  },
+  "handlers": {
+    "module": "handlers/pageHandlers"
+  }
 }
 
-// Custom Page Extension
-export interface PageExtension {
-  id: string;
-  path: string;
-  displayName: string;
-  permissions?: string[];
-  component: React.ComponentType<PageExtensionProps>;
+// Handler module example
+export function navigateToPage(event, context) {
+  event.preventDefault();
+  context.navigation.navigate('/extension/page');
 }
 
-// Basic extension slot component
-const ExtensionSlot: React.FC<{
-  slotName: string;
-  context?: any;
-}> = ({ slotName, context }) => {
-  const { extensions } = useExtensions();
-  const validExtensions = extensions.filter(ext => 
-    // Filter extensions that provide this slot
-  );
+// Descriptor renderer component
+const DescriptorRenderer: React.FC<{
+  descriptor: BaseDescriptor;
+  handlers: Record<string, Function>;
+  context: ExtensionContext;
+  data?: any;
+}> = ({ descriptor, handlers, context, data }) => {
+  // Safely render descriptor with security validation
+  const Component = getSecureComponent(descriptor.type);
+  const safeProps = sanitizeProps(descriptor.props);
   
   return (
-    <>
-      {validExtensions.map(ext => (
-        <ExtensionRenderer
-          key={ext.id}
-          extension={ext}
-          slotName={slotName}
-          context={context}
-        />
-      ))}
-    </>
+    <Component
+      {...safeProps}
+      {...bindEventHandlers(descriptor.handlers, handlers, context)}
+    >
+      {renderChildren(descriptor.children, handlers, context, data)}
+    </Component>
   );
 };
 ```
@@ -225,30 +236,47 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 ```
 
-## Security Considerations (Simplified)
+## Security Considerations (Descriptor-Based)
 
-1. **Basic Permission System**
-   - Extensions must declare required permissions
-   - Users must approve permission requests during installation
+1. **Descriptor Security Model**
+   - Only whitelisted component types and HTML elements allowed
+   - Props sanitization prevents XSS and injection attacks
+   - No direct React/JavaScript execution in descriptors
 
-2. **Data Access Controls**
+2. **Handler Module Security**
+   - Handler modules loaded through secure blob URLs
+   - Limited API surface through ExtensionContext
+   - Memory management with automatic cleanup
+
+3. **Data Access Controls**
    - Extensions operate within tenant data boundaries
    - Row-level security policies apply to extension queries
+   - Storage service provides tenant-isolated data access
 
-3. **Manual Review Process**
+4. **Manual Review Process**
    - Administrator approval before extension activation
-   - Review extension code for security issues
+   - Descriptor validation at load time
+   - Runtime security checks for all user interactions
 
-## Extension Development Experience (Streamlined)
+## Extension Development Experience (Descriptor-Based)
 
-1. **Essential Developer Tools**
-   - Basic CLI tool for extension scaffolding
-   - Simple extension packaging
+1. **Descriptor Development Tools**
+   - JSON schema validation for descriptors
+   - Descriptor editor with live preview
+   - Build system for handler modules
+   - Extension packaging and validation
 
-2. **Documentation**
-   - Focused API reference
-   - Example extensions for core use cases
-   - Quick start guide
+2. **Development Benefits**
+   - No React imports or complex module resolution
+   - Smaller bundle sizes (~5kb vs ~45kb)
+   - Faster development cycle with descriptor hot-reload
+   - Clear separation between UI structure and behavior
+
+3. **Documentation**
+   - Descriptor schema reference
+   - Component registry documentation
+   - Handler development guide
+   - Migration guide from React components
 
 ## Future Vision
 

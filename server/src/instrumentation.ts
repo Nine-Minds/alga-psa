@@ -10,12 +10,13 @@
 
 export async function register() {
   // Only run initialization in Node.js runtime (not Edge runtime)
-  if (process.env.NEXT_RUNTIME === 'nodejs') {
+  // and skip during build time
+  if (process.env.NEXT_RUNTIME === 'nodejs' && process.env.NEXT_PHASE !== 'phase-production-build') {
     console.log('[Instrumentation] Starting application initialization...');
     
     try {
       // Import initializeApp dynamically to avoid issues with Edge runtime
-      const { initializeApp } = await import('./lib/actions/initializeApp');
+      const { initializeApp } = await import('./lib/initializeApp');
       
       // Initialize the application (runs startup tasks, syncs templates, etc.)
       await initializeApp();
@@ -26,5 +27,7 @@ export async function register() {
       // Note: We don't throw here to allow the server to start even if initialization fails
       // This is a decision point - you might want to fail fast in production
     }
+  } else if (process.env.NEXT_PHASE === 'phase-production-build') {
+    console.log('[Instrumentation] Skipping initialization during build phase');
   }
 }

@@ -62,7 +62,8 @@ describe.todo('Ticket Permissions Unit Tests', () => {
       email: 'john@example.com',
       hashed_password: 'hashed_password_here',
       roles: [userRole],
-      is_inactive: false
+      is_inactive: false,
+      user_type: 'internal'
     };
 
     adminUser = {
@@ -74,7 +75,8 @@ describe.todo('Ticket Permissions Unit Tests', () => {
       email: 'jane@example.com',
       hashed_password: 'hashed_password_here',
       roles: [adminRole],
-      is_inactive: false
+      is_inactive: false,
+      user_type: 'internal'
     };
 
     mockTicket = {

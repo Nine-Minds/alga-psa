@@ -21,7 +21,7 @@ import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAu
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { ButtonComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
-import { getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/documentActions';
 
 interface ContactDetailsViewProps {
@@ -81,7 +81,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
         
         // Fetch contact avatar URL
         if (userId && contact.tenant) {
-          const contactAvatarUrl = await getContactAvatarUrl(contact.contact_name_id, contact.tenant);
+          const contactAvatarUrl = await getContactAvatarUrlAction(contact.contact_name_id, contact.tenant);
           setAvatarUrl(contactAvatarUrl);
         }
       } catch (err) {

@@ -76,7 +76,8 @@ export class ExtensionRegistry implements IExtensionRegistry {
         .returning('*');
 
       // Update permissions
-      await this.updateExtensionPermissions(updated.id, manifest.permissions || []);
+      const permissionsArray = this.extractPermissionsArray(manifest.permissions);
+      await this.updateExtensionPermissions(updated.id, permissionsArray);
 
       return {
         ...updated,
@@ -93,13 +94,14 @@ export class ExtensionRegistry implements IExtensionRegistry {
         version: manifest.version,
         manifest: JSON.stringify(manifest),
         main_entry_point: manifest.main || null,
-        is_enabled: false // Default to disabled for new extensions
+        is_enabled: manifest.autoEnable || false // Use autoEnable from manifest
       })
       .returning('*');
 
     // Register permissions
-    if (manifest.permissions && manifest.permissions.length > 0) {
-      await this.updateExtensionPermissions(extension.id, manifest.permissions);
+    const permissionsArray = this.extractPermissionsArray(manifest.permissions);
+    if (permissionsArray.length > 0) {
+      await this.updateExtensionPermissions(extension.id, permissionsArray);
     }
 
     return {
@@ -436,6 +438,25 @@ export class ExtensionRegistry implements IExtensionRegistry {
   }
 
   /**
+   * Extract permissions array from various formats
+   */
+  private extractPermissionsArray(permissions: any): string[] {
+    if (!permissions) return [];
+    
+    // If it's already an array of strings, return it
+    if (Array.isArray(permissions)) {
+      return permissions.filter(p => typeof p === 'string');
+    }
+    
+    // If it's an object with api permissions (like in the softwareone extension)
+    if (typeof permissions === 'object' && permissions.api && Array.isArray(permissions.api)) {
+      return permissions.api;
+    }
+    
+    return [];
+  }
+
+  /**
    * Update extension permissions
    */
   private async updateExtensionPermissions(
@@ -471,6 +492,12 @@ export class ExtensionRegistry implements IExtensionRegistry {
     }
     
     const extensions = await query.orderBy('name');
+    
+    console.log('[ExtensionRegistry] getAllExtensions raw data:', extensions.map((e: any) => ({
+      id: e.id,
+      name: e.name,
+      manifestType: typeof e.manifest
+    })));
 
     return extensions.map((extension: any) => ({
       ...extension,
