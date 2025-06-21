@@ -68,6 +68,13 @@ const nextConfig = {
       },
     });
 
+    // Exclude flow components CSS files to prevent autoprefixer issues during build
+    config.module.rules.push({
+      test: /\.module\.css$/,
+      include: path.resolve(__dirname, '../ee/server/src/components/flow'),
+      use: 'null-loader',
+    });
+
     // Enable WebAssembly experiments (temporarily disabled for debugging)
     // config.experiments = {
     //   ...config.experiments,
