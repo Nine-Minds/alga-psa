@@ -5,7 +5,7 @@ import UserDetails from './UserDetails';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { DataTable } from 'server/src/components/ui/DataTable';
 import UserAvatar from '../../ui/UserAvatar';
-import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { getUserAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { MoreVertical, Pen, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -41,7 +41,7 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate }) =>
       
       const avatarPromises = usersToFetch.map(async (user) => {
         try {
-          const avatarUrl = await getUserAvatarUrl(user.user_id, user.tenant);
+          const avatarUrl = await getUserAvatarUrlAction(user.user_id, user.tenant);
           return { userId: user.user_id, avatarUrl };
         } catch (error) {
           console.error(`Error fetching avatar for user ${user.user_id}:`, error);
