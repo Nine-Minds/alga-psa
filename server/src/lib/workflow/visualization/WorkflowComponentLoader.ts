@@ -5,9 +5,10 @@ import type { ComponentType } from 'react';
 export type WorkflowProps = {};
 export type WorkflowComponentType = ComponentType<WorkflowProps>;
 
-// Dynamic import will resolve to either the EE component or the CE empty component
-// based on the webpack alias configuration
+// Dynamic import with fallback to prevent build issues when flow components are not available
 export const DynamicWorkflowComponent = dynamic<WorkflowProps>(
-  () => import('@ee/components/flow/DnDFlow').then(mod => mod.default),
+  () => import('@ee/components/flow/DnDFlow')
+    .then(mod => mod.default)
+    .catch(() => import('@/empty/components/flow/DnDFlow').then(mod => mod.default)),
   { ssr: false }
 );
