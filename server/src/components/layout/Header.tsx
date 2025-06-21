@@ -11,7 +11,7 @@ import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { usePathname } from 'next/navigation';
 import { menuItems, bottomMenuItems, MenuItem } from 'server/src/config/menuConfig';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { getUserAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { useRouter } from 'next/navigation';
 
 interface HeaderProps {
@@ -63,10 +63,15 @@ const Header: React.FC<HeaderProps> = ({
       if (user) {
         setUserData(user);
         
-        // Fetch the user's avatar URL
+        // Fetch the user's avatar URL using server action
         if (user.tenant && user.user_id) {
-          const userAvatarUrl = await getUserAvatarUrl(user.user_id, user.tenant);
-          setAvatarUrl(userAvatarUrl);
+          try {
+            const userAvatarUrl = await getUserAvatarUrlAction(user.user_id, user.tenant);
+            setAvatarUrl(userAvatarUrl);
+          } catch (error) {
+            console.error('Error fetching user avatar URL:', error);
+            setAvatarUrl(null);
+          }
         }
       }
     };
