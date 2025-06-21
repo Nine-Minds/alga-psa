@@ -44,6 +44,7 @@ import {
     clientMaintenanceSummarySchema
 } from '../../schemas/asset.schema';
 import { getCurrentUser } from '../user-actions/userActions';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 import { createTenantKnex } from '../../db';
 import { Knex } from 'knex';
 import { withTransaction } from '@shared/db';
@@ -138,6 +139,16 @@ async function upsertExtensionData(
 
 // Export getAsset for external use
 export async function getAsset(asset_id: string): Promise<Asset> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    // Check permission for asset reading
+    if (!await hasPermission(currentUser, 'asset', 'read')) {
+        throw new Error('Permission denied: Cannot read assets');
+    }
+
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
         throw new Error('No tenant found');
@@ -246,6 +257,16 @@ function formatAssetForOutput(asset: any): Asset {
 }
 
 export async function createAsset(data: CreateAssetRequest): Promise<Asset> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    // Check permission for asset creation
+    if (!await hasPermission(currentUser, 'asset', 'create')) {
+        throw new Error('Permission denied: Cannot create assets');
+    }
+
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
         throw new Error('No tenant found');
@@ -339,6 +360,16 @@ export async function createAsset(data: CreateAssetRequest): Promise<Asset> {
 }
 
 export async function updateAsset(asset_id: string, data: UpdateAssetRequest): Promise<Asset> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    // Check permission for asset updating
+    if (!await hasPermission(currentUser, 'asset', 'update')) {
+        throw new Error('Permission denied: Cannot update assets');
+    }
+
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
         throw new Error('No tenant found');
@@ -466,6 +497,16 @@ async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: stri
 }
 
 export async function listAssets(params: AssetQueryParams): Promise<AssetListResponse> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    // Check permission for asset reading
+    if (!await hasPermission(currentUser, 'asset', 'read')) {
+        throw new Error('Permission denied: Cannot read assets');
+    }
+
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
         throw new Error('No tenant found');
@@ -557,6 +598,11 @@ export async function createMaintenanceSchedule(data: CreateMaintenanceScheduleR
             throw new Error('No user session found');
         }
 
+        // Check permission for asset updating (maintenance is considered an update operation)
+        if (!await hasPermission(currentUser, 'asset', 'update')) {
+            throw new Error('Permission denied: Cannot create maintenance schedules');
+        }
+
         const { knex, tenant } = await createTenantKnex();
         if (!tenant) {
             throw new Error('No tenant found');
@@ -610,6 +656,16 @@ export async function updateMaintenanceSchedule(
     data: UpdateMaintenanceScheduleRequest
 ): Promise<AssetMaintenanceSchedule> {
     try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser) {
+            throw new Error('No authenticated user found');
+        }
+
+        // Check permission for asset updating (maintenance is considered an update operation)
+        if (!await hasPermission(currentUser, 'asset', 'update')) {
+            throw new Error('Permission denied: Cannot update maintenance schedules');
+        }
+
         const { knex, tenant } = await createTenantKnex();
         if (!tenant) {
             throw new Error('No tenant found');
@@ -659,6 +715,16 @@ export async function updateMaintenanceSchedule(
 
 export async function deleteMaintenanceSchedule(schedule_id: string): Promise<void> {
     try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser) {
+            throw new Error('No authenticated user found');
+        }
+
+        // Check permission for asset deletion
+        if (!await hasPermission(currentUser, 'asset', 'delete')) {
+            throw new Error('Permission denied: Cannot delete maintenance schedules');
+        }
+
         const { knex, tenant } = await createTenantKnex();
         if (!tenant) {
             throw new Error('No tenant found');
@@ -686,6 +752,11 @@ export async function recordMaintenanceHistory(data: CreateMaintenanceHistoryReq
         const currentUser = await getCurrentUser();
         if (!currentUser) {
             throw new Error('No user session found');
+        }
+
+        // Check permission for asset updating (maintenance recording is considered an update operation)
+        if (!await hasPermission(currentUser, 'asset', 'update')) {
+            throw new Error('Permission denied: Cannot record maintenance history');
         }
 
         const { knex, tenant } = await createTenantKnex();
@@ -753,6 +824,16 @@ export async function recordMaintenanceHistory(data: CreateMaintenanceHistoryReq
 // Reporting Functions
 export async function getAssetMaintenanceReport(asset_id: string): Promise<AssetMaintenanceReport> {
     try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser) {
+            throw new Error('No authenticated user found');
+        }
+
+        // Check permission for asset reading
+        if (!await hasPermission(currentUser, 'asset', 'read')) {
+            throw new Error('Permission denied: Cannot read asset maintenance reports');
+        }
+
         const { knex, tenant } = await createTenantKnex();
         if (!tenant) {
             throw new Error('No tenant found');
@@ -836,6 +917,16 @@ export async function getAssetMaintenanceReport(asset_id: string): Promise<Asset
 
 export async function getClientMaintenanceSummary(company_id: string): Promise<ClientMaintenanceSummary> {
     try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser) {
+            throw new Error('No authenticated user found');
+        }
+
+        // Check permission for asset reading
+        if (!await hasPermission(currentUser, 'asset', 'read')) {
+            throw new Error('Permission denied: Cannot read client maintenance summaries');
+        }
+
         const { knex, tenant } = await createTenantKnex();
         if (!tenant) {
             throw new Error('No tenant found');
@@ -968,6 +1059,16 @@ export async function getClientMaintenanceSummary(company_id: string): Promise<C
 // Asset Association Functions
 // Update only the map callback in listEntityAssets function
 export async function listEntityAssets(entity_id: string, entity_type: 'ticket' | 'project'): Promise<Asset[]> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    // Check permission for asset reading
+    if (!await hasPermission(currentUser, 'asset', 'read')) {
+        throw new Error('Permission denied: Cannot read asset associations');
+    }
+
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
         throw new Error('No tenant found');
@@ -997,16 +1098,22 @@ export async function listEntityAssets(entity_id: string, entity_type: 'ticket' 
 }
 
 export async function createAssetAssociation(data: CreateAssetAssociationRequest): Promise<AssetAssociation> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No user session found');
+    }
+
+    // Check permission for asset updating (associations are considered update operations)
+    if (!await hasPermission(currentUser, 'asset', 'update')) {
+        throw new Error('Permission denied: Cannot create asset associations');
+    }
+
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
         throw new Error('No tenant found');
     }
 
     try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error('No user session found');
-        }
 
         // Validate the input data
         const validatedData = validateData(createAssetAssociationSchema, data);
@@ -1042,6 +1149,16 @@ export async function removeAssetAssociation(
     entity_id: string,
     entity_type: 'ticket' | 'project'
 ): Promise<void> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    // Check permission for asset deletion
+    if (!await hasPermission(currentUser, 'asset', 'delete')) {
+        throw new Error('Permission denied: Cannot remove asset associations');
+    }
+
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
         throw new Error('No tenant found');

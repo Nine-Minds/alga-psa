@@ -3,6 +3,8 @@
 import { Knex } from 'knex'; // Import Knex type
 import { createTenantKnex } from 'server/src/lib/db';
 import { TaxRegion } from 'server/src/types/types.d';
+import { getCurrentUser } from './user-actions/userActions';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 interface DefaultTaxRateInfo {
   tax_rate_id: string;
   tax_percentage: number;
@@ -10,6 +12,16 @@ interface DefaultTaxRateInfo {
 }
 
 export async function fetchTaxRegions(): Promise<TaxRegion[]> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Check permission for time entry reading (reading tax regions for time entries)
+  if (!await hasPermission(currentUser, 'timeentry', 'read')) {
+    throw new Error('Permission denied: Cannot read tax regions for time entries');
+  }
+
   const {knex: db, tenant} = await createTenantKnex();
   const regions = await db('tax_regions')
     .where({ tenant, is_active: true })
@@ -20,6 +32,16 @@ export async function fetchTaxRegions(): Promise<TaxRegion[]> {
 
 // Phase 1.2: Fetch the default tax rate percentage for the company associated with the work item.
 export async function fetchCompanyTaxRateForWorkItem(workItemId: string, workItemType: string): Promise<number | undefined> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Check permission for time entry reading (reading tax rates for time entries)
+  if (!await hasPermission(currentUser, 'timeentry', 'read')) {
+    throw new Error('Permission denied: Cannot read tax rates for time entries');
+  }
+
   console.log(`Fetching default tax rate percentage for work item ${workItemId} of type ${workItemType}`);
 
   const {knex: db, tenant} = await createTenantKnex();
@@ -93,6 +115,16 @@ export async function fetchCompanyTaxRateForWorkItem(workItemId: string, workIte
 
 // Fetch the default tax rate ID and percentage for the company associated with the work item.
 export async function fetchDefaultCompanyTaxRateInfoForWorkItem(workItemId: string, workItemType: string): Promise<DefaultTaxRateInfo | null> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Check permission for time entry reading (reading tax rate info for time entries)
+  if (!await hasPermission(currentUser, 'timeentry', 'read')) {
+    throw new Error('Permission denied: Cannot read tax rate info for time entries');
+  }
+
   console.log(`Fetching default tax rate info for work item ${workItemId} of type ${workItemType}`);
 
   const {knex: db, tenant} = await createTenantKnex();
@@ -173,6 +205,16 @@ export async function fetchDefaultCompanyTaxRateInfoForWorkItem(workItemId: stri
 }
 
 export async function fetchServicesForTimeEntry(workItemType?: string): Promise<{ id: string; name: string; type: string; tax_rate_id: string | null }[]> { // Return tax_rate_id instead
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Check permission for time entry reading (reading services for time entries)
+  if (!await hasPermission(currentUser, 'timeentry', 'read')) {
+    throw new Error('Permission denied: Cannot read services for time entries');
+  }
+
   const {knex: db, tenant} = await createTenantKnex();
 
   let query = db('service_catalog as sc')
@@ -208,6 +250,16 @@ export async function fetchScheduleEntryForWorkItem(workItemId: string): Promise
   scheduled_start: string;
   scheduled_end: string
 } | null> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Check permission for time entry reading (reading schedule entries for time entries)
+  if (!await hasPermission(currentUser, 'timeentry', 'read')) {
+    throw new Error('Permission denied: Cannot read schedule entries for time entries');
+  }
+
   try {
     const { knex, tenant } = await createTenantKnex();
 

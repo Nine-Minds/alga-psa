@@ -10,7 +10,7 @@ import { Label } from '../ui/Label';
 import { Input } from '../ui/Input';
 import { Checkbox } from '../ui/Checkbox';
 
-import { createBillingPlan, updateBillingPlan } from 'server/src/lib/actions/billingPlanAction';
+import { createBillingPlan, updateBillingPlan, updateBillingPlanFixedConfig, getBillingPlanFixedConfig } from 'server/src/lib/actions/billingPlanAction';
 // Removed bucketPlanAction imports
 import { IBillingPlan, IServiceType } from 'server/src/interfaces/billing.interfaces'; // Removed IBucketPlan, IService
 // Removed planServiceActions imports
@@ -36,25 +36,37 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
   const [billingFrequency, setBillingFrequency] = useState('');
   const [planType, setPlanType] = useState<PlanType>('Fixed');
   const [isCustom, setIsCustom] = useState(false);
+  const [baseRate, setBaseRate] = useState<number | undefined>(undefined);
   const tenant = useTenant()!;
   // Removed activeTab state
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false); // Added saving state
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
-  // Removed all plan type specific state variables (baseRate, hourlyRate, totalHours, etc.)
+  // Removed other plan type specific state variables (hourlyRate, totalHours, etc.)
   // Removed service selection state (selectedServices, availableServices, isLoading)
   // Removed overlap check state (showOverlapWarning, overlappingServices, pendingPlanData)
 
   // Update form when editingPlan changes or dialog opens
   useEffect(() => {
+    const loadBaseRate = async (planId: string) => {
+        try {
+            const config = await getBillingPlanFixedConfig(planId);
+            setBaseRate(config?.base_rate ?? undefined);
+        } catch (err) {
+            console.error('Error loading plan config:', err);
+        }
+    };
+
     if (open) {
         if (editingPlan) {
             setPlanName(editingPlan.plan_name);
             setBillingFrequency(editingPlan.billing_frequency);
             setPlanType(editingPlan.plan_type as PlanType);
             setIsCustom(editingPlan.is_custom);
-            // No need to load specific config here anymore
+            if (editingPlan.plan_id && editingPlan.plan_type === 'Fixed') {
+                loadBaseRate(editingPlan.plan_id);
+            }
         } else {
             // Reset form for new plan when dialog opens without editingPlan
             resetForm();
@@ -74,7 +86,11 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
     const errors: string[] = [];
     if (!planName.trim()) errors.push('Plan name');
     if (!billingFrequency) errors.push('Billing frequency');
-    // No type-specific validation needed here
+    if (planType === 'Fixed') {
+      if (baseRate === undefined || baseRate === null || isNaN(baseRate)) {
+        errors.push('Base rate');
+      }
+    }
     return errors;
   };
 
@@ -120,7 +136,9 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
         savedPlanId = newPlan.plan_id;
       }
 
-      // No need to save specific config or add services here
+      if (savedPlanId && planType === 'Fixed') {
+        await updateBillingPlanFixedConfig(savedPlanId, { base_rate: baseRate ?? null });
+      }
 
       resetForm();
       onPlanAdded(savedPlanId); // Pass the ID back
@@ -137,6 +155,7 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
     setBillingFrequency('');
     setPlanType('Fixed');
     setIsCustom(false);
+    setBaseRate(undefined);
     setValidationErrors([]);
     setHasAttemptedSubmit(false);
     // No other state to reset
@@ -222,16 +241,22 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
                 />
                 {/* Removed CustomSelect */}
               </div>
-              <div className="flex items-center space-x-2 pt-2">
-                <Checkbox
-                  id="is-custom"
-                  checked={isCustom}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setIsCustom(e.target.checked)}
-                />
-                <Label htmlFor="is-custom" className="cursor-pointer">
-                  Is Custom Plan
-                </Label>
-              </div>
+              {planType === 'Fixed' && (
+                <div>
+                  <Label htmlFor="base-rate">Base Rate *</Label>
+                  <Input
+                    id="base-rate"
+                    type="number"
+                    value={baseRate !== undefined ? baseRate : ''}
+                    onChange={(e) => setBaseRate(e.target.value === '' ? undefined : Number(e.target.value))}
+                    placeholder="Enter base rate"
+                    min={0}
+                    step={0.01}
+                    required
+                    className={hasAttemptedSubmit && (baseRate === undefined || isNaN(baseRate)) ? 'border-red-500' : ''}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Removed Config Tab Content and Service Selection */}

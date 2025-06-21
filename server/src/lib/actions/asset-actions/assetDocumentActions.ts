@@ -7,18 +7,25 @@ import { Knex } from 'knex';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { IDocumentAssociation, IDocumentAssociationInput } from 'server/src/interfaces/document-association.interface';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 
 export async function associateDocumentWithAsset(input: IDocumentAssociationInput): Promise<IDocumentAssociation> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No user session found');
+    }
+
+    // Check permission for asset updating (document associations are considered update operations)
+    if (!await hasPermission(currentUser, 'asset', 'update')) {
+        throw new Error('Permission denied: Cannot associate documents with assets');
+    }
+
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
         throw new Error('No tenant found');
     }
 
     try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-            throw new Error('No user session found');
-        }
 
         // Create association in the standard document_associations table
         const [association] = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -43,6 +50,16 @@ export async function associateDocumentWithAsset(input: IDocumentAssociationInpu
 }
 
 export async function removeDocumentFromAsset(tenant: string, association_id: string): Promise<void> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    // Check permission for asset deletion
+    if (!await hasPermission(currentUser, 'asset', 'delete')) {
+        throw new Error('Permission denied: Cannot remove documents from assets');
+    }
+
     const { knex } = await createTenantKnex();
 
     try {
@@ -68,6 +85,16 @@ export async function removeDocumentFromAsset(tenant: string, association_id: st
 }
 
 export async function getAssetDocuments(tenant: string, asset_id: string): Promise<(IDocument & { association_id: string, notes?: string })[]> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    // Check permission for asset reading
+    if (!await hasPermission(currentUser, 'asset', 'read')) {
+        throw new Error('Permission denied: Cannot read asset documents');
+    }
+
     const { knex } = await createTenantKnex();
 
     try {
@@ -116,6 +143,16 @@ export async function updateAssetDocumentNotes(
     association_id: string,
     notes: string
 ): Promise<IDocumentAssociation> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    // Check permission for asset updating
+    if (!await hasPermission(currentUser, 'asset', 'update')) {
+        throw new Error('Permission denied: Cannot update asset document notes');
+    }
+
     const { knex } = await createTenantKnex();
 
     try {

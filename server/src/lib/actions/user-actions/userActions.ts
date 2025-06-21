@@ -15,6 +15,7 @@ import UserPreferences from 'server/src/lib/models/userPreferences';
 import { verifyEmailSuffix, getCompanyByEmailSuffix } from 'server/src/lib/actions/company-settings/emailSettings';
 import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/EntityImageService';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 
 interface ActionResult {
   success: boolean;
@@ -29,13 +30,24 @@ interface ActionResult {
  */
 export async function checkEmailExistsGlobally(email: string): Promise<boolean> {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
     const db = await getAdminConnection();
     
-    const existingUser = await db('users')
-      .where({ email: email.toLowerCase() })
-      .first();
-    
-    return !!existingUser;
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(currentUser, 'user', 'read', trx)) {
+        throw new Error('Permission denied: Cannot check email existence');
+      }
+
+      const existingUser = await trx('users')
+        .where({ email: email.toLowerCase() })
+        .first();
+      
+      return !!existingUser;
+    });
   } catch (error) {
     console.error('Error checking email existence globally:', error);
     throw new Error('Failed to check email existence');
@@ -44,19 +56,28 @@ export async function checkEmailExistsGlobally(email: string): Promise<boolean> 
 
 export async function addUser(userData: { firstName: string; lastName: string; email: string, password: string, roleId?: string }): Promise<IUser> {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
     const {knex: db, tenant} = await createTenantKnex();
 
-    if (!userData.roleId) {
-      throw new Error("Role is required");
-    }
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(currentUser, 'user', 'create', trx)) {
+        throw new Error('Permission denied: Cannot create user');
+      }
 
-    // Check if email already exists globally
-    const emailExists = await checkEmailExistsGlobally(userData.email);
-    if (emailExists) {
-      throw new Error("A user with this email address already exists");
-    }
+      if (!userData.roleId) {
+        throw new Error("Role is required");
+      }
 
-    const newUser = await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Check if email already exists globally
+      const emailExists = await checkEmailExistsGlobally(userData.email);
+      if (emailExists) {
+        throw new Error("A user with this email address already exists");
+      }
+
       const [user] = await trx('users')
         .insert({
           first_name: userData.firstName,
@@ -74,15 +95,17 @@ export async function addUser(userData: { firstName: string; lastName: string; e
         tenant: tenant || undefined
       });
 
+      revalidatePath('/settings');
       return user;
     });
-
-    revalidatePath('/settings');
-    return newUser;
   } catch (error: any) {
     console.error('Error adding user:', error);
     // Pass through the specific error message if it's about duplicate email
     if (error.message === "A user with this email address already exists") {
+      throw error;
+    }
+    // Pass through permission denied errors
+    if (error.message === "Permission denied: Cannot create user") {
       throw error;
     }
     throw new Error('Failed to add user');
@@ -91,9 +114,18 @@ export async function addUser(userData: { firstName: string; lastName: string; e
 
 export async function deleteUser(userId: string): Promise<void> {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
     const {knex: db, tenant} = await createTenantKnex();
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(currentUser, 'user', 'delete', trx)) {
+        throw new Error('Permission denied: Cannot delete user');
+      }
+
       const assignedCompany = await trx('companies')
         .where({ account_manager_id: userId, tenant: tenant || undefined })
         .first();
@@ -155,9 +187,21 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
 
 export async function findUserById(id: string): Promise<IUserWithRoles | null> {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
     const {knex} = await createTenantKnex();
-    const user = await User.getUserWithRoles(knex, id);
-    return user || null;
+    
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(currentUser, 'user', 'read', trx)) {
+        throw new Error('Permission denied: Cannot read user');
+      }
+
+      const user = await User.getUserWithRoles(trx, id);
+      return user || null;
+    });
   } catch (error) {
     console.error(`Failed to find user with id ${id}:`, error);
     throw new Error('Failed to find user');
@@ -169,22 +213,33 @@ export async function getAllUsers(includeInactive: boolean = true, userType?: st
     const currentUser = await getCurrentUser();
     const tenant = currentUser?.tenant;
 
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
     if (!tenant) {
       throw new Error('Tenant is required');
     }
 
     const {knex} = await createTenantKnex();
-    const users = await User.getAll(knex, includeInactive);
-    const usersWithRoles = await Promise.all(users.map(async (user: IUser): Promise<IUserWithRoles> => {
-      const roles = await User.getUserRoles(knex, user.user_id);
-      return { ...user, roles };
-    }));
+    
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(currentUser, 'user', 'read', trx)) {
+        throw new Error('Permission denied: Cannot read users');
+      }
 
-    // Filter by tenant and optionally by user_type
-    return usersWithRoles.filter(user =>
-      user.tenant === tenant &&
-      (userType ? user.user_type === userType : true)
-    );
+      const users = await User.getAll(trx, includeInactive);
+      const usersWithRoles = await Promise.all(users.map(async (user: IUser): Promise<IUserWithRoles> => {
+        const roles = await User.getUserRoles(trx, user.user_id);
+        return { ...user, roles };
+      }));
+
+      // Filter by tenant and optionally by user_type
+      return usersWithRoles.filter(user =>
+        user.tenant === tenant &&
+        (userType ? user.user_type === userType : true)
+      );
+    });
   } catch (error) {
     console.error('Failed to fetch users:', error);
     throw new Error('Failed to fetch users');
@@ -193,10 +248,21 @@ export async function getAllUsers(includeInactive: boolean = true, userType?: st
 
 export async function updateUser(userId: string, userData: Partial<IUser>): Promise<IUserWithRoles | null> {
   try {
-    const {knex} = await createTenantKnex();
-    await User.update(knex, userId, userData);
-    const updatedUser = await User.getUserWithRoles(knex, userId);
-    return updatedUser || null;
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx) => {
+      if (!await hasPermission(currentUser, 'user', 'update', trx)) {
+        throw new Error('Permission denied: Cannot update user');
+      }
+      
+      await User.update(trx, userId, userData);
+      const updatedUser = await User.getUserWithRoles(trx, userId);
+      return updatedUser || null;
+    });
   } catch (error) {
     console.error(`Failed to update user with id ${userId}:`, error);
     throw new Error('Failed to update user');
@@ -205,9 +271,18 @@ export async function updateUser(userId: string, userData: Partial<IUser>): Prom
 
 export async function updateUserRoles(userId: string, roleIds: string[]): Promise<void> {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
     const {knex: db, tenant} = await createTenantKnex();
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(currentUser, 'user', 'update', trx)) {
+        throw new Error('Permission denied: Cannot update user roles');
+      }
+
       // Delete existing roles
       await trx('user_roles')
         .where({ user_id: userId, tenant: tenant || undefined })
@@ -265,15 +340,33 @@ export async function getAllRoles(): Promise<IRole[]> {
 
 export async function getUserRolesWithPermissions(userId: string, knexConnection?: Knex | Knex.Transaction): Promise<IRoleWithPermissions[]> {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
     let knex: Knex | Knex.Transaction;
     if (knexConnection) {
       knex = knexConnection;
+      // If we have a connection passed in, check permissions directly
+      if (!await hasPermission(currentUser, 'user', 'read', knex)) {
+        throw new Error('Permission denied: Cannot read user roles with permissions');
+      }
+      const rolesWithPermissions = await User.getUserRolesWithPermissions(knex, userId);
+      return rolesWithPermissions;
     } else {
       const result = await createTenantKnex();
       knex = result.knex;
+      
+      return await withTransaction(knex, async (trx: Knex.Transaction) => {
+        if (!await hasPermission(currentUser, 'user', 'read', trx)) {
+          throw new Error('Permission denied: Cannot read user roles with permissions');
+        }
+        
+        const rolesWithPermissions = await User.getUserRolesWithPermissions(trx, userId);
+        return rolesWithPermissions;
+      });
     }
-    const rolesWithPermissions = await User.getUserRolesWithPermissions(knex, userId);
-    return rolesWithPermissions;
   } catch (error) {
     console.error(`Failed to fetch roles with permissions for user with id ${userId}:`, error);
     throw new Error('Failed to fetch user roles with permissions');
@@ -317,9 +410,21 @@ export async function getCurrentUserPermissions(): Promise<string[]> {
 
 export async function getUserWithRoles(userId: string): Promise<IUserWithRoles | null> {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
     const {knex} = await createTenantKnex();
-    const user = await User.getUserWithRoles(knex, userId);
-    return user || null;
+    
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(currentUser, 'user', 'read', trx)) {
+        throw new Error('Permission denied: Cannot read user with roles');
+      }
+
+      const user = await User.getUserWithRoles(trx, userId);
+      return user || null;
+    });
   } catch (error) {
     console.error(`Failed to fetch user with roles for id ${userId}:`, error);
     throw new Error('Failed to fetch user with roles');
@@ -328,9 +433,21 @@ export async function getUserWithRoles(userId: string): Promise<IUserWithRoles |
 
 export async function getMultipleUsersWithRoles(userIds: string[]): Promise<IUserWithRoles[]> {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
     const {knex} = await createTenantKnex();
-    const users = await Promise.all(userIds.map((id: string): Promise<IUserWithRoles | undefined> => User.getUserWithRoles(knex, id)));
-    return users.filter((user): user is IUserWithRoles => user !== undefined);
+    
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(currentUser, 'user', 'read', trx)) {
+        throw new Error('Permission denied: Cannot read multiple users with roles');
+      }
+
+      const users = await Promise.all(userIds.map((id: string): Promise<IUserWithRoles | undefined> => User.getUserWithRoles(trx, id)));
+      return users.filter((user): user is IUserWithRoles => user !== undefined);
+    });
   } catch (error) {
     console.error('Failed to fetch multiple users with roles:', error);
     throw new Error('Failed to fetch multiple users with roles');
@@ -432,9 +549,18 @@ export async function registerClientUser(
   password: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
     const db = await getAdminConnection();
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(currentUser, 'user', 'create', trx)) {
+        throw new Error('Permission denied: Cannot create client user');
+      }
+
       // First verify the contact exists and get their tenant
       const contact = await trx('contacts')
         .join('companies', function() {
@@ -560,15 +686,24 @@ export async function changeOwnPassword(
 // Function for admins to change user passwords
 export async function getUserCompanyId(userId: string): Promise<string | null> {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
     const { knex: db, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
     }
 
-    const user = await User.get(db, userId); // Use User.get which includes tenant context
-    if (!user) return null;
-
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(currentUser, 'user', 'read', trx)) {
+        throw new Error('Permission denied: Cannot read user company ID');
+      }
+
+      const user = await User.get(trx, userId); // Use User.get which includes tenant context
+      if (!user) return null;
+
       // First try to get company ID from contact if user is contact-based
       if (user.contact_id) {
         const contact = await trx('contacts')
@@ -611,12 +746,21 @@ export async function getUserCompanyId(userId: string): Promise<string | null> {
  */
 export async function getUserContactId(userId: string): Promise<string | null> {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
     const { knex: db, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
     }
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(currentUser, 'user', 'read', trx)) {
+        throw new Error('Permission denied: Cannot read user contact ID');
+      }
+
       const user = await trx('users')
         .where({
           user_id: userId,
@@ -839,6 +983,11 @@ export async function deleteUserAvatar(userId: string): Promise<ActionResult> {
 
 export async function getClientUsersForCompany(companyId: string): Promise<IUser[]> {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
@@ -846,6 +995,10 @@ export async function getClientUsersForCompany(companyId: string): Promise<IUser
 
     // Get all users associated with the company
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(currentUser, 'user', 'read', trx)) {
+        throw new Error('Permission denied: Cannot read client users for company');
+      }
+
       const users = await trx('users')
         .join('contacts', function() {
           this.on('users.contact_id', '=', 'contacts.contact_name_id')
