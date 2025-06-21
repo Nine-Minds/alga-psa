@@ -32,7 +32,7 @@ import {
 } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 // Removed incorrect import: import { IService } from 'server/src/interfaces/service.interfaces';
 // Removed incorrect import: import { isDeepStrictEqual } from 'util';
-import isEqual from 'lodash/isEqual'; // Use lodash for deep equality check
+import { isEqual } from 'lodash'; // Use lodash for deep equality check
 // Removed incorrect import: import { validateServiceHourlyConfig } from 'server/src/lib/validators/planServiceConfigurationValidators';
 
 // --- Local Type Definitions ---
