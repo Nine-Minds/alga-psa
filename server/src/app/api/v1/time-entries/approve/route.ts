@@ -1,0 +1,19 @@
+/**
+ * Time Entry Approval API Route
+ * POST /api/v1/time-entries/approve - Approve time entries
+ */
+
+import { TimeEntryController } from 'server/src/lib/api/controllers/TimeEntryController';
+import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+
+const controller = new TimeEntryController();
+
+export async function POST(request: Request) {
+  try {
+    return await controller.approveEntries()(request as any);
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+export const runtime = 'nodejs';
