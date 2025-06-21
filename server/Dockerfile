@@ -49,8 +49,8 @@ WORKDIR /app/server
 # Copy server source code (changes frequently)
 COPY server/ ./
 
-# Build the Next.js application
-RUN npm run build
+# Clean any existing build artifacts and build the Next.js application
+RUN rm -rf .next && npm run build
 
 # Copy and make entrypoint executable (rarely changes)
 COPY server/entrypoint.sh /app/entrypoint.sh
