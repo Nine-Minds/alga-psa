@@ -812,7 +812,7 @@ export class TimeEntryService extends BaseService<any> {
 
   private async getEntriesByService(query: Knex.QueryBuilder, context: ServiceContext): Promise<Record<string, number>> {
     const results = await query
-      .leftJoin('services', `${this.tableName}.service_id`, 'services.service_id`)
+      .leftJoin('services', this.tableName + '.service_id', 'services.service_id')
       .groupBy('services.service_name')
       .select('services.service_name', context.db.raw('COUNT(*) as count'))
       .limit(10);
