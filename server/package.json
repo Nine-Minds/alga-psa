@@ -62,6 +62,7 @@
     "handlebars": "^4.7.8",
     "jsondiffpatch": "^0.6.0",
     "jsonwebtoken": "^9.0.2",
+    "lodash": "^4.17.21",
     "lucide-react": "^0.475.0",
     "marked": "^15.0.7",
     "monaco-editor": "^0.52.2",
