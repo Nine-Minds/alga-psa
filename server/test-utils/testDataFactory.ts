@@ -88,34 +88,35 @@ export async function createCompany(
  * @param options Optional location properties
  * @returns The ID of the created location
  */
-// export async function createCompanyLocation(
-//   db: Knex,
-//   companyId: string,
-//   tenantId: string,
-//   options: Partial<ICompanyLocation> = {}
-// ): Promise<string> {
-//   const locationId = uuidv4();
-//   const now = new Date();
+export async function createCompanyLocation(
+  db: Knex,
+  companyId: string,
+  tenantId: string,
+  options: Partial<ICompanyLocation> = {}
+): Promise<string> {
+  const locationId = uuidv4();
+  const now = new Date();
 
-//   const location: ICompanyLocation = {
-//     location_id: locationId,
-//     company_id: companyId,
-//     tenant: tenantId,
-//     address_line1: options.address_line1 || '123 Test St',
-//     address_line2: options.address_line2,
-//     city: options.city || 'Test City',
-//     state: options.state,
-//     postal_code: options.postal_code,
-//     country: options.country || 'US',
-//     tax_region: options.tax_region || 'US-NY',
-//     created_at: now,
-//     updated_at: now
-//   };
+  const location: ICompanyLocation = {
+    location_id: locationId,
+    company_id: companyId,
+    tenant: tenantId,
+    address_line1: options.address_line1 || '123 Test St',
+    address_line2: options.address_line2,
+    city: options.city || 'Test City',
+    state_province: options.state_province,
+    postal_code: options.postal_code,
+    country_code: options.country_code || 'US',
+    country_name: options.country_name || 'United States',
+    region_code: options.region_code || 'US-NY',
+    created_at: now.toISOString(),
+    updated_at: now.toISOString()
+  };
 
-//   await db('company_locations').insert(location);
+  await db('company_locations').insert(location);
 
-//   return locationId;
-// }
+  return locationId;
+}
 
 /**
  * Creates a new user in the database
