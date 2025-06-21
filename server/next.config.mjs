@@ -8,6 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig = {
   reactStrictMode: true,
+  output: 'standalone', // Disable static generation entirely
   transpilePackages: ['@blocknote/core', '@blocknote/react', '@blocknote/mantine'],
   webpack: (config, { isServer }) => {
     // Disable webpack cache
@@ -115,7 +116,7 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '5mb', // Increase limit for WASM uploads
     },
-    instrumentationHook: true // Enable instrumentation for app initialization
+    instrumentationHook: true
   }
 };
 

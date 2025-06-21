@@ -493,7 +493,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
     
     const extensions = await query.orderBy('name');
     
-    console.log('[ExtensionRegistry] getAllExtensions raw data:', extensions.map(e => ({
+    console.log('[ExtensionRegistry] getAllExtensions raw data:', extensions.map((e: any) => ({
       id: e.id,
       name: e.name,
       manifestType: typeof e.manifest

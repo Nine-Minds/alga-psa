@@ -1,5 +1,4 @@
 import React from 'react';
-import { useRouter } from 'next/navigation';
 
 // Dummy data directly in the page
 const dummyAgreements = [
@@ -51,10 +50,11 @@ const dummyAgreements = [
 ];
 
 export default function SoftwareOneAgreementsPage() {
-  const router = useRouter();
-
   const handleRowClick = (agreementId: string) => {
-    router.push(`/softwareone/agreement/${agreementId}`);
+    // Use window.location for static export compatibility
+    if (typeof window !== 'undefined') {
+      window.location.href = `/softwareone/agreement/${agreementId}`;
+    }
   };
 
   const getStatusBadge = (status: 'active' | 'inactive' | 'pending') => {
@@ -147,3 +147,10 @@ export default function SoftwareOneAgreementsPage() {
     </div>
   );
 }
+
+// Disable static optimization to prevent pre-render errors
+export const getServerSideProps = async () => {
+  return {
+    props: {}
+  };
+};

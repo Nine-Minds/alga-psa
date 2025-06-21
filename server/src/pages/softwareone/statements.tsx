@@ -13,3 +13,10 @@ const StatementsPageContent = dynamic(
 export default function SoftwareOneStatementsPage() {
   return <StatementsPageContent />;
 }
+
+// Disable static optimization to prevent pre-render errors
+export const getServerSideProps = async () => {
+  return {
+    props: {}
+  };
+};
