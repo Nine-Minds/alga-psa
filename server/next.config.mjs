@@ -38,7 +38,7 @@ const nextConfig = {
       }
     };
 
-    // Exclude database dialects we don't use
+    // Exclude database dialects we don't use and heavy dev dependencies
     config.externals = [
       ...config.externals || [],
       'oracledb',
@@ -48,6 +48,11 @@ const nextConfig = {
       'better-sqlite3',
       'tedious'
     ];
+
+    // For server-side builds, externalize ts-morph to prevent bundling issues
+    if (isServer) {
+      config.externals.push('ts-morph');
+    }
 
     // Rule to handle .wasm files as assets
     config.module.rules.push({
