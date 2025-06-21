@@ -116,7 +116,7 @@
     "@typescript-eslint/parser": "^8.19.1",
     "as-json": "^1.0.2",
     "assemblyscript": "^0.27.36",
-    "autoprefixer": "^10.4.20",
+    "autoprefixer": "^10.4.21",
     "copy-webpack-plugin": "^13.0.0",
     "eslint": "^9.18.0",
     "eslint-plugin-react": "^7.37.3",
