@@ -135,48 +135,56 @@ export class ContactService extends BaseService<IContact> {
   /**
    * Create new contact
    */
-  async create(data: CreateContactData, context: ServiceContext): Promise<IContact> {
-    const { knex } = await this.getKnex();
-
-    return withTransaction(knex, async (trx) => {
-      // Validate company exists if provided
-      if (data.company_id) {
-        const company = await trx('companies')
-          .where({ company_id: data.company_id, tenant: context.tenant })
-          .first();
-        
-        if (!company) {
-          throw new Error('Company not found');
+  async create(data: Partial<IContact>, context: ServiceContext): Promise<IContact> {
+      const { knex } = await this.getKnex();
+  
+      return withTransaction(knex, async (trx) => {
+        // Validate company exists if provided
+        if (data.company_id) {
+          const company = await trx('companies')
+            .where({ company_id: data.company_id, tenant: context.tenant })
+            .first();
+          
+          if (!company) {
+            throw new Error('Company not found');
+          }
         }
-      }
+  
+        // Prepare contact data
+        const contactData = {
+          contact_name_id: knex.raw('gen_random_uuid()'),
+          full_name: data.full_name,
+          company_id: data.company_id || null,
+          phone_number: data.phone_number || '',
+          email: data.email,
+          role: data.role || '',
+          date_of_birth: data.date_of_birth,
+          notes: data.notes,
+          is_inactive: data.is_inactive || false,
+          tenant: context.tenant,
+          created_at: knex.raw('now()'),
+          updated_at: knex.raw('now()')
+        };
+  
+        // Insert contact
+        const [contact] = await trx('contacts').insert(contactData).returning('*');
+  
+        // Handle tags if provided
+        if ((data as any).tags && (data as any).tags.length > 0) {
+          await this.handleTags(contact.contact_name_id, (data as any).tags, context, trx);
+        }
+  
+        return contact as IContact;
+      });
+    }
+  
+    /**
+     * Create contact with typed data
+     */
+    async createContact(data: CreateContactData, context: ServiceContext): Promise<IContact> {
+      return this.create(data as Partial<IContact>, context);
+    }
 
-      // Prepare contact data
-      const contactData = {
-        contact_name_id: knex.raw('gen_random_uuid()'),
-        full_name: data.full_name,
-        company_id: data.company_id || null,
-        phone_number: data.phone_number || '',
-        email: data.email,
-        role: data.role || '',
-        date_of_birth: data.date_of_birth,
-        notes: data.notes,
-        is_inactive: data.is_inactive || false,
-        tenant: context.tenant,
-        created_at: knex.raw('now()'),
-        updated_at: knex.raw('now()')
-      };
-
-      // Insert contact
-      const [contact] = await trx('contacts').insert(contactData).returning('*');
-
-      // Handle tags if provided
-      if (data.tags && data.tags.length > 0) {
-        await this.handleTags(contact.contact_name_id, data.tags, context, trx);
-      }
-
-      return contact as IContact;
-    });
-  }
 
   /**
    * Update contact

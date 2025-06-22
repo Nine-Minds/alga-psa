@@ -401,36 +401,37 @@ export class AutomationService {
   }
 
   async listAutomationExecutions(
-    filters: AutomationExecutionFilter,
-    tenantId: string,
-    page: number = 1,
-    limit: number = 25
-  ): Promise<PaginatedResponse<AutomationExecution>> {
-    await validateTenantAccess(tenantId);
+      filters: AutomationExecutionFilter,
+      tenantId: string,
+      page: number = 1,
+      limit: number = 25
+    ): Promise<PaginatedResponse<AutomationExecution[]>> {
+      await validateTenantAccess(tenantId);
+  
+      const conditions = { tenant: tenantId, ...filters };
+      const offset = (page - 1) * limit;
+  
+      const [executions, total] = await Promise.all([
+        this.db.findMany('automation_executions', conditions, {
+          limit,
+          offset,
+          orderBy: { started_at: 'desc' }
+        }),
+        this.db.count('automation_executions', conditions)
+      ]);
+  
+      return {
+        success: true,
+        data: [executions as AutomationExecution[]],
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      };
+    }
 
-    const conditions = { tenant: tenantId, ...filters };
-    const offset = (page - 1) * limit;
-
-    const [executions, total] = await Promise.all([
-      this.db.findMany('automation_executions', conditions, {
-        limit,
-        offset,
-        orderBy: { started_at: 'desc' }
-      }),
-      this.db.count('automation_executions', conditions)
-    ]);
-
-    return {
-      success: true,
-      data: executions as AutomationExecution[],
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit)
-      }
-    };
-  }
 
   async retryAutomationExecution(
     executionId: string,
@@ -491,81 +492,85 @@ export class AutomationService {
   // ============================================================================
 
   async createAutomationTemplate(
-    data: CreateTemplateFromRule,
-    tenantId: string,
-    userId?: string
-  ): Promise<SuccessResponse<AutomationTemplate>> {
-    await validateTenantAccess(tenantId);
-
-    const rule = await this.db.findOne('automation_rules', {
-      rule_id: data.automation_rule_id,
-      tenant: tenantId
-    });
-
-    if (!rule) {
-      throw new Error('Automation rule not found');
+      data: CreateTemplateFromRule,
+      tenantId: string,
+      userId?: string
+    ): Promise<SuccessResponse<AutomationTemplate>> {
+      await validateTenantAccess(tenantId);
+  
+      const rule = await this.db.findOne('automation_rules', {
+        rule_id: data.automation_rule_id,
+        tenant: tenantId
+      });
+  
+      if (!rule) {
+        throw new Error('Automation rule not found');
+      }
+  
+      const templateId = crypto.randomUUID();
+      const now = new Date().toISOString();
+  
+      const template: AutomationTemplate = {
+        template_id: templateId,
+        name: data.template_name,
+        description: data.template_description,
+        category: data.category,
+        icon: undefined,
+        template_config: {
+          ...rule,
+          rule_id: undefined,
+          tenant: undefined,
+          created_by: undefined,
+          created_at: undefined,
+          updated_at: undefined,
+          execution_count: undefined,
+          last_executed: undefined
+        },
+        version: '1.0.0',
+        author: userId,
+        compatible_versions: [],
+        required_permissions: [],
+        usage_count: 0,
+        last_used: undefined,
+        template_variables: (data.template_variables || []).map(variable => ({
+          name: variable.variable_name,
+          type: variable.type,
+          display_name: variable.display_name,
+          required: variable.required,
+          description: variable.description
+        })),
+        is_active: true,
+        is_featured: false,
+        tenant: tenantId
+      };
+  
+      await this.db.insert('automation_templates', template);
+  
+      // Publish event
+      await this.eventBus.publish('automation.template.created', {
+        templateId,
+        tenantId,
+        templateName: data.template_name,
+        sourceRuleId: data.automation_rule_id,
+        userId
+      });
+  
+      // Audit log
+      await this.auditLog.log({
+        action: 'automation_template_created',
+        entityType: 'automation_template',
+        entityId: templateId,
+        userId,
+        tenantId,
+        changes: template
+      });
+  
+      return {
+        success: true,
+        data: template
+      };
     }
 
-    const templateId = crypto.randomUUID();
-    const now = new Date().toISOString();
-
-    const template: AutomationTemplate = {
-      template_id: templateId,
-      name: data.template_name,
-      description: data.template_description,
-      category: data.category,
-      icon: undefined,
-      template_config: {
-        ...rule,
-        rule_id: undefined,
-        tenant: undefined,
-        created_by: undefined,
-        created_at: undefined,
-        updated_at: undefined,
-        execution_count: undefined,
-        last_executed: undefined
-      },
-      version: '1.0.0',
-      author: userId,
-      compatible_versions: [],
-      required_permissions: [],
-      usage_count: 0,
-      last_used: undefined,
-      template_variables: (data.template_variables || []).map(variable => ({
-        ...variable,
-        name: variable.variable_name
-      })),
-      is_active: true,
-      is_featured: false,
-      tenant: tenantId
-    };
-
-    await this.db.insert('automation_templates', template);
-
-    // Publish event
-    await this.eventBus.publish('automation.template.created', {
-      templateId,
-      tenantId,
-      templateName: data.template_name,
-      sourceRuleId: data.automation_rule_id,
-      userId
-    });
-
-    // Audit log
-    await this.auditLog.log({
-      action: 'automation_template_created',
-      entityType: 'automation_template',
-      entityId: templateId,
-      userId,
-      tenantId,
-      changes: template
-    });
-
-    return {
-      success: true,
-      data: template
-    };
-  }
 
   async getAutomationTemplate(
     templateId: string,
@@ -589,36 +594,37 @@ export class AutomationService {
   }
 
   async listAutomationTemplates(
-    filters: TemplateFilter,
-    tenantId: string,
-    page: number = 1,
-    limit: number = 25
-  ): Promise<PaginatedResponse<AutomationTemplate>> {
-    await validateTenantAccess(tenantId);
+      filters: TemplateFilter,
+      tenantId: string,
+      page: number = 1,
+      limit: number = 25
+    ): Promise<PaginatedResponse<AutomationTemplate[]>> {
+      await validateTenantAccess(tenantId);
+  
+      const conditions = { tenant: tenantId, ...filters };
+      const offset = (page - 1) * limit;
+  
+      const [templates, total] = await Promise.all([
+        this.db.findMany('automation_templates', conditions, {
+          limit,
+          offset,
+          orderBy: { created_at: 'desc' }
+        }),
+        this.db.count('automation_templates', conditions)
+      ]);
+  
+      return {
+        success: true,
+        data: [templates as AutomationTemplate[]],
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      };
+    }
 
-    const conditions = { tenant: tenantId, ...filters };
-    const offset = (page - 1) * limit;
-
-    const [templates, total] = await Promise.all([
-      this.db.findMany('automation_templates', conditions, {
-        limit,
-        offset,
-        orderBy: { created_at: 'desc' }
-      }),
-      this.db.count('automation_templates', conditions)
-    ]);
-
-    return {
-      success: true,
-      data: templates as AutomationTemplate[],
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit)
-      }
-    };
-  }
 
   async createRuleFromTemplate(
     templateId: string,
@@ -734,72 +740,74 @@ export class AutomationService {
   // ============================================================================
 
   async bulkUpdateStatus(
-    data: BulkStatusUpdate,
-    tenantId: string,
-    userId?: string
-  ): Promise<SuccessResponse<{ updated: number; errors: string[] }>> {
-    await validateTenantAccess(tenantId);
-
-    const results = { updated: 0, errors: [] as string[] };
-
-    for (const ruleId of data.ids) {
-      try {
-        await this.updateAutomationRule(ruleId, { status: data.status }, tenantId, userId);
-        results.updated++;
-      } catch (error) {
-        results.errors.push(`${ruleId}: ${error instanceof Error ? error.message : String(error)}`);
+      data: BulkStatusUpdate,
+      tenantId: string,
+      userId?: string
+    ): Promise<SuccessResponse<{ updated: number; errors: string[] }>> {
+      await validateTenantAccess(tenantId);
+  
+      const results = { updated: 0, errors: [] as string[] };
+  
+      for (const ruleId of data.ids) {
+        try {
+          await this.updateAutomationRule(ruleId, { status: data.status }, tenantId, userId);
+          results.updated++;
+        } catch (error) {
+          results.errors.push(`${ruleId}: ${error instanceof Error ? error.message : String(error)}`);
+        }
       }
+  
+      return {
+        success: true,
+        data: results
+      };
     }
 
-    return {
-      success: true,
-      data: results
-    };
-  }
 
   async bulkExecute(
-    data: BulkExecution,
-    tenantId: string,
-    userId?: string
-  ): Promise<SuccessResponse<{ started: number; errors: string[] }>> {
-    await validateTenantAccess(tenantId);
-
-    const results = { started: 0, errors: [] as string[] };
-
-    const executeRule = async (ruleId: string) => {
-      try {
-        await this.executeAutomationRule(
-          ruleId,
-          {
-            automation_rule_id: ruleId,
-            execution_data: data.execution_data,
-            override_conditions: data.override_conditions,
-            dry_run: false
-          },
-          tenantId,
-          userId
+      data: BulkExecution,
+      tenantId: string,
+      userId?: string
+    ): Promise<SuccessResponse<{ started: number; errors: string[] }>> {
+      await validateTenantAccess(tenantId);
+  
+      const results = { started: 0, errors: [] as string[] };
+  
+      const executeRule = async (ruleId: string) => {
+        try {
+          await this.executeAutomationRule(
+            ruleId,
+            {
+              automation_rule_id: ruleId,
+              execution_data: data.execution_data,
+              override_conditions: data.override_conditions,
+              dry_run: false
+            },
+            tenantId,
+            userId
+          );
+          results.started++;
+        } catch (error) {
+          results.errors.push(`${ruleId}: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      };
+  
+      if (data.sequential_execution) {
+        for (const ruleId of data.automation_rule_ids) {
+          await executeRule(ruleId);
+        }
+      } else {
+        await Promise.all(
+          data.automation_rule_ids.map(executeRule)
         );
-        results.started++;
-      } catch (error) {
-        results.errors.push(`${ruleId}: ${error instanceof Error ? error.message : String(error)}`);
       }
-    };
-
-    if (data.sequential_execution) {
-      for (const ruleId of data.automation_rule_ids) {
-        await executeRule(ruleId);
-      }
-    } else {
-      await Promise.all(
-        data.automation_rule_ids.map(executeRule)
-      );
+  
+      return {
+        success: true,
+        data: results
+      };
     }
 
-    return {
-      success: true,
-      data: results
-    };
-  }
 
   // ============================================================================
   // PRIVATE HELPER METHODS

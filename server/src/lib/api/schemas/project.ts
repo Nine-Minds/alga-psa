@@ -29,7 +29,8 @@ export const createProjectSchema = z.object({
   assigned_to: uuidSchema.optional(),
   contact_name_id: uuidSchema.optional(),
   budgeted_hours: z.number().min(0).optional(),
-  tags: z.array(z.string()).optional()
+  tags: z.array(z.string()).optional(),
+  create_default_phase: z.boolean().optional().default(false)
 });
 
 // Update project schema (all fields optional)

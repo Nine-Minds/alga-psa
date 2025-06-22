@@ -308,7 +308,7 @@ export class ContactController extends BaseController {
     );
 
     return middleware(async (req: ApiRequest, validatedData: CreateContactData) => {
-      const contact = await this.contactService.create(validatedData, req.context!);
+      const contact = await this.contactService.createContact(validatedData, req.context!);
       
       // Add HATEOAS links
       const links: any = {
