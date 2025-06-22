@@ -1,0 +1,810 @@
+/**
+ * Project API Service
+ * Handles all project-related database operations for the REST API
+ */
+
+import { Knex } from 'knex';
+import { withTransaction } from '@shared/db';
+import { BaseService, ServiceContext, ListOptions, ListResult } from './BaseService';
+import { 
+  IProject, 
+  IProjectPhase, 
+  IProjectTask, 
+  ITaskChecklistItem,
+  IProjectTicketLink,
+  ProjectStatus
+} from 'server/src/interfaces/project.interfaces';
+import { 
+  CreateProjectData,
+  UpdateProjectData,
+  ProjectFilterData,
+  CreateProjectPhaseData,
+  UpdateProjectPhaseData,
+  CreateProjectTaskData,
+  UpdateProjectTaskData,
+  CreateTaskChecklistItemData,
+  CreateProjectTicketLinkData,
+  ProjectSearchData,
+  ProjectExportQuery
+} from '../schemas/project';
+import ProjectModel from 'server/src/lib/models/project';
+import ProjectTaskModel from 'server/src/lib/models/projectTask';
+import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { OrderingService } from 'server/src/lib/services/orderingService';
+
+export class ProjectService extends BaseService<IProject> {
+  constructor() {
+    super({
+      tableName: 'projects',
+      primaryKey: 'project_id',
+      tenantColumn: 'tenant',
+      searchableFields: ['project_name', 'description'],
+      defaultSort: 'created_at',
+      defaultOrder: 'desc',
+      auditFields: {
+        createdBy: 'created_by',
+        updatedBy: 'updated_by',
+        createdAt: 'created_at',
+        updatedAt: 'updated_at'
+      }
+    });
+  }
+
+  async list(options: ListOptions, context: ServiceContext, filters?: ProjectFilterData): Promise<ListResult<IProject>> {
+      const { knex } = await this.getKnex();
+      const query = knex(this.tableName)
+        .where(`${this.tableName}.tenant`, context.tenant);
+  
+      // Apply filters
+      if (filters) {
+        if (filters.project_name) {
+          query.where(`${this.tableName}.project_name`, 'ilike', `%${filters.project_name}%`);
+        }
+        if (filters.company_id) {
+          query.where(`${this.tableName}.company_id`, filters.company_id);
+        }
+        if (filters.status) {
+          query.where(`${this.tableName}.status`, filters.status);
+        }
+        if (filters.start_date_from) {
+          query.where(`${this.tableName}.start_date`, '>=', filters.start_date_from);
+        }
+        if (filters.start_date_to) {
+          query.where(`${this.tableName}.start_date`, '<=', filters.start_date_to);
+        }
+        if (filters.end_date_from) {
+          query.where(`${this.tableName}.end_date`, '>=', filters.end_date_from);
+        }
+        if (filters.end_date_to) {
+          query.where(`${this.tableName}.end_date`, '<=', filters.end_date_to);
+        }
+        if (filters.is_inactive !== undefined) {
+          query.where(`${this.tableName}.is_inactive`, filters.is_inactive);
+        }
+        if (filters.assigned_to) {
+        query.where(`${this.tableName}.assigned_to`, filters.assigned_to);
+      }
+      if (filters.contact_name_id) {
+        query.where(`${this.tableName}.contact_name_id`, filters.contact_name_id);
+      }
+      if (filters.is_closed !== undefined) {
+        query.where(`${this.tableName}.is_closed`, filters.is_closed);
+      }
+      if (filters.has_assignment !== undefined) {
+        if (filters.has_assignment) {
+          query.whereNotNull(`${this.tableName}.assigned_to`);
+        } else {
+          query.whereNull(`${this.tableName}.assigned_to`);
+        }
+      }
+      }
+  
+      // Apply search from filters
+    if (filters?.search) {
+      query.where(subQuery => {
+        subQuery.where(`${this.tableName}.project_name`, 'ilike', `%${filters.search}%`)
+          .orWhere(`${this.tableName}.description`, 'ilike', `%${filters.search}%`);
+      });
+    }
+  
+      // Get total count for pagination
+      const countQuery = query.clone().clearSelect().clearOrder().count('* as count');
+  
+      // Apply sorting
+      const sortField = options.sort || 'project_name';
+      const sortOrder = options.order || 'asc';
+      query.orderBy(`${this.tableName}.${sortField}`, sortOrder);
+  
+      // Apply pagination
+      const page = options.page || 1;
+      const limit = options.limit || 25;
+      const offset = (page - 1) * limit;
+      query.limit(limit).offset(offset);
+  
+      const [projects, [{ count }]] = await Promise.all([
+        query,
+        countQuery
+      ]);
+  
+      return {
+        data: projects,
+        total: parseInt(count as string)
+      };
+    }
+
+
+  async getById(id: string, context: ServiceContext): Promise<IProject | null> {
+      const { knex } = await this.getKnex();
+      
+      const project = await knex(this.tableName)
+        .leftJoin('companies', `${this.tableName}.company_id`, 'companies.company_id')
+        .leftJoin('contacts', `${this.tableName}.contact_name_id`, 'contacts.contact_name_id')
+        .leftJoin('users', `${this.tableName}.assigned_to`, 'users.user_id')
+        .where({
+          [`${this.tableName}.${this.primaryKey}`]: id,
+          [`${this.tableName}.tenant`]: context.tenant
+        })
+        .select(
+          `${this.tableName}.*`,
+          'companies.company_name as client_name',
+          'contacts.full_name as contact_name',
+          knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as assigned_user_name`)
+        )
+        .first();
+  
+      return project || null;
+    }
+
+
+  async getWithDetails(id: string, context: ServiceContext): Promise<any | null> {
+    const project = await this.getById(id, context);
+    if (!project) return null;
+
+    const [phases, statistics, company, contact, assignedUser] = await Promise.all([
+      this.getPhases(id, context),
+      this.getProjectStatistics(id, context),
+      this.getProjectCompany(project.company_id, context),
+      project.contact_name_id ? this.getProjectContact(project.contact_name_id, context) : null,
+      project.assigned_to ? this.getProjectAssignedUser(project.assigned_to, context) : null
+    ]);
+
+    return {
+      ...project,
+      company,
+      contact,
+      assigned_user: assignedUser,
+      phases,
+      statistics
+    };
+  }
+
+  async createProject(data: CreateProjectData, context: ServiceContext): Promise<IProject> {
+    const { knex } = await this.getKnex();
+    
+    return withTransaction(knex, async (trx) => {
+      // Generate WBS code
+      const wbsCode = await ProjectModel.generateNextWbsCode(trx, '');
+      
+      // Get default status
+      const defaultStatus = await this.getDefaultProjectStatus(context);
+      
+      const projectData = {
+        ...data,
+        wbs_code: wbsCode,
+        status: data.status || defaultStatus.status_id,
+        tenant: context.tenant,
+        created_at: new Date(),
+        updated_at: new Date()
+      };
+
+      const [project] = await trx(this.tableName).insert(projectData).returning('*');
+
+      // Create initial phase if needed
+      if (data.create_default_phase) {
+        await trx('project_phases').insert({
+          phase_id: trx.raw('gen_random_uuid()'),
+          project_id: project.project_id,
+          phase_name: 'Initial Phase',
+          description: 'Default project phase',
+          start_date: project.start_date,
+          end_date: project.end_date,
+          status: 'active',
+          tenant: context.tenant,
+          created_at: new Date(),
+          updated_at: new Date()
+        });
+      }
+
+      // Publish event
+      await publishEvent({
+        eventType: 'PROJECT_CREATED',
+        payload: {
+          tenantId: context.tenant,
+          projectId: project.project_id,
+          projectName: project.project_name,
+          companyId: project.company_id,
+          userId: context.userId,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+      return project;
+    });
+  }
+
+  // Override for BaseService compatibility  
+  async create(data: Partial<IProject>, context: ServiceContext): Promise<IProject>;
+  async create(data: CreateProjectData, context: ServiceContext): Promise<IProject>;
+  async create(data: CreateProjectData | Partial<IProject>, context: ServiceContext): Promise<IProject> {
+    return this.createProject(data as CreateProjectData, context);
+  }
+
+  async update(id: string, data: UpdateProjectData, context: ServiceContext): Promise<IProject> {
+      const { knex } = await this.getKnex();
+      
+      return withTransaction(knex, async (trx) => {
+        const updateData = {
+          ...data,
+          updated_at: new Date()
+        };
+  
+        const [project] = await trx(this.tableName)
+          .where({ [this.primaryKey]: id, tenant: context.tenant })
+          .update(updateData)
+          .returning('*');
+  
+        if (!project) {
+          throw new Error('Project not found');
+        }
+  
+        // Publish event
+        await publishEvent({
+          eventType: 'PROJECT_UPDATED',
+          payload: {
+            tenantId: context.tenant,
+            projectId: id,
+            changes: data,
+            userId: context.userId,
+            timestamp: new Date().toISOString()
+          }
+        });
+  
+        return project;
+      });
+    }
+
+
+  async delete(id: string, context: ServiceContext): Promise<void> {
+      const { knex } = await this.getKnex();
+      
+      return withTransaction(knex, async (trx) => {
+        const result = await trx(this.tableName)
+          .where({ [this.primaryKey]: id, tenant: context.tenant })
+          .del();
+  
+        if (result === 0) {
+          throw new Error('Project not found');
+        }
+  
+        // Publish event
+        await publishEvent({
+          eventType: 'PROJECT_DELETED',
+          payload: {
+            tenantId: context.tenant,
+            projectId: id,
+            userId: context.userId,
+            timestamp: new Date().toISOString()
+          }
+        });
+      });
+    }
+
+
+  // Project phases
+  async getPhases(projectId: string, context: ServiceContext): Promise<IProjectPhase[]> {
+      const { knex } = await this.getKnex();
+      
+      return knex('project_phases')
+        .where({ project_id: projectId, tenant: context.tenant })
+        .orderBy([
+          { column: 'order_key', order: 'asc' },
+          { column: 'order_number', order: 'asc' }
+        ]);
+    }
+
+
+  async createPhase(projectId: string, data: CreateProjectPhaseData, context: ServiceContext): Promise<IProjectPhase> {
+      const { knex } = await this.getKnex();
+      
+      return withTransaction(knex, async (trx) => {
+        const project = await this.getById(projectId, context);
+        if (!project) {
+          throw new Error('Project not found');
+        }
+  
+        const phases = await this.getPhases(projectId, context);
+        const nextOrderNumber = phases.length + 1;
+  
+        // Generate WBS code
+        const phaseNumbers = phases
+          .map(phase => {
+            const parts = phase.wbs_code.split('.');
+            return parseInt(parts[parts.length - 1]);
+          })
+          .filter(num => !isNaN(num));
+  
+        const maxPhaseNumber = phaseNumbers.length > 0 ? Math.max(...phaseNumbers) : 0;
+        const newWbsCode = `${project.wbs_code}.${maxPhaseNumber + 1}`;
+  
+        // Generate order key
+        let orderKey: string;
+        if (phases.length === 0) {
+          orderKey = OrderingService.generateKeyForPosition(null, null);
+        } else {
+          const sortedPhases = [...phases].sort((a, b) => {
+            if (a.order_key && b.order_key) {
+              return a.order_key < b.order_key ? -1 : a.order_key > b.order_key ? 1 : 0;
+            }
+            return 0;
+          });
+          const lastPhase = sortedPhases[sortedPhases.length - 1];
+          orderKey = OrderingService.generateKeyForPosition(lastPhase.order_key || null, null);
+        }
+  
+        const phaseData = {
+          ...data,
+          project_id: projectId,
+          order_number: nextOrderNumber,
+          wbs_code: newWbsCode,
+          order_key: orderKey,
+          tenant: context.tenant,
+          created_at: new Date(),
+          updated_at: new Date()
+        };
+  
+        const [phase] = await trx('project_phases')
+          .insert(phaseData)
+          .returning('*');
+  
+        return phase;
+      });
+    }
+
+
+  async updatePhase(phaseId: string, data: UpdateProjectPhaseData, context: ServiceContext): Promise<IProjectPhase> {
+      const { knex } = await this.getKnex();
+      
+      return withTransaction(knex, async (trx) => {
+        const updateData = {
+          ...data,
+          updated_at: new Date()
+        };
+  
+        const [phase] = await trx('project_phases')
+          .where({ phase_id: phaseId, tenant: context.tenant })
+          .update(updateData)
+          .returning('*');
+  
+        if (!phase) {
+          throw new Error('Project phase not found');
+        }
+  
+        return phase;
+      });
+    }
+
+
+  async deletePhase(phaseId: string, context: ServiceContext): Promise<void> {
+      const { knex } = await this.getKnex();
+      
+      const result = await knex('project_phases')
+        .where({ phase_id: phaseId, tenant: context.tenant })
+        .del();
+  
+      if (result === 0) {
+        throw new Error('Project phase not found');
+      }
+    }
+
+
+  // Project tasks
+  async getTasks(projectId: string, context: ServiceContext): Promise<IProjectTask[]> {
+      const { knex } = await this.getKnex();
+      
+      return knex('project_tasks')
+        .join('project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')
+        .where({
+          'project_phases.project_id': projectId,
+          'project_tasks.tenant': context.tenant
+        })
+        .select('project_tasks.*')
+        .orderBy([
+          { column: 'project_tasks.order_key', order: 'asc' },
+          { column: 'project_tasks.order_number', order: 'asc' }
+        ]);
+    }
+
+
+  async createTask(phaseId: string, data: CreateProjectTaskData, context: ServiceContext): Promise<IProjectTask> {
+      const { knex } = await this.getKnex();
+      
+      return withTransaction(knex, async (trx) => {
+        const phase = await trx('project_phases')
+          .where({ phase_id: phaseId, tenant: context.tenant })
+          .first();
+  
+        if (!phase) {
+          throw new Error('Phase not found');
+        }
+  
+        const tasks = await trx('project_tasks')
+          .where({ phase_id: phaseId, tenant: context.tenant });
+  
+        // Generate WBS code
+        const taskNumbers = tasks
+          .map(task => {
+            const parts = task.wbs_code.split('.');
+            return parseInt(parts[parts.length - 1]);
+          })
+          .filter(num => !isNaN(num));
+  
+        const maxTaskNumber = taskNumbers.length > 0 ? Math.max(...taskNumbers) : 0;
+        const newWbsCode = `${phase.wbs_code}.${maxTaskNumber + 1}`;
+  
+        // Generate order key
+        let orderKey: string;
+        if (tasks.length === 0) {
+          orderKey = OrderingService.generateKeyForPosition(null, null);
+        } else {
+          const sortedTasks = [...tasks].sort((a, b) => {
+            if (a.order_key && b.order_key) {
+              return a.order_key < b.order_key ? -1 : a.order_key > b.order_key ? 1 : 0;
+            }
+            return 0;
+          });
+          const lastTask = sortedTasks[sortedTasks.length - 1];
+          orderKey = OrderingService.generateKeyForPosition(lastTask.order_key || null, null);
+        }
+  
+        const taskData = {
+          ...data,
+          phase_id: phaseId,
+          order_number: tasks.length + 1,
+          wbs_code: newWbsCode,
+          order_key: orderKey,
+          tenant: context.tenant,
+          created_at: new Date(),
+          updated_at: new Date()
+        };
+  
+        const [task] = await trx('project_tasks')
+          .insert(taskData)
+          .returning('*');
+  
+        return task;
+      });
+    }
+
+
+  async updateTask(taskId: string, data: UpdateProjectTaskData, context: ServiceContext): Promise<IProjectTask> {
+      const { knex } = await this.getKnex();
+      
+      return withTransaction(knex, async (trx) => {
+        const updateData = {
+          ...data,
+          updated_at: new Date()
+        };
+  
+        const [task] = await trx('project_tasks')
+          .where({ task_id: taskId, tenant: context.tenant })
+          .update(updateData)
+          .returning('*');
+  
+        if (!task) {
+          throw new Error('Project task not found');
+        }
+  
+        return task;
+      });
+    }
+
+
+  async deleteTask(taskId: string, context: ServiceContext): Promise<void> {
+      const { knex } = await this.getKnex();
+      
+      const result = await knex('project_tasks')
+        .where({ task_id: taskId, tenant: context.tenant })
+        .del();
+  
+      if (result === 0) {
+        throw new Error('Project task not found');
+      }
+    }
+
+
+  // Task checklist items
+  async getTaskChecklistItems(taskId: string, context: ServiceContext): Promise<ITaskChecklistItem[]> {
+      const { knex } = await this.getKnex();
+      
+      return knex('task_checklist_items')
+        .where({ task_id: taskId, tenant: context.tenant })
+        .orderBy('order_number');
+    }
+
+
+  async createChecklistItem(taskId: string, data: CreateTaskChecklistItemData, context: ServiceContext): Promise<ITaskChecklistItem> {
+      const { knex } = await this.getKnex();
+      
+      return withTransaction(knex, async (trx) => {
+        const items = await this.getTaskChecklistItems(taskId, context);
+        const nextOrderNumber = data.order_number ?? items.length + 1;
+  
+        const itemData = {
+          ...data,
+          task_id: taskId,
+          order_number: nextOrderNumber,
+          tenant: context.tenant,
+          created_at: new Date(),
+          updated_at: new Date()
+        };
+  
+        const [item] = await trx('task_checklist_items')
+          .insert(itemData)
+          .returning('*');
+  
+        return item;
+      });
+    }
+
+
+  // Project ticket links
+  async getProjectTicketLinks(projectId: string, context: ServiceContext): Promise<IProjectTicketLink[]> {
+      const { knex } = await this.getKnex();
+      
+      return knex('project_ticket_links')
+        .leftJoin('tickets', 'project_ticket_links.ticket_id', 'tickets.ticket_id')
+        .leftJoin('companies', 'tickets.company_id', 'companies.company_id')
+        .where({
+          'project_ticket_links.project_id': projectId,
+          'project_ticket_links.tenant': context.tenant
+        })
+        .select(
+          'project_ticket_links.*',
+          'tickets.title as ticket_title',
+          'tickets.ticket_number',
+          'tickets.status as ticket_status',
+          'companies.company_name'
+        );
+    }
+
+
+  async createTicketLink(projectId: string, data: CreateProjectTicketLinkData, context: ServiceContext): Promise<IProjectTicketLink> {
+      const { knex } = await this.getKnex();
+      
+      const linkData = {
+        ...data,
+        project_id: projectId,
+        tenant: context.tenant,
+        created_at: new Date()
+      };
+  
+      const [link] = await knex('project_ticket_links')
+        .insert(linkData)
+        .returning('*');
+  
+      return link;
+    }
+
+
+  // Search and export
+  async search(searchData: ProjectSearchData, context: ServiceContext): Promise<IProject[]> {
+      const { knex } = await this.getKnex();
+      const tableName = this.tableName; // Capture tableName in scope
+      
+      const query = knex(tableName)
+        .where(`${tableName}.tenant`, context.tenant);
+  
+      // Build search query
+      if (searchData.fields && searchData.fields.length > 0) {
+        query.where(function() {
+          searchData.fields!.forEach(field => {
+            if (field === 'company_name') {
+              this.orWhere('companies.company_name', 'ilike', `%${searchData.query}%`);
+            } else {
+              this.orWhere(`${tableName}.${field}`, 'ilike', `%${searchData.query}%`);
+            }
+          });
+        });
+      } else {
+        // Default search across all text fields
+        query.where(function() {
+          this.orWhere(`${tableName}.project_name`, 'ilike', `%${searchData.query}%`)
+            .orWhere(`${tableName}.description`, 'ilike', `%${searchData.query}%`)
+            .orWhere(`${tableName}.wbs_code`, 'ilike', `%${searchData.query}%`);
+        });
+      }
+  
+      // Apply filters
+      if (searchData.status && searchData.status.length > 0) {
+        query.whereIn(`${tableName}.status`, searchData.status);
+      }
+      if (searchData.company_ids && searchData.company_ids.length > 0) {
+        query.whereIn(`${tableName}.company_id`, searchData.company_ids);
+      }
+      if (searchData.assigned_to_ids && searchData.assigned_to_ids.length > 0) {
+        query.whereIn(`${tableName}.assigned_to`, searchData.assigned_to_ids);
+      }
+      if (!searchData.include_inactive) {
+        query.where(`${tableName}.is_inactive`, false);
+      }
+  
+      // Add company join for company name search
+      query.leftJoin('companies', `${tableName}.company_id`, 'companies.company_id')
+        .select(`${tableName}.*`, 'companies.company_name')
+        .orderBy(`${tableName}.project_name`)
+        .limit(searchData.limit || 25);
+  
+      return query;
+    }
+
+
+  // Statistics
+  async getStatistics(context: ServiceContext): Promise<any> {
+      const { knex } = await this.getKnex();
+      const tableName = this.tableName;
+      
+      const stats = await knex(tableName)
+        .where(`${tableName}.tenant`, context.tenant)
+        .select([
+          knex.raw('COUNT(*) as total_projects'),
+          knex.raw(`COUNT(CASE WHEN status = 'active' THEN 1 END) as active_projects`),
+          knex.raw(`COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_projects`),
+          knex.raw(`COUNT(CASE WHEN status = 'on_hold' THEN 1 END) as on_hold_projects`),
+          knex.raw(`COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_projects`),
+          knex.raw(`COUNT(CASE WHEN end_date < NOW() AND status != 'completed' THEN 1 END) as overdue_projects`),
+          knex.raw('SUM(budgeted_hours) as total_budgeted_hours'),
+          knex.raw(`COUNT(CASE WHEN created_at >= date_trunc('month', NOW()) THEN 1 END) as projects_created_this_month`),
+          knex.raw(`COUNT(CASE WHEN status = 'completed' AND updated_at >= date_trunc('month', NOW()) THEN 1 END) as projects_completed_this_month`)
+        ])
+        .first();
+  
+      // Get projects by status
+      const projectsByStatus = await knex(tableName)
+        .where(`${tableName}.tenant`, context.tenant)
+        .groupBy('status')
+        .select('status', knex.raw('COUNT(*) as count'));
+  
+      // Get projects by company
+      const projectsByCompany = await knex(tableName)
+        .join('companies', `${tableName}.company_id`, 'companies.company_id')
+        .where(`${tableName}.tenant`, context.tenant)
+        .groupBy('companies.company_name')
+        .select('companies.company_name', knex.raw('COUNT(*) as count'))
+        .limit(10);
+  
+      return {
+        ...stats,
+        projects_by_status: projectsByStatus.reduce((acc: any, row: any) => {
+          acc[row.status] = parseInt(row.count);
+          return acc;
+        }, {}),
+        top_companies_by_project_count: projectsByCompany.map((row: any) => ({
+          company_name: row.company_name,
+          project_count: parseInt(row.count)
+        }))
+      };
+    }
+
+
+  // Helper methods
+  private async getDefaultProjectStatus(context: ServiceContext): Promise<any> {
+      const { knex } = await this.getKnex();
+      
+      const status = await knex('statuses')
+        .where({ 
+          tenant: context.tenant,
+          item_type: 'project',
+          is_active: true
+        })
+        .orderBy('display_order')
+        .first();
+  
+      if (!status) {
+        throw new Error('No default project status found');
+      }
+  
+      return status;
+    }
+
+
+  private async setupDefaultStatusMappings(projectId: string, context: ServiceContext): Promise<void> {
+      const { knex } = await this.getKnex();
+      
+      const standardStatuses = await knex('standard_statuses')
+        .where({ item_type: 'project_task', is_active: true })
+        .orderBy('display_order');
+  
+      for (const status of standardStatuses) {
+        await knex('project_status_mappings').insert({
+          project_id: projectId,
+          standard_status_id: status.standard_status_id,
+          is_standard: true,
+          custom_name: null,
+          display_order: status.display_order,
+          is_visible: true,
+          tenant: context.tenant
+        });
+      }
+    }
+
+
+  private async getProjectStatistics(projectId: string, context: ServiceContext): Promise<any> {
+      const { knex } = await this.getKnex();
+      
+      const [phaseCount, taskStats] = await Promise.all([
+        knex('project_phases')
+          .where({ project_id: projectId, tenant: context.tenant })
+          .count('* as count')
+          .first(),
+        knex('project_tasks')
+          .join('project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')
+          .where({
+            'project_phases.project_id': projectId,
+            'project_tasks.tenant': context.tenant
+          })
+          .select([
+            knex.raw('COUNT(*) as total_tasks'),
+            knex.raw(`COUNT(CASE WHEN project_status_mapping.is_closed THEN 1 END) as completed_tasks`),
+            knex.raw('SUM(project_tasks.estimated_hours) as total_estimated_hours'),
+            knex.raw('SUM(project_tasks.actual_hours) as total_actual_hours')
+          ])
+          .leftJoin('project_status_mappings', 'project_tasks.project_status_mapping_id', 'project_status_mappings.project_status_mapping_id')
+          .leftJoin('standard_statuses', 'project_status_mappings.standard_status_id', 'standard_statuses.standard_status_id')
+          .first()
+      ]);
+  
+      const totalTasks = parseInt(taskStats?.total_tasks || '0');
+      const completedTasks = parseInt(taskStats?.completed_tasks || '0');
+  
+      return {
+        phase_count: parseInt(phaseCount?.count+'' || '0'),
+        total_tasks: totalTasks,
+        completed_tasks: completedTasks,
+        pending_tasks: totalTasks - completedTasks,
+        completion_percentage: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
+        total_estimated_hours: parseFloat(taskStats?.total_estimated_hours || '0'),
+        total_actual_hours: parseFloat(taskStats?.total_actual_hours || '0')
+      };
+    }
+
+
+  private async getProjectCompany(companyId: string, context: ServiceContext): Promise<any> {
+      const { knex } = await this.getKnex();
+      
+      return knex('companies')
+        .where({ company_id: companyId, tenant: context.tenant })
+        .select('company_id', 'company_name', 'email', 'phone_no')
+        .first();
+    }
+
+
+  private async getProjectContact(contactId: string, context: ServiceContext): Promise<any> {
+      const { knex } = await this.getKnex();
+      
+      return knex('contacts')
+        .where({ contact_name_id: contactId, tenant: context.tenant })
+        .select('contact_name_id', 'full_name', 'email', 'phone_number')
+        .first();
+    }
+
+
+  private async getProjectAssignedUser(userId: string, context: ServiceContext): Promise<any> {
+      const { knex } = await this.getKnex();
+      
+      return knex('users')
+        .where({ user_id: userId })
+        .select('user_id', 'first_name', 'last_name', 'email')
+        .first();
+    }
+
+}
