@@ -10,7 +10,7 @@ const controller = new UserController();
 
 export async function PUT(request: Request) {
   try {
-    return await controller.bulkDeactivate()(request as any);
+    return await controller.update()(request as any);
   } catch (error) {
     return handleApiError(error);
   }

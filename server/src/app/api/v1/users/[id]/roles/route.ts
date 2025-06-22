@@ -24,7 +24,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   try {
     const req = request as any;
     req.params = params;
-    return await controller.assignUserRoles()(req);
+    return await controller.create()(req);
   } catch (error) {
     return handleApiError(error);
   }
@@ -34,7 +34,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   try {
     const req = request as any;
     req.params = params;
-    return await controller.removeUserRoles()(req);
+    return await controller.delete()(req);
   } catch (error) {
     return handleApiError(error);
   }

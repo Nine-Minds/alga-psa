@@ -33,7 +33,6 @@ import {
   UserSearchData,
   UserExportQuery,
   ChangePasswordData,
-  UserActivityFilter,
   UserBulkActionResult
 } from '../schemas/userSchemas';
 import { 
@@ -1001,7 +1000,7 @@ export class UserController extends BaseController {
       withQueryValidation(userActivityFilterSchema)
     );
 
-    return middleware(async (req: ApiRequest, validatedQuery: UserActivityFilter) => {
+    return middleware(async (req: ApiRequest, validatedQuery: any) => {
       const url = new URL(req.url);
       const page = parseInt(url.searchParams.get('page') || '1');
       const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), 100);
@@ -1036,7 +1035,7 @@ export class UserController extends BaseController {
       withQueryValidation(userActivityFilterSchema)
     );
 
-    return middleware(async (req: ApiRequest, validatedQuery: UserActivityFilter) => {
+    return middleware(async (req: ApiRequest, validatedQuery: any) => {
       const userId = this.extractIdFromPath(req);
       const url = new URL(req.url);
       const page = parseInt(url.searchParams.get('page') || '1');

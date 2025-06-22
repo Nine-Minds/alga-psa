@@ -5,22 +5,13 @@
  */
 
 import { QuickBooksController } from 'server/src/lib/api/controllers/QuickBooksController';
-import { QuickBooksService } from 'server/src/lib/api/services/QuickBooksService';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-let controller: QuickBooksController | null = null;
-
-function getController() {
-  if (!controller) {
-    const quickBooksService = new QuickBooksService();
-    controller = new QuickBooksController(quickBooksService);
-  }
-  return controller;
-}
+const controller = new QuickBooksController();
 
 export async function GET(request: Request) {
   try {
-    return await getController().getAccountMappings()(request as any);
+    return await controller.getAccountMappings()(request as any);
   } catch (error) {
     return handleApiError(error);
   }
@@ -28,7 +19,7 @@ export async function GET(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    return await getController().configureAccountMappings()(request as any);
+    return await controller.configureAccountMappings()(request as any);
   } catch (error) {
     return handleApiError(error);
   }

@@ -65,34 +65,17 @@ import {
 import { ApiRegistry } from '../metadata/ApiRegistry';
 import { generateResourceLinks } from '../utils/responseHelpers';
 
-export class AutomationController extends BaseController {
+export class AutomationController {
   private automationService: AutomationService;
 
   constructor() {
     // Note: In a real implementation, these dependencies would be injected
     // For now, we'll assume they're available or mock them as needed
-    const automationService = new AutomationService(
+    this.automationService = new AutomationService(
       undefined as any, // DatabaseService - would be injected
       undefined as any, // EventBusService - would be injected  
       undefined as any  // AuditLogService - would be injected
     );
-    
-    super(automationService, {
-      resource: 'automation',
-      createSchema: createAutomationRuleSchema,
-      updateSchema: updateAutomationRuleSchema,
-      querySchema: automationRulesListSchema,
-      permissions: {
-        create: 'create',
-        read: 'read',
-        update: 'update',
-        delete: 'delete',
-        list: 'read'
-      }
-    });
-
-    this.automationService = automationService;
-    this.registerEndpoints();
   }
 
   /**
@@ -360,7 +343,7 @@ export class AutomationController extends BaseController {
 
       const response = {
         ...result.data,
-        _links: generateResourceLinks('automation/rules', result.data.rule_id)
+        _links: generateResourceLinks('automation/rules', result.data.rule_id, '/api/v1')
       };
 
       return createSuccessResponse(response, 201);
@@ -378,7 +361,7 @@ export class AutomationController extends BaseController {
     );
 
     return middleware(async (req: ApiRequest) => {
-      const id = this.extractIdFromPath(req);
+      const id = new URL(req.url).pathname.split('/').pop()!;
       
       const result = await this.automationService.getAutomationRule(
         id,
@@ -388,7 +371,7 @@ export class AutomationController extends BaseController {
       const response = {
         ...result.data,
         _links: {
-          ...generateResourceLinks('automation/rules', id),
+          ...generateResourceLinks('automation/rules', id, '/api/v1'),
           execute: `/api/v1/automation/rules/${id}/execute`,
           executions: `/api/v1/automation/executions?automation_rule_id=${id}`
         }
@@ -410,7 +393,7 @@ export class AutomationController extends BaseController {
     );
 
     return middleware(async (req: ApiRequest, validatedData: UpdateAutomationRule) => {
-      const id = this.extractIdFromPath(req);
+      const id = new URL(req.url).pathname.split('/').pop()!;
       
       const result = await this.automationService.updateAutomationRule(
         id,
@@ -421,7 +404,7 @@ export class AutomationController extends BaseController {
 
       const response = {
         ...result.data,
-        _links: generateResourceLinks('automation/rules', id)
+        _links: generateResourceLinks('automation/rules', id, '/api/v1')
       };
 
       return createSuccessResponse(response);
@@ -439,7 +422,7 @@ export class AutomationController extends BaseController {
     );
 
     return middleware(async (req: ApiRequest) => {
-      const id = this.extractIdFromPath(req);
+      const id = new URL(req.url).pathname.split('/').pop()!;
       
       await this.automationService.deleteAutomationRule(
         id,
@@ -502,7 +485,7 @@ export class AutomationController extends BaseController {
     );
 
     return middleware(async (req: ApiRequest) => {
-      const id = this.extractIdFromPath(req);
+      const id = new URL(req.url).pathname.split('/').pop()!;
       
       const result = await this.automationService.getAutomationExecution(
         id,
@@ -512,7 +495,7 @@ export class AutomationController extends BaseController {
       const response = {
         ...result.data,
         _links: {
-          ...generateResourceLinks('automation/executions', id),
+          ...generateResourceLinks('automation/executions', id, '/api/v1'),
           rule: `/api/v1/automation/rules/${result.data.automation_rule_id}`,
           retry: result.data.status === 'failed' ? `/api/v1/automation/executions/${id}/retry` : undefined
         }
@@ -534,7 +517,7 @@ export class AutomationController extends BaseController {
     );
 
     return middleware(async (req: ApiRequest, validatedData: ManualExecution) => {
-      const ruleId = this.extractIdFromPath(req);
+      const ruleId = new URL(req.url).pathname.split('/').pop()!;
       
       const result = await this.automationService.executeAutomationRule(
         ruleId,
@@ -566,7 +549,7 @@ export class AutomationController extends BaseController {
     );
 
     return middleware(async (req: ApiRequest) => {
-      const id = this.extractIdFromPath(req);
+      const id = new URL(req.url).pathname.split('/').pop()!;
       
       const result = await this.automationService.retryAutomationExecution(
         id,
@@ -637,7 +620,7 @@ export class AutomationController extends BaseController {
     );
 
     return middleware(async (req: ApiRequest) => {
-      const id = this.extractIdFromPath(req);
+      const id = new URL(req.url).pathname.split('/').pop()!;
       
       const result = await this.automationService.getAutomationTemplate(
         id,
@@ -647,7 +630,7 @@ export class AutomationController extends BaseController {
       const response = {
         ...result.data,
         _links: {
-          ...generateResourceLinks('automation/templates', id),
+          ...generateResourceLinks('automation/templates', id, '/api/v1'),
           use: `/api/v1/automation/templates/${id}/use`
         }
       };
@@ -676,7 +659,7 @@ export class AutomationController extends BaseController {
 
       const response = {
         ...result.data,
-        _links: generateResourceLinks('automation/templates', result.data.template_id)
+        _links: generateResourceLinks('automation/templates', result.data.template_id, '/api/v1')
       };
 
       return createSuccessResponse(response, 201);
@@ -697,7 +680,7 @@ export class AutomationController extends BaseController {
     );
 
     return middleware(async (req: ApiRequest, validatedData: { variables: Record<string, any> }) => {
-      const templateId = this.extractIdFromPath(req);
+      const templateId = new URL(req.url).pathname.split('/').pop()!;
       
       const result = await this.automationService.createRuleFromTemplate(
         templateId,

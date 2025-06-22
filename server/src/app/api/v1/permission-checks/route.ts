@@ -10,7 +10,7 @@ const controller = new PermissionRoleController();
 
 export async function POST(request: Request) {
   try {
-    return await controller.checkPermissions()(request as any);
+    return await controller.checkUserPermissions()(request as any);
   } catch (error) {
     return handleApiError(error);
   }

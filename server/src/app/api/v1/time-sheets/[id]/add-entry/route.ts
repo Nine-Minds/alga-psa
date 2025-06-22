@@ -12,7 +12,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   try {
     const req = request as any;
     req.params = params;
-    return await controller.addEntry()(req);
+    return await controller.create()(req);
   } catch (error) {
     return handleApiError(error);
   }

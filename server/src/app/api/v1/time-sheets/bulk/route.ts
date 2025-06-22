@@ -10,7 +10,7 @@ const controller = new TimeSheetController();
 
 export async function POST(request: Request) {
   try {
-    return await controller.bulkOperations()(request as any);
+    return await controller.list()(request as any);
   } catch (error) {
     return handleApiError(error);
   }

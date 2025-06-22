@@ -9,11 +9,7 @@ import { ITicket } from 'server/src/interfaces/ticket.interfaces';
 import { withTransaction } from '@shared/db';
 import { NumberingService } from 'server/src/lib/services/numberingService';
 import { getEventBus } from 'server/src/lib/eventBus';
-import { 
-  TicketCreatedEvent,
-  TicketUpdatedEvent,
-  TicketClosedEvent
-} from 'server/src/lib/eventBus/events';
+// Event types no longer needed as we create objects directly
 import { 
   CreateTicketData, 
   UpdateTicketData, 
@@ -249,14 +245,16 @@ export class TicketService extends BaseService<ITicket> {
       }
 
       // Publish ticket created event
-      await this.safePublishEvent('TicketCreated', new TicketCreatedEvent(
-        ticket.ticket_id,
-        ticket.ticket_number,
-        ticket.title,
-        ticket.company_id,
-        context.userId,
-        context.tenant
-      ));
+      await this.safePublishEvent('TicketCreated', {
+        id: require("crypto").randomUUID(),
+        eventType: "TICKET_CREATED" as const,
+        timestamp: new Date().toISOString(),
+        payload: {
+          tenantId: context.tenant,
+          ticketId: ticket.ticket_id,
+          userId: context.userId
+        }
+      });
 
       return ticket as ITicket;
     });
@@ -311,23 +309,29 @@ export class TicketService extends BaseService<ITicket> {
           .first();
 
         if (newStatus?.is_closed) {
-          await this.safePublishEvent('TicketClosed', new TicketClosedEvent(
-            ticket.ticket_id,
-            ticket.ticket_number,
-            ticket.company_id,
-            context.userId,
-            context.tenant
-          ));
+          await this.safePublishEvent('TicketClosed', {
+            id: require("crypto").randomUUID(),
+            eventType: "TICKET_CLOSED" as const,
+            timestamp: new Date().toISOString(),
+            payload: {
+              tenantId: context.tenant,
+              ticketId: ticket.ticket_id,
+              userId: context.userId
+            }
+          });
         }
       }
 
-      await this.safePublishEvent('TicketUpdated', new TicketUpdatedEvent(
-        ticket.ticket_id,
-        ticket.ticket_number,
-        ticket.company_id,
-        context.userId,
-        context.tenant
-      ));
+      await this.safePublishEvent('TicketUpdated', {
+        id: require("crypto").randomUUID(),
+        eventType: "TICKET_UPDATED" as const,
+        timestamp: new Date().toISOString(),
+        payload: {
+          tenantId: context.tenant,
+          ticketId: ticket.ticket_id,
+          userId: context.userId
+        }
+      });
 
       return ticket as ITicket;
     });

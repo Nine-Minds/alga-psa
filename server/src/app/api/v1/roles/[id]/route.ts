@@ -14,7 +14,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
   try {
     const req = request as any;
     req.params = params;
-    return await controller.getRole()(req);
+    return await controller.getById()(req);
   } catch (error) {
     return handleApiError(error);
   }
@@ -24,7 +24,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   try {
     const req = request as any;
     req.params = params;
-    return await controller.updateRole()(req);
+    return await controller.update()(req);
   } catch (error) {
     return handleApiError(error);
   }
@@ -34,7 +34,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   try {
     const req = request as any;
     req.params = params;
-    return await controller.deleteRole()(req);
+    return await controller.delete()(req);
   } catch (error) {
     return handleApiError(error);
   }

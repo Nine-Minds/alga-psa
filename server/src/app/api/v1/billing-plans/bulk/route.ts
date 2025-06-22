@@ -10,7 +10,7 @@ const controller = new BillingPlanController();
 
 export async function POST(request: Request) {
   try {
-    return await controller.bulkCreate()(request as any);
+    return await controller.bulkCreatePlans()(request as any);
   } catch (error) {
     return handleApiError(error);
   }
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    return await controller.bulkUpdate()(request as any);
+    return await controller.bulkUpdatePlans()(request as any);
   } catch (error) {
     return handleApiError(error);
   }
@@ -26,7 +26,7 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    return await controller.bulkDelete()(request as any);
+    return await controller.bulkDeletePlans()(request as any);
   } catch (error) {
     return handleApiError(error);
   }

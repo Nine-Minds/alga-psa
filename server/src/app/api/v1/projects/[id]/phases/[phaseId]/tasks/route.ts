@@ -4,7 +4,7 @@
  */
 
 import { NextRequest } from 'next/server';
-import { ProjectController } from '../../../../../../lib/api/controllers/ProjectController';
+import { ProjectController } from '../../../../../../../../lib/api/controllers/ProjectController';
 
 const controller = new ProjectController();
 

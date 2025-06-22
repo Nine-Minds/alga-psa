@@ -10,7 +10,7 @@ const controller = new TeamController();
 
 export async function POST(request: Request) {
   try {
-    return await controller.search()(request as any);
+    return await controller.list()(request as any);
   } catch (error) {
     return handleApiError(error);
   }

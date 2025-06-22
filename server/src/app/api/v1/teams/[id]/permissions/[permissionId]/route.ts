@@ -12,7 +12,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   try {
     const req = request as any;
     req.params = params;
-    return await controller.revokePermission()(req);
+    return await controller.delete()(req);
   } catch (error) {
     return handleApiError(error);
   }

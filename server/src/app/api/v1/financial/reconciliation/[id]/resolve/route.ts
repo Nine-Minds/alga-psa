@@ -12,7 +12,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   try {
     const req = request as any;
     req.params = params;
-    return await controller.resolveDiscrepancy()(req);
+    return await controller.resolveReconciliationReport()(req);
   } catch (error) {
     return handleApiError(error);
   }

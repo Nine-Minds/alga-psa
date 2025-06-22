@@ -1018,3 +1018,6 @@ export async function getClientUsersForCompany(companyId: string): Promise<IUser
     throw error;
   }
 }
+
+// Alias for compatibility
+export const getUserById = findUserById;

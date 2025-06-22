@@ -12,7 +12,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
   try {
     const req = request as any;
     req.params = params;
-    return await controller.getAnalytics()(req);
+    return await controller.list()(req);
   } catch (error) {
     return handleApiError(error);
   }

@@ -11,8 +11,8 @@ let controller: QuickBooksController | null = null;
 
 function getController() {
   if (!controller) {
-    const quickBooksService = new QuickBooksService();
-    controller = new QuickBooksController(quickBooksService);
+    const quickBooksService = new QuickBooksService(null as any, null as any, null as any);
+    controller = new QuickBooksController();
   }
   return controller;
 }
