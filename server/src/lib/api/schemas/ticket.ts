@@ -226,15 +226,15 @@ export const ticketSearchSchema = z.object({
   priority_ids: z.array(uuidSchema).optional(),
   company_ids: z.array(uuidSchema).optional(),
   assigned_to_ids: z.array(uuidSchema).optional(),
-  include_closed: booleanTransform.optional().default(false),
+  include_closed: booleanTransform.optional().default("false"),
   limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25')
 });
 
 // Ticket export schema
 export const ticketExportQuerySchema = z.object({
   format: z.enum(['csv', 'json', 'xlsx']).optional().default('csv'),
-  include_closed: booleanTransform.optional().default(false),
-  include_comments: booleanTransform.optional().default(false),
+  include_closed: booleanTransform.optional().default("false"),
+  include_comments: booleanTransform.optional().default("false"),
   date_range: z.enum(['today', 'week', 'month', 'quarter', 'year', 'custom']).optional(),
   start_date: z.string().datetime().optional(),
   end_date: z.string().datetime().optional(),

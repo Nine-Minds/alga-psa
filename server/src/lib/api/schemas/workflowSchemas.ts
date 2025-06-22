@@ -541,7 +541,7 @@ export const workflowAnalyticsQuerySchema = z.object({
   date_from: dateSchema,
   date_to: dateSchema,
   group_by: z.enum(['day', 'week', 'month', 'workflow', 'status', 'user']).optional().default('day'),
-  include_system_workflows: booleanTransform.optional().default(false)
+  include_system_workflows: booleanTransform.optional().default("false")
 });
 
 // Workflow analytics response schema
@@ -605,8 +605,8 @@ export const workflowVersionResponseSchema = z.object({
 export const workflowExportQuerySchema = z.object({
   format: z.enum(['json', 'yaml', 'csv']).optional().default('json'),
   entity_types: z.array(z.enum(['registrations', 'templates', 'executions', 'tasks'])).optional(),
-  include_system_workflows: booleanTransform.optional().default(false),
-  include_history: booleanTransform.optional().default(false),
+  include_system_workflows: booleanTransform.optional().default("false"),
+  include_history: booleanTransform.optional().default("false"),
   date_from: dateSchema.optional(),
   date_to: dateSchema.optional(),
   workflow_names: z.array(z.string()).optional()

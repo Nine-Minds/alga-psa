@@ -174,7 +174,7 @@ export const creditTrackingResponseSchema = creditTrackingBaseSchema.merge(baseE
 
 export const creditListQuerySchema = paginationQuerySchema.merge(baseFilterSchema).extend({
   company_id: uuidSchema.optional(),
-  include_expired: booleanTransform.optional().default(false),
+  include_expired: booleanTransform.optional().default("false"),
   expiring_soon: booleanTransform.optional(),
   has_remaining: booleanTransform.optional()
 });
@@ -253,7 +253,7 @@ export const paymentMethodListQuerySchema = paginationQuerySchema.merge(baseFilt
   company_id: uuidSchema.optional(),
   type: paymentMethodTypeSchema.optional(),
   is_default: booleanTransform.optional(),
-  exclude_deleted: booleanTransform.optional().default(true)
+  exclude_deleted: booleanTransform.optional().default("true")
 });
 
 // ============================================================================
@@ -718,7 +718,7 @@ export const financialAnalyticsQuerySchema = z.object({
   date_from: dateSchema,
   date_to: dateSchema,
   group_by: z.enum(['day', 'week', 'month']).optional().default('month'),
-  include_projections: booleanTransform.optional().default(false)
+  include_projections: booleanTransform.optional().default("false")
 });
 
 export const revenueAnalyticsSchema = z.object({

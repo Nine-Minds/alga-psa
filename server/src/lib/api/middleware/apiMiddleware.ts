@@ -193,10 +193,10 @@ export function handleApiError(error: any): NextResponse {
     timestamp: new Date().toISOString()
   });
 
-  if (error instanceof ApiError) {
+  if (error.statusCode && typeof error.statusCode === 'number') {
     return NextResponse.json({
       error: {
-        code: error.code,
+        code: error.code || 'UNKNOWN_ERROR',
         message: error.message,
         details: error.details
       }

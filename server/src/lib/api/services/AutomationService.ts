@@ -405,7 +405,7 @@ export class AutomationService {
     tenantId: string,
     page: number = 1,
     limit: number = 25
-  ): Promise<PaginatedResponse<AutomationExecution[]>> {
+  ): Promise<PaginatedResponse<AutomationExecution>> {
     await validateTenantAccess(tenantId);
 
     const conditions = { tenant: tenantId, ...filters };
@@ -531,7 +531,10 @@ export class AutomationService {
       required_permissions: [],
       usage_count: 0,
       last_used: undefined,
-      template_variables: data.template_variables || [],
+      template_variables: (data.template_variables || []).map(variable => ({
+        ...variable,
+        name: variable.variable_name
+      })),
       is_active: true,
       is_featured: false,
       tenant: tenantId
@@ -590,7 +593,7 @@ export class AutomationService {
     tenantId: string,
     page: number = 1,
     limit: number = 25
-  ): Promise<PaginatedResponse<AutomationTemplate[]>> {
+  ): Promise<PaginatedResponse<AutomationTemplate>> {
     await validateTenantAccess(tenantId);
 
     const conditions = { tenant: tenantId, ...filters };
@@ -744,7 +747,7 @@ export class AutomationService {
         await this.updateAutomationRule(ruleId, { status: data.status }, tenantId, userId);
         results.updated++;
       } catch (error) {
-        results.errors.push(`${ruleId}: ${error.message}`);
+        results.errors.push(`${ruleId}: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
@@ -770,14 +773,15 @@ export class AutomationService {
           {
             automation_rule_id: ruleId,
             execution_data: data.execution_data,
-            override_conditions: data.override_conditions
+            override_conditions: data.override_conditions,
+            dry_run: false
           },
           tenantId,
           userId
         );
         results.started++;
       } catch (error) {
-        results.errors.push(`${ruleId}: ${error.message}`);
+        results.errors.push(`${ruleId}: ${error instanceof Error ? error.message : String(error)}`);
       }
     };
 

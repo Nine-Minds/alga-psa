@@ -125,7 +125,7 @@ export const updateTeamMemberRoleSchema = z.object({
 // ============================================================================
 
 // Team hierarchy node schema
-export const teamHierarchyNodeSchema = z.object({
+export const teamHierarchyNodeSchema: z.ZodType<any> = z.object({
   team_id: uuidSchema,
   team_name: z.string(),
   manager_id: uuidSchema.nullable(),

@@ -52,7 +52,12 @@ export class TimeEntryController extends BaseController {
       const context = { userId: (req as any).user?.id || "unknown", tenant: (req as any).user?.tenant || "default" };
       
       const { page, limit, sort, order, ...filters } = query;
-      const listOptions = { page, limit, sort, order };
+      const listOptions = { 
+        page: page ? parseInt(page) : undefined, 
+        limit: limit ? parseInt(limit) : undefined, 
+        sort, 
+        order: order as 'asc' | 'desc' | undefined
+      };
       
       const result = await this.timeEntryService.list(listOptions, context, filters);
       

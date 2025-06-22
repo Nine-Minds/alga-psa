@@ -101,7 +101,7 @@ export const contactImportSchema = z.object({
 
 export const contactExportQuerySchema = z.object({
   format: z.enum(['csv', 'json']).optional().default('csv'),
-  include_inactive: booleanTransform.optional().default(false),
+  include_inactive: booleanTransform.optional().default("false"),
   company_id: uuidSchema.optional(),
   fields: z.array(z.string()).optional()
 });
@@ -122,7 +122,7 @@ export const contactSearchSchema = z.object({
   query: z.string().min(1, 'Search query is required'),
   fields: z.array(z.enum(['full_name', 'email', 'phone_number', 'role', 'notes'])).optional(),
   company_id: uuidSchema.optional(),
-  include_inactive: booleanTransform.optional().default(false),
+  include_inactive: booleanTransform.optional().default("false"),
   limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25')
 });
 

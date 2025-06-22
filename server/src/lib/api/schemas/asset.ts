@@ -354,16 +354,16 @@ export const assetSearchSchema = z.object({
   asset_types: z.array(assetTypeSchema).optional(),
   statuses: z.array(z.string()).optional(),
   company_ids: z.array(uuidSchema).optional(),
-  include_extension_data: booleanTransform.optional().default(false),
+  include_extension_data: booleanTransform.optional().default('false'),
   limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25')
 });
 
 // Asset export schema
 export const assetExportQuerySchema = z.object({
   format: z.enum(['csv', 'json', 'xlsx']).optional().default('csv'),
-  include_extension_data: booleanTransform.optional().default(false),
-  include_maintenance: booleanTransform.optional().default(false),
-  include_documents: booleanTransform.optional().default(false),
+  include_extension_data: booleanTransform.optional().default('false'),
+  include_maintenance: booleanTransform.optional().default('false'),
+  include_documents: booleanTransform.optional().default('false'),
   asset_types: z.array(assetTypeSchema).optional(),
   statuses: z.array(z.string()).optional(),
   company_ids: z.array(uuidSchema).optional(),

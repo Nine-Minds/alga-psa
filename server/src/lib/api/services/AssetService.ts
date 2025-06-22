@@ -26,11 +26,27 @@ import {
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 
 export class AssetService extends BaseService<any> {
-  protected tableName = 'assets';
-  protected primaryKey = 'asset_id';
+  constructor() {
+    super({
+      tableName: 'assets',
+      primaryKey: 'asset_id',
+      tenantColumn: 'tenant',
+      softDelete: true,
+      auditFields: {
+        createdBy: 'created_by',
+        updatedBy: 'updated_by',
+        createdAt: 'created_at',
+        updatedAt: 'updated_at'
+      },
+      searchableFields: ['asset_tag', 'name', 'serial_number', 'location'],
+      defaultSort: 'created_at',
+      defaultOrder: 'desc'
+    });
+  }
 
   async list(options: ListOptions, context: ServiceContext, filters?: AssetFilterData): Promise<ListResult<any>> {
-    const query = context.db(this.tableName)
+    const knex = await this.getDbForContext(context);
+    const query = knex(this.tableName)
       .where(`${this.tableName}.tenant`, context.tenant);
 
     // Apply filters
@@ -80,9 +96,10 @@ export class AssetService extends BaseService<any> {
         if (filters.warranty_expired) {
           query.where(`${this.tableName}.warranty_end_date`, '<', new Date());
         } else {
+          const tableName = this.tableName;
           query.where(function() {
-            this.where(`${this.tableName}.warranty_end_date`, '>=', new Date())
-              .orWhereNull(`${this.tableName}.warranty_end_date`);
+            this.where(`${tableName}.warranty_end_date`, '>=', new Date())
+              .orWhereNull(`${tableName}.warranty_end_date`);
           });
         }
       }
@@ -93,7 +110,7 @@ export class AssetService extends BaseService<any> {
       .select(
         `${this.tableName}.*`,
         'companies.company_name',
-        context.db.raw(`
+        knex.raw(`
           CASE 
             WHEN ${this.tableName}.warranty_end_date IS NULL THEN 'no_warranty'
             WHEN ${this.tableName}.warranty_end_date < NOW() THEN 'expired'
@@ -103,20 +120,70 @@ export class AssetService extends BaseService<any> {
         `)
       );
 
-    return this.executeListQuery(query, options);
+    // Execute queries with pagination
+    const countQuery = knex(this.tableName)
+      .where(`${this.tableName}.tenant`, context.tenant);
+
+    if (filters) {
+      // Apply the same filters to count query
+      if (filters.company_id) {
+        countQuery.where(`${this.tableName}.company_id`, filters.company_id);
+      }
+      if (filters.status) {
+        countQuery.where(`${this.tableName}.status`, filters.status);
+      }
+      if (filters.asset_type) {
+        countQuery.where(`${this.tableName}.asset_type`, filters.asset_type);
+      }
+      if (filters.warranty_expired !== undefined) {
+        if (filters.warranty_expired) {
+          countQuery.where(`${this.tableName}.warranty_end_date`, '<', new Date());
+        } else {
+          const tableName = this.tableName;
+          countQuery.where(function() {
+            this.where(`${tableName}.warranty_end_date`, '>=', new Date())
+              .orWhereNull(`${tableName}.warranty_end_date`);
+          });
+        }
+      }
+    }
+
+    // Apply pagination
+    const page = options.page || 1;
+    const limit = options.limit || 25;
+    const offset = (page - 1) * limit;
+    
+    query.limit(limit).offset(offset);
+
+    // Apply sorting
+    const sortField = options.sort || 'created_at';
+    const sortOrder = options.order || 'desc';
+    query.orderBy(sortField, sortOrder);
+
+    const [data, [{ count }]] = await Promise.all([
+      query,
+      countQuery.count('* as count')
+    ]);
+
+    return {
+      data,
+      total: parseInt(count as string)
+    };
   }
 
   async getById(id: string, context: ServiceContext): Promise<any | null> {
-    const asset = await context.db(this.tableName)
+    const knex = await this.getDbForContext(context);
+    const query = knex(this.tableName)
       .leftJoin('companies', `${this.tableName}.company_id`, 'companies.company_id')
       .where({
         [`${this.tableName}.${this.primaryKey}`]: id,
         [`${this.tableName}.tenant`]: context.tenant
-      })
-      .select(
+      });
+      
+    const asset = await query.select(
         `${this.tableName}.*`,
         'companies.company_name',
-        context.db.raw(`
+        knex.raw(`
           CASE 
             WHEN ${this.tableName}.warranty_end_date IS NULL THEN 'no_warranty'
             WHEN ${this.tableName}.warranty_end_date < NOW() THEN 'expired'
@@ -162,7 +229,8 @@ export class AssetService extends BaseService<any> {
       updated_at: new Date()
     };
 
-    const [asset] = await context.db(this.tableName)
+    const knex = await this.getDbForContext(context);
+    const [asset] = await knex(this.tableName)
       .insert(assetRecord)
       .returning('*');
 
@@ -191,7 +259,8 @@ export class AssetService extends BaseService<any> {
       updated_at: new Date()
     };
 
-    await context.db(this.tableName)
+    const knex = await this.getDbForContext(context);
+    await knex(this.tableName)
       .where({ [this.primaryKey]: id, tenant: context.tenant })
       .update(updateData);
 
@@ -221,7 +290,8 @@ export class AssetService extends BaseService<any> {
     await this.deleteExtensionData(id, asset.asset_type, context);
 
     // Delete main asset record (cascade will handle relationships, documents, etc.)
-    await context.db(this.tableName)
+    const knex = await this.getDbForContext(context);
+    await knex(this.tableName)
       .where({ [this.primaryKey]: id, tenant: context.tenant })
       .del();
 
@@ -242,7 +312,8 @@ export class AssetService extends BaseService<any> {
     const tableName = this.getExtensionTableName(assetType);
     if (!tableName) return null;
 
-    return context.db(tableName)
+    const knex = await this.getDbForContext(context);
+    return knex(tableName)
       .where({ asset_id: assetId, tenant: context.tenant })
       .first();
   }
@@ -259,17 +330,18 @@ export class AssetService extends BaseService<any> {
     };
 
     // Check if record exists
-    const existing = await context.db(tableName)
+    const knex = await this.getDbForContext(context);
+    const existing = await knex(tableName)
       .where({ asset_id: assetId, tenant: context.tenant })
       .first();
 
     if (existing) {
-      await context.db(tableName)
+      await knex(tableName)
         .where({ asset_id: assetId, tenant: context.tenant })
         .update(extensionData);
     } else {
       extensionData.created_at = new Date();
-      await context.db(tableName).insert(extensionData);
+      await knex(tableName).insert(extensionData);
     }
   }
 
@@ -277,14 +349,16 @@ export class AssetService extends BaseService<any> {
     const tableName = this.getExtensionTableName(assetType);
     if (!tableName) return;
 
-    await context.db(tableName)
+    const knex = await this.getDbForContext(context);
+    await knex(tableName)
       .where({ asset_id: assetId, tenant: context.tenant })
       .del();
   }
 
   // Asset relationships
   async getAssetRelationships(assetId: string, context: ServiceContext): Promise<any[]> {
-    return context.db('asset_relationships')
+    const knex = await this.getDbForContext(context);
+    return knex('asset_relationships')
       .join('assets as related_assets', 'asset_relationships.related_asset_id', 'related_assets.asset_id')
       .where({
         'asset_relationships.asset_id': assetId,
@@ -306,7 +380,8 @@ export class AssetService extends BaseService<any> {
     }
 
     // Check for existing relationship
-    const existing = await context.db('asset_relationships')
+    const knex = await this.getDbForContext(context);
+    const existing = await knex('asset_relationships')
       .where({
         asset_id: assetId,
         related_asset_id: data.related_asset_id,
@@ -325,7 +400,7 @@ export class AssetService extends BaseService<any> {
       created_at: new Date()
     };
 
-    const [relationship] = await context.db('asset_relationships')
+    const [relationship] = await knex('asset_relationships')
       .insert(relationshipData)
       .returning('*');
 
@@ -333,14 +408,16 @@ export class AssetService extends BaseService<any> {
   }
 
   async deleteRelationship(relationshipId: string, context: ServiceContext): Promise<void> {
-    await context.db('asset_relationships')
+    const knex = await this.getDbForContext(context);
+    await knex('asset_relationships')
       .where({ relationship_id: relationshipId, tenant: context.tenant })
       .del();
   }
 
   // Asset documents
   async getAssetDocuments(assetId: string, context: ServiceContext): Promise<any[]> {
-    return context.db('document_associations')
+    const knex = await this.getDbForContext(context);
+    return knex('document_associations')
       .join('documents', 'document_associations.document_id', 'documents.document_id')
       .where({
         'document_associations.entity_type': 'asset',
@@ -366,7 +443,8 @@ export class AssetService extends BaseService<any> {
       created_at: new Date()
     };
 
-    const [association] = await context.db('document_associations')
+    const knex = await this.getDbForContext(context);
+    const [association] = await knex('document_associations')
       .insert(associationData)
       .returning('*');
 
@@ -374,14 +452,16 @@ export class AssetService extends BaseService<any> {
   }
 
   async removeDocumentAssociation(associationId: string, context: ServiceContext): Promise<void> {
-    await context.db('document_associations')
+    const knex = await this.getDbForContext(context);
+    await knex('document_associations')
       .where({ association_id: associationId, tenant: context.tenant })
       .del();
   }
 
   // Maintenance management
   async getMaintenanceSchedules(assetId: string, context: ServiceContext): Promise<any[]> {
-    return context.db('asset_maintenance_schedules')
+    const knex = await this.getDbForContext(context);
+    return knex('asset_maintenance_schedules')
       .leftJoin('users', 'asset_maintenance_schedules.assigned_to', 'users.user_id')
       .where({
         'asset_maintenance_schedules.asset_id': assetId,
@@ -389,7 +469,7 @@ export class AssetService extends BaseService<any> {
       })
       .select(
         'asset_maintenance_schedules.*',
-        context.db.raw(`CONCAT(users.first_name, ' ', users.last_name) as assigned_user_name`)
+        knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as assigned_user_name`)
       );
   }
 
@@ -403,9 +483,14 @@ export class AssetService extends BaseService<any> {
     };
 
     // Calculate next maintenance date
-    scheduleData.next_maintenance = this.calculateNextMaintenanceDate(data.start_date, data.frequency, data.frequency_interval);
+    (scheduleData as any).next_maintenance = this.calculateNextMaintenanceDate(
+      data.start_date || new Date().toISOString(), 
+      data.frequency, 
+      data.frequency_interval
+    );
 
-    const [schedule] = await context.db('asset_maintenance_schedules')
+    const knex = await this.getDbForContext(context);
+    const [schedule] = await knex('asset_maintenance_schedules')
       .insert(scheduleData)
       .returning('*');
 
@@ -420,7 +505,8 @@ export class AssetService extends BaseService<any> {
 
     // Recalculate next maintenance if frequency changed
     if (data.frequency || data.frequency_interval || data.start_date) {
-      const existing = await context.db('asset_maintenance_schedules')
+      const knex = await this.getDbForContext(context);
+      const existing = await knex('asset_maintenance_schedules')
         .where({ schedule_id: scheduleId, tenant: context.tenant })
         .first();
       
@@ -428,21 +514,23 @@ export class AssetService extends BaseService<any> {
         const startDate = data.start_date || existing.start_date;
         const frequency = data.frequency || existing.frequency;
         const interval = data.frequency_interval || existing.frequency_interval;
-        updateData.next_maintenance = this.calculateNextMaintenanceDate(startDate, frequency, interval);
+        (updateData as any).next_maintenance = this.calculateNextMaintenanceDate(startDate, frequency, interval);
       }
     }
 
-    await context.db('asset_maintenance_schedules')
+    const knex = await this.getDbForContext(context);
+    await knex('asset_maintenance_schedules')
       .where({ schedule_id: scheduleId, tenant: context.tenant })
       .update(updateData);
 
-    return context.db('asset_maintenance_schedules')
+    return knex('asset_maintenance_schedules')
       .where({ schedule_id: scheduleId, tenant: context.tenant })
       .first();
   }
 
   async deleteMaintenanceSchedule(scheduleId: string, context: ServiceContext): Promise<void> {
-    await context.db('asset_maintenance_schedules')
+    const knex = await this.getDbForContext(context);
+    await knex('asset_maintenance_schedules')
       .where({ schedule_id: scheduleId, tenant: context.tenant })
       .del();
   }
@@ -455,7 +543,8 @@ export class AssetService extends BaseService<any> {
       created_at: new Date()
     };
 
-    const [maintenance] = await context.db('asset_maintenance_history')
+    const knex = await this.getDbForContext(context);
+    const [maintenance] = await knex('asset_maintenance_history')
       .insert(maintenanceData)
       .returning('*');
 
@@ -468,7 +557,8 @@ export class AssetService extends BaseService<any> {
   }
 
   async getMaintenanceHistory(assetId: string, context: ServiceContext): Promise<any[]> {
-    return context.db('asset_maintenance_history')
+    const knex = await this.getDbForContext(context);
+    return knex('asset_maintenance_history')
       .leftJoin('users', 'asset_maintenance_history.performed_by', 'users.user_id')
       .where({
         'asset_maintenance_history.asset_id': assetId,
@@ -476,34 +566,36 @@ export class AssetService extends BaseService<any> {
       })
       .select(
         'asset_maintenance_history.*',
-        context.db.raw(`CONCAT(users.first_name, ' ', users.last_name) as performed_by_user_name`)
+        knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as performed_by_user_name`)
       )
       .orderBy('performed_at', 'desc');
   }
 
   // Search and export
   async search(searchData: AssetSearchData, context: ServiceContext): Promise<any[]> {
-    const query = context.db(this.tableName)
+    const knex = await this.getDbForContext(context);
+    const query = knex(this.tableName)
       .where(`${this.tableName}.tenant`, context.tenant);
 
     // Build search query
+    const tableName = this.tableName;
     if (searchData.fields && searchData.fields.length > 0) {
       query.where(function() {
         searchData.fields!.forEach(field => {
           if (field === 'company_name') {
             this.orWhere('companies.company_name', 'ilike', `%${searchData.query}%`);
           } else {
-            this.orWhere(`${this.tableName}.${field}`, 'ilike', `%${searchData.query}%`);
+            this.orWhere(`${tableName}.${field}`, 'ilike', `%${searchData.query}%`);
           }
         });
       });
     } else {
       // Default search across all text fields
       query.where(function() {
-        this.orWhere(`${this.tableName}.asset_tag`, 'ilike', `%${searchData.query}%`)
-          .orWhere(`${this.tableName}.name`, 'ilike', `%${searchData.query}%`)
-          .orWhere(`${this.tableName}.serial_number`, 'ilike', `%${searchData.query}%`)
-          .orWhere(`${this.tableName}.location`, 'ilike', `%${searchData.query}%`);
+        this.orWhere(`${tableName}.asset_tag`, 'ilike', `%${searchData.query}%`)
+          .orWhere(`${tableName}.name`, 'ilike', `%${searchData.query}%`)
+          .orWhere(`${tableName}.serial_number`, 'ilike', `%${searchData.query}%`)
+          .orWhere(`${tableName}.location`, 'ilike', `%${searchData.query}%`);
       });
     }
 
@@ -596,7 +688,8 @@ export class AssetService extends BaseService<any> {
   }
 
   private async updateScheduleAfterMaintenance(scheduleId: string, performedAt: string, context: ServiceContext): Promise<void> {
-    const schedule = await context.db('asset_maintenance_schedules')
+    const knex = await this.getDbForContext(context);
+    const schedule = await knex('asset_maintenance_schedules')
       .where({ schedule_id: scheduleId, tenant: context.tenant })
       .first();
 
@@ -607,7 +700,7 @@ export class AssetService extends BaseService<any> {
         schedule.frequency_interval
       );
 
-      await context.db('asset_maintenance_schedules')
+      await knex('asset_maintenance_schedules')
         .where({ schedule_id: scheduleId, tenant: context.tenant })
         .update({
           last_maintenance: performedAt,
@@ -618,20 +711,22 @@ export class AssetService extends BaseService<any> {
   }
 
   private async getAssetCompany(companyId: string, context: ServiceContext): Promise<any> {
-    return context.db('companies')
+    const knex = await this.getDbForContext(context);
+    return knex('companies')
       .where({ company_id: companyId, tenant: context.tenant })
       .select('company_id', 'company_name', 'email', 'phone_no')
       .first();
   }
 
   private async getBasicStatistics(context: ServiceContext): Promise<any> {
-    const stats = await context.db(this.tableName)
+    const knex = await this.getDbForContext(context);
+    const stats = await knex(this.tableName)
       .where(`${this.tableName}.tenant`, context.tenant)
       .select([
-        context.db.raw('COUNT(*) as total_assets'),
-        context.db.raw(`COUNT(CASE WHEN created_at >= date_trunc('month', NOW()) THEN 1 END) as assets_added_this_month`),
-        context.db.raw('AVG(EXTRACT(DAYS FROM NOW() - purchase_date)) as average_asset_age_days'),
-        context.db.raw('SUM(COALESCE(purchase_price, 0)) as total_asset_value')
+        knex.raw('COUNT(*) as total_assets'),
+        knex.raw(`COUNT(CASE WHEN created_at >= date_trunc('month', NOW()) THEN 1 END) as assets_added_this_month`),
+        knex.raw('AVG(EXTRACT(DAYS FROM NOW() - purchase_date)) as average_asset_age_days'),
+        knex.raw('SUM(COALESCE(purchase_price, 0)) as total_asset_value')
       ])
       .first();
 
@@ -644,10 +739,11 @@ export class AssetService extends BaseService<any> {
   }
 
   private async getAssetsByType(context: ServiceContext): Promise<Record<string, number>> {
-    const results = await context.db(this.tableName)
+    const knex = await this.getDbForContext(context);
+    const results = await knex(this.tableName)
       .where(`${this.tableName}.tenant`, context.tenant)
       .groupBy('asset_type')
-      .select('asset_type', context.db.raw('COUNT(*) as count'));
+      .select('asset_type', knex.raw('COUNT(*) as count'));
 
     return results.reduce((acc, item) => {
       acc[item.asset_type] = parseInt(item.count);
@@ -656,23 +752,27 @@ export class AssetService extends BaseService<any> {
   }
 
   private async getAssetsByStatus(context: ServiceContext): Promise<Record<string, number>> {
-    const results = await context.db(this.tableName)
-      .where(`${this.tableName}.tenant`, context.tenant)
-      .groupBy('status')
-      .select('status', context.db.raw('COUNT(*) as count'));
+    const knex = await this.getDbForContext(context);
+    const results = await knex(this.tableName)
+        .where(`${this.tableName}.tenant`, context.tenant)
+        .groupBy('status')
+        .select('status', knex.raw('COUNT(*) as count'));
+  
+      return results.reduce((acc, item) => {
+        const status = item.status ?? 'Unknown';
+        acc[status] = parseInt(item.count);
+        return acc;
+      }, {} as Record<string, number>);
+    }
 
-    return results.reduce((acc, item) => {
-      acc[item.status] = parseInt(item.count);
-      return acc;
-    }, {} as Record<string, number>);
-  }
 
   private async getAssetsByCompany(context: ServiceContext): Promise<Record<string, number>> {
-    const results = await context.db(this.tableName)
+    const knex = await this.getDbForContext(context);
+    const results = await knex(this.tableName)
       .join('companies', `${this.tableName}.company_id`, 'companies.company_id')
       .where(`${this.tableName}.tenant`, context.tenant)
       .groupBy('companies.company_name')
-      .select('companies.company_name', context.db.raw('COUNT(*) as count'))
+      .select('companies.company_name', knex.raw('COUNT(*) as count'))
       .limit(10);
 
     return results.reduce((acc, item) => {
@@ -682,11 +782,12 @@ export class AssetService extends BaseService<any> {
   }
 
   private async getWarrantyStatistics(context: ServiceContext): Promise<any> {
-    const stats = await context.db(this.tableName)
+    const knex = await this.getDbForContext(context);
+    const stats = await knex(this.tableName)
       .where(`${this.tableName}.tenant`, context.tenant)
       .select([
-        context.db.raw(`COUNT(CASE WHEN warranty_end_date < NOW() + INTERVAL '30 days' AND warranty_end_date >= NOW() THEN 1 END) as warranty_expiring_soon`),
-        context.db.raw(`COUNT(CASE WHEN warranty_end_date < NOW() THEN 1 END) as warranty_expired`)
+        knex.raw(`COUNT(CASE WHEN warranty_end_date < NOW() + INTERVAL '30 days' AND warranty_end_date >= NOW() THEN 1 END) as warranty_expiring_soon`),
+        knex.raw(`COUNT(CASE WHEN warranty_end_date < NOW() THEN 1 END) as warranty_expired`)
       ])
       .first();
 
@@ -697,11 +798,12 @@ export class AssetService extends BaseService<any> {
   }
 
   private async getMaintenanceStatistics(context: ServiceContext): Promise<any> {
-    const stats = await context.db('asset_maintenance_schedules')
+    const knex = await this.getDbForContext(context);
+    const stats = await knex('asset_maintenance_schedules')
       .where('asset_maintenance_schedules.tenant', context.tenant)
       .select([
-        context.db.raw(`COUNT(CASE WHEN next_maintenance <= NOW() AND is_active = true THEN 1 END) as maintenance_due`),
-        context.db.raw(`COUNT(CASE WHEN next_maintenance < NOW() - INTERVAL '7 days' AND is_active = true THEN 1 END) as maintenance_overdue`)
+        knex.raw(`COUNT(CASE WHEN next_maintenance <= NOW() AND is_active = true THEN 1 END) as maintenance_due`),
+        knex.raw(`COUNT(CASE WHEN next_maintenance < NOW() - INTERVAL '7 days' AND is_active = true THEN 1 END) as maintenance_overdue`)
       ])
       .first();
 

@@ -6,12 +6,20 @@
 import { Knex } from 'knex';
 import { createTenantKnex } from '../../db';
 import { withTransaction } from '@shared/db';
-import { ListOptions } from '../controllers/BaseController';
+// Import and re-export for services
+export interface ListOptions {
+  page?: number;
+  limit?: number;
+  sort?: string;
+  order?: 'asc' | 'desc';
+  filters?: Record<string, any>;
+}
 
 export interface ServiceContext {
   userId: string;
   tenant: string;
   user?: any;
+  db?: Knex;
 }
 
 export interface ListResult<T> {
@@ -40,7 +48,12 @@ export abstract class BaseService<T = any> {
   protected primaryKey: string;
   protected tenantColumn: string;
   protected softDelete: boolean;
-  protected auditFields: Required<ServiceOptions['auditFields']>;
+  protected auditFields: {
+    createdBy: string;
+    updatedBy: string;
+    createdAt: string;
+    updatedAt: string;
+  };
   protected searchableFields: string[];
   protected defaultSort: string;
   protected defaultOrder: 'asc' | 'desc';
@@ -65,8 +78,24 @@ export abstract class BaseService<T = any> {
   /**
    * Get database connection with tenant context
    */
-  protected async getKnex(): Promise<{ knex: Knex; tenant: string }> {
-    return createTenantKnex();
+    protected async getKnex(): Promise<{ knex: Knex; tenant: string }> {
+      const result = await createTenantKnex();
+      if (!result.tenant) {
+        throw new Error('No tenant found in current context');
+      }
+      return { knex: result.knex, tenant: result.tenant };
+    }
+
+
+  /**
+   * Get database connection for a context (backward compatibility)
+   */
+  protected async getDbForContext(context: ServiceContext): Promise<Knex> {
+    if (context.db) {
+      return context.db;
+    }
+    const { knex } = await this.getKnex();
+    return knex;
   }
 
   /**
