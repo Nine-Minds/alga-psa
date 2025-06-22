@@ -12,7 +12,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   try {
     const req = request as any;
     req.params = params;
-    return await controller.updateBillingPlan()(req);
+    return await controller.update()(req);
   } catch (error) {
     return handleApiError(error);
   }

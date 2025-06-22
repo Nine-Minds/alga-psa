@@ -118,9 +118,9 @@ export class WorkflowController extends BaseController {
   private workflowService: WorkflowService;
 
   constructor() {
-    const workflowService = new WorkflowService();
+    const workflowService = new WorkflowService(null as any, null as any, null as any);
     
-    super(workflowService, {
+    super(null as any, {
       resource: 'workflow',
       createSchema: createWorkflowRegistrationSchema,
       updateSchema: updateWorkflowRegistrationSchema,
@@ -649,7 +649,7 @@ export class WorkflowController extends BaseController {
 
       const response = {
         ...result.data,
-        _links: generateResourceLinks('workflows', result.data.registration_id)
+        _links: generateResourceLinks('workflows', result.data.registration_id, "/api/v1", ["read", "update", "delete"])
       };
 
       return createSuccessResponse(response, 201);
@@ -675,7 +675,7 @@ export class WorkflowController extends BaseController {
 
       const response = {
         ...result.data,
-        _links: generateResourceLinks('workflows', id)
+        _links: generateResourceLinks('workflows', id, "/api/v1", ["read", "update", "delete"])
       };
 
       return createSuccessResponse(response);
@@ -704,7 +704,7 @@ export class WorkflowController extends BaseController {
 
       const response = {
         ...result.data,
-        _links: generateResourceLinks('workflows', id)
+        _links: generateResourceLinks('workflows', id, "/api/v1", ["read", "update", "delete"])
       };
 
       return createSuccessResponse(response);
@@ -791,7 +791,7 @@ export class WorkflowController extends BaseController {
 
       const response = {
         ...result.data,
-        _links: generateResourceLinks('workflow-executions', result.data.execution_id)
+        _links: generateResourceLinks('workflow-executions', result.data.execution_id, "/api/v1", ["read", "update", "delete"])
       };
 
       return createSuccessResponse(response, 201);
@@ -818,7 +818,7 @@ export class WorkflowController extends BaseController {
       const response = {
         ...result.data,
         _links: {
-          ...generateResourceLinks('workflow-executions', id),
+          ...generateResourceLinks('workflow-executions', id, "/api/v1", ["read", "update", "delete"]),
           events: `/api/v1/workflow-events?execution_id=${id}`,
           tasks: `/api/v1/workflow-tasks?execution_id=${id}`,
           pause: `/api/v1/workflow-executions/${id}/pause`,
@@ -854,7 +854,7 @@ export class WorkflowController extends BaseController {
 
       const response = {
         ...result.data,
-        _links: generateResourceLinks('workflow-executions', id)
+        _links: generateResourceLinks('workflow-executions', id, "/api/v1", ["read", "update", "delete"])
       };
 
       return createSuccessResponse(response);
@@ -966,8 +966,9 @@ export class WorkflowController extends BaseController {
           workflow_name: original.data.workflow_name,
           workflow_version: original.data.workflow_version,
           workflow_type: original.data.workflow_type,
-          context_data: original.data.context_data,
-          correlation_id: original.data.correlation_id
+          priority: 'medium' as const,
+          context_data: original.data.context_data || undefined,
+          correlation_id: original.data.correlation_id || undefined
         },
         req.context!.tenant,
         req.context!.userId
@@ -977,7 +978,7 @@ export class WorkflowController extends BaseController {
         original_execution_id: id,
         new_execution_id: newExecution.data.execution_id,
         message: 'Workflow execution restarted successfully',
-        _links: generateResourceLinks('workflow-executions', newExecution.data.execution_id)
+        _links: generateResourceLinks('workflow-executions', newExecution.data.execution_id, "/api/v1", ["read", "update", "delete"])
       });
     });
   }
@@ -1040,7 +1041,7 @@ export class WorkflowController extends BaseController {
 
       const response = {
         ...result.data,
-        _links: generateResourceLinks('workflow-events', result.data.event_id)
+        _links: generateResourceLinks('workflow-events', result.data.event_id, "/api/v1", ["read", "update", "delete"])
       };
 
       return createSuccessResponse(response, 201);
@@ -1066,7 +1067,7 @@ export class WorkflowController extends BaseController {
 
       const response = {
         ...result.data,
-        _links: generateResourceLinks('workflow-events', id)
+        _links: generateResourceLinks('workflow-events', id, "/api/v1", ["read", "update", "delete"])
       };
 
       return createSuccessResponse(response);
@@ -1132,7 +1133,7 @@ export class WorkflowController extends BaseController {
       const response = {
         ...result.data,
         _links: {
-          ...generateResourceLinks('workflow-tasks', result.data.task_id),
+          ...generateResourceLinks('workflow-tasks', result.data.task_id, "/api/v1", ["read", "update", "delete"]),
           claim: `/api/v1/workflow-tasks/${result.data.task_id}/claim`,
           complete: `/api/v1/workflow-tasks/${result.data.task_id}/complete`
         }
@@ -1162,7 +1163,7 @@ export class WorkflowController extends BaseController {
       const response = {
         ...result.data,
         _links: {
-          ...generateResourceLinks('workflow-tasks', id),
+          ...generateResourceLinks('workflow-tasks', id, "/api/v1", ["read", "update", "delete"]),
           claim: `/api/v1/workflow-tasks/${id}/claim`,
           complete: `/api/v1/workflow-tasks/${id}/complete`,
           execution: `/api/v1/workflow-executions/${result.data.execution_id}`
@@ -1195,7 +1196,7 @@ export class WorkflowController extends BaseController {
 
       const response = {
         ...result.data,
-        _links: generateResourceLinks('workflow-tasks', id)
+        _links: generateResourceLinks('workflow-tasks', id, "/api/v1", ["read", "update", "delete"])
       };
 
       return createSuccessResponse(response);
@@ -1223,7 +1224,7 @@ export class WorkflowController extends BaseController {
       const response = {
         ...result.data,
         _links: {
-          ...generateResourceLinks('workflow-tasks', id),
+          ...generateResourceLinks('workflow-tasks', id, "/api/v1", ["read", "update", "delete"]),
           complete: `/api/v1/workflow-tasks/${id}/complete`
         }
       };
@@ -1254,7 +1255,7 @@ export class WorkflowController extends BaseController {
 
       const response = {
         ...result.data,
-        _links: generateResourceLinks('workflow-tasks', id)
+        _links: generateResourceLinks('workflow-tasks', id, "/api/v1", ["read", "update", "delete"])
       };
 
       return createSuccessResponse(response);
@@ -1319,7 +1320,7 @@ export class WorkflowController extends BaseController {
 
       const response = {
         ...result.data,
-        _links: generateResourceLinks('workflow-templates', result.data.template_id)
+        _links: generateResourceLinks('workflow-templates', result.data.template_id, "/api/v1", ["read", "update", "delete"])
       };
 
       return createSuccessResponse(response, 201);
@@ -1345,7 +1346,7 @@ export class WorkflowController extends BaseController {
 
       const response = {
         ...result.data,
-        _links: generateResourceLinks('workflow-templates', id)
+        _links: generateResourceLinks('workflow-templates', id, "/api/v1", ["read", "update", "delete"])
       };
 
       return createSuccessResponse(response);
@@ -1374,7 +1375,7 @@ export class WorkflowController extends BaseController {
 
       const response = {
         ...result.data,
-        _links: generateResourceLinks('workflow-templates', id)
+        _links: generateResourceLinks('workflow-templates', id, "/api/v1", ["read", "update", "delete"])
       };
 
       return createSuccessResponse(response);

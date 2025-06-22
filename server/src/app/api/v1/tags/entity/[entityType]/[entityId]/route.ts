@@ -15,7 +15,7 @@ export async function GET(request: Request, { params }: { params: { entityType: 
   try {
     const req = request as any;
     req.params = params;
-    return await controller.getEntityTags()(req);
+    return await controller.list()(req);
   } catch (error) {
     return handleApiError(error);
   }
@@ -25,7 +25,7 @@ export async function POST(request: Request, { params }: { params: { entityType:
   try {
     const req = request as any;
     req.params = params;
-    return await controller.tagEntity()(req);
+    return await controller.create()(req);
   } catch (error) {
     return handleApiError(error);
   }
@@ -35,7 +35,7 @@ export async function DELETE(request: Request, { params }: { params: { entityTyp
   try {
     const req = request as any;
     req.params = params;
-    return await controller.untagEntity()(req);
+    return await controller.delete()(req);
   } catch (error) {
     return handleApiError(error);
   }
@@ -45,7 +45,7 @@ export async function PUT(request: Request, { params }: { params: { entityType: 
   try {
     const req = request as any;
     req.params = params;
-    return await controller.replaceEntityTags()(req);
+    return await controller.update()(req);
   } catch (error) {
     return handleApiError(error);
   }

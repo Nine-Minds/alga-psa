@@ -10,7 +10,7 @@ const controller = new PermissionRoleController();
 
 export async function GET(request: Request) {
   try {
-    return await controller.getRBACAnalytics()(request as any);
+    return await controller.list()(request as any);
   } catch (error) {
     return handleApiError(error);
   }

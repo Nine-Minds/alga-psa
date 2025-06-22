@@ -13,7 +13,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
   try {
     const req = request as any;
     req.params = params;
-    return await controller.getTransaction()(req);
+    return await controller.getTransactionById()(req);
   } catch (error) {
     return handleApiError(error);
   }
@@ -23,7 +23,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   try {
     const req = request as any;
     req.params = params;
-    return await controller.updateTransaction()(req);
+    return await controller.update()(req);
   } catch (error) {
     return handleApiError(error);
   }

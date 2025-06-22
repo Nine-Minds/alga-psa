@@ -10,7 +10,7 @@ const controller = new UserController();
 
 export async function POST(request: Request) {
   try {
-    return await controller.bulkCreate()(request as any);
+    return await controller.create()(request as any);
   } catch (error) {
     return handleApiError(error);
   }

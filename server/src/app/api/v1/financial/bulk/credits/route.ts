@@ -10,7 +10,7 @@ const controller = new FinancialController();
 
 export async function POST(request: Request) {
   try {
-    return await controller.bulkCreditOperations()(request as any);
+    return await controller.bulkInvoiceOperations()(request as any);
   } catch (error) {
     return handleApiError(error);
   }

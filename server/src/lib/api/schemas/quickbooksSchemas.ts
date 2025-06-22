@@ -31,13 +31,13 @@ import {
 // ============================================================================
 
 // QBO Reference schema - core building block for QBO objects
-export const qboRefSchema = z.object({
+const qboRefSchema = z.object({
   value: z.string().min(1),
   name: z.string().optional()
 });
 
 // QBO Address schema
-export const qboAddressSchema = z.object({
+const qboAddressSchema = z.object({
   Id: z.string().optional(),
   Line1: z.string().optional(),
   Line2: z.string().optional(),
@@ -53,33 +53,33 @@ export const qboAddressSchema = z.object({
 });
 
 // QBO Email Address schema
-export const qboEmailAddrSchema = z.object({
+const qboEmailAddrSchema = z.object({
   Address: z.string().email()
 });
 
 // QBO Phone Number schema
-export const qboPhoneNumberSchema = z.object({
+const qboPhoneNumberSchema = z.object({
   FreeFormNumber: z.string().min(1)
 });
 
 // QBO Metadata schema
-export const qboMetaDataSchema = z.object({
+const qboMetaDataSchema = z.object({
   CreateTime: z.string().datetime(),
   LastUpdatedTime: z.string().datetime()
 });
 
 // QBO monetary amount schema (handles decimal precision)
-export const qboMonetaryAmountSchema = z.number().min(0);
+const qboMonetaryAmountSchema = z.number().min(0);
 
 // QBO date schema (YYYY-MM-DD format)
-export const qboDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const qboDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 // ============================================================================
 // Connection Management Schemas
 // ============================================================================
 
 // OAuth connection status enum
-export const qboConnectionStatusSchema = z.enum([
+const qboConnectionStatusSchema = z.enum([
   'Connected',
   'Not Connected', 
   'Error',
@@ -88,7 +88,7 @@ export const qboConnectionStatusSchema = z.enum([
 ]);
 
 // QBO Credentials schema
-export const qboCredentialsSchema = z.object({
+const qboCredentialsSchema = z.object({
   accessToken: z.string().min(1),
   refreshToken: z.string().min(1),
   realmId: z.string().min(1),
@@ -97,14 +97,14 @@ export const qboCredentialsSchema = z.object({
 });
 
 // OAuth authorization request schema
-export const qboOAuthRequestSchema = z.object({
+const qboOAuthRequestSchema = z.object({
   state: z.string().min(1),
   redirect_uri: urlSchema.optional(),
   scope: z.string().optional().default('com.intuit.quickbooks.accounting')
 });
 
 // OAuth callback schema
-export const qboOAuthCallbackSchema = z.object({
+const qboOAuthCallbackSchema = z.object({
   code: z.string().min(1),
   state: z.string().min(1),
   realmId: z.string().min(1),
@@ -113,7 +113,7 @@ export const qboOAuthCallbackSchema = z.object({
 });
 
 // Connection status response schema
-export const qboConnectionStatusResponseSchema = z.object({
+const qboConnectionStatusResponseSchema = z.object({
   connected: z.boolean(),
   status: qboConnectionStatusSchema,
   companyName: z.string().optional(),
@@ -124,7 +124,7 @@ export const qboConnectionStatusResponseSchema = z.object({
 });
 
 // Connection test schema
-export const qboConnectionTestSchema = z.object({
+const qboConnectionTestSchema = z.object({
   testType: z.enum(['companyInfo', 'items', 'customers', 'full']).default('companyInfo'),
   forceRefresh: z.boolean().default(false)
 });
@@ -134,7 +134,7 @@ export const qboConnectionTestSchema = z.object({
 // ============================================================================
 
 // QBO Customer schema
-export const qboCustomerSchema = z.object({
+const qboCustomerSchema = z.object({
   Id: z.string().optional(),
   SyncToken: z.string().optional(),
   DisplayName: z.string().optional(),
@@ -152,7 +152,7 @@ export const qboCustomerSchema = z.object({
 });
 
 // Customer sync request schema
-export const customerSyncRequestSchema = z.object({
+const customerSyncRequestSchema = z.object({
   company_id: uuidSchema.optional(), // Sync specific company, or all if omitted
   sync_type: z.enum(['create', 'update', 'bidirectional']).default('bidirectional'),
   force_update: z.boolean().default(false),
@@ -160,7 +160,7 @@ export const customerSyncRequestSchema = z.object({
 });
 
 // Customer sync response schema
-export const customerSyncResponseSchema = z.object({
+const customerSyncResponseSchema = z.object({
   success: z.boolean(),
   synced_customers: z.number().min(0),
   created_customers: z.number().min(0),
@@ -177,7 +177,7 @@ export const customerSyncResponseSchema = z.object({
 });
 
 // Customer mapping schema
-export const customerMappingSchema = z.object({
+const customerMappingSchema = z.object({
   company_id: uuidSchema,
   qbo_customer_id: z.string(),
   display_name: z.string(),
@@ -192,7 +192,7 @@ export const customerMappingSchema = z.object({
 // ============================================================================
 
 // QBO Tax Line Detail schema
-export const qboTaxLineDetailSchema = z.object({
+const qboTaxLineDetailSchema = z.object({
   Amount: qboMonetaryAmountSchema.optional(),
   TaxLineDetailType: z.literal('TaxLineDetail').optional(),
   TaxRateRef: qboRefSchema.optional(),
@@ -202,14 +202,14 @@ export const qboTaxLineDetailSchema = z.object({
 });
 
 // QBO Transaction Tax Detail schema
-export const qboTxnTaxDetailSchema = z.object({
+const qboTxnTaxDetailSchema = z.object({
   TxnTaxCodeRef: qboRefSchema.optional(),
   TotalTax: qboMonetaryAmountSchema.optional(),
   TaxLine: z.array(qboTaxLineDetailSchema).optional()
 });
 
 // QBO Sales Item Line Detail schema
-export const qboSalesItemLineDetailSchema = z.object({
+const qboSalesItemLineDetailSchema = z.object({
   ItemRef: qboRefSchema,
   Qty: z.number().min(0).optional(),
   UnitPrice: qboMonetaryAmountSchema.optional(),
@@ -220,7 +220,7 @@ export const qboSalesItemLineDetailSchema = z.object({
 });
 
 // QBO Discount Line Detail schema
-export const qboDiscountLineDetailSchema = z.object({
+const qboDiscountLineDetailSchema = z.object({
   DiscountAccountRef: qboRefSchema.optional(),
   PercentBased: z.boolean().optional(),
   DiscountPercent: z.number().min(0).max(100).optional(),
@@ -230,7 +230,7 @@ export const qboDiscountLineDetailSchema = z.object({
 });
 
 // QBO Invoice Line schema
-export const qboInvoiceLineSchema = z.object({
+const qboInvoiceLineSchema = z.object({
   Id: z.string().optional(),
   LineNum: z.number().min(1).optional(),
   Description: z.string().optional(),
@@ -241,7 +241,7 @@ export const qboInvoiceLineSchema = z.object({
 });
 
 // QBO Invoice schema
-export const qboInvoiceSchema = z.object({
+const qboInvoiceSchema = z.object({
   Id: z.string().optional(),
   SyncToken: z.string().optional(),
   DocNumber: z.string().optional(),
@@ -261,7 +261,7 @@ export const qboInvoiceSchema = z.object({
 });
 
 // Invoice export request schema
-export const invoiceExportRequestSchema = z.object({
+const invoiceExportRequestSchema = z.object({
   invoice_id: uuidSchema.optional(), // Export specific invoice, or all if omitted
   date_range: z.object({
     start_date: qboDateSchema,
@@ -276,7 +276,7 @@ export const invoiceExportRequestSchema = z.object({
 });
 
 // Invoice export response schema
-export const invoiceExportResponseSchema = z.object({
+const invoiceExportResponseSchema = z.object({
   success: z.boolean(),
   exported_invoices: z.number().min(0),
   created_invoices: z.number().min(0),
@@ -293,7 +293,7 @@ export const invoiceExportResponseSchema = z.object({
 });
 
 // Invoice import request schema
-export const invoiceImportRequestSchema = z.object({
+const invoiceImportRequestSchema = z.object({
   qbo_invoice_id: z.string().optional(), // Import specific invoice, or all recent if omitted
   date_range: z.object({
     start_date: qboDateSchema,
@@ -309,7 +309,7 @@ export const invoiceImportRequestSchema = z.object({
 // ============================================================================
 
 // QBO Account schema
-export const qboAccountSchema = z.object({
+const qboAccountSchema = z.object({
   Id: z.string(),
   SyncToken: z.string().optional(),
   Name: z.string(),
@@ -328,7 +328,7 @@ export const qboAccountSchema = z.object({
 });
 
 // Account mapping configuration schema
-export const accountMappingConfigSchema = z.object({
+const accountMappingConfigSchema = z.object({
   mapping_id: uuidSchema,
   account_type: z.enum(['income', 'expense', 'asset', 'liability', 'equity']),
   alga_account_name: z.string(),
@@ -340,7 +340,7 @@ export const accountMappingConfigSchema = z.object({
 }).merge(baseEntitySchema);
 
 // Account mapping request schema
-export const accountMappingRequestSchema = z.object({
+const accountMappingRequestSchema = z.object({
   mappings: z.array(z.object({
     account_type: z.enum(['income', 'expense', 'asset', 'liability', 'equity']),
     alga_account_name: z.string(),
@@ -355,7 +355,7 @@ export const accountMappingRequestSchema = z.object({
 // ============================================================================
 
 // QBO Payment schema
-export const qboPaymentSchema = z.object({
+const qboPaymentSchema = z.object({
   Id: z.string().optional(),
   SyncToken: z.string().optional(),
   CustomerRef: qboRefSchema,
@@ -376,7 +376,7 @@ export const qboPaymentSchema = z.object({
 });
 
 // Payment sync request schema
-export const paymentSyncRequestSchema = z.object({
+const paymentSyncRequestSchema = z.object({
   payment_id: uuidSchema.optional(), // Sync specific payment, or all if omitted
   invoice_id: uuidSchema.optional(), // Sync payments for specific invoice
   date_range: z.object({
@@ -388,7 +388,7 @@ export const paymentSyncRequestSchema = z.object({
 });
 
 // Payment sync response schema
-export const paymentSyncResponseSchema = z.object({
+const paymentSyncResponseSchema = z.object({
   success: z.boolean(),
   synced_payments: z.number().min(0),
   created_payments: z.number().min(0),
@@ -408,7 +408,7 @@ export const paymentSyncResponseSchema = z.object({
 // ============================================================================
 
 // QBO Tax Code schema
-export const qboTaxCodeSchema = z.object({
+const qboTaxCodeSchema = z.object({
   Id: z.string(),
   SyncToken: z.string().optional(),
   Name: z.string(),
@@ -434,7 +434,7 @@ export const qboTaxCodeSchema = z.object({
 });
 
 // QBO Tax Rate schema
-export const qboTaxRateSchema = z.object({
+const qboTaxRateSchema = z.object({
   Id: z.string(),
   SyncToken: z.string().optional(),
   Name: z.string(),
@@ -447,7 +447,7 @@ export const qboTaxRateSchema = z.object({
 });
 
 // Tax mapping configuration schema
-export const taxMappingConfigSchema = z.object({
+const taxMappingConfigSchema = z.object({
   mapping_id: uuidSchema,
   alga_tax_region: z.string(),
   qbo_tax_code_id: z.string(),
@@ -459,7 +459,7 @@ export const taxMappingConfigSchema = z.object({
 }).merge(baseEntitySchema);
 
 // Tax mapping request schema
-export const taxMappingRequestSchema = z.object({
+const taxMappingRequestSchema = z.object({
   mappings: z.array(z.object({
     alga_tax_region: z.string(),
     qbo_tax_code_id: z.string(),
@@ -473,7 +473,7 @@ export const taxMappingRequestSchema = z.object({
 // ============================================================================
 
 // Sync status enum
-export const syncStatusSchema = z.enum([
+const syncStatusSchema = z.enum([
   'pending',
   'in_progress', 
   'completed',
@@ -483,7 +483,7 @@ export const syncStatusSchema = z.enum([
 ]);
 
 // Sync operation type enum
-export const syncOperationTypeSchema = z.enum([
+const syncOperationTypeSchema = z.enum([
   'customer_sync',
   'invoice_export',
   'invoice_import',
@@ -495,7 +495,7 @@ export const syncOperationTypeSchema = z.enum([
 ]);
 
 // Sync status record schema
-export const syncStatusRecordSchema = z.object({
+const syncStatusRecordSchema = z.object({
   sync_id: uuidSchema,
   operation_type: syncOperationTypeSchema,
   status: syncStatusSchema,
@@ -511,7 +511,7 @@ export const syncStatusRecordSchema = z.object({
 }).merge(baseEntitySchema);
 
 // Sync status query schema
-export const syncStatusQuerySchema = z.object({
+const syncStatusQuerySchema = z.object({
   operation_type: syncOperationTypeSchema.optional(),
   status: syncStatusSchema.optional(),
   date_range: z.object({
@@ -522,7 +522,7 @@ export const syncStatusQuerySchema = z.object({
 });
 
 // Error handling configuration schema
-export const errorHandlingConfigSchema = z.object({
+const errorHandlingConfigSchema = z.object({
   config_id: uuidSchema,
   operation_type: syncOperationTypeSchema,
   retry_attempts: z.number().min(0).max(10).default(3),
@@ -539,7 +539,7 @@ export const errorHandlingConfigSchema = z.object({
 // ============================================================================
 
 // Field mapping schema
-export const fieldMappingSchema = z.object({
+const fieldMappingSchema = z.object({
   alga_field: z.string(),
   qbo_field: z.string(),
   transform_function: z.string().optional(),
@@ -549,7 +549,7 @@ export const fieldMappingSchema = z.object({
 });
 
 // Entity mapping configuration schema
-export const entityMappingConfigSchema = z.object({
+const entityMappingConfigSchema = z.object({
   mapping_id: uuidSchema,
   entity_type: z.enum(['customer', 'invoice', 'payment', 'item', 'tax_code']),
   mapping_name: z.string(),
@@ -560,7 +560,7 @@ export const entityMappingConfigSchema = z.object({
 }).merge(baseEntitySchema);
 
 // Mapping configuration request schema
-export const mappingConfigRequestSchema = z.object({
+const mappingConfigRequestSchema = z.object({
   entity_type: z.enum(['customer', 'invoice', 'payment', 'item', 'tax_code']),
   mapping_name: z.string(),
   field_mappings: z.array(fieldMappingSchema).min(1),
@@ -573,7 +573,7 @@ export const mappingConfigRequestSchema = z.object({
 // ============================================================================
 
 // Bulk sync request schema
-export const bulkSyncRequestSchema = z.object({
+const bulkSyncRequestSchema = z.object({
   operations: z.array(z.object({
     operation_type: syncOperationTypeSchema,
     entity_ids: z.array(uuidSchema).optional(),
@@ -590,7 +590,7 @@ export const bulkSyncRequestSchema = z.object({
 });
 
 // Bulk sync response schema
-export const bulkSyncResponseSchema = z.object({
+const bulkSyncResponseSchema = z.object({
   bulk_sync_id: uuidSchema,
   status: syncStatusSchema,
   started_at: z.string().datetime(),
@@ -615,7 +615,7 @@ export const bulkSyncResponseSchema = z.object({
 // ============================================================================
 
 // Health check type enum
-export const healthCheckTypeSchema = z.enum([
+const healthCheckTypeSchema = z.enum([
   'connection',
   'authentication',
   'api_limits',
@@ -626,7 +626,7 @@ export const healthCheckTypeSchema = z.enum([
 ]);
 
 // Health status enum
-export const healthStatusSchema = z.enum([
+const healthStatusSchema = z.enum([
   'healthy',
   'warning',
   'critical',
@@ -634,7 +634,7 @@ export const healthStatusSchema = z.enum([
 ]);
 
 // Health check result schema
-export const healthCheckResultSchema = z.object({
+const healthCheckResultSchema = z.object({
   check_type: healthCheckTypeSchema,
   status: healthStatusSchema,
   message: z.string(),
@@ -644,7 +644,7 @@ export const healthCheckResultSchema = z.object({
 });
 
 // Integration health response schema
-export const integrationHealthResponseSchema = z.object({
+const integrationHealthResponseSchema = z.object({
   overall_status: healthStatusSchema,
   last_health_check: z.string().datetime(),
   connection_status: qboConnectionStatusSchema,
@@ -669,7 +669,7 @@ export const integrationHealthResponseSchema = z.object({
 });
 
 // Health monitoring configuration schema
-export const healthMonitoringConfigSchema = z.object({
+const healthMonitoringConfigSchema = z.object({
   config_id: uuidSchema,
   check_interval_minutes: z.number().min(1).max(1440).default(15),
   enabled_checks: z.array(healthCheckTypeSchema),
@@ -692,7 +692,7 @@ export const healthMonitoringConfigSchema = z.object({
 // ============================================================================
 
 // QBO Item schema
-export const qboItemSchema = z.object({
+const qboItemSchema = z.object({
   Id: z.string(),
   SyncToken: z.string().optional(),
   Name: z.string(),
@@ -708,7 +708,7 @@ export const qboItemSchema = z.object({
 });
 
 // QBO Term schema
-export const qboTermSchema = z.object({
+const qboTermSchema = z.object({
   Id: z.string(),
   SyncToken: z.string().optional(),
   Name: z.string(),
@@ -721,7 +721,7 @@ export const qboTermSchema = z.object({
 });
 
 // QBO Payment Method schema
-export const qboPaymentMethodSchema = z.object({
+const qboPaymentMethodSchema = z.object({
   Id: z.string(),
   SyncToken: z.string().optional(),
   Name: z.string(),
@@ -735,7 +735,7 @@ export const qboPaymentMethodSchema = z.object({
 // ============================================================================
 
 // QBO entity filter schema
-export const qboEntityFilterSchema = z.object({
+const qboEntityFilterSchema = z.object({
   entity_type: z.enum(['customer', 'invoice', 'payment', 'item', 'account', 'tax_code', 'term']),
   active_only: z.boolean().default(true),
   modified_since: z.string().datetime().optional(),
@@ -744,7 +744,7 @@ export const qboEntityFilterSchema = z.object({
 });
 
 // Sync history filter schema
-export const syncHistoryFilterSchema = baseFilterSchema.extend({
+const syncHistoryFilterSchema = baseFilterSchema.extend({
   operation_type: syncOperationTypeSchema.optional(),
   status: syncStatusSchema.optional(),
   date_range: z.object({
@@ -758,7 +758,7 @@ export const syncHistoryFilterSchema = baseFilterSchema.extend({
 // ============================================================================
 
 // QBO entity list response schema
-export const qboEntityListResponseSchema = successResponseSchema.extend({
+const qboEntityListResponseSchema = successResponseSchema.extend({
   data: z.array(z.any()),
   metadata: z.object({
     entity_type: z.string(),
@@ -768,12 +768,12 @@ export const qboEntityListResponseSchema = successResponseSchema.extend({
 });
 
 // Sync status list response schema
-export const syncStatusListResponseSchema = paginatedResponseSchema.extend({
+const syncStatusListResponseSchema = paginatedResponseSchema.extend({
   data: z.array(syncStatusRecordSchema)
 });
 
 // Mapping configuration list response schema
-export const mappingConfigListResponseSchema = paginatedResponseSchema.extend({
+const mappingConfigListResponseSchema = paginatedResponseSchema.extend({
   data: z.array(entityMappingConfigSchema)
 });
 
@@ -782,17 +782,17 @@ export const mappingConfigListResponseSchema = paginatedResponseSchema.extend({
 // ============================================================================
 
 // QBO entity ID parameter schema
-export const qboEntityIdParamSchema = z.object({
+const qboEntityIdParamSchema = z.object({
   entity_id: z.string().min(1)
 });
 
 // Sync ID parameter schema
-export const syncIdParamSchema = z.object({
+const syncIdParamSchema = z.object({
   sync_id: uuidSchema
 });
 
 // Mapping ID parameter schema
-export const mappingIdParamSchema = z.object({
+const mappingIdParamSchema = z.object({
   mapping_id: uuidSchema
 });
 

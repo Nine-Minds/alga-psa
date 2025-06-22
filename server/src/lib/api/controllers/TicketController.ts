@@ -346,7 +346,7 @@ export class TicketController extends BaseController {
       const ticket = await this.ticketService.update(ticketId, validatedData, req.context!);
       
       // Add HATEOAS links
-      const links = {
+      const links: any = {
         self: `/api/v1/tickets/${ticketId}`,
         edit: `/api/v1/tickets/${ticketId}`,
         collection: '/api/v1/tickets'
@@ -419,7 +419,7 @@ export class TicketController extends BaseController {
       }
 
       // Add HATEOAS links
-      const links = {
+      const links: any = {
         self: `/api/v1/tickets/${id}`,
         edit: `/api/v1/tickets/${id}`,
         delete: `/api/v1/tickets/${id}`,

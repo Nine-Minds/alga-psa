@@ -281,7 +281,7 @@ export class ContactController extends BaseController {
       }
 
       // Add HATEOAS links
-      const links = {
+      const links: any = {
         self: `/api/v1/contacts/${id}`,
         edit: `/api/v1/contacts/${id}`,
         delete: `/api/v1/contacts/${id}`,
@@ -311,7 +311,7 @@ export class ContactController extends BaseController {
       const contact = await this.contactService.create(validatedData, req.context!);
       
       // Add HATEOAS links
-      const links = {
+      const links: any = {
         self: `/api/v1/contacts/${contact.contact_name_id}`,
         edit: `/api/v1/contacts/${contact.contact_name_id}`,
         collection: '/api/v1/contacts'
@@ -340,7 +340,7 @@ export class ContactController extends BaseController {
       const contact = await this.contactService.update(id, validatedData, req.context!);
       
       // Add HATEOAS links
-      const links = {
+      const links: any = {
         self: `/api/v1/contacts/${id}`,
         edit: `/api/v1/contacts/${id}`,
         collection: '/api/v1/contacts'
