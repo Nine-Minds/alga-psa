@@ -12,12 +12,12 @@ export async function validateTenantAccess(
 ): Promise<void> {
   // TODO: Implement actual tenant access validation
   // This should check if the user has access to the specified tenant
-  if (\!tenantId) {
+  if (!tenantId) {
     throw new Error('Tenant ID is required');
   }
   
   // For now, just validate the format
-  if (\!isValidUUID(tenantId)) {
+  if (!isValidUUID(tenantId)) {
     throw new Error('Invalid tenant ID format');
   }
   
@@ -31,4 +31,4 @@ export function isValidUUID(uuid: string): boolean {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   return uuidRegex.test(uuid);
 }
-EOF < /dev/null
+
