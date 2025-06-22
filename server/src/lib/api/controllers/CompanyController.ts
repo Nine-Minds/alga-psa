@@ -347,7 +347,7 @@ export class CompanyController extends BaseController {
     );
 
     return middleware(async (req: ApiRequest, validatedData: CreateCompanyData) => {
-      const company = await this.companyService.create(validatedData, req.context!);
+      const company = await this.companyService.createCompany(validatedData, req.context!);
       
       // Add HATEOAS links
       const links = {

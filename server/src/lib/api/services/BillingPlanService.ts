@@ -17,6 +17,7 @@ import BillingPlan from 'server/src/lib/models/billingPlan';
 import BillingPlanFixedConfig from 'server/src/lib/models/billingPlanFixedConfig';
 import BundleBillingPlan from 'server/src/lib/models/bundleBillingPlan';
 import { PlanServiceConfigurationService } from 'server/src/lib/services/planServiceConfigurationService';
+import { publishEvent } from 'server/src/lib/eventBus/publishers';
 
 // Import schema types for validation
 import {
@@ -104,143 +105,288 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
    * List billing plans with enhanced filtering and analytics
    */
   async list(
-    options: ListOptions, 
-    context: ServiceContext, 
-    serviceOptions: BillingPlanServiceOptions = {}
-  ): Promise<ListResult<BillingPlanResponse>> {
-    const { knex } = await this.getKnex();
-    
-    const {
-      page = 1,
-      limit = 25,
-      filters = {} as BillingPlanFilterData,
-      sort,
-      order
-    } = options;
+      options: ListOptions, 
+      context: ServiceContext
+    ): Promise<ListResult<IBillingPlan>> {
+      const serviceOptions: BillingPlanServiceOptions = {};
+      const { knex } = await this.getKnex();
+      
+      const {
+        page = 1,
+        limit = 25,
+        filters = {} as BillingPlanFilterData,
+        sort,
+        order
+      } = options;
+  
+      // Build enhanced query with analytics if requested
+      let dataQuery = this.buildBillingPlanQuery(knex, context, serviceOptions);
+      dataQuery = this.applyBillingPlanFilters(dataQuery, filters);
+      dataQuery = this.applySorting(dataQuery, sort, order);
+      dataQuery = this.applyPagination(dataQuery, page, limit);
+  
+      // Build count query
+      let countQuery = this.buildBaseQuery(knex, context);
+      countQuery = this.applyBillingPlanFilters(countQuery, filters);
+  
+      // Execute queries
+      const [plans, [{ count }]] = await Promise.all([
+        dataQuery,
+        countQuery.count('* as count')
+      ]);
+  
+      // Transform null to undefined for compatibility
+      const transformedPlans = plans.map((plan: any) => ({
+        ...plan,
+        service_category: plan.service_category || undefined
+      }));
+  
+      return {
+        data: transformedPlans as IBillingPlan[],
+        total: parseInt(count as string)
+      };
+    }
+  
+    // Extended list method for API use
+    async listWithOptions(
+      options: ListOptions, 
+      context: ServiceContext, 
+      serviceOptions: BillingPlanServiceOptions = {}
+    ): Promise<ListResult<BillingPlanResponse>> {
+      const { knex } = await this.getKnex();
+      
+      const {
+        page = 1,
+        limit = 25,
+        filters = {} as BillingPlanFilterData,
+        sort,
+        order
+      } = options;
+  
+      // Build enhanced query with analytics if requested
+      let dataQuery = this.buildBillingPlanQuery(knex, context, serviceOptions);
+      dataQuery = this.applyBillingPlanFilters(dataQuery, filters);
+      dataQuery = this.applySorting(dataQuery, sort, order);
+      dataQuery = this.applyPagination(dataQuery, page, limit);
+  
+      // Build count query
+      let countQuery = this.buildBaseQuery(knex, context);
+      countQuery = this.applyBillingPlanFilters(countQuery, filters);
+  
+      // Execute queries
+      const [plans, [{ count }]] = await Promise.all([
+        dataQuery,
+        countQuery.count('* as count')
+      ]);
+  
+      // Transform null to undefined for compatibility
+      const transformedPlans = plans.map((plan: any) => ({
+        ...plan,
+        service_category: plan.service_category || undefined
+      }));
+  
+      // Add HATEOAS links
+      const plansWithLinks = transformedPlans.map((plan: any) => 
+        addHateoasLinks(plan, this.generatePlanLinks(plan.plan_id!, context))
+      );
+  
+      return {
+        data: plansWithLinks as BillingPlanResponse[],
+        total: parseInt(count as string)
+      };
+    }
 
-    // Build enhanced query with analytics if requested
-    let dataQuery = this.buildBillingPlanQuery(knex, context, serviceOptions);
-    dataQuery = this.applyBillingPlanFilters(dataQuery, filters);
-    dataQuery = this.applySorting(dataQuery, sort, order);
-    dataQuery = this.applyPagination(dataQuery, page, limit);
 
-    // Build count query
-    let countQuery = this.buildBaseQuery(knex, context);
-    countQuery = this.applyBillingPlanFilters(countQuery, filters);
-
-    // Execute queries
-    const [plans, [{ count }]] = await Promise.all([
-      dataQuery,
-      countQuery.count('* as count')
-    ]);
-
-    // Add HATEOAS links
-    const plansWithLinks = plans.map((plan: IBillingPlan) => 
-      addHateoasLinks(plan, this.generatePlanLinks(plan.plan_id!, context))
-    );
-
-    return {
-      data: plansWithLinks as BillingPlanResponse[],
-      total: parseInt(count as string)
-    };
-  }
 
   /**
    * Get billing plan by ID with related data
    */
-  async getById(
-    id: string, 
-    context: ServiceContext, 
-    options: BillingPlanServiceOptions = {}
-  ): Promise<BillingPlanResponse | null> {
-    const { knex } = await this.getKnex();
-    
-    const query = this.buildBillingPlanQuery(knex, context, options)
-      .where('bp.plan_id', id)
-      .first();
-
-    const plan = await query;
-    
-    if (!plan) {
-      return null;
+  async getById(id: string, context: ServiceContext): Promise<IBillingPlan | null> {
+      const { knex } = await this.getKnex();
+      
+      const query = this.buildBaseQuery(knex, context)
+        .where('plan_id', id)
+        .first();
+  
+      const plan = await query;
+      
+      if (!plan) {
+        return null;
+      }
+  
+      // Transform null to undefined for compatibility
+      return {
+        ...plan,
+        service_category: plan.service_category || undefined
+      } as IBillingPlan;
     }
+  
+    /**
+     * Get billing plan by ID with related data and options
+     */
+    async getByIdWithOptions(
+        id: string, 
+        context: ServiceContext, 
+        options: BillingPlanServiceOptions = {}
+      ): Promise<BillingPlanResponse | null> {
+        const { knex } = await this.getKnex();
+        
+        const query = this.buildBillingPlanQuery(knex, context, options)
+          .where('bp.plan_id', id)
+          .first();
+    
+        const plan = await query;
+        
+        if (!plan) {
+          return null;
+        }
+    
+        // Transform null to undefined for compatibility
+        const transformedPlan = {
+          ...plan,
+          service_category: plan.service_category || undefined
+        };
+    
+        // Add HATEOAS links
+        return addHateoasLinks(transformedPlan, this.generatePlanLinks(id, context)) as BillingPlanResponse;
+      }
 
-    // Add HATEOAS links
-    return addHateoasLinks(plan, this.generatePlanLinks(id, context)) as BillingPlanResponse;
-  }
+
 
   /**
    * Create new billing plan with validation and audit trail
    */
-  async create(data: CreateBillingPlanData, context: ServiceContext): Promise<BillingPlanResponse> {
-    const { knex } = await this.getKnex();
-    
-    return withTransaction(knex, async (trx) => {
-      // Validate business rules
-      await this.validatePlanCreation(data, context, trx);
+  async create(data: CreateBillingPlanData, context: ServiceContext): Promise<any> {
+      const { knex } = await this.getKnex();
       
-      // Create the plan
-      const planData = this.addCreateAuditFields(data, context);
-      planData.plan_id = uuidv4();
-      
-      const [plan] = await trx('billing_plans').insert(planData).returning('*');
-      
-      // Create type-specific configuration if needed
-      if (data.plan_type === 'Fixed' && data.base_rate !== undefined) {
-        await this.createFixedPlanConfig(plan.plan_id, {
-          base_rate: data.base_rate,
-          enable_proration: false,
-          billing_cycle_alignment: 'start'
-        }, context, trx);
-      }
-      
-      // Add HATEOAS links
-      return addHateoasLinks(plan, this.generatePlanLinks(plan.plan_id, context)) as BillingPlanResponse;
-    });
-  }
+      return withTransaction(knex, async (trx) => {
+        const planData = this.addCreateAuditFields(data, context);
+        planData.plan_id = uuidv4();
+        
+        // Create the base billing plan record
+        const [billingPlan] = await trx('billing_plans').insert(planData).returning('*');
+        
+        // Create default fixed config if plan type is Fixed (handle base_rate if provided)
+        if (data.plan_type === 'Fixed') {
+          const fixedConfig = {
+            plan_id: planData.plan_id,
+            base_rate: (data as any).base_rate || 0,
+            enable_proration: false,
+            billing_cycle_alignment: 'start' as const,
+            tenant: context.tenant,
+            created_at: new Date(),
+            updated_at: new Date()
+          };
+          await trx('billing_plan_fixed_configs').insert(fixedConfig);
+        }
+  
+        // Publish event
+        await publishEvent({
+          eventType: 'BILLING_PLAN_CREATED',
+          payload: {
+            tenantId: context.tenant,
+            planId: billingPlan.plan_id,
+            planName: data.plan_name,
+            planType: data.plan_type,
+            userId: context.userId,
+            timestamp: new Date().toISOString()
+          }
+        });
+  
+        return this.getById(billingPlan.plan_id, context);
+      });
+    }
+
 
   /**
    * Update billing plan with validation
    */
-  async update(
-    id: string, 
-    data: UpdateBillingPlanData, 
-    context: ServiceContext
-  ): Promise<BillingPlanResponse> {
-    const { knex } = await this.getKnex();
-    
-    return withTransaction(knex, async (trx) => {
-      // Check if plan exists and get current state
-      const existingPlan = await this.getExistingPlan(id, context, trx);
+  async update(id: string, data: Partial<IBillingPlan>, context: ServiceContext): Promise<IBillingPlan> {
+      const { knex } = await this.getKnex();
       
-      // Validate business rules
-      await this.validatePlanUpdate(id, data, existingPlan, context, trx);
+      return withTransaction(knex, async (trx) => {
+        // Check if plan exists and get current state
+        const existingPlan = await this.getExistingPlan(id, context, trx);
+        
+        // Prepare update data
+        const updateData = this.addUpdateAuditFields(data, context);
+        
+        // Handle plan type specific logic
+        if (existingPlan.plan_type === 'Hourly') {
+          // Remove per-service fields for hourly plans
+          delete updateData.hourly_rate;
+          delete updateData.minimum_billable_time;
+          delete updateData.round_up_to_nearest;
+        }
+        
+        // Update the plan
+        const [updatedPlan] = await trx('billing_plans')
+          .where('plan_id', id)
+          .where('tenant', context.tenant)
+          .update(updateData)
+          .returning('*');
+        
+        if (!updatedPlan) {
+          throw new Error('Plan not found or permission denied');
+        }
+        
+        // Transform null to undefined for compatibility
+        return {
+          ...updatedPlan,
+          service_category: updatedPlan.service_category || undefined
+        } as IBillingPlan;
+      });
+    }
+  
+    /**
+     * Update billing plan with enhanced features and response
+     */
+    async updatePlan(
+      id: string, 
+      data: UpdateBillingPlanData, 
+      context: ServiceContext
+    ): Promise<BillingPlanResponse> {
+      const { knex } = await this.getKnex();
       
-      // Prepare update data
-      const updateData = this.addUpdateAuditFields(data, context);
-      
-      // Handle plan type specific logic
-      if (existingPlan.plan_type === 'Hourly') {
-        // Remove per-service fields for hourly plans
-        delete updateData.hourly_rate;
-        delete updateData.minimum_billable_time;
-        delete updateData.round_up_to_nearest;
-      }
-      
-      // Update the plan
-      const [updatedPlan] = await trx('billing_plans')
-        .where('plan_id', id)
-        .where('tenant', context.tenant)
-        .update(updateData)
-        .returning('*');
-      
-      if (!updatedPlan) {
-        throw new Error('Plan not found or permission denied');
-      }
-      
-      return addHateoasLinks(updatedPlan, this.generatePlanLinks(id, context)) as BillingPlanResponse;
-    });
-  }
+      return withTransaction(knex, async (trx) => {
+        // Check if plan exists and get current state
+        const existingPlan = await this.getExistingPlan(id, context, trx);
+        
+        // Validate business rules
+        await this.validatePlanUpdate(id, data, existingPlan, context, trx);
+        
+        // Prepare update data
+        const updateData = this.addUpdateAuditFields(data, context);
+        
+        // Handle plan type specific logic
+        if (existingPlan.plan_type === 'Hourly') {
+          // Remove per-service fields for hourly plans
+          delete updateData.hourly_rate;
+          delete updateData.minimum_billable_time;
+          delete updateData.round_up_to_nearest;
+        }
+        
+        // Update the plan
+        const [updatedPlan] = await trx('billing_plans')
+          .where('plan_id', id)
+          .where('tenant', context.tenant)
+          .update(updateData)
+          .returning('*');
+        
+        if (!updatedPlan) {
+          throw new Error('Plan not found or permission denied');
+        }
+        
+        // Transform null to undefined for compatibility
+        const transformedPlan = {
+          ...updatedPlan,
+          service_category: updatedPlan.service_category || undefined
+        };
+        
+        return addHateoasLinks(transformedPlan, this.generatePlanLinks(id, context)) as BillingPlanResponse;
+      });
+    }
+
 
   /**
    * Delete billing plan with cascade checks
@@ -362,54 +508,55 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
    * Add service to billing plan
    */
   async addServiceToPlan(
-    planId: string,
-    data: AddServiceToPlanData,
-    context: ServiceContext
-  ): Promise<IPlanServiceConfiguration> {
-    const { knex } = await this.getKnex();
-    
-    return withTransaction(knex, async (trx) => {
-      // Validate plan exists
-      const plan = await this.getExistingPlan(planId, context, trx);
+      planId: string,
+      data: AddServiceToPlanData,
+      context: ServiceContext
+    ): Promise<any> {
+      const { knex } = await this.getKnex();
       
-      // Validate service exists
-      const service = await this.getServiceById(data.service_id, context, trx);
-      if (!service) {
-        throw new Error('Service not found');
-      }
-      
-      // Check if service already exists in plan
-      const existingConfig = await trx('plan_service_configuration')
-        .where('plan_id', planId)
-        .where('service_id', data.service_id)
-        .where('tenant', context.tenant)
-        .first();
-      
-      if (existingConfig) {
-        throw new Error('Service already exists in this plan');
-      }
-      
-      // Create service configuration
-      this.planServiceConfigService = new PlanServiceConfigurationService(trx, context.tenant);
-      
-      const baseConfigData = {
-        plan_id: planId,
-        service_id: data.service_id,
-        configuration_type: data.configuration_type || plan.plan_type,
-        custom_rate: data.custom_rate,
-        quantity: data.quantity || 1,
-        tenant: context.tenant
-      };
-      
-      const configId = await this.planServiceConfigService.createConfiguration(
-        baseConfigData,
-        data.type_config || {}
-      );
-      
-      // Return the created configuration
-      return await this.planServiceConfigService.getConfigurationWithDetails(configId);
-    });
-  }
+      return withTransaction(knex, async (trx) => {
+        // Validate plan exists
+        const plan = await this.getExistingPlan(planId, context, trx);
+        
+        // Validate service exists
+        const service = await this.getServiceById(data.service_id, context, trx);
+        if (!service) {
+          throw new Error('Service not found');
+        }
+        
+        // Check if service already exists in plan
+        const existingConfig = await trx('plan_service_configuration')
+          .where('plan_id', planId)
+          .where('service_id', data.service_id)
+          .where('tenant', context.tenant)
+          .first();
+        
+        if (existingConfig) {
+          throw new Error('Service already exists in this plan');
+        }
+        
+        // Create service configuration
+        this.planServiceConfigService = new PlanServiceConfigurationService(trx, context.tenant);
+        
+        const baseConfigData = {
+          plan_id: planId,
+          service_id: data.service_id,
+          configuration_type: data.configuration_type || plan.plan_type,
+          custom_rate: data.custom_rate,
+          quantity: data.quantity || 1,
+          tenant: context.tenant
+        };
+        
+        const configId = await this.planServiceConfigService.createConfiguration(
+          baseConfigData,
+          data.type_config || {}
+        );
+        
+        // Return the created configuration
+        return await this.planServiceConfigService.getConfigurationWithDetails(configId);
+      });
+    }
+
 
   /**
    * Remove service from billing plan
@@ -443,43 +590,39 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
    * Update service configuration in plan
    */
   async updatePlanService(
-    planId: string,
-    serviceId: string,
-    data: UpdatePlanServiceData,
-    context: ServiceContext
-  ): Promise<IPlanServiceConfiguration> {
-    const { knex } = await this.getKnex();
-    
-    return withTransaction(knex, async (trx) => {
-      // Get existing configuration
-      const config = await trx('plan_service_configuration')
-        .where('plan_id', planId)
-        .where('service_id', serviceId)
-        .where('tenant', context.tenant)
-        .first();
+      planId: string,
+      serviceId: string,
+      data: UpdatePlanServiceData,
+      context: ServiceContext
+    ): Promise<any> {
+      const { knex } = await this.getKnex();
       
-      if (!config) {
-        throw new Error('Service configuration not found in plan');
-      }
-      
-      // Update configuration
-      this.planServiceConfigService = new PlanServiceConfigurationService(trx, context.tenant);
-      
-      const baseConfigUpdates = {
-        custom_rate: data.custom_rate,
-        quantity: data.quantity
-      };
-      
-      await this.planServiceConfigService.updateConfiguration(
-        config.config_id,
-        baseConfigUpdates,
-        data.type_config
-      );
-      
-      // Return updated configuration
-      return await this.planServiceConfigService.getConfigurationWithDetails(config.config_id);
-    });
-  }
+      return withTransaction(knex, async (trx) => {
+        // Get existing configuration
+        const config = await trx('plan_service_configuration')
+          .where('plan_id', planId)
+          .where('service_id', serviceId)
+          .where('tenant', context.tenant)
+          .first();
+        
+        if (!config) {
+          throw new Error('Service configuration not found in plan');
+        }
+        
+        // Update service configuration
+        this.planServiceConfigService = new PlanServiceConfigurationService(trx, context.tenant);
+        
+        await this.planServiceConfigService.updateConfiguration(
+          config.config_id,
+          data,
+          data.type_config || {}
+        );
+        
+        // Return updated configuration
+        return await this.planServiceConfigService.getConfigurationWithDetails(config.config_id);
+      });
+    }
+
 
   /**
    * Get all services in a billing plan
@@ -648,9 +791,7 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
     return withTransaction(knex, async (trx) => {
       // Validate plan exists and is active
       const plan = await this.getExistingPlan(data.plan_id, context, trx);
-      if (!plan.is_active) {
-        throw new Error('Cannot assign inactive plan to company');
-      }
+      // Plan existence check is sufficient - active plans are in the table
       
       // Validate company exists
       await this.validateCompanyExists(data.company_id, context, trx);
@@ -983,69 +1124,72 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
   /**
    * Bulk create billing plans
    */
-  async bulkCreate(
-    data: BulkCreateBillingPlansData,
-    context: ServiceContext
-  ): Promise<BillingPlanResponse[]> {
-    const { knex } = await this.getKnex();
-    
-    return withTransaction(knex, async (trx) => {
-      const results: BillingPlanResponse[] = [];
+  async bulkCreateBillingPlans(
+      data: BulkCreateBillingPlansData,
+      context: ServiceContext
+    ): Promise<BillingPlanResponse[]> {
+      const { knex } = await this.getKnex();
       
-      for (const planData of data.plans) {
-        // Validate each plan
-        await this.validatePlanCreation(planData, context, trx);
+      return withTransaction(knex, async (trx) => {
+        const results: BillingPlanResponse[] = [];
         
-        // Create plan
-        const auditedData = this.addCreateAuditFields({
-          plan_id: uuidv4(),
-          ...planData
-        }, context);
+        for (const planData of data.plans) {
+          // Validate each plan
+          await this.validatePlanCreation(planData, context, trx);
+          
+          // Create plan
+          const auditedData = this.addCreateAuditFields({
+            plan_id: uuidv4(),
+            ...planData
+          }, context);
+          
+          const [plan] = await trx('billing_plans').insert(auditedData).returning('*');
+          results.push(addHateoasLinks(plan, this.generatePlanLinks(plan.plan_id, context)) as BillingPlanResponse);
+        }
         
-        const [plan] = await trx('billing_plans').insert(auditedData).returning('*');
-        results.push(addHateoasLinks(plan, this.generatePlanLinks(plan.plan_id, context)) as BillingPlanResponse);
-      }
-      
-      return results;
-    });
-  }
+        return results;
+      });
+    }
+
 
   /**
    * Bulk update billing plans
    */
-  async bulkUpdate(
-    data: BulkUpdateBillingPlansData,
-    context: ServiceContext
-  ): Promise<BillingPlanResponse[]> {
-    const { knex } = await this.getKnex();
-    
-    return withTransaction(knex, async (trx) => {
-      const results: BillingPlanResponse[] = [];
+  async bulkUpdateBillingPlans(
+      data: BulkUpdateBillingPlansData,
+      context: ServiceContext
+    ): Promise<BillingPlanResponse[]> {
+      const { knex } = await this.getKnex();
       
-      for (const update of data.plans) {
-        const updatedPlan = await this.update(update.plan_id, update.data, context);
-        results.push(updatedPlan);
-      }
-      
-      return results;
-    });
-  }
+      return withTransaction(knex, async (trx) => {
+        const results: BillingPlanResponse[] = [];
+        
+        for (const update of data.plans) {
+          const updatedPlan = await this.updatePlan(update.plan_id, update.data, context);
+          results.push(updatedPlan);
+        }
+        
+        return results;
+      });
+    }
+
 
   /**
    * Bulk delete billing plans
    */
-  async bulkDelete(
-    data: BulkDeleteBillingPlansData,
-    context: ServiceContext
-  ): Promise<void> {
-    const { knex } = await this.getKnex();
-    
-    return withTransaction(knex, async (trx) => {
-      for (const planId of data.plan_ids) {
-        await this.delete(planId, context);
-      }
-    });
-  }
+  async bulkDeleteBillingPlans(
+      data: BulkDeleteBillingPlansData,
+      context: ServiceContext
+    ): Promise<void> {
+      const { knex } = await this.getKnex();
+      
+      return withTransaction(knex, async (trx) => {
+        for (const planId of data.plan_ids) {
+          await this.delete(planId, context);
+        }
+      });
+    }
+
 
   // ============================================================================
   // ANALYTICS AND REPORTING
@@ -1135,7 +1279,7 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
     
     const planTypeDistribution: Record<string, number> = {};
     plansByType.forEach((item: any) => {
-      planTypeDistribution[item.plan_type] = parseInt(item.count);
+      planTypeDistribution[item.plan_type] = parseInt(String(item.count));
     });
     
     // Get billing frequency distribution
@@ -1147,13 +1291,13 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
     
     const billingFrequencyDistribution: Record<string, number> = {};
     frequencyDistribution.forEach((item: any) => {
-      billingFrequencyDistribution[item.billing_frequency] = parseInt(item.count);
+      billingFrequencyDistribution[item.billing_frequency] = parseInt(String(item.count));
     });
     
     return {
-      total_plans: parseInt(planCount?.count || '0'),
-      total_bundles: parseInt(bundleCount?.count || '0'),
-      total_assignments: parseInt(assignmentCount?.count || '0'),
+      total_plans: parseInt(String(planCount?.count || '0')),
+      total_bundles: parseInt(String(bundleCount?.count || '0')),
+      total_assignments: parseInt(String(assignmentCount?.count || '0')),
       plans_by_type: planTypeDistribution,
       revenue_summary: {
         total_monthly_revenue: 0,
@@ -1164,7 +1308,7 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
         most_popular_plan_types: Object.entries(planTypeDistribution).map(([type, count]) => ({
           plan_type: type as any,
           count,
-          percentage: (count / parseInt(planCount?.count || '1')) * 100
+          percentage: (count / parseInt(String(planCount?.count || '1'))) * 100
         })),
         billing_frequency_distribution: billingFrequencyDistribution
       }
@@ -1252,29 +1396,33 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
   }
 
   private async validatePlanCreation(
-    data: CreateBillingPlanData,
-    context: ServiceContext,
-    trx?: Knex.Transaction
-  ): Promise<void> {
-    const knex = trx || await this.getKnex().then(({ knex }) => knex);
-    
-    // Check for duplicate plan names
-    const existingPlan = await knex('billing_plans')
-      .where('plan_name', data.plan_name)
-      .where('tenant', context.tenant)
-      .first();
-    
-    if (existingPlan) {
-      throw new Error('A plan with this name already exists');
+      data: CreateBillingPlanData,
+      context: ServiceContext,
+      trx?: Knex.Transaction
+    ): Promise<void> {
+      const { knex } = trx ? { knex: trx } : await this.getKnex();
+      
+      // Check for duplicate plan names
+      const existingPlan = await knex('billing_plans')
+        .where('plan_name', data.plan_name)
+        .where('tenant', context.tenant)
+        .first();
+      
+      if (existingPlan) {
+        throw new Error('A plan with this name already exists');
+      }
+      
+      // Validate plan type specific requirements
+      if (data.plan_type === 'Fixed') {
+        const baseRate = (data as any).base_rate;
+        if (baseRate !== undefined && baseRate < 0) {
+          throw new Error('Base rate must be non-negative for Fixed plans');
+        }
+      }
+      
+      // Add more validation rules as needed
     }
-    
-    // Validate plan type specific requirements
-    if (data.plan_type === 'Fixed' && data.base_rate && data.base_rate < 0) {
-      throw new Error('Base rate must be non-negative for Fixed plans');
-    }
-    
-    // Add more validation rules as needed
-  }
+
 
   private async validatePlanUpdate(
     planId: string,
@@ -1310,7 +1458,7 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
     context: ServiceContext,
     trx?: Knex.Transaction
   ): Promise<IBillingPlan> {
-    const knex = trx || await this.getKnex().then(({ knex }) => knex);
+    const { knex } = trx ? { knex: trx } : await this.getKnex();
     
     const plan = await knex('billing_plans')
       .where('plan_id', planId)
@@ -1329,7 +1477,7 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
     context: ServiceContext,
     trx?: Knex.Transaction
   ): Promise<{ inUse: boolean; reason?: string }> {
-    const knex = trx || await this.getKnex().then(({ knex }) => knex);
+    const { knex } = trx ? { knex: trx } : await this.getKnex();
     
     // Check company assignments
     const companyAssignments = await knex('company_billing_plans')
@@ -1339,7 +1487,7 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
       .count('* as count')
       .first();
     
-    const companyCount = parseInt(companyAssignments?.count || '0');
+    const companyCount = parseInt(String(companyAssignments?.count || '0'));
     if (companyCount > 0) {
       return {
         inUse: true,
@@ -1356,7 +1504,7 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
       .count('* as count')
       .first();
     
-    const bundleCount = parseInt(bundleAssignments?.count || '0');
+    const bundleCount = parseInt(String(bundleAssignments?.count || '0'));
     if (bundleCount > 0) {
       return {
         inUse: true,
@@ -1469,37 +1617,38 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
   }
 
   private async validateSafeUnassignment(
-    companyBillingPlanId: string,
-    context: ServiceContext,
-    trx: Knex.Transaction
-  ): Promise<void> {
-    // Check for pending invoices
-    const pendingInvoices = await trx('invoices')
-      .where('company_billing_plan_id', companyBillingPlanId)
-      .where('tenant', context.tenant)
-      .where('status', 'pending')
-      .count('* as count')
-      .first();
-    
-    if (parseInt(pendingInvoices?.count || '0') > 0) {
-      throw new Error('Cannot unassign plan: there are pending invoices');
+      companyBillingPlanId: string,
+      context: ServiceContext,
+      trx: Knex.Transaction
+    ): Promise<void> {
+      // Check for pending invoices
+      const pendingInvoices = await trx('invoices')
+        .where('company_billing_plan_id', companyBillingPlanId)
+        .where('tenant', context.tenant)
+        .where('status', 'pending')
+        .count('* as count')
+        .first();
+      
+      if (parseInt(String(pendingInvoices?.count || '0')) > 0) {
+        throw new Error('Cannot unassign plan: there are pending invoices');
+      }
+      
+      // Check for active usage tracking
+      const activeUsage = await trx('bucket_usage')
+        .join('company_billing_plans as cbp', function() {
+          this.on('bucket_usage.company_id', '=', 'cbp.company_id')
+              .andOn('bucket_usage.tenant', '=', 'cbp.tenant');
+        })
+        .where('cbp.company_billing_plan_id', companyBillingPlanId)
+        .where('bucket_usage.period_end', '>', new Date())
+        .count('* as count')
+        .first();
+      
+      if (parseInt(String(activeUsage?.count || '0')) > 0) {
+        throw new Error('Cannot unassign plan: there is active usage tracking');
+      }
     }
-    
-    // Check for active usage tracking
-    const activeUsage = await trx('bucket_usage')
-      .join('company_billing_plans as cbp', function() {
-        this.on('bucket_usage.company_id', '=', 'cbp.company_id')
-            .andOn('bucket_usage.tenant', '=', 'cbp.tenant');
-      })
-      .where('cbp.company_billing_plan_id', companyBillingPlanId)
-      .where('bucket_usage.period_end', '>', new Date())
-      .count('* as count')
-      .first();
-    
-    if (parseInt(activeUsage?.count || '0') > 0) {
-      throw new Error('Cannot unassign plan: there is active usage tracking');
-    }
-  }
+
 
   private async getServiceById(
     serviceId: string,

@@ -23,11 +23,20 @@ import {
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 
 export class TimeEntryService extends BaseService<any> {
-  protected tableName = 'time_entries';
-  protected primaryKey = 'entry_id';
+  constructor() {
+    super({
+      tableName: 'time_entries',
+      primaryKey: 'entry_id',
+      tenantColumn: 'tenant',
+      searchableFields: ['notes'],
+      defaultSort: 'start_time',
+      defaultOrder: 'desc'
+    });
+  }
 
   async list(options: ListOptions, context: ServiceContext, filters?: TimeEntryFilterData): Promise<ListResult<any>> {
-    const query = context.db(this.tableName)
+    const { knex } = await this.getKnex();
+    const query = knex(this.tableName)
       .where(`${this.tableName}.tenant`, context.tenant);
 
     // Apply filters
@@ -63,10 +72,10 @@ export class TimeEntryService extends BaseService<any> {
         query.where(`${this.tableName}.end_time`, '<=', filters.end_time_to);
       }
       if (filters.date_from) {
-        query.where(context.db.raw('DATE(start_time)'), '>=', filters.date_from);
+        query.where(knex.raw('DATE(start_time)'), '>=', filters.date_from);
       }
       if (filters.date_to) {
-        query.where(context.db.raw('DATE(start_time)'), '<=', filters.date_to);
+        query.where(knex.raw('DATE(start_time)'), '<=', filters.date_to);
       }
       if (filters.time_sheet_id) {
         query.where(`${this.tableName}.time_sheet_id`, filters.time_sheet_id);
@@ -76,12 +85,12 @@ export class TimeEntryService extends BaseService<any> {
       }
       if (filters.company_id) {
         query.leftJoin('tickets', function() {
-          this.on(`${this.tableName}.work_item_id`, 'tickets.ticket_id')
-            .andOn(`${this.tableName}.work_item_type`, context.db.raw('?', ['ticket']));
+          this.on(`time_entries.work_item_id`, 'tickets.ticket_id')
+            .andOn(`time_entries.work_item_type`, knex.raw('?', ['ticket']));
         })
         .leftJoin('project_tasks', function() {
-          this.on(`${this.tableName}.work_item_id`, 'project_tasks.task_id')
-            .andOn(`${this.tableName}.work_item_type`, context.db.raw('?', ['project_task']));
+          this.on(`time_entries.work_item_id`, 'project_tasks.task_id')
+            .andOn(`time_entries.work_item_type`, knex.raw('?', ['project_task']));
         })
         .leftJoin('project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')
         .leftJoin('projects', 'project_phases.project_id', 'projects.project_id')
@@ -104,17 +113,40 @@ export class TimeEntryService extends BaseService<any> {
       .leftJoin('time_sheets', `${this.tableName}.time_sheet_id`, 'time_sheets.id')
       .select(
         `${this.tableName}.*`,
-        context.db.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
+        knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
         'services.service_name',
-        context.db.raw(`ROUND(${this.tableName}.billable_duration / 60.0, 2) as duration_hours`),
-        context.db.raw(`CASE WHEN ${this.tableName}.billable_duration > 0 THEN true ELSE false END as is_billable`)
+        knex.raw(`ROUND(${this.tableName}.billable_duration / 60.0, 2) as duration_hours`),
+        knex.raw(`CASE WHEN ${this.tableName}.billable_duration > 0 THEN true ELSE false END as is_billable`)
       );
 
-    return this.executeListQuery(query, options);
+    // Apply pagination and sorting
+    const { page = 1, limit = 25, sort, order } = options;
+    const offset = (page - 1) * limit;
+    
+    const sortField = sort || this.defaultSort;
+    const sortOrder = order || this.defaultOrder;
+    
+    query.orderBy(`${this.tableName}.${sortField}`, sortOrder);
+    query.limit(limit).offset(offset);
+
+    // Get total count
+    const countQuery = knex(this.tableName)
+      .where(`${this.tableName}.tenant`, context.tenant);
+    
+    const [data, [{ count }]] = await Promise.all([
+      query,
+      countQuery.count('* as count')
+    ]);
+
+    return {
+      data,
+      total: parseInt(count as string)
+    };
   }
 
   async getById(id: string, context: ServiceContext): Promise<any | null> {
-    const timeEntry = await context.db(this.tableName)
+    const { knex } = await this.getKnex();
+    const timeEntry = await knex(this.tableName)
       .leftJoin('users', `${this.tableName}.user_id`, 'users.user_id')
       .leftJoin('services', `${this.tableName}.service_id`, 'services.service_id')
       .leftJoin('time_sheets', `${this.tableName}.time_sheet_id`, 'time_sheets.id')
@@ -124,10 +156,10 @@ export class TimeEntryService extends BaseService<any> {
       })
       .select(
         `${this.tableName}.*`,
-        context.db.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
+        knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
         'services.service_name',
-        context.db.raw(`ROUND(${this.tableName}.billable_duration / 60.0, 2) as duration_hours`),
-        context.db.raw(`CASE WHEN ${this.tableName}.billable_duration > 0 THEN true ELSE false END as is_billable`)
+        knex.raw(`ROUND(${this.tableName}.billable_duration / 60.0, 2) as duration_hours`),
+        knex.raw(`CASE WHEN ${this.tableName}.billable_duration > 0 THEN true ELSE false END as is_billable`)
       )
       .first();
 
@@ -157,6 +189,8 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async create(data: CreateTimeEntryData, context: ServiceContext): Promise<any> {
+    const { knex } = await this.getKnex();
+    
     // Calculate billable duration
     const startTime = new Date(data.start_time);
     const endTime = new Date(data.end_time);
@@ -183,7 +217,7 @@ export class TimeEntryService extends BaseService<any> {
       Object.assign(timeEntryData, billingInfo);
     }
 
-    const [timeEntry] = await context.db(this.tableName)
+    const [timeEntry] = await knex(this.tableName)
       .insert(timeEntryData)
       .returning('*');
 
@@ -205,6 +239,7 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async update(id: string, data: UpdateTimeEntryData, context: ServiceContext): Promise<any> {
+    const { knex } = await this.getKnex();
     const existing = await this.getById(id, context);
     if (!existing) {
       throw new Error('Time entry not found');
@@ -220,7 +255,7 @@ export class TimeEntryService extends BaseService<any> {
       throw new Error('Cannot modify approved time entries');
     }
 
-    const updateData = {
+    const updateData: any = {
       ...data,
       updated_at: new Date()
     };
@@ -239,7 +274,7 @@ export class TimeEntryService extends BaseService<any> {
       Object.assign(updateData, billingInfo);
     }
 
-    await context.db(this.tableName)
+    await knex(this.tableName)
       .where({ [this.primaryKey]: id, tenant: context.tenant })
       .update(updateData);
 
@@ -259,6 +294,7 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async delete(id: string, context: ServiceContext): Promise<void> {
+    const { knex } = await this.getKnex();
     const existing = await this.getById(id, context);
     if (!existing) {
       throw new Error('Time entry not found');
@@ -274,7 +310,7 @@ export class TimeEntryService extends BaseService<any> {
       throw new Error('Cannot delete approved time entries');
     }
 
-    await context.db(this.tableName)
+    await knex(this.tableName)
       .where({ [this.primaryKey]: id, tenant: context.tenant })
       .del();
 
@@ -290,8 +326,8 @@ export class TimeEntryService extends BaseService<any> {
     });
   }
 
-  // Bulk operations
-  async bulkCreate(data: BulkTimeEntryData, context: ServiceContext): Promise<any[]> {
+  // Override bulk methods to match BaseService signature
+  async bulkCreateTimeEntries(data: BulkTimeEntryData, context: ServiceContext): Promise<any[]> {
     const results = [];
     
     for (const entryData of data.entries) {
@@ -299,14 +335,15 @@ export class TimeEntryService extends BaseService<any> {
         const result = await this.create(entryData, context);
         results.push({ success: true, data: result });
       } catch (error) {
-        results.push({ success: false, error: error.message, data: entryData });
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        results.push({ success: false, error: errorMessage, data: entryData });
       }
     }
 
     return results;
   }
 
-  async bulkUpdate(data: BulkUpdateTimeEntryData, context: ServiceContext): Promise<any[]> {
+  async bulkUpdateTimeEntries(data: BulkUpdateTimeEntryData, context: ServiceContext): Promise<any[]> {
     const results = [];
     
     for (const { entry_id, data: updateData } of data.entries) {
@@ -314,14 +351,15 @@ export class TimeEntryService extends BaseService<any> {
         const result = await this.update(entry_id, updateData, context);
         results.push({ success: true, data: result });
       } catch (error) {
-        results.push({ success: false, error: error.message, entry_id });
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        results.push({ success: false, error: errorMessage, entry_id });
       }
     }
 
     return results;
   }
 
-  async bulkDelete(data: BulkDeleteTimeEntryData, context: ServiceContext): Promise<any[]> {
+  async bulkDeleteTimeEntries(data: BulkDeleteTimeEntryData, context: ServiceContext): Promise<any[]> {
     const results = [];
     
     for (const entryId of data.entry_ids) {
@@ -329,7 +367,8 @@ export class TimeEntryService extends BaseService<any> {
         await this.delete(entryId, context);
         results.push({ success: true, entry_id: entryId });
       } catch (error) {
-        results.push({ success: false, error: error.message, entry_id: entryId });
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        results.push({ success: false, error: errorMessage, entry_id: entryId });
       }
     }
 
@@ -338,8 +377,10 @@ export class TimeEntryService extends BaseService<any> {
 
   // Time tracking sessions
   async startTimeTracking(data: StartTimeTrackingData, context: ServiceContext): Promise<any> {
+    const { knex } = await this.getKnex();
+    
     // Check for existing active session
-    const existingSession = await context.db('active_time_sessions')
+    const existingSession = await knex('active_time_sessions')
       .where({ user_id: context.userId, tenant: context.tenant })
       .first();
 
@@ -355,7 +396,7 @@ export class TimeEntryService extends BaseService<any> {
       created_at: new Date()
     };
 
-    const [session] = await context.db('active_time_sessions')
+    const [session] = await knex('active_time_sessions')
       .insert(sessionData)
       .returning('*');
 
@@ -368,7 +409,8 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async stopTimeTracking(sessionId: string, data: StopTimeTrackingData, context: ServiceContext): Promise<any> {
-    const session = await context.db('active_time_sessions')
+    const { knex } = await this.getKnex();
+    const session = await knex('active_time_sessions')
       .where({ session_id: sessionId, user_id: context.userId, tenant: context.tenant })
       .first();
 
@@ -385,13 +427,14 @@ export class TimeEntryService extends BaseService<any> {
       start_time: session.start_time,
       end_time: endTime.toISOString(),
       notes: data.notes || session.notes,
-      service_id: data.service_id || session.service_id
+      service_id: data.service_id || session.service_id,
+      is_billable: true // Add required property
     };
 
     const timeEntry = await this.create(timeEntryData, context);
 
     // Delete active session
-    await context.db('active_time_sessions')
+    await knex('active_time_sessions')
       .where({ session_id: sessionId, tenant: context.tenant })
       .del();
 
@@ -399,7 +442,8 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async getActiveSession(context: ServiceContext): Promise<any | null> {
-    const session = await context.db('active_time_sessions')
+    const { knex } = await this.getKnex();
+    const session = await knex('active_time_sessions')
       .where({ user_id: context.userId, tenant: context.tenant })
       .first();
 
@@ -419,6 +463,7 @@ export class TimeEntryService extends BaseService<any> {
 
   // Templates
   async createTemplate(data: CreateTimeTemplateData, context: ServiceContext): Promise<any> {
+    const { knex } = await this.getKnex();
     const templateData = {
       ...data,
       user_id: context.userId,
@@ -427,7 +472,7 @@ export class TimeEntryService extends BaseService<any> {
       updated_at: new Date()
     };
 
-    const [template] = await context.db('time_entry_templates')
+    const [template] = await knex('time_entry_templates')
       .insert(templateData)
       .returning('*');
 
@@ -435,18 +480,20 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async getTemplates(context: ServiceContext): Promise<any[]> {
-    return context.db('time_entry_templates')
+    const { knex } = await this.getKnex();
+    return knex('time_entry_templates')
       .where({ user_id: context.userId, tenant: context.tenant, is_active: true })
       .orderBy('template_name');
   }
 
   // Approval operations
   async approveTimeEntries(data: ApproveTimeEntriesData, context: ServiceContext): Promise<any[]> {
+    const { knex } = await this.getKnex();
     const results = [];
     
     for (const entryId of data.entry_ids) {
       try {
-        await context.db(this.tableName)
+        await knex(this.tableName)
           .where({ 
             entry_id: entryId, 
             tenant: context.tenant,
@@ -473,7 +520,8 @@ export class TimeEntryService extends BaseService<any> {
           }
         });
       } catch (error) {
-        results.push({ success: false, error: error.message, entry_id: entryId });
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        results.push({ success: false, error: errorMessage, entry_id: entryId });
       }
     }
 
@@ -481,11 +529,12 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async requestChanges(data: RequestTimeEntryChangesData, context: ServiceContext): Promise<any[]> {
+    const { knex } = await this.getKnex();
     const results = [];
     
     for (const entryId of data.entry_ids) {
       try {
-        await context.db(this.tableName)
+        await knex(this.tableName)
           .where({ 
             entry_id: entryId, 
             tenant: context.tenant,
@@ -512,7 +561,8 @@ export class TimeEntryService extends BaseService<any> {
           }
         });
       } catch (error) {
-        results.push({ success: false, error: error.message, entry_id: entryId });
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        results.push({ success: false, error: errorMessage, entry_id: entryId });
       }
     }
 
@@ -521,7 +571,8 @@ export class TimeEntryService extends BaseService<any> {
 
   // Search and export
   async search(searchData: TimeEntrySearchData, context: ServiceContext): Promise<any[]> {
-    const query = context.db(this.tableName)
+    const { knex } = await this.getKnex();
+    const query = knex(this.tableName)
       .where(`${this.tableName}.tenant`, context.tenant);
 
     // Build search query
@@ -529,11 +580,11 @@ export class TimeEntryService extends BaseService<any> {
       query.where(function() {
         searchData.fields!.forEach(field => {
           if (field === 'user_name') {
-            this.orWhere(context.db.raw(`CONCAT(users.first_name, ' ', users.last_name)`), 'ilike', `%${searchData.query}%`);
+            this.orWhere(knex.raw(`CONCAT(users.first_name, ' ', users.last_name)`), 'ilike', `%${searchData.query}%`);
           } else if (field === 'service_name') {
             this.orWhere('services.service_name', 'ilike', `%${searchData.query}%`);
           } else {
-            this.orWhere(`${this.tableName}.${field}`, 'ilike', `%${searchData.query}%`);
+            this.orWhere(`time_entries.${field}`, 'ilike', `%${searchData.query}%`);
           }
         });
       });
@@ -556,10 +607,10 @@ export class TimeEntryService extends BaseService<any> {
       query.whereIn(`${this.tableName}.service_id`, searchData.service_ids);
     }
     if (searchData.date_from) {
-      query.where(context.db.raw('DATE(start_time)'), '>=', searchData.date_from);
+      query.where(knex.raw('DATE(start_time)'), '>=', searchData.date_from);
     }
     if (searchData.date_to) {
-      query.where(context.db.raw('DATE(start_time)'), '<=', searchData.date_to);
+      query.where(knex.raw('DATE(start_time)'), '<=', searchData.date_to);
     }
     if (searchData.billable_only) {
       query.where(`${this.tableName}.billable_duration`, '>', 0);
@@ -570,7 +621,7 @@ export class TimeEntryService extends BaseService<any> {
       .leftJoin('services', `${this.tableName}.service_id`, 'services.service_id')
       .select(
         `${this.tableName}.*`,
-        context.db.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
+        knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
         'services.service_name'
       )
       .limit(searchData.limit || 25);
@@ -580,15 +631,16 @@ export class TimeEntryService extends BaseService<any> {
 
   // Statistics
   async getStatistics(context: ServiceContext, filters?: TimeEntryFilterData): Promise<any> {
-    let query = context.db(this.tableName)
+    const { knex } = await this.getKnex();
+    let query = knex(this.tableName)
       .where(`${this.tableName}.tenant`, context.tenant);
 
     // Apply date filters if provided
     if (filters?.date_from) {
-      query = query.where(context.db.raw('DATE(start_time)'), '>=', filters.date_from);
+      query = query.where(knex.raw('DATE(start_time)'), '>=', filters.date_from);
     }
     if (filters?.date_to) {
-      query = query.where(context.db.raw('DATE(start_time)'), '<=', filters.date_to);
+      query = query.where(knex.raw('DATE(start_time)'), '<=', filters.date_to);
     }
 
     const [basicStats, typeStats, statusStats, userStats, serviceStats, topWorkItems] = await Promise.all([
@@ -612,6 +664,8 @@ export class TimeEntryService extends BaseService<any> {
 
   // Helper methods
   private async getOrCreateTimeSheet(startTime: string, userId: string, context: ServiceContext): Promise<string> {
+    const { knex } = await this.getKnex();
+    
     // Get time period for the start date
     const startDate = new Date(startTime);
     const period = await this.getTimePeriodForDate(startDate, context);
@@ -621,7 +675,7 @@ export class TimeEntryService extends BaseService<any> {
     }
 
     // Check for existing time sheet
-    let timeSheet = await context.db('time_sheets')
+    let timeSheet = await knex('time_sheets')
       .where({
         period_id: period.period_id,
         user_id: userId,
@@ -631,7 +685,7 @@ export class TimeEntryService extends BaseService<any> {
 
     if (!timeSheet) {
       // Create new time sheet
-      const [newTimeSheet] = await context.db('time_sheets')
+      const [newTimeSheet] = await knex('time_sheets')
         .insert({
           period_id: period.period_id,
           user_id: userId,
@@ -649,7 +703,8 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   private async getTimePeriodForDate(date: Date, context: ServiceContext): Promise<any> {
-    return context.db('time_periods')
+    const { knex } = await this.getKnex();
+    return knex('time_periods')
       .where({
         tenant: context.tenant
       })
@@ -676,7 +731,8 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   private async getTimeEntryUser(userId: string, context: ServiceContext): Promise<any> {
-    return context.db('users')
+    const { knex } = await this.getKnex();
+    return knex('users')
       .where({ user_id: userId })
       .select('user_id', 'first_name', 'last_name', 'email')
       .first();
@@ -685,21 +741,23 @@ export class TimeEntryService extends BaseService<any> {
   private async getWorkItemDetails(workItemId: string | null, workItemType: string, context: ServiceContext): Promise<any> {
     if (!workItemId) return null;
 
+    const { knex } = await this.getKnex();
+    
     switch (workItemType) {
       case 'ticket':
-        return context.db('tickets')
+        return knex('tickets')
           .where({ ticket_id: workItemId, tenant: context.tenant })
-          .select('ticket_id as id', 'title', context.db.raw('? as type', [workItemType]), 'company_id')
+          .select('ticket_id as id', 'title', knex.raw('? as type', [workItemType]), 'company_id')
           .first();
       case 'project_task':
-        return context.db('project_tasks')
+        return knex('project_tasks')
           .join('project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')
           .join('projects', 'project_phases.project_id', 'projects.project_id')
           .where({ 'project_tasks.task_id': workItemId, 'project_tasks.tenant': context.tenant })
           .select(
             'project_tasks.task_id as id', 
             'project_tasks.task_name as title', 
-            context.db.raw('? as type', [workItemType]),
+            knex.raw('? as type', [workItemType]),
             'projects.company_id',
             'projects.project_id'
           )
@@ -710,14 +768,16 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   private async getServiceDetails(serviceId: string, context: ServiceContext): Promise<any> {
-    return context.db('services')
+    const { knex } = await this.getKnex();
+    return knex('services')
       .where({ service_id: serviceId, tenant: context.tenant })
       .select('service_id', 'service_name', 'default_rate', 'billing_unit')
       .first();
   }
 
   private async getTimeSheetDetails(timeSheetId: string, context: ServiceContext): Promise<any> {
-    return context.db('time_sheets')
+    const { knex } = await this.getKnex();
+    return knex('time_sheets')
       .where({ id: timeSheetId, tenant: context.tenant })
       .select('id', 'period_id', 'approval_status', 'submitted_at', 'approved_at')
       .first();
@@ -745,14 +805,15 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   private async getBasicTimeStats(query: Knex.QueryBuilder, context: ServiceContext): Promise<any> {
+    const { knex } = await this.getKnex();
     const stats = await query
       .select([
-        context.db.raw('COUNT(*) as total_entries'),
-        context.db.raw('SUM(CASE WHEN billable_duration > 0 THEN billable_duration ELSE 0 END) / 60.0 as total_billable_hours'),
-        context.db.raw('SUM(CASE WHEN billable_duration = 0 THEN EXTRACT(EPOCH FROM (end_time - start_time)) / 3600 ELSE 0 END) as total_non_billable_hours'),
-        context.db.raw('AVG(billable_duration) as average_entry_duration'),
-        context.db.raw(`COUNT(CASE WHEN start_time >= date_trunc('week', NOW()) THEN 1 END) as entries_this_week`),
-        context.db.raw(`COUNT(CASE WHEN start_time >= date_trunc('month', NOW()) THEN 1 END) as entries_this_month`)
+        knex.raw('COUNT(*) as total_entries'),
+        knex.raw('SUM(CASE WHEN billable_duration > 0 THEN billable_duration ELSE 0 END) / 60.0 as total_billable_hours'),
+        knex.raw('SUM(CASE WHEN billable_duration = 0 THEN EXTRACT(EPOCH FROM (end_time - start_time)) / 3600 ELSE 0 END) as total_non_billable_hours'),
+        knex.raw('AVG(billable_duration) as average_entry_duration'),
+        knex.raw(`COUNT(CASE WHEN start_time >= date_trunc('week', NOW()) THEN 1 END) as entries_this_week`),
+        knex.raw(`COUNT(CASE WHEN start_time >= date_trunc('month', NOW()) THEN 1 END) as entries_this_month`)
       ])
       .first();
 
@@ -773,51 +834,55 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   private async getEntriesByType(query: Knex.QueryBuilder, context: ServiceContext): Promise<Record<string, number>> {
+    const { knex } = await this.getKnex();
     const results = await query
       .groupBy('work_item_type')
-      .select('work_item_type', context.db.raw('COUNT(*) as count'));
+      .select('work_item_type', knex.raw('COUNT(*) as count'));
 
-    return results.reduce((acc, item) => {
+    return results.reduce((acc: any, item: any) => {
       acc[item.work_item_type] = parseInt(item.count);
       return acc;
     }, {} as Record<string, number>);
   }
 
   private async getEntriesByStatus(query: Knex.QueryBuilder, context: ServiceContext): Promise<Record<string, number>> {
+    const { knex } = await this.getKnex();
     const results = await query
       .groupBy('approval_status')
-      .select('approval_status', context.db.raw('COUNT(*) as count'));
+      .select('approval_status', knex.raw('COUNT(*) as count'));
 
-    return results.reduce((acc, item) => {
+    return results.reduce((acc: any, item: any) => {
       acc[item.approval_status] = parseInt(item.count);
       return acc;
     }, {} as Record<string, number>);
   }
 
   private async getEntriesByUser(query: Knex.QueryBuilder, context: ServiceContext): Promise<Record<string, number>> {
+    const { knex } = await this.getKnex();
     const results = await query
       .join('users', `${this.tableName}.user_id`, 'users.user_id')
       .groupBy('users.user_id', 'users.first_name', 'users.last_name')
       .select(
-        context.db.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
-        context.db.raw('COUNT(*) as count')
+        knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
+        knex.raw('COUNT(*) as count')
       )
       .limit(10);
 
-    return results.reduce((acc, item) => {
+    return results.reduce((acc: any, item: any) => {
       acc[item.user_name] = parseInt(item.count);
       return acc;
     }, {} as Record<string, number>);
   }
 
   private async getEntriesByService(query: Knex.QueryBuilder, context: ServiceContext): Promise<Record<string, number>> {
+    const { knex } = await this.getKnex();
     const results = await query
       .leftJoin('services', this.tableName + '.service_id', 'services.service_id')
       .groupBy('services.service_name')
-      .select('services.service_name', context.db.raw('COUNT(*) as count'))
+      .select('services.service_name', knex.raw('COUNT(*) as count'))
       .limit(10);
 
-    return results.reduce((acc, item) => {
+    return results.reduce((acc: any, item: any) => {
       const serviceName = item.service_name || 'No Service';
       acc[serviceName] = parseInt(item.count);
       return acc;
@@ -825,20 +890,21 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   private async getTopWorkItems(query: Knex.QueryBuilder, context: ServiceContext): Promise<any[]> {
+    const { knex } = await this.getKnex();
     const results = await query
       .whereNotNull('work_item_id')
       .groupBy('work_item_id', 'work_item_type')
       .select(
         'work_item_id',
         'work_item_type',
-        context.db.raw('SUM(billable_duration) / 60.0 as total_hours'),
-        context.db.raw('COUNT(*) as entry_count')
+        knex.raw('SUM(billable_duration) / 60.0 as total_hours'),
+        knex.raw('COUNT(*) as entry_count')
       )
       .orderBy('total_hours', 'desc')
       .limit(5);
 
     // Get work item titles
-    return Promise.all(results.map(async item => {
+    return Promise.all(results.map(async (item: any) => {
       const workItem = await this.getWorkItemDetails(item.work_item_id, item.work_item_type, context);
       return {
         work_item_id: item.work_item_id,

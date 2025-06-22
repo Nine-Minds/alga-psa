@@ -18,6 +18,7 @@ import {
   UpdateCompanyLocationData
 } from '../schemas/company';
 import { ListOptions } from '../controllers/BaseController';
+import { publishEvent } from 'server/src/lib/eventBus/publishers';
 
 export class CompanyService extends BaseService<ICompany> {
   constructor() {
@@ -129,99 +130,135 @@ export class CompanyService extends BaseService<ICompany> {
   /**
    * Create new company with default settings
    */
-  async create(data: CreateCompanyData, context: ServiceContext): Promise<ICompany> {
-    const { knex } = await this.getKnex();
-
-    return withTransaction(knex, async (trx) => {
-      // Prepare company data
-      const companyData = {
-        company_id: knex.raw('gen_random_uuid()'),
-        company_name: data.company_name,
-        phone_no: data.phone_no || '',
-        email: data.email || '',
-        url: data.url || '',
-        address: data.address,
-        client_type: data.client_type,
-        tax_id_number: data.tax_id_number,
-        notes: data.notes,
-        properties: data.properties,
-        payment_terms: data.payment_terms,
-        billing_cycle: data.billing_cycle,
-        credit_balance: 0,
-        credit_limit: data.credit_limit,
-        preferred_payment_method: data.preferred_payment_method,
-        auto_invoice: data.auto_invoice || false,
-        invoice_delivery_method: data.invoice_delivery_method,
-        region_code: data.region_code,
-        is_tax_exempt: data.is_tax_exempt || false,
-        tax_exemption_certificate: data.tax_exemption_certificate,
-        timezone: data.timezone,
-        invoice_template_id: data.invoice_template_id,
-        billing_contact_id: data.billing_contact_id,
-        billing_email: data.billing_email,
-        account_manager_id: data.account_manager_id,
-        is_inactive: data.is_inactive || false,
-        tenant: context.tenant,
-        created_at: knex.raw('now()'),
-        updated_at: knex.raw('now()')
-      };
-
-      // Insert company
-      const [company] = await trx('companies').insert(companyData).returning('*');
-
-      // Create default tax settings for the company
-      await createDefaultTaxSettings(company.company_id, context.tenant, trx);
-
-      // Add default email settings
-      await addCompanyEmailSetting(company.company_id, trx);
-
-      // Handle tags if provided
-      if (data.tags && data.tags.length > 0) {
-        await this.handleTags(company.company_id, data.tags, context, trx);
+  async create(data: Partial<ICompany>, context: ServiceContext): Promise<ICompany> {
+        const { knex } = await this.getKnex();
+    
+        return withTransaction(knex, async (trx) => {
+          // Prepare company data
+          const companyData = {
+            company_id: knex.raw('gen_random_uuid()'),
+            company_name: data.company_name,
+            phone_no: data.phone_no || '',
+            email: data.email || '',
+            url: data.url || '',
+            address: data.address,
+            client_type: data.client_type,
+            tax_id_number: data.tax_id_number,
+            notes: data.notes,
+            properties: data.properties,
+            payment_terms: data.payment_terms,
+            billing_cycle: data.billing_cycle,
+            credit_balance: 0,
+            credit_limit: data.credit_limit,
+            preferred_payment_method: data.preferred_payment_method,
+            auto_invoice: data.auto_invoice || false,
+            invoice_delivery_method: data.invoice_delivery_method,
+            region_code: data.region_code,
+            is_tax_exempt: data.is_tax_exempt || false,
+            tax_exemption_certificate: data.tax_exemption_certificate,
+            timezone: data.timezone,
+            invoice_template_id: data.invoice_template_id,
+            billing_contact_id: data.billing_contact_id,
+            billing_email: data.billing_email,
+            account_manager_id: data.account_manager_id,
+            is_inactive: data.is_inactive || false,
+            tenant: context.tenant,
+            created_at: knex.raw('now()'),
+            updated_at: knex.raw('now()')
+          };
+    
+          // Insert company
+          const [company] = await trx('companies').insert(companyData).returning('*');
+    
+          // Create default tax settings for the company (call with correct parameters)
+          await createDefaultTaxSettings(company.company_id);
+    
+          // Add default email settings (call with correct parameters)
+          await addCompanyEmailSetting(company.company_id, 'default');
+    
+          // Handle tags if provided
+          if ((data as any).tags && (data as any).tags.length > 0) {
+            await this.handleTags(company.company_id, (data as any).tags, context, trx);
+          }
+    
+          // Publish event
+          await publishEvent({
+            eventType: 'COMPANY_CREATED',
+            payload: {
+              tenantId: context.tenant,
+              companyId: company.company_id,
+              companyName: data.company_name,
+              userId: context.userId,
+              timestamp: new Date().toISOString()
+            }
+          });
+    
+          return company;
+        });
+      }
+  
+      /**
+       * Create company with typed data
+       */
+      async createCompany(data: CreateCompanyData, context: ServiceContext): Promise<ICompany> {
+        return this.create(data as Partial<ICompany>, context);
       }
 
-      return company as ICompany;
-    });
-  }
+
 
   /**
    * Update company
    */
   async update(id: string, data: UpdateCompanyData, context: ServiceContext): Promise<ICompany> {
-    const { knex } = await this.getKnex();
-
-    return withTransaction(knex, async (trx) => {
-      // Prepare update data
-      const updateData = {
-        ...data,
-        updated_at: knex.raw('now()')
-      };
-
-      // Remove undefined values
-      Object.keys(updateData).forEach(key => {
-        if (updateData[key as keyof UpdateCompanyData] === undefined) {
-          delete updateData[key as keyof UpdateCompanyData];
+      const { knex } = await this.getKnex();
+  
+      return withTransaction(knex, async (trx) => {
+        // Prepare update data
+        const updateData: any = {
+          ...data,
+          updated_at: knex.raw('now()')
+        };
+  
+        // Remove undefined values
+        Object.keys(updateData).forEach(key => {
+          if (updateData[key] === undefined) {
+            delete updateData[key];
+          }
+        });
+  
+        // Update company
+        const [company] = await trx('companies')
+          .where('company_id', id)
+          .where('tenant', context.tenant)
+          .update(updateData)
+          .returning('*');
+  
+        if (!company) {
+          throw new Error('Company not found or permission denied');
         }
+  
+        // Handle tags if provided
+        if (data.tags !== undefined) {
+          await this.handleTags(id, data.tags, context, trx);
+        }
+  
+        // Publish event
+        await publishEvent({
+          eventType: 'COMPANY_UPDATED',
+          payload: {
+            tenantId: context.tenant,
+            companyId: id,
+            companyName: company.company_name,
+            changes: data,
+            userId: context.userId,
+            timestamp: new Date().toISOString()
+          }
+        });
+  
+        return company;
       });
+    }
 
-      // Update company
-      const [company] = await trx('companies')
-        .where({ company_id: id, tenant: context.tenant })
-        .update(updateData)
-        .returning('*');
-
-      if (!company) {
-        throw new Error('Company not found or permission denied');
-      }
-
-      // Handle tags if provided
-      if (data.tags) {
-        await this.handleTags(id, data.tags, context, trx);
-      }
-
-      return company as ICompany;
-    });
-  }
 
   /**
    * Get company locations
@@ -281,42 +318,41 @@ export class CompanyService extends BaseService<ICompany> {
    * Update company location
    */
   async updateLocation(
-    companyId: string,
-    locationId: string,
-    data: UpdateCompanyLocationData,
-    context: ServiceContext
-  ): Promise<ICompanyLocation> {
-    const { knex } = await this.getKnex();
-
-    return withTransaction(knex, async (trx) => {
-      const updateData = {
-        ...data,
-        updated_at: knex.raw('now()')
-      };
-
-      // Remove undefined values
-      Object.keys(updateData).forEach(key => {
-        if (updateData[key as keyof UpdateCompanyLocationData] === undefined) {
-          delete updateData[key as keyof UpdateCompanyLocationData];
+      companyId: string,
+      locationId: string,
+      data: UpdateCompanyLocationData,
+      context: ServiceContext
+    ): Promise<ICompanyLocation> {
+      const { knex } = await this.getKnex();
+  
+      return withTransaction(knex, async (trx) => {
+        const updateData: any = {
+          ...data,
+          updated_at: knex.raw('now()')
+        };
+  
+        // Remove undefined values
+        Object.keys(updateData).forEach(key => {
+          if (updateData[key] === undefined) {
+            delete updateData[key];
+          }
+        });
+  
+        const [location] = await trx('company_locations')
+          .where('location_id', locationId)
+          .where('company_id', companyId)
+          .where('tenant', context.tenant)
+          .update(updateData)
+          .returning('*');
+  
+        if (!location) {
+          throw new Error('Company location not found or permission denied');
         }
+  
+        return location as ICompanyLocation;
       });
+    }
 
-      const [location] = await trx('company_locations')
-        .where({
-          location_id: locationId,
-          company_id: companyId,
-          tenant: context.tenant
-        })
-        .update(updateData)
-        .returning('*');
-
-      if (!location) {
-        throw new Error('Location not found or permission denied');
-      }
-
-      return location as ICompanyLocation;
-    });
-  }
 
   /**
    * Delete company location

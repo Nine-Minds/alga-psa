@@ -488,7 +488,7 @@ export class BillingPlanController extends BaseController {
       delete filters.order;
 
       const listOptions: ListOptions = { page, limit, filters, sort, order };
-      const result = await this.billingPlanService.list(listOptions, req.context!, serviceOptions);
+      const result = await this.billingPlanService.listWithOptions(listOptions, req.context!, serviceOptions);
       
       return createPaginatedResponse(
         result.data,
@@ -527,7 +527,7 @@ export class BillingPlanController extends BaseController {
         includeCompanies: url.searchParams.get('include_companies') === 'true'
       };
 
-      const plan = await this.billingPlanService.getById(id, req.context!, serviceOptions);
+      const plan = await this.billingPlanService.getByIdWithOptions(id, req.context!, serviceOptions);
       
       if (!plan) {
         throw new NotFoundError('Billing plan not found');
@@ -1104,7 +1104,7 @@ export class BillingPlanController extends BaseController {
     );
 
     return middleware(async (req: ApiRequest, validatedData: BulkCreateBillingPlansData) => {
-      const plans = await this.billingPlanService.bulkCreate(validatedData, req.context!);
+      const plans = await this.billingPlanService.bulkCreateBillingPlans(validatedData, req.context!);
       return createSuccessResponse({ plans, count: plans.length }, 201);
     });
   }
@@ -1120,7 +1120,7 @@ export class BillingPlanController extends BaseController {
     );
 
     return middleware(async (req: ApiRequest, validatedData: BulkUpdateBillingPlansData) => {
-      const plans = await this.billingPlanService.bulkUpdate(validatedData, req.context!);
+      const plans = await this.billingPlanService.bulkUpdateBillingPlans(validatedData, req.context!);
       return createSuccessResponse({ plans, count: plans.length });
     });
   }
@@ -1136,7 +1136,7 @@ export class BillingPlanController extends BaseController {
     );
 
     return middleware(async (req: ApiRequest, validatedData: BulkDeleteBillingPlansData) => {
-      await this.billingPlanService.bulkDelete(validatedData, req.context!);
+      await this.billingPlanService.bulkDeleteBillingPlans(validatedData, req.context!);
       return createSuccessResponse({ message: 'Plans deleted successfully', count: validatedData.plan_ids.length });
     });
   }

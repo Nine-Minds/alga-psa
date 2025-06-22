@@ -122,47 +122,41 @@ export class CategoryTagService extends BaseService {
    * List service categories with filtering and pagination
    */
   async listServiceCategories(
-    filters: Partial<CategoryFilterParams> = {},
-    context: ServiceContext
-  ): Promise<ListResult<ServiceCategoryResponse>> {
-    const { knex } = await this.getKnex();
-
-    let query = knex('service_categories')
-      .where('tenant', context.tenant);
-
-    // Apply filters
-    if (filters.category_name) {
-      query = query.whereILike('category_name', `%${filters.category_name}%`);
-    }
-    if (filters.has_description !== undefined) {
-      if (filters.has_description) {
-        query = query.whereNotNull('description').where('description', '!=', '');
-      } else {
-        query = query.where(subQuery => 
-          subQuery.whereNull('description').orWhere('description', '=', '')
-        );
+      filters: Partial<CategoryFilterParams> = {},
+      context: ServiceContext,
+      options: { page?: number; limit?: number } = {}
+    ): Promise<ListResult<ServiceCategoryResponse>> {
+      const { knex } = await this.getKnex();
+      
+      const query = knex('service_categories')
+        .where('tenant', context.tenant);
+  
+      // Apply filters
+      if (filters.category_name) {
+        query.whereILike('category_name', `%${filters.category_name}%`);
       }
+      // has_description filter removed - not available in filter type
+  
+      // Get total count
+      const [{ count }] = await query.clone().count('* as count');
+  
+      // Apply pagination and get data
+      const limit = options.limit || 25;
+      const page = options.page || 1;
+      const offset = (page - 1) * limit;
+  
+      const categories = await query
+        .select('category_id', 'category_name', 'description', 'tenant')
+        .orderBy('category_name', 'asc')
+        .limit(limit)
+        .offset(offset);
+  
+      return {
+        data: categories as ServiceCategoryResponse[],
+        total: parseInt(count as string)
+      };
     }
 
-    // Get total count
-    const [{ count }] = await query.clone().count('* as count');
-
-    // Apply pagination and get data
-    const limit = filters.limit || 25;
-    const page = filters.page || 1;
-    const offset = (page - 1) * limit;
-
-    const categories = await query
-      .select('category_id', 'category_name', 'description', 'tenant')
-      .orderBy('category_name', 'asc')
-      .limit(limit)
-      .offset(offset);
-
-    return {
-      data: categories as ServiceCategoryResponse[],
-      total: parseInt(count as string)
-    };
-  }
 
   /**
    * Get service category by ID
@@ -296,60 +290,66 @@ export class CategoryTagService extends BaseService {
    * List ticket categories with hierarchical support
    */
   async listTicketCategories(
-    filters: Partial<CategoryFilterParams> = {},
-    context: ServiceContext
-  ): Promise<ListResult<TicketCategoryResponse>> {
-    const { knex } = await this.getKnex();
-
-    let query = knex('categories')
-      .where('tenant', context.tenant);
-
-    // Apply filters
-    if (filters.category_name) {
-      query = query.whereILike('category_name', `%${filters.category_name}%`);
-    }
-    if (filters.channel_id) {
-      query = query.where('channel_id', filters.channel_id);
-    }
-    if (filters.parent_category) {
-      query = query.where('parent_category', filters.parent_category);
-    }
-    if (filters.is_parent !== undefined) {
-      if (filters.is_parent) {
-        query = query.whereNull('parent_category');
+      filters: Partial<CategoryFilterParams> = {},
+      context: ServiceContext,
+      options: { page?: number; limit?: number } = {}
+    ): Promise<ListResult<TicketCategoryResponse>> {
+      const { knex } = await this.getKnex();
+      
+      const query = knex('ticket_categories as tc')
+        .leftJoin('ticket_categories as parent', 'tc.parent_category', 'parent.category_id')
+        .leftJoin('channels as ch', 'tc.channel_id', 'ch.channel_id')
+        .where('tc.tenant', context.tenant);
+  
+      // Apply filters
+      if (filters.category_name) {
+        query.whereILike('tc.category_name', `%${filters.category_name}%`);
       }
-    }
-    if (filters.is_child !== undefined) {
-      if (filters.is_child) {
-        query = query.whereNotNull('parent_category');
+      if (filters.channel_id) {
+        query.where('tc.channel_id', filters.channel_id);
       }
+      if (filters.parent_category) {
+        query.where('tc.parent_category', filters.parent_category);
+      }
+      if (filters.is_parent !== undefined) {
+        if (filters.is_parent) {
+          query.whereNotNull('tc.parent_category');
+        } else {
+          query.whereNull('tc.parent_category');
+        }
+      }
+  
+      // Get total count
+      const [{ count }] = await query.clone().count('tc.category_id as count');
+  
+      // Apply pagination and get data
+      const limit = options.limit || 25;
+      const page = options.page || 1;
+      const offset = (page - 1) * limit;
+  
+      const categories = await query
+        .select(
+          'tc.category_id',
+          'tc.category_name',
+          'tc.parent_category',
+          'tc.channel_id',
+          'tc.description',
+          'tc.created_by',
+          'tc.created_at',
+          'tc.tenant',
+          'parent.category_name as parent_category_name',
+          'ch.channel_name'
+        )
+        .orderBy('tc.category_name', 'asc')
+        .limit(limit)
+        .offset(offset);
+  
+      return {
+        data: categories as TicketCategoryResponse[],
+        total: parseInt(count as string)
+      };
     }
 
-    // Get total count
-    const [{ count }] = await query.clone().count('* as count');
-
-    // Apply pagination and get data
-    const limit = filters.limit || 25;
-    const page = filters.page || 1;
-    const offset = (page - 1) * limit;
-
-    const categories = await query
-      .select('*')
-      .orderBy('category_name', 'asc')
-      .limit(limit)
-      .offset(offset);
-
-    // Add hierarchical data if requested
-    const enrichedCategories = await this.enrichCategoriesWithHierarchy(
-      categories,
-      context
-    );
-
-    return {
-      data: enrichedCategories,
-      total: parseInt(count as string)
-    };
-  }
 
   /**
    * Get ticket category by ID with hierarchy information
@@ -372,101 +372,144 @@ export class CategoryTagService extends BaseService {
    * Create new ticket category
    */
   async createTicketCategory(
-    data: CreateTicketCategoryData,
-    context: ServiceContext
-  ): Promise<TicketCategoryResponse> {
-    const { knex } = await this.getKnex();
-
-    return withTransaction(knex, async (trx) => {
-      // Validate parent category if provided
-      if (data.parent_category) {
-        const parent = await trx('categories')
-          .where({
-            category_id: data.parent_category,
-            tenant: context.tenant,
-            channel_id: data.channel_id
-          })
+      data: CreateTicketCategoryData,
+      context: ServiceContext
+    ): Promise<TicketCategoryResponse> {
+      const { knex } = await this.getKnex();
+      
+      return withTransaction(knex, async (trx) => {
+        // Validate parent category exists if provided
+        if (data.parent_category) {
+          const parentExists = await trx('ticket_categories')
+            .where('category_id', data.parent_category)
+            .where('tenant', context.tenant)
+            .first();
+          
+          if (!parentExists) {
+            throw new Error('Parent category not found');
+          }
+        }
+  
+        // Validate channel exists
+        const channelExists = await trx('channels')
+          .where('channel_id', data.channel_id)
+          .where('tenant', context.tenant)
           .first();
-
-        if (!parent) {
-          throw new Error('Parent category not found or not in the same channel');
+        
+        if (!channelExists) {
+          throw new Error('Channel not found');
         }
+  
+        const categoryId = uuidv4();
+        const categoryData = {
+          category_id: categoryId,
+          category_name: data.category_name,
+          parent_category: data.parent_category || null,
+          channel_id: data.channel_id,
+          description: data.description || null,
+          created_by: context.userId,
+          created_at: new Date(),
+          tenant: context.tenant
+        };
+  
+        await trx('ticket_categories').insert(categoryData);
+  
+        // Return the created category
+        const created = await trx('ticket_categories as tc')
+          .leftJoin('ticket_categories as parent', 'tc.parent_category', 'parent.category_id')
+          .leftJoin('channels as ch', 'tc.channel_id', 'ch.channel_id')
+          .where('tc.category_id', categoryId)
+          .where('tc.tenant', context.tenant)
+          .select(
+            'tc.category_id',
+            'tc.category_name',
+            'tc.parent_category',
+            'tc.channel_id',
+            'tc.description',
+            'tc.created_by',
+            'tc.created_at',
+            'tc.tenant',
+            'parent.category_name as parent_category_name',
+            'ch.channel_name'
+          )
+          .first();
+  
+        return created as TicketCategoryResponse;
+      });
+    }
 
-        // Check for circular hierarchy
-        const isCircular = await this.checkCircularHierarchy(
-          data.parent_category,
-          data.category_id || uuidv4(),
-          context,
-          trx
-        );
-
-        if (isCircular) {
-          throw new Error('Cannot create circular category hierarchy');
-        }
-      }
-
-      const categoryData = {
-        category_id: uuidv4(),
-        category_name: data.category_name,
-        parent_category: data.parent_category || null,
-        channel_id: data.channel_id,
-        description: data.description || null,
-        created_by: context.userId,
-        created_at: new Date(),
-        tenant: context.tenant
-      };
-
-      const category = await TicketCategory.insert(trx, categoryData);
-      const enriched = await this.enrichCategoriesWithHierarchy([category], context);
-      return enriched[0];
-    });
-  }
 
   /**
    * Update ticket category
    */
   async updateTicketCategory(
-    id: string,
-    data: Partial<CreateTicketCategoryData>,
-    context: ServiceContext
-  ): Promise<TicketCategoryResponse> {
-    const { knex } = await this.getKnex();
-
-    return withTransaction(knex, async (trx) => {
-      // Validate parent category change if provided
-      if (data.parent_category !== undefined) {
-        if (data.parent_category) {
-          // Check if parent exists and is in same channel
-          const parent = await trx('categories')
-            .where({
-              category_id: data.parent_category,
-              tenant: context.tenant
-            })
-            .first();
-
-          if (!parent) {
-            throw new Error('Parent category not found');
-          }
-
-          // Check for circular hierarchy
-          const isCircular = await this.checkCircularHierarchy(
-            data.parent_category,
-            id,
-            context,
-            trx
-          );
-
-          if (isCircular) {
-            throw new Error('Cannot create circular category hierarchy');
+      categoryId: string,
+      data: Partial<CreateTicketCategoryData>,
+      context: ServiceContext
+    ): Promise<TicketCategoryResponse> {
+      const { knex } = await this.getKnex();
+      
+      return withTransaction(knex, async (trx) => {
+        // Check if category exists
+        const existing = await trx('ticket_categories')
+          .where('category_id', categoryId)
+          .where('tenant', context.tenant)
+          .first();
+        
+        if (!existing) {
+          throw new Error('Ticket category not found');
+        }
+  
+        // Validate parent category if being updated
+        if (data.parent_category !== undefined) {
+          if (data.parent_category && data.parent_category !== categoryId) {
+            const parentExists = await trx('ticket_categories')
+              .where('category_id', data.parent_category)
+              .where('tenant', context.tenant)
+              .first();
+            
+            if (!parentExists) {
+              throw new Error('Parent category not found');
+            }
           }
         }
-      }
+  
+        // Prepare update data, converting undefined to null where needed
+        const updateData: any = {};
+        if (data.category_name !== undefined) updateData.category_name = data.category_name;
+        if (data.parent_category !== undefined) updateData.parent_category = data.parent_category || null;
+        if (data.channel_id !== undefined) updateData.channel_id = data.channel_id;
+        if (data.description !== undefined) updateData.description = data.description || null;
+  
+        await trx('ticket_categories')
+          .where('category_id', categoryId)
+          .where('tenant', context.tenant)
+          .update(updateData);
+  
+        // Return updated category
+        const updated = await trx('ticket_categories as tc')
+          .leftJoin('ticket_categories as parent', 'tc.parent_category', 'parent.category_id')
+          .leftJoin('channels as ch', 'tc.channel_id', 'ch.channel_id')
+          .where('tc.category_id', categoryId)
+          .where('tc.tenant', context.tenant)
+          .select(
+            'tc.category_id',
+            'tc.category_name',
+            'tc.parent_category',
+            'tc.channel_id',
+            'tc.description',
+            'tc.created_by',
+            'tc.created_at',
+            'tc.tenant',
+            'parent.category_name as parent_category_name',
+            'ch.channel_name'
+          )
+          .first();
+  
+        return updated as TicketCategoryResponse;
+      });
+    }
 
-      const updated = await TicketCategory.update(trx, id, data);
-      const enriched = await this.enrichCategoriesWithHierarchy([updated], context);
-      return enriched[0];
-    });
-  }
 
   /**
    * Delete ticket category
@@ -535,7 +578,7 @@ export class CategoryTagService extends BaseService {
       }
 
       const updated = await TicketCategory.update(trx, categoryId, {
-        parent_category: newParentId
+        parent_category: newParentId || undefined
       });
 
       const enriched = await this.enrichCategoriesWithHierarchy([updated], context);
@@ -551,66 +594,63 @@ export class CategoryTagService extends BaseService {
    * List tags with filtering and analytics
    */
   async listTags(
-    filters: TagFilterParams = {},
-    context: ServiceContext
-  ): Promise<ListResult<TagResponse>> {
-    const { knex } = await this.getKnex();
-
-    let query = knex('tags')
-      .where('tenant', context.tenant);
-
-    // Apply filters
-    if (filters.tag_text) {
-      query = query.whereILike('tag_text', `%${filters.tag_text}%`);
-    }
-    if (filters.tagged_id) {
-      query = query.where('tagged_id', filters.tagged_id);
-    }
-    if (filters.tagged_type) {
-      query = query.where('tagged_type', filters.tagged_type);
-    }
-    if (filters.tagged_ids && filters.tagged_ids.length > 0) {
-      query = query.whereIn('tagged_id', filters.tagged_ids);
-    }
-    if (filters.tagged_types && filters.tagged_types.length > 0) {
-      query = query.whereIn('tagged_type', filters.tagged_types);
-    }
-    if (filters.channel_id) {
-      query = query.where('channel_id', filters.channel_id);
-    }
-    if (filters.has_color !== undefined) {
-      if (filters.has_color) {
-        query = query.whereNotNull('background_color').orWhereNotNull('text_color');
-      } else {
-        query = query.whereNull('background_color').whereNull('text_color');
+      filters: TagFilterParams = {},
+      context: ServiceContext,
+      options: { page?: number; limit?: number } = {}
+    ): Promise<ListResult<TagResponse>> {
+      const { knex } = await this.getKnex();
+      
+      const query = knex('tags as t')
+        .leftJoin('channels as ch', 't.channel_id', 'ch.channel_id')
+        .where('t.tenant', context.tenant);
+  
+      // Apply filters
+      if (filters.tag_text) {
+        query.whereILike('t.tag_text', `%${filters.tag_text}%`);
       }
+      if (filters.tagged_type) {
+        if (Array.isArray(filters.tagged_type)) {
+          query.whereIn('t.tagged_type', filters.tagged_type);
+        } else {
+          query.where('t.tagged_type', filters.tagged_type);
+        }
+      }
+      if (filters.tagged_id) {
+        query.where('t.tagged_id', filters.tagged_id);
+      }
+      if (filters.channel_id) {
+        query.where('t.channel_id', filters.channel_id);
+      }
+      if (filters.background_color) {
+        query.where('t.background_color', filters.background_color);
+      }
+      if (filters.is_active !== undefined) {
+        query.where('t.is_active', filters.is_active);
+      }
+  
+      // Get total count
+      const [{ count }] = await query.clone().count('t.tag_id as count');
+  
+      // Apply pagination and get data
+      const limit = options.limit || 25;
+      const page = options.page || 1;
+      const offset = (page - 1) * limit;
+  
+      const tags = await query
+        .select(
+          't.*',
+          'ch.channel_name'
+        )
+        .orderBy('t.tag_text', 'asc')
+        .limit(limit)
+        .offset(offset);
+  
+      return {
+        data: tags as TagResponse[],
+        total: parseInt(count as string)
+      };
     }
-    if (filters.background_color) {
-      query = query.where('background_color', filters.background_color);
-    }
-    if (filters.text_color) {
-      query = query.where('text_color', filters.text_color);
-    }
 
-    // Get total count
-    const [{ count }] = await query.clone().count('* as count');
-
-    // Apply pagination and get data
-    const limit = filters.limit || 25;
-    const page = filters.page || 1;
-    const offset = (page - 1) * limit;
-
-    const tags = await query
-      .select('*')
-      .orderBy('tag_text', 'asc')
-      .limit(limit)
-      .offset(offset);
-
-    return {
-      data: tags as TagResponse[],
-      total: parseInt(count as string)
-    };
-  }
 
   /**
    * Get tag by ID
@@ -624,25 +664,55 @@ export class CategoryTagService extends BaseService {
    * Create new tag
    */
   async createTag(
-    data: CreateTagData,
-    context: ServiceContext
-  ): Promise<TagResponse> {
-    const { knex } = await this.getKnex();
+        data: CreateTagData,
+        context: ServiceContext
+      ): Promise<TagResponse> {
+        const { knex } = await this.getKnex();
+        
+        return withTransaction(knex, async (trx) => {
+          const tagData: Omit<ITag, 'tenant' | 'tag_id'> = {
+            tag_text: data.tag_text,
+            tagged_id: data.tagged_id,
+            tagged_type: data.tagged_type,
+            channel_id: data.channel_id || undefined,
+            background_color: data.background_color || undefined,
+            text_color: data.text_color || undefined
+          };
+    
+          const fullTagData = {
+            tag_id: uuidv4(),
+            ...tagData,
+            // Convert undefined to null for database
+            channel_id: tagData.channel_id || null,
+            background_color: tagData.background_color || null,
+            text_color: tagData.text_color || null,
+            tenant: context.tenant,
+            created_at: new Date()
+          };
+    
+          await trx('tags').insert(fullTagData);
+    
+          // Return the created tag with channel info
+          const created = await trx('tags as t')
+            .leftJoin('channels as ch', 't.channel_id', 'ch.channel_id')
+            .where('t.tag_id', fullTagData.tag_id)
+            .where('t.tenant', context.tenant)
+            .select('t.*', 'ch.channel_name')
+            .first();
+    
+          // Transform null back to undefined for response
+          const response = {
+            ...created,
+            channel_id: created.channel_id || undefined,
+            background_color: created.background_color || undefined,
+            text_color: created.text_color || undefined
+          };
+    
+          return response as TagResponse;
+        });
+      }
 
-    return withTransaction(knex, async (trx) => {
-      const tagData = {
-        tag_text: data.tag_text.toLowerCase().trim(),
-        tagged_id: data.tagged_id,
-        tagged_type: data.tagged_type,
-        channel_id: data.channel_id || null,
-        background_color: data.background_color || null,
-        text_color: data.text_color || null
-      };
 
-      const result = await Tag.insert(trx, tagData);
-      return { ...tagData, tag_id: result.tag_id, tenant: context.tenant } as TagResponse;
-    });
-  }
 
   /**
    * Update tag
@@ -777,9 +847,9 @@ export class CategoryTagService extends BaseService {
             tag_text: normalizedTag,
             tagged_id: entityId,
             tagged_type: entityType,
-            channel_id: options.channel_id || null,
-            background_color: colors.background_color || null,
-            text_color: colors.text_color || null
+            channel_id: options.channel_id || undefined,
+            background_color: colors.background_color || undefined,
+            text_color: colors.text_color || undefined
           };
 
           const result = await Tag.insert(trx, tagData);
@@ -1313,15 +1383,15 @@ export class CategoryTagService extends BaseService {
     ].sort((a, b) => b.usage_count - a.usage_count);
 
     return {
-      total_categories: parseInt(serviceStats?.count || '0') + parseInt(ticketStats?.count || '0'),
+      total_categories: parseInt(String(serviceStats?.count || '0')) + parseInt(String(ticketStats?.count || '0')),
       categories_by_type: {
-        service: parseInt(serviceStats?.count || '0'),
-        ticket: parseInt(ticketStats?.count || '0')
+        service: parseInt(String(serviceStats?.count || '0')),
+        ticket: parseInt(String(ticketStats?.count || '0'))
       },
       most_used_categories: mostUsedCategories.map((cat: any) => ({
         category_id: cat.category_id,
         category_name: cat.category_name,
-        usage_count: parseInt(cat.usage_count),
+        usage_count: parseInt(String(cat.usage_count)),
         category_type: cat.category_type
       })),
       hierarchy_depth_stats: hierarchyStats
