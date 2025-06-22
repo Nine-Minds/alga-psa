@@ -90,7 +90,6 @@ import {
 import {
   ITransaction,
   ICreditTracking,
-  IInvoice,
   PaymentMethod,
   IBillingPlan,
   ITaxRate,
@@ -519,7 +518,7 @@ export class FinancialService extends BaseService<ITransaction> {
   async createPrepaymentInvoice(
     request: CreatePrepaymentInvoiceRequest,
     context: ServiceContext
-  ): Promise<FinancialResponse<IInvoice>> {
+  ): Promise<FinancialResponse<any>> {
     await this.validatePermissions('create', 'credit', context);
     
     const invoice = await creditActions.createPrepaymentInvoice(
@@ -614,7 +613,11 @@ export class FinancialService extends BaseService<ITransaction> {
         actual_balance: result.actualBalance,
         expected_balance: result.actualBalance, // Same for this context
         difference: 0,
-        last_transaction: result.lastTransaction
+        last_transaction: result.lastTransaction ? {
+          ...result.lastTransaction,
+          status: result.lastTransaction.status || 'pending',
+          tenant: result.lastTransaction.tenant || ''
+        } as unknown as any : undefined
       },
       links: [
         {
@@ -655,7 +658,7 @@ export class FinancialService extends BaseService<ITransaction> {
       companyId,
       periodStart,
       periodEnd,
-      billingCycleId
+      billingCycleId!
     );
 
     // Calculate tax amounts
@@ -673,7 +676,10 @@ export class FinancialService extends BaseService<ITransaction> {
     }
 
     const billingResult: BillingCalculationResult = {
-      charges: result.charges,
+      charges: result.charges.map((charge: any) => ({
+        ...charge,
+        service_name: charge.service_name || charge.description || 'Service'
+      })),
       total_amount: result.charges.reduce((sum, charge) => sum + charge.total, 0),
       tax_amount: totalTaxAmount,
       discounts: [],
@@ -853,10 +859,10 @@ export class FinancialService extends BaseService<ITransaction> {
     const report: AccountBalanceReport = {
       company_id: companyId,
       current_balance: company.credit_balance || 0,
-      available_credit: Number(availableCredits.total) || 0,
-      expired_credit: Number(expiredCredits.total) || 0,
-      pending_invoices: Number(pendingInvoices.total) || 0,
-      overdue_amount: Number(overdueInvoices.total) || 0,
+      available_credit: Number(availableCredits[0]?.total) || 0,
+      expired_credit: Number(expiredCredits[0]?.total) || 0,
+      pending_invoices: Number(pendingInvoices[0]?.total) || 0,
+      overdue_amount: Number(overdueInvoices[0]?.total) || 0,
       last_payment_date: lastPayment?.created_at,
       last_payment_amount: lastPayment?.amount,
       as_of_date: reportDate
@@ -1030,7 +1036,11 @@ export class FinancialService extends BaseService<ITransaction> {
       )
       .where('tenant', context.tenant)
       .whereIn('status', ['sent', 'paid'])
-      .whereBetween('created_at', [date_from, date_to])
+      .modify((qb) => {
+        if (date_from && date_to) {
+          qb.whereBetween('created_at', [date_from, date_to]);
+        }
+      })
       .groupBy(knex.raw(dateGrouping))
       .orderBy('period');
 
@@ -1049,7 +1059,11 @@ export class FinancialService extends BaseService<ITransaction> {
         'credit_application',
         'credit_expiration'
       ])
-      .whereBetween('created_at', [date_from, date_to])
+      .modify((qb) => {
+        if (date_from && date_to) {
+          qb.whereBetween('created_at', [date_from, date_to]);
+        }
+      })
       .groupBy(knex.raw(dateGrouping))
       .orderBy('period');
 
@@ -1065,7 +1079,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
     // Calculate additional credit metrics
     const creditAnalytics = await Promise.all(
-      creditData.map(async (period) => {
+      creditData.map(async (period: any) => {
         // Get credit balance at end of period
         const balanceQuery = knex('companies')
           .sum('credit_balance as total_balance')
@@ -1099,7 +1113,7 @@ export class FinancialService extends BaseService<ITransaction> {
     );
 
     const analytics: FinancialAnalytics = {
-      revenue: revenueData.map(row => ({
+      revenue: revenueData.map((row: any) => ({
         period: row.period,
         total_revenue: Number(row.total_revenue) || 0,
         recurring_revenue: Number(row.recurring_revenue) || 0,

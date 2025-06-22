@@ -35,8 +35,17 @@ export class ProjectController extends BaseController {
   private projectService: ProjectService;
 
   constructor() {
-    super(null as any, null as any);
-    this.projectService = new ProjectService(null as any);
+    super(null as any, {
+      resource: 'project',
+      permissions: {
+        create: 'create',
+        read: 'read', 
+        update: 'update',
+        delete: 'delete',
+        list: 'read'
+      }
+    });
+    this.projectService = new ProjectService();
   }
 
   /**

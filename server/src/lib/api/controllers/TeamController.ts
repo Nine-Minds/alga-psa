@@ -957,7 +957,11 @@ export class TeamController extends BaseController {
     );
 
     return middleware(async (req: ApiRequest, validatedData: { teams: Array<{ team_id: string; data: UpdateTeamData }> }) => {
-      const results = await this.teamService.bulkUpdate(validatedData.teams, req.context!);
+      const mappedTeams = validatedData.teams.map(team => ({
+        id: team.team_id,
+        data: team.data
+      }));
+      const results = await this.teamService.bulkUpdate(mappedTeams, req.context!);
       
       return createSuccessResponse({
         updated_teams: results,

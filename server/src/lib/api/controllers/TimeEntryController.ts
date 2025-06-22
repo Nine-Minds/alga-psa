@@ -34,7 +34,7 @@ export class TimeEntryController extends BaseController {
 
   constructor() {
     super(null as any, null as any);
-    this.timeEntryService = new TimeEntryService(null as any);
+    this.timeEntryService = new TimeEntryService();
   }
 
   /**
@@ -259,7 +259,7 @@ export class TimeEntryController extends BaseController {
       const data = await req.json() || {};
       const context = { userId: (req as any).user?.id || "unknown", tenant: (req as any).user?.tenant || "default" };
       
-      const results = await this.timeEntryService.bulkDelete(data, context);
+      const results = await this.timeEntryService.bulkDeleteTimeEntries(data, context);
       
       const response = createApiResponse({
         data: results,

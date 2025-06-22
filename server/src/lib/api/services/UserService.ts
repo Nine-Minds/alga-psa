@@ -307,8 +307,8 @@ export class UserService extends BaseService<IUser> {
 
       // Remove undefined values
       Object.keys(updateData).forEach(key => {
-        if (updateData[key as keyof UpdateUserData] === undefined) {
-          delete updateData[key as keyof UpdateUserData];
+        if ((updateData as any)[key] === undefined) {
+          delete (updateData as any)[key];
         }
       });
 
@@ -1126,7 +1126,7 @@ export class UserService extends BaseService<IUser> {
     return {
       success: true,
       message: 'Avatar uploaded successfully',
-      avatarUrl: uploadResult.imageUrl
+      avatarUrl: uploadResult.imageUrl || undefined
     };
   }
 

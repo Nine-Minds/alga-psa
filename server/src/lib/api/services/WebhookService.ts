@@ -98,7 +98,13 @@ export class WebhookService {
 
     return {
       success: true,
-      data: webhook as WebhookResponse
+      data: {
+        ...webhook,
+        last_delivery_at: webhook.last_delivery_at || undefined,
+        last_failure_at: webhook.last_failure_at || undefined,
+        last_success_at: webhook.last_success_at || undefined,
+        description: webhook.description || null
+      } as unknown as WebhookResponse
     };
   }
 
@@ -123,7 +129,13 @@ export class WebhookService {
 
     return {
       success: true,
-      data: webhook as WebhookResponse
+      data: {
+        ...webhook,
+        last_delivery_at: webhook.last_delivery_at || undefined,
+        last_failure_at: webhook.last_failure_at || undefined,
+        last_success_at: webhook.last_success_at || undefined,
+        description: webhook.description || null
+      } as unknown as WebhookResponse
     };
   }
 
@@ -243,36 +255,37 @@ export class WebhookService {
   }
 
   async listWebhooks(
-    filters: WebhookFilterData,
-    tenantId: string,
-    page: number = 1,
-    limit: number = 25
-  ): Promise<PaginatedResponse<WebhookResponse[]>> {
-    await validateTenantAccess(tenantId);
+      filters: WebhookFilterData,
+      tenantId: string,
+      page: number = 1,
+      limit: number = 25
+    ): Promise<PaginatedResponse<WebhookResponse>> {
+      await validateTenantAccess(tenantId);
+  
+      const conditions = { tenant: tenantId, ...filters };
+      const offset = (page - 1) * limit;
+  
+      const [webhooks, total] = await Promise.all([
+        this.db.findMany('webhooks', conditions, {
+          limit,
+          offset,
+          orderBy: { created_at: 'desc' }
+        }),
+        this.db.count('webhooks', conditions)
+      ]);
+  
+      return {
+        success: true,
+        data: webhooks as WebhookResponse[],
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      };
+    }
 
-    const conditions = { tenant: tenantId, ...filters };
-    const offset = (page - 1) * limit;
-
-    const [webhooks, total] = await Promise.all([
-      this.db.findMany('webhooks', conditions, {
-        limit,
-        offset,
-        orderBy: { created_at: 'desc' }
-      }),
-      this.db.count('webhooks', conditions)
-    ]);
-
-    return {
-      success: true,
-      data: webhooks as WebhookResponse[],
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit)
-      }
-    };
-  }
 
   // ============================================================================
   // WEBHOOK TESTING
@@ -361,7 +374,7 @@ export class WebhookService {
       const testResult: WebhookTestResult = {
         test_id: testId,
         success: false,
-        error_message: error.message,
+        error_message: error instanceof Error ? error.message : String(error),
         tested_at: new Date().toISOString()
       };
 
@@ -441,7 +454,7 @@ export class WebhookService {
         error_message: deliveryResult.error_message,
         attempted_at: now,
         completed_at: now,
-        next_retry_at: null,
+        next_retry_at: undefined,
         tenant: tenantId
       };
 
@@ -475,10 +488,10 @@ export class WebhookService {
         request_method: webhook.method,
         status: 'failed',
         attempt_number: 1,
-        error_message: error.message,
+        error_message: error instanceof Error ? error.message : String(error),
         attempted_at: now,
         completed_at: now,
-        next_retry_at: null,
+        next_retry_at: undefined,
         tenant: tenantId
       };
 
@@ -567,41 +580,42 @@ export class WebhookService {
         data: updated as WebhookDelivery
       };
     } catch (error) {
-      throw new Error(`Retry failed: ${error.message}`);
+      throw new Error(`Retry failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   async getDeliveryHistory(
-    webhookId: string,
-    tenantId: string,
-    page: number = 1,
-    limit: number = 25
-  ): Promise<PaginatedResponse<WebhookDelivery[]>> {
-    await validateTenantAccess(tenantId);
+      webhookId: string,
+      tenantId: string,
+      page: number = 1,
+      limit: number = 25
+    ): Promise<PaginatedResponse<WebhookDelivery>> {
+      await validateTenantAccess(tenantId);
+  
+      const conditions = { webhook_id: webhookId, tenant: tenantId };
+      const offset = (page - 1) * limit;
+  
+      const [deliveries, total] = await Promise.all([
+        this.db.findMany('webhook_deliveries', conditions, {
+          limit,
+          offset,
+          orderBy: { attempted_at: 'desc' }
+        }),
+        this.db.count('webhook_deliveries', conditions)
+      ]);
+  
+      return {
+        success: true,
+        data: deliveries as WebhookDelivery[],
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      };
+    }
 
-    const conditions = { webhook_id: webhookId, tenant: tenantId };
-    const offset = (page - 1) * limit;
-
-    const [deliveries, total] = await Promise.all([
-      this.db.findMany('webhook_deliveries', conditions, {
-        limit,
-        offset,
-        orderBy: { attempted_at: 'desc' }
-      }),
-      this.db.count('webhook_deliveries', conditions)
-    ]);
-
-    return {
-      success: true,
-      data: deliveries as WebhookDelivery[],
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit)
-      }
-    };
-  }
 
   // ============================================================================
   // WEBHOOK TEMPLATES
@@ -691,23 +705,26 @@ export class WebhookService {
     }
 
     // Merge template configuration with customization
-    const webhookData: CreateWebhookData = {
-      name: customization.name || template.name,
-      description: customization.description || template.description,
-      url: customization.url || template.default_config.url_template || '',
-      method: customization.method || template.default_config.method,
-      event_types: customization.event_types || template.supported_events || [],
+    const webhookData = {
+      name: String(customization.name || template.name),
+      description: customization.description || template.description || null,
+      url: String(customization.url || template.default_config?.url_template || ''),
+      method: (customization.method || template.default_config?.method || 'POST') as any,
+      event_types: (customization.event_types || template.supported_events || []) as any,
       custom_headers: {
         ...template.default_config.headers,
         ...customization.custom_headers
       },
       security: customization.security || {
-        type: template.default_config.security_type || 'none'
+        type: template.default_config.security_type || 'none',
+        header_name: 'Authorization',
+        algorithm: 'sha256' as const,
+        signature_header: 'X-Signature'
       },
       ...customization
     };
 
-    return await this.createWebhook(webhookData, tenantId, userId);
+    return await this.createWebhook(webhookData as CreateWebhookData, tenantId, userId);
   }
 
   // ============================================================================
@@ -774,7 +791,7 @@ export class WebhookService {
         }
         results.processed++;
       } catch (error) {
-        results.errors.push(`${webhookId}: ${error.message}`);
+        results.errors.push(`${webhookId}: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
@@ -822,7 +839,7 @@ export class WebhookService {
       entity_type: eventType.split('.')[0],
       event_types: [eventType as any],
       is_active: true,
-      expires_at: null,
+      expires_at: undefined,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       tenant: tenantId
@@ -899,7 +916,7 @@ export class WebhookService {
     } catch (error) {
       return {
         success: false,
-        error_message: error.message,
+        error_message: error instanceof Error ? error.message : String(error),
         duration_ms: Date.now() - startTime
       };
     }
@@ -938,11 +955,11 @@ export class WebhookService {
       return event;
     }
 
-    let payload = { ...event };
+    let payload: Record<string, any> = { ...event };
 
     // Apply field inclusion/exclusion
     if (transformation.include_fields) {
-      const included: any = {};
+      const included: Record<string, any> = {};
       for (const field of transformation.include_fields) {
         if (payload[field] !== undefined) {
           included[field] = payload[field];
@@ -1028,7 +1045,12 @@ export class WebhookService {
     attemptNumber: number,
     retryConfig: RetryConfig
   ): Date {
-    const { strategy, initial_delay, max_delay, backoff_multiplier } = retryConfig;
+    const { strategy, initial_delay, max_delay, backoff_multiplier } = retryConfig || {
+      strategy: 'exponential_backoff' as const,
+      initial_delay: 1000,
+      max_delay: 300000,
+      backoff_multiplier: 2
+    };
     
     let delay = initial_delay;
 

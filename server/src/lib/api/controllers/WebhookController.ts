@@ -38,8 +38,21 @@ export class WebhookController extends BaseController {
   private webhookService: WebhookService;
 
   constructor() {
-    super(null as any, null as any);
-    this.webhookService = new WebhookService(null as any, null as any, null as any);
+    super(null as any, {
+      resource: 'webhook',
+      permissions: {
+        create: 'create',
+        read: 'read',
+        update: 'update',
+        delete: 'delete', 
+        list: 'read'
+      }
+    });
+    this.webhookService = new WebhookService(
+      undefined as any, // DatabaseService - would be injected
+      undefined as any, // EventBusService - would be injected  
+      undefined as any  // AuditLogService - would be injected
+    );
   }
 
   // ============================================================================

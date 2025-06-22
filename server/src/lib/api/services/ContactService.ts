@@ -212,8 +212,8 @@ export class ContactService extends BaseService<IContact> {
 
       // Remove undefined values
       Object.keys(updateData).forEach(key => {
-        if (updateData[key as keyof UpdateContactData] === undefined) {
-          delete updateData[key as keyof UpdateContactData];
+        if ((updateData as any)[key] === undefined) {
+          delete (updateData as any)[key];
         }
       });
 
@@ -359,7 +359,7 @@ export class ContactService extends BaseService<IContact> {
         acc[row.role] = parseInt(row.count);
         return acc;
       }, {}),
-      recent_contacts: parseInt(recentStats.recent_contacts as string)
+      recent_contacts: parseInt(recentStats?.recent_contacts as string || '0')
     };
   }
 

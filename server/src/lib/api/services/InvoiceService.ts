@@ -221,42 +221,62 @@ export class InvoiceService extends BaseService<IInvoice> {
   /**
    * Get invoice by ID with detailed information
    */
-  async getById(id: string, context: ServiceContext): Promise<IInvoice | null> {
-    await this.validatePermissions(context, 'invoice', 'read');
+  async getById(id: string, context: ServiceContext, options?: any): Promise<IInvoice | null> {
+      await this.validatePermissions(context, 'invoice', 'read');
+  
+      const { knex } = await this.getKnex();
+      
+      return withTransaction(knex, async (trx) => {
+        const invoice = await this.buildBaseQuery(trx, context)
+          .where('invoices.invoice_id', id)
+          .first();
+  
+        if (!invoice) {
+          return null;
+        }
+  
+        // Get related data based on options
+        const includeItems = options?.include_items !== false;
+        const includeTransactions = options?.include_transactions === true;
+        const includeCompany = options?.include_company !== false;
+  
+        const [lineItems, company, billingCycle, taxDetails, payments, credits] = await Promise.all([
+          includeItems ? this.getInvoiceLineItems(id, trx, context) : [],
+          includeCompany ? this.getInvoiceCompany(invoice.company_id, trx, context) : null,
+          invoice.billing_cycle_id ? this.getBillingCycle(invoice.billing_cycle_id, trx, context) : null,
+          invoice.tax_rate_id ? this.getTaxDetails(invoice.tax_rate_id, trx, context) : null,
+          includeTransactions ? this.getInvoicePayments(id, trx, context) : [],
+          includeTransactions ? this.getInvoiceCredits(id, trx, context) : []
+        ]);
+  
+        const result: any = {
+          ...invoice,
+          _links: this.generateInvoiceLinks(invoice)
+        };
+  
+        if (includeItems) {
+          result.line_items = lineItems;
+          result.invoice_items = lineItems; // Alias for controller compatibility
+        }
+        if (includeCompany) {
+          result.company = company;
+        }
+        if (billingCycle) {
+          result.billing_cycle = billingCycle;
+        }
+        if (taxDetails) {
+          result.tax_details = taxDetails;
+        }
+        if (includeTransactions) {
+          result.payments = payments;
+          result.credits = credits;
+          result.transactions = [...payments, ...credits]; // Combined for transactions endpoint
+        }
+  
+        return result;
+      });
+    }
 
-    const { knex } = await this.getKnex();
-    
-    return withTransaction(knex, async (trx) => {
-      const invoice = await this.buildBaseQuery(trx, context)
-        .where('invoices.invoice_id', id)
-        .first();
-
-      if (!invoice) {
-        return null;
-      }
-
-      // Get related data
-      const [lineItems, company, billingCycle, taxDetails, payments, credits] = await Promise.all([
-        this.getInvoiceLineItems(id, trx, context),
-        this.getInvoiceCompany(invoice.company_id, trx, context),
-        invoice.billing_cycle_id ? this.getBillingCycle(invoice.billing_cycle_id, trx, context) : null,
-        invoice.tax_rate_id ? this.getTaxDetails(invoice.tax_rate_id, trx, context) : null,
-        this.getInvoicePayments(id, trx, context),
-        this.getInvoiceCredits(id, trx, context)
-      ]);
-
-      return {
-        ...invoice,
-        line_items: lineItems,
-        company,
-        billing_cycle: billingCycle,
-        tax_details: taxDetails,
-        payments,
-        credits,
-        _links: this.generateInvoiceLinks(invoice)
-      };
-    });
-  }
 
   /**
    * Create a new invoice
@@ -989,6 +1009,38 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   // ============================================================================
+  // Missing Methods - Stub Implementations  
+  // ============================================================================
+
+  async generateFromBillingCycle(data: any, context: InvoiceServiceContext): Promise<IInvoice> {
+    throw new Error('generateFromBillingCycle not yet implemented');
+  }
+
+  async generateManualInvoice(data: ManualInvoiceRequest, context: InvoiceServiceContext): Promise<IInvoice> {
+    throw new Error('generateManualInvoice not yet implemented');
+  }
+
+  async approve(id: string, context: InvoiceServiceContext, executionId?: string): Promise<IInvoice> {
+    throw new Error('approve not yet implemented');
+  }
+
+  async reject(id: string, reason: string, context: InvoiceServiceContext, executionId?: string): Promise<IInvoice> {
+    throw new Error('reject not yet implemented');
+  }
+
+  async generatePDF(id: string, context: InvoiceServiceContext): Promise<any> {
+    throw new Error('generatePDF not yet implemented');
+  }
+
+  async search(query: any, context: InvoiceServiceContext, options?: any): Promise<{ data: IInvoice[]; total: number }> {
+    throw new Error('search not yet implemented');
+  }
+
+  async createRecurringTemplate(data: CreateRecurringInvoiceTemplate, context: InvoiceServiceContext): Promise<RecurringInvoiceTemplate> {
+    throw new Error('createRecurringTemplate not yet implemented');
+  }
+
+  // ============================================================================
   // Preview and Templates
   // ============================================================================
 
@@ -1314,5 +1366,47 @@ export class InvoiceService extends BaseService<IInvoice> {
       .orderBy('total_revenue', 'desc')
       .limit(10);
   }
+
+  // ============================================================================
+  // Alias Methods for Controller Compatibility
+  // ============================================================================
+
+  async calculateTax(request: TaxCalculationRequest, context: InvoiceServiceContext): Promise<TaxCalculationResponse> {
+    return this.calculateTaxes(request, context);
+  }
+
+  async finalize(data: FinalizeInvoice, context: InvoiceServiceContext): Promise<IInvoice> {
+    return this.finalizeInvoice(data, context);
+  }
+
+  async send(data: SendInvoice, context: InvoiceServiceContext): Promise<IInvoice> {
+    return this.sendInvoice(data, context);
+  }
+
+  async bulkSend(data: BulkInvoiceSend, context: InvoiceServiceContext): Promise<any> {
+    const result = await this.bulkSendInvoices(data, context);
+    return {
+      sent_count: Array.isArray(result) ? result.length : (result?.sent_count || 0),
+      errors: Array.isArray(result) ? [] : (result?.errors || [])
+    };
+  }
+
+  async getAnalytics(context: InvoiceServiceContext, dateRange?: any): Promise<InvoiceAnalytics> {
+    return this.getStatistics(context, dateRange) as Promise<InvoiceAnalytics>;
+  }
+
+  async previewInvoice(request: InvoicePreviewRequest, context: InvoiceServiceContext): Promise<InvoicePreviewResponse> {
+    return this.generatePreview(request, context);
+  }
+
+  // ============================================================================
+  // Missing Methods - Stub Implementations
+  // ============================================================================
+
+  async bulkDelete(ids: string[], context: ServiceContext): Promise<void> {
+    throw new Error('bulkDelete not yet implemented');
+  }
+
+
 }
 
