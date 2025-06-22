@@ -233,7 +233,7 @@ class ApiRegistryClass {
   }
 
   private generateParameters(endpoint: ApiEndpoint): any[] {
-    const parameters = [];
+    const parameters: any[] = [];
 
     // Path parameters
     const pathParams = endpoint.path.match(/{([^}]+)}/g);

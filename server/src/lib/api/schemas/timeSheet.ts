@@ -248,15 +248,15 @@ export const timeSheetSearchSchema = z.object({
   period_ids: z.array(uuidSchema).optional(),
   date_from: dateSchema.optional(),
   date_to: dateSchema.optional(),
-  include_entries: booleanTransform.optional().default(false),
+  include_entries: booleanTransform.optional().default("false"),
   limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25')
 });
 
 // Time sheet export schema
 export const timeSheetExportQuerySchema = z.object({
   format: z.enum(['csv', 'json', 'xlsx']).optional().default('csv'),
-  include_time_entries: booleanTransform.optional().default(false),
-  include_comments: booleanTransform.optional().default(false),
+  include_time_entries: booleanTransform.optional().default("false"),
+  include_comments: booleanTransform.optional().default("false"),
   group_by: z.enum(['user', 'period', 'status', 'none']).optional().default('none'),
   approval_statuses: z.array(approvalStatusSchema).optional(),
   user_ids: z.array(uuidSchema).optional(),
@@ -274,8 +274,8 @@ export const generateTimePeriodsSchema = z.object({
   frequency_unit: z.number().min(1).optional().default(1)
 });
 
-// Schedule entry schemas (simplified for time management context)
-export const createScheduleEntrySchema = z.object({
+// Base schedule entry schema (without refinements)
+const baseScheduleEntrySchema = z.object({
   title: z.string().min(1, 'Title is required'),
   scheduled_start: z.string().datetime(),
   scheduled_end: z.string().datetime(),
@@ -285,14 +285,17 @@ export const createScheduleEntrySchema = z.object({
   notes: z.string().optional(),
   is_private: z.boolean().optional().default(false),
   recurrence_pattern: z.string().optional()
-}).refine(data => {
+});
+
+// Schedule entry schemas (simplified for time management context)
+export const createScheduleEntrySchema = baseScheduleEntrySchema.refine(data => {
   return new Date(data.scheduled_end) > new Date(data.scheduled_start);
 }, {
   message: "Scheduled end time must be after start time",
   path: ["scheduled_end"]
 });
 
-export const updateScheduleEntrySchema = createUpdateSchema(createScheduleEntrySchema).refine(data => {
+export const updateScheduleEntrySchema = createUpdateSchema(baseScheduleEntrySchema).refine(data => {
   if (data.scheduled_start && data.scheduled_end) {
     return new Date(data.scheduled_end) > new Date(data.scheduled_start);
   }

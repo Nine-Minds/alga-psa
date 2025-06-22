@@ -83,7 +83,7 @@ export const createTicketCategorySchema = z.object({
 
 export const updateTicketCategorySchema = createUpdateSchema(createTicketCategorySchema);
 
-export const ticketCategoryResponseSchema = z.object({
+export const ticketCategoryResponseSchema: z.ZodType<any> = z.object({
   category_id: uuidSchema,
   category_name: z.string(),
   parent_category: uuidSchema.nullable(),
@@ -263,7 +263,7 @@ export const reorderCategoriesSchema = z.object({
   })).min(1, 'At least one category order is required')
 });
 
-export const categoryTreeResponseSchema = z.object({
+export const categoryTreeResponseSchema: z.ZodType<any> = z.object({
   category_id: uuidSchema,
   category_name: z.string(),
   parent_category: uuidSchema.nullable(),
@@ -316,7 +316,7 @@ export const categoryAnalyticsFilterSchema = z.object({
   channel_id: uuidSchema.optional(),
   date_from: dateSchema,
   date_to: dateSchema,
-  include_subcategories: booleanTransform.optional().default(true)
+  include_subcategories: booleanTransform.optional().default("true")
 });
 
 export const categoryUsageStatsSchema = z.object({
@@ -339,8 +339,8 @@ export const tagSearchSchema = z.object({
   query: z.string().min(1, 'Search query is required'),
   entity_types: z.array(taggedEntityTypeSchema).optional(),
   channel_ids: z.array(uuidSchema).optional(),
-  exact_match: booleanTransform.optional().default(false),
-  include_colors: booleanTransform.optional().default(true),
+  exact_match: booleanTransform.optional().default("false"),
+  include_colors: booleanTransform.optional().default("true"),
   limit: z.number().int().min(1).max(100).optional().default(25)
 });
 
@@ -358,8 +358,8 @@ export const categorySearchSchema = z.object({
   query: z.string().min(1, 'Search query is required'),
   category_type: categoryTypeSchema.optional(),
   channel_id: uuidSchema.optional(),
-  include_path: booleanTransform.optional().default(true),
-  include_usage: booleanTransform.optional().default(false),
+  include_path: booleanTransform.optional().default("true"),
+  include_usage: booleanTransform.optional().default("false"),
   limit: z.number().int().min(1).max(100).optional().default(25)
 });
 
@@ -380,7 +380,7 @@ export const categorySearchResultSchema = z.object({
 // Bulk Category Operations
 export const bulkDeleteCategoriesSchema = bulkDeleteSchema.extend({
   category_type: categoryTypeSchema,
-  force: booleanTransform.optional().default(false) // Force delete even if in use
+  force: booleanTransform.optional().default("false") // Force delete even if in use
 });
 
 export const bulkUpdateCategoriesSchema = bulkUpdateSchema.extend({
@@ -437,15 +437,15 @@ export const tagValidationRulesSchema = z.object({
   allowed_characters: z.string().optional().default('a-zA-Z0-9-_\\s'),
   min_tag_length: z.number().int().min(1).optional().default(1),
   max_tag_length: z.number().int().max(100).optional().default(50),
-  case_sensitive: booleanTransform.optional().default(false),
-  auto_suggest: booleanTransform.optional().default(true)
+  case_sensitive: booleanTransform.optional().default("false"),
+  auto_suggest: booleanTransform.optional().default("true")
 });
 
 // Category Validation Rules
 export const categoryValidationRulesSchema = z.object({
   max_depth: z.number().int().min(1).max(10).optional().default(5),
-  allow_empty_categories: booleanTransform.optional().default(true),
-  unique_names_per_level: booleanTransform.optional().default(true),
+  allow_empty_categories: booleanTransform.optional().default("true"),
+  unique_names_per_level: booleanTransform.optional().default("true"),
   max_children: z.number().int().min(1).max(100).optional().default(50)
 });
 

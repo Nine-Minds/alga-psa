@@ -93,6 +93,7 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
       defaultSort: 'plan_name',
       defaultOrder: 'asc'
     });
+    this.planServiceConfigService = new PlanServiceConfigurationService();
   }
 
   // ============================================================================
@@ -1034,7 +1035,7 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
    * Bulk delete billing plans
    */
   async bulkDelete(
-    data: BullingDeleteBillingPlansData,
+    data: BulkDeleteBillingPlansData,
     context: ServiceContext
   ): Promise<void> {
     const { knex } = await this.getKnex();

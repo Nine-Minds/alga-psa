@@ -97,3 +97,5 @@ secrets/
 data/
 shared/dist
 temp_wasm_compile
+venv/
+.serena

@@ -73,10 +73,10 @@ export class InvoiceController extends BaseController {
       } = query;
       
       const listOptions = { 
-        page, 
-        limit, 
+        page: page ? parseInt(page) : undefined, 
+        limit: limit ? parseInt(limit) : undefined, 
         sort, 
-        order,
+        order: order as 'asc' | 'desc' | undefined,
         include_items: include_items === 'true',
         include_company: include_company === 'true',
         include_billing_cycle: include_billing_cycle === 'true',

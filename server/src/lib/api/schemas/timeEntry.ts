@@ -19,8 +19,8 @@ export const workItemTypeSchema = z.enum(['ticket', 'project_task', 'non_billabl
 // Approval status schema
 export const approvalStatusSchema = z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'CHANGES_REQUESTED']);
 
-// Create time entry schema
-export const createTimeEntrySchema = z.object({
+// Base time entry schema (without refinements)
+const baseTimeEntrySchema = z.object({
   work_item_id: uuidSchema.optional(),
   work_item_type: workItemTypeSchema,
   start_time: z.string().datetime(),
@@ -29,7 +29,10 @@ export const createTimeEntrySchema = z.object({
   service_id: uuidSchema.optional(),
   tax_region: z.string().optional(),
   is_billable: z.boolean().optional().default(true)
-}).refine(data => {
+});
+
+// Create time entry schema
+export const createTimeEntrySchema = baseTimeEntrySchema.refine(data => {
   // Validate that end_time is after start_time
   if (data.start_time && data.end_time) {
     return new Date(data.end_time) > new Date(data.start_time);
@@ -41,7 +44,7 @@ export const createTimeEntrySchema = z.object({
 });
 
 // Update time entry schema (all fields optional except validation)
-export const updateTimeEntrySchema = createUpdateSchema(createTimeEntrySchema).refine(data => {
+export const updateTimeEntrySchema = createUpdateSchema(baseTimeEntrySchema).refine(data => {
   // Validate that end_time is after start_time if both are provided
   if (data.start_time && data.end_time) {
     return new Date(data.end_time) > new Date(data.start_time);
@@ -230,8 +233,8 @@ export const timeEntrySearchSchema = z.object({
 // Time entry export schema
 export const timeEntryExportQuerySchema = z.object({
   format: z.enum(['csv', 'json', 'xlsx']).optional().default('csv'),
-  include_billing_info: booleanTransform.optional().default(false),
-  include_work_item_details: booleanTransform.optional().default(false),
+  include_billing_info: booleanTransform.optional().default("false"),
+  include_work_item_details: booleanTransform.optional().default("false"),
   group_by: z.enum(['user', 'work_item', 'service', 'date', 'none']).optional().default('none'),
   work_item_types: z.array(workItemTypeSchema).optional(),
   approval_statuses: z.array(approvalStatusSchema).optional(),

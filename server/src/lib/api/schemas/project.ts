@@ -305,16 +305,16 @@ export const projectSearchSchema = z.object({
   status: z.array(projectStatusSchema).optional(),
   company_ids: z.array(uuidSchema).optional(),
   assigned_to_ids: z.array(uuidSchema).optional(),
-  include_inactive: booleanTransform.optional().default(false),
+  include_inactive: booleanTransform.optional().default("false"),
   limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25')
 });
 
 // Project export schema
 export const projectExportQuerySchema = z.object({
   format: z.enum(['csv', 'json', 'xlsx']).optional().default('csv'),
-  include_inactive: booleanTransform.optional().default(false),
-  include_phases: booleanTransform.optional().default(false),
-  include_tasks: booleanTransform.optional().default(false),
+  include_inactive: booleanTransform.optional().default("false"),
+  include_phases: booleanTransform.optional().default("false"),
+  include_tasks: booleanTransform.optional().default("false"),
   status: z.array(projectStatusSchema).optional(),
   company_ids: z.array(uuidSchema).optional(),
   fields: z.array(z.string()).optional()

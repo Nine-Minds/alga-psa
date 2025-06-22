@@ -30,8 +30,8 @@ export const billingMethodSchema = z.enum(['fixed', 'per_unit']);
 // CORE BILLING PLAN SCHEMAS
 // ============================================================================
 
-// Create billing plan schema
-export const createBillingPlanSchema = z.object({
+// Base billing plan schema (without refinements)
+const baseBillingPlanSchema = z.object({
   plan_name: z.string().min(1, 'Plan name is required').max(255),
   billing_frequency: billingFrequencySchema,
   is_custom: z.boolean().optional().default(false),
@@ -53,7 +53,10 @@ export const createBillingPlanSchema = z.object({
   // Additional features and settings
   is_active: z.boolean().optional().default(true),
   features: z.array(z.string()).optional()
-}).refine(data => {
+});
+
+// Create billing plan schema
+export const createBillingPlanSchema = baseBillingPlanSchema.refine(data => {
   // Validation: If overtime is enabled, rate and threshold must be provided
   if (data.enable_overtime && (!data.overtime_rate || !data.overtime_threshold)) {
     return false;
@@ -68,7 +71,7 @@ export const createBillingPlanSchema = z.object({
 });
 
 // Update billing plan schema
-export const updateBillingPlanSchema = createUpdateSchema(createBillingPlanSchema);
+export const updateBillingPlanSchema = createUpdateSchema(baseBillingPlanSchema);
 
 // Billing plan response schema
 export const billingPlanResponseSchema = z.object({

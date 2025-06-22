@@ -330,8 +330,8 @@ export const userSearchSchema = z.object({
   user_type: userTypeSchema.optional(),
   role_id: uuidSchema.optional(),
   team_id: uuidSchema.optional(),
-  include_inactive: booleanTransform.optional().default(false),
-  limit: numberTransform.pipe(z.number().min(1).max(100)).optional().default(25)
+  include_inactive: booleanTransform.optional().default("false"),
+  limit: numberTransform.pipe(z.number().min(1).max(100)).optional().default('25')
 });
 
 // User import/export schemas
@@ -350,14 +350,14 @@ export const userImportSchema = z.object({
 
 export const userExportQuerySchema = z.object({
   format: z.enum(['csv', 'json', 'xlsx']).optional().default('csv'),
-  include_inactive: booleanTransform.optional().default(false),
+  include_inactive: booleanTransform.optional().default("false"),
   user_type: userTypeSchema.optional(),
   role_id: uuidSchema.optional(),
   team_id: uuidSchema.optional(),
   fields: z.array(z.string()).optional(),
-  include_roles: booleanTransform.optional().default(false),
-  include_teams: booleanTransform.optional().default(false),
-  include_preferences: booleanTransform.optional().default(false)
+  include_roles: booleanTransform.optional().default("false"),
+  include_teams: booleanTransform.optional().default("false"),
+  include_preferences: booleanTransform.optional().default("false")
 });
 
 // Session and authentication response schemas
