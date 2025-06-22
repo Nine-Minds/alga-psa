@@ -612,7 +612,7 @@ export class InvoiceController extends BaseController {
       const data = await req.json() || {};
       const context = { userId: (req as any).user?.id || "unknown", tenant: (req as any).user?.tenant || "default" };
       
-      const result = await this.invoiceService.bulkDelete(data, context);
+      const result = await this.invoiceService.bulkDeleteInvoices(data, context);
       
       const response = createApiResponse({
         data: result,
@@ -648,7 +648,7 @@ export class InvoiceController extends BaseController {
             credit_amount: data.credit_amount_per_invoice
           };
           const result = await this.invoiceService.applyCredit(creditData, context);
-          results.push({ invoice_id: invoiceId, ...result });
+          results.push({ ...result, invoice_id: invoiceId });
         } catch (error) {
           errors.push(`Error applying credit to invoice ${invoiceId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }

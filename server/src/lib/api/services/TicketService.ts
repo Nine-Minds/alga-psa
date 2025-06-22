@@ -204,61 +204,85 @@ export class TicketService extends BaseService<ITicket> {
 
   /**
    * Create new ticket
-   */
-  async create(data: CreateTicketData, context: ServiceContext): Promise<ITicket> {
-    const { knex } = await this.getKnex();
-
-    return withTransaction(knex, async (trx) => {
-      // Generate ticket number
-      const numberingService = new NumberingService();
-      const ticketNumber = await numberingService.getNextTicketNumber();
-
-      // Prepare ticket data
-      const ticketData = {
-        ticket_id: knex.raw('gen_random_uuid()'),
-        ticket_number: ticketNumber,
-        title: data.title,
-        url: data.url || null,
-        channel_id: data.channel_id,
-        company_id: data.company_id,
-        location_id: data.location_id || null,
-        contact_name_id: data.contact_name_id || null,
-        status_id: data.status_id,
-        category_id: data.category_id || null,
-        subcategory_id: data.subcategory_id || null,
-        entered_by: context.userId,
-        updated_by: context.userId,
-        assigned_to: data.assigned_to || null,
-        priority_id: data.priority_id,
-        attributes: data.attributes || null,
-        entered_at: knex.raw('now()'),
-        updated_at: knex.raw('now()'),
-        tenant: context.tenant
-      };
-
-      // Insert ticket
-      const [ticket] = await trx('tickets').insert(ticketData).returning('*');
-
-      // Handle tags if provided
-      if (data.tags && data.tags.length > 0) {
-        await this.handleTags(ticket.ticket_id, data.tags, context, trx);
+    // Override for BaseService compatibility  
+    async create(data: Partial<ITicket>, context: ServiceContext): Promise<ITicket>;
+    async create(data: CreateTicketData, context: ServiceContext): Promise<ITicket>;
+    async create(data: CreateTicketData | Partial<ITicket>, context: ServiceContext): Promise<ITicket> {
+      // Ensure we have required fields for CreateTicketData
+      if (!data.company_id || !data.title || !data.channel_id || !data.status_id || !data.priority_id) {
+        throw new Error('Required ticket fields missing: company_id, title, channel_id, status_id, priority_id');
       }
-
-      // Publish ticket created event
-      await this.safePublishEvent('TicketCreated', {
-        id: require("crypto").randomUUID(),
-        eventType: "TICKET_CREATED" as const,
-        timestamp: new Date().toISOString(),
-        payload: {
-          tenantId: context.tenant,
-          ticketId: ticket.ticket_id,
-          userId: context.userId
+      return this.createTicket(data as CreateTicketData, context);
+    }
+  
+    private async createTicket(data: CreateTicketData, context: ServiceContext): Promise<ITicket> {
+   */
+    // Override for BaseService compatibility  
+    async create(data: Partial<ITicket>, context: ServiceContext): Promise<ITicket>;
+    async create(data: CreateTicketData, context: ServiceContext): Promise<ITicket>;
+    async create(data: CreateTicketData | Partial<ITicket>, context: ServiceContext): Promise<ITicket> {
+      // Ensure we have required fields for CreateTicketData
+      if (!data.company_id || !data.title || !data.channel_id || !data.status_id || !data.priority_id) {
+        throw new Error('Required ticket fields missing: company_id, title, channel_id, status_id, priority_id');
+      }
+      return this.createTicket(data as CreateTicketData, context);
+    }
+  
+    private async createTicket(data: CreateTicketData, context: ServiceContext): Promise<ITicket> {
+      const { knex } = await this.getKnex();
+  
+      return withTransaction(knex, async (trx) => {
+        // Generate ticket number
+        const numberingService = new NumberingService();
+        const ticketNumber = await numberingService.getNextTicketNumber();
+  
+        // Prepare ticket data
+        const ticketData = {
+          ticket_id: knex.raw('gen_random_uuid()'),
+          ticket_number: ticketNumber,
+          title: data.title,
+          url: data.url || null,
+          channel_id: data.channel_id,
+          company_id: data.company_id,
+          location_id: data.location_id || null,
+          contact_name_id: data.contact_name_id || null,
+          status_id: data.status_id,
+          category_id: data.category_id || null,
+          subcategory_id: data.subcategory_id || null,
+          entered_by: context.userId,
+          updated_by: context.userId,
+          assigned_to: data.assigned_to || null,
+          priority_id: data.priority_id,
+          attributes: data.attributes || null,
+          entered_at: knex.raw('now()'),
+          updated_at: knex.raw('now()'),
+          tenant: context.tenant
+        };
+  
+        // Insert ticket
+        const [ticket] = await trx('tickets').insert(ticketData).returning('*');
+  
+        // Handle tags if provided
+        if (data.tags && data.tags.length > 0) {
+          await this.handleTags(ticket.ticket_id, data.tags, context, trx);
         }
+  
+        // Publish ticket created event
+        await this.safePublishEvent('TicketCreated', {
+          id: require("crypto").randomUUID(),
+          eventType: "TICKET_CREATED" as const,
+          timestamp: new Date().toISOString(),
+          payload: {
+            tenantId: context.tenant,
+            ticketId: ticket.ticket_id,
+            userId: context.userId
+          }
+        });
+  
+        return ticket as ITicket;
       });
+    }
 
-      return ticket as ITicket;
-    });
-  }
 
   /**
    * Update ticket
@@ -276,19 +300,19 @@ export class TicketService extends BaseService<ITicket> {
         throw new Error('Ticket not found or permission denied');
       }
 
-      // Prepare update data
+      // Remove undefined values from data object
+      const cleanedData = { ...data };
+      Object.keys(cleanedData).forEach(key => {
+        if ((cleanedData as any)[key] === undefined) {
+          delete (cleanedData as any)[key];
+        }
+      });
+      
       const updateData = {
-        ...data,
+        ...cleanedData,
         updated_by: context.userId,
         updated_at: knex.raw('now()')
       };
-
-      // Remove undefined values
-      Object.keys(updateData).forEach(key => {
-        if (updateData[key as keyof UpdateTicketData] === undefined) {
-          delete updateData[key as keyof UpdateTicketData];
-        }
-      });
 
       // Update ticket
       const [ticket] = await trx('tickets')

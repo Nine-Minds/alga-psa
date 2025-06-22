@@ -33,8 +33,22 @@ import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { OrderingService } from 'server/src/lib/services/orderingService';
 
 export class ProjectService extends BaseService<IProject> {
-  protected tableName = 'projects';
-  protected primaryKey = 'project_id';
+  constructor() {
+    super({
+      tableName: 'projects',
+      primaryKey: 'project_id',
+      tenantColumn: 'tenant',
+      searchableFields: ['project_name', 'description'],
+      defaultSort: 'created_at',
+      defaultOrder: 'desc',
+      auditFields: {
+        createdBy: 'created_by',
+        updatedBy: 'updated_by',
+        createdAt: 'created_at',
+        updatedAt: 'updated_at'
+      }
+    });
+  }
 
   async list(options: ListOptions, context: ServiceContext, filters?: ProjectFilterData): Promise<ListResult<IProject>> {
       const { knex } = await this.getKnex();

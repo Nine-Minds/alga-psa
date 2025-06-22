@@ -38,8 +38,17 @@ export class TimeSheetController extends BaseController {
   private timeSheetService: TimeSheetService;
 
   constructor() {
-    super(null as any, null as any);
-    this.timeSheetService = new TimeSheetService(null as any);
+    super(null as any, {
+      resource: 'timesheet',
+      permissions: {
+        create: 'create',
+        read: 'read',
+        update: 'update',
+        delete: 'delete',
+        list: 'read'
+      }
+    });
+    this.timeSheetService = new TimeSheetService();
   }
 
   /**

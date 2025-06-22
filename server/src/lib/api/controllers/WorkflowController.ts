@@ -118,7 +118,11 @@ export class WorkflowController extends BaseController {
   private workflowService: WorkflowService;
 
   constructor() {
-    const workflowService = new WorkflowService(null as any, null as any, null as any);
+    const workflowService = new WorkflowService(
+      undefined as any, // DatabaseService - would be injected
+      undefined as any, // EventBusService - would be injected  
+      undefined as any  // AuditLogService - would be injected
+    );
     
     super(null as any, {
       resource: 'workflow',

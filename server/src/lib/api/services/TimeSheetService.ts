@@ -29,8 +29,22 @@ import {
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 
 export class TimeSheetService extends BaseService<any> {
-  protected tableName = 'time_sheets';
-  protected primaryKey = 'id';
+  constructor() {
+    super({
+      tableName: 'time_sheets',
+      primaryKey: 'id',
+      tenantColumn: 'tenant',
+      searchableFields: ['user_id', 'period_id', 'approval_status'],
+      defaultSort: 'created_at',
+      defaultOrder: 'desc',
+      auditFields: {
+        createdBy: 'created_by',
+        updatedBy: 'updated_by',
+        createdAt: 'created_at',
+        updatedAt: 'updated_at'
+      }
+    });
+  }
 
   async list(options: ListOptions, context: ServiceContext, filters?: TimeSheetFilterData): Promise<ListResult<any>> {
       const { knex } = await this.getKnex();
@@ -711,8 +725,8 @@ export class TimeSheetService extends BaseService<any> {
       
       return withTransaction(knex, async (trx) => {
         const periods = [];
-        const startDate = new Date(data.start_date);
-        const endDate = new Date(data.end_date);
+        const startDate = new Date(data.start_date!);
+        const endDate = new Date(data.end_date!);
         let currentDate = new Date(startDate);
   
         while (currentDate <= endDate) {
@@ -875,7 +889,7 @@ export class TimeSheetService extends BaseService<any> {
   
         // Add assignees
         if (data.assigned_user_ids && data.assigned_user_ids.length > 0) {
-          const assigneeData = data.assigned_user_ids.map(userId => ({
+          const assigneeData = data.assigned_user_ids.map((userId: string) => ({
             entry_id: entry.entry_id,
             user_id: userId,
             tenant: context.tenant
@@ -922,7 +936,7 @@ export class TimeSheetService extends BaseService<any> {
             .del();
   
           if (data.assigned_user_ids.length > 0) {
-            const assigneeData = data.assigned_user_ids.map(userId => ({
+            const assigneeData = data.assigned_user_ids.map((userId: string) => ({
               entry_id: id,
               user_id: userId,
               tenant: context.tenant

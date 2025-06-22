@@ -31,7 +31,7 @@ import {
   BulkSyncResponse,
   IntegrationHealthResponse,
   HealthMonitoringConfig,
-  QboEntityFilterData,
+
   SyncStatus,
   SyncOperationType,
   HealthCheckType,
@@ -258,7 +258,7 @@ export class QuickBooksService {
         success: true,
         data: {
           success: false,
-          message: `Connection test failed: ${error.message}`
+          message: `Connection test failed: ${error instanceof Error ? error.message : String(error)}`
         }
       };
     }
@@ -373,7 +373,7 @@ export class QuickBooksService {
     } catch (error) {
       // Update sync status as failed
       await this.updateSyncStatusRecord(syncId, 'failed', {
-        error_message: error.message,
+        error_message: error instanceof Error ? error.message : String(error),
         duration_ms: Date.now() - startTime
       });
 
@@ -385,7 +385,7 @@ export class QuickBooksService {
     tenantId: string,
     page: number = 1,
     limit: number = 25
-  ): Promise<PaginatedResponse<CustomerMapping[]>> {
+  ): Promise<PaginatedResponse<CustomerMapping>> {
     await validateTenantAccess(tenantId);
 
     const offset = (page - 1) * limit;
@@ -475,7 +475,7 @@ export class QuickBooksService {
     } catch (error) {
       // Update sync status as failed
       await this.updateSyncStatusRecord(syncId, 'failed', {
-        error_message: error.message,
+        error_message: error instanceof Error ? error.message : String(error),
         duration_ms: Date.now() - startTime
       });
 
@@ -531,7 +531,7 @@ export class QuickBooksService {
     } catch (error) {
       // Update sync status as failed
       await this.updateSyncStatusRecord(syncId, 'failed', {
-        error_message: error.message,
+        error_message: error instanceof Error ? error.message : String(error),
         duration_ms: Date.now() - startTime
       });
 
@@ -593,7 +593,7 @@ export class QuickBooksService {
     } catch (error) {
       // Update sync status as failed
       await this.updateSyncStatusRecord(syncId, 'failed', {
-        error_message: error.message,
+        error_message: error instanceof Error ? error.message : String(error),
         duration_ms: Date.now() - startTime
       });
 
@@ -634,14 +634,13 @@ export class QuickBooksService {
           tenant: tenantId,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          created_by: userId || null,
-          updated_by: userId || null
+
         };
 
         await this.db.insert('qbo_account_mappings', mappingConfig);
         results.created++;
       } catch (error) {
-        results.errors.push(`${mapping.alga_account_name}: ${error.message}`);
+        results.errors.push(`${mapping.alga_account_name}: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
@@ -689,14 +688,13 @@ export class QuickBooksService {
           tenant: tenantId,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          created_by: userId || null,
-          updated_by: userId || null
+
         };
 
         await this.db.insert('qbo_tax_mappings', mappingConfig);
         results.created++;
       } catch (error) {
-        results.errors.push(`${mapping.alga_tax_region}: ${error.message}`);
+        results.errors.push(`${mapping.alga_tax_region}: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
@@ -752,7 +750,7 @@ export class QuickBooksService {
     query: SyncStatusQuery,
     tenantId: string,
     page: number = 1
-  ): Promise<PaginatedResponse<SyncStatusRecord[]>> {
+  ): Promise<PaginatedResponse<SyncStatusRecord>> {
     await validateTenantAccess(tenantId);
 
     const conditions = { tenant: tenantId, ...query };
@@ -985,8 +983,7 @@ export class QuickBooksService {
       tenant: tenantId,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      created_by: null,
-      updated_by: null
+
     };
 
     await this.db.insert('qbo_sync_status', record);

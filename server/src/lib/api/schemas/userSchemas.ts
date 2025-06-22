@@ -159,23 +159,26 @@ export const userPreferenceResponseSchema = z.object({
 
 // User filter schema
 export const userFilterSchema = baseFilterSchema.extend({
-  username: z.string().optional(),
-  first_name: z.string().optional(),
-  last_name: z.string().optional(),
-  email: z.string().optional(),
-  phone: z.string().optional(),
-  user_type: userTypeSchema.optional(),
-  role_id: uuidSchema.optional(),
-  role_name: z.string().optional(),
-  team_id: uuidSchema.optional(),
-  contact_id: uuidSchema.optional(),
-  is_inactive: booleanTransform.optional(),
-  two_factor_enabled: booleanTransform.optional(),
-  is_google_user: booleanTransform.optional(),
-  has_avatar: booleanTransform.optional(),
-  timezone: z.string().optional(),
-  company_id: uuidSchema.optional()
-});
+               username: z.string().optional(),
+               first_name: z.string().optional(),
+               last_name: z.string().optional(),
+               email: z.string().optional(),
+               phone: z.string().optional(),
+               user_type: userTypeSchema.optional(),
+               role_id: uuidSchema.optional(),
+               role_name: z.string().optional(),
+               team_id: uuidSchema.optional(),
+               contact_id: uuidSchema.optional(),
+               is_inactive: booleanTransform.optional(),
+               two_factor_enabled: booleanTransform.optional(),
+               is_google_user: booleanTransform.optional(),
+               has_avatar: booleanTransform.optional(),
+               timezone: z.string().optional(),
+               company_id: uuidSchema.optional(),
+               include_teams: booleanTransform.optional(),
+               include_permissions: booleanTransform.optional()
+             });
+;
 
 // User list query schema
 export const userListQuerySchema = createListQuerySchema(userFilterSchema);
@@ -285,21 +288,23 @@ export const bulkDeactivateUsersSchema = z.object({
 
 // User activity and analytics schemas
 export const userActivityLogSchema = z.object({
-  user_id: uuidSchema,
-  activity_type: z.enum(['login', 'logout', 'password_change', 'profile_update', 'role_change', 'team_join', 'team_leave']),
-  ip_address: z.string().ip().optional(),
-  user_agent: z.string().optional(),
-  metadata: z.record(z.any()).optional(),
-  created_at: dateSchema.optional()
-});
+               user_id: uuidSchema,
+               activity_type: z.enum(['login', 'logout', 'password_change', 'profile_update', 'role_change', 'team_join', 'team_leave', 'user_created', '2fa_enabled', '2fa_disabled', 'user_deactivated', 'user_activated']),
+               ip_address: z.string().ip().optional(),
+               user_agent: z.string().optional(),
+               metadata: z.record(z.any()).optional(),
+               created_at: dateSchema.optional()
+             });
+;
 
 export const userActivityFilterSchema = z.object({
-  user_id: uuidSchema.optional(),
-  activity_type: z.array(z.enum(['login', 'logout', 'password_change', 'profile_update', 'role_change', 'team_join', 'team_leave'])).optional(),
-  from_date: dateSchema.optional(),
-  to_date: dateSchema.optional(),
-  ip_address: z.string().optional()
-});
+               user_id: uuidSchema.optional(),
+               activity_type: z.array(z.enum(['login', 'logout', 'password_change', 'profile_update', 'role_change', 'team_join', 'team_leave', 'user_created', '2fa_enabled', '2fa_disabled', 'user_deactivated', 'user_activated'])).optional(),
+               from_date: dateSchema.optional(),
+               to_date: dateSchema.optional(),
+               ip_address: z.string().optional()
+             });
+;
 
 export const userStatsResponseSchema = z.object({
   total_users: z.number(),

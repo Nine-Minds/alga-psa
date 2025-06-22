@@ -41,7 +41,7 @@ import {
   PermissionCheckData,
   PermissionChecksData,
   PermissionCheckResult,
-  PermissionChecksResponseSchema,
+  permissionChecksResponseSchema,
   BulkCreateRolesData,
   BulkUpdateRolesData,
   BulkDeleteRolesData,
@@ -135,10 +135,12 @@ export class PermissionRoleService extends BaseService<IRole> {
       .limit(limit)
       .offset((page - 1) * limit);
 
-    const [data, [{ count }]] = await Promise.all([
+    const [data, countResult] = await Promise.all([
       dataQuery,
       query.clone().count('* as count').first()
     ]);
+    
+    const count = countResult?.count || 0;
 
     return {
       data: data.map(permission => this.addPermissionHateoas(permission, context)),
@@ -436,10 +438,12 @@ export class PermissionRoleService extends BaseService<IRole> {
     ).groupBy('r.role_id');
 
     // Execute queries
-    const [roles, [{ count }]] = await Promise.all([
+    const [roles, countResult] = await Promise.all([
       dataQuery,
       countQuery.count('* as count').first()
     ]);
+    
+    const count = countResult?.count || 0;
 
     return {
       data: roles.map(role => this.addRoleHateoas(role, context)),
@@ -1302,7 +1306,8 @@ export class PermissionRoleService extends BaseService<IRole> {
       role_name: newRoleName,
       description: newDescription,
       copy_from_role_id: sourceRoleId,
-      permissions: copyPermissions ? [] : undefined // Empty array means copy permissions
+      permissions: copyPermissions ? [] : [],
+      is_template: false
     }, context);
   }
 
@@ -1427,7 +1432,7 @@ export class PermissionRoleService extends BaseService<IRole> {
           results.push(role);
         } catch (error) {
           logger.error(`Error creating role ${roleData.role_name}:`, error);
-          throw new Error(`Failed to create role ${roleData.role_name}: ${error.message}`);
+          throw new Error(`Failed to create role ${roleData.role_name}: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
       
@@ -1450,7 +1455,7 @@ export class PermissionRoleService extends BaseService<IRole> {
           results.push(role);
         } catch (error) {
           logger.error(`Error updating role ${update.role_id}:`, error);
-          throw new Error(`Failed to update role ${update.role_id}: ${error.message}`);
+          throw new Error(`Failed to update role ${update.role_id}: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
       
@@ -1474,7 +1479,7 @@ export class PermissionRoleService extends BaseService<IRole> {
           deletedCount++;
         } catch (error) {
           logger.error(`Error deleting role ${roleId}:`, error);
-          errors.push(`${roleId}: ${error.message}`);
+          errors.push(`${roleId}: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
       
