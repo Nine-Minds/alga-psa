@@ -1,0 +1,163 @@
+{
+  "id": "com.alga.softwareone",
+  "name": "SoftwareOne Integration",
+  "version": "0.1.0",
+  "description": "Browse and bill SoftwareOne agreements inside Alga PSA",
+  "author": {
+    "name": "Alga Development Team",
+    "email": "dev@alga.io"
+  },
+  "minAppVersion": "1.5.0",
+  "tenantMode": "specific",
+  "main": "index.js",
+  "autoEnable": true,
+  "permissions": [
+    "ui:view",
+    "company:read",
+    "billing:write",
+    "extension:read",
+    "extension:write",
+    "storage:read",
+    "storage:write"
+  ],
+  "components": [
+    {
+      "type": "navigation",
+      "slot": "main-navigation",
+      "component": "descriptors/navigation/NavItemSimple.json",
+      "props": {
+        "id": "swone-nav",
+        "label": "SoftwareOne",
+        "icon": "CloudIcon",
+        "path": "/softwareone/agreements",
+        "priority": 75,
+        "permissions": []
+      }
+    },
+    {
+      "type": "navigation",
+      "slot": "settings-navigation",
+      "component": "descriptors/navigation/NavItem.json",
+      "props": {
+        "id": "swone-settings-nav",
+        "label": "SoftwareOne",
+        "icon": "CloudIcon",
+        "path": "/settings/softwareone",
+        "priority": 70,
+        "permissions": ["extension:write"]
+      }
+    },
+    {
+      "type": "custom-page",
+      "slot": "custom-pages",
+      "component": "descriptors/pages/SettingsPage.json",
+      "props": {
+        "id": "swone-settings",
+        "path": "/settings/softwareone",
+        "title": "SoftwareOne Settings",
+        "permissions": ["extension:write"]
+      }
+    },
+    {
+      "type": "custom-page",
+      "slot": "custom-pages",
+      "component": "descriptors/pages/AgreementsList.json",
+      "props": {
+        "id": "swone-agreements",
+        "path": "/softwareone/agreements",
+        "title": "Agreements",
+        "permissions": []
+      }
+    },
+    {
+      "type": "custom-page",
+      "slot": "custom-pages",
+      "component": "descriptors/pages/AgreementDetail.json",
+      "props": {
+        "id": "swone-agreement-detail",
+        "path": "/softwareone/agreement/:id",
+        "title": "Agreement Details",
+        "permissions": []
+      }
+    },
+    {
+      "type": "custom-page",
+      "slot": "custom-pages",
+      "component": "descriptors/pages/StatementsList.json",
+      "props": {
+        "id": "swone-statements",
+        "path": "/softwareone/statements",
+        "title": "Statements",
+        "permissions": []
+      }
+    },
+    {
+      "type": "custom-page",
+      "slot": "custom-pages",
+      "component": "descriptors/pages/StatementDetail.json",
+      "props": {
+        "id": "swone-statement-detail",
+        "path": "/softwareone/statement/:id",
+        "title": "Statement Details",
+        "permissions": []
+      }
+    }
+  ],
+  "routes": [
+    {
+      "path": "/agreements",
+      "component": "descriptors/pages/AgreementsList.json"
+    },
+    {
+      "path": "/agreements/:id",
+      "component": "descriptors/pages/AgreementDetail.json"
+    },
+    {
+      "path": "/statements",
+      "component": "descriptors/pages/StatementsList.json"
+    },
+    {
+      "path": "/statements/:id",
+      "component": "descriptors/pages/StatementDetail.json"
+    },
+    {
+      "path": "/settings",
+      "component": "descriptors/pages/SettingsPage.json"
+    }
+  ],
+  "settings": [
+    {
+      "key": "apiEndpoint",
+      "type": "string",
+      "label": "API Endpoint",
+      "description": "SoftwareOne API endpoint URL",
+      "required": true,
+      "default": "https://api.softwareone.com"
+    },
+    {
+      "key": "apiToken",
+      "type": "string",
+      "label": "API Token",
+      "description": "SoftwareOne API authentication token",
+      "required": true,
+      "encrypted": true
+    },
+    {
+      "key": "syncInterval",
+      "type": "number",
+      "label": "Sync Interval (minutes)",
+      "description": "How often to sync data from SoftwareOne",
+      "default": 60,
+      "min": 15,
+      "max": 1440
+    },
+    {
+      "key": "enableAutoSync",
+      "type": "boolean",
+      "label": "Enable Auto-sync",
+      "description": "Automatically sync data at the specified interval",
+      "default": false
+    }
+  ],
+  "dependencies": {}
+}

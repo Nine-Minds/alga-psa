@@ -1,151 +1,264 @@
-/**
- * Extension Renderer Component
- * 
- * Handles dynamic loading of extension components
- */
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { ExtensionRendererProps } from './types';
 import { ExtensionErrorBoundary } from './ExtensionErrorBoundary';
-import logger from '../../../../../../server/src/utils/logger';
+import { DescriptorRenderer } from './DescriptorRenderer';
+import { UIDescriptor, PageDescriptor } from './descriptors/types';
 
-// Cache for loaded components
-const componentCache = new Map<string, React.ComponentType<any>>();
+// Create a cache for the dynamically imported components and descriptors.
+const componentCache = new Map<string, React.LazyExoticComponent<React.ComponentType<any>>>();
+const descriptorCache = new Map<string, Promise<UIDescriptor | PageDescriptor>>();
+const handlerCache = new Map<string, Promise<Record<string, Function>>>();
 
-/**
- * Loading state component
- */
+// A simple loading component to show while the extension component is being fetched.
 const Loading = () => (
-  <div className="rounded-md border border-gray-200 bg-gray-50 p-4 text-center">
-    <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
-    <span className="ml-2 text-sm text-gray-600">Loading extension...</span>
-  </div>
+  <div className="p-4 text-center text-gray-500">Loading Extension...</div>
 );
 
-/**
- * Renders an extension component with dynamic loading
- */
+// A component to display when the extension component fails to load.
+const ErrorDisplay = ({ error, componentPath }: { error: any; componentPath: string }) => (
+    <div className="p-4 text-red-700 bg-red-100 border border-red-300 rounded-md">
+        <p className="font-semibold">Error loading component</p>
+        <p className="text-sm">Could not load <code className="text-xs bg-red-200 p-1 rounded">{componentPath}</code>.</p>
+        <pre className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded">{error.toString()}</pre>
+    </div>
+);
+
 export function ExtensionRenderer({
   extensionId,
   componentPath,
   slotProps = {},
   defaultProps = {},
-  onRender,
   onError,
 }: ExtensionRendererProps) {
-  const [Component, setComponent] = useState<React.ComponentType<any> | null>(null);
+  console.log(`[ExtensionRenderer] INIT - extensionId: ${extensionId}, componentPath: ${componentPath}`);
+  console.log(`[ExtensionRenderer] INIT - slotProps:`, slotProps);
+  
+  const [descriptor, setDescriptor] = useState<UIDescriptor | PageDescriptor | null>(null);
+  const [handlers, setHandlers] = useState<Record<string, Function>>({});
+  const [isDescriptor, setIsDescriptor] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
-  const startTime = useRef(Date.now());
 
-  // Generate a cache key for this component
+  // Check if the component path is a descriptor (ends with .json or has descriptor in the path)
+  useEffect(() => {
+    const checkIfDescriptor = async () => {
+      console.log(`[ExtensionRenderer] Checking component: ${componentPath} for extension: ${extensionId}`);
+      console.log(`[ExtensionRenderer] Current loading state: ${loading}, isDescriptor: ${isDescriptor}`);
+      
+      let shouldLoadAsDescriptor = false;
+      
+      // First, try to detect by file extension
+      if (componentPath.endsWith('.json') || componentPath.includes('/descriptors/')) {
+        console.log(`[ExtensionRenderer] Detected as descriptor by path: ${componentPath}`);
+        shouldLoadAsDescriptor = true;
+      }
+
+      // Try to load as descriptor if we think it might be one
+      if (shouldLoadAsDescriptor || isDescriptor === null) {
+        try {
+          console.log(`[ExtensionRenderer] Attempting to load descriptor via server action`);
+          
+          // Import the server action dynamically to avoid SSR issues
+          const { loadExtensionDescriptor } = await import('../../actions/extension-actions/extensionActions');
+          const result = await loadExtensionDescriptor(extensionId, componentPath);
+          
+          console.log(`[ExtensionRenderer] Server action result:`, result);
+          
+          if (result.success && result.descriptor) {
+            const data = result.descriptor;
+            console.log(`[ExtensionRenderer] Loaded descriptor data:`, data);
+            
+            // Check if it has descriptor structure
+            if (data.type && (typeof data.type === 'string')) {
+              console.log(`[ExtensionRenderer] Valid descriptor detected with type: ${data.type}`);
+              setIsDescriptor(true);
+              setDescriptor(data);
+              
+              // Load handlers if specified
+              if (data.handlers?.module) {
+                console.log(`[ExtensionRenderer] Loading handlers from: ${data.handlers.module}`);
+                try {
+                  // Import the server action for loading handlers
+                  const { loadExtensionHandlers } = await import('../../actions/extension-actions/extensionActions');
+                  const handlerResult = await loadExtensionHandlers(extensionId, data.handlers.module);
+                  
+                  if (handlerResult.success && handlerResult.moduleContent) {
+                    console.log(`[ExtensionRenderer] Handler module content loaded, creating blob URL`);
+                    
+                    // Create a blob URL for the module content to enable dynamic import
+                    const blob = new Blob([handlerResult.moduleContent], { type: 'application/javascript' });
+                    const blobUrl = URL.createObjectURL(blob);
+                    
+                    try {
+                      const handlerModule = await import(/* webpackIgnore: true */ blobUrl);
+                      console.log(`[ExtensionRenderer] Handlers loaded:`, handlerModule);
+                      setHandlers(handlerModule.default || handlerModule);
+                      
+                      // Clean up blob URL to prevent memory leaks
+                      URL.revokeObjectURL(blobUrl);
+                    } catch (importErr) {
+                      console.error(`[ExtensionRenderer] Failed to import handler module:`, importErr);
+                      URL.revokeObjectURL(blobUrl);
+                    }
+                  } else {
+                    console.error(`[ExtensionRenderer] Failed to load handler module:`, handlerResult.error);
+                  }
+                } catch (handlerErr) {
+                  console.error(`[ExtensionRenderer] Failed to load handlers:`, handlerErr);
+                }
+              }
+              console.log(`[ExtensionRenderer] Descriptor loading complete`);
+              setLoading(false);
+              return;
+            } else {
+              console.error(`[ExtensionRenderer] Descriptor does not have valid structure:`, data);
+              if (shouldLoadAsDescriptor) {
+                setIsDescriptor(true);
+                setDescriptor(null);
+                setLoading(false);
+                return;
+              }
+            }
+          } else {
+            console.error(`[ExtensionRenderer] Failed to load descriptor:`, result.error);
+            if (shouldLoadAsDescriptor) {
+              setIsDescriptor(true);
+              setDescriptor(null);
+              setLoading(false);
+              return;
+            }
+          }
+        } catch (err) {
+          console.error(`[ExtensionRenderer] Error loading descriptor:`, err);
+          // For descriptors detected by path, we should set an error state
+          if (componentPath.endsWith('.json') || componentPath.includes('/descriptors/')) {
+            setIsDescriptor(true);
+            // Set empty descriptor to show error
+            setDescriptor(null);
+            setLoading(false);  // Set loading to false on error
+            return;
+          }
+        }
+      }
+      
+      // Only set as non-descriptor if we haven't already determined it's a descriptor
+      if (isDescriptor === null) {
+        console.log(`[ExtensionRenderer] Not a descriptor, treating as component`);
+        setIsDescriptor(false);
+      }
+      
+      setLoading(false);
+    };
+
+    checkIfDescriptor();
+  }, [extensionId, componentPath]);
+
+  // If it's a descriptor, render with DescriptorRenderer
+  if (isDescriptor === true) {
+    console.log(`[ExtensionRenderer] Rendering descriptor`);
+    
+    const context = {
+      extension: {
+        id: extensionId,
+        version: '1.0.0', // TODO: Get from manifest
+        storage: {
+          get: async (key: string) => {
+            console.log(`[ExtensionRenderer] Storage.get called with key: ${key}`);
+            return Promise.resolve(null);
+          },
+          set: async (key: string, value: any) => {
+            console.log(`[ExtensionRenderer] Storage.set called with key: ${key}`, value);
+            return Promise.resolve();
+          },
+          delete: async (key: string) => {
+            console.log(`[ExtensionRenderer] Storage.delete called with key: ${key}`);
+            return Promise.resolve();
+          },
+          list: async (prefix?: string) => {
+            console.log(`[ExtensionRenderer] Storage.list called with prefix: ${prefix}`);
+            return Promise.resolve([]);
+          }
+        }
+      },
+      user: {
+        id: '', // TODO: Get from context
+        tenantId: '', // TODO: Get from context
+        permissions: [] // TODO: Get from context
+      }
+    };
+
+    if (loading || !descriptor) {
+      console.log(`[ExtensionRenderer] Loading or no descriptor yet, showing loading...`);
+      return <Loading />;
+    }
+    
+    // Check if descriptor failed to load (null after load attempt)
+    if (descriptor === null) {
+      console.error(`[ExtensionRenderer] Descriptor failed to load for: ${componentPath}`);
+      return <ErrorDisplay error={new Error('Failed to load descriptor')} componentPath={componentPath} />;
+    }
+
+    console.log(`[ExtensionRenderer] Rendering DescriptorRenderer with descriptor:`, descriptor);
+    console.log(`[ExtensionRenderer] Props:`, { ...defaultProps, ...slotProps });
+    console.log(`[ExtensionRenderer] Handlers:`, handlers);
+
+    return (
+      <ExtensionErrorBoundary extensionId={extensionId} onError={onError}>
+        <DescriptorRenderer
+          descriptor={descriptor}
+          handlers={handlers}
+          context={context}
+          data={{ ...defaultProps, ...slotProps }}
+        />
+      </ExtensionErrorBoundary>
+    );
+  }
+
+  // If it's still being determined, show loading
+  if (isDescriptor === null || loading) {
+    console.log(`[ExtensionRenderer] Still determining if descriptor or component... loading=${loading}, isDescriptor=${isDescriptor}`);
+    return <Loading />;
+  }
+
+  // Otherwise, use the existing component loading logic
+  console.log(`[ExtensionRenderer] Loading as regular component: ${componentPath}`);
   const cacheKey = `${extensionId}:${componentPath}`;
 
-  // Combine props
-  const componentProps = {
+  if (!componentCache.has(cacheKey)) {
+    console.log(`[ExtensionRenderer] Creating lazy component for: ${componentPath}`);
+    const LazyComponent = React.lazy(() => {
+        const componentUrl = `${window.location.origin}/api/extensions/${extensionId}/components/${componentPath}`;
+        console.log(`[ExtensionRenderer] Loading component from: ${componentUrl}`);
+        return import(/* webpackIgnore: true */ /* @vite-ignore */ componentUrl)
+            .then(module => {
+                console.log(`[ExtensionRenderer] Component loaded successfully:`, module);
+                return module;
+            })
+            .catch(err => {
+                console.error(`[ExtensionRenderer] Failed to load component: ${componentPath}`, err);
+                onError?.(err);
+                return { default: () => <ErrorDisplay error={err} componentPath={componentPath} /> };
+            });
+    });
+    componentCache.set(cacheKey, LazyComponent);
+  }
+
+  const LazyComponent = componentCache.get(cacheKey)!;
+
+  const combinedProps = {
     ...defaultProps,
     ...slotProps,
     extensionId,
   };
 
-  // Load the component dynamically
-  useEffect(() => {
-    let isMounted = true;
-    
-    async function loadComponent() {
-      try {
-        // Check if the component is already cached
-        if (componentCache.has(cacheKey)) {
-          const cachedComponent = componentCache.get(cacheKey)!;
-          if (isMounted) {
-            setComponent(() => cachedComponent);
-            setLoading(false);
-            
-            // Track render time
-            const loadTime = Date.now() - startTime.current;
-            onRender?.(loadTime);
-          }
-          return;
-        }
-        
-        // Dynamic import - in a real implementation, this would be fetching
-        // from an API or special URL that serves the extension's JavaScript
-        // For now, we'll simulate it with a timeout and placeholder component
-        
-        // For demonstration purposes only - would be replaced with actual loading
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // In a real implementation, this would be:
-        // const module = await import(`/api/extensions/${extensionId}/components/${componentPath}`);
-        // const Component = module.default;
-        
-        // For now, create a placeholder component
-        const PlaceholderComponent = (props: any) => (
-          <div className="border border-dashed p-4 rounded-md bg-gray-50">
-            <div className="text-sm font-medium text-gray-700 mb-2">
-              Extension Component from {extensionId}
-            </div>
-            <div className="text-xs text-gray-500 mb-3">
-              Component Path: {componentPath}
-            </div>
-            <div className="bg-white p-3 rounded border text-xs">
-              <pre className="whitespace-pre-wrap">
-                {JSON.stringify(props, null, 2)}
-              </pre>
-            </div>
-          </div>
-        );
-        
-        // Cache the component
-        componentCache.set(cacheKey, PlaceholderComponent);
-        
-        if (isMounted) {
-          setComponent(() => PlaceholderComponent);
-          setLoading(false);
-          
-          // Track render time
-          const loadTime = Date.now() - startTime.current;
-          onRender?.(loadTime);
-        }
-      } catch (error) {
-        logger.error('Failed to load extension component', {
-          extensionId,
-          componentPath,
-          error,
-        });
-        
-        if (isMounted) {
-          setLoading(false);
-          onError?.(error as Error);
-        }
-      }
-    }
-    
-    loadComponent();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [cacheKey, extensionId, componentPath, onRender, onError]);
-  
-  if (loading) {
-    return <Loading />;
-  }
-  
-  if (!Component) {
-    return (
-      <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-        Failed to load extension component
-      </div>
-    );
-  }
-  
+  console.log(`[ExtensionRenderer] Rendering component with props:`, combinedProps);
+
   return (
-    <ExtensionErrorBoundary 
-      extensionId={extensionId}
-      onError={onError}
-    >
-      <Component {...componentProps} />
+    <ExtensionErrorBoundary extensionId={extensionId} onError={onError}>
+      <Suspense fallback={<Loading />}>
+        <LazyComponent {...combinedProps} />
+      </Suspense>
     </ExtensionErrorBoundary>
   );
 }

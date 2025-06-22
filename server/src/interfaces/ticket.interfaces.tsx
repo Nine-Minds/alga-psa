@@ -24,6 +24,7 @@ export interface ITicket extends TenantEntity, ITaggable {
   closed_at: string | null;  // Changed from Date to string
   attributes: Record<string, unknown> | null; // Changed from any to unknown
   priority_id: string;
+  estimated_hours?: number;
   location?: ICompanyLocation; // For populated location data
 }
 

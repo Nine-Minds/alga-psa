@@ -491,7 +491,7 @@ ${action.parameters.map((param: ActionParameterDefinition) => `    ${param.name}
       
       // Register code snippets
       monaco.languages.registerCompletionItemProvider("typescript", {
-        provideCompletionItems: (model, position) => {
+        provideCompletionItems: (model: editor.ITextModel, position: any) => {
           const suggestions = workflowSnippets.map((snippet) => {
             return {
               label: snippet.label,

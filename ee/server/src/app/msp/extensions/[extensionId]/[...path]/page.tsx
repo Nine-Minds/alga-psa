@@ -73,19 +73,72 @@ export default function ExtensionPage() {
         // In a real implementation, this would fetch from an API endpoint
         // For example: /api/extensions/${extensionId}/pages?path=${path}
         
-        // For now, we'll use a placeholder implementation
-        await new Promise(resolve => setTimeout(resolve, 300));
+        // Map URL paths to descriptor files
+        const pathMappings: Record<string, { component: string; title: string }> = {
+          '/agreements': {
+            component: 'descriptors/pages/AgreementsList.json',
+            title: 'SoftwareOne Agreements'
+          },
+          '/statements': {
+            component: 'descriptors/pages/StatementsList.json', 
+            title: 'SoftwareOne Statements'
+          },
+          '/settings': {
+            component: 'descriptors/pages/SettingsPage.json',
+            title: 'SoftwareOne Settings'
+          }
+        };
         
-        // Mock data for demonstration
+        // Check if path matches agreement detail pattern (/agreements/:id)
+        if (pathSegments[0] === 'agreements' && pathSegments[1]) {
+          const mockPage = {
+            extensionId,
+            component: 'descriptors/pages/AgreementDetail.json',
+            props: {
+              id: 'agreement-detail-page',
+              path,
+              title: 'Agreement Details',
+              agreementId: pathSegments[1],
+              permissions: ['view:agreements']
+            }
+          };
+          setPageData(mockPage);
+          setLoading(false);
+          return;
+        }
+        
+        // Check if path matches statement detail pattern (/statements/:id) 
+        if (pathSegments[0] === 'statements' && pathSegments[1]) {
+          const mockPage = {
+            extensionId,
+            component: 'descriptors/pages/StatementDetail.json',
+            props: {
+              id: 'statement-detail-page', 
+              path,
+              title: 'Statement Details',
+              statementId: pathSegments[1],
+              permissions: ['view:statements']
+            }
+          };
+          setPageData(mockPage);
+          setLoading(false);
+          return;
+        }
+        
+        // Handle standard path mappings
+        const mapping = pathMappings[path];
+        if (!mapping) {
+          throw new Error(`No descriptor mapping found for path: ${path}`);
+        }
+        
         const mockPage = {
           extensionId,
-          component: 'CustomPage',
+          component: mapping.component,
           props: {
-            id: 'sample-page',
+            id: `${extensionId}-${pathSegments.join('-')}-page`,
             path,
-            title: 'Sample Extension Page',
-            icon: 'FileIcon',
-            permissions: ['view:pages']
+            title: mapping.title,
+            permissions: ['view:extensions']
           }
         };
         
@@ -125,18 +178,60 @@ export default function ExtensionPage() {
     });
   }
   
-  // Render the page
+  // Render the page within the DefaultLayout structure
   return (
     <ExtensionProvider>
       <Suspense fallback={<LoadingPage />}>
-        <div className="extension-page-container">
-          <PageRenderer
-            extensionId={pageData.extensionId}
-            component={pageData.component}
-            props={pageData.props}
-            params={urlParams}
-            searchParams={searchParamsObj}
-          />
+        <div className="p-4 md:p-6">
+          {/* Breadcrumbs */}
+          <nav className="mb-4">
+            <ol className="flex flex-wrap items-center text-sm text-gray-500">
+              <li>
+                <a href="/msp/dashboard" className="hover:text-primary-600">
+                  Dashboard
+                </a>
+              </li>
+              <li className="mx-2">
+                <span className="text-gray-400">›</span>
+              </li>
+              <li>
+                <a href="/msp/extensions" className="hover:text-primary-600">
+                  Extensions
+                </a>
+              </li>
+              <li className="mx-2">
+                <span className="text-gray-400">›</span>
+              </li>
+              <li>
+                <span className="font-medium text-gray-900">
+                  {extensionId.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                </span>
+              </li>
+              {pathSegments.map((segment, index) => (
+                <React.Fragment key={index}>
+                  <li className="mx-2">
+                    <span className="text-gray-400">›</span>
+                  </li>
+                  <li>
+                    <span className={index === pathSegments.length - 1 ? 'font-medium text-gray-900' : 'text-gray-500'}>
+                      {segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ')}
+                    </span>
+                  </li>
+                </React.Fragment>
+              ))}
+            </ol>
+          </nav>
+          
+          {/* Extension content */}
+          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+            <PageRenderer
+              extensionId={pageData.extensionId}
+              component={pageData.component}
+              props={pageData.props}
+              params={urlParams}
+              searchParams={searchParamsObj}
+            />
+          </div>
         </div>
       </Suspense>
     </ExtensionProvider>

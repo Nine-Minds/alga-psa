@@ -1,0 +1,227 @@
+{
+  "type": "page",
+  "meta": {
+    "title": "SoftwareOne Agreements",
+    "description": "View and manage SoftwareOne agreements"
+  },
+  "content": {
+    "type": "div",
+    "props": {
+      "className": "min-h-screen bg-gray-50"
+    },
+    "children": [
+      {
+        "type": "header",
+        "props": {
+          "className": "bg-white shadow-sm border-b"
+        },
+        "children": [
+          {
+            "type": "div",
+            "props": {
+              "className": "px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center"
+            },
+            "children": [
+              {
+                "type": "h1",
+                "props": {
+                  "className": "text-xl font-semibold text-gray-900"
+                },
+                "children": ["SoftwareOne Agreements"]
+              },
+              {
+                "type": "div",
+                "props": {
+                  "className": "flex gap-2"
+                },
+                "children": [
+                  {
+                    "type": "Button",
+                    "props": {
+                      "variant": "outline",
+                      "size": "sm"
+                    },
+                    "handlers": {
+                      "click": "refreshAgreements"
+                    },
+                    "children": [
+                      {
+                        "type": "RefreshIcon",
+                        "props": {
+                          "className": "w-4 h-4 mr-2"
+                        }
+                      },
+                      "Refresh"
+                    ]
+                  },
+                  {
+                    "type": "Button",
+                    "props": {
+                      "variant": "outline",
+                      "size": "sm"
+                    },
+                    "handlers": {
+                      "click": "exportAgreements"
+                    },
+                    "children": [
+                      {
+                        "type": "DownloadIcon",
+                        "props": {
+                          "className": "w-4 h-4 mr-2"
+                        }
+                      },
+                      "Export"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "main",
+        "props": {
+          "className": "p-6"
+        },
+        "children": [
+          {
+            "type": "Card",
+            "children": [
+              {
+                "type": "CardContent",
+                "props": {
+                  "className": "p-0"
+                },
+                "children": [
+                  {
+                    "type": "table",
+                    "data": {
+                      "key": "agreements",
+                      "source": "api",
+                      "endpoint": "/api/extensions/{{extensionId}}/agreements"
+                    },
+                    "columns": [
+                      {
+                        "key": "name",
+                        "header": "Agreement Name",
+                        "sortable": true,
+                        "cell": {
+                          "type": "a",
+                          "props": {
+                            "className": "text-blue-600 hover:underline cursor-pointer font-medium"
+                          },
+                          "handlers": {
+                            "click": {
+                              "handler": "navigateToAgreementDetail",
+                              "params": {
+                                "agreementId": "{{row.id}}"
+                              }
+                            }
+                          },
+                          "children": ["{{row.name}}"]
+                        }
+                      },
+                      {
+                        "key": "product",
+                        "header": "Product",
+                        "sortable": true
+                      },
+                      {
+                        "key": "vendor",
+                        "header": "Vendor",
+                        "sortable": true
+                      },
+                      {
+                        "key": "consumer",
+                        "header": "Consumer",
+                        "sortable": true
+                      },
+                      {
+                        "key": "status",
+                        "header": "Status",
+                        "sortable": true,
+                        "cell": {
+                          "type": "Badge",
+                          "props": {
+                            "variant": "{{row.status === 'active' ? 'success' : row.status === 'pending' ? 'warning' : 'secondary'}}"
+                          },
+                          "children": ["{{row.status}}"]
+                        }
+                      },
+                      {
+                        "key": "currency",
+                        "header": "Currency"
+                      },
+                      {
+                        "key": "spxy",
+                        "header": "SPXY",
+                        "cell": {
+                          "type": "span",
+                          "children": ["{{row.currency}} {{row.spxy.toLocaleString()}}"]
+                        }
+                      },
+                      {
+                        "key": "actions",
+                        "header": "",
+                        "cell": {
+                          "type": "Button",
+                          "props": {
+                            "variant": "ghost",
+                            "size": "sm"
+                          },
+                          "handlers": {
+                            "click": {
+                              "handler": "showAgreementActions",
+                              "params": {
+                                "agreementId": "{{row.id}}"
+                              }
+                            }
+                          },
+                          "children": ["Actions"]
+                        }
+                      }
+                    ],
+                    "pagination": {
+                      "enabled": true,
+                      "pageSize": 10,
+                      "pageSizeOptions": [10, 25, 50]
+                    },
+                    "filtering": {
+                      "enabled": true,
+                      "filters": [
+                        {
+                          "key": "status",
+                          "label": "Status",
+                          "type": "select",
+                          "options": [
+                            { "label": "All", "value": "" },
+                            { "label": "Active", "value": "active" },
+                            { "label": "Inactive", "value": "inactive" },
+                            { "label": "Pending", "value": "pending" }
+                          ]
+                        },
+                        {
+                          "key": "vendor",
+                          "label": "Vendor",
+                          "type": "text"
+                        }
+                      ]
+                    },
+                    "sorting": {
+                      "enabled": true,
+                      "defaultSort": { "field": "name", "order": "asc" }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "handlers": {
+    "module": "descriptors/handlers/agreements.js"
+  }
+}

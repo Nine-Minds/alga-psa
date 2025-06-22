@@ -6,8 +6,7 @@
 'use client';
 
 import React from 'react';
-import { ExtensionErrorBoundaryProps, ExtensionErrorBoundaryState } from './types';
-import logger from '../../../../../../server/src/utils/logger';
+import { logger, ExtensionErrorBoundaryProps, ExtensionErrorBoundaryState } from '@shared/extension-utils';
 
 /**
  * Default fallback UI for extension errors
@@ -73,7 +72,7 @@ export class ExtensionErrorBoundary extends React.Component<
       // If a custom fallback is provided, use it
       if (fallback) {
         if (typeof fallback === 'function') {
-          return fallback(error);
+          return (fallback as any)({ error });
         }
         return fallback;
       }

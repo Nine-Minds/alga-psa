@@ -19,7 +19,7 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Card } from 'server/src/components/ui/Card';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
-import { getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { updateContact, getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
 import Documents from 'server/src/components/documents/Documents';
 import ContactDetailsEdit from './ContactDetailsEdit';
@@ -224,7 +224,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       if (userId && contact.tenant) {
         try {
           const [contactAvatarUrl, fetchedTags] = await Promise.all([
-            getContactAvatarUrl(contact.contact_name_id, contact.tenant),
+            getContactAvatarUrlAction(contact.contact_name_id, contact.tenant),
             findTagsByEntityIds([contact.contact_name_id], 'contact')
           ]);
           

@@ -72,7 +72,8 @@ describe('Auth Functions', () => {
         username: 'testUser',
         email: 'test@example.com',
         password: 'password123',
-        companyName: 'TestCompany'
+        companyName: 'TestCompany',
+        user_type: 'internal'
     };
 
     afterEach(() => {

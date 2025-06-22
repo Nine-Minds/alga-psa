@@ -12,7 +12,7 @@ import { ReflectionContainer } from '@/types/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
 import { ContainerComponent } from '@/types/ui-reflection/types';
 import { useExtensionContext } from '../ExtensionProvider';
-import logger from '@/utils/logger';
+import { getExtensionNavigationItems } from '@/lib/actions/extension-actions';
 
 /**
  * Navigation Slot component
@@ -24,10 +24,14 @@ export function NavigationSlot({
   collapsed = false,
   filter,
 }: NavigationSlotProps) {
+  console.log('[NavigationSlot] Component rendering');
+  
   const [items, setItems] = useState<ExtensionNavigationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const extensionContext = useExtensionContext();
+  
+  console.log('[NavigationSlot] Initial state:', { loading, itemsCount: items.length, error });
   
   // Register with Alga's UI automation system
   const { automationIdProps } = useAutomationIdAndRegister<ContainerComponent>({
@@ -39,58 +43,43 @@ export function NavigationSlot({
   // Fetch navigation items
   useEffect(() => {
     const fetchNavigationItems = async () => {
+      console.log('[NavigationSlot] Fetching navigation items...');
       try {
-        // In a real implementation, this would fetch from an API endpoint
-        // For example: /api/extensions/navigation
-        
-        // For now, we'll use a placeholder implementation
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        // Mock data for demonstration
-        const mockItems: ExtensionNavigationItem[] = [
-          {
-            extensionId: 'sample-extension-1',
-            component: 'NavItem',
-            props: {
-              id: 'sample-nav-1',
-              label: 'Custom Reports',
-              icon: 'BarChartIcon',
-              path: '/msp/extensions/reports',
-              priority: 80,
-              permissions: ['view:reports']
-            }
-          },
-          {
-            extensionId: 'sample-extension-2',
-            component: undefined, // Some items may not need a custom component
-            props: {
-              id: 'sample-nav-2',
-              label: 'Asset Tracking',
-              icon: 'BoxIcon',
-              path: '/msp/extensions/assets',
-              priority: 70,
-              permissions: ['view:assets']
-            }
-          }
-        ];
+        // Use server action to fetch navigation items
+        const navigationItems = await getExtensionNavigationItems();
+        console.log('[NavigationSlot] Received navigation items:', navigationItems);
         
         // Filter based on permissions
-        const filteredItems = mockItems.filter(item => {
+        const filteredItems = navigationItems.filter(item => {
           const requiredPermissions = item.props.permissions || [];
-          return requiredPermissions.every(permission => 
+          const hasPermissions = requiredPermissions.every(permission => 
             extensionContext.hasPermission(permission)
           );
+          console.log('[NavigationSlot] Checking permissions for item:', {
+            item: item.props.id,
+            requiredPermissions,
+            hasPermissions
+          });
+          return hasPermissions;
         });
         
-        // Sort by priority (higher values first)
-        filteredItems.sort((a, b) => 
-          (b.props.priority || 0) - (a.props.priority || 0)
-        );
+        console.log('[NavigationSlot] Filtered items:', filteredItems);
         
+        // Log detailed item info for debugging
+        filteredItems.forEach(item => {
+          console.log('[NavigationSlot] Navigation item detail:', {
+            extensionId: item.extensionId,
+            extensionName: item.extensionName,
+            component: item.component,
+            props: item.props
+          });
+        });
+        
+        // Items are already sorted by priority from the server action
         setItems(filteredItems);
         setLoading(false);
       } catch (error) {
-        logger.error('Failed to fetch navigation items', { error });
+        console.error('[NavigationSlot] Failed to fetch navigation items', error);
         setError('Failed to load navigation extensions');
         setLoading(false);
       }

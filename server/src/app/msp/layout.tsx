@@ -1,6 +1,7 @@
 "use client";
 import { SessionProvider } from "next-auth/react";
 import DefaultLayout from "server/src/components/layout/DefaultLayout";
+import { TagProvider } from "server/src/context/TagContext";
 
 export default function MspLayout({
   children,
@@ -9,9 +10,11 @@ export default function MspLayout({
 }>) {
   return (
     <SessionProvider>
-      <DefaultLayout>
-        {children}
-      </DefaultLayout>
+      <TagProvider>
+        <DefaultLayout>
+          {children}
+        </DefaultLayout>
+      </TagProvider>
     </SessionProvider>
   );
 }

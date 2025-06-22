@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ITag, TaggedEntityType } from 'server/src/interfaces/tag.interfaces';
-import { createTag, deleteTag } from 'server/src/lib/actions/tagActions';
+import { createTag, deleteTag, getAllTags, updateTagColor } from 'server/src/lib/actions/tagActions';
 import { TagList } from './TagList';
 import { TagInput } from './TagInput';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
@@ -28,9 +28,36 @@ export const TagManager: React.FC<TagManagerProps> = ({
   className = '',
   allowColorEdit = true
 }) => {
-  const { tags: allTags, refetchTags, updateTagColor } = useTags();
+  const tagContext = useTags();
   const [tags, setTags] = useState<ITag[]>(initialTags);
+  const [localAllTags, setLocalAllTags] = useState<ITag[]>([]);
   const lastGlobalTagsRef = useRef<ITag[]>([]);
+
+  // Use context if available, otherwise use local state
+  const allTags = tagContext?.tags || localAllTags;
+  const refetchTags = tagContext?.refetchTags || (async () => {
+    try {
+      const fetchedTags = await getAllTags();
+      setLocalAllTags(fetchedTags);
+    } catch (error) {
+      console.error('Error fetching tags:', error);
+    }
+  });
+  const updateTagColorFn = tagContext?.updateTagColor || (async (tagId: string, backgroundColor: string | null, textColor: string | null) => {
+    try {
+      await updateTagColor(tagId, backgroundColor, textColor);
+      await refetchTags();
+    } catch (error) {
+      console.error('Error updating tag color:', error);
+    }
+  });
+
+  // Fetch tags on mount if no context is available
+  useEffect(() => {
+    if (!tagContext) {
+      refetchTags();
+    }
+  }, [tagContext, refetchTags]);
 
   useEffect(() => {
     setTags(initialTags);

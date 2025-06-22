@@ -6,19 +6,26 @@
  * Extension manifest format
  */
 export interface ExtensionManifest {
+  id?: string; // Optional ID field
   name: string;
   description?: string;
   version: string;
-  author?: string;
+  author?: string | { name: string; email?: string };
   homepage?: string;
   repository?: string;
   license?: string;
   main: string;
-  components?: ExtensionComponentDefinition[];
-  permissions?: string[];
+  components?: any[]; // Components can have various structures based on type
+  permissions?: any; // Can be string[] or object with nested permissions
   requiredExtensions?: string[];
   settings?: ExtensionSettingDefinition[];
   assets?: string[];
+  tenantMode?: 'all' | 'specific';
+  autoEnable?: boolean;
+  minAppVersion?: string;
+  api?: {
+    endpoints?: ExtensionApiEndpoint[];
+  };
 }
 
 /**
@@ -26,9 +33,10 @@ export interface ExtensionManifest {
  */
 export enum ExtensionComponentType {
   TAB = 'tab-extension',
-  NAVIGATION = 'navigation-item',
+  NAVIGATION = 'navigation',
   DASHBOARD_WIDGET = 'dashboard-widget',
   CUSTOM_PAGE = 'custom-page',
+  PAGE = 'page',
 }
 
 /**
@@ -142,6 +150,9 @@ export interface ExtensionSettingDefinition {
     value: string | number | boolean;
   }>;
   required?: boolean;
+  encrypted?: boolean;
+  min?: number;
+  max?: number;
 }
 
 /**
@@ -250,6 +261,17 @@ export interface ExtensionStorageService {
  */
 export interface StorageOptions {
   expiresIn?: number; // TTL in seconds
+}
+
+/**
+ * Extension API endpoint definition
+ */
+export interface ExtensionApiEndpoint {
+  id: string;
+  path: string;
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  handler: string;
+  permissions?: string[];
 }
 
 /**
