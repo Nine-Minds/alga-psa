@@ -359,7 +359,11 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
         },
         rowCount: data.length,
         visibleRows: table.getPaginationRowModel().rows.map((row): { id: string; values: Record<string, unknown> } => ({
-          id: ('id' in row.original) ? (row.original as { id: string }).id : '',
+          id: 'id' in row.original
+            ? (row.original as { id: string }).id
+            : 'user_id' in row.original
+              ? (row.original as { user_id: string }).user_id
+              : '',
           values: row.original as Record<string, unknown>
         })),
         sortedBy: table.getState().sorting[0] ? {
@@ -436,8 +440,13 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
             </thead>
             <tbody className="divide-y divide-gray-100">
               {table.getPaginationRowModel().rows.map((row): JSX.Element => {
-                // Use the id property if it exists in the data, otherwise use row.id
-                const rowId = ('id' in row.original) ? (row.original as { id: string }).id : row.id;
+                // Use a stable identifier for the row key when possible
+                const rowId =
+                  'id' in row.original
+                    ? (row.original as { id: string }).id
+                    : 'user_id' in row.original
+                      ? (row.original as { user_id: string }).user_id
+                      : row.id;
                 return (
                   <tr
                     key={`row_${rowId}`}
