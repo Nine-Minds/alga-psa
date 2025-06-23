@@ -7,10 +7,9 @@
 import { UserController } from 'server/src/lib/api/controllers/UserController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new UserController();
-
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
+    const controller = new UserController();
     const req = request as any;
     req.params = params;
     return await controller.getUserTeams()(req);
@@ -21,6 +20,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
+    const controller = new UserController();
     const req = request as any;
     req.params = params;
     return await controller.create()(req);
@@ -30,3 +30,4 @@ export async function POST(request: Request, { params }: { params: { id: string 
 }
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';

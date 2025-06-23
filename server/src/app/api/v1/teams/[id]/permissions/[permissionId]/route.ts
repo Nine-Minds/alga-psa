@@ -19,3 +19,4 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 }
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';

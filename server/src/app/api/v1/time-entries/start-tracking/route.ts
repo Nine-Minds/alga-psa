@@ -6,10 +6,9 @@
 import { TimeEntryController } from 'server/src/lib/api/controllers/TimeEntryController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new TimeEntryController();
-
 export async function POST(request: Request) {
   try {
+    const controller = new TimeEntryController();
     return await controller.startTimeTracking()(request as any);
   } catch (error) {
     return handleApiError(error);
@@ -17,3 +16,4 @@ export async function POST(request: Request) {
 }
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';

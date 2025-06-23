@@ -28,3 +28,4 @@ export async function POST(request: Request, { params }: { params: { sync_id: st
 }
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';

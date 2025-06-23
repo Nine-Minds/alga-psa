@@ -6,10 +6,9 @@
 import { AssetController } from 'server/src/lib/api/controllers/AssetController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new AssetController();
-
 export async function DELETE(request: Request) {
   try {
+    const controller = new AssetController();
     return await controller.deleteRelationship()(request as any);
   } catch (error) {
     return handleApiError(error);
@@ -17,3 +16,4 @@ export async function DELETE(request: Request) {
 }
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
