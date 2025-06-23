@@ -20,7 +20,7 @@ export default function UsersPage() {
       setError(null);
       const fetchedUsers = await getMultipleUsersWithRoles([]);  // Fetch all users
       const sortedUsers = [...fetchedUsers].sort((a, b) =>
-        (a.first_name || '').localeCompare(b.first_name || '')
+        (a.first_name || '').toLowerCase().localeCompare((b.first_name || '').toLowerCase())
       );
       setUsers(sortedUsers);
     } catch (err) {

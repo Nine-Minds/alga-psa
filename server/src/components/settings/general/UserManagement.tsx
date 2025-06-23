@@ -32,7 +32,7 @@ const UserManagement = (): JSX.Element => {
     try {
       const fetchedUsers = await getAllUsers(true);
       const sortedUsers = [...fetchedUsers].sort((a, b) =>
-        (a.first_name || '').localeCompare(b.first_name || '')
+        (a.first_name || '').toLowerCase().localeCompare((b.first_name || '').toLowerCase())
       );
       setUsers(sortedUsers);
       setLoading(false);
