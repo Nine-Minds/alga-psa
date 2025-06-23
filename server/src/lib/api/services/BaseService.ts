@@ -25,6 +25,7 @@ export interface ServiceContext {
 export interface ListResult<T> {
   data: T[];
   total: number;
+  _links?: Record<string, { href: string; method: string; rel: string }>;
 }
 
 export interface ServiceOptions {

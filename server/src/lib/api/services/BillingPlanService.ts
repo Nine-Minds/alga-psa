@@ -1720,17 +1720,17 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
     }
   }
 
-  private generatePlanLinks(planId: string, context: ServiceContext): Record<string, string> {
+  private generatePlanLinks(planId: string, context: ServiceContext): Record<string, { href: string; method: string; rel: string }> {
     const baseUrl = '/api/v1/billing-plans';
     return generateResourceLinks('billing-plans', planId, baseUrl, ['read', 'update', 'delete']);
   }
 
-  private generateBundleLinks(bundleId: string, context: ServiceContext): Record<string, string> {
+  private generateBundleLinks(bundleId: string, context: ServiceContext): Record<string, { href: string; method: string; rel: string }> {
     const baseUrl = '/api/v1/plan-bundles';
     return generateResourceLinks('plan-bundles', bundleId, baseUrl, ['read', 'update', 'delete']);
   }
 
-  private generateCompanyPlanLinks(companyBillingPlanId: string, context: ServiceContext): Record<string, string> {
+  private generateCompanyPlanLinks(companyBillingPlanId: string, context: ServiceContext): Record<string, { href: string; method: string; rel: string }> {
     const baseUrl = '/api/v1/company-billing-plans';
     return generateResourceLinks('company-billing-plans', companyBillingPlanId, baseUrl, ['read', 'update', 'delete']);
   }

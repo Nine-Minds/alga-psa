@@ -26,6 +26,11 @@ import { PaginatedResponse, SuccessResponse } from '../../types/api';
 import { validateTenantAccess } from '../../utils/validation';
 import { EventBusService } from './EventBusService';
 import { AuditLogService } from './AuditLogService';
+import { 
+  generateComprehensiveLinks, 
+  generateCollectionLinks, 
+  addHateoasLinks 
+} from '../utils/responseHelpers';
 
 export class WebhookService {
   constructor(
@@ -39,105 +44,140 @@ export class WebhookService {
   // ============================================================================
 
   async createWebhook(
-    data: CreateWebhookData,
-    tenantId: string,
-    userId?: string
-  ): Promise<SuccessResponse<WebhookResponse>> {
-    await validateTenantAccess(tenantId);
-
-    // Validate webhook URL
-    await this.validateWebhookUrl(data.url);
-
-    // Validate event types
-    for (const eventType of data.event_types) {
-      await this.validateEventType(eventType);
-    }
-
-    const webhookId = crypto.randomUUID();
-    const now = new Date().toISOString();
-
-    const webhook = {
-      webhook_id: webhookId,
-      tenant: tenantId,
-      created_at: now,
-      updated_at: now,
-      total_deliveries: 0,
-      successful_deliveries: 0,
-      failed_deliveries: 0,
-      last_delivery_at: null,
-      last_success_at: null,
-      last_failure_at: null,
-      ...data
-    };
-
-    await this.db.insert('webhooks', webhook);
-
-    // Create subscriptions for each event type
-    for (const eventType of data.event_types) {
-      await this.createEventSubscription(webhookId, eventType, tenantId);
-    }
-
-    // Publish event
-    await this.eventBus.publish('webhook.created', {
-      webhookId,
-      tenantId,
-      webhookName: data.name,
-      eventTypes: data.event_types,
-      userId
-    });
-
-    // Audit log
-    await this.auditLog.log({
-      action: 'webhook_created',
-      entityType: 'webhook',
-      entityId: webhookId,
-      userId,
-      tenantId,
-      changes: webhook
-    });
-
-    return {
-      success: true,
-      data: {
+      data: CreateWebhookData,
+      tenantId: string,
+      userId?: string
+    ): Promise<SuccessResponse<WebhookResponse>> {
+      await validateTenantAccess(tenantId);
+  
+      // Validate webhook URL
+      await this.validateWebhookUrl(data.url);
+  
+      // Validate event types
+      for (const eventType of data.event_types) {
+        await this.validateEventType(eventType);
+      }
+  
+      const webhookId = crypto.randomUUID();
+      const now = new Date().toISOString();
+  
+      const webhook = {
+        webhook_id: webhookId,
+        tenant: tenantId,
+        created_at: now,
+        updated_at: now,
+        total_deliveries: 0,
+        successful_deliveries: 0,
+        failed_deliveries: 0,
+        last_delivery_at: null,
+        last_success_at: null,
+        last_failure_at: null,
+        ...data
+      };
+  
+      await this.db.insert('webhooks', webhook);
+  
+      // Create subscriptions for each event type
+      for (const eventType of data.event_types) {
+        await this.createEventSubscription(webhookId, eventType, tenantId);
+      }
+  
+      // Publish event
+      await this.eventBus.publish('webhook.created', {
+        webhookId,
+        tenantId,
+        webhookName: data.name,
+        eventTypes: data.event_types,
+        userId
+      });
+  
+      // Audit log
+      await this.auditLog.log({
+        action: 'webhook_created',
+        entityType: 'webhook',
+        entityId: webhookId,
+        userId,
+        tenantId,
+        changes: webhook
+      });
+  
+      // Generate HATEOAS links
+      const links = generateComprehensiveLinks('webhooks', webhookId, '/api/v1', {
+        crudActions: ['read', 'update', 'delete'],
+        customActions: {
+          test: { method: 'POST', path: 'test' },
+          deliveries: { method: 'GET', path: 'deliveries' },
+          analytics: { method: 'GET', path: 'analytics' }
+        },
+        relationships: {
+          subscriptions: { resource: 'webhook-subscriptions', many: true },
+          templates: { resource: 'webhook-templates', many: true }
+        }
+      });
+  
+      const responseData = {
         ...webhook,
         last_delivery_at: webhook.last_delivery_at || undefined,
         last_failure_at: webhook.last_failure_at || undefined,
         last_success_at: webhook.last_success_at || undefined,
         description: webhook.description || null
-      } as unknown as WebhookResponse
-    };
-  }
+      } as unknown as WebhookResponse;
+  
+      return {
+        success: true,
+        data: addHateoasLinks(responseData, links)
+      };
+    }
+
 
   async getWebhook(
-    webhookId: string,
-    tenantId: string
-  ): Promise<SuccessResponse<WebhookResponse>> {
-    await validateTenantAccess(tenantId);
-
-    const webhook = await this.db.findOne('webhooks', {
-      webhook_id: webhookId,
-      tenant: tenantId
-    });
-
-    if (!webhook) {
-      throw new Error('Webhook not found');
-    }
-
-    // Get recent delivery statistics
-    const recentStats = await this.getRecentDeliveryStats(webhookId);
-    webhook.recent_stats = recentStats;
-
-    return {
-      success: true,
-      data: {
+      webhookId: string,
+      tenantId: string
+    ): Promise<SuccessResponse<WebhookResponse>> {
+      await validateTenantAccess(tenantId);
+  
+      const webhook = await this.db.findOne('webhooks', {
+        webhook_id: webhookId,
+        tenant: tenantId
+      });
+  
+      if (!webhook) {
+        throw new Error('Webhook not found');
+      }
+  
+      // Get recent delivery statistics
+      const recentStats = await this.getRecentDeliveryStats(webhookId);
+      webhook.recent_stats = recentStats;
+  
+      // Generate HATEOAS links
+      const links = generateComprehensiveLinks('webhooks', webhookId, '/api/v1', {
+        crudActions: ['read', 'update', 'delete'],
+        customActions: {
+          test: { method: 'POST', path: 'test' },
+          deliveries: { method: 'GET', path: 'deliveries' },
+          analytics: { method: 'GET', path: 'analytics' },
+          retry: { method: 'POST', path: 'retry' }
+        },
+        relationships: {
+          subscriptions: { resource: 'webhook-subscriptions', many: true },
+          templates: { resource: 'webhook-templates', many: true }
+        }
+      });
+  
+      const responseData = {
         ...webhook,
         last_delivery_at: webhook.last_delivery_at || undefined,
         last_failure_at: webhook.last_failure_at || undefined,
         last_success_at: webhook.last_success_at || undefined,
         description: webhook.description || null
-      } as unknown as WebhookResponse
-    };
-  }
+      } as unknown as WebhookResponse;
+  
+      return {
+        success: true,
+        data: addHateoasLinks(responseData, links)
+      };
+    }
+
 
   async updateWebhook(
     webhookId: string,
@@ -255,36 +295,61 @@ export class WebhookService {
   }
 
   async listWebhooks(
-      filters: WebhookFilterData,
-      tenantId: string,
-      page: number = 1,
-      limit: number = 25
-    ): Promise<PaginatedResponse<WebhookResponse>> {
-      await validateTenantAccess(tenantId);
+        filters: WebhookFilterData,
+        tenantId: string,
+        page: number = 1,
+        limit: number = 25
+      ): Promise<PaginatedResponse<WebhookResponse>> {
+        await validateTenantAccess(tenantId);
+    
+        const conditions = { tenant: tenantId, ...filters };
+        const offset = (page - 1) * limit;
+    
+        const [webhooks, total] = await Promise.all([
+          this.db.findMany('webhooks', conditions, {
+            limit,
+            offset,
+            orderBy: { created_at: 'desc' }
+          }),
+          this.db.count('webhooks', conditions)
+        ]);
   
-      const conditions = { tenant: tenantId, ...filters };
-      const offset = (page - 1) * limit;
+        const totalPages = Math.ceil(total / limit);
+        
+        // Generate collection-level HATEOAS links
+        const collectionLinks = generateCollectionLinks(
+          'webhooks',
+          '/api/v1',
+          { page, limit, total, totalPages },
+          filters
+        );
   
-      const [webhooks, total] = await Promise.all([
-        this.db.findMany('webhooks', conditions, {
-          limit,
-          offset,
-          orderBy: { created_at: 'desc' }
-        }),
-        this.db.count('webhooks', conditions)
-      ]);
-  
-      return {
-        success: true,
-        data: webhooks as WebhookResponse[],
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit)
-        }
-      };
-    }
+        // Add individual resource links to each webhook
+        const webhooksWithLinks = webhooks.map(webhook => {
+          const resourceLinks = generateComprehensiveLinks('webhooks', webhook.webhook_id, '/api/v1', {
+            crudActions: ['read', 'update', 'delete'],
+            customActions: {
+              test: { method: 'POST', path: 'test' },
+              deliveries: { method: 'GET', path: 'deliveries' },
+              analytics: { method: 'GET', path: 'analytics' }
+            }
+          });
+          return addHateoasLinks(webhook as WebhookResponse, resourceLinks);
+        });
+    
+        return {
+          success: true,
+          data: webhooksWithLinks,
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages
+          },
+          _links: collectionLinks
+        };
+      }
+
 
 
   // ============================================================================
