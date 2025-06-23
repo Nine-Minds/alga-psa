@@ -6,10 +6,10 @@
 import { WorkflowController } from 'server/src/lib/api/controllers/WorkflowController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new WorkflowController();
 
 export async function POST(request: Request) {
   try {
+    const controller = new WorkflowController();
     return await controller.bulkAssignWorkflowTasks()(request as any);
   } catch (error) {
     return handleApiError(error);
@@ -17,3 +17,4 @@ export async function POST(request: Request) {
 }
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';

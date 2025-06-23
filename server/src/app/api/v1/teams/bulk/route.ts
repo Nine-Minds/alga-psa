@@ -7,10 +7,9 @@
 import { TeamController } from 'server/src/lib/api/controllers/TeamController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new TeamController();
-
 export async function PUT(request: Request) {
   try {
+    const controller = new TeamController();
     return await controller.bulkUpdate()(request as any);
   } catch (error) {
     return handleApiError(error);
@@ -19,6 +18,7 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const controller = new TeamController();
     return await controller.bulkDelete()(request as any);
   } catch (error) {
     return handleApiError(error);
@@ -26,3 +26,4 @@ export async function DELETE(request: Request) {
 }
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';

@@ -8,10 +8,9 @@
 import { TimeEntryController } from 'server/src/lib/api/controllers/TimeEntryController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new TimeEntryController();
-
 export async function POST(request: Request) {
   try {
+    const controller = new TimeEntryController();
     return await controller.create()(request as any);
   } catch (error) {
     return handleApiError(error);
@@ -20,6 +19,7 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
+    const controller = new TimeEntryController();
     return await controller.bulkUpdate()(request as any);
   } catch (error) {
     return handleApiError(error);
@@ -28,6 +28,7 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const controller = new TimeEntryController();
     return await controller.bulkDelete()(request as any);
   } catch (error) {
     return handleApiError(error);
@@ -35,3 +36,4 @@ export async function DELETE(request: Request) {
 }
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';

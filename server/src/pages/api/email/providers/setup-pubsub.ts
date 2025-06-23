@@ -31,9 +31,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     
     console.log(`🔧 Setting up Google Pub/Sub for project: ${data.projectId}`);
 
-    const gmailWebhookService = GmailWebhookService.getInstance();
-    
     // Set up Pub/Sub topic and subscription
+    const gmailWebhookService = GmailWebhookService.getInstance();
     const setupResult = await gmailWebhookService.setupGmailWebhook(
       // We don't have a provider config here, so we create a minimal one for setup
       {

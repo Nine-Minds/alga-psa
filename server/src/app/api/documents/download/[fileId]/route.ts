@@ -111,3 +111,5 @@ export async function GET(req: NextRequest, { params }: { params: { fileId: stri
     }
   }
 }
+
+export const dynamic = 'force-dynamic';

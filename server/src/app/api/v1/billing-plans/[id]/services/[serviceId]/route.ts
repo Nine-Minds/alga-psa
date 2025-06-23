@@ -41,3 +41,4 @@ export async function DELETE(
   
   return controller.removeServiceFromPlan()(request);
 }
+export const dynamic = 'force-dynamic';

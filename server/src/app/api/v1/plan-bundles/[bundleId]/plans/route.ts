@@ -19,3 +19,4 @@ export async function POST(request: Request, { params }: { params: { bundleId: s
 }
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
