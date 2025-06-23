@@ -19,7 +19,10 @@ export default function UsersPage() {
       setLoading(true);
       setError(null);
       const fetchedUsers = await getMultipleUsersWithRoles([]);  // Fetch all users
-      setUsers(fetchedUsers);
+      const sortedUsers = [...fetchedUsers].sort((a, b) =>
+        (a.first_name || '').localeCompare(b.first_name || '')
+      );
+      setUsers(sortedUsers);
     } catch (err) {
       console.error('Failed to fetch users:', err);
       setError('Failed to load users. Please try again later.');
