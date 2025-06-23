@@ -1,4 +1,5 @@
 # --- Color Constants ---
+
 export-env {
     $env.ALGA_COLOR_RESET = (ansi reset)
     $env.ALGA_COLOR_GREEN = (ansi green)
