@@ -13,7 +13,7 @@ on:
 
 jobs:
   publish:
-    if: (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || (github.event_name == 'create' && github.event.ref_type == 'tag' && startsWith(github.event.ref, 'v'))
+    if: (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || (github.event_name == 'create' && github.event.ref_type == 'tag' && startsWith(github.event.ref, 'v')) || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -105,8 +105,8 @@ jobs:
             # This is a tag create event: use the tag name for both editions
             CE_TAGS="ghcr.io/nine-minds/alga-psa-ce:${{ github.event.ref }}"
             EE_TAGS="ghcr.io/nine-minds/alga-psa-ee:${{ github.event.ref }},ghcr.io/nine-minds/alga-psa:${{ github.event.ref }}"
-          elif [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            # This is a workflow_run event (e.g., after PR merge to main): use latest and short SHA for both editions
+          elif [[ "${{ github.event_name }}" == "workflow_run" ]] || [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
+            # This is a workflow_run event or push to main: use latest and short SHA for both editions
             CE_TAGS="ghcr.io/nine-minds/alga-psa-ce:latest,ghcr.io/nine-minds/alga-psa-ce:${{ steps.sha.outputs.short_sha }}"
             EE_TAGS="ghcr.io/nine-minds/alga-psa-ee:latest,ghcr.io/nine-minds/alga-psa-ee:${{ steps.sha.outputs.short_sha }},ghcr.io/nine-minds/alga-psa:latest,ghcr.io/nine-minds/alga-psa:${{ steps.sha.outputs.short_sha }}"
           else
