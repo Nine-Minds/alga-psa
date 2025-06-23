@@ -331,6 +331,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     pageCount: totalPages,
+    enableSortingRemoval: false,
     state: {
       pagination: {
         pageIndex,
