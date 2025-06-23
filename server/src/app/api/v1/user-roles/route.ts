@@ -9,10 +9,9 @@
 import { PermissionRoleController } from 'server/src/lib/api/controllers/PermissionRoleController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new PermissionRoleController();
-
 export async function GET(request: Request) {
   try {
+    const controller = new PermissionRoleController();
     return await controller.list()(request as any);
   } catch (error) {
     return handleApiError(error);
@@ -21,6 +20,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const controller = new PermissionRoleController();
     return await controller.assignRolesToUser()(request as any);
   } catch (error) {
     return handleApiError(error);
@@ -29,6 +29,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const controller = new PermissionRoleController();
     return await controller.removeRolesFromUser()(request as any);
   } catch (error) {
     return handleApiError(error);
@@ -37,6 +38,7 @@ export async function DELETE(request: Request) {
 
 export async function PUT(request: Request) {
   try {
+    const controller = new PermissionRoleController();
     return await controller.replaceUserRoles()(request as any);
   } catch (error) {
     return handleApiError(error);
@@ -44,3 +46,4 @@ export async function PUT(request: Request) {
 }
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';

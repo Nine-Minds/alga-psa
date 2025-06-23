@@ -8,10 +8,9 @@
 import { TimeSheetController } from 'server/src/lib/api/controllers/TimeSheetController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new TimeSheetController();
-
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
+    const controller = new TimeSheetController();
     const req = request as any;
     req.params = params;
     return await controller.getById()(req);
@@ -22,6 +21,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
+    const controller = new TimeSheetController();
     const req = request as any;
     req.params = params;
     return await controller.update()(req);
@@ -32,6 +32,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
+    const controller = new TimeSheetController();
     const req = request as any;
     req.params = params;
     return await controller.delete()(req);
@@ -41,3 +42,4 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 }
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';

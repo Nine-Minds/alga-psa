@@ -6,16 +6,16 @@
 import { FinancialController } from 'server/src/lib/api/controllers/FinancialController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new FinancialController();
-
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
+    const financialController = new FinancialController();
     const req = request as any;
     req.params = params;
-    return await controller.resolveReconciliationReport()(req);
+    return await financialController.resolveReconciliationReport()(req);
   } catch (error) {
     return handleApiError(error);
   }
 }
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';

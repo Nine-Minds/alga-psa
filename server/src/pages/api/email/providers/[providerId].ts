@@ -30,7 +30,6 @@ const updateProviderSchema = z.object({
 });
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const emailProviderService = new EmailProviderService();
   const { providerId } = req.query;
 
   if (!providerId || typeof providerId !== 'string') {
@@ -42,11 +41,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   switch (req.method) {
     case 'GET':
-      return handleGetProvider(req, res, emailProviderService, providerId);
+      return handleGetProvider(req, res, providerId);
     case 'PUT':
-      return handleUpdateProvider(req, res, emailProviderService, providerId);
+      return handleUpdateProvider(req, res, providerId);
     case 'DELETE':
-      return handleDeleteProvider(req, res, emailProviderService, providerId);
+      return handleDeleteProvider(req, res, providerId);
     default:
       return res.status(405).json({ 
         error: 'Method not allowed',
@@ -62,11 +61,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 async function handleGetProvider(
   req: NextApiRequest, 
   res: NextApiResponse, 
-  service: EmailProviderService,
   providerId: string
 ) {
   try {
-    const provider = await service.getProvider(providerId);
+    const emailProviderService = new EmailProviderService();
+    const provider = await emailProviderService.getProvider(providerId);
     
     if (!provider) {
       return res.status(404).json({
@@ -92,15 +91,15 @@ async function handleGetProvider(
 async function handleUpdateProvider(
   req: NextApiRequest, 
   res: NextApiResponse, 
-  service: EmailProviderService,
   providerId: string
 ) {
   try {
+    const emailProviderService = new EmailProviderService();
     // Validate request body
     const data = updateProviderSchema.parse(req.body);
     
     // Check if provider exists
-    const existingProvider = await service.getProvider(providerId);
+    const existingProvider = await emailProviderService.getProvider(providerId);
     if (!existingProvider) {
       return res.status(404).json({
         error: 'Provider not found',
@@ -109,15 +108,15 @@ async function handleUpdateProvider(
     }
 
     // Update the provider
-    const updatedProvider = await service.updateProvider(providerId, data);
+    const updatedProvider = await emailProviderService.updateProvider(providerId, data);
 
     // Handle webhook reinitialization if necessary
     if (data.isActive !== undefined || data.vendorConfig) {
       try {
         if (updatedProvider.active) {
-          await service.initializeProviderWebhook(providerId);
+          await emailProviderService.initializeProviderWebhook(providerId);
         } else {
-          await service.deactivateProviderWebhook(providerId);
+          await emailProviderService.deactivateProviderWebhook(providerId);
         }
       } catch (webhookError: any) {
         console.warn(`Failed to update webhook for provider ${providerId}:`, webhookError.message);
@@ -149,12 +148,12 @@ async function handleUpdateProvider(
 async function handleDeleteProvider(
   req: NextApiRequest, 
   res: NextApiResponse, 
-  service: EmailProviderService,
   providerId: string
 ) {
   try {
+    const emailProviderService = new EmailProviderService();
     // Check if provider exists
-    const provider = await service.getProvider(providerId);
+    const provider = await emailProviderService.getProvider(providerId);
     if (!provider) {
       return res.status(404).json({
         error: 'Provider not found',
@@ -165,7 +164,7 @@ async function handleDeleteProvider(
     // Deactivate webhook before deletion
     if (provider.active) {
       try {
-        await service.deactivateProviderWebhook(providerId);
+        await emailProviderService.deactivateProviderWebhook(providerId);
       } catch (webhookError: any) {
         console.warn(`Failed to deactivate webhook for provider ${providerId}:`, webhookError.message);
         // Continue with deletion anyway
@@ -173,7 +172,7 @@ async function handleDeleteProvider(
     }
 
     // Delete the provider
-    await service.deleteProvider(providerId);
+    await emailProviderService.deleteProvider(providerId);
 
     return res.status(200).json({
       success: true,

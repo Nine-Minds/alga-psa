@@ -6,10 +6,9 @@
 import { AssetController } from 'server/src/lib/api/controllers/AssetController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new AssetController();
-
 export async function PUT(request: Request) {
   try {
+    const controller = new AssetController();
     return await controller.bulkUpdate()(request as any);
   } catch (error) {
     return handleApiError(error);
@@ -17,3 +16,4 @@ export async function PUT(request: Request) {
 }
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
