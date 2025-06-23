@@ -435,7 +435,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
               ))}
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {table.getPaginationRowModel().rows.map((row): JSX.Element => {
+              {table.getPaginationRowModel().rows.map((row, rowIndex): JSX.Element => {
                 // Use the id property if it exists in the data, otherwise use row.id
                 const rowId = ('id' in row.original) ? (row.original as { id: string }).id : row.id;
                 return (
@@ -443,7 +443,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                     key={`row_${rowId}`}
                     onClick={() => handleRowClick(row)}
                     className={`
-                    ${row.index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}
+                    ${rowIndex % 2 === 0 ? 'bg-gray-50' : 'bg-white'}
                     hover:bg-blue-50 transition-colors cursor-pointer
                   `}
                   >

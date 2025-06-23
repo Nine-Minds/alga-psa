@@ -31,7 +31,10 @@ const UserManagement = (): JSX.Element => {
   const fetchUsers = async (): Promise<void> => {
     try {
       const fetchedUsers = await getAllUsers(true);
-      setUsers(fetchedUsers);
+      const sortedUsers = [...fetchedUsers].sort((a, b) =>
+        (a.first_name || '').localeCompare(b.first_name || '')
+      );
+      setUsers(sortedUsers);
       setLoading(false);
     } catch (err) {
       console.error('Error fetching users:', err);
