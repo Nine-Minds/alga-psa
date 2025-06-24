@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "NEXT_PUBLIC_EDITION=enterprise next dev",
-    "build": "NEXT_PUBLIC_EDITION=enterprise ../scripts/build-enterprise.sh && NEXT_PUBLIC_EDITION=enterprise next build",
+    "dev": "next dev",
+    "build": "NEXT_PUBLIC_EDITION=enterprise next build",
     "start": "next start",
     "build:enterprise": "../scripts/build-enterprise.sh",
     "lint": "next lint",
