@@ -17,3 +17,4 @@ export async function POST(
   
   return controller.createTask()(request);
 }
+export const dynamic = 'force-dynamic';

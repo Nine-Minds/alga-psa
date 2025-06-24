@@ -7,10 +7,9 @@
 import { AutomationController } from 'server/src/lib/api/controllers/AutomationController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new AutomationController();
-
 export async function GET(request: Request) {
   try {
+    const controller = new AutomationController();
     return await controller.listAutomationTemplates()(request as any);
   } catch (error) {
     return handleApiError(error);
@@ -19,6 +18,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const controller = new AutomationController();
     return await controller.createAutomationTemplate()(request as any);
   } catch (error) {
     return handleApiError(error);
@@ -26,3 +26,4 @@ export async function POST(request: Request) {
 }
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';

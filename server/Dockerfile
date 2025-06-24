@@ -19,6 +19,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY server/package.json ./server/
 COPY ee/server/package.json ./ee/server/
+COPY scripts/ ./scripts/
 
 # Install dependencies (cached unless package files change)
 
@@ -46,7 +47,7 @@ RUN if [ "$EXCLUDE_EE" = "true" ]; then \
 
 WORKDIR /app/server
 
-# Copy server source code (changes frequently)
+# Copy server source code
 COPY server/ ./
 COPY scripts/ ./scripts/
 

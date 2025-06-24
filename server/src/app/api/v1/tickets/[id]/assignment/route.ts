@@ -6,10 +6,9 @@
 import { TicketController } from 'server/src/lib/api/controllers/TicketController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new TicketController();
-
 export async function PUT(request: Request) {
   try {
+    const controller = new TicketController();
     return await controller.updateTicketAssignment()(request as any);
   } catch (error) {
     return handleApiError(error);
@@ -17,3 +16,4 @@ export async function PUT(request: Request) {
 }
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';

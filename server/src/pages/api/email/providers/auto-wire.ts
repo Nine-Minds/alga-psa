@@ -52,13 +52,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     
     console.log(`🔧 Starting auto-wiring for ${providerType} provider: ${config.mailbox}`);
 
-    const autoWiring = new EmailProviderAutoWiring();
     let result;
 
     if (providerType === 'microsoft') {
+      const autoWiring = new EmailProviderAutoWiring();
       const microsoftConfig = microsoftAutoWireSchema.parse(config);
       result = await autoWiring.autoWireMicrosoft(microsoftConfig);
     } else if (providerType === 'google') {
+      const autoWiring = new EmailProviderAutoWiring();
       const gmailConfig = gmailAutoWireSchema.parse(config);
       result = await autoWiring.autoWireGmail(gmailConfig);
     } else {

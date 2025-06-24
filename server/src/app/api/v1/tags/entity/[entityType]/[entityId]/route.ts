@@ -52,3 +52,4 @@ export async function PUT(request: Request, { params }: { params: { entityType: 
 }
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';

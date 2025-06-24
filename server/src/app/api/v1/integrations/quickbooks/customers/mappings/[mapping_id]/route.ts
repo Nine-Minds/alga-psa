@@ -28,3 +28,4 @@ export async function DELETE(request: Request, { params }: { params: { mapping_i
 }
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';

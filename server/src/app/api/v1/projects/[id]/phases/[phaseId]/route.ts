@@ -28,3 +28,4 @@ export async function DELETE(
   
   return controller.deletePhase()(request);
 }
+export const dynamic = 'force-dynamic';

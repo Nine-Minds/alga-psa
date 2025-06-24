@@ -41,13 +41,11 @@ const querySchema = z.object({
 });
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const emailProviderService = new EmailProviderService();
-
   switch (req.method) {
     case 'GET':
-      return handleGetProviders(req, res, emailProviderService);
+      return handleGetProviders(req, res);
     case 'POST':
-      return handleCreateProvider(req, res, emailProviderService);
+      return handleCreateProvider(req, res);
     default:
       return res.status(405).json({ 
         error: 'Method not allowed',
@@ -62,14 +60,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
  */
 async function handleGetProviders(
   req: NextApiRequest, 
-  res: NextApiResponse, 
-  service: EmailProviderService
+  res: NextApiResponse
 ) {
   try {
+    const emailProviderService = new EmailProviderService();
     // Validate query parameters
     const query = querySchema.parse(req.query);
     
-    const providers = await service.getProviders({
+    const providers = await emailProviderService.getProviders({
       tenant: query.tenant,
       providerType: query.providerType,
       isActive: query.isActive
@@ -98,15 +96,15 @@ async function handleGetProviders(
  */
 async function handleCreateProvider(
   req: NextApiRequest, 
-  res: NextApiResponse, 
-  service: EmailProviderService
+  res: NextApiResponse
 ) {
   try {
+    const emailProviderService = new EmailProviderService();
     // Validate request body
     const data = createProviderSchema.parse(req.body);
     
     // Check if provider with same mailbox already exists
-    const existingProviders = await service.getProviders({ 
+    const existingProviders = await emailProviderService.getProviders({ 
       tenant: data.tenant,
       mailbox: data.mailbox 
     });
@@ -119,12 +117,12 @@ async function handleCreateProvider(
     }
 
     // Create the provider
-    const provider = await service.createProvider(data);
+    const provider = await emailProviderService.createProvider(data);
 
     // If the provider is active, attempt to initialize webhooks
     if (data.isActive) {
       try {
-        await service.initializeProviderWebhook(provider.id);
+        await emailProviderService.initializeProviderWebhook(provider.id);
       } catch (webhookError: any) {
         console.warn(`Failed to initialize webhook for provider ${provider.id}:`, webhookError.message);
         // Don't fail the creation, but log the warning

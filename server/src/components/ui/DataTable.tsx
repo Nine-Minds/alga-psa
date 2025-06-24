@@ -13,6 +13,7 @@ import {
   flexRender,
   ColumnDef,
   Row,
+  SortingFn,
 } from '@tanstack/react-table';
 import { ColumnDefinition, DataTableProps } from 'server/src/interfaces/dataTable.interfaces';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
@@ -74,6 +75,13 @@ const getDisplayText = (columnDef: ColumnDefinition<any> | undefined, cellValue:
   }
   
   return String(cellValue);
+};
+
+// Custom case-insensitive sorting function for all columns
+const caseInsensitiveSort: SortingFn<any> = (rowA, rowB, columnId) => {
+  const a = rowA.getValue(columnId);
+  const b = rowB.getValue(columnId);
+  return String(a ?? '').toLowerCase().localeCompare(String(b ?? '').toLowerCase());
 };
 
 // Component to register table cell content with UI reflection system
@@ -293,6 +301,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
           accessorFn: (row) => getNestedValue(row, col.dataIndex),
           header: () => col.title,
           cell: (info) => col.render ? col.render(info.getValue(), info.row.original, info.row.index) : info.getValue(),
+          sortingFn: caseInsensitiveSort,
         })),
     [columns, visibleColumnIds]
   );
@@ -322,6 +331,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     pageCount: totalPages,
+    enableSortingRemoval: false,
     state: {
       pagination: {
         pageIndex,
@@ -435,7 +445,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
               ))}
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {table.getPaginationRowModel().rows.map((row): JSX.Element => {
+              {table.getPaginationRowModel().rows.map((row, rowIndex): JSX.Element => {
                 // Use the id property if it exists in the data, otherwise use row.id
                 const rowId = ('id' in row.original) ? (row.original as { id: string }).id : row.id;
                 return (
@@ -443,7 +453,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                     key={`row_${rowId}`}
                     onClick={() => handleRowClick(row)}
                     className={`
-                    ${row.index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}
+                    ${rowIndex % 2 === 0 ? 'bg-gray-50' : 'bg-white'}
                     hover:bg-blue-50 transition-colors cursor-pointer
                   `}
                   >
