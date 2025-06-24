@@ -161,8 +161,13 @@ function createHeaderSection(viewModel: InvoiceViewModel): SectionElement {
 
 function createCustomerSection(viewModel: InvoiceViewModel): SectionElement {
     // Handle null customer with fallback values
-    const customerName = viewModel.customer ? viewModel.customer.name : "N/A";
-    const customerAddress = viewModel.customer ? viewModel.customer.address : "N/A";
+    let customerName: string = "N/A";
+    let customerAddress: string = "N/A";
+    
+    if (viewModel.customer !== null) {
+        customerName = viewModel.customer!.name;
+        customerAddress = viewModel.customer!.address;
+    }
     
     const customerSection = new SectionElement([
         new RowElement([
