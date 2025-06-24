@@ -411,7 +411,7 @@ export function UsagePlanConfiguration({
                         <BillingPlanDialog
                           editingPlan={plan}
                           onPlanAdded={() => fetchPlanData()}
-                          triggerButton={<Button variant="outline" size="sm">Edit Plan Basics</Button>}
+                          triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Plan Basics</Button>}
                           allServiceTypes={[]}
                         />
                       )}
@@ -435,7 +435,7 @@ export function UsagePlanConfiguration({
             <BillingPlanDialog
               editingPlan={plan}
               onPlanAdded={() => fetchPlanData()}
-              triggerButton={<Button variant="outline" size="sm">Edit Plan Basics</Button>}
+              triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Plan Basics</Button>}
               allServiceTypes={[]}
             />
           )}

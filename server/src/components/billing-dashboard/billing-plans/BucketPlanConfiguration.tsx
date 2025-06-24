@@ -297,8 +297,8 @@ export function BucketPlanConfiguration({
           {plan && (
             <BillingPlanDialog
               editingPlan={plan}
-              onPlanAdded={() => fetchPlanData()}
-              triggerButton={<Button variant="outline" size="sm">Edit Plan Basics</Button>}
+              onPlanAdded={() => fetchAndInitializeConfigs()}
+              triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Plan Basics</Button>}
               allServiceTypes={[]}
             />
           )}
