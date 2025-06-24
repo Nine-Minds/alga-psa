@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle, ChevronDown } from 'lucide-react';
 import { Button } from 'server/src/components/ui/Button';
+import { BillingPlanDialog } from '../BillingPlanDialog';
 import Spinner from 'server/src/components/ui/Spinner';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { getPlanServicesWithConfigurations } from 'server/src/lib/actions/planServiceActions';
@@ -291,8 +292,16 @@ export function BucketPlanConfiguration({
   return (
     <div className={`space-y-6 ${className}`}>
       <Card>
-        <CardHeader>
+        <CardHeader className="flex items-center justify-between">
           <CardTitle>Edit Plan: {plan?.plan_name || '...'} (Bucket) - Service Configurations</CardTitle>
+          {plan && (
+            <BillingPlanDialog
+              editingPlan={plan}
+              onPlanAdded={() => fetchAndInitializeConfigs()}
+              triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Plan Basics</Button>}
+              allServiceTypes={[]}
+            />
+          )}
         </CardHeader>
         <CardContent>
           {planServices.length === 0 ? (
