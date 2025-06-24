@@ -162,23 +162,11 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
           tenant: tenant
         }),
       
-      // Users
-      trx('users as u')
-        .select(
-          'u.*',
-          'd.file_id as avatar_file_id'
-        )
-        .leftJoin('document_associations as da', function() {
-          this.on('da.entity_id', '=', 'u.user_id')
-              .andOn('da.tenant', '=', 'u.tenant')
-              .andOnVal('da.entity_type', '=', 'user');
-        })
-        .leftJoin('documents as d', function() {
-           this.on('d.document_id', '=', 'da.document_id')
-              .andOn('d.tenant', '=', 'u.tenant');
-        })
-        .where({ 'u.tenant': tenant })
-        .orderBy('u.first_name', 'asc'),
+      // Users - get users without joins first, then handle avatars separately to avoid duplicates
+      trx('users')
+        .select('*')
+        .where({ tenant })
+        .orderBy('first_name', 'asc'),
       
       // Statuses
       trx('statuses')
@@ -368,7 +356,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       label: status.name || ""
     }));
 
-    const agentOptions = users.map((agent) => ({
+    const agentOptions = (Object.values(userMap) as Array<{ user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>).map((agent) => ({
       value: agent.user_id,
       label: `${agent.first_name} ${agent.last_name}`
     }));

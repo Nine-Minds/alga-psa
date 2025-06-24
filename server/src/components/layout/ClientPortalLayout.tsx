@@ -132,6 +132,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
 
             {/* Right side - Profile */}
             <div className="flex items-center">
+              <NotificationBell />
               <div className="flex items-center">
                 <DropdownMenu.Root>
                   <DropdownMenu.Trigger asChild>
