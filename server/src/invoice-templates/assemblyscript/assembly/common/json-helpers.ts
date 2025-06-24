@@ -3,6 +3,11 @@ import {
     TextElement, ImageElement, ColumnElement, RowElement, SectionElement, SimpleGlobalStyles
 } from "../types"; // Adjust path as needed
 
+// Helper function to check if a value is an object
+function isObject(value: any): boolean {
+    return value !== null && typeof value === "object" && !isArray(value);
+}
+
 // --- JSON String Escaping ---
 // Basic escaping for control characters and quotes/backslashes.
 // Note: This is a simplified version and might not cover all edge cases (e.g., Unicode).
@@ -216,7 +221,7 @@ function serializeLayoutElement(element: LayoutElement): string {
     // Helper to add property
     function addProp(key: string, value: any, isDefault: boolean = false): void {
          // Check for null or default boolean value
-        if (value !== null && !(isBoolean(value) && value === isDefault)) {
+        if (value !== null && !(isBoolean(value) && (value as boolean) === isDefault)) {
             if (!firstProp) {
                 result += ",";
             }
