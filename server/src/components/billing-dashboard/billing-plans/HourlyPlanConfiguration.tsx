@@ -10,6 +10,7 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle, Trash2, Info, ChevronDown } from 'lucide-react';
 import { Button, ButtonProps } from 'server/src/components/ui/Button'; // Import ButtonProps
+import { BillingPlanDialog } from '../BillingPlanDialog';
 import Spinner from 'server/src/components/ui/Spinner';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import * as Accordion from '@radix-ui/react-accordion';
@@ -586,8 +587,16 @@ export function HourlyPlanConfiguration({
 
             {/* Service Specific Settings */}
             <Card>
-                <CardHeader>
+                <CardHeader className="flex items-center justify-between">
                     <CardTitle>Edit Plan: {plan?.plan_name || '...'} (Hourly) - Service Rates & Settings</CardTitle>
+                    {plan && (
+                        <BillingPlanDialog
+                            editingPlan={plan}
+                            onPlanAdded={() => fetchPlanData()}
+                            triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Plan Basics</Button>}
+                            allServiceTypes={[]}
+                        />
+                    )}
                 </CardHeader>
                 <CardContent>
                     {serviceConfigs.length > 0 ? (

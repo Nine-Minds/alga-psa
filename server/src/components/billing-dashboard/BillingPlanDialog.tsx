@@ -5,22 +5,17 @@ import React, { useState, useEffect, useCallback } from 'react';
 import CustomSelect from '../ui/CustomSelect';
 import { Dialog, DialogContent, DialogFooter } from '../ui/Dialog';
 import { Button } from '../ui/Button';
-// Removed Tabs imports
 import { Label } from '../ui/Label';
 import { Input } from '../ui/Input';
 import { Checkbox } from '../ui/Checkbox';
-
+import { Switch } from '../ui/Switch';
 import { createBillingPlan, updateBillingPlan, updateBillingPlanFixedConfig, getBillingPlanFixedConfig } from 'server/src/lib/actions/billingPlanAction';
-// Removed bucketPlanAction imports
 import { IBillingPlan, IServiceType } from 'server/src/interfaces/billing.interfaces'; // Removed IBucketPlan, IService
-// Removed planServiceActions imports
 import { useTenant } from '../TenantProvider';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing'; // Removed PLAN_TYPE_OPTIONS
-// Removed getServices, getPlanServices imports
-// Removed OverlapWarningDialog import
 import { PlanTypeSelector, PlanType } from './billing-plans/PlanTypeSelector'; // Import PlanTypeSelector again
-// Removed ConfigPanel imports
+
 
 interface BillingPlanDialogProps {
   onPlanAdded: (newPlanId?: string) => void; // Modified to pass new plan ID
@@ -37,6 +32,8 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
   const [planType, setPlanType] = useState<PlanType>('Fixed');
   const [isCustom, setIsCustom] = useState(false);
   const [baseRate, setBaseRate] = useState<number | undefined>(undefined);
+  const [enableProration, setEnableProration] = useState<boolean>(false);
+  const [billingCycleAlignment, setBillingCycleAlignment] = useState<string>('start');
   const tenant = useTenant()!;
   // Removed activeTab state
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -49,10 +46,12 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
 
   // Update form when editingPlan changes or dialog opens
   useEffect(() => {
-    const loadBaseRate = async (planId: string) => {
+    const loadFixedConfig = async (planId: string) => {
         try {
             const config = await getBillingPlanFixedConfig(planId);
             setBaseRate(config?.base_rate ?? undefined);
+            setEnableProration(config?.enable_proration ?? false);
+            setBillingCycleAlignment(config?.billing_cycle_alignment ?? 'start');
         } catch (err) {
             console.error('Error loading plan config:', err);
         }
@@ -65,7 +64,7 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
             setPlanType(editingPlan.plan_type as PlanType);
             setIsCustom(editingPlan.is_custom);
             if (editingPlan.plan_id && editingPlan.plan_type === 'Fixed') {
-                loadBaseRate(editingPlan.plan_id);
+                loadFixedConfig(editingPlan.plan_id);
             }
         } else {
             // Reset form for new plan when dialog opens without editingPlan
@@ -137,10 +136,15 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
       }
 
       if (savedPlanId && planType === 'Fixed') {
-        await updateBillingPlanFixedConfig(savedPlanId, { base_rate: baseRate ?? null });
+        await updateBillingPlanFixedConfig(savedPlanId, {
+          base_rate: baseRate ?? null,
+          enable_proration: enableProration,
+          billing_cycle_alignment: enableProration ? billingCycleAlignment as 'start' | 'end' : 'start'
+        });
       }
 
       resetForm();
+      setOpen(false); // Close the dialog after successful save
       onPlanAdded(savedPlanId); // Pass the ID back
     } catch (error) {
       console.error('Error saving billing plan:', error);
@@ -156,6 +160,8 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
     setPlanType('Fixed');
     setIsCustom(false);
     setBaseRate(undefined);
+    setEnableProration(false);
+    setBillingCycleAlignment('start');
     setValidationErrors([]);
     setHasAttemptedSubmit(false);
     // No other state to reset
@@ -242,19 +248,55 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
                 {/* Removed CustomSelect */}
               </div>
               {planType === 'Fixed' && (
-                <div>
-                  <Label htmlFor="base-rate">Base Rate *</Label>
-                  <Input
-                    id="base-rate"
-                    type="number"
-                    value={baseRate !== undefined ? baseRate : ''}
-                    onChange={(e) => setBaseRate(e.target.value === '' ? undefined : Number(e.target.value))}
-                    placeholder="Enter base rate"
-                    min={0}
-                    step={0.01}
-                    required
-                    className={hasAttemptedSubmit && (baseRate === undefined || isNaN(baseRate)) ? 'border-red-500' : ''}
-                  />
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="base-rate">Base Rate *</Label>
+                    <Input
+                      id="base-rate"
+                      type="number"
+                      value={baseRate !== undefined ? baseRate : ''}
+                      onChange={(e) => setBaseRate(e.target.value === '' ? undefined : Number(e.target.value))}
+                      placeholder="Enter base rate"
+                      min={0}
+                      step={0.01}
+                      required
+                      className={hasAttemptedSubmit && (baseRate === undefined || isNaN(baseRate)) ? 'border-red-500' : ''}
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="enable-proration"
+                      checked={enableProration}
+                      onCheckedChange={setEnableProration}
+                    />
+                    <Label htmlFor="enable-proration" className="cursor-pointer">
+                      Enable Proration
+                    </Label>
+                  </div>
+                  {enableProration && (
+                    <div className="pl-8 space-y-2">
+                      <Label htmlFor="billing-cycle-alignment">Billing Cycle Alignment</Label>
+                      <CustomSelect
+                        id="billing-cycle-alignment"
+                        options={[
+                          { value: 'start', label: 'Start of Billing Cycle' },
+                          { value: 'end', label: 'End of Billing Cycle' },
+                          { value: 'calendar', label: 'Calendar Month' },
+                          { value: 'anniversary', label: 'Anniversary Date' }
+                        ]}
+                        onValueChange={setBillingCycleAlignment}
+                        value={billingCycleAlignment}
+                        placeholder="Select alignment"
+                        className="w-full"
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        {billingCycleAlignment === 'start' && 'Proration is calculated based on the start date of the billing cycle.'}
+                        {billingCycleAlignment === 'end' && 'Proration is calculated based on the end date of the billing cycle.'}
+                        {billingCycleAlignment === 'calendar' && 'Proration aligns to the calendar month (e.g., the 1st of the month).'}
+                        {billingCycleAlignment === 'anniversary' && 'Proration aligns to the anniversary date of the subscription or plan start.'}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
+import { BillingPlanDialog } from '../BillingPlanDialog';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import Spinner from 'server/src/components/ui/Spinner';
@@ -404,8 +405,16 @@ export function UsagePlanConfiguration({
       return (
           <div className={`space-y-6 ${className}`}>
               <Card>
-                  <CardHeader>
+                  <CardHeader className="flex items-center justify-between">
                       <CardTitle>Edit Plan: {plan?.plan_name || '...'} (Usage)</CardTitle>
+                      {plan && (
+                        <BillingPlanDialog
+                          editingPlan={plan}
+                          onPlanAdded={() => fetchPlanData()}
+                          triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Plan Basics</Button>}
+                          allServiceTypes={[]}
+                        />
+                      )}
                   </CardHeader>
                   <CardContent>
                       <p className="text-muted-foreground mb-4">No services are currently associated with this usage plan. Add services below to configure their pricing.</p>
@@ -420,8 +429,16 @@ export function UsagePlanConfiguration({
   return (
     <div className={`space-y-6 ${className}`}>
       <Card>
-        <CardHeader>
+        <CardHeader className="flex items-center justify-between">
           <CardTitle>Edit Plan: {plan?.plan_name || '...'} (Usage) - Service Pricing</CardTitle>
+          {plan && (
+            <BillingPlanDialog
+              editingPlan={plan}
+              onPlanAdded={() => fetchPlanData()}
+              triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Plan Basics</Button>}
+              allServiceTypes={[]}
+            />
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           {saveError && (
