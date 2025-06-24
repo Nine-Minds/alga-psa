@@ -75,9 +75,13 @@ class Priority {
     if (!tenant) {
       throw new Error('Tenant context is required for priority operations');
     }
+    
+    // Remove tenant from update data since it's a partition key and cannot be modified
+    const { tenant: _, ...updateData } = priority;
+    
     const [updatedPriority] = await knexOrTrx('priorities')
       .where({ priority_id: id, tenant })
-      .update(priority)
+      .update(updateData)
       .returning('*');
     return updatedPriority || null;
   }
