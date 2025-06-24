@@ -49,6 +49,10 @@ WORKDIR /app/server
 
 # Copy server source code
 COPY server/ ./
+COPY scripts/ ./scripts/
+
+ENV NEXT_PUBLIC_EDITION=enterprise
+RUN ./scripts/build-enterprise.sh
 
 # Clean any existing build artifacts and build the Next.js application
 RUN rm -rf .next && npm run build
