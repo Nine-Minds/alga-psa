@@ -202,9 +202,9 @@ spec:
             - name: STORAGE_LOCAL_BASE_PATH
               value: "{{ .Values.config.storage.providers.local.base_path | default "/data/files" }}"
             - name: STORAGE_LOCAL_MAX_FILE_SIZE
-              value: "{{ .Values.config.storage.providers.local.max_file_size | default "\"104857600\"" }}"
+              value: "{{ .Values.config.storage.providers.local.max_file_size | default "524288000" }}"
             - name: STORAGE_LOCAL_ALLOWED_MIME_TYPES
-              value: "{{ join "," .Values.config.storage.providers.local.allowed_mime_types | default "image/*,application/pdf,text/plain" }}"
+              value: "{{ join "," .Values.config.storage.providers.local.allowed_mime_types | default "image/*,application/pdf,text/plain,video/*" }}"
             - name: STORAGE_LOCAL_RETENTION_DAYS
               value: "{{ .Values.config.storage.providers.local.retention_days | default "30" }}"
             {{- end }}

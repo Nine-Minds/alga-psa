@@ -202,13 +202,14 @@ config:
       local:
         enabled: false
         base_path: '/data/files'
-        max_file_size: 104857600  # 100MB
+        max_file_size: "524288000"  # 500MB
         allowed_mime_types:
           - 'image/*'
           - 'application/pdf'
           - 'text/plain'
           - 'application/msword'
           - 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+          - 'video/*'
         retention_days: 7  # Shorter retention for dev
 
 # Development logging
