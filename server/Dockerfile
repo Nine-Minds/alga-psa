@@ -38,11 +38,13 @@ COPY services/ ./services/
 
 # Copy EE features conditionally
 COPY ee/ ./ee/
+# Handle edition-specific setup
 RUN if [ "$EXCLUDE_EE" = "true" ]; then \
         echo "Building CE edition - excluding EE features..."; \
         rm -rf ./ee; \
     else \
         echo "Including EE features..."; \
+        ./scripts/build-enterprise.sh; \
     fi
 
 WORKDIR /app/server
@@ -51,11 +53,13 @@ WORKDIR /app/server
 COPY server/ ./
 COPY scripts/ ./scripts/
 
-ENV NEXT_PUBLIC_EDITION=enterprise
-RUN ./scripts/build-enterprise.sh
-
-# Clean any existing build artifacts and build the Next.js application
-RUN rm -rf .next && npm run build
+# Clean any existing build artifacts and build the Next.js application with conditional env var
+RUN rm -rf .next && \
+    if [ "$EXCLUDE_EE" = "true" ]; then \
+        npm run build; \
+    else \
+        npm run build:enterprise; \
+    fi
 
 # Copy and make entrypoint executable (rarely changes)
 COPY server/entrypoint.sh /app/entrypoint.sh
