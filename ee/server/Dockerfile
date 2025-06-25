@@ -1,5 +1,8 @@
-# Start with a base image and install system dependencies
-FROM node:alpine AS base
+# Dockerfile for using pre-built EE artifacts
+# Designed for Argo workflows and CI systems that build separately
+# Expects .next, dist, shared/dist to exist locally with EE features included
+
+FROM node:alpine
 RUN apk add --no-cache \
     bash \
     postgresql-client \
@@ -9,91 +12,46 @@ RUN apk add --no-cache \
     ghostscript \
     curl \
     nano
+
 WORKDIR /app
 
-# Stage for installing dependencies (cache-friendly)
-FROM base AS deps
-# Copy package files for both root and server parts of the project
+# Copy package files for dependency installation
 COPY package.json package-lock.json ./
 COPY server/package.json ./server/
 COPY ee/server/package.json ./ee/server/
-COPY tsconfig.base.json ./
-COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/assemblyscript
 
-RUN npm install
+# Install only production dependencies
+RUN npm install --omit=dev
 
-# Builder stage for compiling the application
-FROM deps AS builder
-# Copy all project files and build the server
-COPY . .
-
-WORKDIR /app
-RUN npm install --workspace=shared
-RUN npm run build --workspace=shared
-
-# Copy EE files and build enterprise edition
-COPY scripts/ ./scripts/
-ENV NEXT_PUBLIC_EDITION=enterprise
-RUN ./scripts/build-enterprise.sh
-
-WORKDIR /app/server
-
-# Create secrets directory and populate with secure placeholder values
-RUN mkdir -p /app/secrets && \
-    echo "secure-admin-password-placeholder" > /app/secrets/postgres_password && \
-    echo "secure-app-password-placeholder" > /app/secrets/db_password_server && \
-    echo "secure-hocuspocus-password-placeholder" > /app/secrets/db_password_hocuspocus && \
-    echo "secure-redis-password-placeholder" > /app/secrets/redis_password && \
-    echo "secure-32char-auth-key-placeholder-xxxxx" > /app/secrets/alga_auth_key && \
-    echo "secure-32char-crypto-key-placeholder-xxxx" > /app/secrets/crypto_key && \
-    echo "secure-32char-token-key-placeholder-xxxx" > /app/secrets/token_secret_key && \
-    echo "secure-32char-nextauth-key-placeholder-xx" > /app/secrets/nextauth_secret && \
-    echo "secure-email-password-placeholder" > /app/secrets/email_password && \
-    echo "secure-oauth-client-id-placeholder" > /app/secrets/google_oauth_client_id && \
-    echo "secure-oauth-client-secret-placeholder" > /app/secrets/google_oauth_client_secret && \
-    chmod 600 /app/secrets/*
-
-# Copy example environment file
-COPY .env.example /app/.env   
-COPY .env.example /app/server/.env  
-
-WORKDIR /app
-RUN npm run build:ee
-
-# Final production image with minimal runtime artifacts
-FROM node:alpine
-RUN apk add --no-cache bash \
-    postgresql-client \
-    redis \
-    graphicsmagick \
-    imagemagick \
-    ghostscript \
-    curl \
-    nano
-
-WORKDIR /app
+# Copy base files
 COPY tsconfig.base.json ./
 COPY server/setup /app/server/setup
 COPY .env.example /app/.env   
 COPY .env.example /app/server/.env  
 
-# Copy built application and node_modules from earlier stages -- minimalist approach
-COPY --from=builder /app/shared ./shared
-COPY --from=builder /app/server/.next ./server/.next
-COPY --from=builder /app/server/public ./server/public
-COPY --from=builder /app/server/next.config.mjs ./server/
-COPY --from=builder /app/server/package.json ./server/
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/package-lock.json ./
-COPY --from=builder /app/server/knexfile.cjs ./server/
-COPY --from=builder /app/server/migrations/ ./server/migrations/
-COPY --from=builder /app/server/seeds/ ./server/seeds/
-COPY --from=builder /app/server/src/ ./server/src/
-COPY --from=deps /app/node_modules ./node_modules
+# Copy pre-built shared workspace (must exist locally)
+COPY ./shared/dist ./shared/dist
+COPY ./shared/package.json ./shared/package.json
 
-# Copy EE migrations (they get merged during build-enterprise.sh)
-COPY --from=builder /app/ee/server/migrations/ ./server/migrations/
+# Copy pre-built artifacts (must exist locally with EE features)
+# These should be built by Argo workflow with build-enterprise.sh
+COPY ./server/.next ./server/.next
+COPY ./server/dist ./server/dist
 
+# Copy runtime files
+COPY ./server/public ./server/public
+COPY ./server/next.config.mjs ./server/
+COPY ./server/knexfile.cjs ./server/
+COPY ./server/migrations/ ./server/migrations/
+COPY ./server/seeds/ ./server/seeds/
+COPY ./server/src/ ./server/src/
+
+# Copy EE-specific files
+COPY ./ee/server/src /app/ee/server/src
+COPY ./ee/server/migrations/ ./server/migrations/
+COPY ./ee/server/seeds/ ./server/seeds/
+
+# Copy entrypoint
 COPY server/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
