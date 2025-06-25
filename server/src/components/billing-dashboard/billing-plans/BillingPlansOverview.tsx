@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, Card, Heading } from '@radix-ui/themes';
+import { Box, Card, Heading, AlertDialog } from '@radix-ui/themes';
 import { toast } from 'react-hot-toast'; // Import toast
 import { Button } from 'server/src/components/ui/Button';
 import { MoreVertical, Plus } from 'lucide-react';
@@ -14,6 +14,7 @@ import {
 } from 'server/src/components/ui/DropdownMenu';
 import { BillingPlanDialog } from '../BillingPlanDialog';
 import { getBillingPlans, deleteBillingPlan } from 'server/src/lib/actions/billingPlanAction';
+import { getPlanServicesWithConfigurations } from 'server/src/lib/actions/planServiceActions';
 import { IBillingPlan, IServiceType } from 'server/src/interfaces/billing.interfaces'; // Added IServiceType
 import { getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions'; // Added import for fetching types
 import { DataTable } from 'server/src/components/ui/DataTable';
@@ -25,6 +26,8 @@ const BillingPlansOverview: React.FC = () => {
   const [editingPlan, setEditingPlan] = useState<IBillingPlan | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]>([]); // Added state for service types
+  const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null);
+  const [deleteErrorServices, setDeleteErrorServices] = useState<string[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -66,7 +69,10 @@ const BillingPlansOverview: React.FC = () => {
             toast.error(error.message);
         // Check for the specific error message for plans with associated services (from pre-check)
         } else if (error.message.includes('associated services')) {
-          toast.error(error.message); // Use the exact message from the action
+          // Fetch associated services to display in a dialog
+          const services = await getPlanServicesWithConfigurations(planId);
+          setDeleteErrorServices(services.map(s => s.service.service_name));
+          setDeleteErrorMessage(error.message);
         } else {
           // Display other specific error messages directly
           toast.error(error.message);
@@ -187,6 +193,27 @@ const BillingPlansOverview: React.FC = () => {
           onRowClick={handleBillingPlanClick}
           rowClassName={() => "cursor-pointer"}
         />
+
+        {deleteErrorMessage && (
+          <AlertDialog.Root open={!!deleteErrorMessage}>
+            <AlertDialog.Content>
+              <AlertDialog.Title>Cannot Delete Plan</AlertDialog.Title>
+              <AlertDialog.Description>
+                {deleteErrorMessage}
+                {deleteErrorServices.length > 0 && (
+                  <ul className="mt-2 list-disc pl-5">
+                    {deleteErrorServices.map((name) => (
+                      <li key={name}>{name}</li>
+                    ))}
+                  </ul>
+                )}
+              </AlertDialog.Description>
+              <Button onClick={() => { setDeleteErrorMessage(null); setDeleteErrorServices([]); }}>
+                Close
+              </Button>
+            </AlertDialog.Content>
+          </AlertDialog.Root>
+        )}
       </Box>
     </Card>
   );

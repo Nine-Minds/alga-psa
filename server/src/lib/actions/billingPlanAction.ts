@@ -198,7 +198,22 @@ export async function deleteBillingPlan(planId: string): Promise<void> {
             // Check if plan has associated services before attempting to delete
             const hasServices = await BillingPlan.hasAssociatedServices(trx, planId);
             if (hasServices) {
-                throw new Error(`Cannot delete plan that has associated services. Please remove all services from this plan before deleting.`);
+                // Fetch the names of associated services for a more helpful error
+                const serviceRows = await trx('plan_services as ps')
+                    .leftJoin('service_catalog as sc', function() {
+                        this.on('ps.service_id', '=', 'sc.service_id')
+                            .andOn('ps.tenant', '=', 'sc.tenant');
+                    })
+                    .where({ 'ps.plan_id': planId, 'ps.tenant': tenant })
+                    .select('sc.service_name');
+
+                const serviceNames = serviceRows.map(row => row.service_name as string);
+                const displayLimit = 5;
+                const displayNames = serviceNames.length > displayLimit
+                    ? serviceNames.slice(0, displayLimit).join(', ') + ` and ${serviceNames.length - displayLimit} more`
+                    : serviceNames.join(', ');
+
+                throw new Error(`Cannot delete plan that has associated services: ${displayNames}. Please remove these services from this plan before deleting.`);
             }
 
             await BillingPlan.delete(trx, planId);
