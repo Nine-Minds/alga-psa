@@ -7,7 +7,6 @@ export interface IContact extends TenantEntity, ITaggable {
   phone_number: string;
   email: string;
   role: string;
-  date_of_birth?: string;
   created_at: string;
   updated_at: string;
   is_inactive: boolean;
@@ -54,11 +53,10 @@ export interface ImportContactResult {
   originalData: Record<string, any>;
 }
 
-export type MappableField = 
+export type MappableField =
   | 'full_name'
   | 'phone_number'
   | 'email'
-  | 'date_of_birth'
   | 'company_name'
   | 'role'
   | 'notes'

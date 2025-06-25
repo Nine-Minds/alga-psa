@@ -290,7 +290,6 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
               onClick={handleCompanyClick}
             />
             <TableRow label="Role" value={contact.role || 'Not set'} />
-            <TableRow label="Date of Birth" value={formatDateForDisplay(contact.date_of_birth)} />
             <TableRow label="Status" value={contact.is_inactive ? 'Inactive' : 'Active'} />
             <TableRow label="Created At" value={new Date(contact.created_at).toLocaleString()} />
             <TableRow label="Updated At" value={new Date(contact.updated_at).toLocaleString()} />

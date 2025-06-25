@@ -158,7 +158,6 @@ export class ContactService extends BaseService<IContact> {
           phone_number: data.phone_number || '',
           email: data.email,
           role: data.role || '',
-          date_of_birth: data.date_of_birth,
           notes: data.notes,
           is_inactive: data.is_inactive || false,
           tenant: context.tenant,
@@ -390,7 +389,6 @@ export class ContactService extends BaseService<IContact> {
       'c.email',
       'c.phone_number',
       'c.role',
-      'c.date_of_birth',
       'c.is_inactive',
       'c.created_at',
       'comp.company_name'
@@ -401,8 +399,8 @@ export class ContactService extends BaseService<IContact> {
     } else {
       // Convert to CSV format
       const headers = [
-        'ID', 'Full Name', 'Email', 'Phone', 'Role', 
-        'Date of Birth', 'Company', 'Inactive', 'Created At'
+        'ID', 'Full Name', 'Email', 'Phone', 'Role',
+        'Company', 'Inactive', 'Created At'
       ];
       
       const rows = contacts.map(contact => [
@@ -411,7 +409,6 @@ export class ContactService extends BaseService<IContact> {
         contact.email,
         contact.phone_number,
         contact.role || '',
-        contact.date_of_birth || '',
         contact.company_name || '',
         contact.is_inactive ? 'Yes' : 'No',
         contact.created_at
@@ -455,9 +452,6 @@ export class ContactService extends BaseService<IContact> {
           } else {
             query.whereNull('c.company_id');
           }
-          break;
-        case 'birth_month':
-          query.whereRaw('EXTRACT(month FROM c.date_of_birth) = ?', [value]);
           break;
         case 'company_name':
           query.whereILike('comp.company_name', `%${value}%`);

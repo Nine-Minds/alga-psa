@@ -540,7 +540,7 @@ export async function updateContact(contactData: Partial<IContact>): Promise<ICo
     // Define valid fields
     const validFields: (keyof IContact)[] = [
       'contact_name_id', 'full_name', 'company_id', 'phone_number',
-      'email', 'date_of_birth', 'created_at', 'updated_at', 'is_inactive',
+      'email', 'created_at', 'updated_at', 'is_inactive',
       'role', 'notes'
     ];
 
@@ -680,7 +680,6 @@ export async function updateContactsForCompany(companyId: string, updateData: Pa
           break;
 
         case 'notes':
-        case 'date_of_birth':
           // These fields are optional strings
           if (value === null) {
             acc[contactKey] = undefined;
@@ -887,7 +886,6 @@ export async function importContactsFromCSV(
               phone_number: contactData.phone_number?.trim() || '',
               company_id: contactData.company_id,
               is_inactive: contactData.is_inactive || false,
-              date_of_birth: contactData.date_of_birth,
               role: contactData.role?.trim() || '',
               notes: contactData.notes?.trim() || '',
               tenant: tenant,

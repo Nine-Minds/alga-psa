@@ -185,13 +185,6 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
                 />
               </td>
             </tr>
-            <TableRow 
-              id={`${id}-dob`}
-              label="Date of Birth" 
-              value={contact.date_of_birth || ''} 
-              onChange={(value) => handleInputChange('date_of_birth', value)} 
-              type="date"
-            />
             <tr>
               <td className="py-2 font-semibold">Status:</td>
               <td className="py-2">

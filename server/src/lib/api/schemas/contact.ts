@@ -21,7 +21,6 @@ export const createContactSchema = z.object({
   phone_number: phoneSchema,
   email: emailSchema,
   role: z.string().max(100).optional(),
-  date_of_birth: z.string().datetime().optional(),
   notes: z.string().optional(),
   is_inactive: z.boolean().optional().default(false),
   tags: z.array(z.string()).optional()
@@ -39,7 +38,6 @@ export const contactFilterSchema = baseFilterSchema.extend({
   role: z.string().optional(),
   is_inactive: booleanTransform.optional(),
   has_company: booleanTransform.optional(),
-  birth_month: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(12)).optional(),
   company_name: z.string().optional()
 });
 
@@ -54,7 +52,6 @@ export const contactResponseSchema = z.object({
   phone_number: z.string().nullable(),
   email: z.string(),
   role: z.string().nullable(),
-  date_of_birth: z.string().datetime().nullable(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   is_inactive: z.boolean(),
