@@ -6,7 +6,7 @@ services:
       file: ./server/docker-compose.prebuilt.yaml
       service: server
     container_name: ${APP_NAME:-sebastian}_server_ce
-    image: ghcr.io/nine-minds/alga-psa:latest
+    image: ghcr.io/nine-minds/alga-psa:0e922b4f
     platform: linux/amd64
     environment:
       EDITION: community
@@ -68,7 +68,7 @@ services:
         required: false
 
   setup:
-    image: ghcr.io/nine-minds/alga-psa:latest
+    image: ghcr.io/nine-minds/alga-psa:0e922b4f
     platform: linux/amd64
     container_name: ${APP_NAME:-sebastian}_setup_ce
     environment:

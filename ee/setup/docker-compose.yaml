@@ -6,7 +6,7 @@ services:
       file: docker-compose.yaml
       service: server
     build:
-      context: .
+      context: ../..
       dockerfile: ee/server/Dockerfile
     environment:
       EDITION: enterprise
@@ -39,8 +39,8 @@ services:
       file: docker-compose.yaml
       service: setup
     build:
-      context: .
-      dockerfile: ee/server/Dockerfile
+      context: ../..
+      dockerfile: ee/setup/Dockerfile
     container_name: ${APP_NAME:-sebastian}_setup_ee
     networks:
       - app-network

@@ -1,0 +1,54 @@
+FROM node:latest
+
+WORKDIR /app/setup
+
+# Install database clients and utilities (including development tools)
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    sqlite3 \
+    curl \
+    vim \
+    nano \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy setup files
+COPY setup/entrypoint.sh ./
+COPY setup/config.ini ./config.ini
+COPY ee/setup/entrypoint.sh ./ee-entrypoint.sh
+COPY ee/setup/config.ini ./ee-config.ini
+
+# Copy server files
+COPY server/package.json /app/server/
+COPY server/setup/create_database.js /app/server/setup/
+COPY server/knexfile.cjs /app/server/
+COPY server/migrations /app/server/migrations
+COPY server/seeds /app/server/seeds
+
+# Copy EE server files and overlay them
+COPY ee/server/migrations /app/server/migrations
+COPY ee/server/seeds /app/server/seeds
+
+# Make entrypoint scripts executable
+RUN chmod +x ./entrypoint.sh
+RUN chmod +x ./ee-entrypoint.sh
+
+WORKDIR /app
+COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/assemblyscript
+
+# Install dependencies (including dev dependencies for development)
+WORKDIR /app/server
+RUN npm install
+RUN npm install -g knex nodemon
+RUN npm install pg knex dotenv pg-boss
+
+# Install pg-boss in setup directory
+WORKDIR /app/setup
+RUN npm init -y && npm install pg-boss nodemon
+
+# Add type:module to package.json for ES modules support
+RUN node -e "const pkg=require('./package.json'); pkg.type='module'; require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2))"
+
+WORKDIR /app/setup
+
+# Set the EE entrypoint script for development
+ENTRYPOINT ["./ee-entrypoint.sh"]

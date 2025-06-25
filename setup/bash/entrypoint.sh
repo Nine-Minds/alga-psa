@@ -50,63 +50,31 @@ check_database_connection() {
 }
 
 setup_db(){
-    send_log info "** Starting to setup database [ $DB_TYPE ]**"
-    case "$DB_TYPE" in
-        "postgres")
-            # Check database connection first
-            check_database_connection
-            
-            # Run create_database.js
-            send_log info "Running database creation script..."
-            node /app/server/setup/create_database.js
+    send_log info "** Starting to setup database **"
+    # Check database connection first
+    check_database_connection
+    
+    # Run create_database.js
+    send_log info "Running database creation script..."
+    node /app/server/setup/create_database.js
 
-            # Run migrations
-            send_log info "Running database migrations..."
-            cd /app && NODE_OPTIONS="--experimental-vm-modules" npx knex --knexfile $KNEXFILE migrate:latest
-            NODE_OPTIONS="--experimental-vm-modules" npx knex --knexfile $KNEXFILE seed:run
+    # Run migrations
+    send_log info "Running database migrations..."
+    cd /app && NODE_OPTIONS="--experimental-vm-modules" npx knex --knexfile $KNEXFILE migrate:latest
+    NODE_OPTIONS="--experimental-vm-modules" npx knex --knexfile $KNEXFILE seed:run
 
-            send_log info " ** Database setup completed **"
-            ;;
-        "mysql")
-            # Run create_database.js
-            send_log info "Running database creation script..."
-            node /app/server/setup/create_database.js
-
-            # Run migrations
-            send_log info "Running database migrations..."
-            cd /app && NODE_OPTIONS="--experimental-vm-modules" npx knex --knexfile $KNEXFILE migrate:latest
-            NODE_OPTIONS="--experimental-vm-modules" npx knex --knexfile $KNEXFILE seed:run
-
-            send_log info " ** Database setup completed **"
-            ;;
-        *)
-            send_log error "Unsupported database type: $DB_TYPE"
-            exit 1
-    esac
+    send_log info " ** Database setup completed **"
 }
 
 installed_client(){
-    send_log info "** Starting to install client for $DB_TYPE **"
-    case "$DB_TYPE" in
-        "postgres")
-            send_log debug "Installing client for postgres"
-            # We already installed postgresql-client in Dockerfile
-            send_log debug "Client for postgres installed"
-            ;;
-        "mysql")
-            send_log debug "Installing client for mysql"
-            mysql -h $DB_HOST -P $DB_PORT -u $DB_USER -p$DB_PASSWORD  < /setup.sql
-            send_log debug "Client for mysql installed"
-            ;;
-        *)
-            send_log error "Unsupported database type: $DB_TYPE"
-            exit 1
-            ;;
-    esac
+    send_log info "** Starting to install client **"
+    send_log debug "Installing client for postgres"
+    # We already installed postgresql-client in Dockerfile
+    send_log debug "Client for postgres installed"
 }
 
 installed_client
-send_log info ">>>>> CLIENT INSTALLED [ $DB_TYPE  ] <<<<<"
+send_log info ">>>>> CLIENT INSTALLED <<<<<"
 
 setup_db
 

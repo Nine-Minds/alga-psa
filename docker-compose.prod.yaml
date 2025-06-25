@@ -7,7 +7,7 @@ services:
       APP_ENV: production
     build:
       context: .
-      dockerfile: Dockerfile.prod
+      dockerfile: Dockerfile
 
   setup:
     environment:
