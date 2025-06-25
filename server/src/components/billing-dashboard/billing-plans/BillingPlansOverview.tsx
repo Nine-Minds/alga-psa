@@ -27,7 +27,7 @@ const BillingPlansOverview: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]>([]); // Added state for service types
   const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null);
-  const [deleteErrorServices, setDeleteErrorServices] = useState<string[]>([]);
+  const [deleteErrorServices, setDeleteErrorServices] = useState<{ id: string; name: string }[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -71,7 +71,9 @@ const BillingPlansOverview: React.FC = () => {
         } else if (error.message.includes('associated services')) {
           // Fetch associated services to display in a dialog
           const services = await getPlanServicesWithConfigurations(planId);
-          setDeleteErrorServices(services.map(s => s.service.service_name));
+          setDeleteErrorServices(
+            services.map(s => ({ id: s.service.service_id, name: s.service.service_name }))
+          );
           setDeleteErrorMessage(error.message);
         } else {
           // Display other specific error messages directly
@@ -202,8 +204,15 @@ const BillingPlansOverview: React.FC = () => {
                 {deleteErrorMessage}
                 {deleteErrorServices.length > 0 && (
                   <ul className="mt-2 list-disc pl-5">
-                    {deleteErrorServices.map((name) => (
-                      <li key={name}>{name}</li>
+                    {deleteErrorServices.map((svc) => (
+                      <li key={svc.id}>
+                        <a
+                          href={`/msp/billing?tab=service-catalog&serviceId=${svc.id}`}
+                          className="text-blue-600 underline"
+                        >
+                          {svc.name}
+                        </a>
+                      </li>
                     ))}
                   </ul>
                 )}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
@@ -8,7 +9,7 @@ import { UnitOfMeasureInput } from './UnitOfMeasureInput';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { ConfirmationDialog } from '../ui/ConfirmationDialog';
 // Import new action and types
-import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse } from 'server/src/lib/actions/serviceActions';
+import { getServices, updateService, deleteService, getServiceById, getServiceTypesForSelection, PaginatedServicesResponse } from 'server/src/lib/actions/serviceActions';
 import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions';
 // Import action to get tax rates
 import { getTaxRates } from 'server/src/lib/actions/taxSettingsActions';
@@ -80,6 +81,8 @@ const ServiceCatalogManager: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10); // Default page size
   const [totalCount, setTotalCount] = useState(0);
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const filteredServices = services.filter(service => {
     // Get the effective service type ID (either standard or custom)
     const effectiveServiceTypeId = service.standard_service_type_id || service.custom_service_type_id;
@@ -118,6 +121,25 @@ const ServiceCatalogManager: React.FC = () => {
     fetchAllServiceTypes(); // Fetch service types
     fetchTaxRates(); // Fetch tax rates instead of regions
   }, []);
+
+  // Open edit dialog when serviceId query param is present
+  useEffect(() => {
+    const svcId = searchParams.get('serviceId');
+    if (svcId) {
+      const loadService = async () => {
+        try {
+          const svc = await getServiceById(svcId);
+          if (svc) {
+            setEditingService(svc);
+            setIsEditDialogOpen(true);
+          }
+        } catch (err) {
+          console.error('Failed to load service for edit dialog', err);
+        }
+      };
+      loadService();
+    }
+  }, [searchParams]);
 
   // Function to fetch all service types
   const fetchAllServiceTypes = async () => {
@@ -444,6 +466,9 @@ const ServiceCatalogManager: React.FC = () => {
               id={`edit-service-${record.service_id}`}
               onClick={() => {
                 setEditingService(record);
+                const params = new URLSearchParams(searchParams.toString());
+                params.set('serviceId', record.service_id!);
+                router.replace(`?${params.toString()}`, { scroll: false });
                 setIsEditDialogOpen(true);
               }}
             >
@@ -510,14 +535,17 @@ const ServiceCatalogManager: React.FC = () => {
               onRowClick={(record: IService) => { // Use updated IService
                 // Store the current page before opening the dialog
                 const currentPageBeforeDialog = currentPage;
-                
+
                 // Add optional UI fields if needed when setting state
                 setEditingService({
                   ...record,
                   // sku: record.sku || '', // Example if sku was fetched
                 });
+                const params = new URLSearchParams(searchParams.toString());
+                params.set('serviceId', record.service_id!);
+                router.replace(`?${params.toString()}`, { scroll: false });
                 setIsEditDialogOpen(true);
-                
+
                 // Ensure the current page is preserved
                 setCurrentPage(currentPageBeforeDialog);
               }}
@@ -526,9 +554,14 @@ const ServiceCatalogManager: React.FC = () => {
           </div>
         </CardContent>
       </Card>
-      <Dialog 
-        isOpen={isEditDialogOpen} 
-        onClose={() => setIsEditDialogOpen(false)} 
+      <Dialog
+        isOpen={isEditDialogOpen}
+        onClose={() => {
+          setIsEditDialogOpen(false);
+          const params = new URLSearchParams(searchParams.toString());
+          params.delete('serviceId');
+          router.replace(`?${params.toString()}`, { scroll: false });
+        }}
         title="Edit Service"
       >
         <DialogContent>
