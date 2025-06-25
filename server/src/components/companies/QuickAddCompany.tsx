@@ -91,7 +91,6 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
     phone_number: '',
     email: '',
     role: '',
-    date_of_birth: '',
     notes: '',
   };
 

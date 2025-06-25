@@ -386,11 +386,6 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               value={editedContact.phone_number || ''}
               onEdit={(value) => handleFieldChange('phone_number', value)}
             />
-            <DateDetailItem
-              label="Date of Birth"
-              value={editedContact.date_of_birth || null}
-              onEdit={(value) => handleFieldChange('date_of_birth', value)}
-            />
             <SwitchDetailItem
               value={!editedContact.is_inactive || false}
               onEdit={(isActive) => handleFieldChange('is_inactive', !isActive)}
