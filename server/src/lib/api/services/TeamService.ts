@@ -33,7 +33,12 @@ import { ListOptions } from '../controllers/BaseController';
 import { getMultipleUsersWithRoles, getUserById } from 'server/src/lib/actions/user-actions/userActions';
 import TeamModel from 'server/src/lib/models/team';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
-import { generateResourceLinks } from '../utils/responseHelpers';
+import { 
+  generateResourceLinks, 
+  generateComprehensiveLinks,
+  generateCollectionLinks,
+  addHateoasLinks 
+} from '../utils/responseHelpers';
 import logger from 'server/src/utils/logger';
 
 export interface TeamServiceOptions {
@@ -99,150 +104,199 @@ export class TeamService extends BaseService<ITeam> {
    * List teams with enhanced filtering and search
    */
   async list(options: ListOptions, context: ServiceContext): Promise<ListResult<ITeam>> {
-    const { knex } = await this.getKnex();
-    
-    const {
-      page = 1,
-      limit = 25,
-      filters = {} as TeamFilterData,
-      sort,
-      order
-    } = options;
-
-    // Build base query with manager and company joins
-    let dataQuery = knex('teams as t')
-      .leftJoin('users as manager', function() {
-        this.on('t.manager_id', '=', 'manager.user_id')
-            .andOn('t.tenant', '=', 'manager.tenant');
-      })
-      .where('t.tenant', context.tenant);
-
-    let countQuery = knex('teams as t')
-      .where('t.tenant', context.tenant);
-
-    // Apply filters
-    dataQuery = this.applyTeamFilters(dataQuery, filters, knex);
-    countQuery = this.applyTeamFilters(countQuery, filters, knex);
-
-    // Apply sorting
-    const sortField = sort || this.defaultSort;
-    const sortOrder = order || this.defaultOrder;
-    
-    if (sortField === 'manager_name') {
-      dataQuery = dataQuery.orderByRaw(`COALESCE(manager.first_name || ' ' || manager.last_name, manager.username) ${sortOrder}`);
-    } else if (sortField === 'member_count') {
-      dataQuery = dataQuery.orderBy('member_count', sortOrder);
-    } else {
-      dataQuery = dataQuery.orderBy(`t.${sortField}`, sortOrder);
+      const { knex } = await this.getKnex();
+      
+      const {
+        page = 1,
+        limit = 25,
+        filters = {} as TeamFilterData,
+        sort,
+        order
+      } = options;
+  
+      // Build base query with manager and company joins
+      let dataQuery = knex('teams as t')
+        .leftJoin('users as manager', function() {
+          this.on('t.manager_id', '=', 'manager.user_id')
+              .andOn('t.tenant', '=', 'manager.tenant');
+        })
+        .where('t.tenant', context.tenant);
+  
+      let countQuery = knex('teams as t')
+        .where('t.tenant', context.tenant);
+  
+      // Apply filters
+      dataQuery = this.applyTeamFilters(dataQuery, filters, knex);
+      countQuery = this.applyTeamFilters(countQuery, filters, knex);
+  
+      // Apply sorting
+      const sortField = sort || this.defaultSort;
+      const sortOrder = order || this.defaultOrder;
+      
+      if (sortField === 'manager_name') {
+        dataQuery = dataQuery.orderByRaw(`COALESCE(manager.first_name || ' ' || manager.last_name, manager.username) ${sortOrder}`);
+      } else if (sortField === 'member_count') {
+        dataQuery = dataQuery.orderBy('member_count', sortOrder);
+      } else {
+        dataQuery = dataQuery.orderBy(`t.${sortField}`, sortOrder);
+      }
+  
+      // Apply pagination
+      const offset = (page - 1) * limit;
+      dataQuery = dataQuery.limit(limit).offset(offset);
+  
+      // Select fields with member count
+      dataQuery = dataQuery.select(
+        't.*',
+        knex.raw('COALESCE(manager.first_name || \' \' || manager.last_name, manager.username) as manager_name'),
+        knex.raw(`(
+          SELECT COUNT(*)
+          FROM team_members tm
+          JOIN users u ON tm.user_id = u.user_id AND tm.tenant = u.tenant
+          WHERE tm.team_id = t.team_id
+          AND tm.tenant = t.tenant
+          AND u.is_inactive = false
+        ) as member_count`)
+      );
+  
+      // Execute queries
+      const [teams, [{ count }]] = await Promise.all([
+        dataQuery,
+        countQuery.count('* as count')
+      ]);
+  
+      // Enhance teams with members and HATEOAS links
+      const enhancedTeams = await Promise.all(
+        teams.map(async (team: any) => {
+          const memberIds = await TeamModel.getMembers(knex, team.team_id);
+          const members = memberIds.length > 0 ? await getMultipleUsersWithRoles(memberIds) : [];
+          
+          const teamData = {
+            ...team,
+            members,
+            member_count: parseInt(team.member_count)
+          } as ITeam;
+  
+          // Generate individual team HATEOAS links
+          const teamLinks = generateComprehensiveLinks('teams', team.team_id, '/api/v1', {
+            crudActions: ['read', 'update', 'delete'],
+            relationships: {
+              members: { resource: 'users', many: true },
+              projects: { resource: 'projects', many: true }
+            },
+            customActions: {
+              analytics: { method: 'GET', path: 'analytics' },
+              permissions: { method: 'GET', path: 'permissions' }
+            }
+          });
+  
+          return addHateoasLinks(teamData, teamLinks);
+        })
+      );
+  
+      const total = parseInt(count as string);
+      const totalPages = Math.ceil(total / limit);
+  
+      // Generate collection-level HATEOAS links
+      const collectionLinks = generateCollectionLinks(
+        'teams',
+        '/api/v1',
+        { page, limit, total, totalPages },
+        filters
+      );
+  
+      return {
+        data: enhancedTeams,
+        total,
+        _links: collectionLinks
+      };
     }
 
-    // Apply pagination
-    const offset = (page - 1) * limit;
-    dataQuery = dataQuery.limit(limit).offset(offset);
-
-    // Select fields with member count
-    dataQuery = dataQuery.select(
-      't.*',
-      knex.raw('COALESCE(manager.first_name || \' \' || manager.last_name, manager.username) as manager_name'),
-      knex.raw(`(
-        SELECT COUNT(*)
-        FROM team_members tm
-        JOIN users u ON tm.user_id = u.user_id AND tm.tenant = u.tenant
-        WHERE tm.team_id = t.team_id
-        AND tm.tenant = t.tenant
-        AND u.is_inactive = false
-      ) as member_count`)
-    );
-
-    // Execute queries
-    const [teams, [{ count }]] = await Promise.all([
-      dataQuery,
-      countQuery.count('* as count')
-    ]);
-
-    // Enhance teams with members and additional data
-    const enhancedTeams = await Promise.all(
-      teams.map(async (team: any) => {
-        const memberIds = await TeamModel.getMembers(knex, team.team_id);
-        const members = memberIds.length > 0 ? await getMultipleUsersWithRoles(memberIds) : [];
-        
-        return {
-          ...team,
-          members,
-          member_count: parseInt(team.member_count)
-        } as ITeam;
-      })
-    );
-
-    return {
-      data: enhancedTeams,
-      total: parseInt(count as string)
-    };
-  }
 
   /**
    * Get team by ID with enhanced data
    */
   async getById(id: string, context: ServiceContext, options: TeamServiceOptions = {}): Promise<ITeam | null> {
-    const { knex } = await this.getKnex();
-
-    const team = await knex('teams as t')
-      .leftJoin('users as manager', function() {
-        this.on('t.manager_id', '=', 'manager.user_id')
-            .andOn('t.tenant', '=', 'manager.tenant');
-      })
-      .select(
-        't.*',
-        knex.raw('COALESCE(manager.first_name || \' \' || manager.last_name, manager.username) as manager_name'),
-        'manager.email as manager_email'
-      )
-      .where({ 't.team_id': id, 't.tenant': context.tenant })
-      .first();
-
-    if (!team) {
-      return null;
-    }
-
-    // Get team members
-    const memberIds = await TeamModel.getMembers(knex, id);
-    const members = memberIds.length > 0 ? await getMultipleUsersWithRoles(memberIds) : [];
-
-    let enhancedTeam: any = {
-      ...team,
-      members
-    };
-
-    // Add manager details if requested
-    if (options.includeManager && team.manager_id) {
-      try {
-        const manager = await getUserById(team.manager_id);
-        enhancedTeam.manager = manager;
-      } catch (error) {
-        logger.warn(`Failed to fetch manager details for team ${id}:`, error);
+      const { knex } = await this.getKnex();
+  
+      const team = await knex('teams as t')
+        .leftJoin('users as manager', function() {
+          this.on('t.manager_id', '=', 'manager.user_id')
+              .andOn('t.tenant', '=', 'manager.tenant');
+        })
+        .select(
+          't.*',
+          knex.raw('COALESCE(manager.first_name || \' \' || manager.last_name, manager.username) as manager_name'),
+          'manager.email as manager_email'
+        )
+        .where({ 't.team_id': id, 't.tenant': context.tenant })
+        .first();
+  
+      if (!team) {
+        return null;
       }
-    }
-
-    // Add projects if requested
-    if (options.includeProjects) {
-      enhancedTeam.projects = await this.getTeamProjects(id, context);
-    }
-
-    // Add analytics if requested
-    if (options.includeAnalytics) {
-      try {
-        enhancedTeam.analytics = await this.getTeamAnalytics(id, context);
-      } catch (error) {
-        logger.warn(`Failed to fetch analytics for team ${id}:`, error);
+  
+      // Get team members
+      const memberIds = await TeamModel.getMembers(knex, id);
+      const members = memberIds.length > 0 ? await getMultipleUsersWithRoles(memberIds) : [];
+  
+      let enhancedTeam: any = {
+        ...team,
+        members
+      };
+  
+      // Add manager details if requested
+      if (options.includeManager && team.manager_id) {
+        try {
+          const manager = await getUserById(team.manager_id);
+          enhancedTeam.manager = manager;
+        } catch (error) {
+          logger.warn(`Failed to fetch manager details for team ${id}:`, error);
+        }
       }
+  
+      // Add projects if requested
+      if (options.includeProjects) {
+        enhancedTeam.projects = await this.getTeamProjects(id, context);
+      }
+  
+      // Add analytics if requested
+      if (options.includeAnalytics) {
+        try {
+          enhancedTeam.analytics = await this.getTeamAnalytics(id, context);
+        } catch (error) {
+          logger.warn(`Failed to fetch analytics for team ${id}:`, error);
+        }
+      }
+  
+      // Add permissions if requested
+      if (options.includePermissions) {
+        enhancedTeam.permissions = await this.getTeamPermissions(id, context);
+      }
+  
+      // Generate HATEOAS links
+      const links = generateComprehensiveLinks('teams', id, '/api/v1', {
+        crudActions: ['read', 'update', 'delete'],
+        relationships: {
+          members: { resource: 'users', many: true },
+          projects: { resource: 'projects', many: true },
+          manager: { resource: 'users', many: false }
+        },
+        customActions: {
+          'add-member': { method: 'POST', path: 'members' },
+          'remove-member': { method: 'DELETE', path: 'members' },
+          'assign-manager': { method: 'PUT', path: 'manager' },
+          'assign-project': { method: 'POST', path: 'projects' },
+          analytics: { method: 'GET', path: 'analytics' },
+          permissions: { method: 'GET', path: 'permissions' },
+          hierarchy: { method: 'GET', path: 'hierarchy' },
+          capacity: { method: 'GET', path: 'capacity' }
+        }
+      });
+  
+      return addHateoasLinks(enhancedTeam as ITeam, links);
     }
 
-    // Add permissions if requested
-    if (options.includePermissions) {
-      enhancedTeam.permissions = await this.getTeamPermissions(id, context);
-    }
-
-    return enhancedTeam as ITeam;
-  }
 
   /**
    * Create new team with validation

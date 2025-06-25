@@ -47,7 +47,7 @@ export interface UserWithFullDetails extends IUserWithRoles {
   };
   avatarUrl?: string | null;
   logoUrl?: string | null;
-  _links?: Record<string, string>;
+  _links?: Record<string, { href: string; method: string; rel: string }>;
 }
 
 export interface UserBulkOperationResult {
@@ -1365,11 +1365,11 @@ export class UserService extends BaseService<IUser> {
         const links = generateResourceLinks('users', user.user_id, baseUrl, ['read', 'update', 'delete']);
         
         // Add specific user action links
-        links.roles = `${baseUrl}/users/${user.user_id}/roles`;
-        links.teams = `${baseUrl}/users/${user.user_id}/teams`;
-        links.preferences = `${baseUrl}/users/${user.user_id}/preferences`;
-        links.avatar = `${baseUrl}/users/${user.user_id}/avatar`;
-        links.permissions = `${baseUrl}/users/${user.user_id}/permissions`;
+        links.roles = { href: `${baseUrl}/users/${user.user_id}/roles`, method: 'GET', rel: 'related' };
+        links.teams = { href: `${baseUrl}/users/${user.user_id}/teams`, method: 'GET', rel: 'related' };
+        links.preferences = { href: `${baseUrl}/users/${user.user_id}/preferences`, method: 'GET', rel: 'related' };
+        links.avatar = { href: `${baseUrl}/users/${user.user_id}/avatar`, method: 'GET', rel: 'related' };
+        links.permissions = { href: `${baseUrl}/users/${user.user_id}/permissions`, method: 'GET', rel: 'related' };
         
         enhancedUser._links = links;
       }

@@ -27,6 +27,7 @@ export interface PaginatedResponse<T = any> extends ApiResponse<T[]> {
     total: number;
     totalPages: number;
   };
+  _links?: Record<string, any>;
 }
 
 /**

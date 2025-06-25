@@ -281,39 +281,248 @@ export function extractFilters(url: URL, excludeParams: string[] = ['page', 'lim
 /**
  * Generate HATEOAS links for a resource
  */
+/**
+ * Generate HATEOAS links for a resource
+ */
 export function generateResourceLinks(
   resource: string,
   id: string,
   baseUrl: string,
-  actions: string[] = ['read', 'update', 'delete']
-): Record<string, string> {
-  const links: Record<string, string> = {
-    self: `${baseUrl}/${resource}/${id}`
+  actions: string[] = ['read', 'update', 'delete'],
+  additionalLinks: Record<string, string> = {}
+): Record<string, { href: string; method: string; rel: string }> {
+  const links: Record<string, { href: string; method: string; rel: string }> = {
+    self: {
+      href: `${baseUrl}/${resource}/${id}`,
+      method: 'GET',
+      rel: 'self'
+    }
   };
 
   if (actions.includes('update')) {
-    links.edit = `${baseUrl}/${resource}/${id}`;
+    links.edit = {
+      href: `${baseUrl}/${resource}/${id}`,
+      method: 'PUT',
+      rel: 'edit'
+    };
+    links.patch = {
+      href: `${baseUrl}/${resource}/${id}`,
+      method: 'PATCH',
+      rel: 'partial-update'
+    };
   }
 
   if (actions.includes('delete')) {
-    links.delete = `${baseUrl}/${resource}/${id}`;
+    links.delete = {
+      href: `${baseUrl}/${resource}/${id}`,
+      method: 'DELETE',
+      rel: 'delete'
+    };
   }
 
   // Add collection link
-  links.collection = `${baseUrl}/${resource}`;
+  links.collection = {
+    href: `${baseUrl}/${resource}`,
+    method: 'GET',
+    rel: 'collection'
+  };
+
+  // Add create link for collection
+  if (actions.includes('create')) {
+    links.create = {
+      href: `${baseUrl}/${resource}`,
+      method: 'POST',
+      rel: 'create'
+    };
+  }
+
+  // Add additional custom links
+  Object.entries(additionalLinks).forEach(([rel, href]) => {
+    links[rel] = {
+      href,
+      method: 'GET',
+      rel
+    };
+  });
 
   return links;
 }
 
+
+/**
+ * Add HATEOAS links to response data
+ */
 /**
  * Add HATEOAS links to response data
  */
 export function addHateoasLinks<T extends { [key: string]: any }>(
   data: T,
-  links: Record<string, string>
-): T & { _links: Record<string, string> } {
+  links: Record<string, { href: string; method: string; rel: string }>
+): T & { _links: Record<string, { href: string; method: string; rel: string }> } {
   return {
     ...data,
     _links: links
+  };
+}
+
+/**
+ * Generate collection-level HATEOAS links
+ */
+export function generateCollectionLinks(
+  resource: string,
+  baseUrl: string,
+  pagination?: { page: number; limit: number; total: number; totalPages: number },
+  filters?: Record<string, any>
+): Record<string, { href: string; method: string; rel: string }> {
+  const links: Record<string, { href: string; method: string; rel: string }> = {
+    self: {
+      href: `${baseUrl}/${resource}`,
+      method: 'GET',
+      rel: 'self'
+    },
+    create: {
+      href: `${baseUrl}/${resource}`,
+      method: 'POST',
+      rel: 'create'
+    }
+  };
+
+  // Add pagination links
+  if (pagination) {
+    const { page, limit, totalPages } = pagination;
+    const baseQuery = new URLSearchParams(filters ? Object.entries(filters).map(([k, v]) => [k, String(v)]) : []);
+    
+    // First page
+    links.first = {
+      href: `${baseUrl}/${resource}?${new URLSearchParams({ ...Object.fromEntries(baseQuery), page: '1', limit: String(limit) })}`,
+      method: 'GET',
+      rel: 'first'
+    };
+
+    // Last page
+    links.last = {
+      href: `${baseUrl}/${resource}?${new URLSearchParams({ ...Object.fromEntries(baseQuery), page: String(totalPages), limit: String(limit) })}`,
+      method: 'GET',
+      rel: 'last'
+    };
+
+    // Previous page
+    if (page > 1) {
+      links.prev = {
+        href: `${baseUrl}/${resource}?${new URLSearchParams({ ...Object.fromEntries(baseQuery), page: String(page - 1), limit: String(limit) })}`,
+        method: 'GET',
+        rel: 'prev'
+      };
+    }
+
+    // Next page
+    if (page < totalPages) {
+      links.next = {
+        href: `${baseUrl}/${resource}?${new URLSearchParams({ ...Object.fromEntries(baseQuery), page: String(page + 1), limit: String(limit) })}`,
+        method: 'GET',
+        rel: 'next'
+      };
+    }
+  }
+
+  return links;
+}
+
+/**
+ * Generate relationship links for a resource
+ */
+export function generateRelationshipLinks(
+  resource: string,
+  id: string,
+  baseUrl: string,
+  relationships: Record<string, { resource: string; many?: boolean }>
+): Record<string, { href: string; method: string; rel: string }> {
+  const links: Record<string, { href: string; method: string; rel: string }> = {};
+
+  Object.entries(relationships).forEach(([relationName, config]) => {
+    const relationHref = `${baseUrl}/${resource}/${id}/${relationName}`;
+    
+    links[relationName] = {
+      href: relationHref,
+      method: 'GET',
+      rel: 'related'
+    };
+
+    // Add creation/management links for relationships
+    if (config.many) {
+      links[`add_${relationName}`] = {
+        href: relationHref,
+        method: 'POST',
+        rel: 'add-related'
+      };
+      
+      links[`remove_${relationName}`] = {
+        href: relationHref,
+        method: 'DELETE',
+        rel: 'remove-related'
+      };
+    }
+  });
+
+  return links;
+}
+
+/**
+ * Generate action links for a resource
+ */
+export function generateActionLinks(
+  resource: string,
+  id: string,
+  baseUrl: string,
+  actions: Record<string, { method: string; path?: string }>
+): Record<string, { href: string; method: string; rel: string }> {
+  const links: Record<string, { href: string; method: string; rel: string }> = {};
+
+  Object.entries(actions).forEach(([actionName, config]) => {
+    const actionPath = config.path || actionName;
+    links[actionName] = {
+      href: `${baseUrl}/${resource}/${id}/${actionPath}`,
+      method: config.method,
+      rel: 'action'
+    };
+  });
+
+  return links;
+}
+
+/**
+ * Comprehensive HATEOAS link generator for any resource
+ */
+export function generateComprehensiveLinks(
+  resource: string,
+  id: string,
+  baseUrl: string,
+  options: {
+    crudActions?: string[];
+    relationships?: Record<string, { resource: string; many?: boolean }>;
+    customActions?: Record<string, { method: string; path?: string }>;
+    additionalLinks?: Record<string, string>;
+  } = {}
+): Record<string, { href: string; method: string; rel: string }> {
+  const {
+    crudActions = ['read', 'update', 'delete'],
+    relationships = {},
+    customActions = {},
+    additionalLinks = {}
+  } = options;
+
+  // Generate base CRUD links
+  const crudLinks = generateResourceLinks(resource, id, baseUrl, crudActions, additionalLinks);
+  
+  // Generate relationship links
+  const relationshipLinks = generateRelationshipLinks(resource, id, baseUrl, relationships);
+  
+  // Generate action links
+  const actionLinks = generateActionLinks(resource, id, baseUrl, customActions);
+
+  return {
+    ...crudLinks,
+    ...relationshipLinks,
+    ...actionLinks
   };
 }

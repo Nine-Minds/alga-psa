@@ -29,6 +29,7 @@ export interface PaginatedResponse<T = any> {
     totalPages: number;
   };
   meta?: Record<string, any>;
+  _links?: Record<string, any>;
 }
 
 export interface ListOptions {
