@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "NEXT_PUBLIC_EDITION=enterprise next build",
+    "build": "next build",
+    "build:enterprise": "NEXT_PUBLIC_EDITION=enterprise next build",
+    "build:enterprise-script": "../scripts/build-enterprise.sh",
     "start": "next start",
-    "build:enterprise": "../scripts/build-enterprise.sh",
     "lint": "next lint",
     "workflow-worker": "ts-node --esm src/bin/workflow-worker.ts",
     "workflow-worker:dev": "nodemon --watch src --ext ts --exec \"ts-node --esm src/bin/workflow-worker.ts\"",

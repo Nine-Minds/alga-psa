@@ -22,7 +22,7 @@ import { TaxRegionsManager } from '../tax/TaxRegionsManager'; // Import the new 
 import QboIntegrationSettings from '../integrations/QboIntegrationSettings'; // Import the actual settings component
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
-import { DynamicExtensionsComponent } from 'server/src/lib/extensions/ExtensionComponentLoader';
+// Extensions are only available in Enterprise Edition
 import { EmailSettings } from '../../admin/EmailSettings';
 // Removed import: import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
@@ -196,7 +196,9 @@ const SettingsPage = (): JSX.Element =>  {
                 <CardDescription>Install, configure, and manage extensions to extend Alga PSA functionality</CardDescription>
               </CardHeader>
               <CardContent>
-                <DynamicExtensionsComponent />
+                <div className="text-center py-8 text-gray-500">
+                  <p>Extension management is only available in Enterprise Edition.</p>
+                </div>
               </CardContent>
             </Card>
           ),
