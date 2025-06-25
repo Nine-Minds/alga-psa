@@ -186,24 +186,8 @@ export async function deleteBillingPlan(planId: string): Promise<void> {
         const hasServices = Object.keys(associations.servicesByCategory).length > 0;
         const hasCompanies = associations.companies.length > 0;
         if (hasServices || hasCompanies) {
-            const parts: string[] = [];
-            if (hasServices) {
-                const serviceDetails = Object.entries(associations.servicesByCategory)
-                    .map(([category, services]) =>
-                        `${category}: ${services.map(s => s.name).join(', ')}`
-                    );
-                parts.push(`services - ${serviceDetails.join('; ')}`);
-            }
-            if (hasCompanies) {
-                const displayLimit = 5;
-                const displayNames = associations.companies.length > displayLimit
-                    ? associations.companies.slice(0, displayLimit).join(', ') + ` and ${associations.companies.length - displayLimit} more`
-                    : associations.companies.join(', ');
-                parts.push(`companies - ${displayNames}`);
-            }
-            const detail = parts.join('; ');
             throw new PlanDeletionError(
-                `Cannot delete billing plan: it is still linked to ${detail}.`,
+                'Cannot delete billing plan. Remove it from the items below and try again.',
                 associations
             );
         }
