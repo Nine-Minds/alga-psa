@@ -83,6 +83,19 @@ CLAUDE.md
 next-env.d.ts
 ee/server/src/generated/
 
+# Temporary and test files
+temp-values-*.yaml
+test-values-*.yaml
+*-temp.*
+*.temp.*
+fix-*.sh
+fix-*.nu
+build.log
+build_output.txt
+typescript-errors-*.md
+debug-*.sql
+check-*.sql
+update-*.sql
 
 *draft*
 .vscode
