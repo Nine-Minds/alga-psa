@@ -223,9 +223,10 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
                 } catch (error) {
                   let message = 'Failed to delete plan';
                   let associations: PlanAssociationDetails | null = null;
-                  if (error instanceof PlanDeletionError) {
-                    message = error.message;
-                    associations = error.associations;
+                  const err = error as any;
+                  if (error instanceof PlanDeletionError || err?.name === 'PlanDeletionError') {
+                    message = err.message;
+                    associations = err.associations;
                   } else if (error instanceof Error) {
                     message = error.message;
                   }

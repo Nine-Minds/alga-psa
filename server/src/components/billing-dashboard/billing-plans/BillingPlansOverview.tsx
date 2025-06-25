@@ -73,9 +73,10 @@ const BillingPlansOverview: React.FC = () => {
       console.error('Error deleting billing plan:', error); // Keep console log for debugging
       let message = 'An unexpected error occurred while deleting the plan.';
       let associations: PlanAssociationDetails | null = null;
-      if (error instanceof PlanDeletionError) {
-        message = error.message;
-        associations = error.associations;
+      const err = error as any;
+      if (error instanceof PlanDeletionError || err?.name === 'PlanDeletionError') {
+        message = err.message;
+        associations = err.associations;
       } else if (error instanceof Error) {
         message = error.message;
       }
