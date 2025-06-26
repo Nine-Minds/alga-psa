@@ -44,6 +44,7 @@
     "node_modules",
     "dist",
     "src/invoice-templates/assemblyscript",
-    "src/lib/workflows"
+    "src/lib/workflows",
+    "src/test/**/*"
   ]
 }

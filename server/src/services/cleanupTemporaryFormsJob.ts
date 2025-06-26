@@ -45,19 +45,22 @@ export async function cleanupTemporaryFormsJob(): Promise<{ success: boolean; de
 /**
  * Schedule the cleanup job to run daily
  * 
- * @param scheduler The job scheduler instance
+ * @param cronExpression Optional cron expression, defaults to daily at 2:00 AM
  * @returns The job ID or null if scheduling failed
  */
 export async function scheduleCleanupTemporaryFormsJob(
-  scheduler: any,
   cronExpression: string = '0 2 * * *' // Default: daily at 2:00 AM
 ): Promise<string | null> {
-  if (!scheduler) {
-    console.warn('Scheduler not available, skipping scheduling of cleanupTemporaryFormsJob');
-    return null;
-  }
-  
   try {
+    // Import here to avoid circular dependencies
+    const { initializeScheduler } = await import('server/src/lib/jobs/index');
+    const scheduler = await initializeScheduler();
+    
+    if (!scheduler) {
+      console.warn('Scheduler not available, skipping scheduling of cleanupTemporaryFormsJob');
+      return null;
+    }
+    
     // This is a system-wide job, so we use a special tenant ID
     const jobId = await scheduler.scheduleRecurringJob(
       'cleanup-temporary-workflow-forms',
