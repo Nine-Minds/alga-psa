@@ -12,6 +12,10 @@ metadata:
     dev-environment: "true"
     branch: "{{ .Values.devEnv.sanitizedBranch }}"
 spec:
+  {{- $existingPVC := lookup "v1" "PersistentVolumeClaim" .Values.devEnv.namespace (printf "%s-code-server-workspace" (include "sebastian.fullname" .)) }}
+  {{- if and $existingPVC $existingPVC.spec.volumeName }}
+  volumeName: {{ $existingPVC.spec.volumeName }}
+  {{- end }}
   accessModes:
     - ReadWriteOnce
   resources:

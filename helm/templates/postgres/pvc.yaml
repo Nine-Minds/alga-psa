@@ -9,6 +9,10 @@ metadata:
     "helm.sh/resource-policy": keep
   {{- end }}
 spec:
+  {{- $existingPVC := lookup "v1" "PersistentVolumeClaim" (include "sebastian.namespace" .) (printf "%s-postgres-data" (include "sebastian.fullname" .)) }}
+  {{- if and $existingPVC $existingPVC.spec.volumeName }}
+  volumeName: {{ $existingPVC.spec.volumeName }}
+  {{- end }}
   accessModes:
     - ReadWriteOnce
   resources:

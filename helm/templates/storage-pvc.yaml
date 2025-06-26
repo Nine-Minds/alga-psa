@@ -11,6 +11,10 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
+  {{- $existingPVC := lookup "v1" "PersistentVolumeClaim" (include "sebastian.namespace" .) (printf "%s-storage" (include "sebastian.fullname" .)) }}
+  {{- if and $existingPVC $existingPVC.spec.volumeName }}
+  volumeName: {{ $existingPVC.spec.volumeName }}
+  {{- end }}
   accessModes:
     {{- range .Values.server.persistence.accessModes }}
     - {{ . | quote }}
