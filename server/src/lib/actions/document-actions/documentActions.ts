@@ -1547,6 +1547,82 @@ export async function getDocumentTypeId(mimeType: string): Promise<{ typeId: str
  * @param file_id The ID of the file in external_files.
  * @returns A promise resolving to the image URL string, or null if an error occurs or the file is not found/an image.
  */
+/**
+ * Core implementation for generating image URLs from file IDs.
+ * Handles different storage providers (local vs. S3).
+ * 
+ * @param file_id The ID of the file in external_files
+ * @param useTransaction Whether to use database transaction (default: true)
+ * @returns A promise resolving to the image URL string, or null if an error occurs or the file is not found/an image
+ */
+async function getImageUrlCore(file_id: string, useTransaction: boolean = true): Promise<string | null> {
+  try {
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      console.error('getImageUrlCore: No tenant found');
+      return null;
+    }
+
+    // Fetch minimal file details to check MIME type and existence
+    const fileDetails = useTransaction 
+      ? await withTransaction(knex, async (trx: Knex.Transaction) => {
+          return await trx('external_files')
+            .select('mime_type', 'storage_path')
+            .where({ file_id, tenant })
+            .first();
+        })
+      : await knex('external_files')
+          .select('mime_type', 'storage_path')
+          .where({ file_id, tenant })
+          .first();
+
+    if (!fileDetails) {
+      console.warn(`getImageUrlCore: File not found for file_id: ${file_id}`);
+      return null;
+    }
+
+    // Check if the file is an image
+    if (!fileDetails.mime_type?.startsWith('image/')) {
+      console.warn(`getImageUrlCore: File ${file_id} is not an image (mime_type: ${fileDetails.mime_type})`);
+      return null;
+    }
+
+    // Determine storage provider type
+    const config = getStorageConfig();
+    const providerType = config.defaultProvider;
+
+    if (providerType === 'local') {
+      return `/api/documents/view/${file_id}`;
+    } else if (providerType === 's3') {
+      const provider = await StorageProviderFactory.createProvider();
+      if ('getPublicUrl' in provider && typeof provider.getPublicUrl === 'function') {
+        return await provider.getPublicUrl(fileDetails.storage_path);
+      } else {
+        console.error('getImageUrlCore: S3 provider instance does not implement getPublicUrl method.');
+        return null;
+      }
+    } else {
+      console.error(`getImageUrlCore: Unsupported storage provider type: ${providerType}`);
+      return null;
+    }
+  } catch (error) {
+    console.error(`getImageUrlCore: Error generating URL for file_id ${file_id}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Generates a URL for accessing an image file by its ID.
+ * This is the PUBLIC API that includes user authentication and permission checks.
+ * 
+ * Use this function when:
+ * - Handling user requests that need authentication
+ * - API endpoints that require permission validation
+ * - Any user-facing functionality
+ * 
+ * @param file_id The ID of the file in external_files
+ * @returns A promise resolving to the image URL string, or null if an error occurs or the file is not found/an image
+ */
 export async function getImageUrl(file_id: string): Promise<string | null> {
   try {
     const currentUser = await getCurrentUser();
@@ -1559,59 +1635,32 @@ export async function getImageUrl(file_id: string): Promise<string | null> {
       throw new Error('Permission denied: Cannot read documents');
     }
 
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      console.error('getImageUrl: No tenant found');
-      return null;
-    }
-
-    // Fetch minimal file details to check MIME type and existence
-    const fileDetails = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('external_files')
-        .select('mime_type', 'storage_path')
-        .where({ file_id, tenant })
-        .first();
-    });
-
-    if (!fileDetails) {
-      console.warn(`getImageUrl: File not found for file_id: ${file_id}`);
-      return null;
-    }
-
-    // Check if the file is an image
-    if (!fileDetails.mime_type?.startsWith('image/')) {
-      console.warn(`getImageUrl: File ${file_id} is not an image (mime_type: ${fileDetails.mime_type})`);
-      return null;
-    }
-
-    // Determine storage provider type (example logic, adjust as needed)
-    const config = getStorageConfig();
-    const providerType = config.defaultProvider;
-
-    if (providerType === 'local') {
-      // For local storage, return the API route
-      return `/api/documents/view/${file_id}`;
-    } else if (providerType === 's3') {
-      // For S3, generate a pre-signed URL or return a direct URL
-      // This requires the StorageService or S3 provider instance
-      const provider = await StorageProviderFactory.createProvider();
-      if ('getPublicUrl' in provider && typeof provider.getPublicUrl === 'function') {
-        // Assuming getPublicUrl exists and handles pre-signing if needed
-        return await provider.getPublicUrl(fileDetails.storage_path);
-      } else {
-        console.error('getImageUrl: S3 provider instance does not implement getPublicUrl method.');
-        return null;
-      }
-    } else {
-      console.error(`getImageUrl: Unsupported storage provider type: ${providerType}`);
-      return null;
-    }
+    return await getImageUrlCore(file_id, true);
   } catch (error) {
     console.error(`getImageUrl: Error generating URL for file_id ${file_id}:`, error);
     return null;
   }
 }
 
+/**
+ * Generates a URL for accessing an image file by its ID without authentication checks.
+ * This is the INTERNAL API that bypasses user authentication and permission validation.
+ * 
+ * Use this function when:
+ * - System-level operations that don't require user context
+ * - Internal service calls where authentication is handled elsewhere
+ * - Background processes and workflows
+ * - Avatar utilities and other trusted internal operations
+ * 
+ * SECURITY WARNING: This function bypasses all user authentication and permission checks.
+ * Only use in trusted contexts where access control is handled at a higher level.
+ * 
+ * @param file_id The ID of the file in external_files
+ * @returns A promise resolving to the image URL string, or null if an error occurs or the file is not found/an image
+ */
+export async function getImageUrlInternal(file_id: string): Promise<string | null> {
+  return await getImageUrlCore(file_id, false);
+}
 export async function getDistinctEntityTypes(): Promise<string[]> {
   try {
     const currentUser = await getCurrentUser();

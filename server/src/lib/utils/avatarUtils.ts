@@ -1,5 +1,5 @@
 import { createTenantKnex } from 'server/src/lib/db';
-import { getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
+import { getImageUrlInternal } from 'server/src/lib/actions/document-actions/documentActions';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 
@@ -80,7 +80,7 @@ export async function getEntityImageUrl(
 
     // Use the existing getImageUrl function to get the URL
     // This function manages its own transaction internally
-    const imageUrl = await getImageUrl(result);
+    const imageUrl = await getImageUrlInternal(result);
     
     if (imageUrl) {
       const timestamp = Date.now();
@@ -195,7 +195,7 @@ export async function getEntityImageUrlsBatch(
       const fileId = docToFileMap.get(documentId);
       if (fileId) {
         try {
-          const imageUrl = await getImageUrl(fileId);
+          const imageUrl = await getImageUrlInternal(fileId);
           if (imageUrl) {
             const timestamp = Date.now();
             const urlWithTimestamp = `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}t=${timestamp}`;
