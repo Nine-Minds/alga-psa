@@ -125,7 +125,6 @@ export class JobScheduler implements IJobScheduler {
           connectionString: connectionString,
           retryLimit: 3,
           retryBackoff: true,
-          ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined
         });
 
         boss.on('error', error => {
