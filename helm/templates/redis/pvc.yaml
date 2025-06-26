@@ -5,6 +5,10 @@ metadata:
   name: {{ include "sebastian.fullname" . }}-redis-data
   namespace: {{ include "sebastian.namespace" . }}
 spec:
+  {{- $existingPVC := lookup "v1" "PersistentVolumeClaim" (include "sebastian.namespace" .) (printf "%s-redis-data" (include "sebastian.fullname" .)) }}
+  {{- if and $existingPVC $existingPVC.spec.volumeName }}
+  volumeName: {{ $existingPVC.spec.volumeName }}
+  {{- end }}
   accessModes:
     - ReadWriteOnce
   resources:

@@ -7,6 +7,10 @@ metadata:
   labels:
     {{- include "sebastian.labels" . | nindent 4 }}
 spec:
+  {{- $existingPVC := lookup "v1" "PersistentVolumeClaim" (include "sebastian.namespace" .) (printf "%s-local-storage" (include "sebastian.fullname" .)) }}
+  {{- if and $existingPVC $existingPVC.spec.volumeName }}
+  volumeName: {{ $existingPVC.spec.volumeName }}
+  {{- end }}
   accessModes:
     - ReadWriteOnce
   storageClassName: {{ .Values.persistence.storageClass | quote }}
