@@ -1,9 +1,9 @@
-import Redis from 'ioredis';
 import { withTransaction } from '@shared/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 import { SSEEvent } from 'server/src/interfaces/notification.interfaces';
 import logger from '@shared/core/logger';
+import { getRedisClient } from 'server/src/config/redisConfig';
 
 interface SubscriberOptions {
   userId: string;
@@ -13,8 +13,8 @@ interface SubscriberOptions {
 }
 
 export class NotificationSubscriber {
-  private redis?: Redis;
-  private pubsub?: Redis;
+  private redis?: Awaited<ReturnType<typeof getRedisClient>>;
+  private pubsub?: Awaited<ReturnType<typeof getRedisClient>>;
   private heartbeatInterval?: NodeJS.Timeout;
   private channels: string[] = [];
   private isCleanedUp: boolean = false;
@@ -34,24 +34,9 @@ export class NotificationSubscriber {
 
   private async initializeRedis() {
     try {
-      const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-      
       // Use separate Redis connections for pub/sub
-      this.redis = new Redis(redisUrl, {
-        maxRetriesPerRequest: 1,
-        connectTimeout: 5000,
-        lazyConnect: true,
-      });
-      
-      this.pubsub = new Redis(redisUrl, {
-        maxRetriesPerRequest: 1,
-        connectTimeout: 5000,
-        lazyConnect: true,
-      });
-
-      // Test connection
-      await this.redis.ping();
-      await this.pubsub.ping();
+      this.redis = await getRedisClient();
+      this.pubsub = await getRedisClient();
       
       this.redisConnected = true;
       logger.info('[NotificationSubscriber] Redis connected successfully');
@@ -90,7 +75,7 @@ export class NotificationSubscriber {
       this.startHeartbeat();
     } catch (error) {
       logger.error('Failed to start notification subscriber:', error);
-      this.cleanup();
+      await this.cleanup();
     }
   }
 
@@ -98,24 +83,23 @@ export class NotificationSubscriber {
     if (this.isCleanedUp || !this.redisConnected || !this.pubsub) return;
 
     try {
-      // Subscribe to channels
-      await this.pubsub.subscribe(...this.channels);
+      // Subscribe to channels - for node-redis we need to subscribe one by one
+      for (const channel of this.channels) {
+        await this.pubsub.subscribe(channel, async (message, channelName) => {
+          if (this.isCleanedUp) return;
 
-      // Handle incoming messages
-      this.pubsub.on('message', async (channel, message) => {
-        if (this.isCleanedUp) return;
-
-        try {
-          const notification = JSON.parse(message);
-          await this.sendEvent({
-            event: 'notification',
-            data: notification,
-            id: notification.id,
-          });
-        } catch (error) {
-          logger.error('Failed to process notification:', error);
-        }
-      });
+          try {
+            const notification = JSON.parse(message);
+            await this.sendEvent({
+              event: 'notification',
+              data: notification,
+              id: notification.id,
+            });
+          } catch (error) {
+            logger.error('Failed to process notification:', error);
+          }
+        });
+      }
     } catch (error) {
       logger.error('Failed to setup subscriptions:', error);
       throw error;
@@ -187,11 +171,12 @@ export class NotificationSubscriber {
     } catch (error) {
       // Client disconnected
       logger.debug('Client disconnected:', error);
-      this.cleanup();
+      // Don't await here as this might be called from a sync context
+      this.cleanup().catch(e => logger.debug('Cleanup error:', e));
     }
   }
 
-  cleanup() {
+  async cleanup() {
     if (this.isCleanedUp) return;
     this.isCleanedUp = true;
 
@@ -203,8 +188,14 @@ export class NotificationSubscriber {
       // Unsubscribe and disconnect Redis connections
       if (this.pubsub && this.redisConnected) {
         try {
-          this.pubsub.unsubscribe(...this.channels);
-          this.pubsub.disconnect();
+          // For node-redis we need to unsubscribe from each channel
+          for (const channel of this.channels) {
+            await this.pubsub.unsubscribe(channel);
+          }
+          // Check if still connected before disconnecting
+          if (this.pubsub.isOpen) {
+            await this.pubsub.disconnect();
+          }
         } catch (redisError) {
           logger.debug('Error cleaning up pubsub:', redisError);
         }
@@ -212,7 +203,10 @@ export class NotificationSubscriber {
 
       if (this.redis && this.redisConnected) {
         try {
-          this.redis.disconnect();
+          // Check if still connected before disconnecting
+          if (this.redis.isOpen) {
+            await this.redis.disconnect();
+          }
         } catch (redisError) {
           logger.debug('Error cleaning up redis:', redisError);
         }

@@ -28,7 +28,7 @@ export function useSSE({
   const [lastEventId, setLastEventId] = useState<string | null>(null);
 
   const connect = useCallback(() => {
-    if (!session?.user || eventSourceRef.current?.readyState === EventSource.OPEN) {
+    if (!session?.user?.id || !session?.user?.tenant || eventSourceRef.current?.readyState === EventSource.OPEN) {
       return;
     }
 
@@ -181,7 +181,8 @@ export function useSSE({
   }, []);
 
   useEffect(() => {
-    if (session?.user) {
+    // Only connect if we have a fully authenticated session with tenant info
+    if (session?.user?.id && session?.user?.tenant) {
       connect();
     } else {
       disconnect();

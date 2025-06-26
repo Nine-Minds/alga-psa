@@ -38,9 +38,13 @@ export async function GET(request: NextRequest) {
     });
 
     // Handle client disconnect
-    request.signal.addEventListener('abort', () => {
-      subscriber.cleanup();
-      writer.close();
+    request.signal.addEventListener('abort', async () => {
+      try {
+        await subscriber.cleanup();
+        await writer.close();
+      } catch (error) {
+        console.error('Error during cleanup:', error);
+      }
     });
 
     // Start subscription

@@ -1,4 +1,3 @@
-import Redis from 'ioredis';
 import { withTransaction } from '@shared/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getConnection } from '@shared/db/connection';
@@ -10,6 +9,7 @@ import {
   NotificationTemplate 
 } from 'server/src/interfaces/notification.interfaces';
 import logger from '@shared/core/logger';
+import { getRedisClient } from 'server/src/config/redisConfig';
 
 // A simple template engine
 function compileTemplate(template: string, data: Record<string, any>): string {
@@ -17,7 +17,7 @@ function compileTemplate(template: string, data: Record<string, any>): string {
 }
 
 export class NotificationPublisher {
-  private redis?: Redis;
+  private redis?: Awaited<ReturnType<typeof getRedisClient>>;
   private redisConnected: boolean = false;
 
   constructor() {
@@ -26,15 +26,7 @@ export class NotificationPublisher {
 
   private async initializeRedis() {
     try {
-      const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-      this.redis = new Redis(redisUrl, {
-        maxRetriesPerRequest: 1,
-        connectTimeout: 5000,
-        lazyConnect: true,
-      });
-
-      // Test connection
-      await this.redis.ping();
+      this.redis = await getRedisClient();
       this.redisConnected = true;
       logger.info('[NotificationPublisher] Redis connected successfully');
     } catch (error) {
@@ -187,10 +179,10 @@ export class NotificationPublisher {
     }
   }
 
-  disconnect() {
+  async disconnect() {
     if (this.redis && this.redisConnected) {
       try {
-        this.redis.disconnect();
+        await this.redis.disconnect();
       } catch (error) {
         logger.debug('[NotificationPublisher] Error disconnecting Redis:', error);
       }
