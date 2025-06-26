@@ -1,0 +1,117 @@
+# Telemetry Environment Variables for nm-kube-config
+# Add these to your nm-kube-config repository for telemetry deployment
+
+# =============================================================================
+# TELEMETRY MASTER CONTROLS
+# =============================================================================
+
+# Master telemetry switch - MUST be explicitly set to "true" to enable
+TELEMETRY_ENABLED: "false"
+
+# Emergency disable override - takes precedence over all other settings
+TELEMETRY_FORCE_DISABLE: "false"
+
+# SigNoz endpoint URL (update with your actual SigNoz deployment)
+TELEMETRY_ENDPOINT: "https://signoz.internal.yourcompany.com"
+
+# Sampling rate (0.0 to 1.0) - 0.1 = 10% of traces
+TELEMETRY_SAMPLE_RATE: "0.1"
+
+# Salt for hashing user/tenant IDs (generate a unique random string)
+TELEMETRY_SALT: "your-unique-random-salt-here-change-in-production"
+
+# =============================================================================
+# OPENTELEMETRY CONFIGURATION
+# =============================================================================
+
+# OTLP exporter endpoint
+OTEL_EXPORTER_OTLP_ENDPOINT: "https://signoz.internal.yourcompany.com:4318"
+
+# Trace sampling configuration
+OTEL_TRACES_SAMPLER: "traceidratio"
+OTEL_TRACES_SAMPLER_ARG: "0.1"
+
+# Batch processing settings
+OTEL_BSP_MAX_EXPORT_BATCH_SIZE: "512"
+OTEL_BSP_SCHEDULE_DELAY: "5000"
+
+# =============================================================================
+# PRIVACY SETTINGS
+# =============================================================================
+
+# Enable PII sanitization (recommended: true)
+TELEMETRY_PII_SANITIZATION: "true"
+
+# Anonymize IP addresses (recommended: true for GDPR compliance)
+TELEMETRY_IP_ANONYMIZATION: "true"
+
+# Consent version for tracking user consent changes
+TELEMETRY_CONSENT_VERSION: "1.0"
+
+# =============================================================================
+# FRONTEND TELEMETRY
+# =============================================================================
+
+# Frontend telemetry master switch (must match backend setting)
+NEXT_PUBLIC_TELEMETRY_ENABLED: "false"
+
+# Frontend OTEL endpoint (accessible from browser)
+NEXT_PUBLIC_OTEL_ENDPOINT: "https://signoz.internal.yourcompany.com/v1/traces"
+
+# Application version for telemetry correlation
+NEXT_PUBLIC_APP_VERSION: "1.0.0"
+
+# =============================================================================
+# ENVIRONMENT-SPECIFIC OVERRIDES
+# =============================================================================
+
+# Development Environment
+development:
+  TELEMETRY_ENABLED: "true"
+  TELEMETRY_SAMPLE_RATE: "1.0"  # 100% sampling in dev
+  NEXT_PUBLIC_TELEMETRY_ENABLED: "true"
+  TELEMETRY_ENDPOINT: "http://localhost:4318"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318"
+
+# Staging Environment  
+staging:
+  TELEMETRY_ENABLED: "true" 
+  TELEMETRY_SAMPLE_RATE: "0.5"  # 50% sampling in staging
+  NEXT_PUBLIC_TELEMETRY_ENABLED: "true"
+
+# Production Environment
+production:
+  TELEMETRY_ENABLED: "false"  # Disabled by default, enable only when ready
+  TELEMETRY_SAMPLE_RATE: "0.05"  # 5% sampling when enabled
+  NEXT_PUBLIC_TELEMETRY_ENABLED: "false"
+
+# =============================================================================
+# SIGNOZ DATA RETENTION (for SigNoz configuration)
+# =============================================================================
+
+# ClickHouse TTL settings (days)
+CLICKHOUSE_TRACES_TTL: "30"    # 30 days for traces
+CLICKHOUSE_METRICS_TTL: "90"   # 90 days for metrics  
+CLICKHOUSE_LOGS_TTL: "60"      # 60 days for logs
+
+# =============================================================================
+# DEPLOYMENT NOTES
+# =============================================================================
+
+# 1. Update TELEMETRY_ENDPOINT with your actual SigNoz deployment URL
+# 2. Generate a unique TELEMETRY_SALT for your deployment  
+# 3. Ensure SigNoz is deployed and accessible at the specified endpoint
+# 4. Set TELEMETRY_ENABLED="true" only when ready to collect telemetry
+# 5. Users must still opt-in via the UI even when telemetry is enabled
+# 6. Monitor resource usage and adjust TELEMETRY_SAMPLE_RATE as needed
+
+# =============================================================================
+# SECURITY CHECKLIST
+# =============================================================================
+
+# ✓ TELEMETRY_SALT is unique and secret
+# ✓ SigNoz endpoint uses HTTPS
+# ✓ Network access is restricted to internal infrastructure only
+# ✓ Regular backups of SigNoz data are configured
+# ✓ Log retention policies are set appropriately
+# ✓ User consent flows are tested and working
