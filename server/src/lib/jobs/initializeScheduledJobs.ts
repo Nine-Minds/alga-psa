@@ -1,9 +1,6 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleReconcileBucketUsageJob } from './index';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob } from './index';
 import logger from '@shared/core/logger';
-import { createTenantKnex } from 'server/src/lib/db';
-import { registerCleanupTemporaryFormsJob } from 'server/src/services/cleanupTemporaryFormsJob';
-import { JobService } from 'server/src/services/job.service';
-import { StorageService } from 'server/src/lib/storage/StorageService';
+import { getConnection } from 'server/src/lib/db/db';
 
 /**
  * Initialize all scheduled jobs for the application
@@ -15,8 +12,8 @@ export async function initializeScheduledJobs(): Promise<void> {
     await initializeScheduler();
     logger.info('Job scheduler initialized');
     
-    // Get all tenants
-    const { knex } = await createTenantKnex();
+    // Get all tenants using root connection
+    const knex = await getConnection(null);
     const tenants = await knex('tenants').select('tenant');
     
     // Set up expired credits job for each tenant
@@ -60,16 +57,17 @@ export async function initializeScheduledJobs(): Promise<void> {
      }
    }
    
-   // Register temporary forms cleanup job (system-wide)
+   // Schedule temporary forms cleanup job (system-wide)
    try {
-     const { JobScheduler } = await import('./jobScheduler');
-     const jobService = await JobService.create();
-     const storageService = new StorageService();
-     const scheduler = await JobScheduler.getInstance(jobService, storageService);
-     registerCleanupTemporaryFormsJob(scheduler);
-     logger.info('Registered temporary forms cleanup job');
+     const cleanupJobId = await scheduleCleanupTemporaryFormsJob();
+     
+     if (cleanupJobId) {
+       logger.info(`Scheduled temporary forms cleanup job with ID ${cleanupJobId}`);
+     } else {
+       logger.error('Failed to schedule temporary forms cleanup job');
+     }
    } catch (error) {
-     logger.error('Failed to register temporary forms cleanup job:', error);
+     logger.error('Failed to schedule temporary forms cleanup job:', error);
    }
    
    logger.info('All scheduled jobs initialized');

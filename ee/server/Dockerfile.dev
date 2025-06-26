@@ -1,7 +1,7 @@
 FROM node:alpine AS server
 
 # Build argument to control edition
-ARG EXCLUDE_EE=false
+ARG INCLUDE_EE=true
 
 # Install required system dependencies (rarely changes)
 RUN apk add --no-cache \
@@ -39,12 +39,12 @@ COPY services/ ./services/
 # Copy EE features conditionally
 COPY ee/ ./ee/
 # Handle edition-specific setup
-RUN if [ "$EXCLUDE_EE" = "true" ]; then \
-        echo "Building CE edition - excluding EE features..."; \
-        rm -rf ./ee; \
-    else \
+RUN if [ "$INCLUDE_EE" = "true" ]; then \
         echo "Including EE features..."; \
         ./scripts/build-enterprise.sh; \
+    else \
+        echo "Building CE edition - excluding EE features..."; \
+        rm -rf ./ee; \
     fi
 
 WORKDIR /app/server
@@ -55,10 +55,10 @@ COPY scripts/ ./scripts/
 
 # Clean any existing build artifacts and build the Next.js application with conditional env var
 RUN rm -rf .next && \
-    if [ "$EXCLUDE_EE" = "true" ]; then \
-        npm run build; \
-    else \
+    if [ "$INCLUDE_EE" = "true" ]; then \
         npm run build:enterprise; \
+    else \
+        npm run build; \
     fi
 
 # Copy and make entrypoint executable (rarely changes)
@@ -68,4 +68,3 @@ RUN chmod +x /app/entrypoint.sh
 EXPOSE 3000
 ENV NODE_ENV=production
 ENTRYPOINT ["/app/entrypoint.sh"]
-

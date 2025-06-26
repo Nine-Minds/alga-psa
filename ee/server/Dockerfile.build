@@ -16,6 +16,7 @@ FROM base AS deps
 # Copy package files for both root and server parts of the project
 COPY package.json package-lock.json ./
 COPY server/package.json ./server/
+COPY ee/server/package.json ./ee/server/
 COPY tsconfig.base.json ./
 COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/assemblyscript
 
@@ -28,7 +29,12 @@ COPY . .
 
 WORKDIR /app
 RUN npm install --workspace=shared
-# RUN npm run build --workspace=shared
+RUN npm run build --workspace=shared
+
+# Copy EE files and build enterprise edition
+COPY scripts/ ./scripts/
+ENV NEXT_PUBLIC_EDITION=enterprise
+RUN ./scripts/build-enterprise.sh
 
 WORKDIR /app/server
 
@@ -46,13 +52,13 @@ RUN mkdir -p /app/secrets && \
     echo "secure-oauth-client-id-placeholder" > /app/secrets/google_oauth_client_id && \
     echo "secure-oauth-client-secret-placeholder" > /app/secrets/google_oauth_client_secret && \
     chmod 600 /app/secrets/*
+
 # Copy example environment file
 COPY .env.example /app/.env   
 COPY .env.example /app/server/.env  
 
-
 WORKDIR /app
-# RUN npm run build
+RUN npm run build:ee
 
 # Final production image with minimal runtime artifacts
 FROM node:alpine
@@ -63,8 +69,7 @@ RUN apk add --no-cache bash \
     imagemagick \
     ghostscript \
     curl \
-    nano \
-    bash
+    nano
 
 WORKDIR /app
 COPY tsconfig.base.json ./
@@ -74,9 +79,7 @@ COPY .env.example /app/server/.env
 
 # Copy built application and node_modules from earlier stages -- minimalist approach
 COPY --from=builder /app/shared ./shared
-# Use local build instead of container build
-COPY ./server/.next ./server/.next
-COPY ./server/dist ./server/dist
+COPY --from=builder /app/server/.next ./server/.next
 COPY --from=builder /app/server/public ./server/public
 COPY --from=builder /app/server/next.config.mjs ./server/
 COPY --from=builder /app/server/package.json ./server/
@@ -88,10 +91,15 @@ COPY --from=builder /app/server/seeds/ ./server/seeds/
 COPY --from=builder /app/server/src/ ./server/src/
 COPY --from=deps /app/node_modules ./node_modules
 
-COPY --from=builder ./app/ee/server/migrations/ ./server/migrations/
+# Copy EE migrations (they get merged during build-enterprise.sh)
+COPY --from=builder /app/ee/server/migrations/ ./server/migrations/
 
 COPY server/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
+
+# Create build timestamp for verification
+RUN echo "BUILD_TIME=$(date)" > /app/build-info.txt && \
+    echo "BUILD_EPOCH=$(date +%s)" >> /app/build-info.txt
 
 EXPOSE 3000
 ENV NODE_ENV=production

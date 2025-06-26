@@ -10,7 +10,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { ExtensionProvider } from '../../../../../lib/extensions/ui/ExtensionProvider';
 import { PageRenderer } from '../../../../../lib/extensions/ui/pages/PageRenderer';
-import { logger } from '../../../../../utils/logger';
+import logger from 'server/src/utils/logger';
 
 // Loading state component
 function LoadingPage() {

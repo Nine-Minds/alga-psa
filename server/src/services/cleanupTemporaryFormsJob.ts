@@ -43,33 +43,35 @@ export async function cleanupTemporaryFormsJob(): Promise<{ success: boolean; de
 }
 
 /**
- * Register this job with the scheduler
+ * Schedule the cleanup job to run daily
  * 
- * @param jobService The job service instance
+ * @param cronExpression Optional cron expression, defaults to daily at 2:00 AM
+ * @returns The job ID or null if scheduling failed
  */
-export function registerCleanupTemporaryFormsJob(jobService: any): void {
-  if (!jobService) {
-    console.warn('Job service not available, skipping registration of cleanupTemporaryFormsJob');
-    return;
-  }
-  
+export async function scheduleCleanupTemporaryFormsJob(
+  cronExpression: string = '0 2 * * *' // Default: daily at 2:00 AM
+): Promise<string | null> {
   try {
-    // Register the job to run daily at 2 AM
-    jobService.registerJob({
-      name: 'cleanup-temporary-workflow-forms',
-      displayName: 'Cleanup Temporary Workflow Forms',
-      description: 'Removes temporary forms created for inline workflow tasks',
-      schedule: '0 2 * * *', // Daily at 2 AM (cron syntax)
-      handler: cleanupTemporaryFormsJob,
-      singleInstance: true,
-      timeout: 30 * 60 * 1000, // 30 minutes timeout
-      retryOnFailure: true,
-      maxRetries: 3,
-      retryDelay: 5 * 60 * 1000 // 5 minutes
-    });
+    // Import here to avoid circular dependencies
+    const { initializeScheduler } = await import('server/src/lib/jobs/index');
+    const scheduler = await initializeScheduler();
     
-    console.log('Successfully registered cleanupTemporaryFormsJob');
+    if (!scheduler) {
+      console.warn('Scheduler not available, skipping scheduling of cleanupTemporaryFormsJob');
+      return null;
+    }
+    
+    // This is a system-wide job, so we use a special tenant ID
+    const jobId = await scheduler.scheduleRecurringJob(
+      'cleanup-temporary-workflow-forms',
+      cronExpression,
+      { tenantId: 'system' } // System-wide job
+    );
+    
+    console.log('Successfully scheduled cleanupTemporaryFormsJob with ID:', jobId);
+    return jobId;
   } catch (error) {
-    console.error('Error registering cleanupTemporaryFormsJob:', error);
+    console.error('Error scheduling cleanupTemporaryFormsJob:', error);
+    return null;
   }
 }

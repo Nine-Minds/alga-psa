@@ -70,7 +70,7 @@ services:
   setup:
     build:
       context: .
-      dockerfile: ee/server/Dockerfile
+      dockerfile: ee/setup/Dockerfile
     container_name: ${APP_NAME:-sebastian}_setup_ee
     environment:
       EDITION: enterprise

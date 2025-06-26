@@ -9,6 +9,7 @@ import { expiringCreditsNotificationHandler, ExpiringCreditsNotificationJobData 
 import { creditReconciliationHandler, CreditReconciliationJobData } from './handlers/creditReconciliationHandler';
 // Import the new handler
 import { handleReconcileBucketUsage, ReconcileBucketUsageJobData } from './handlers/reconcileBucketUsageHandler';
+import { cleanupTemporaryFormsJob } from '../../services/cleanupTemporaryFormsJob';
 import { JobService } from '../../services/job.service';
 import { getConnection } from '../db/db';
 import { StorageService } from '../../lib/storage/StorageService';
@@ -71,6 +72,11 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     jobScheduler.registerJobHandler<ReconcileBucketUsageJobData>('reconcile-bucket-usage', async (job: Job<ReconcileBucketUsageJobData>) => {
       // Directly call the handler function
       await handleReconcileBucketUsage(job);
+    });
+
+    // Register cleanup temporary forms handler
+    jobScheduler.registerJobHandler('cleanup-temporary-workflow-forms', async (job: Job<{ tenantId: string }>) => {
+      await cleanupTemporaryFormsJob();
     });
 
   }
@@ -206,3 +212,7 @@ export const scheduleCreditReconciliationJob = async (
     { tenantId, companyId }
   );
 };
+
+// Re-export the cleanup temporary forms scheduling function
+export { scheduleCleanupTemporaryFormsJob } from '../../services/cleanupTemporaryFormsJob';
+

@@ -6,7 +6,7 @@ services:
       file: ./server/docker-compose.prebuilt.yaml
       service: server
     container_name: ${APP_NAME:-sebastian}_server_ce
-    image: ghcr.io/nine-minds/alga-psa:latest
+    image: ghcr.io/nine-minds/alga-psa-ce:latest
     platform: linux/amd64
     environment:
       EDITION: community
@@ -57,6 +57,8 @@ services:
     networks:
       - app-network
     depends_on:
+      setup:
+        condition: service_completed_successfully
       postgres:
         condition: service_started
       pgbouncer:
@@ -68,9 +70,10 @@ services:
         required: false
 
   setup:
-    image: ghcr.io/nine-minds/alga-psa:latest
+    image: ghcr.io/nine-minds/alga-psa-ce:latest
     platform: linux/amd64
     container_name: ${APP_NAME:-sebastian}_setup_ce
+    restart: "no"
     environment:
       EDITION: community
       NODE_OPTIONS: --experimental-vm-modules

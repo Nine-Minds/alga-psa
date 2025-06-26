@@ -1,6 +1,6 @@
-# Dockerfile for using pre-built local artifacts
-# Build locally first with: npm run build
-# Then use this Dockerfile to containerize without rebuilding
+# Dockerfile for using pre-built artifacts
+# Designed for Argo workflows and CI systems that build separately
+# Expects .next, dist, and shared/dist to exist locally
 
 FROM node:alpine
 RUN apk add --no-cache \
@@ -20,7 +20,7 @@ COPY package.json package-lock.json ./
 COPY server/package.json ./server/
 
 # Install only production dependencies
-RUN npm install
+RUN npm install --omit=dev
 
 # Copy base files
 COPY tsconfig.base.json ./
@@ -33,7 +33,7 @@ COPY ./shared/dist ./shared/dist
 COPY ./shared/package.json ./shared/package.json
 
 # Copy pre-built artifacts (must exist locally)
-# These should be built locally with: npm run build
+# These should be built by Argo workflow or separate build step
 COPY ./server/.next ./server/.next
 COPY ./server/dist ./server/dist
 
@@ -44,9 +44,6 @@ COPY ./server/knexfile.cjs ./server/
 COPY ./server/migrations/ ./server/migrations/
 COPY ./server/seeds/ ./server/seeds/
 COPY ./server/src/ ./server/src/
-
-# Copy EE migrations
-COPY ./ee/server/migrations/ ./server/migrations/
 
 # Copy entrypoint
 COPY server/entrypoint.sh /app/entrypoint.sh
