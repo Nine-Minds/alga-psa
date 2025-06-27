@@ -917,6 +917,70 @@ export async function importCompaniesFromCSV(
             company: savedCompany,
             originalData: companyData
           });
+
+          // Handle location update/creation for existing companies
+          const hasLocationData = companyData.address_line1 || companyData.city || companyData.location_name;
+          if (hasLocationData && savedCompany) {
+            try {
+              // Check if company already has a location
+              const existingLocation = await trx('company_locations')
+                .where({ company_id: savedCompany.company_id, tenant })
+                .first();
+
+              const locationData = {
+                company_id: savedCompany.company_id,
+                tenant: tenant,
+                location_name: companyData.location_name || 'Default Location',
+                address_line1: companyData.address_line1 || '',
+                address_line2: companyData.address_line2 || '',
+                address_line3: companyData.address_line3 || '',
+                city: companyData.city || '',
+                state_province: companyData.state_province || '',
+                postal_code: companyData.postal_code || '',
+                country_code: companyData.country_code || 'US',
+                country_name: companyData.country_name || 'United States',
+                is_billing_address: companyData.is_billing_address || false,
+                is_shipping_address: companyData.is_shipping_address || false,
+                is_default: companyData.is_default !== undefined ? companyData.is_default : true,
+                phone: companyData.location_phone || '',
+                fax: companyData.location_fax || '',
+                email: companyData.location_email || '',
+                notes: companyData.location_notes || '',
+                is_active: companyData.is_location_active !== undefined ? companyData.is_location_active : true,
+                updated_at: new Date().toISOString()
+              };
+
+              if (existingLocation) {
+                // Update existing location
+                await trx('company_locations')
+                  .where({ location_id: existingLocation.location_id })
+                  .update(locationData);
+                
+                // Update the result message
+                const lastResult = results[results.length - 1];
+                if (lastResult) {
+                  lastResult.message += ' with location updated';
+                }
+              } else {
+                // Create new location
+                locationData.created_at = new Date().toISOString();
+                await trx('company_locations').insert(locationData);
+                
+                // Update the result message
+                const lastResult = results[results.length - 1];
+                if (lastResult) {
+                  lastResult.message += ' with location created';
+                }
+              }
+            } catch (locationError) {
+              console.error('Error handling company location:', locationError);
+              // Don't fail the entire import if location handling fails
+              const lastResult = results[results.length - 1];
+              if (lastResult) {
+                lastResult.message += ' (location update failed)';
+              }
+            }
+          }
         } else {
           // Create new company with synchronized website fields
           const properties = companyData.properties ? { ...companyData.properties } : {};
@@ -967,6 +1031,51 @@ export async function importCompaniesFromCSV(
             company: savedCompany,
             originalData: companyData
           });
+        }
+
+        // Create company location if location data is provided
+        const hasLocationData = companyData.address_line1 || companyData.city || companyData.location_name;
+        if (hasLocationData && savedCompany) {
+          try {
+            const locationData = {
+              company_id: savedCompany.company_id,
+              tenant: tenant,
+              location_name: companyData.location_name || 'Default Location',
+              address_line1: companyData.address_line1 || '',
+              address_line2: companyData.address_line2 || '',
+              address_line3: companyData.address_line3 || '',
+              city: companyData.city || '',
+              state_province: companyData.state_province || '',
+              postal_code: companyData.postal_code || '',
+              country_code: companyData.country_code || 'US',
+              country_name: companyData.country_name || 'United States',
+              is_billing_address: companyData.is_billing_address || false,
+              is_shipping_address: companyData.is_shipping_address || false,
+              is_default: companyData.is_default !== undefined ? companyData.is_default : true,
+              phone: companyData.location_phone || '',
+              fax: companyData.location_fax || '',
+              email: companyData.location_email || '',
+              notes: companyData.location_notes || '',
+              is_active: companyData.is_location_active !== undefined ? companyData.is_location_active : true,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+
+            await trx('company_locations').insert(locationData);
+            
+            // Update the result message to indicate location was also created
+            const lastResult = results[results.length - 1];
+            if (lastResult) {
+              lastResult.message += ' with location';
+            }
+          } catch (locationError) {
+            console.error('Error creating company location:', locationError);
+            // Don't fail the entire import if location creation fails
+            const lastResult = results[results.length - 1];
+            if (lastResult) {
+              lastResult.message += ' (location creation failed)';
+            }
+          }
         }
       } catch (error) {
         console.error('Error processing company:', companyData, error);

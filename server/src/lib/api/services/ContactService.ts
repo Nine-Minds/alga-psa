@@ -421,6 +421,27 @@ export class ContactService extends BaseService<IContact> {
   }
 
   /**
+   * Generate CSV template for contact imports
+   */
+  async generateCsvTemplate(): Promise<string> {
+    const headers = [
+      'full_name',
+      'email', 
+      'phone_number',
+      'company_name',
+      'role',
+      'notes',
+      'tags'
+    ];
+
+    // Import unparseCSV utility
+    const { unparseCSV } = await import('server/src/lib/utils/csvParser');
+    
+    // Return empty template with just headers
+    return unparseCSV([], headers);
+  }
+
+  /**
    * Apply contact-specific filters
    */
   private applyContactFilters(query: Knex.QueryBuilder, filters: ContactFilterData): Knex.QueryBuilder {

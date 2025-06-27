@@ -70,6 +70,26 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
   }>({ current: 0, total: 0 });
   const [failedRecords, setFailedRecords] = useState<ImportContactResult[]>([]);
 
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await fetch('/api/v1/contacts/template');
+      if (!response.ok) throw new Error('Failed to download template');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'contacts_template.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading template:', error);
+      setErrors(['Failed to download template']);
+    }
+  };
+
   const getFieldOptions = () => {
     return [
       { value: 'unassigned', label: 'Select field' },
@@ -419,12 +439,26 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
             <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg">
               <Upload className="mx-auto h-12 w-12 text-gray-400" />
               <p className="mt-2 text-sm text-gray-600">Upload a CSV file with contact data</p>
-              <Input
-                type="file"
-                accept=".csv"
-                onChange={handleFileUpload}
-                className="mt-4"
-              />
+              <div className="mt-4 space-y-3">
+                <Input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileUpload}
+                />
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-xs text-gray-500">Need a template?</span>
+                  <Button
+                    id="download-contact-template"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDownloadTemplate}
+                    className="text-xs"
+                  >
+                    <Download size={14} className="mr-1" />
+                    Download Template
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
 

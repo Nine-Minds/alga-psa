@@ -353,4 +353,22 @@ export class ContactController extends BaseController {
       return createSuccessResponse({ ...contact, _links: links });
     });
   }
+
+  /**
+   * Generate CSV template for contact imports
+   */
+  generateTemplate = () => compose(
+    withAuth,
+    withPermission('contact', 'read'),
+    async (req: ApiRequest): Promise<Response> => {
+      const csvTemplate = await this.contactService.generateCsvTemplate();
+      
+      const headers = new Headers({
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="contacts_template.csv"'
+      });
+
+      return new Response(csvTemplate, { headers });
+    }
+  );
 }

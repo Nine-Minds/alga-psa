@@ -386,4 +386,22 @@ export class CompanyController extends BaseController {
       return createSuccessResponse({ ...company, _links: links });
     });
   }
+
+  /**
+   * Generate CSV template for company imports
+   */
+  generateTemplate = () => compose(
+    withAuth,
+    withPermission('company', 'read'),
+    async (req: ApiRequest): Promise<Response> => {
+      const csvTemplate = await this.companyService.generateCsvTemplate();
+      
+      const headers = new Headers({
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="companies_template.csv"'
+      });
+
+      return new Response(csvTemplate, { headers });
+    }
+  );
 }

@@ -547,4 +547,42 @@ export class CompanyService extends BaseService<ICompany> {
       await trx('company_tags').insert(tagInserts);
     }
   }
+
+  /**
+   * Generate CSV template for company imports
+   */
+  async generateCsvTemplate(): Promise<string> {
+    const headers = [
+      'client_name',
+      'email',
+      'phone_number',
+      'website',
+      'client_type',
+      'is_inactive',
+      'notes',
+      'location_name',
+      'address_line1',
+      'address_line2',
+      'address_line3',
+      'city',
+      'state_province',
+      'postal_code',
+      'country_code',
+      'country_name',
+      'is_billing_address',
+      'is_shipping_address',
+      'is_default',
+      'location_phone',
+      'location_fax',
+      'location_email',
+      'location_notes',
+      'is_location_active'
+    ];
+
+    // Import unparseCSV utility
+    const { unparseCSV } = await import('server/src/lib/utils/csvParser');
+    
+    // Return empty template with just headers
+    return unparseCSV([], headers);
+  }
 }
