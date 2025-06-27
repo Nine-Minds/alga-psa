@@ -145,21 +145,26 @@ export async function getRecentActivity(): Promise<RecentActivity[]> {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Get recent tickets with their initial descriptions
       const tickets = await trx('tickets')
-      .select([
-        'tickets.title',
-        'tickets.updated_at as timestamp',
-        'comments.note as description'
-      ])
-      .leftJoin('comments', function() {
-        this.on('tickets.ticket_id', '=', 'comments.ticket_id')
-            .andOn('tickets.tenant', '=', 'comments.tenant');
-      })
-      .where({
-        'tickets.tenant': tenant,
-        'tickets.company_id': companyId
-      })
-      .orderBy('tickets.updated_at', 'desc')
-      .limit(3);
+        .select([
+          'tickets.title',
+          'tickets.updated_at as timestamp',
+          trx.raw(
+            `(
+              select note from comments
+              where comments.ticket_id = tickets.ticket_id
+                and comments.tenant = tickets.tenant
+                and comments.is_initial_description = true
+              order by comments.created_at asc
+              limit 1
+            ) as description`
+          )
+        ])
+        .where({
+          'tickets.tenant': tenant,
+          'tickets.company_id': companyId
+        })
+        .orderBy('tickets.updated_at', 'desc')
+        .limit(3);
 
       // Get recent invoices
       const invoices = await trx('invoices')
