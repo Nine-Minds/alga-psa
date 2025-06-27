@@ -35,7 +35,7 @@ export function ClientDashboard() {
     return (
       <div className="space-y-6">
         <Card>
-          <CardContent className="p-8">
+          <CardContent className="p-8 pt-8">
             <div className="text-center text-[rgb(var(--color-text-700))]">
               <p>There was an error loading the dashboard. Please try again later.</p>
             </div>
@@ -49,7 +49,7 @@ export function ClientDashboard() {
     return (
       <div className="space-y-6">
         <Card>
-          <CardContent className="p-8">
+          <CardContent className="p-8 pt-8">
             <div className="text-center text-[rgb(var(--color-text-700))]">
               <p>Loading dashboard...</p>
             </div>
@@ -72,7 +72,7 @@ export function ClientDashboard() {
       {/* Metrics Overview */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-4">
         <Card className="bg-white">
-          <CardContent className="p-8">
+          <CardContent className="p-8 pt-8">
             <div className="text-lg font-medium text-[rgb(var(--color-text-600))] truncate">
               Open Support Tickets
             </div>
@@ -88,7 +88,7 @@ export function ClientDashboard() {
         </Card>
 
         <Card className="bg-white">
-          <CardContent className="p-8">
+          <CardContent className="p-8 pt-8">
             <div className="text-lg font-medium text-[rgb(var(--color-text-600))] truncate">
               Open Projects
             </div>
@@ -104,7 +104,7 @@ export function ClientDashboard() {
         </Card>
 
         <Card className="bg-white">
-          <CardContent className="p-8">
+          <CardContent className="p-8 pt-8">
             <div className="text-lg font-medium text-[rgb(var(--color-text-600))] truncate">
               Pending Invoices
             </div>
