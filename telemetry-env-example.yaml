@@ -5,8 +5,8 @@
 # TELEMETRY MASTER CONTROLS
 # =============================================================================
 
-# Master telemetry switch - MUST be explicitly set to "true" to enable
-TELEMETRY_ENABLED: "false"
+# Master telemetry switch - enabled by default, set to "false" to disable
+TELEMETRY_ENABLED: "true"
 
 # Emergency disable override - takes precedence over all other settings
 TELEMETRY_FORCE_DISABLE: "false"
@@ -53,7 +53,7 @@ TELEMETRY_CONSENT_VERSION: "1.0"
 # =============================================================================
 
 # Frontend telemetry master switch (must match backend setting)
-NEXT_PUBLIC_TELEMETRY_ENABLED: "false"
+NEXT_PUBLIC_TELEMETRY_ENABLED: "true"
 
 # Frontend OTEL endpoint (accessible from browser)
 NEXT_PUBLIC_OTEL_ENDPOINT: "https://signoz.internal.yourcompany.com/v1/traces"
@@ -81,9 +81,9 @@ staging:
 
 # Production Environment
 production:
-  TELEMETRY_ENABLED: "false"  # Disabled by default, enable only when ready
-  TELEMETRY_SAMPLE_RATE: "0.05"  # 5% sampling when enabled
-  NEXT_PUBLIC_TELEMETRY_ENABLED: "false"
+  TELEMETRY_ENABLED: "true"  # Enabled by default for metrics collection
+  TELEMETRY_SAMPLE_RATE: "0.1"  # 10% sampling in production
+  NEXT_PUBLIC_TELEMETRY_ENABLED: "true"
 
 # =============================================================================
 # SIGNOZ DATA RETENTION (for SigNoz configuration)
@@ -101,8 +101,8 @@ CLICKHOUSE_LOGS_TTL: "60"      # 60 days for logs
 # 1. Update TELEMETRY_ENDPOINT with your actual SigNoz deployment URL
 # 2. Generate a unique TELEMETRY_SALT for your deployment  
 # 3. Ensure SigNoz is deployed and accessible at the specified endpoint
-# 4. Set TELEMETRY_ENABLED="true" only when ready to collect telemetry
-# 5. Users must still opt-in via the UI even when telemetry is enabled
+# 4. Telemetry is enabled by default - set TELEMETRY_ENABLED="false" to disable
+# 5. Users are opted-in by default but can opt-out via the UI
 # 6. Monitor resource usage and adjust TELEMETRY_SAMPLE_RATE as needed
 
 # =============================================================================

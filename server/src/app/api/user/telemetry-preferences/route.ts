@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getKnex } from 'server/src/lib/db';
-import { getCurrentUserId, getCurrentTenantId } from 'server/src/lib/db';
+import { getCurrentTenantId } from 'server/src/lib/db';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import TelemetryPreferencesModel from 'server/src/lib/models/telemetryPreferences';
 import { TELEMETRY_CONFIG } from 'server/src/config/telemetry';
 import logger from 'server/src/utils/logger';
@@ -8,14 +9,16 @@ import logger from 'server/src/utils/logger';
 export async function GET(request: NextRequest) {
   try {
     const knex = getKnex();
-    const userId = await getCurrentUserId();
+    const currentUser = await getCurrentUser();
     
-    if (!userId) {
+    if (!currentUser) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       );
     }
+    
+    const userId = currentUser.user_id;
 
     const preferences = await TelemetryPreferencesModel.getTelemetryPreferences(
       knex,
@@ -33,7 +36,8 @@ export async function GET(request: NextRequest) {
     logger.error('Error getting telemetry preferences:', error);
     
     // Return safe defaults on error
-    const userId = await getCurrentUserId().catch(() => 'unknown');
+    const currentUser = await getCurrentUser().catch(() => null);
+    const userId = currentUser?.user_id || 'unknown';
     return NextResponse.json({
       ...TELEMETRY_CONFIG.DEFAULT_PREFERENCES,
       last_updated: new Date().toISOString(),
@@ -47,14 +51,16 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const knex = getKnex();
-    const userId = await getCurrentUserId();
+    const currentUser = await getCurrentUser();
     
-    if (!userId) {
+    if (!currentUser) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       );
     }
+    
+    const userId = currentUser.user_id;
 
     const body = await request.json();
     
@@ -106,14 +112,16 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const knex = getKnex();
-    const userId = await getCurrentUserId();
+    const currentUser = await getCurrentUser();
     
-    if (!userId) {
+    if (!currentUser) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       );
     }
+    
+    const userId = currentUser.user_id;
 
     // Disable all telemetry for the user
     await TelemetryPreferencesModel.disableAllTelemetry(knex, userId);
