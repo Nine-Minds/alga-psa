@@ -47,8 +47,9 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
     targetTable: 'statuses',
     mapFields: (source: IStandardStatus, tenantId: string, userId: string) => ({
       name: source.name,
+      status_type: source.item_type,
       item_type: source.item_type,
-      display_order: source.display_order,
+      order_number: source.display_order,
       is_closed: source.is_closed,
       is_default: source.is_default,
       tenant: tenantId,
@@ -159,10 +160,114 @@ export async function getReferenceData(dataType: ReferenceDataType, filters?: an
   return await query;
 }
 
+export interface ImportConflict {
+  referenceItem: any;
+  conflictType: 'name' | 'order';
+  existingItem?: any;
+  suggestedOrder?: number;
+}
+
+export async function checkImportConflicts(
+  dataType: ReferenceDataType,
+  referenceIds: string[],
+  filters?: any
+): Promise<ImportConflict[]> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser?.user_id || !currentUser?.tenant) {
+    throw new Error('User not authenticated or tenant not found');
+  }
+
+  const config = referenceDataConfigs[dataType];
+  const { knex: db } = await createTenantKnex();
+  
+  let referenceData = await getReferenceData(dataType, filters);
+  
+  if (referenceIds && referenceIds.length > 0) {
+    referenceData = referenceData.filter((item: any) => 
+      referenceIds.includes(item.id || item.priority_id || item.standard_status_id || item.status_id || item.type_id)
+    );
+  }
+  
+  const conflicts: ImportConflict[] = [];
+  
+  for (const item of referenceData) {
+    const mappedData = config.mapFields(item, currentUser.tenant, currentUser.user_id);
+    
+    let hasNameConflict = false;
+    let hasOrderConflict = false;
+    
+    // Check name conflict
+    if (config.conflictCheck) {
+      hasNameConflict = await config.conflictCheck(mappedData, currentUser.tenant);
+      if (hasNameConflict) {
+        conflicts.push({
+          referenceItem: item,
+          conflictType: 'name',
+          existingItem: hasNameConflict
+        });
+      }
+    }
+    
+    // Check order conflict for data types that have order (even if there's a name conflict)
+    if (dataType === 'priorities' || dataType === 'statuses') {
+      const orderField = dataType === 'priorities' ? 'order_number' : 'order_number';
+      const orderValue = mappedData[orderField];
+      
+      if (orderValue && !hasNameConflict) { // Only check order if no name conflict
+        const whereClause: any = {
+          tenant: currentUser.tenant,
+          [orderField]: orderValue
+        };
+        
+        // For statuses, use status_type; for priorities, use item_type
+        if (dataType === 'statuses' && mappedData.status_type) {
+          whereClause.status_type = mappedData.status_type;
+        } else if (dataType === 'priorities' && mappedData.item_type) {
+          whereClause.item_type = mappedData.item_type;
+        }
+        
+        const existingWithOrder = await db(config.targetTable)
+          .where(whereClause)
+          .first();
+          
+        if (existingWithOrder) {
+          // Find next available order number
+          const maxOrderWhereClause: any = {
+            tenant: currentUser.tenant
+          };
+          
+          // For statuses, use status_type; for priorities, use item_type
+          if (dataType === 'statuses' && mappedData.status_type) {
+            maxOrderWhereClause.status_type = mappedData.status_type;
+          } else if (dataType === 'priorities' && mappedData.item_type) {
+            maxOrderWhereClause.item_type = mappedData.item_type;
+          }
+          
+          const maxOrder = await db(config.targetTable)
+            .where(maxOrderWhereClause)
+            .max(orderField + ' as max')
+            .first();
+            
+          conflicts.push({
+            referenceItem: item,
+            conflictType: 'order',
+            existingItem: existingWithOrder,
+            suggestedOrder: (maxOrder?.max || 0) + 10
+          });
+          hasOrderConflict = true;
+        }
+      }
+    }
+  }
+  
+  return conflicts;
+}
+
 export async function importReferenceData(
   dataType: ReferenceDataType, 
   referenceIds?: string[], 
-  filters?: any
+  filters?: any,
+  conflictResolutions?: Record<string, { action: 'skip' | 'rename' | 'reorder', newName?: string, newOrder?: number }>
 ) {
   const currentUser = await getCurrentUser();
   if (!currentUser?.user_id || !currentUser?.tenant) {
@@ -176,7 +281,7 @@ export async function importReferenceData(
   
   if (referenceIds && referenceIds.length > 0) {
     referenceData = referenceData.filter((item: any) => 
-      referenceIds.includes(item.id || item.priority_id || item.status_id || item.type_id)
+      referenceIds.includes(item.id || item.priority_id || item.standard_status_id || item.status_id || item.type_id)
     );
   }
   
@@ -184,9 +289,32 @@ export async function importReferenceData(
   const skippedItems = [];
   
   for (const item of referenceData) {
-    const mappedData = config.mapFields(item, currentUser.tenant, currentUser.user_id);
+    const itemId = item.id || item.priority_id || item.standard_status_id || item.status_id || item.type_id;
+    const resolution = conflictResolutions?.[itemId];
     
-    if (config.conflictCheck) {
+    if (resolution?.action === 'skip') {
+      skippedItems.push({
+        name: item.name || item.priority_name || item.type_name || item.service_type,
+        reason: 'Skipped by user'
+      });
+      continue;
+    }
+    
+    let mappedData = config.mapFields(item, currentUser.tenant, currentUser.user_id);
+    
+    // Apply conflict resolutions
+    if (resolution?.action === 'rename' && resolution.newName) {
+      const nameField = item.priority_name ? 'priority_name' : 'name';
+      mappedData[nameField] = resolution.newName;
+    }
+    
+    if (resolution?.action === 'reorder' && resolution.newOrder !== undefined) {
+      const orderField = dataType === 'priorities' ? 'order_number' : 'order_number';
+      mappedData[orderField] = resolution.newOrder;
+    }
+    
+    // Check for name conflict one more time after resolution
+    if (config.conflictCheck && !resolution) {
       const hasConflict = await config.conflictCheck(mappedData, currentUser.tenant);
       if (hasConflict) {
         skippedItems.push({
@@ -197,10 +325,33 @@ export async function importReferenceData(
       }
     }
     
-    const [savedItem] = await db(config.targetTable)
-      .insert(mappedData)
-      .returning('*');
-    importedItems.push(savedItem);
+    try {
+      const [savedItem] = await db(config.targetTable)
+        .insert(mappedData)
+        .returning('*');
+      importedItems.push(savedItem);
+    } catch (insertError: any) {
+      console.error('Error inserting item:', insertError);
+      
+      // Check if it's a duplicate order error
+      if (insertError.code === '23505' && insertError.constraint === 'unique_tenant_type_order') {
+        skippedItems.push({
+          name: item.name || item.priority_name || item.type_name || item.service_type,
+          reason: `Order number ${mappedData.order_number} is already in use`
+        });
+      } else if (insertError.code === '23505') {
+        // Other unique constraint violation
+        skippedItems.push({
+          name: item.name || item.priority_name || item.type_name || item.service_type,
+          reason: 'Already exists'
+        });
+      } else {
+        skippedItems.push({
+          name: item.name || item.priority_name || item.type_name || item.service_type,
+          reason: insertError.message || 'Unknown error'
+        });
+      }
+    }
   }
   
   return {
