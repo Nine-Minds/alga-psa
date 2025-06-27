@@ -73,6 +73,9 @@ const UsageMetricsTab = dynamic(() => import('./UsageMetricsTab'), {
     </div>
   </div>
 });
+
+// Flag to control visibility of advanced usage tabs and metrics
+const SHOW_USAGE_FEATURES = false;
 export default function BillingOverview() {
   const [currentTab, setCurrentTab] = useState('Overview');
   const [billingPlan, setBillingPlan] = useState<ICompanyBillingPlan | null>(null);
@@ -321,35 +324,37 @@ export default function BillingOverview() {
       });
     }
 
-    // Add Hours by Service tab (all users have access)
-    tabsArray.push({
-      label: 'Hours by Service',
-      content: (
-        <div id="hours-service-tab">
-          <HoursByServiceTab
-            hoursByService={hoursByService}
-            isHoursLoading={isHoursLoading}
-            dateRange={dateRange}
-            handleDateRangeChange={handleDateRangeChange}
-          />
-        </div>
-      ),
-    });
+    if (SHOW_USAGE_FEATURES) {
+      // Add Hours by Service tab
+      tabsArray.push({
+        label: 'Hours by Service',
+        content: (
+          <div id="hours-service-tab">
+            <HoursByServiceTab
+              hoursByService={hoursByService}
+              isHoursLoading={isHoursLoading}
+              dateRange={dateRange}
+              handleDateRangeChange={handleDateRangeChange}
+            />
+          </div>
+        ),
+      });
 
-    // Add Usage Metrics tab (all users have access)
-    tabsArray.push({
-      label: 'Usage Metrics',
-      content: (
-        <div id="usage-metrics-tab">
-          <UsageMetricsTab
-            usageMetrics={usageMetrics}
-            isUsageMetricsLoading={isUsageMetricsLoading}
-            dateRange={dateRange}
-            handleDateRangeChange={handleDateRangeChange}
-          />
-        </div>
-      ),
-    });
+      // Add Usage Metrics tab
+      tabsArray.push({
+        label: 'Usage Metrics',
+        content: (
+          <div id="usage-metrics-tab">
+            <UsageMetricsTab
+              usageMetrics={usageMetrics}
+              isUsageMetricsLoading={isUsageMetricsLoading}
+              dateRange={dateRange}
+              handleDateRangeChange={handleDateRangeChange}
+            />
+          </div>
+        ),
+      });
+    }
     
     return tabsArray;
   }, [
