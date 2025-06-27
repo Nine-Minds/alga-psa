@@ -70,7 +70,7 @@ export function ClientDashboard() {
       </div>
 
       {/* Metrics Overview */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
         <Card className="bg-white">
           <CardContent className="p-8">
             <div className="text-lg font-medium text-[rgb(var(--color-text-600))] truncate">
