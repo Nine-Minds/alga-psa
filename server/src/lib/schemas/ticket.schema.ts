@@ -87,6 +87,7 @@ export const ticketListItemSchema = baseTicketSchema.extend({
     entered_by: z.string().uuid().nullable(),
     status_name: z.string(),
     priority_name: z.string(),
+    priority_color: z.string().optional(),
     channel_name: z.string(),
     category_name: z.string(),
     entered_by_name: z.string(),

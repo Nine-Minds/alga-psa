@@ -1,10 +1,10 @@
 'use server'
 
-import { IUser, IChannel, ITicketStatus, IPriority, IStandardPriority, ICompany, IContact } from 'server/src/interfaces';
+import { IUser, IChannel, ITicketStatus, IPriority, ICompany, IContact } from 'server/src/interfaces';
 import { getAllUsers, getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getAllChannels } from 'server/src/lib/actions/channel-actions/channelActions';
 import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
-import { getAllPrioritiesWithStandard } from 'server/src/lib/actions/priorityActions';
+import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import { getAllCompanies, getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
 import { getContactsByCompany } from 'server/src/lib/actions/contact-actions/contactActions';
 
@@ -12,7 +12,7 @@ export interface TicketFormData {
   users: IUser[];
   channels: IChannel[];
   statuses: ITicketStatus[];
-  priorities: (IPriority | IStandardPriority)[];
+  priorities: IPriority[];
   companies: ICompany[];
   contacts?: IContact[];
   selectedCompany?: {
@@ -44,7 +44,7 @@ export async function getTicketFormData(prefilledCompanyId?: string): Promise<Ti
         console.error('Error fetching statuses:', error);
         return [];
       }),
-      getAllPrioritiesWithStandard('ticket').catch(error => {
+      getAllPriorities('ticket').catch(error => {
         console.error('Error fetching priorities:', error);
         return [];
       }),

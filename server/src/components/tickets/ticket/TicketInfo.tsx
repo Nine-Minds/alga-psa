@@ -9,6 +9,7 @@ import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { PrioritySelect } from '@/components/tickets/PrioritySelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
 import { TagManager } from 'server/src/components/tags';
@@ -274,8 +275,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             </div>
             <div>
               <h5 className="font-bold mb-2">Priority</h5>
-              <CustomSelect
-                value={ticket.priority_id || ''}
+              <PrioritySelect
+                value={ticket.priority_id}
                 options={priorityOptions}
                 onValueChange={(value) => onSelectChange('priority_id', value)}
                 customStyles={customStyles}

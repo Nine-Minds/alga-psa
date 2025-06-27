@@ -28,7 +28,7 @@ import { IChannel } from 'server/src/interfaces';
 import { getTicketCategories } from 'server/src/lib/actions/ticketCategoryActions';
 import { getAllChannels } from 'server/src/lib/actions/channel-actions/channelActions';
 import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
-import { getAllPrioritiesWithStandard } from 'server/src/lib/actions/priorityActions';
+import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import TicketSelect from './TicketSelect';
 
@@ -177,7 +177,7 @@ export default function TaskTicketLinks({
         getTicketCategories().catch(() => []),
         getAllChannels().catch(() => []),
         getTicketStatuses().catch(() => []),
-        getAllPrioritiesWithStandard('ticket').catch(() => [])
+        getAllPriorities('ticket').catch(() => [])
       ]);
 
       setCategories(fetchedCategories || []);

@@ -3,11 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { IProjectPhase, IProjectTask, ITaskChecklistItem, ProjectStatus, IProjectTicketLinkWithDetails, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
+import { IPriority } from 'server/src/interfaces/ticket.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import AvatarIcon from 'server/src/components/ui/AvatarIcon';
 import { getProjectTreeData, getProjectDetails } from 'server/src/lib/actions/project-actions/projectActions';
-import { getAllPrioritiesWithStandard } from 'server/src/lib/actions/priorityActions';
+import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import {
   updateTaskWithChecklist,
   addTaskToPhase,
@@ -42,6 +42,7 @@ import TaskTicketLinks from './TaskTicketLinks';
 import { TaskDependencies } from './TaskDependencies';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from 'server/src/components/ui/TreeSelect';
+import { PrioritySelect } from 'server/src/components/tickets/PrioritySelect';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { useDrawer } from 'server/src/context/DrawerContext';
 import { IWorkItem, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
@@ -122,7 +123,7 @@ export default function TaskForm({
     additionalAssigneeCount: number;
     ticketLinkCount: number;
   } | null>(null);
-  const [priorities, setPriorities] = useState<(IPriority | IStandardPriority)[]>([]);
+  const [priorities, setPriorities] = useState<IPriority[]>([]);
   const [selectedPriorityId, setSelectedPriorityId] = useState<string | null>(task?.priority_id ?? null);
   const [taskDependencies, setTaskDependencies] = useState<{
     predecessors: IProjectTaskDependency[];
@@ -148,7 +149,7 @@ export default function TaskForm({
         }
 
         // Fetch priorities for project tasks
-        const allPriorities = await getAllPrioritiesWithStandard('project_task');
+        const allPriorities = await getAllPriorities('project_task');
         setPriorities(allPriorities);
         
         // Fetch task types
@@ -908,13 +909,15 @@ export default function TaskForm({
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                    <CustomSelect
-                      value={selectedPriorityId || ''}
-                      options={priorities.map(p => ({
-                        value: p.priority_id,
-                        label: p.priority_name,
-                        color: p.color
-                      }))}
+                    <PrioritySelect
+                      value={selectedPriorityId}
+                      options={priorities
+                        .sort((a, b) => a.order_number - b.order_number)
+                        .map(p => ({
+                          value: p.priority_id,
+                          label: p.priority_name,
+                          color: p.color
+                        }))}
                       onValueChange={(value) => setSelectedPriorityId(value || null)}
                       placeholder="Select priority"
                       className="w-full"

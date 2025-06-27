@@ -15,6 +15,8 @@ interface ColorPickerProps {
   currentTextColor?: string | null;
   onSave: (backgroundColor: string | null, textColor: string | null) => void;
   trigger: React.ReactNode;
+  showTextColor?: boolean; // Make text color optional
+  previewType?: 'tag' | 'circle'; // Choose preview style
 }
 
 const PRESET_COLORS = [
@@ -46,6 +48,8 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
   currentTextColor,
   onSave,
   trigger,
+  showTextColor = true,
+  previewType = 'tag',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [backgroundColor, setBackgroundColor] = useState(currentBackgroundColor || '');
@@ -83,13 +87,13 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
   };
 
   const handleSave = () => {
-    if (!validateColor(backgroundColor) || !validateColor(textColor)) {
+    if (!validateColor(backgroundColor) || (showTextColor && !validateColor(textColor))) {
       return;
     }
     
     onSave(
       backgroundColor || null,
-      textColor || null
+      showTextColor ? (textColor || null) : null
     );
     setIsOpen(false);
   };
@@ -103,9 +107,11 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
 
   const handlePresetClick = (preset: { background: string; text: string }) => {
     setBackgroundColor(preset.background);
-    setTextColor(preset.text);
+    if (showTextColor) {
+      setTextColor(preset.text);
+      setTextError('');
+    }
     setBackgroundError('');
-    setTextError('');
   };
 
   return (
@@ -114,33 +120,51 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
       <PopoverContent
         className="w-80 p-4 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
         sideOffset={5}
+        onInteractOutside={(e) => {
+          // Prevent closing when clicking inside the popover
+          const target = e.target as HTMLElement;
+          if (target.closest('[role="dialog"]')) {
+            e.preventDefault();
+          }
+        }}
       >
         <div className="space-y-4">
-          <h3 className="text-sm font-semibold text-gray-900">Customize Tag Colors</h3>
+          <h3 className="text-sm font-semibold text-gray-900">
+            {showTextColor ? 'Customize Tag Colors' : 'Choose Color'}
+          </h3>
           
           {/* Preset colors */}
           <div>
             <Label className="text-xs text-gray-700 mb-2 block">Quick Select</Label>
             <div className="grid grid-cols-6 gap-2">
               {PRESET_COLORS.map((preset, index) => {
-                const isSelected = backgroundColor === preset.background && textColor === preset.text;
+                const isSelected = showTextColor 
+                  ? backgroundColor === preset.background && textColor === preset.text
+                  : backgroundColor === preset.background;
                 return (
                   <button
                     key={index}
-                    className={`w-full h-8 rounded border-2 hover:border-gray-400 transition-colors ${
+                    type="button"
+                    className={`w-full h-8 ${showTextColor ? 'rounded' : 'rounded-full'} border-2 hover:border-gray-400 transition-colors ${
                       isSelected ? 'border-gray-600 ring-2 ring-gray-300' : 'border-gray-300'
                     }`}
                     style={{ backgroundColor: preset.background }}
-                    onClick={() => handlePresetClick(preset)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handlePresetClick(preset);
+                    }}
                     aria-label={`Select preset color ${index + 1}`}
-                    title={`Background: ${preset.background}, Text: ${preset.text}`}
+                    title={showTextColor ? `Background: ${preset.background}, Text: ${preset.text}` : preset.background}
                   >
-                    <span
-                      className="text-xs font-medium"
-                      style={{ color: preset.text }}
-                    >
-                      Aa
-                    </span>
+                    {showTextColor && (
+                      <span
+                        className="text-xs font-medium"
+                        style={{ color: preset.text }}
+                      >
+                        Aa
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -174,45 +198,58 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
               )}
             </div>
 
-            <div>
-              <Label htmlFor="text-color" className="text-xs text-gray-700">
-                Text Color
-              </Label>
-              <div className="flex gap-2 mt-1">
-                <Input
-                  id="text-color"
-                  value={textColor}
-                  onChange={(e) => handleTextChange(e.target.value)}
-                  placeholder="#FFFFFF"
-                  className="flex-1"
-                />
-                <input
-                  type="color"
-                  value={textColor || '#000000'}
-                  onChange={(e) => handleTextChange(e.target.value)}
-                  className="w-10 h-10 rounded border border-gray-300 cursor-pointer"
-                  title="Pick text color"
-                />
+            {showTextColor && (
+              <div>
+                <Label htmlFor="text-color" className="text-xs text-gray-700">
+                  Text Color
+                </Label>
+                <div className="flex gap-2 mt-1">
+                  <Input
+                    id="text-color"
+                    value={textColor}
+                    onChange={(e) => handleTextChange(e.target.value)}
+                    placeholder="#FFFFFF"
+                    className="flex-1"
+                  />
+                  <input
+                    type="color"
+                    value={textColor || '#000000'}
+                    onChange={(e) => handleTextChange(e.target.value)}
+                    className="w-10 h-10 rounded border border-gray-300 cursor-pointer"
+                    title="Pick text color"
+                  />
+                </div>
+                {textError && (
+                  <p className="text-xs text-red-600 mt-1">{textError}</p>
+                )}
               </div>
-              {textError && (
-                <p className="text-xs text-red-600 mt-1">{textError}</p>
-              )}
-            </div>
+            )}
           </div>
 
           {/* Preview */}
-          {(backgroundColor || textColor) && validateColor(backgroundColor) && validateColor(textColor) && (
+          {(backgroundColor || (!showTextColor || textColor)) && 
+           validateColor(backgroundColor) && 
+           (!showTextColor || validateColor(textColor)) && (
             <div>
               <Label className="text-xs text-gray-700 mb-2 block">Preview</Label>
-              <div
-                className="px-3 py-1 rounded-full inline-block"
-                style={{
-                  backgroundColor: backgroundColor || '#E5E7EB',
-                  color: textColor || '#374151',
-                }}
-              >
-                <span className="text-sm">Sample Tag</span>
-              </div>
+              {previewType === 'circle' ? (
+                <div className="flex justify-center">
+                  <div
+                    className="w-12 h-12 rounded-full border-2 border-gray-300"
+                    style={{ backgroundColor: backgroundColor || '#E5E7EB' }}
+                  />
+                </div>
+              ) : (
+                <div
+                  className="px-3 py-1 rounded-full inline-block"
+                  style={{
+                    backgroundColor: backgroundColor || '#E5E7EB',
+                    color: textColor || '#374151',
+                  }}
+                >
+                  <span className="text-sm">Sample Tag</span>
+                </div>
+              )}
             </div>
           )}
 
