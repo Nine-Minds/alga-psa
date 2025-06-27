@@ -13,6 +13,9 @@ import type { ClientBucketUsageResult } from 'server/src/lib/actions/client-port
 import { Skeleton } from 'server/src/components/ui/Skeleton';
 import PlanDetailsDialog from './PlanDetailsDialog';
 
+// Flag to control visibility of bucket usage metrics
+const SHOW_USAGE_FEATURES = false;
+
 interface BillingOverviewTabProps {
   billingPlan: ICompanyBillingPlan | null;
   invoices: InvoiceViewModel[];
@@ -115,7 +118,8 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
           {invoiceCard}
         </div>
 
-        {/* Enhanced Bucket Usage Visualization - Client-side only rendering */}
+        {/* Enhanced Bucket Usage Visualization - optionally hidden */}
+        {SHOW_USAGE_FEATURES && (
         <Card id="bucket-usage-card" className="p-6">
           <h3 className="text-lg font-semibold mb-4">Bucket Usage</h3>
           {!isClient ? (
@@ -170,6 +174,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
             </div>
           )}
         </Card>
+        )}
       </div>
 
       {/* Plan Details Dialog */}
