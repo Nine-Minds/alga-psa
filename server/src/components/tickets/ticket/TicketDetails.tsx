@@ -225,6 +225,27 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         initialTicket.title || '',
         userId || ''
     );
+
+    // Restore timer if an open interval exists (e.g., when opening in a new tab)
+    useEffect(() => {
+        if (!initialTicket.ticket_id || !userId) return;
+
+        const restoreTimer = async () => {
+            try {
+                const openInterval = await intervalService.getOpenInterval(initialTicket.ticket_id!, userId);
+                if (openInterval && openInterval.startTime) {
+                    const start = new Date(openInterval.startTime);
+                    const elapsed = Math.floor((Date.now() - start.getTime()) / 1000);
+                    setElapsedTime(elapsed);
+                    setIsRunning(true);
+                }
+            } catch (error) {
+                console.error('Error restoring timer from open interval:', error);
+            }
+        };
+
+        restoreTimer();
+    }, [initialTicket.ticket_id, userId, intervalService]);
     
     // Function to close the current interval before navigation
     // Enhanced function to close the interval - will find and close any open interval for this ticket
