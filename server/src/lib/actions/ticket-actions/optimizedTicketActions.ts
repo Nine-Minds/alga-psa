@@ -186,6 +186,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
           tenant: tenant,
           status_type: 'ticket'
         })
+        .orderBy('order_number', 'asc')
         .orderBy('name', 'asc'),
       
       // Channels
@@ -759,6 +760,7 @@ export async function getTicketFormOptions(user: IUser) {
           tenant: tenant,
           status_type: 'ticket'  // Changed from item_type to status_type
         })
+        .orderBy('order_number', 'asc')
         .orderBy('name', 'asc'),
       
       // Priorities - fetch only tenant-specific ticket priorities
