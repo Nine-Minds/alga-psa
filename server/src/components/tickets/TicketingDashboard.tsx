@@ -8,6 +8,7 @@ import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { QuickAddTicket } from './QuickAddTicket';
 import { CategoryPicker } from './CategoryPicker';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
+import { PrioritySelect } from './PrioritySelect';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
@@ -252,6 +253,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     {
       title: 'Priority',
       dataIndex: 'priority_name',
+      render: (value: string, record: ITicketListItem) => (
+        <div className="flex items-center gap-2">
+          <div 
+            className="w-3 h-3 rounded-full border border-gray-300" 
+            style={{ backgroundColor: record.priority_color || '#6B7280' }}
+          />
+          <span>{value}</span>
+        </div>
+      ),
     },
     {
       title: 'Channel',
@@ -527,8 +537,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               onValueChange={(value) => setSelectedStatus(value)}
               placeholder="Select Status"
             />
-            <CustomSelect
-              data-automation-id={`${id}-priority-select`}
+            <PrioritySelect
+              id={`${id}-priority-select`}
               options={priorityOptions}
               value={selectedPriority}
               onValueChange={(value) => setSelectedPriority(value)}

@@ -7,7 +7,7 @@ import Spinner from 'server/src/components/ui/Spinner';
 import { format } from 'date-fns';
 import { getClientTickets, updateTicketStatus } from 'server/src/lib/actions/client-portal-actions/client-tickets';
 import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
-import { getAllPrioritiesWithStandard } from 'server/src/lib/actions/priorityActions';
+import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import { getTicketCategories } from 'server/src/lib/actions/ticketCategoryActions';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ITicketListItem, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
@@ -50,7 +50,7 @@ export function TicketList() {
       try {
         const [statuses, priorities, categories] = await Promise.all([
           getTicketStatuses(),
-          getAllPrioritiesWithStandard('ticket'),
+          getAllPriorities('ticket'),
           getTicketCategories()
         ]);
 
@@ -270,8 +270,14 @@ export function TicketList() {
       title: 'Priority',
       dataIndex: 'priority_name',
       width: '15%',
-      render: (value: string) => (
-        <div className="capitalize">{value}</div>
+      render: (value: string, record: ITicketListItem) => (
+        <div className="flex items-center gap-2">
+          <div 
+            className="w-3 h-3 rounded-full border border-gray-300" 
+            style={{ backgroundColor: record.priority_color || '#6B7280' }}
+          />
+          <span className="capitalize">{value}</span>
+        </div>
       ),
     },
     {

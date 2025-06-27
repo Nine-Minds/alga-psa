@@ -4,10 +4,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, X, Edit2, ChevronRight, ChevronDown, Network, Search, MoreVertical } from "lucide-react"; 
+import { Plus, X, Edit2, ChevronRight, ChevronDown, Network, Search, MoreVertical, Palette } from "lucide-react";
+import ColorPicker from 'server/src/components/ui/ColorPicker';
 import { getAllChannels, createChannel, deleteChannel, updateChannel } from 'server/src/lib/actions/channel-actions/channelActions';
 import { getStatuses, createStatus, deleteStatus, updateStatus } from 'server/src/lib/actions/status-actions/statusActions';
 import { getAllPriorities, getAllPrioritiesWithStandard, createPriority, deletePriority, updatePriority } from 'server/src/lib/actions/priorityActions';
+import { importReferenceData, getAvailableReferenceData } from 'server/src/lib/actions/referenceDataActions';
 import { getTicketCategories, createTicketCategory, deleteTicketCategory, updateTicketCategory } from 'server/src/lib/actions/ticketCategoryActions';
 import { IChannel } from 'server/src/interfaces/channel.interface';
 import { IStatus, ItemType } from 'server/src/interfaces/status.interface';
@@ -272,6 +274,10 @@ const TicketingSettings = (): JSX.Element => {
   const [selectedPriorityType, setSelectedPriorityType] = useState<'ticket' | 'project_task'>('ticket');
   const [showPriorityDialog, setShowPriorityDialog] = useState(false);
   const [editingPriority, setEditingPriority] = useState<IPriority | null>(null);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [availableReferencePriorities, setAvailableReferencePriorities] = useState<IStandardPriority[]>([]);
+  const [selectedImportPriorities, setSelectedImportPriorities] = useState<string[]>([]);
+  const [priorityColor, setPriorityColor] = useState('#6B7280');
 
   useEffect(() => {
     const initUser = async () => {
@@ -289,7 +295,7 @@ const TicketingSettings = (): JSX.Element => {
         const [fetchedChannels, fetchedStatuses, fetchedPriorities, fetchedCategories] = await Promise.all([
           getAllChannels(true),
           getStatuses(selectedStatusType),
-          getAllPrioritiesWithStandard(),
+          getAllPriorities(),
           getTicketCategories()
         ]);
         setChannels(fetchedChannels);
@@ -1131,11 +1137,11 @@ const TicketingSettings = (): JSX.Element => {
               />
             </div>
             
-            {/* Info box about standard priorities */}
+            {/* Info box about priorities */}
             <div className="bg-blue-50 p-4 rounded-md mb-4">
               <p className="text-sm text-blue-700">
-                <strong>Standard Priorities:</strong> System-defined priorities cannot be edited or deleted. 
-                You can create custom priorities specific to your organization that will appear alongside standard ones.
+                <strong>Priority Management:</strong> Create custom priorities for your organization or import from standard templates. 
+                All priorities can be edited or deleted to fit your workflow.
               </p>
             </div>
 
@@ -1146,60 +1152,70 @@ const TicketingSettings = (): JSX.Element => {
                 dataIndex: 'action',
                 width: '5%',
                 render: (_, item) => (
-                  'tenant' in item ? (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          className="h-8 w-8 p-0"
-                          id={`priority-actions-menu-${item.priority_id}`}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <span className="sr-only">Open menu</span>
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          id={`edit-priority-${item.priority_id}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingPriority(item as IPriority);
-                            setShowPriorityDialog(true);
-                          }}
-                        >
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          id={`delete-priority-${item.priority_id}`}
-                          className="text-red-600 focus:text-red-600"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeletePriorityRequestWrapper(item.priority_id);
-                          }}
-                        >
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  ) : (
-                    <span className="text-xs text-gray-400">System</span>
-                  )
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        className="h-8 w-8 p-0"
+                        id={`priority-actions-menu-${item.priority_id}`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <span className="sr-only">Open menu</span>
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        id={`edit-priority-${item.priority_id}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingPriority(item as IPriority);
+                          setPriorityColor(item.color || '#6B7280');
+                          setShowPriorityDialog(true);
+                        }}
+                      >
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        id={`delete-priority-${item.priority_id}`}
+                        className="text-red-600 focus:text-red-600"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeletePriorityRequestWrapper(item.priority_id);
+                        }}
+                      >
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 ),
               }]}
               pagination={false}
             />
             
-            <div className="mt-4">
+            <div className="mt-4 flex gap-2">
               <Button 
                 id='add-priority-button' 
                 onClick={() => {
                   setEditingPriority(null);
+                  setPriorityColor('#6B7280');
                   setShowPriorityDialog(true);
                 }} 
                 className="bg-primary-500 text-white hover:bg-primary-600"
               >
                 <Plus className="h-4 w-4 mr-2" /> Add Priority
+              </Button>
+              <Button 
+                id='import-priorities-button' 
+                onClick={async () => {
+                  const available = await getAvailableReferenceData('priorities', { item_type: selectedPriorityType });
+                  setAvailableReferencePriorities(available);
+                  setSelectedImportPriorities([]);
+                  setShowImportDialog(true);
+                }} 
+                variant="outline"
+              >
+                Import from Standard Types
               </Button>
             </div>
           </div>
@@ -1372,31 +1388,31 @@ const TicketingSettings = (): JSX.Element => {
               const formData = new FormData(e.currentTarget);
               const name = formData.get('name') as string;
               const level = parseInt(formData.get('level') as string);
-              const color = formData.get('color') as string;
               
               if (editingPriority) {
                 await updatePriorityItem({
                   ...editingPriority,
                   priority_name: name,
                   order_number: level,
-                  color: color
+                  color: priorityColor
                 });
               } else {
                 await createPriority({
                   priority_name: name,
                   order_number: level,
-                  color: color,
+                  color: priorityColor,
                   item_type: selectedPriorityType,
                   created_by: userId,
                   created_at: new Date()
                 });
                 // Refresh priorities list
-                const updatedPriorities = await getAllPrioritiesWithStandard();
+                const updatedPriorities = await getAllPriorities();
                 setPriorities(updatedPriorities);
               }
               
               setShowPriorityDialog(false);
               setEditingPriority(null);
+              setPriorityColor('#6B7280');
             }}>
               <div className="space-y-4">
                 <div>
@@ -1430,19 +1446,33 @@ const TicketingSettings = (): JSX.Element => {
                     Color
                   </label>
                   <div className="flex items-center gap-2">
-                    <Input
-                      name="color"
-                      type="color"
-                      defaultValue={editingPriority?.color || '#6B7280'}
-                      className="h-10 w-20"
-                      required
+                    <div 
+                      className="w-10 h-10 rounded border border-gray-300" 
+                      style={{ backgroundColor: priorityColor }}
                     />
-                    <Input
-                      type="text"
-                      value={editingPriority?.color || '#6B7280'}
-                      readOnly
-                      className="flex-1"
+                    <ColorPicker
+                      currentBackgroundColor={priorityColor}
+                      currentTextColor="#FFFFFF"
+                      onSave={(backgroundColor) => {
+                        if (backgroundColor) {
+                          setPriorityColor(backgroundColor);
+                        }
+                      }}
+                      showTextColor={false}
+                      previewType="circle"
+                      trigger={
+                        <Button
+                          id="priority-color-picker-btn"
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-2">
+                          <Palette className="h-4 w-4" />
+                          <span>Choose Color</span>
+                        </Button>
+                      }
                     />
+                    <span className="text-sm text-gray-600">{priorityColor}</span>
                   </div>
                 </div>
               </div>
@@ -1455,6 +1485,7 @@ const TicketingSettings = (): JSX.Element => {
                   onClick={() => {
                     setShowPriorityDialog(false);
                     setEditingPriority(null);
+                    setPriorityColor('#6B7280');
                   }}
                 >
                   Cancel
@@ -1468,6 +1499,130 @@ const TicketingSettings = (): JSX.Element => {
                 </Button>
               </DialogFooter>
             </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Priorities Dialog */}
+      <Dialog
+        isOpen={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        title="Import Standard Priorities"
+        className="max-w-lg"
+        id="import-priorities-dialog"
+      >
+        <DialogContent>
+          {availableReferencePriorities.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">All standard priorities have already been imported for {selectedPriorityType === 'ticket' ? 'tickets' : 'project tasks'}.</p>
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm text-gray-600 mb-4">
+                Select the standard priorities you want to import. These will be copied to your organization's priorities.
+              </p>
+              
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {availableReferencePriorities.map((priority) => (
+                  <div
+                    key={priority.priority_id}
+                    className="flex items-center p-3 border rounded-lg hover:bg-gray-50"
+                  >
+                    <input
+                      type="checkbox"
+                      id={`import-priority-${priority.priority_id}`}
+                      checked={selectedImportPriorities.includes(priority.priority_id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedImportPriorities([...selectedImportPriorities, priority.priority_id]);
+                        } else {
+                          setSelectedImportPriorities(selectedImportPriorities.filter(id => id !== priority.priority_id));
+                        }
+                      }}
+                      className="mr-3"
+                    />
+                    <label
+                      htmlFor={`import-priority-${priority.priority_id}`}
+                      className="flex-1 flex items-center justify-between cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-4 h-4 rounded"
+                          style={{ backgroundColor: priority.color }}
+                        />
+                        <span className="font-medium">{priority.priority_name}</span>
+                      </div>
+                      <span className="text-sm text-gray-500">Order: {priority.order_number}</span>
+                    </label>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="mt-4 flex items-center gap-2">
+                <Button
+                  id="import-priorities-select-all"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setSelectedImportPriorities(availableReferencePriorities.map(p => p.priority_id))}
+                >
+                  Select All
+                </Button>
+                <Button
+                  id="import-priorities-clear-selection"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setSelectedImportPriorities([])}
+                >
+                  Clear Selection
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button
+              id="cancel-import-dialog"
+              variant="outline"
+              onClick={() => {
+                setShowImportDialog(false);
+                setSelectedImportPriorities([]);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              id="import-selected-priorities"
+              variant="default"
+              disabled={selectedImportPriorities.length === 0}
+              onClick={async () => {
+                try {
+                  const result = await importReferenceData(
+                    'priorities',
+                    selectedImportPriorities,
+                    { item_type: selectedPriorityType }
+                  );
+                  
+                  if (result.imported.length > 0) {
+                    toast.success(`Successfully imported ${result.imported.length} priorities`);
+                    // Refresh priorities list
+                    const updatedPriorities = await getAllPriorities();
+                    setPriorities(updatedPriorities);
+                  }
+                  
+                  if (result.skipped.length > 0) {
+                    toast.error(`Skipped ${result.skipped.length} priorities (already exist)`);
+                  }
+                  
+                  setShowImportDialog(false);
+                  setSelectedImportPriorities([]);
+                } catch (error) {
+                  console.error('Error importing priorities:', error);
+                  toast.error('Failed to import priorities');
+                }
+              }}
+            >
+              Import ({selectedImportPriorities.length})
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

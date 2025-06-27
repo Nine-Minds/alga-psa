@@ -15,30 +15,10 @@ class Priority {
     return query;
   }
 
-  static async getAllWithStandard(knexOrTrx: Knex | Knex.Transaction, itemType?: 'ticket' | 'project_task'): Promise<(IPriority | IStandardPriority)[]> {
-    const tenant = await getCurrentTenantId();
-    if (!tenant) {
-      throw new Error('Tenant context is required for priority operations');
-    }
-    
-    // Get standard priorities
-    const standardQuery = knexOrTrx('standard_priorities').select('*');
-    if (itemType) {
-      standardQuery.where({ item_type: itemType });
-    }
-    standardQuery.orderBy('order_number', 'asc');
-    const standardPriorities = await standardQuery;
-
-    // Get tenant-specific priorities
-    const tenantQuery = knexOrTrx('priorities').where({ tenant });
-    if (itemType) {
-      tenantQuery.where({ item_type: itemType });
-    }
-    tenantQuery.orderBy('order_number', 'asc');
-    const tenantPriorities = await tenantQuery;
-    
-    // Combine both, standard first
-    return [...standardPriorities, ...tenantPriorities];
+  static async getAllWithStandard(knexOrTrx: Knex | Knex.Transaction, itemType?: 'ticket' | 'project_task'): Promise<IPriority[]> {
+    // This method is deprecated. Standard priorities should be imported via referenceDataActions.
+    // Now it just returns tenant-specific priorities.
+    return this.getAll(knexOrTrx, itemType);
   }
 
   static async get(knexOrTrx: Knex | Knex.Transaction, id: string): Promise<IPriority | null> {
