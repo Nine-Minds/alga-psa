@@ -48,6 +48,7 @@ export function EmailProviderConfiguration({
   const [error, setError] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<EmailProvider | null>(null);
+  const [activeTab, setActiveTab] = useState<'microsoft' | 'gmail'>('microsoft');
 
   // Load existing providers on component mount
   useEffect(() => {
@@ -176,7 +177,7 @@ export function EmailProviderConfiguration({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs value="microsoft" onValueChange={() => {}} className="w-full">
+            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'microsoft' | 'gmail')} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="microsoft">Microsoft 365</TabsTrigger>
                 <TabsTrigger value="gmail">Gmail</TabsTrigger>

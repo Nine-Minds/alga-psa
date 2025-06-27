@@ -24,6 +24,7 @@ import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 // Extensions are only available in Enterprise Edition
 import { EmailSettings } from '../../admin/EmailSettings';
+import { EmailProviderConfigurationWrapper } from '../../EmailProviderConfigurationWrapper';
 // Removed import: import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
 // Revert to standard function component
@@ -178,8 +179,25 @@ const SettingsPage = (): JSX.Element =>  {
     },
     { // Add the new Integrations tab definition
       label: "Integrations",
-      // Render the QBO settings client component directly
-      content: <QboIntegrationSettings />,
+      content: (
+        <div className="space-y-6">
+          {/* QuickBooks Online Integration */}
+          <QboIntegrationSettings />
+          
+          {/* Inbound Email Integration */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Inbound Email Integration</CardTitle>
+              <CardDescription>
+                Configure email providers to automatically process incoming emails into tickets
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EmailProviderConfigurationWrapper />
+            </CardContent>
+          </Card>
+        </div>
+      ),
     }
   ];
 
