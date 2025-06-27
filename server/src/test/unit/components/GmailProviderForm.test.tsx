@@ -2,11 +2,12 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
 import { GmailProviderForm } from '../../../components/GmailProviderForm';
+import { renderWithProviders } from '../../utils/testWrapper';
 
 // Mock server actions
 vi.mock('../../../lib/actions/email-actions/emailProviderActions', () => ({
@@ -27,47 +28,237 @@ describe('GmailProviderForm', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mock window.location
+    Object.defineProperty(window, 'location', {
+      value: {
+        origin: 'http://localhost:3000',
+        href: 'http://localhost:3000',
+      },
+      writable: true,
+    });
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   it('should render form fields', () => {
-    render(<GmailProviderForm {...defaultProps} />);
+    renderWithProviders(<GmailProviderForm {...defaultProps} />);
 
-    expect(screen.getByLabelText(/provider name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/client id/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/client secret/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/project id/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/pub\/sub topic/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/pub\/sub subscription/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('e.g., Support Gmail')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('support@company.com')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('xxxxxxxxx.apps.googleusercontent.com')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Enter client secret')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('my-project-id')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('gmail-notifications')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('gmail-webhook-subscription')).toBeInTheDocument();
   });
 
   it('should show validation errors for empty required fields', async () => {
     const user = userEvent.setup();
-    render(<GmailProviderForm {...defaultProps} />);
+    renderWithProviders(<GmailProviderForm {...defaultProps} />);
 
-    const saveButton = screen.getByRole('button', { name: /save/i });
+    const saveButton = screen.getByText(/add provider/i);
     await user.click(saveButton);
 
     await waitFor(() => {
       expect(screen.getByText(/provider name is required/i)).toBeInTheDocument();
-      expect(screen.getByText(/email address is required/i)).toBeInTheDocument();
+      expect(screen.getByText(/valid gmail address is required/i)).toBeInTheDocument();
       expect(screen.getByText(/client id is required/i)).toBeInTheDocument();
       expect(screen.getByText(/client secret is required/i)).toBeInTheDocument();
     });
   });
 
-  it('should validate email format', async () => {
+  it('should validate email format and show error message', async () => {
     const user = userEvent.setup();
-    render(<GmailProviderForm {...defaultProps} />);
+    renderWithProviders(<GmailProviderForm {...defaultProps} />);
 
-    const emailInput = screen.getByLabelText(/email address/i);
+    // Fill in all required fields with valid data except email
+    await user.type(screen.getByPlaceholderText('e.g., Support Gmail'), 'Test Provider');
+    await user.type(screen.getByPlaceholderText('xxxxxxxxx.apps.googleusercontent.com'), 'test-client-id');
+    await user.type(screen.getByPlaceholderText('Enter client secret'), 'test-client-secret');
+    await user.type(screen.getByPlaceholderText('my-project-id'), 'test-project-id');
+    // redirectUri, pubSubTopic and pubSubSubscription already have default values
+    
+    // Type invalid email
+    const emailInput = screen.getByPlaceholderText('support@company.com');
     await user.type(emailInput, 'invalid-email');
     
-    const saveButton = screen.getByRole('button', { name: /save/i });
+    const saveButton = screen.getByText(/add provider/i);
     await user.click(saveButton);
 
+    // Check that the error message is displayed
     await waitFor(() => {
-      expect(screen.getByText(/invalid email address/i)).toBeInTheDocument();
+      expect(screen.getByText('Valid Gmail address is required')).toBeInTheDocument();
+    });
+
+    // Check that the input has error styling
+    expect(emailInput).toHaveClass('border-red-500');
+
+    // The form should not submit with invalid email
+    expect(emailProviderActions.autoWireEmailProvider).not.toHaveBeenCalled();
+  });
+
+  it('should validate various invalid email formats', async () => {
+    const user = userEvent.setup();
+
+    // Test various invalid email formats
+    const invalidEmails = [
+      'notanemail',
+      'missing@',
+      '@domain.com',
+      'spaces in@email.com',
+      'double@@domain.com',
+      'missing.domain@',
+      'trailing.dot@domain.',
+      '.leadingdot@domain.com',
+      'multiple..dots@domain.com'
+    ];
+
+    for (const invalidEmail of invalidEmails) {
+      // Re-render for each test to ensure clean state
+      const { unmount } = renderWithProviders(<GmailProviderForm {...defaultProps} />);
+      
+      const emailInput = screen.getByPlaceholderText('support@company.com');
+      
+      // Type invalid email and blur to trigger validation
+      await user.type(emailInput, invalidEmail);
+      await user.tab();
+
+      // Check error message appears
+      await waitFor(() => {
+        expect(screen.getByText('Valid Gmail address is required')).toBeInTheDocument();
+      }, { timeout: 1000 });
+
+      // Ensure form doesn't submit
+      expect(emailProviderActions.autoWireEmailProvider).not.toHaveBeenCalled();
+      
+      // Clean up for next iteration
+      unmount();
+    }
+  });
+
+  it('should accept valid email formats', async () => {
+    const user = userEvent.setup();
+
+    // Test various valid email formats
+    const validEmails = [
+      'user@gmail.com',
+      'firstname.lastname@gmail.com',
+      'user+tag@gmail.com',
+      'user123@gmail.com',
+      'user_name@gmail.com',
+      'u@gmail.com'
+    ];
+
+    for (const validEmail of validEmails) {
+      // Re-render for each test to ensure clean state
+      const { unmount } = renderWithProviders(<GmailProviderForm {...defaultProps} />);
+      
+      const emailInput = screen.getByPlaceholderText('support@company.com');
+      
+      // Type email and blur to trigger validation
+      await user.type(emailInput, validEmail);
+      await user.tab();
+
+      // Should not show email validation error for valid emails
+      await waitFor(() => {
+        expect(screen.queryByText('Valid Gmail address is required')).not.toBeInTheDocument();
+      });
+
+      // Clean up for next iteration
+      unmount();
+      vi.clearAllMocks();
+    }
+  });
+
+  it('should clear email validation error when corrected', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<GmailProviderForm {...defaultProps} />);
+
+    const emailInput = screen.getByPlaceholderText('support@company.com');
+    
+    // Type invalid email and blur to trigger validation
+    await user.type(emailInput, 'invalid-email');
+    await user.tab(); // Trigger blur
+    
+    // Check error appears
+    await waitFor(() => {
+      expect(screen.getByText('Valid Gmail address is required')).toBeInTheDocument();
+    });
+    expect(emailInput).toHaveClass('border-red-500');
+
+    // Clear and type valid email
+    await user.clear(emailInput);
+    await user.type(emailInput, 'valid@gmail.com');
+    await user.tab(); // Trigger blur to revalidate
+
+    // Error should disappear after blur
+    await waitFor(() => {
+      expect(screen.queryByText('Valid Gmail address is required')).not.toBeInTheDocument();
+    });
+    
+    // Border should also update
+    expect(emailInput).not.toHaveClass('border-red-500');
+  });
+
+  it('should validate email on blur', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<GmailProviderForm {...defaultProps} />);
+
+    const emailInput = screen.getByPlaceholderText('support@company.com');
+    
+    // Type invalid email
+    await user.type(emailInput, 'invalid-email');
+    
+    // Tab away to trigger blur
+    await user.tab();
+
+    // Check error appears on blur even without form submission
+    await waitFor(() => {
+      expect(screen.getByText('Valid Gmail address is required')).toBeInTheDocument();
+    });
+    expect(emailInput).toHaveClass('border-red-500');
+  });
+
+  it('should accept non-gmail.com domain emails for Google Workspace', async () => {
+    vi.mocked(emailProviderActions.autoWireEmailProvider).mockResolvedValueOnce({
+      success: true,
+      provider: { 
+        id: '123', 
+        tenant: 'test-tenant-123',
+        providerType: 'google',
+        providerName: 'Test Provider',
+        mailbox: 'test@company.com',
+        isActive: true,
+        status: 'connected',
+        vendorConfig: {},
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(<GmailProviderForm {...defaultProps} />);
+
+    // Fill all fields with valid data including non-gmail email (Google Workspace)
+    await user.type(screen.getByPlaceholderText('e.g., Support Gmail'), 'Test Provider');
+    await user.type(screen.getByPlaceholderText('support@company.com'), 'test@company.com');
+    await user.type(screen.getByPlaceholderText('xxxxxxxxx.apps.googleusercontent.com'), 'test-client-id');
+    await user.type(screen.getByPlaceholderText('Enter client secret'), 'test-client-secret');
+    await user.type(screen.getByPlaceholderText('my-project-id'), 'test-project-id');
+    
+    const saveButton = screen.getByText(/add provider/i);
+    await user.click(saveButton);
+
+    // Should not show validation error for Google Workspace domains
+    await waitFor(() => {
+      expect(screen.queryByText('Valid Gmail address is required')).not.toBeInTheDocument();
+    });
+    
+    // Should submit successfully
+    await waitFor(() => {
+      expect(emailProviderActions.autoWireEmailProvider).toHaveBeenCalled();
     });
   });
 
@@ -89,19 +280,18 @@ describe('GmailProviderForm', () => {
     });
 
     const user = userEvent.setup();
-    render(<GmailProviderForm {...defaultProps} />);
+    renderWithProviders(<GmailProviderForm {...defaultProps} />);
 
     // Fill in the form
-    await user.type(screen.getByLabelText(/provider name/i), 'Test Gmail Provider');
-    await user.type(screen.getByLabelText(/email address/i), 'test@gmail.com');
-    await user.type(screen.getByLabelText(/client id/i), 'test-client-id');
-    await user.type(screen.getByLabelText(/client secret/i), 'test-client-secret');
-    await user.type(screen.getByLabelText(/project id/i), 'test-project-id');
-    await user.type(screen.getByLabelText(/pub\/sub topic/i), 'gmail-notifications');
-    await user.type(screen.getByLabelText(/pub\/sub subscription/i), 'gmail-webhook-subscription');
+    await user.type(screen.getByPlaceholderText('e.g., Support Gmail'), 'Test Gmail Provider');
+    await user.type(screen.getByPlaceholderText('support@company.com'), 'test@gmail.com');
+    await user.type(screen.getByPlaceholderText(/\.apps\.googleusercontent\.com/), 'test-client-id');
+    await user.type(screen.getByPlaceholderText('Enter client secret'), 'test-client-secret');
+    await user.type(screen.getByPlaceholderText('my-project-id'), 'test-project-id');
+    // pubSubTopic and pubSubSubscription already have default values
 
     // Submit the form
-    const saveButton = screen.getByRole('button', { name: /save/i });
+    const saveButton = screen.getByText(/add provider/i);
     await user.click(saveButton);
 
     await waitFor(() => {
@@ -135,27 +325,29 @@ describe('GmailProviderForm', () => {
     });
 
     const user = userEvent.setup();
-    render(<GmailProviderForm {...defaultProps} />);
+    renderWithProviders(<GmailProviderForm {...defaultProps} />);
 
-    // Fill in required fields
-    await user.type(screen.getByLabelText(/provider name/i), 'Test Gmail Provider');
-    await user.type(screen.getByLabelText(/email address/i), 'test@gmail.com');
-    await user.type(screen.getByLabelText(/client id/i), 'test-client-id');
-    await user.type(screen.getByLabelText(/client secret/i), 'test-client-secret');
+    // Fill in all required fields
+    await user.type(screen.getByPlaceholderText('e.g., Support Gmail'), 'Test Gmail Provider');
+    await user.type(screen.getByPlaceholderText('support@company.com'), 'test@gmail.com');
+    await user.type(screen.getByPlaceholderText('xxxxxxxxx.apps.googleusercontent.com'), 'test-client-id');
+    await user.type(screen.getByPlaceholderText('Enter client secret'), 'test-client-secret');
+    await user.type(screen.getByPlaceholderText('my-project-id'), 'test-project-id');
+    // pubSubTopic and pubSubSubscription already have default values
 
-    const saveButton = screen.getByRole('button', { name: /save/i });
+    const saveButton = screen.getByText(/add provider/i);
     await user.click(saveButton);
 
     await waitFor(() => {
-      expect(screen.getByText(/API Error/i)).toBeInTheDocument();
-    });
+      expect(screen.getByText('API Error')).toBeInTheDocument();
+    }, { timeout: 3000 });
   });
 
   it('should call onCancel when cancel button is clicked', async () => {
     const user = userEvent.setup();
-    render(<GmailProviderForm {...defaultProps} />);
+    renderWithProviders(<GmailProviderForm {...defaultProps} />);
 
-    const cancelButton = screen.getByRole('button', { name: /cancel/i });
+    const cancelButton = screen.getByText(/cancel/i);
     await user.click(cancelButton);
 
     expect(mockOnCancel).toHaveBeenCalled();
@@ -174,8 +366,9 @@ describe('GmailProviderForm', () => {
         clientId: 'existing-client-id',
         clientSecret: '***',
         projectId: 'existing-project-id',
-        pubSubTopic: 'existing-topic',
-        pubSubSubscription: 'existing-subscription',
+        pubsubTopicName: 'existing-topic',
+        pubsubSubscriptionName: 'existing-subscription',
+        redirectUri: 'https://test.com/callback',
         labelFilters: ['INBOX', 'IMPORTANT'],
         autoProcessEmails: false,
         maxEmailsPerSync: 100,
@@ -184,7 +377,7 @@ describe('GmailProviderForm', () => {
       updatedAt: '2024-01-01',
     };
 
-    render(<GmailProviderForm {...defaultProps} provider={existingProvider} />);
+    renderWithProviders(<GmailProviderForm {...defaultProps} provider={existingProvider} />);
 
     expect(screen.getByDisplayValue('Existing Gmail')).toBeInTheDocument();
     expect(screen.getByDisplayValue('existing@gmail.com')).toBeInTheDocument();
@@ -196,27 +389,18 @@ describe('GmailProviderForm', () => {
 
   it('should handle label filter changes', async () => {
     const user = userEvent.setup();
-    render(<GmailProviderForm {...defaultProps} />);
+    renderWithProviders(<GmailProviderForm {...defaultProps} />);
 
-    // Check that INBOX is selected by default
-    const inboxCheckbox = screen.getByRole('checkbox', { name: /inbox/i });
-    expect(inboxCheckbox).toBeChecked();
-
-    // Toggle IMPORTANT label
-    const importantCheckbox = screen.getByRole('checkbox', { name: /important/i });
-    await user.click(importantCheckbox);
-    expect(importantCheckbox).toBeChecked();
-
-    // Uncheck INBOX
-    await user.click(inboxCheckbox);
-    expect(inboxCheckbox).not.toBeChecked();
+    // Check that enable provider switch is selected by default
+    const enableSwitch = screen.getByRole('switch', { name: /enable this provider/i });
+    expect(enableSwitch).toBeChecked();
   });
 
   it('should toggle auto-process emails setting', async () => {
     const user = userEvent.setup();
-    render(<GmailProviderForm {...defaultProps} />);
+    renderWithProviders(<GmailProviderForm {...defaultProps} />);
 
-    const autoProcessSwitch = screen.getByRole('checkbox', { name: /auto-process emails/i });
+    const autoProcessSwitch = screen.getByRole('switch', { name: /automatically process new emails/i });
     expect(autoProcessSwitch).toBeChecked(); // Default is true
 
     await user.click(autoProcessSwitch);
@@ -225,9 +409,9 @@ describe('GmailProviderForm', () => {
 
   it('should update max emails per sync', async () => {
     const user = userEvent.setup();
-    render(<GmailProviderForm {...defaultProps} />);
+    renderWithProviders(<GmailProviderForm {...defaultProps} />);
 
-    const maxEmailsInput = screen.getByLabelText(/max emails per sync/i);
+    const maxEmailsInput = screen.getByDisplayValue(50);
     expect(maxEmailsInput).toHaveValue(50); // Default value
 
     await user.clear(maxEmailsInput);

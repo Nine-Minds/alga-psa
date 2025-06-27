@@ -61,6 +61,7 @@ export function GmailProviderForm({
 
   const form = useForm<GmailProviderFormData>({
     resolver: zodResolver(gmailProviderSchema) as any,
+    mode: 'onBlur',
     defaultValues: provider ? {
       providerName: provider.providerName,
       mailbox: provider.mailbox,
@@ -165,7 +166,7 @@ export function GmailProviderForm({
       authUrl.searchParams.set('scope', 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify');
       authUrl.searchParams.set('access_type', 'offline');
       authUrl.searchParams.set('prompt', 'consent');
-      authUrl.searchParams.set('state', btoa(JSON.stringify({ tenant, mailbox: formData.mailbox })));
+      authUrl.searchParams.set('state', btoa(JSON.stringify({ mailbox: formData.mailbox })));
 
       // Open OAuth window
       const popup = window.open(
@@ -273,7 +274,7 @@ export function GmailProviderForm({
                 type="email"
                 {...form.register('mailbox')}
                 placeholder="support@company.com"
-                className={hasAttemptedSubmit && form.formState.errors.mailbox ? 'border-red-500' : ''}
+                className={form.formState.errors.mailbox ? 'border-red-500' : ''}
               />
               {form.formState.errors.mailbox && (
                 <p className="text-sm text-red-500">{form.formState.errors.mailbox.message}</p>

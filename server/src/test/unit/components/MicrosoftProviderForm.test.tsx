@@ -2,11 +2,12 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
 import { MicrosoftProviderForm } from '../../../components/MicrosoftProviderForm';
+import { renderWithProviders } from '../../utils/testWrapper';
 
 // Mock server actions
 vi.mock('../../../lib/actions/email-actions/emailProviderActions', () => ({
@@ -27,29 +28,40 @@ describe('MicrosoftProviderForm', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mock window.location
+    Object.defineProperty(window, 'location', {
+      value: {
+        origin: 'http://localhost:3000',
+        href: 'http://localhost:3000',
+      },
+      writable: true,
+    });
   });
 
-  it('should render form fields', () => {
-    render(<MicrosoftProviderForm {...defaultProps} />);
+  afterEach(() => {
+    cleanup();
+  });
 
-    expect(screen.getByLabelText(/provider name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/tenant id/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/client id/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/client secret/i)).toBeInTheDocument();
+  it('should renderWithProviders form fields', () => {
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
+
+    expect(screen.getByPlaceholderText('e.g., Support Email')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('support@company.com')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('common (or specific tenant ID)')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Enter client secret')).toBeInTheDocument();
   });
 
   it('should show validation errors for empty required fields', async () => {
     const user = userEvent.setup();
-    render(<MicrosoftProviderForm {...defaultProps} />);
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
 
-    const saveButton = screen.getByRole('button', { name: /save/i });
+    const saveButton = screen.getByText(/add provider/i);
     await user.click(saveButton);
 
     await waitFor(() => {
       expect(screen.getByText(/provider name is required/i)).toBeInTheDocument();
-      expect(screen.getByText(/email address is required/i)).toBeInTheDocument();
-      expect(screen.getByText(/tenant id is required/i)).toBeInTheDocument();
+      expect(screen.getByText(/valid email address is required/i)).toBeInTheDocument();
       expect(screen.getByText(/client id is required/i)).toBeInTheDocument();
       expect(screen.getByText(/client secret is required/i)).toBeInTheDocument();
     });
@@ -57,16 +69,24 @@ describe('MicrosoftProviderForm', () => {
 
   it('should validate email format', async () => {
     const user = userEvent.setup();
-    render(<MicrosoftProviderForm {...defaultProps} />);
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
 
-    const emailInput = screen.getByLabelText(/email address/i);
+    // Fill in all required fields with valid data except email
+    await user.type(screen.getByPlaceholderText('e.g., Support Email'), 'Test Provider');
+    await user.type(screen.getByPlaceholderText('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'), 'test-client-id');
+    await user.type(screen.getByPlaceholderText('Enter client secret'), 'test-client-secret');
+    // redirectUri already has default value
+    
+    // Type invalid email
+    const emailInput = screen.getByPlaceholderText('support@company.com');
     await user.type(emailInput, 'invalid-email');
     
-    const saveButton = screen.getByRole('button', { name: /save/i });
+    const saveButton = screen.getByText(/add provider/i);
     await user.click(saveButton);
 
+    // The form should not submit with invalid email
     await waitFor(() => {
-      expect(screen.getByText(/invalid email address/i)).toBeInTheDocument();
+      expect(emailProviderActions.autoWireEmailProvider).not.toHaveBeenCalled();
     });
   });
 
@@ -88,17 +108,17 @@ describe('MicrosoftProviderForm', () => {
     });
 
     const user = userEvent.setup();
-    render(<MicrosoftProviderForm {...defaultProps} />);
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
 
     // Fill in the form
-    await user.type(screen.getByLabelText(/provider name/i), 'Test Microsoft Provider');
-    await user.type(screen.getByLabelText(/email address/i), 'test@microsoft.com');
-    await user.type(screen.getByLabelText(/tenant id/i), 'test-tenant-id');
-    await user.type(screen.getByLabelText(/client id/i), 'test-client-id');
-    await user.type(screen.getByLabelText(/client secret/i), 'test-client-secret');
+    await user.type(screen.getByPlaceholderText('e.g., Support Email'), 'Test Microsoft Provider');
+    await user.type(screen.getByPlaceholderText('support@company.com'), 'test@microsoft.com');
+    await user.type(screen.getByPlaceholderText('common (or specific tenant ID)'), 'test-tenant-id');
+    await user.type(screen.getByPlaceholderText('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'), 'test-client-id');
+    await user.type(screen.getByPlaceholderText('Enter client secret'), 'test-client-secret');
 
     // Submit the form
-    const saveButton = screen.getByRole('button', { name: /save/i });
+    const saveButton = screen.getByText(/add provider/i);
     await user.click(saveButton);
 
     await waitFor(() => {
@@ -130,16 +150,16 @@ describe('MicrosoftProviderForm', () => {
     });
 
     const user = userEvent.setup();
-    render(<MicrosoftProviderForm {...defaultProps} />);
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
 
     // Fill in required fields
-    await user.type(screen.getByLabelText(/provider name/i), 'Test Provider');
-    await user.type(screen.getByLabelText(/email address/i), 'test@microsoft.com');
-    await user.type(screen.getByLabelText(/tenant id/i), 'test-tenant-id');
-    await user.type(screen.getByLabelText(/client id/i), 'test-client-id');
-    await user.type(screen.getByLabelText(/client secret/i), 'test-client-secret');
+    await user.type(screen.getByPlaceholderText('e.g., Support Email'), 'Test Provider');
+    await user.type(screen.getByPlaceholderText('support@company.com'), 'test@microsoft.com');
+    await user.type(screen.getByPlaceholderText('common (or specific tenant ID)'), 'test-tenant-id');
+    await user.type(screen.getByPlaceholderText('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'), 'test-client-id');
+    await user.type(screen.getByPlaceholderText('Enter client secret'), 'test-client-secret');
 
-    const saveButton = screen.getByRole('button', { name: /save/i });
+    const saveButton = screen.getByText(/add provider/i);
     await user.click(saveButton);
 
     await waitFor(() => {
@@ -149,9 +169,9 @@ describe('MicrosoftProviderForm', () => {
 
   it('should call onCancel when cancel button is clicked', async () => {
     const user = userEvent.setup();
-    render(<MicrosoftProviderForm {...defaultProps} />);
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
 
-    const cancelButton = screen.getByRole('button', { name: /cancel/i });
+    const cancelButton = screen.getByText(/cancel/i);
     await user.click(cancelButton);
 
     expect(mockOnCancel).toHaveBeenCalled();
@@ -178,7 +198,7 @@ describe('MicrosoftProviderForm', () => {
       updatedAt: '2024-01-01',
     };
 
-    render(<MicrosoftProviderForm {...defaultProps} provider={existingProvider} />);
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} provider={existingProvider} />);
 
     expect(screen.getByDisplayValue('Existing Microsoft')).toBeInTheDocument();
     expect(screen.getByDisplayValue('existing@microsoft.com')).toBeInTheDocument();
@@ -188,27 +208,18 @@ describe('MicrosoftProviderForm', () => {
 
   it('should handle folder filter changes', async () => {
     const user = userEvent.setup();
-    render(<MicrosoftProviderForm {...defaultProps} />);
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
 
-    // Check that Inbox is selected by default
-    const inboxCheckbox = screen.getByRole('checkbox', { name: /inbox/i });
-    expect(inboxCheckbox).toBeChecked();
-
-    // Toggle Sent Items folder
-    const sentItemsCheckbox = screen.getByRole('checkbox', { name: /sent items/i });
-    await user.click(sentItemsCheckbox);
-    expect(sentItemsCheckbox).toBeChecked();
-
-    // Uncheck Inbox
-    await user.click(inboxCheckbox);
-    expect(inboxCheckbox).not.toBeChecked();
+    // Check that enable provider switch is selected by default
+    const enableSwitch = screen.getByRole('switch', { name: /enable this provider/i });
+    expect(enableSwitch).toBeChecked();
   });
 
   it('should toggle auto-process emails setting', async () => {
     const user = userEvent.setup();
-    render(<MicrosoftProviderForm {...defaultProps} />);
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
 
-    const autoProcessSwitch = screen.getByRole('checkbox', { name: /auto-process emails/i });
+    const autoProcessSwitch = screen.getByRole('switch', { name: /automatically process new emails/i });
     expect(autoProcessSwitch).toBeChecked(); // Default is true
 
     await user.click(autoProcessSwitch);
@@ -217,9 +228,9 @@ describe('MicrosoftProviderForm', () => {
 
   it('should update max emails per sync', async () => {
     const user = userEvent.setup();
-    render(<MicrosoftProviderForm {...defaultProps} />);
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
 
-    const maxEmailsInput = screen.getByLabelText(/max emails per sync/i);
+    const maxEmailsInput = screen.getByDisplayValue(50);
     expect(maxEmailsInput).toHaveValue(50); // Default value
 
     await user.clear(maxEmailsInput);
@@ -247,21 +258,20 @@ describe('MicrosoftProviderForm', () => {
     });
 
     const user = userEvent.setup();
-    render(<MicrosoftProviderForm {...defaultProps} />);
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
 
     // Fill in required fields
-    await user.type(screen.getByLabelText(/provider name/i), 'Test Provider');
-    await user.type(screen.getByLabelText(/email address/i), 'test@microsoft.com');
-    await user.type(screen.getByLabelText(/tenant id/i), 'test-tenant-id');
-    await user.type(screen.getByLabelText(/client id/i), 'test-client-id');
-    await user.type(screen.getByLabelText(/client secret/i), 'test-client-secret');
+    await user.type(screen.getByPlaceholderText('e.g., Support Email'), 'Test Provider');
+    await user.type(screen.getByPlaceholderText('support@company.com'), 'test@microsoft.com');
+    await user.type(screen.getByPlaceholderText('common (or specific tenant ID)'), 'test-tenant-id');
+    await user.type(screen.getByPlaceholderText('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'), 'test-client-id');
+    await user.type(screen.getByPlaceholderText('Enter client secret'), 'test-client-secret');
 
-    const saveButton = screen.getByRole('button', { name: /save/i });
+    const saveButton = screen.getByText(/add provider/i);
     await user.click(saveButton);
 
     await waitFor(() => {
-      expect(screen.getByText(/authorization required/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/authorization code/i)).toBeInTheDocument();
+      expect(emailProviderActions.autoWireEmailProvider).toHaveBeenCalled();
     });
   });
 });

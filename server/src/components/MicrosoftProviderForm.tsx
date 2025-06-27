@@ -143,7 +143,7 @@ export function MicrosoftProviderForm({
       authUrl.searchParams.set('response_type', 'code');
       authUrl.searchParams.set('redirect_uri', formData.redirectUri);
       authUrl.searchParams.set('scope', 'https://graph.microsoft.com/Mail.Read offline_access');
-      authUrl.searchParams.set('state', btoa(JSON.stringify({ tenant, mailbox: formData.mailbox })));
+      authUrl.searchParams.set('state', btoa(JSON.stringify({ mailbox: formData.mailbox })));
 
       // Open OAuth window
       const popup = window.open(
