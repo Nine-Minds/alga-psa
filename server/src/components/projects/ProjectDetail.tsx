@@ -6,7 +6,7 @@ import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { useDrawer } from "server/src/context/DrawerContext";
-import { getAllPrioritiesWithStandard } from 'server/src/lib/actions/priorityActions';
+import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import { findTagsByEntityId, findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
 import { TagManager, TagFilter } from 'server/src/components/tags';
@@ -228,7 +228,7 @@ export default function ProjectDetail({
         setProjectTreeData(treeData);
         
         // Fetch priorities for project tasks
-        const allPriorities = await getAllPrioritiesWithStandard('project_task');
+        const allPriorities = await getAllPriorities('project_task');
         setPriorities(allPriorities);
 
         // Fetch task types
