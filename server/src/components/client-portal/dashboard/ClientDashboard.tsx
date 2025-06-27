@@ -207,8 +207,9 @@ export function ClientDashboard() {
             <Button
               id="view-invoice-button"
               className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background relative bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))] hover:bg-[rgb(var(--color-primary-200))] h-10 py-2 px-4 group"
+              asChild
             >
-              View Latest Invoice
+              <a href="/client-portal/billing">View Latest Invoice</a>
             </Button>
           </div>
         </CardContent>
