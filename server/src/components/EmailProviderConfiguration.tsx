@@ -14,6 +14,11 @@ import { Plus, Settings, Trash2, CheckCircle, Clock } from 'lucide-react';
 import { MicrosoftProviderForm } from './MicrosoftProviderForm';
 import { GmailProviderForm } from './GmailProviderForm';
 import { EmailProviderList } from './EmailProviderList';
+import { 
+  getEmailProviders, 
+  deleteEmailProvider, 
+  testEmailProviderConnection 
+} from '../lib/actions/email-actions/emailProviderActions';
 
 export interface EmailProvider {
   id: string;
@@ -31,14 +36,12 @@ export interface EmailProvider {
 }
 
 export interface EmailProviderConfigurationProps {
-  tenant: string;
   onProviderAdded?: (provider: EmailProvider) => void;
   onProviderUpdated?: (provider: EmailProvider) => void;
   onProviderDeleted?: (providerId: string) => void;
 }
 
 export function EmailProviderConfiguration({
-  tenant,
   onProviderAdded,
   onProviderUpdated,
   onProviderDeleted
@@ -53,20 +56,15 @@ export function EmailProviderConfiguration({
   // Load existing providers on component mount
   useEffect(() => {
     loadProviders();
-  }, [tenant]);
+  }, []);
 
   const loadProviders = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`/api/email/providers?tenant=${tenant}`);
-      if (!response.ok) {
-        throw new Error('Failed to load email providers');
-      }
-      
-      const data = await response.json();
-      setProviders(data.providers || []);
+      const providers = await getEmailProviders();
+      setProviders(providers || []);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -88,13 +86,7 @@ export function EmailProviderConfiguration({
 
   const handleProviderDeleted = async (providerId: string) => {
     try {
-      const response = await fetch(`/api/email/providers/${providerId}`, {
-        method: 'DELETE'
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to delete provider');
-      }
+      await deleteEmailProvider(providerId);
       
       setProviders(prev => prev.filter(p => p.id !== providerId));
       onProviderDeleted?.(providerId);
@@ -107,15 +99,7 @@ export function EmailProviderConfiguration({
     try {
       setError(null);
       
-      const response = await fetch(`/api/email/providers/${provider.id}/test`, {
-        method: 'POST'
-      });
-      
-      if (!response.ok) {
-        throw new Error('Connection test failed');
-      }
-      
-      const result = await response.json();
+      const result = await testEmailProviderConnection(provider.id);
       
       if (result.success) {
         // Update provider status
@@ -185,7 +169,6 @@ export function EmailProviderConfiguration({
               
               <TabsContent value="microsoft" className="space-y-4">
                 <MicrosoftProviderForm
-                  tenant={tenant}
                   onSuccess={handleProviderAdded}
                   onCancel={() => setShowAddForm(false)}
                 />
@@ -193,7 +176,6 @@ export function EmailProviderConfiguration({
               
               <TabsContent value="gmail" className="space-y-4">
                 <GmailProviderForm
-                  tenant={tenant}
                   onSuccess={handleProviderAdded}
                   onCancel={() => setShowAddForm(false)}
                 />
@@ -224,14 +206,12 @@ export function EmailProviderConfiguration({
           <CardContent>
             {selectedProvider.providerType === 'microsoft' ? (
               <MicrosoftProviderForm
-                tenant={tenant}
                 provider={selectedProvider}
                 onSuccess={handleProviderUpdated}
                 onCancel={() => setSelectedProvider(null)}
               />
             ) : (
               <GmailProviderForm
-                tenant={tenant}
                 provider={selectedProvider}
                 onSuccess={handleProviderUpdated}
                 onCancel={() => setSelectedProvider(null)}

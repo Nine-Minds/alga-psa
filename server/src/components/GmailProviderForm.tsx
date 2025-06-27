@@ -17,6 +17,10 @@ import { Alert, AlertDescription } from './ui/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
 import { ExternalLink, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
+import { 
+  autoWireEmailProvider, 
+  updateEmailProvider 
+} from '../lib/actions/email-actions/emailProviderActions';
 
 const gmailProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),
@@ -36,14 +40,12 @@ const gmailProviderSchema = z.object({
 type GmailProviderFormData = z.infer<typeof gmailProviderSchema>;
 
 interface GmailProviderFormProps {
-  tenant: string;
   provider?: EmailProvider;
   onSuccess: (provider: EmailProvider) => void;
   onCancel: () => void;
 }
 
 export function GmailProviderForm({ 
-  tenant, 
   provider, 
   onSuccess, 
   onCancel 
@@ -95,43 +97,51 @@ export function GmailProviderForm({
       setLoading(true);
       setError(null);
 
-      const payload = {
-        tenant,
-        providerType: 'google',
-        providerName: data.providerName,
-        mailbox: data.mailbox,
-        isActive: data.isActive,
-        vendorConfig: {
-          clientId: data.clientId,
-          clientSecret: data.clientSecret,
-          projectId: data.projectId,
-          redirectUri: data.redirectUri,
-          pubsubTopicName: data.pubsubTopicName,
-          pubsubSubscriptionName: data.pubsubSubscriptionName,
-          autoProcessEmails: data.autoProcessEmails,
-          labelFilters: data.labelFilters ? data.labelFilters.split(',').map(l => l.trim()) : ['INBOX'],
-          maxEmailsPerSync: data.maxEmailsPerSync
+      if (isEditing && provider) {
+        // Update existing provider
+        const updatedProvider = await updateEmailProvider(provider.id, {
+          providerName: data.providerName,
+          isActive: data.isActive,
+          vendorConfig: {
+            ...provider.vendorConfig,
+            clientId: data.clientId,
+            clientSecret: data.clientSecret,
+            projectId: data.projectId,
+            redirectUri: data.redirectUri,
+            pubsubTopicName: data.pubsubTopicName,
+            pubsubSubscriptionName: data.pubsubSubscriptionName,
+            autoProcessEmails: data.autoProcessEmails,
+            labelFilters: data.labelFilters ? data.labelFilters.split(',').map(l => l.trim()) : ['INBOX'],
+            maxEmailsPerSync: data.maxEmailsPerSync
+          }
+        });
+        onSuccess(updatedProvider);
+      } else {
+        // Create new provider using auto-wire
+        const result = await autoWireEmailProvider({
+          providerType: 'google',
+          config: {
+            providerName: data.providerName,
+            mailbox: data.mailbox,
+            clientId: data.clientId,
+            clientSecret: data.clientSecret,
+            projectId: data.projectId,
+            pubSubTopic: data.pubsubTopicName,
+            pubSubSubscription: data.pubsubSubscriptionName,
+            labelFilters: data.labelFilters ? data.labelFilters.split(',').map(l => l.trim()) : ['INBOX'],
+            autoProcessEmails: data.autoProcessEmails,
+            maxEmailsPerSync: data.maxEmailsPerSync,
+          }
+        });
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to save provider');
         }
-      };
 
-      const url = isEditing ? `/api/email/providers/${provider.id}` : '/api/email/providers';
-      const method = isEditing ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to save provider');
+        if (result.provider) {
+          onSuccess(result.provider);
+        }
       }
-
-      const result = await response.json();
-      onSuccess(result.provider);
 
     } catch (err: any) {
       setError(err.message);

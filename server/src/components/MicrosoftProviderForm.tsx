@@ -17,6 +17,10 @@ import { Alert, AlertDescription } from './ui/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
 import { ExternalLink, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
+import { 
+  autoWireEmailProvider, 
+  updateEmailProvider 
+} from '../lib/actions/email-actions/emailProviderActions';
 
 const microsoftProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),
@@ -34,14 +38,12 @@ const microsoftProviderSchema = z.object({
 type MicrosoftProviderFormData = z.infer<typeof microsoftProviderSchema>;
 
 interface MicrosoftProviderFormProps {
-  tenant: string;
   provider?: EmailProvider;
   onSuccess: (provider: EmailProvider) => void;
   onCancel: () => void;
 }
 
 export function MicrosoftProviderForm({ 
-  tenant, 
   provider, 
   onSuccess, 
   onCancel 
@@ -79,41 +81,47 @@ export function MicrosoftProviderForm({
       setLoading(true);
       setError(null);
 
-      const payload = {
-        tenant,
-        providerType: 'microsoft',
-        providerName: data.providerName,
-        mailbox: data.mailbox,
-        isActive: data.isActive,
-        vendorConfig: {
-          clientId: data.clientId,
-          clientSecret: data.clientSecret,
-          tenantId: data.tenantId,
-          redirectUri: data.redirectUri,
-          autoProcessEmails: data.autoProcessEmails,
-          folderFilters: data.folderFilters ? data.folderFilters.split(',').map(f => f.trim()) : ['Inbox'],
-          maxEmailsPerSync: data.maxEmailsPerSync
+      if (isEditing && provider) {
+        // Update existing provider
+        const updatedProvider = await updateEmailProvider(provider.id, {
+          providerName: data.providerName,
+          isActive: data.isActive,
+          vendorConfig: {
+            ...provider.vendorConfig,
+            clientId: data.clientId,
+            clientSecret: data.clientSecret,
+            tenantId: data.tenantId,
+            redirectUri: data.redirectUri,
+            autoProcessEmails: data.autoProcessEmails,
+            folderFilters: data.folderFilters ? data.folderFilters.split(',').map(f => f.trim()) : ['Inbox'],
+            maxEmailsPerSync: data.maxEmailsPerSync
+          }
+        });
+        onSuccess(updatedProvider);
+      } else {
+        // Create new provider using auto-wire
+        const result = await autoWireEmailProvider({
+          providerType: 'microsoft',
+          config: {
+            providerName: data.providerName,
+            mailbox: data.mailbox,
+            tenantId: data.tenantId,
+            clientId: data.clientId,
+            clientSecret: data.clientSecret,
+            folderFilters: data.folderFilters ? data.folderFilters.split(',').map(f => f.trim()) : ['Inbox'],
+            autoProcessEmails: data.autoProcessEmails,
+            maxEmailsPerSync: data.maxEmailsPerSync,
+          }
+        });
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to save provider');
         }
-      };
 
-      const url = isEditing ? `/api/email/providers/${provider.id}` : '/api/email/providers';
-      const method = isEditing ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to save provider');
+        if (result.provider) {
+          onSuccess(result.provider);
+        }
       }
-
-      const result = await response.json();
-      onSuccess(result.provider);
 
     } catch (err: any) {
       setError(err.message);
