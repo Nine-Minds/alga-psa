@@ -52,22 +52,8 @@ describe('MicrosoftProviderForm', () => {
     expect(screen.getByPlaceholderText('Enter client secret')).toBeInTheDocument();
   });
 
-  it('should show validation errors for empty required fields', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
 
-    const saveButton = screen.getByText(/add provider/i);
-    await user.click(saveButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/provider name is required/i)).toBeInTheDocument();
-      expect(screen.getByText(/valid email address is required/i)).toBeInTheDocument();
-      expect(screen.getByText(/client id is required/i)).toBeInTheDocument();
-      expect(screen.getByText(/client secret is required/i)).toBeInTheDocument();
-    });
-  });
-
-  it('should validate email format', async () => {
+  it('should validate email format and show error message', async () => {
     const user = userEvent.setup();
     renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
 
@@ -84,9 +70,171 @@ describe('MicrosoftProviderForm', () => {
     const saveButton = screen.getByText(/add provider/i);
     await user.click(saveButton);
 
-    // The form should not submit with invalid email
+    // Check that the error message is displayed
     await waitFor(() => {
+      expect(screen.getByText('Valid email address is required')).toBeInTheDocument();
+    });
+
+    // Check that the input has error styling
+    expect(emailInput).toHaveClass('border-red-500');
+
+    // The form should not submit with invalid email
+    expect(emailProviderActions.autoWireEmailProvider).not.toHaveBeenCalled();
+  });
+
+  it('should validate various invalid email formats', async () => {
+    const user = userEvent.setup();
+
+    // Test various invalid email formats
+    const invalidEmails = [
+      'notanemail',
+      'missing@',
+      '@domain.com',
+      'spaces in@email.com',
+      'double@@domain.com',
+      'missing.domain@',
+      'trailing.dot@domain.',
+      '.leadingdot@domain.com',
+      'multiple..dots@domain.com'
+    ];
+
+    for (const invalidEmail of invalidEmails) {
+      // Re-render for each test to ensure clean state
+      const { unmount } = renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
+      
+      const emailInput = screen.getByPlaceholderText('support@company.com');
+      
+      // Type invalid email to trigger validation
+      await user.type(emailInput, invalidEmail);
+
+      // Check error message appears
+      await waitFor(() => {
+        expect(screen.getByText('Valid email address is required')).toBeInTheDocument();
+      }, { timeout: 1000 });
+
+      // Ensure form doesn't submit
       expect(emailProviderActions.autoWireEmailProvider).not.toHaveBeenCalled();
+      
+      // Clean up for next iteration
+      unmount();
+    }
+  });
+
+  it('should accept valid email formats', async () => {
+    const user = userEvent.setup();
+
+    // Test various valid email formats
+    const validEmails = [
+      'user@microsoft.com',
+      'firstname.lastname@outlook.com',
+      'user+tag@company.com',
+      'user123@hotmail.com',
+      'user_name@organization.org',
+      'u@domain.com'
+    ];
+
+    for (const validEmail of validEmails) {
+      // Re-render for each test to ensure clean state
+      const { unmount } = renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
+      
+      const emailInput = screen.getByPlaceholderText('support@company.com');
+      
+      // Type email to trigger validation
+      await user.type(emailInput, validEmail);
+
+      // Should not show email validation error for valid emails
+      await waitFor(() => {
+        expect(screen.queryByText('Valid email address is required')).not.toBeInTheDocument();
+      });
+
+      // Clean up for next iteration
+      unmount();
+      vi.clearAllMocks();
+    }
+  });
+
+  it('should clear email validation error when corrected', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
+
+    const emailInput = screen.getByPlaceholderText('support@company.com');
+    
+    // Type invalid email to trigger validation
+    await user.type(emailInput, 'invalid-email');
+    
+    // Check error appears
+    await waitFor(() => {
+      expect(screen.getByText('Valid email address is required')).toBeInTheDocument();
+    });
+    expect(emailInput).toHaveClass('border-red-500');
+
+    // Clear and type valid email
+    await user.clear(emailInput);
+    await user.type(emailInput, 'valid@company.com');
+
+    // Error should disappear after typing valid email
+    await waitFor(() => {
+      expect(screen.queryByText('Valid email address is required')).not.toBeInTheDocument();
+    });
+    
+    // Border should also update
+    expect(emailInput).not.toHaveClass('border-red-500');
+  });
+
+  it('should validate email on change', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
+
+    const emailInput = screen.getByPlaceholderText('support@company.com');
+    
+    // Type invalid email
+    await user.type(emailInput, 'invalid-email');
+
+    // Check error appears on change without form submission
+    await waitFor(() => {
+      expect(screen.getByText('Valid email address is required')).toBeInTheDocument();
+    });
+    expect(emailInput).toHaveClass('border-red-500');
+  });
+
+  it('should accept Microsoft and custom domain emails', async () => {
+    vi.mocked(emailProviderActions.autoWireEmailProvider).mockResolvedValueOnce({
+      success: true,
+      provider: { 
+        id: '123', 
+        tenant: 'test-tenant-123',
+        providerType: 'microsoft',
+        providerName: 'Test Provider',
+        mailbox: 'user@customdomain.com',
+        isActive: true,
+        status: 'connected',
+        vendorConfig: {},
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
+
+    // Fill all fields with valid data including custom domain email
+    await user.type(screen.getByPlaceholderText('e.g., Support Email'), 'Test Provider');
+    await user.type(screen.getByPlaceholderText('support@company.com'), 'user@customdomain.com');
+    await user.type(screen.getByPlaceholderText('common (or specific tenant ID)'), 'test-tenant-id');
+    await user.type(screen.getByPlaceholderText('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'), 'test-client-id');
+    await user.type(screen.getByPlaceholderText('Enter client secret'), 'test-client-secret');
+    
+    const saveButton = screen.getByText(/add provider/i);
+    await user.click(saveButton);
+
+    // Should not show validation error for custom domains
+    await waitFor(() => {
+      expect(screen.queryByText('Valid email address is required')).not.toBeInTheDocument();
+    });
+    
+    // Should submit successfully
+    await waitFor(() => {
+      expect(emailProviderActions.autoWireEmailProvider).toHaveBeenCalled();
     });
   });
 
@@ -272,6 +420,60 @@ describe('MicrosoftProviderForm', () => {
 
     await waitFor(() => {
       expect(emailProviderActions.autoWireEmailProvider).toHaveBeenCalled();
+    });
+  });
+
+  it('should disable submit button when form is invalid', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
+
+    const submitButton = screen.getByText(/add provider/i);
+    
+    // Button should be disabled initially when required fields are empty
+    expect(submitButton).toBeDisabled();
+
+    // Fill in some but not all required fields
+    await user.type(screen.getByPlaceholderText('e.g., Support Email'), 'Test Provider');
+    await user.type(screen.getByPlaceholderText('support@company.com'), 'test@microsoft.com');
+    
+    // Button should still be disabled
+    expect(submitButton).toBeDisabled();
+
+    // Fill in remaining required fields
+    await user.type(screen.getByPlaceholderText('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'), 'test-client-id');
+    await user.type(screen.getByPlaceholderText('Enter client secret'), 'test-client-secret');
+    
+    // Button should be enabled when all required fields are filled
+    await waitFor(() => {
+      expect(submitButton).not.toBeDisabled();
+    });
+  });
+
+  it('should disable submit button when there are validation errors', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
+
+    const submitButton = screen.getByText(/add provider/i);
+    const emailInput = screen.getByPlaceholderText('support@company.com');
+    
+    // Fill all required fields
+    await user.type(screen.getByPlaceholderText('e.g., Support Email'), 'Test Provider');
+    await user.type(emailInput, 'valid@microsoft.com');
+    await user.type(screen.getByPlaceholderText('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'), 'test-client-id');
+    await user.type(screen.getByPlaceholderText('Enter client secret'), 'test-client-secret');
+    
+    // Button should be enabled
+    await waitFor(() => {
+      expect(submitButton).not.toBeDisabled();
+    });
+
+    // Now make email invalid
+    await user.clear(emailInput);
+    await user.type(emailInput, 'invalid-email');
+    
+    // Button should be disabled when there's a validation error
+    await waitFor(() => {
+      expect(submitButton).toBeDisabled();
     });
   });
 });

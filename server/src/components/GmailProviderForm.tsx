@@ -61,7 +61,7 @@ export function GmailProviderForm({
 
   const form = useForm<GmailProviderFormData>({
     resolver: zodResolver(gmailProviderSchema) as any,
-    mode: 'onBlur',
+    mode: 'onChange',
     defaultValues: provider ? {
       providerName: provider.providerName,
       mailbox: provider.mailbox,
@@ -544,8 +544,7 @@ export function GmailProviderForm({
         <Button 
           id="gmail-submit-btn" 
           type="submit" 
-          disabled={loading}
-          className={Object.keys(form.formState.errors).length > 0 && !loading ? 'opacity-50' : ''}
+          disabled={loading || !form.formState.isValid}
         >
           {loading ? 'Saving...' : isEditing ? 'Update Provider' : 'Add Provider'}
         </Button>

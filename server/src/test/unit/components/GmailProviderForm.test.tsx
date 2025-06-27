@@ -54,20 +54,6 @@ describe('GmailProviderForm', () => {
     expect(screen.getByPlaceholderText('gmail-webhook-subscription')).toBeInTheDocument();
   });
 
-  it('should show validation errors for empty required fields', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<GmailProviderForm {...defaultProps} />);
-
-    const saveButton = screen.getByText(/add provider/i);
-    await user.click(saveButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/provider name is required/i)).toBeInTheDocument();
-      expect(screen.getByText(/valid gmail address is required/i)).toBeInTheDocument();
-      expect(screen.getByText(/client id is required/i)).toBeInTheDocument();
-      expect(screen.getByText(/client secret is required/i)).toBeInTheDocument();
-    });
-  });
 
   it('should validate email format and show error message', async () => {
     const user = userEvent.setup();
@@ -121,9 +107,8 @@ describe('GmailProviderForm', () => {
       
       const emailInput = screen.getByPlaceholderText('support@company.com');
       
-      // Type invalid email and blur to trigger validation
+      // Type invalid email to trigger validation
       await user.type(emailInput, invalidEmail);
-      await user.tab();
 
       // Check error message appears
       await waitFor(() => {
@@ -157,9 +142,8 @@ describe('GmailProviderForm', () => {
       
       const emailInput = screen.getByPlaceholderText('support@company.com');
       
-      // Type email and blur to trigger validation
+      // Type email to trigger validation
       await user.type(emailInput, validEmail);
-      await user.tab();
 
       // Should not show email validation error for valid emails
       await waitFor(() => {
@@ -178,9 +162,8 @@ describe('GmailProviderForm', () => {
 
     const emailInput = screen.getByPlaceholderText('support@company.com');
     
-    // Type invalid email and blur to trigger validation
+    // Type invalid email to trigger validation
     await user.type(emailInput, 'invalid-email');
-    await user.tab(); // Trigger blur
     
     // Check error appears
     await waitFor(() => {
@@ -191,9 +174,8 @@ describe('GmailProviderForm', () => {
     // Clear and type valid email
     await user.clear(emailInput);
     await user.type(emailInput, 'valid@gmail.com');
-    await user.tab(); // Trigger blur to revalidate
 
-    // Error should disappear after blur
+    // Error should disappear after typing valid email
     await waitFor(() => {
       expect(screen.queryByText('Valid Gmail address is required')).not.toBeInTheDocument();
     });
@@ -202,7 +184,7 @@ describe('GmailProviderForm', () => {
     expect(emailInput).not.toHaveClass('border-red-500');
   });
 
-  it('should validate email on blur', async () => {
+  it('should validate email on change', async () => {
     const user = userEvent.setup();
     renderWithProviders(<GmailProviderForm {...defaultProps} />);
 
@@ -210,11 +192,8 @@ describe('GmailProviderForm', () => {
     
     // Type invalid email
     await user.type(emailInput, 'invalid-email');
-    
-    // Tab away to trigger blur
-    await user.tab();
 
-    // Check error appears on blur even without form submission
+    // Check error appears on change without form submission
     await waitFor(() => {
       expect(screen.getByText('Valid Gmail address is required')).toBeInTheDocument();
     });
@@ -417,5 +396,61 @@ describe('GmailProviderForm', () => {
     await user.clear(maxEmailsInput);
     await user.type(maxEmailsInput, '100');
     expect(maxEmailsInput).toHaveValue(100);
+  });
+
+  it('should disable submit button when form is invalid', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<GmailProviderForm {...defaultProps} />);
+
+    const submitButton = screen.getByText(/add provider/i);
+    
+    // Button should be disabled initially when required fields are empty
+    expect(submitButton).toBeDisabled();
+
+    // Fill in some but not all required fields
+    await user.type(screen.getByPlaceholderText('e.g., Support Gmail'), 'Test Provider');
+    await user.type(screen.getByPlaceholderText('support@company.com'), 'test@gmail.com');
+    
+    // Button should still be disabled
+    expect(submitButton).toBeDisabled();
+
+    // Fill in remaining required fields
+    await user.type(screen.getByPlaceholderText('xxxxxxxxx.apps.googleusercontent.com'), 'test-client-id');
+    await user.type(screen.getByPlaceholderText('Enter client secret'), 'test-client-secret');
+    await user.type(screen.getByPlaceholderText('my-project-id'), 'test-project-id');
+    
+    // Button should be enabled when all required fields are filled
+    await waitFor(() => {
+      expect(submitButton).not.toBeDisabled();
+    });
+  });
+
+  it('should disable submit button when there are validation errors', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<GmailProviderForm {...defaultProps} />);
+
+    const submitButton = screen.getByText(/add provider/i);
+    const emailInput = screen.getByPlaceholderText('support@company.com');
+    
+    // Fill all required fields
+    await user.type(screen.getByPlaceholderText('e.g., Support Gmail'), 'Test Provider');
+    await user.type(emailInput, 'valid@gmail.com');
+    await user.type(screen.getByPlaceholderText('xxxxxxxxx.apps.googleusercontent.com'), 'test-client-id');
+    await user.type(screen.getByPlaceholderText('Enter client secret'), 'test-client-secret');
+    await user.type(screen.getByPlaceholderText('my-project-id'), 'test-project-id');
+    
+    // Button should be enabled
+    await waitFor(() => {
+      expect(submitButton).not.toBeDisabled();
+    });
+
+    // Now make email invalid
+    await user.clear(emailInput);
+    await user.type(emailInput, 'invalid-email');
+    
+    // Button should be disabled when there's a validation error
+    await waitFor(() => {
+      expect(submitButton).toBeDisabled();
+    });
   });
 });

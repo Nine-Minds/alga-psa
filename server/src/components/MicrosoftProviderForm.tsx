@@ -57,6 +57,7 @@ export function MicrosoftProviderForm({
 
   const form = useForm<MicrosoftProviderFormData>({
     resolver: zodResolver(microsoftProviderSchema) as any,
+    mode: 'onChange',
     defaultValues: provider ? {
       providerName: provider.providerName,
       mailbox: provider.mailbox,
@@ -217,6 +218,7 @@ export function MicrosoftProviderForm({
                 type="email"
                 {...form.register('mailbox')}
                 placeholder="support@company.com"
+                className={form.formState.errors.mailbox ? 'border-red-500' : ''}
               />
               {form.formState.errors.mailbox && (
                 <p className="text-sm text-red-500">{form.formState.errors.mailbox.message}</p>
@@ -396,7 +398,7 @@ export function MicrosoftProviderForm({
         <Button id="cancel-btn" type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button id="submit-btn" type="submit" disabled={loading}>
+        <Button id="submit-btn" type="submit" disabled={loading || !form.formState.isValid}>
           {loading ? 'Saving...' : isEditing ? 'Update Provider' : 'Add Provider'}
         </Button>
       </div>
