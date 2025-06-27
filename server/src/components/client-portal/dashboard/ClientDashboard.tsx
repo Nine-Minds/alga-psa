@@ -70,9 +70,9 @@ export function ClientDashboard() {
       </div>
 
       {/* Metrics Overview */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 justify-center">
         <Card className="bg-white">
-          <CardContent className="p-8 flex flex-col justify-center h-full">
+          <CardContent className="p-8 flex flex-col items-center justify-center text-center h-full">
             <div className="text-lg font-medium text-[rgb(var(--color-text-600))] truncate">
               Open Support Tickets
             </div>
@@ -88,7 +88,7 @@ export function ClientDashboard() {
         </Card>
 
         <Card className="bg-white">
-          <CardContent className="p-8 flex flex-col justify-center h-full">
+          <CardContent className="p-8 flex flex-col items-center justify-center text-center h-full">
             <div className="text-lg font-medium text-[rgb(var(--color-text-600))] truncate">
               Open Projects
             </div>
@@ -104,7 +104,7 @@ export function ClientDashboard() {
         </Card>
 
         <Card className="bg-white">
-          <CardContent className="p-8 flex flex-col justify-center h-full">
+          <CardContent className="p-8 flex flex-col items-center justify-center text-center h-full">
             <div className="text-lg font-medium text-[rgb(var(--color-text-600))] truncate">
               Pending Invoices
             </div>
