@@ -48,11 +48,6 @@ export async function calculateProjectCompletion(projectId: string): Promise<Pro
       this.on('project_status_mappings.status_id', '=', 'statuses.status_id')
           .andOn('project_status_mappings.tenant', '=', 'statuses.tenant');
     })
-    // Also join with standard_statuses for cases where is_standard is true
-    .leftJoin('standard_statuses', function() {
-      this.on('project_status_mappings.standard_status_id', '=', 'standard_statuses.standard_status_id')
-          .andOn('project_status_mappings.tenant', '=', 'standard_statuses.tenant');
-    })
     .where({
       'project_phases.project_id': projectId,
       'project_tasks.tenant': tenant
@@ -60,7 +55,7 @@ export async function calculateProjectCompletion(projectId: string): Promise<Pro
     .select(
       'project_tasks.*',
       'project_status_mappings.is_standard',
-      db.raw('CASE WHEN project_status_mappings.is_standard = true THEN standard_statuses.is_closed ELSE statuses.is_closed END as is_closed')
+      'statuses.is_closed'
     );
 
   // Calculate task-based completion

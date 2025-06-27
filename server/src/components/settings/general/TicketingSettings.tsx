@@ -9,10 +9,10 @@ import ColorPicker from 'server/src/components/ui/ColorPicker';
 import { getAllChannels, createChannel, deleteChannel, updateChannel } from 'server/src/lib/actions/channel-actions/channelActions';
 import { getStatuses, createStatus, deleteStatus, updateStatus } from 'server/src/lib/actions/status-actions/statusActions';
 import { getAllPriorities, getAllPrioritiesWithStandard, createPriority, deletePriority, updatePriority } from 'server/src/lib/actions/priorityActions';
-import { importReferenceData, getAvailableReferenceData } from 'server/src/lib/actions/referenceDataActions';
+import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from 'server/src/lib/actions/referenceDataActions';
 import { getTicketCategories, createTicketCategory, deleteTicketCategory, updateTicketCategory } from 'server/src/lib/actions/ticketCategoryActions';
 import { IChannel } from 'server/src/interfaces/channel.interface';
-import { IStatus, ItemType } from 'server/src/interfaces/status.interface';
+import { IStatus, IStandardStatus, ItemType } from 'server/src/interfaces/status.interface';
 import { IPriority, IStandardPriority, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import NumberingSettings from './NumberingSettings';
@@ -278,6 +278,17 @@ const TicketingSettings = (): JSX.Element => {
   const [availableReferencePriorities, setAvailableReferencePriorities] = useState<IStandardPriority[]>([]);
   const [selectedImportPriorities, setSelectedImportPriorities] = useState<string[]>([]);
   const [priorityColor, setPriorityColor] = useState('#6B7280');
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
+  const [editingStatus, setEditingStatus] = useState<IStatus | null>(null);
+  const [showStatusImportDialog, setShowStatusImportDialog] = useState(false);
+  const [availableReferenceStatuses, setAvailableReferenceStatuses] = useState<IStandardStatus[]>([]);
+  const [selectedImportStatuses, setSelectedImportStatuses] = useState<string[]>([]);
+  
+  // Conflict resolution state
+  const [importConflicts, setImportConflicts] = useState<ImportConflict[]>([]);
+  const [showConflictDialog, setShowConflictDialog] = useState(false);
+  const [conflictResolutions, setConflictResolutions] = useState<Record<string, { action: 'skip' | 'rename' | 'reorder', newName?: string, newOrder?: number }>>({});
+  const [currentImportType, setCurrentImportType] = useState<'priorities' | 'statuses'>('priorities');
 
   useEffect(() => {
     const initUser = async () => {
@@ -820,10 +831,18 @@ const TicketingSettings = (): JSX.Element => {
       {
         title: 'Name',
         dataIndex: 'name',
+        width: '30%',
+      },
+      {
+        title: 'Order',
+        dataIndex: 'order_number',
+        width: '10%',
+        render: (value) => value || 0,
       },
       {
         title: 'Status',
         dataIndex: 'is_closed',
+        width: '50%',
         render: (value, record) => (
           <div className="flex items-center space-x-2 text-gray-500">
             <span className="text-sm mr-2">
@@ -836,8 +855,18 @@ const TicketingSettings = (): JSX.Element => {
             />
             <span className="text-xs text-gray-400 ml-2">
               {record.is_closed 
-                ? `${type === 'project' ? 'Projects' : 'Tickets'} with this status will be marked as closed` 
-                : `${type === 'project' ? 'Projects' : 'Tickets'} with this status will remain open`
+                ? `${
+                    type === 'project' ? 'Projects' : 
+                    type === 'ticket' ? 'Tickets' : 
+                    type === 'project_task' ? 'Tasks' : 
+                    'Interactions'
+                  } with this status will be marked as closed` 
+                : `${
+                    type === 'project' ? 'Projects' : 
+                    type === 'ticket' ? 'Tickets' : 
+                    type === 'project_task' ? 'Tasks' : 
+                    'Interactions'
+                  } with this status will remain open`
               }
             </span>
           </div>
@@ -1091,30 +1120,112 @@ const TicketingSettings = (): JSX.Element => {
               </p>
             </div>
           )}
-          {/* Setting Section */}
-          <SettingSection<IStatus>
-            title={`${selectedStatusType.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')} Statuses`}
-            items={statuses}
-            newItem={newStatus}
-            setNewItem={setNewStatus}
-            addItem={addStatus}
-            updateItem={updateStatusItem}
-            deleteItem={handleDeleteStatusRequestWrapper}
-            getItemName={(status) => status.name}
-            getItemKey={(status) => status.status_id || ''}
-            columns={getStatusColumns(selectedStatusType)}
-            headerControls={
+          {selectedStatusType === 'project' && (
+            <div className="bg-blue-50 p-4 rounded-md mb-4">
+              <p className="text-sm text-blue-700">
+                <strong>Project Statuses:</strong> Define the workflow stages for your projects.
+                Mark statuses as "closed" to indicate project completion.
+              </p>
+            </div>
+          )}
+          {selectedStatusType === 'interaction' && (
+            <div className="bg-blue-50 p-4 rounded-md mb-4">
+              <p className="text-sm text-blue-700">
+                <strong>Interaction Statuses:</strong> Track the state of customer interactions
+                such as calls, emails, and meetings.
+              </p>
+            </div>
+          )}
+          {/* Statuses Section */}
+          <div className="bg-white p-6 rounded-lg shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">
+                {selectedStatusType.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')} Statuses
+              </h3>
               <CustomSelect
                 value={selectedStatusType}
                 onValueChange={(value: string) => setSelectedStatusType(value as ItemType)}
                 options={[
                   { value: 'ticket', label: 'Ticket Statuses' },
-                  { value: 'project', label: 'Project Statuses' }
+                  { value: 'project', label: 'Project Statuses' },
+                  { value: 'interaction', label: 'Interaction Statuses' }
                 ]}
                 className="w-64"
               />
-            }
-          />
+            </div>
+            
+            <DataTable
+              data={statuses.filter(s => s.status_type === selectedStatusType).sort((a, b) => (a.order_number || 0) - (b.order_number || 0))}
+              columns={[...getStatusColumns(selectedStatusType), {
+                title: 'Actions',
+                dataIndex: 'action',
+                width: '10%',
+                render: (_, item) => (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        className="h-8 w-8 p-0"
+                        id={`status-actions-menu-${item.status_id}`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <span className="sr-only">Open menu</span>
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        id={`edit-status-${item.status_id}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingStatus(item);
+                          setShowStatusDialog(true);
+                        }}
+                      >
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        id={`delete-status-${item.status_id}`}
+                        className="text-red-600 focus:text-red-600"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteStatusRequestWrapper(item.status_id);
+                        }}
+                      >
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ),
+              }]}
+              pagination={false}
+            />
+            
+            <div className="mt-4 flex gap-2">
+              <Button 
+                id='add-status-button' 
+                onClick={() => {
+                  setEditingStatus(null);
+                  setShowStatusDialog(true);
+                }} 
+                className="bg-primary-500 text-white hover:bg-primary-600"
+              >
+                <Plus className="h-4 w-4 mr-2" /> Add Status
+              </Button>
+              <Button 
+                id='import-statuses-button' 
+                onClick={async () => {
+                  const available = await getAvailableReferenceData('statuses', { item_type: selectedStatusType });
+                  setAvailableReferenceStatuses(available);
+                  setSelectedImportStatuses([]);
+                  setShowStatusImportDialog(true);
+                }} 
+                variant="outline"
+              >
+                Import from Standard Types
+              </Button>
+            </div>
+          </div>
         </div>
       )
     },
@@ -1389,30 +1500,53 @@ const TicketingSettings = (): JSX.Element => {
               const name = formData.get('name') as string;
               const level = parseInt(formData.get('level') as string);
               
-              if (editingPriority) {
-                await updatePriorityItem({
-                  ...editingPriority,
-                  priority_name: name,
-                  order_number: level,
-                  color: priorityColor
-                });
-              } else {
-                await createPriority({
-                  priority_name: name,
-                  order_number: level,
-                  color: priorityColor,
-                  item_type: selectedPriorityType,
-                  created_by: userId,
-                  created_at: new Date()
-                });
+              try {
+                // Check if order number is already taken
+                const existingWithOrder = priorities.find(p => 
+                  'item_type' in p &&
+                  p.item_type === selectedPriorityType && 
+                  p.order_number === level &&
+                  p.priority_id !== editingPriority?.priority_id
+                );
+                
+                if (existingWithOrder) {
+                  toast.error(`Order number ${level} is already taken by "${existingWithOrder.priority_name}". Please choose a different order number.`);
+                  return;
+                }
+                
+                if (editingPriority) {
+                  await updatePriorityItem({
+                    ...editingPriority,
+                    priority_name: name,
+                    order_number: level,
+                    color: priorityColor
+                  });
+                } else {
+                  await createPriority({
+                    priority_name: name,
+                    order_number: level,
+                    color: priorityColor,
+                    item_type: selectedPriorityType,
+                    created_by: userId,
+                    created_at: new Date()
+                  });
+                }
+                
                 // Refresh priorities list
                 const updatedPriorities = await getAllPriorities();
                 setPriorities(updatedPriorities);
+                
+                setShowPriorityDialog(false);
+                setEditingPriority(null);
+                setPriorityColor('#6B7280');
+              } catch (error) {
+                console.error('Error saving priority:', error);
+                if (error instanceof Error && error.message.includes('unique constraint')) {
+                  toast.error('This order number is already in use. Please choose a different order number.');
+                } else {
+                  toast.error('Failed to save priority');
+                }
               }
-              
-              setShowPriorityDialog(false);
-              setEditingPriority(null);
-              setPriorityColor('#6B7280');
             }}>
               <div className="space-y-4">
                 <div>
@@ -1436,9 +1570,32 @@ const TicketingSettings = (): JSX.Element => {
                     type="number"
                     min="1"
                     max="100"
-                    defaultValue={editingPriority?.order_number || 50}
+                    defaultValue={editingPriority?.order_number || (() => {
+                      // Suggest next available order number
+                      const prioritiesOfType = priorities.filter(p => 
+                        'item_type' in p && p.item_type === selectedPriorityType
+                      );
+                      const maxOrder = Math.max(...prioritiesOfType.map(p => p.order_number || 0), 0);
+                      return Math.min(maxOrder + 10, 100);
+                    })()}
                     required
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {(() => {
+                      const prioritiesOfType = priorities.filter(p => 
+                        'item_type' in p && p.item_type === selectedPriorityType
+                      );
+                      const usedOrders = prioritiesOfType
+                        .filter(p => p.priority_id !== editingPriority?.priority_id)
+                        .map(p => p.order_number)
+                        .filter(n => n !== null && n !== undefined)
+                        .sort((a, b) => a - b);
+                      if (usedOrders.length > 0) {
+                        return `Used order numbers: ${usedOrders.join(', ')}`;
+                      }
+                      return 'No order numbers used yet';
+                    })()}
+                  </p>
                 </div>
                 
                 <div>
@@ -1595,25 +1752,42 @@ const TicketingSettings = (): JSX.Element => {
               disabled={selectedImportPriorities.length === 0}
               onClick={async () => {
                 try {
-                  const result = await importReferenceData(
+                  // Check for conflicts first
+                  const conflicts = await checkImportConflicts(
                     'priorities',
                     selectedImportPriorities,
                     { item_type: selectedPriorityType }
                   );
                   
-                  if (result.imported.length > 0) {
-                    toast.success(`Successfully imported ${result.imported.length} priorities`);
-                    // Refresh priorities list
-                    const updatedPriorities = await getAllPriorities();
-                    setPriorities(updatedPriorities);
+                  if (conflicts.length > 0) {
+                    // Show conflict resolution dialog
+                    setImportConflicts(conflicts);
+                    setCurrentImportType('priorities');
+                    setConflictResolutions({});
+                    setShowConflictDialog(true);
+                    setShowImportDialog(false);
+                  } else {
+                    // No conflicts, proceed with import
+                    const result = await importReferenceData(
+                      'priorities',
+                      selectedImportPriorities,
+                      { item_type: selectedPriorityType }
+                    );
+                    
+                    if (result.imported.length > 0) {
+                      toast.success(`Successfully imported ${result.imported.length} priorities`);
+                      // Refresh priorities list
+                      const updatedPriorities = await getAllPriorities();
+                      setPriorities(updatedPriorities);
+                    }
+                    
+                    if (result.skipped.length > 0) {
+                      toast.error(`Skipped ${result.skipped.length} priorities (already exist)`);
+                    }
+                    
+                    setShowImportDialog(false);
+                    setSelectedImportPriorities([]);
                   }
-                  
-                  if (result.skipped.length > 0) {
-                    toast.error(`Skipped ${result.skipped.length} priorities (already exist)`);
-                  }
-                  
-                  setShowImportDialog(false);
-                  setSelectedImportPriorities([]);
                 } catch (error) {
                   console.error('Error importing priorities:', error);
                   toast.error('Failed to import priorities');
@@ -1624,6 +1798,528 @@ const TicketingSettings = (): JSX.Element => {
             </Button>
           </DialogFooter>
         </DialogContent>
+      </Dialog>
+
+      {/* Status Add/Edit Dialog */}
+      <Dialog
+        isOpen={showStatusDialog}
+        onClose={() => setShowStatusDialog(false)}
+        title={editingStatus ? 'Edit Status' : 'Add New Status'}
+        className="max-w-lg"
+        id="status-dialog"
+      >
+        <DialogContent>
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            const name = formData.get('name') as string;
+            const orderNumber = parseInt(formData.get('orderNumber') as string);
+            const isClosed = formData.get('isClosed') === 'true';
+            const isDefault = selectedStatusType === 'ticket' ? formData.get('isDefault') === 'true' : false;
+            
+            try {
+              // Check if order number is already taken
+              const existingWithOrder = statuses.find(s => 
+                s.status_type === selectedStatusType && 
+                s.order_number === orderNumber &&
+                s.status_id !== editingStatus?.status_id
+              );
+              
+              if (existingWithOrder) {
+                toast.error(`Order number ${orderNumber} is already taken by "${existingWithOrder.name}". Please choose a different order number.`);
+                return;
+              }
+              
+              if (editingStatus) {
+                await updateStatusItem({
+                  ...editingStatus,
+                  name: name,
+                  order_number: orderNumber,
+                  is_closed: isClosed,
+                  is_default: isDefault
+                });
+              } else {
+                await createStatus({
+                  name: name,
+                  status_type: selectedStatusType,
+                  order_number: orderNumber,
+                  is_closed: isClosed,
+                  is_default: isDefault,
+                  created_by: userId
+                });
+              }
+              
+              // Refresh statuses list
+              const updatedStatuses = await getStatuses(selectedStatusType);
+              setStatuses(updatedStatuses);
+              
+              setShowStatusDialog(false);
+              setEditingStatus(null);
+            } catch (error) {
+              console.error('Error saving status:', error);
+              if (error instanceof Error && error.message.includes('unique_tenant_type_order')) {
+                toast.error('This order number is already in use. Please choose a different order number.');
+              } else {
+                toast.error('Failed to save status');
+              }
+            }
+          }}>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status Name
+                </label>
+                <Input
+                  name="name"
+                  defaultValue={editingStatus?.name || ''}
+                  required
+                  placeholder="e.g., In Progress"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Order Number (1-100, lower numbers appear first)
+                </label>
+                <Input
+                  name="orderNumber"
+                  type="number"
+                  min="1"
+                  max="100"
+                  defaultValue={editingStatus?.order_number || (() => {
+                    // Suggest next available order number
+                    const statusesOfType = statuses.filter(s => s.status_type === selectedStatusType);
+                    const maxOrder = Math.max(...statusesOfType.map(s => s.order_number || 0), 0);
+                    return Math.min(maxOrder + 10, 100);
+                  })()}
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {(() => {
+                    const statusesOfType = statuses.filter(s => s.status_type === selectedStatusType);
+                    const usedOrders = statusesOfType
+                      .filter(s => s.status_id !== editingStatus?.status_id)
+                      .map(s => s.order_number)
+                      .filter(n => n !== null && n !== undefined)
+                      .sort((a, b) => a - b);
+                    if (usedOrders.length > 0) {
+                      return `Used order numbers: ${usedOrders.join(', ')}`;
+                    }
+                    return 'No order numbers used yet';
+                  })()}
+                </p>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    name="isClosed"
+                    id="status-is-closed"
+                    value="true"
+                    defaultChecked={editingStatus?.is_closed || false}
+                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="status-is-closed" className="text-sm text-gray-700">
+                    Mark as closed status
+                  </label>
+                </div>
+                
+                {selectedStatusType === 'ticket' && (
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      name="isDefault"
+                      id="status-is-default"
+                      value="true"
+                      defaultChecked={editingStatus?.is_default || false}
+                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="status-is-default" className="text-sm text-gray-700">
+                      Set as default status for new tickets
+                    </label>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button
+                id="cancel-status-dialog"
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowStatusDialog(false);
+                  setEditingStatus(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                id="submit-status-dialog"
+                type="submit" 
+                variant="default"
+              >
+                {editingStatus ? 'Update' : 'Add'} Status
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Statuses Dialog */}
+      <Dialog
+        isOpen={showStatusImportDialog}
+        onClose={() => setShowStatusImportDialog(false)}
+        title="Import Standard Statuses"
+        className="max-w-lg"
+        id="import-statuses-dialog"
+      >
+        <DialogContent>
+          {availableReferenceStatuses.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">All standard statuses have already been imported for {selectedStatusType}s.</p>
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm text-gray-600 mb-4">
+                Select the standard statuses you want to import. These will be copied to your organization's statuses.
+              </p>
+              
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {availableReferenceStatuses.map((status) => (
+                  <div
+                    key={status.standard_status_id}
+                    className="flex items-center p-3 border rounded-lg hover:bg-gray-50"
+                  >
+                    <input
+                      type="checkbox"
+                      id={`import-status-${status.standard_status_id}`}
+                      checked={selectedImportStatuses.includes(status.standard_status_id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedImportStatuses([...selectedImportStatuses, status.standard_status_id]);
+                        } else {
+                          setSelectedImportStatuses(selectedImportStatuses.filter(id => id !== status.standard_status_id));
+                        }
+                      }}
+                      className="mr-3"
+                    />
+                    <label
+                      htmlFor={`import-status-${status.standard_status_id}`}
+                      className="flex-1 flex items-center justify-between cursor-pointer"
+                    >
+                      <div>
+                        <span className="font-medium">{status.name}</span>
+                        {status.is_closed && (
+                          <span className="ml-2 text-sm text-gray-500">(Closed)</span>
+                        )}
+                      </div>
+                      <span className="text-sm text-gray-500">Order: {status.display_order}</span>
+                    </label>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="mt-4 flex items-center gap-2">
+                <Button
+                  id="import-statuses-select-all"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setSelectedImportStatuses(availableReferenceStatuses.map(s => s.standard_status_id))}
+                >
+                  Select All
+                </Button>
+                <Button
+                  id="import-statuses-clear-selection"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setSelectedImportStatuses([])}
+                >
+                  Clear Selection
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button
+              id="cancel-import-statuses-dialog"
+              variant="outline"
+              onClick={() => {
+                setShowStatusImportDialog(false);
+                setSelectedImportStatuses([]);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              id="import-selected-statuses"
+              variant="default"
+              disabled={selectedImportStatuses.length === 0}
+              onClick={async () => {
+                try {
+                  // Check for conflicts first
+                  const conflicts = await checkImportConflicts(
+                    'statuses',
+                    selectedImportStatuses,
+                    { item_type: selectedStatusType }
+                  );
+                  
+                  console.log('Status import conflicts:', conflicts);
+                  
+                  if (conflicts.length > 0) {
+                    // Show conflict resolution dialog
+                    setImportConflicts(conflicts);
+                    setCurrentImportType('statuses');
+                    setConflictResolutions({});
+                    setShowConflictDialog(true);
+                    setShowStatusImportDialog(false);
+                  } else {
+                    // No conflicts, proceed with import
+                    const result = await importReferenceData(
+                      'statuses',
+                      selectedImportStatuses,
+                      { item_type: selectedStatusType }
+                    );
+                    
+                    if (result.imported.length > 0) {
+                      toast.success(`Successfully imported ${result.imported.length} statuses`);
+                      // Refresh statuses list
+                      const updatedStatuses = await getStatuses(selectedStatusType);
+                      setStatuses(updatedStatuses);
+                    }
+                    
+                    if (result.skipped.length > 0) {
+                      const skippedReasons = result.skipped.map(s => `${s.name}: ${s.reason}`).join('\n');
+                      console.log('Skipped statuses:', skippedReasons);
+                      toast.error(`Skipped ${result.skipped.length} statuses (${result.skipped[0].reason})`);
+                    }
+                    
+                    setShowStatusImportDialog(false);
+                    setSelectedImportStatuses([]);
+                  }
+                } catch (error) {
+                  console.error('Error importing statuses:', error);
+                  toast.error('Failed to import statuses');
+                }
+              }}
+            >
+              Import ({selectedImportStatuses.length})
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Conflict Resolution Dialog */}
+      <Dialog
+        isOpen={showConflictDialog}
+        onClose={() => {
+          setShowConflictDialog(false);
+          setImportConflicts([]);
+          setConflictResolutions({});
+        }}
+        title="Resolve Import Conflicts"
+        className="max-w-2xl"
+        id="conflict-resolution-dialog"
+      >
+        <DialogContent>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              The following items have conflicts with existing data. Choose how to resolve each conflict:
+            </p>
+            
+            {(() => {
+              // Group conflicts by item ID
+              const conflictsByItem = importConflicts.reduce((acc, conflict) => {
+                const itemId = conflict.referenceItem.id || conflict.referenceItem.priority_id || conflict.referenceItem.standard_status_id || conflict.referenceItem.status_id;
+                if (!acc[itemId]) {
+                  acc[itemId] = {
+                    item: conflict.referenceItem,
+                    conflicts: []
+                  };
+                }
+                acc[itemId].conflicts.push(conflict);
+                return acc;
+              }, {} as Record<string, { item: any, conflicts: ImportConflict[] }>);
+
+              return Object.entries(conflictsByItem).map(([itemId, { item, conflicts }]) => {
+                const itemName = item.name || item.priority_name;
+                const resolution = conflictResolutions[itemId] || { action: 'skip' };
+                const hasNameConflict = conflicts.some(c => c.conflictType === 'name');
+                const hasOrderConflict = conflicts.some(c => c.conflictType === 'order');
+                const orderConflict = conflicts.find(c => c.conflictType === 'order');
+                
+                return (
+                  <div key={itemId} className="border rounded-lg p-4 space-y-3">
+                    <div className="font-medium">
+                      {itemName}
+                      {hasOrderConflict && (
+                        <span className="text-sm text-gray-500 ml-2">
+                          (Order: {item.order_number || item.display_order})
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="text-sm text-gray-600 space-y-1">
+                      {hasNameConflict && <div>• An item with this name already exists.</div>}
+                      {hasOrderConflict && <div>• Order number {item.order_number || item.display_order} is already taken.</div>}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          name={`conflict-${itemId}`}
+                          value="skip"
+                          checked={resolution.action === 'skip'}
+                          onChange={() => {
+                            setConflictResolutions({
+                              ...conflictResolutions,
+                              [itemId]: { action: 'skip' }
+                            });
+                          }}
+                        />
+                        <span>Skip this item</span>
+                      </label>
+                      
+                      {hasNameConflict && (
+                        <label className="flex items-center space-x-2">
+                          <input
+                            type="radio"
+                            name={`conflict-${itemId}`}
+                            value="rename"
+                            checked={resolution.action === 'rename'}
+                            onChange={() => {
+                              setConflictResolutions({
+                                ...conflictResolutions,
+                                [itemId]: { action: 'rename', newName: `${itemName} (Imported)` }
+                              });
+                            }}
+                          />
+                          <span>Import with different name:</span>
+                          {resolution.action === 'rename' && (
+                            <Input
+                              value={resolution.newName || ''}
+                              onChange={(e) => {
+                                setConflictResolutions({
+                                  ...conflictResolutions,
+                                  [itemId]: { ...resolution, newName: e.target.value }
+                                });
+                              }}
+                              className="ml-2 w-64"
+                            />
+                          )}
+                        </label>
+                      )}
+                      
+                      {hasOrderConflict && !hasNameConflict && (
+                        <label className="flex items-center space-x-2">
+                          <input
+                            type="radio"
+                            name={`conflict-${itemId}`}
+                            value="reorder"
+                            checked={resolution.action === 'reorder'}
+                            onChange={() => {
+                              setConflictResolutions({
+                                ...conflictResolutions,
+                                [itemId]: { action: 'reorder', newOrder: orderConflict?.suggestedOrder }
+                              });
+                            }}
+                          />
+                          <span>Import with different order:</span>
+                          {resolution.action === 'reorder' && (
+                            <Input
+                              type="number"
+                              value={resolution.newOrder || orderConflict?.suggestedOrder || 0}
+                              onChange={(e) => {
+                                setConflictResolutions({
+                                  ...conflictResolutions,
+                                  [itemId]: { ...resolution, newOrder: parseInt(e.target.value) }
+                                });
+                              }}
+                              className="ml-2 w-24"
+                            />
+                          )}
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+        </DialogContent>
+        <DialogFooter>
+          <Button
+            id="cancel-conflict-resolution"
+            variant="destructive"
+            onClick={() => {
+              setShowConflictDialog(false);
+              setImportConflicts([]);
+              setConflictResolutions({});
+              // Reopen the original import dialog
+              if (currentImportType === 'priorities') {
+                setShowImportDialog(true);
+              } else {
+                setShowStatusImportDialog(true);
+              }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            id="apply-conflict-resolution"
+            variant="default"
+            onClick={async () => {
+              try {
+                const itemIds = currentImportType === 'priorities' ? selectedImportPriorities : selectedImportStatuses;
+                const filters = currentImportType === 'priorities' 
+                  ? { item_type: selectedPriorityType } 
+                  : { item_type: selectedStatusType };
+                
+                const result = await importReferenceData(
+                  currentImportType,
+                  itemIds,
+                  filters,
+                  conflictResolutions
+                );
+                
+                if (result.imported.length > 0) {
+                  toast.success(`Successfully imported ${result.imported.length} ${currentImportType}`);
+                  
+                  // Refresh the appropriate list
+                  if (currentImportType === 'priorities') {
+                    const updatedPriorities = await getAllPriorities();
+                    setPriorities(updatedPriorities);
+                    setSelectedImportPriorities([]);
+                  } else {
+                    const updatedStatuses = await getStatuses(selectedStatusType);
+                    setStatuses(updatedStatuses);
+                    setSelectedImportStatuses([]);
+                  }
+                }
+                
+                if (result.skipped.length > 0) {
+                  const skippedNames = result.skipped.map(s => s.name).join(', ');
+                  toast(`Skipped: ${skippedNames}`, {
+                    icon: 'ℹ️',
+                    duration: 4000,
+                  });
+                }
+                
+                setShowConflictDialog(false);
+                setImportConflicts([]);
+                setConflictResolutions({});
+              } catch (error) {
+                console.error(`Error importing ${currentImportType}:`, error);
+                toast.error(`Failed to import ${currentImportType}`);
+              }
+            }}
+          >
+            Apply and Import
+          </Button>
+        </DialogFooter>
       </Dialog>
     </div>
   );

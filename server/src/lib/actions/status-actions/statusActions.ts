@@ -268,60 +268,28 @@ export async function getWorkItemStatusOptions(itemType?: ItemType | ItemType[])
         ? (Array.isArray(itemType) ? itemType : [itemType]) 
         : ['ticket', 'project_task'];
 
-      const customStatusesQuery = trx('statuses')
+      const statusesQuery = trx('statuses')
         .where({ tenant: tenant })
-        .select('status_id', 'name')
+        .select('status_id', 'name', 'order_number')
+        .orderBy('order_number', 'asc')
         .orderBy('name', 'asc');
 
       if (itemTypesToFetch.length > 0) {
-        customStatusesQuery.whereIn('status_type', itemTypesToFetch);
+        statusesQuery.whereIn('status_type', itemTypesToFetch);
       }
-      const customStatuses = await customStatusesQuery;
-
-
-      const standardStatusesQuery = trx('standard_statuses')
-        .where({ tenant: tenant })
-        .select('standard_status_id', 'name')
-        .orderBy('name', 'asc');
-        
-      if (itemTypesToFetch.length > 0) {
-        standardStatusesQuery.whereIn('item_type', itemTypesToFetch);
-      }
-      const standardStatuses = await standardStatusesQuery;
+      const statuses = await statusesQuery;
 
       const options: StatusOption[] = [
         { value: 'all_open', label: 'All Open' },
         { value: 'all_closed', label: 'All Closed' },
-        ...customStatuses.map(s => ({
+        ...statuses.map(s => ({
           value: s.status_id,
           label: s.name,
           isStandard: false,
-        })),
-        ...standardStatuses.map(s => ({
-          value: s.standard_status_id,
-          label: s.name,
-          isStandard: true,
-        })),
+        }))
       ];
 
-      const uniqueOptions = options.reduce((acc, current) => {
-        const existing = acc.find(item => item.label === current.label);
-        if (!existing) {
-          acc.push(current);
-        } else if (existing.isStandard === true && current.isStandard === false) {
-          acc = acc.filter(item => item.label !== current.label);
-          acc.push(current);
-        }
-        return acc;
-      }, [] as StatusOption[]);
-
-       const finalOptions = [
-          ...uniqueOptions.filter(o => o.value === 'all_open'),
-          ...uniqueOptions.filter(o => o.value === 'all_closed'),
-          ...uniqueOptions.filter(o => o.value !== 'all_open' && o.value !== 'all_closed').sort((a, b) => a.label.localeCompare(b.label))
-       ];
-
-      return finalOptions;
+      return options;
     });
 
   } catch (error) {
@@ -398,10 +366,6 @@ export async function deleteStatus(statusId: string) {
           .where({
             tenant,
             status_id: statusId
-          })
-          .orWhere({
-            tenant,
-            standard_status_id: statusId
           })
           .count('project_status_mapping_id as count')
           .first();
