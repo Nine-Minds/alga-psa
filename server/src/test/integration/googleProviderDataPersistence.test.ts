@@ -192,7 +192,7 @@ describe('Google Provider Data Persistence Tests', () => {
       mailbox: 'authenticated@gmail.com',
       isActive: true,
       vendorConfig: {
-        clientId: 'auth-client-id',
+        clientId: 'auth-client-id.apps.googleusercontent.com',
         clientSecret: 'auth-secret',
         projectId: 'auth-project',
         pubSubTopic: 'auth-topic',
@@ -235,7 +235,7 @@ describe('Google Provider Data Persistence Tests', () => {
 
     await expect(
       emailProviderService.createProvider(invalidProviderType)
-    ).rejects.toThrow(/violates check constraint/);
+    ).rejects.toThrow(/Provider type must be either "google" or "microsoft"/);
 
     // Verify no records were created with invalid provider type
     const count = await testDb('email_provider_configs')
@@ -247,28 +247,40 @@ describe('Google Provider Data Persistence Tests', () => {
     expect(parseInt(count?.count || '0')).toBe(0);
   });
 
-  it('should allow creation with minimal required fields', async () => {
-    // Test that empty provider name is allowed (though not ideal)
-    const minimalConfig = {
+  it('should enforce validation for required fields', async () => {
+    // Test that empty provider name is not allowed
+    const emptyNameConfig = {
       tenant: testTenant,
       providerType: 'google' as const,
-      providerName: '', // Empty name is allowed
+      providerName: '', // Empty name should fail validation
+      mailbox: 'minimal@gmail.com',
+      isActive: true,
+      vendorConfig: {
+        clientId: 'test.apps.googleusercontent.com',
+        clientSecret: 'secret',
+        projectId: 'project',
+        pubSubTopic: 'topic',
+        pubSubSubscription: 'sub'
+      }
+    };
+
+    await expect(
+      emailProviderService.createProvider(emptyNameConfig)
+    ).rejects.toThrow(/Provider name is required/);
+
+    // Test that missing vendor config fails
+    const noVendorConfig = {
+      tenant: testTenant,
+      providerType: 'google' as const,
+      providerName: 'Test Provider',
       mailbox: 'minimal@gmail.com',
       isActive: true,
       vendorConfig: {}
     };
 
-    // This should succeed
-    const createdProvider = await emailProviderService.createProvider(minimalConfig);
-    
-    expect(createdProvider).toBeDefined();
-    expect(createdProvider.name).toBe('');
-    expect(createdProvider.mailbox).toBe('minimal@gmail.com');
-    
-    // Cleanup
-    await testDb('email_provider_configs')
-      .where('id', createdProvider.id)
-      .delete();
+    await expect(
+      emailProviderService.createProvider(noVendorConfig)
+    ).rejects.toThrow(/Google Client ID is required/);
   });
 
   it('should correctly handle updates to existing Google provider configurations', async () => {
@@ -280,7 +292,7 @@ describe('Google Provider Data Persistence Tests', () => {
       mailbox: 'original@gmail.com',
       isActive: true,
       vendorConfig: {
-        clientId: 'original-client-id',
+        clientId: 'original-client-id.apps.googleusercontent.com',
         clientSecret: 'original-secret',
         projectId: 'original-project',
         pubSubTopic: 'original-topic',
@@ -317,7 +329,7 @@ describe('Google Provider Data Persistence Tests', () => {
     expect(providerConfig.maxEmailsPerSync).toBe(100);
     expect(providerConfig.refreshToken).toBe('new-refresh-token');
     // Original values preserved
-    expect(providerConfig.clientId).toBe('original-client-id');
+    expect(providerConfig.clientId).toBe('original-client-id.apps.googleusercontent.com');
     expect(providerConfig.projectId).toBe('original-project');
   });
 });

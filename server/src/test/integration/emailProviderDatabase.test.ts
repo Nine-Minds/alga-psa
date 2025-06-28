@@ -65,8 +65,8 @@ describe('Email Provider Database Integration Tests', () => {
       if (!tenantExists) {
         await testDb('tenants').insert({
           tenant: testTenant,
-          company_id: uuidv4(),
-          active: true,
+          company_name: 'Email Provider Test Company',
+          email: 'test@company.com',
           created_at: new Date(),
           updated_at: new Date()
         });
@@ -154,7 +154,9 @@ describe('Email Provider Database Integration Tests', () => {
       expect(dbRecord.folder_to_monitor).toBe('Inbox');
       
       // Parse and verify provider_config JSON
-      const providerConfig = JSON.parse(dbRecord.provider_config);
+      const providerConfig = typeof dbRecord.provider_config === 'string' 
+        ? JSON.parse(dbRecord.provider_config)
+        : dbRecord.provider_config;
       expect(providerConfig.clientId).toBe('test-client-id.apps.googleusercontent.com');
       expect(providerConfig.clientSecret).toBe('test-client-secret');
       expect(providerConfig.projectId).toBe('test-project-id');
@@ -198,7 +200,9 @@ describe('Email Provider Database Integration Tests', () => {
 
       expect(dbRecord.mailbox).toBe('support@company.com');
       
-      const providerConfig = JSON.parse(dbRecord.provider_config);
+      const providerConfig = typeof dbRecord.provider_config === 'string' 
+        ? JSON.parse(dbRecord.provider_config)
+        : dbRecord.provider_config;
       expect(providerConfig.labelFilters).toEqual(['INBOX', 'Support']);
       expect(providerConfig.autoProcessEmails).toBe(false);
     });
@@ -214,9 +218,11 @@ describe('Email Provider Database Integration Tests', () => {
         mailbox: 'initial@gmail.com',
         isActive: true,
         vendorConfig: {
-          clientId: 'initial-client-id',
+          clientId: 'initial-client-id.apps.googleusercontent.com',
           clientSecret: 'initial-secret',
           projectId: 'initial-project',
+          pubSubTopic: 'initial-topic',
+          pubSubSubscription: 'initial-sub',
           maxEmailsPerSync: 50
         }
       };
@@ -245,7 +251,7 @@ describe('Email Provider Database Integration Tests', () => {
       expect(updatedProvider.provider_config.labelFilters).toEqual(['INBOX', 'IMPORTANT', 'SENT']);
       
       // Original config should be preserved
-      expect(updatedProvider.provider_config.clientId).toBe('initial-client-id');
+      expect(updatedProvider.provider_config.clientId).toBe('initial-client-id.apps.googleusercontent.com');
       expect(updatedProvider.provider_config.projectId).toBe('initial-project');
 
       // Verify in database
@@ -268,7 +274,13 @@ describe('Email Provider Database Integration Tests', () => {
         providerName: 'Gmail Provider 1',
         mailbox: 'provider1@gmail.com',
         isActive: true,
-        vendorConfig: { clientId: 'client1' }
+        vendorConfig: { 
+          clientId: 'client1.apps.googleusercontent.com',
+          clientSecret: 'secret-1',
+          projectId: 'project-1',
+          pubSubTopic: 'topic-1',
+          pubSubSubscription: 'sub-1'
+        }
       });
 
       const provider2 = await emailProviderService.createProvider({
@@ -277,7 +289,13 @@ describe('Email Provider Database Integration Tests', () => {
         providerName: 'Gmail Provider 2',
         mailbox: 'provider2@company.com',
         isActive: true,
-        vendorConfig: { clientId: 'client2' }
+        vendorConfig: { 
+          clientId: 'client2.apps.googleusercontent.com',
+          clientSecret: 'secret-2',
+          projectId: 'project-2',
+          pubSubTopic: 'topic-2',
+          pubSubSubscription: 'sub-2'
+        }
       });
 
       // Also create a Microsoft provider to ensure filtering works
@@ -287,7 +305,10 @@ describe('Email Provider Database Integration Tests', () => {
         providerName: 'Microsoft Provider',
         mailbox: 'microsoft@outlook.com',
         isActive: true,
-        vendorConfig: { clientId: 'ms-client' }
+        vendorConfig: { 
+          clientId: 'ms-client',
+          clientSecret: 'ms-secret'
+        }
       });
 
       // List only Google providers
@@ -320,7 +341,7 @@ describe('Email Provider Database Integration Tests', () => {
         mailbox: 'full-config@gmail.com',
         isActive: true,
         vendorConfig: {
-          clientId: 'full-client-id',
+          clientId: 'full-client-id.apps.googleusercontent.com',
           clientSecret: 'full-secret',
           projectId: 'full-project',
           redirectUri: 'https://app.example.com/api/auth/google/callback',
@@ -343,7 +364,9 @@ describe('Email Provider Database Integration Tests', () => {
         .where('tenant', testTenant)
         .first();
 
-      const providerConfig = JSON.parse(dbRecord.provider_config);
+      const providerConfig = typeof dbRecord.provider_config === 'string' 
+        ? JSON.parse(dbRecord.provider_config)
+        : dbRecord.provider_config;
       expect(providerConfig.refreshToken).toBe('stored-refresh-token');
       expect(providerConfig.labelFilters).toHaveLength(3);
       expect(providerConfig.maxEmailsPerSync).toBe(500);

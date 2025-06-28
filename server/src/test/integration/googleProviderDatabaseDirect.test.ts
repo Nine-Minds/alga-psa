@@ -185,7 +185,7 @@ describe('Google Provider Database Direct Integration Tests', () => {
         mailbox: 'fullconfig@gmail.com',
         isActive: true,
         vendorConfig: {
-          clientId: 'full-client-id',
+          clientId: 'full-client-id.apps.googleusercontent.com',
           clientSecret: 'full-secret',
           projectId: 'full-project',
           redirectUri: 'https://app.example.com/api/auth/google/callback',
@@ -231,7 +231,7 @@ describe('Google Provider Database Direct Integration Tests', () => {
         mailbox: 'initial@gmail.com',
         isActive: true,
         vendorConfig: {
-          clientId: 'initial-client-id',
+          clientId: 'initial-client-id.apps.googleusercontent.com',
           clientSecret: 'initial-secret',
           projectId: 'initial-project',
           pubSubTopic: 'initial-topic',
@@ -269,7 +269,7 @@ describe('Google Provider Database Direct Integration Tests', () => {
       expect(vendorConfig.labelFilters).toEqual(['INBOX', 'IMPORTANT', 'SENT']);
       
       // Original config should be preserved
-      expect(vendorConfig.clientId).toBe('initial-client-id');
+      expect(vendorConfig.clientId).toBe('initial-client-id.apps.googleusercontent.com');
       expect(vendorConfig.projectId).toBe('initial-project');
     });
 
@@ -283,7 +283,7 @@ describe('Google Provider Database Direct Integration Tests', () => {
         providerName: 'Gmail Provider 1',
         mailbox: 'provider1@gmail.com',
         isActive: true,
-        vendorConfig: { clientId: 'client1', clientSecret: 'secret1', projectId: 'project1', pubSubTopic: 'topic1', pubSubSubscription: 'sub1' }
+        vendorConfig: { clientId: 'client1.apps.googleusercontent.com', clientSecret: 'secret1', projectId: 'project1', pubSubTopic: 'topic1', pubSubSubscription: 'sub1' }
       });
 
       await emailProviderService.createProvider({
@@ -292,7 +292,7 @@ describe('Google Provider Database Direct Integration Tests', () => {
         providerName: 'Gmail Provider 2',
         mailbox: 'provider2@company.com',
         isActive: true,
-        vendorConfig: { clientId: 'client2', clientSecret: 'secret2', projectId: 'project2', pubSubTopic: 'topic2', pubSubSubscription: 'sub2' }
+        vendorConfig: { clientId: 'client2.apps.googleusercontent.com', clientSecret: 'secret2', projectId: 'project2', pubSubTopic: 'topic2', pubSubSubscription: 'sub2' }
       });
 
       // Also create a Microsoft provider to ensure filtering works
