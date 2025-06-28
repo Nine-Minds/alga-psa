@@ -8,6 +8,7 @@ import { EmailProviderConfig } from '../../interfaces/email.interfaces';
 import { MicrosoftGraphAdapter } from './providers/MicrosoftGraphAdapter';
 import { GmailAdapter } from './providers/GmailAdapter';
 import { GmailWebhookService } from './GmailWebhookService';
+import { EmailProviderValidator } from './EmailProviderValidator';
 
 export interface CreateProviderData {
   tenant: string;
@@ -100,22 +101,35 @@ export class EmailProviderService {
    * Create a new email provider
    */
   async createProvider(data: CreateProviderData): Promise<EmailProviderConfig> {
+    // Validate input data
+    const validationErrors = EmailProviderValidator.validateCreateProvider(data);
+    if (validationErrors.length > 0) {
+      const errorMessage = EmailProviderValidator.formatValidationErrors(validationErrors);
+      throw new Error(errorMessage);
+    }
+
     try {
       const db = await this.getDb();
+      
+      // Sanitize input data
+      const sanitizedData = {
+        tenant: data.tenant,
+        provider_type: data.providerType,
+        name: data.providerName.trim(),
+        mailbox: data.mailbox.trim().toLowerCase(),
+        folder_to_monitor: 'Inbox',
+        active: data.isActive,
+        connection_status: 'disconnected',
+        webhook_notification_url: '',
+        provider_config: JSON.stringify(data.vendorConfig || {}),
+        created_at: db.fn.now(),
+        updated_at: db.fn.now()
+      };
+
       const [provider] = await db('email_provider_configs')
         .insert({
           id: db.raw('gen_random_uuid()'),
-          tenant: data.tenant,
-          provider_type: data.providerType,
-          name: data.providerName,
-          mailbox: data.mailbox,
-          folder_to_monitor: 'Inbox',
-          active: data.isActive,
-          connection_status: 'disconnected',
-          webhook_notification_url: '',
-          provider_config: JSON.stringify(data.vendorConfig),
-          created_at: db.fn.now(),
-          updated_at: db.fn.now()
+          ...sanitizedData
         })
         .returning('*');
 
@@ -124,6 +138,18 @@ export class EmailProviderService {
       return this.mapDbRowToProvider(provider);
     } catch (error: any) {
       console.error('Error creating email provider:', error);
+      
+      // Provide more user-friendly error messages for common database errors
+      if (error.code === '23505') { // Unique constraint violation
+        throw new Error('An email provider with this configuration already exists');
+      } else if (error.code === '23503') { // Foreign key violation
+        throw new Error('Invalid tenant specified');
+      } else if (error.code === '23514') { // Check constraint violation
+        throw new Error('Invalid provider type. Must be either "google" or "microsoft"');
+      } else if (error.code === '23502') { // Not null violation
+        throw new Error('Required field is missing');
+      }
+      
       throw new Error(`Failed to create email provider: ${error.message}`);
     }
   }
