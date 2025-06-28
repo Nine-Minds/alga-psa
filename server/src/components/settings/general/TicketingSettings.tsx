@@ -1678,40 +1678,49 @@ const TicketingSettings = (): JSX.Element => {
                 Select the standard priorities you want to import. These will be copied to your organization's priorities.
               </p>
               
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {availableReferencePriorities.map((priority) => (
-                  <div
-                    key={priority.priority_id}
-                    className="flex items-center p-3 border rounded-lg hover:bg-gray-50"
-                  >
-                    <input
-                      type="checkbox"
-                      id={`import-priority-${priority.priority_id}`}
-                      checked={selectedImportPriorities.includes(priority.priority_id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedImportPriorities([...selectedImportPriorities, priority.priority_id]);
-                        } else {
-                          setSelectedImportPriorities(selectedImportPriorities.filter(id => id !== priority.priority_id));
-                        }
-                      }}
-                      className="mr-3"
-                    />
+              <div className="border rounded-md">
+                {/* Table Header */}
+                <div className="flex items-center space-x-2 p-2 bg-muted/50 font-medium text-sm border-b">
+                  <div className="w-8"></div> {/* Checkbox column */}
+                  <div className="w-12"></div> {/* Color column */}
+                  <div className="flex-1">Name</div>
+                  <div className="w-16 text-center">Order</div>
+                </div>
+                {/* Table Body */}
+                <div className="max-h-96 overflow-y-auto">
+                  {availableReferencePriorities.map((priority) => (
                     <label
-                      htmlFor={`import-priority-${priority.priority_id}`}
-                      className="flex-1 flex items-center justify-between cursor-pointer"
+                      key={priority.priority_id}
+                      className="flex items-center space-x-2 p-2 hover:bg-muted/50 border-b last:border-b-0 cursor-pointer"
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="w-8">
+                        <input
+                          type="checkbox"
+                          id={`import-priority-${priority.priority_id}`}
+                          checked={selectedImportPriorities.includes(priority.priority_id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedImportPriorities([...selectedImportPriorities, priority.priority_id]);
+                            } else {
+                              setSelectedImportPriorities(selectedImportPriorities.filter(id => id !== priority.priority_id));
+                            }
+                          }}
+                          className="rounded border-gray-300"
+                        />
+                      </div>
+                      <div className="w-12 flex justify-center">
                         <div
                           className="w-4 h-4 rounded"
                           style={{ backgroundColor: priority.color }}
                         />
-                        <span className="font-medium">{priority.priority_name}</span>
                       </div>
-                      <span className="text-sm text-gray-500">Order: {priority.order_number}</span>
+                      <div className="flex-1 font-medium">{priority.priority_name}</div>
+                      <div className="w-16 text-center text-sm text-muted-foreground">
+                        {priority.order_number}
+                      </div>
                     </label>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
               
               <div className="mt-4 flex items-center gap-2">
@@ -1986,39 +1995,54 @@ const TicketingSettings = (): JSX.Element => {
                 Select the standard statuses you want to import. These will be copied to your organization's statuses.
               </p>
               
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {availableReferenceStatuses.map((status) => (
-                  <div
-                    key={status.standard_status_id}
-                    className="flex items-center p-3 border rounded-lg hover:bg-gray-50"
-                  >
-                    <input
-                      type="checkbox"
-                      id={`import-status-${status.standard_status_id}`}
-                      checked={selectedImportStatuses.includes(status.standard_status_id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedImportStatuses([...selectedImportStatuses, status.standard_status_id]);
-                        } else {
-                          setSelectedImportStatuses(selectedImportStatuses.filter(id => id !== status.standard_status_id));
-                        }
-                      }}
-                      className="mr-3"
-                    />
+              <div className="border rounded-md">
+                {/* Table Header */}
+                <div className="flex items-center space-x-2 p-2 bg-muted/50 font-medium text-sm border-b">
+                  <div className="w-8"></div> {/* Checkbox column */}
+                  <div className="flex-1">Name</div>
+                  <div className="w-20 text-center">Closed</div>
+                  <div className="w-20 text-center">Default</div>
+                  <div className="w-16 text-center">Order</div>
+                </div>
+                {/* Table Body */}
+                <div className="max-h-96 overflow-y-auto">
+                  {availableReferenceStatuses.map((status) => (
                     <label
-                      htmlFor={`import-status-${status.standard_status_id}`}
-                      className="flex-1 flex items-center justify-between cursor-pointer"
+                      key={status.standard_status_id}
+                      className="flex items-center space-x-2 p-2 hover:bg-muted/50 border-b last:border-b-0 cursor-pointer"
                     >
-                      <div>
-                        <span className="font-medium">{status.name}</span>
+                      <div className="w-8">
+                        <input
+                          type="checkbox"
+                          id={`import-status-${status.standard_status_id}`}
+                          checked={selectedImportStatuses.includes(status.standard_status_id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedImportStatuses([...selectedImportStatuses, status.standard_status_id]);
+                            } else {
+                              setSelectedImportStatuses(selectedImportStatuses.filter(id => id !== status.standard_status_id));
+                            }
+                          }}
+                          className="rounded border-gray-300"
+                        />
+                      </div>
+                      <div className="flex-1 font-medium">{status.name}</div>
+                      <div className="w-20 text-center">
                         {status.is_closed && (
-                          <span className="ml-2 text-sm text-gray-500">(Closed)</span>
+                          <span className="text-green-600">✓</span>
                         )}
                       </div>
-                      <span className="text-sm text-gray-500">Order: {status.display_order}</span>
+                      <div className="w-20 text-center">
+                        {status.is_default && (
+                          <span className="text-blue-600">✓</span>
+                        )}
+                      </div>
+                      <div className="w-16 text-center text-sm text-muted-foreground">
+                        {status.display_order}
+                      </div>
                     </label>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
               
               <div className="mt-4 flex items-center gap-2">

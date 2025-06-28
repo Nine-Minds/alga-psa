@@ -293,6 +293,20 @@ export async function updateServiceType(
   }
 }
 
+export async function getAllServiceTypes(): Promise<IServiceType[]> {
+  try {
+    const { ServiceTypeModel } = await import('../models/serviceType');
+    const { knex: db } = await createTenantKnex();
+    const serviceTypes = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await ServiceTypeModel.findAll(trx);
+    });
+    return serviceTypes;
+  } catch (error) {
+    console.error('Error fetching all service types:', error);
+    throw new Error('Failed to fetch service types');
+  }
+}
+
 export async function deleteServiceType(id: string): Promise<void> {
   try {
       // Assuming ServiceTypeModel is imported or available
