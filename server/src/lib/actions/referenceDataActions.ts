@@ -71,17 +71,20 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
     sourceTable: 'standard_service_types',
     targetTable: 'service_types',
     mapFields: (source: IStandardServiceType, tenantId: string, userId: string) => ({
-      service_type: source.name,
-      default_rate: 0,
+      name: source.name,
+      billing_method: source.billing_method,
       tenant: tenantId,
-      created_by: userId
+      is_active: true,
+      description: null,
+      standard_service_type_id: source.id,
+      order_number: source.display_order || 0
     }),
     conflictCheck: async (data: any, tenantId: string) => {
       const { knex: db } = await createTenantKnex();
       const existing = await db('service_types')
         .where({
           tenant: tenantId,
-          service_type: data.service_type
+          name: data.name
         })
         .first();
       return !!existing;
@@ -155,6 +158,8 @@ export async function getReferenceData(dataType: ReferenceDataType, filters?: an
     query = query.orderBy('display_order', 'asc');
   } else if (dataType === 'task_types') {
     query = query.orderBy('display_order', 'asc');
+  } else if (dataType === 'service_types') {
+    query = query.orderBy('display_order', 'asc');
   }
   
   return await query;
@@ -209,7 +214,7 @@ export async function checkImportConflicts(
     }
     
     // Check order conflict for data types that have order (even if there's a name conflict)
-    if (dataType === 'priorities' || dataType === 'statuses') {
+    if (dataType === 'priorities' || dataType === 'statuses' || dataType === 'service_types') {
       const orderField = dataType === 'priorities' ? 'order_number' : 'order_number';
       const orderValue = mappedData[orderField];
       

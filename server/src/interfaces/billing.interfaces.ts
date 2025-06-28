@@ -161,6 +161,7 @@ export interface IStandardServiceType {
   id: string;
   name: string;
   billing_method: 'fixed' | 'per_unit'; // Added
+  display_order: number;
   created_at: ISO8601String;
   updated_at: ISO8601String;
 }
@@ -173,6 +174,8 @@ export interface IServiceType extends TenantEntity {
   // standard_service_type_id removed
   is_active: boolean;
   description?: string | null;
+  order_number: number;
+  standard_service_type_id?: string | null;
   created_at: ISO8601String;
   updated_at: ISO8601String;
 }

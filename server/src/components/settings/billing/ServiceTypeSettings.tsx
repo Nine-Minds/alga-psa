@@ -19,14 +19,17 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from 'server/src/components/ui/DropdownMenu';
-import { IServiceType } from 'server/src/interfaces/billing.interfaces';
+import { IServiceType, IStandardServiceType } from 'server/src/interfaces/billing.interfaces';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { 
     getServiceTypesForSelection, 
+    getAllServiceTypes,
     createServiceType, 
     updateServiceType, 
     deleteServiceType 
 } from 'server/src/lib/actions/serviceActions';
+import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from 'server/src/lib/actions/referenceDataActions';
+import { toast } from 'react-hot-toast';
 
 // Type for the data returned by getServiceTypesForSelection
 type ServiceTypeSelectionItem = {
@@ -51,26 +54,29 @@ const ServiceTypeSettings: React.FC = () => {
   const [typeToDelete, setTypeToDelete] = useState<IServiceType | null>(null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  
+  // State for Import Dialog
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [availableReferenceTypes, setAvailableReferenceTypes] = useState<IStandardServiceType[]>([]);
+  const [selectedImportTypes, setSelectedImportTypes] = useState<string[]>([]);
+  const [importConflicts, setImportConflicts] = useState<ImportConflict[]>([]);
+  const [conflictResolutions, setConflictResolutions] = useState<Record<string, { action: 'skip' | 'rename' | 'reorder', newName?: string, newOrder?: number }>>({});
 
   const fetchTypes = async () => {
     setLoading(true);
     setError(null);
     try {
+      // Fetch the service types for selection (includes standard types)
       const fetchedTypes = await getServiceTypesForSelection();
       setAllTypes(fetchedTypes);
       
-      // Filter for tenant-specific (custom) types
-      const customTypes = fetchedTypes.filter(t => !t.is_standard).map(t => ({
-        id: t.id,
-        name: t.name,
-        billing_method: t.billing_method,
-        is_active: true, // Default to true if not provided
-        created_at: new Date().toISOString(), // Placeholder
-        updated_at: new Date().toISOString(), // Placeholder
-        // Any other required IServiceType fields
-      } as IServiceType));
+      // Fetch all tenant service types with full data including order_number
+      const tenantServiceTypes = await getAllServiceTypes();
       
-      setTenantTypes(customTypes);
+      // Sort by order_number
+      tenantServiceTypes.sort((a, b) => a.order_number - b.order_number);
+      
+      setTenantTypes(tenantServiceTypes);
     } catch (fetchError) {
       console.error("Error fetching service types:", fetchError);
       setError(fetchError instanceof Error ? fetchError.message : "Failed to fetch service types");
@@ -85,7 +91,11 @@ const ServiceTypeSettings: React.FC = () => {
 
   // --- Dialog Handlers ---
   const handleOpenAddDialog = () => {
-    setEditingType({}); // Empty object for add mode
+    // Calculate next order number
+    const maxOrder = tenantTypes.reduce((max, t) => Math.max(max, t.order_number || 0), 0);
+    const nextOrder = maxOrder + 10;
+    
+    setEditingType({ order_number: nextOrder }); // Empty object for add mode with suggested order
     setHasAttemptedSubmit(false);
     setValidationErrors([]);
     setIsEditDialogOpen(true);
@@ -127,6 +137,20 @@ const ServiceTypeSettings: React.FC = () => {
       errors.push("Billing method");
     }
     
+    if (!editingType.order_number && editingType.order_number !== 0) {
+      errors.push("Display order");
+    }
+    
+    // Check for duplicate order number
+    const existingWithOrder = tenantTypes.find(t => 
+      t.order_number === editingType.order_number && 
+      t.id !== editingType.id
+    );
+    
+    if (existingWithOrder) {
+      errors.push(`Order ${editingType.order_number} is already used by "${existingWithOrder.name}"`);
+    }
+    
     if (errors.length > 0) {
       setValidationErrors(errors);
       return;
@@ -147,6 +171,7 @@ const ServiceTypeSettings: React.FC = () => {
             billing_method: editingType.billing_method!, // Now required
             description: editingType.description || null,
             is_active: editingType.is_active ?? true, // Default to active
+            order_number: editingType.order_number!,
         };
         await createServiceType(createData);
       }
@@ -203,6 +228,48 @@ const ServiceTypeSettings: React.FC = () => {
     }
   };
 
+  // Import functionality
+  const handleCheckConflicts = async () => {
+    if (selectedImportTypes.length === 0) return;
+
+    try {
+      const conflicts = await checkImportConflicts('service_types', selectedImportTypes);
+      setImportConflicts(conflicts);
+      
+      if (conflicts.length === 0) {
+        // No conflicts, proceed with import
+        await handleImport();
+      }
+    } catch (error) {
+      console.error('Error checking conflicts:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to check conflicts');
+    }
+  };
+
+  const handleImport = async () => {
+    try {
+      const result = await importReferenceData('service_types', selectedImportTypes, undefined, conflictResolutions);
+      
+      if (result.imported.length > 0) {
+        toast.success(`Imported ${result.imported.length} service type${result.imported.length !== 1 ? 's' : ''}`);
+      }
+      
+      if (result.skipped.length > 0) {
+        const skippedMessage = result.skipped.map(s => `${s.name}: ${s.reason}`).join(', ');
+        toast(skippedMessage, { icon: 'ℹ️' });
+      }
+      
+      setShowImportDialog(false);
+      setSelectedImportTypes([]);
+      setImportConflicts([]);
+      setConflictResolutions({});
+      await fetchTypes();
+    } catch (error) {
+      console.error('Error importing service types:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to import service types');
+    }
+  };
+
   // --- Column Definitions ---
   const tenantColumns: ColumnDefinition<IServiceType>[] = [
     { title: 'Name', dataIndex: 'name' },
@@ -222,6 +289,7 @@ const ServiceTypeSettings: React.FC = () => {
         />
       ) 
     },
+    { title: 'Order', dataIndex: 'order_number', width: '80px' },
     {
       title: 'Actions',
       dataIndex: 'id',
@@ -278,9 +346,23 @@ const ServiceTypeSettings: React.FC = () => {
               <CardTitle>Custom Service Types</CardTitle>
               <CardDescription>Manage your organization's custom service types.</CardDescription>
             </div>
-            <Button id="add-custom-service-type-button" onClick={handleOpenAddDialog}>
-              <Plus className="mr-2 h-4 w-4" /> Add Custom Type
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                id="import-service-types-button" 
+                variant="outline"
+                onClick={async () => {
+                  const available = await getAvailableReferenceData('service_types');
+                  setAvailableReferenceTypes(available);
+                  setSelectedImportTypes([]);
+                  setShowImportDialog(true);
+                }}
+              >
+                Import from Standard Types
+              </Button>
+              <Button id="add-custom-service-type-button" onClick={handleOpenAddDialog}>
+                <Plus className="mr-2 h-4 w-4" /> Add Custom Type
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -358,10 +440,38 @@ const ServiceTypeSettings: React.FC = () => {
                 className={hasAttemptedSubmit && !editingType?.billing_method ? 'ring-1 ring-red-500' : ''}
               />
             </div>
+            <div>
+              <Label htmlFor="order-number">Display Order *</Label>
+              <Input
+                id="order-number"
+                type="number"
+                value={editingType?.order_number || ''}
+                onChange={(e) => {
+                  const value = e.target.value ? parseInt(e.target.value) : undefined;
+                  setEditingType({ ...editingType, order_number: value });
+                  clearErrorIfSubmitted();
+                }}
+                placeholder="e.g., 10, 20, 30..."
+                required
+                className={hasAttemptedSubmit && !editingType?.order_number ? 'border-red-500' : ''}
+              />
+              <p className="text-sm text-muted-foreground mt-1">
+                Use multiples of 10 to allow easy reordering
+                {tenantTypes.length > 0 && (
+                  <span className="block">
+                    Used orders: {tenantTypes
+                      .filter(t => t.id !== editingType?.id)
+                      .map(t => t.order_number)
+                      .sort((a, b) => a - b)
+                      .join(', ')}
+                  </span>
+                )}
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <Button id="cancel-edit-type-button" variant="outline" onClick={handleCloseEditDialog}>Cancel</Button>
-            <Button id="save-type-button" type="submit" className={!editingType?.name?.trim() || !editingType?.billing_method ? 'opacity-50' : ''}>Save</Button>
+            <Button id="save-type-button" type="submit" className={!editingType?.name?.trim() || !editingType?.billing_method || (!editingType?.order_number && editingType?.order_number !== 0) ? 'opacity-50' : ''}>Save</Button>
           </DialogFooter>
           </form>
         </DialogContent>
@@ -381,6 +491,210 @@ const ServiceTypeSettings: React.FC = () => {
         confirmLabel={error && error.includes("in use") ? "Close" : "Delete"}
         cancelLabel="Cancel"
       />
+
+      {/* Import Dialog */}
+      <Dialog 
+        isOpen={showImportDialog && importConflicts.length === 0} 
+        onClose={() => {
+          setShowImportDialog(false);
+          setSelectedImportTypes([]);
+        }} 
+        title="Import Standard Service Types"
+      >
+        <DialogContent>
+          <div className="space-y-4">
+            {availableReferenceTypes.length === 0 ? (
+              <p className="text-muted-foreground">No standard service types available to import.</p>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Select standard service types to import into your organization:
+                </p>
+                <div className="border rounded-md">
+                  {/* Table Header */}
+                  <div className="flex items-center space-x-2 p-2 bg-muted/50 font-medium text-sm border-b">
+                    <div className="w-8"></div> {/* Checkbox column */}
+                    <div className="flex-1">Name</div>
+                    <div className="w-24 text-center">Billing Method</div>
+                    <div className="w-16 text-center">Order</div>
+                  </div>
+                  {/* Table Body */}
+                  <div className="max-h-[300px] overflow-y-auto">
+                    {availableReferenceTypes.map((type) => (
+                      <label 
+                        key={type.id} 
+                        className="flex items-center space-x-2 p-2 hover:bg-muted/50 border-b last:border-b-0 cursor-pointer"
+                      >
+                        <div className="w-8">
+                          <input
+                            type="checkbox"
+                            checked={selectedImportTypes.includes(type.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedImportTypes([...selectedImportTypes, type.id]);
+                              } else {
+                                setSelectedImportTypes(selectedImportTypes.filter(id => id !== type.id));
+                              }
+                            }}
+                            className="rounded border-gray-300"
+                          />
+                        </div>
+                        <div className="flex-1">{type.name}</div>
+                        <div className="w-24 text-center text-sm text-muted-foreground">
+                          {type.billing_method === 'fixed' ? 'Fixed' : 'Per Unit'}
+                        </div>
+                        <div className="w-16 text-center text-sm text-muted-foreground">
+                          {type.display_order}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+        <DialogFooter>
+          <Button 
+            id="cancel-import-service-types"
+            variant="outline" 
+            onClick={() => {
+              setShowImportDialog(false);
+              setSelectedImportTypes([]);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            id="confirm-import-service-types"
+            onClick={handleCheckConflicts}
+            disabled={selectedImportTypes.length === 0}
+          >
+            Import Selected
+          </Button>
+        </DialogFooter>
+      </Dialog>
+
+      {/* Conflict Resolution Dialog */}
+      <Dialog 
+        isOpen={importConflicts.length > 0} 
+        onClose={() => {
+          setImportConflicts([]);
+          setConflictResolutions({});
+        }} 
+        title="Resolve Import Conflicts"
+      >
+        <DialogContent>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              The following items have conflicts that need to be resolved:
+            </p>
+            <div className="space-y-4 max-h-[400px] overflow-y-auto">
+              {importConflicts.map((conflict) => {
+                const itemId = conflict.referenceItem.id;
+                const resolution = conflictResolutions[itemId] || { action: 'skip' };
+                
+                return (
+                  <div key={itemId} className="border rounded-lg p-4 space-y-3">
+                    <div>
+                      <h4 className="font-medium">{conflict.referenceItem.name}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Conflict: {conflict.conflictType === 'name' ? 'Name already exists' : `Order ${conflict.referenceItem.order_number || conflict.referenceItem.display_order} is already in use`}
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          name={`conflict-${itemId}`}
+                          checked={resolution.action === 'skip'}
+                          onChange={() => setConflictResolutions({
+                            ...conflictResolutions,
+                            [itemId]: { action: 'skip' }
+                          })}
+                        />
+                        <span>Skip this item</span>
+                      </label>
+                      
+                      {conflict.conflictType === 'name' && (
+                        <label className="flex items-center space-x-2">
+                          <input
+                            type="radio"
+                            name={`conflict-${itemId}`}
+                            checked={resolution.action === 'rename'}
+                            onChange={() => setConflictResolutions({
+                              ...conflictResolutions,
+                              [itemId]: { action: 'rename', newName: conflict.referenceItem.name + ' (2)' }
+                            })}
+                          />
+                          <span>Import with different name:</span>
+                          {resolution.action === 'rename' && (
+                            <Input
+                              value={resolution.newName || ''}
+                              onChange={(e) => setConflictResolutions({
+                                ...conflictResolutions,
+                                [itemId]: { ...resolution, newName: e.target.value }
+                              })}
+                              className="ml-2 flex-1"
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          )}
+                        </label>
+                      )}
+                      
+                      {conflict.conflictType === 'order' && (
+                        <label className="flex items-center space-x-2">
+                          <input
+                            type="radio"
+                            name={`conflict-${itemId}`}
+                            checked={resolution.action === 'reorder'}
+                            onChange={() => setConflictResolutions({
+                              ...conflictResolutions,
+                              [itemId]: { action: 'reorder', newOrder: conflict.suggestedOrder }
+                            })}
+                          />
+                          <span>Import with different order:</span>
+                          {resolution.action === 'reorder' && (
+                            <Input
+                              type="number"
+                              value={resolution.newOrder || ''}
+                              onChange={(e) => setConflictResolutions({
+                                ...conflictResolutions,
+                                [itemId]: { ...resolution, newOrder: parseInt(e.target.value) }
+                              })}
+                              className="ml-2 w-24"
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          )}
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </DialogContent>
+        <DialogFooter>
+          <Button 
+            id="cancel-resolve-conflicts"
+            variant="outline" 
+            onClick={() => {
+              setImportConflicts([]);
+              setConflictResolutions({});
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            id="confirm-import-with-resolutions"
+            onClick={handleImport}
+          >
+            Import with Resolutions
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </div>
   );
 };
