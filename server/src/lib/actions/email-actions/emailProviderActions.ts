@@ -36,13 +36,13 @@ export async function getEmailProviders(): Promise<EmailProvider[]> {
       id: provider.id,
       tenant: provider.tenant,
       providerType: provider.provider_type,
-      providerName: provider.provider_name,
+      providerName: provider.name,
       mailbox: provider.mailbox,
-      isActive: provider.is_active,
-      status: provider.status || 'disconnected',
+      isActive: provider.active,
+      status: provider.connection_status || 'disconnected',
       lastSyncAt: provider.last_sync_at,
-      errorMessage: provider.error_message,
-      vendorConfig: provider.vendor_config || {},
+      errorMessage: provider.connection_error_message,
+      vendorConfig: provider.provider_config || {},
       createdAt: provider.created_at,
       updatedAt: provider.updated_at,
     }));
@@ -63,11 +63,13 @@ export async function createEmailProvider(input: CreateEmailProviderInput): Prom
         id,
         tenant,
         provider_type: input.providerType,
-        provider_name: input.providerName,
+        name: input.providerName,
         mailbox: input.mailbox,
-        is_active: true,
-        status: 'configuring',
-        vendor_config: input.vendorConfig,
+        active: true,
+        connection_status: 'disconnected',
+        provider_config: input.vendorConfig,
+        folder_to_monitor: 'Inbox',
+        webhook_notification_url: '',
         created_at: new Date(),
         updated_at: new Date(),
       })
@@ -77,13 +79,13 @@ export async function createEmailProvider(input: CreateEmailProviderInput): Prom
       id: provider.id,
       tenant: provider.tenant,
       providerType: provider.provider_type,
-      providerName: provider.provider_name,
+      providerName: provider.name,
       mailbox: provider.mailbox,
-      isActive: provider.is_active,
-      status: provider.status,
+      isActive: provider.active,
+      status: provider.connection_status,
       lastSyncAt: provider.last_sync_at,
-      errorMessage: provider.error_message,
-      vendorConfig: provider.vendor_config,
+      errorMessage: provider.connection_error_message,
+      vendorConfig: provider.provider_config,
       createdAt: provider.created_at,
       updatedAt: provider.updated_at,
     };
@@ -105,13 +107,13 @@ export async function updateEmailProvider(
     };
 
     if (input.providerName !== undefined) {
-      updateData.provider_name = input.providerName;
+      updateData.name = input.providerName;
     }
     if (input.isActive !== undefined) {
-      updateData.is_active = input.isActive;
+      updateData.active = input.isActive;
     }
     if (input.vendorConfig !== undefined) {
-      updateData.vendor_config = input.vendorConfig;
+      updateData.provider_config = input.vendorConfig;
     }
 
     const [provider] = await trx('email_provider_configs')
@@ -127,13 +129,13 @@ export async function updateEmailProvider(
       id: provider.id,
       tenant: provider.tenant,
       providerType: provider.provider_type,
-      providerName: provider.provider_name,
+      providerName: provider.name,
       mailbox: provider.mailbox,
-      isActive: provider.is_active,
-      status: provider.status,
+      isActive: provider.active,
+      status: provider.connection_status,
       lastSyncAt: provider.last_sync_at,
-      errorMessage: provider.error_message,
-      vendorConfig: provider.vendor_config,
+      errorMessage: provider.connection_error_message,
+      vendorConfig: provider.provider_config,
       createdAt: provider.created_at,
       updatedAt: provider.updated_at,
     };
