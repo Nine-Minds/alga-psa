@@ -3,6 +3,7 @@ import { CustomTabs } from "server/src/components/ui/CustomTabs";
 import { NotificationSettings } from "server/src/components/settings/notifications/NotificationSettings";
 import { EmailTemplates } from "server/src/components/settings/notifications/EmailTemplates";
 import { NotificationCategories } from "server/src/components/settings/notifications/NotificationCategories";
+import { TelemetrySettings } from "server/src/components/settings/telemetry/TelemetrySettings";
 
 export default function NotificationsTab() {
   const tabContent = [
@@ -44,6 +45,20 @@ export default function NotificationsTab() {
           </CardHeader>
           <CardContent>
             <NotificationCategories />
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
+      label: "Telemetry",
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>Telemetry & Analytics</CardTitle>
+            <CardDescription>Manage your telemetry and analytics preferences</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TelemetrySettings />
           </CardContent>
         </Card>
       ),
