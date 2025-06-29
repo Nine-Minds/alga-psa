@@ -1576,7 +1576,7 @@ const TicketingSettings = (): JSX.Element => {
                         'item_type' in p && p.item_type === selectedPriorityType
                       );
                       const maxOrder = Math.max(...prioritiesOfType.map(p => p.order_number || 0), 0);
-                      return Math.min(maxOrder + 10, 100);
+                      return Math.min(maxOrder + 1, 100);
                     })()}
                     required
                   />
@@ -1899,7 +1899,7 @@ const TicketingSettings = (): JSX.Element => {
                     // Suggest next available order number
                     const statusesOfType = statuses.filter(s => s.status_type === selectedStatusType);
                     const maxOrder = Math.max(...statusesOfType.map(s => s.order_number || 0), 0);
-                    return Math.min(maxOrder + 10, 100);
+                    return Math.min(maxOrder + 1, 100);
                   })()}
                   required
                 />
@@ -2028,13 +2028,17 @@ const TicketingSettings = (): JSX.Element => {
                       </div>
                       <div className="flex-1 font-medium">{status.name}</div>
                       <div className="w-20 text-center">
-                        {status.is_closed && (
-                          <span className="text-green-600">✓</span>
+                        {status.is_closed ? (
+                          <span className="text-sm text-muted-foreground">Yes</span>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">-</span>
                         )}
                       </div>
                       <div className="w-20 text-center">
-                        {status.is_default && (
-                          <span className="text-blue-600">✓</span>
+                        {status.is_default ? (
+                          <span className="text-sm text-muted-foreground">Yes</span>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">-</span>
                         )}
                       </div>
                       <div className="w-16 text-center text-sm text-muted-foreground">
