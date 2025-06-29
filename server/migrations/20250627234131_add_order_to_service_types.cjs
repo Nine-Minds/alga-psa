@@ -18,7 +18,7 @@ exports.up = async function(knex) {
   for (let i = 0; i < standardTypes.length; i++) {
     await knex('standard_service_types')
       .where('id', standardTypes[i].id)
-      .update({ display_order: (i + 1) * 10 });
+      .update({ display_order: i + 1 });
   }
 
   // Update existing service_types with sequential order numbers per tenant BEFORE adding unique constraint
@@ -31,7 +31,7 @@ exports.up = async function(knex) {
     for (let i = 0; i < tenantTypes.length; i++) {
       await knex('service_types')
         .where('id', tenantTypes[i].id)
-        .update({ order_number: (i + 1) * 10 });
+        .update({ order_number: i + 1 });
     }
   }
 

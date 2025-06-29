@@ -257,7 +257,7 @@ export async function checkImportConflicts(
             referenceItem: item,
             conflictType: 'order',
             existingItem: existingWithOrder,
-            suggestedOrder: (maxOrder?.max || 0) + 10
+            suggestedOrder: (maxOrder?.max || 0) + 1
           });
           hasOrderConflict = true;
         }

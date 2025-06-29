@@ -93,7 +93,7 @@ const ServiceTypeSettings: React.FC = () => {
   const handleOpenAddDialog = () => {
     // Calculate next order number
     const maxOrder = tenantTypes.reduce((max, t) => Math.max(max, t.order_number || 0), 0);
-    const nextOrder = maxOrder + 10;
+    const nextOrder = maxOrder + 1;
     
     setEditingType({ order_number: nextOrder }); // Empty object for add mode with suggested order
     setHasAttemptedSubmit(false);
@@ -451,12 +451,12 @@ const ServiceTypeSettings: React.FC = () => {
                   setEditingType({ ...editingType, order_number: value });
                   clearErrorIfSubmitted();
                 }}
-                placeholder="e.g., 10, 20, 30..."
+                placeholder="e.g., 1, 2, 3..."
                 required
                 className={hasAttemptedSubmit && !editingType?.order_number ? 'border-red-500' : ''}
               />
               <p className="text-sm text-muted-foreground mt-1">
-                Use multiples of 10 to allow easy reordering
+                Order number for display sorting
                 {tenantTypes.length > 0 && (
                   <span className="block">
                     Used orders: {tenantTypes
