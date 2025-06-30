@@ -30,6 +30,8 @@ export interface DataTableProps<T> {
   onPageChange?: (page: number) => void;
   pageSize?: number;
   totalItems?: number;
+  /** When true, renders pagination controls above the table as well */
+  showTopPagination?: boolean;
   editableConfig?: EditableConfig;
   /** Custom class name for table rows */
   rowClassName?: (record: T) => string;

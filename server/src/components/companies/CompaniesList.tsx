@@ -260,6 +260,7 @@ const CompaniesList = ({
                 pageSize={pageSize}
                 totalItems={totalCount}
                 onPageChange={onPageChange}
+                showTopPagination={true}
             />
         </div>
     );
