@@ -7,6 +7,9 @@ import { Button } from 'server/src/components/ui/Button';
 import { getDashboardMetrics, getRecentActivity, type RecentActivity } from 'server/src/lib/actions/client-portal-actions/dashboard';
 import { ClientAddTicket } from 'server/src/components/client-portal/tickets/ClientAddTicket';
 
+// Flag to control visibility of the recent activity section
+const SHOW_RECENT_ACTIVITY = false;
+
 export function ClientDashboard() {
   const router = useRouter();
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
@@ -141,17 +144,18 @@ export function ClientDashboard() {
       </div>
 
       {/* Recent Activity */}
-      <Card className="bg-white">
-        <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-5">
-            {activities.map((activity: RecentActivity, index: number): JSX.Element => {
-              let borderColor = 'border-[rgb(var(--color-primary-500))]';
-              let bgColor = 'bg-[rgb(var(--color-primary-50))]';
-              let textColor = 'text-[rgb(var(--color-primary-700))]';
-              let timeColor = 'text-[rgb(var(--color-primary-500))]';
+      {SHOW_RECENT_ACTIVITY && (
+        <Card className="bg-white">
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-5">
+              {activities.map((activity: RecentActivity, index: number): JSX.Element => {
+                let borderColor = 'border-[rgb(var(--color-primary-500))]';
+                let bgColor = 'bg-[rgb(var(--color-primary-50))]';
+                let textColor = 'text-[rgb(var(--color-primary-700))]';
+                let timeColor = 'text-[rgb(var(--color-primary-500))]';
 
               if (activity.type === 'invoice') {
                 borderColor = 'border-[rgb(var(--color-secondary-400))]';
@@ -165,27 +169,24 @@ export function ClientDashboard() {
                 timeColor = 'text-[rgb(var(--color-accent-500))]';
               }
 
-              return (
-                <div
-                  key={`${activity.type}-${index}`}
-                  className={`border-l-4 ${borderColor} ${bgColor} p-4 rounded-r-lg`}
-                >
-                  <div className="flex">
-                    <div className="ml-3">
-                      <p className={`text-sm ${textColor}`}>
-                        {activity.title}
-                      </p>
-                      <p className={`mt-1 text-xs ${timeColor}`}>
-                        {new Date(activity.timestamp).toLocaleString()}
-                      </p>
+                return (
+                  <div
+                    key={`${activity.type}-${index}`}
+                    className={`border-l-4 ${borderColor} ${bgColor} p-4 rounded-r-lg`}
+                  >
+                    <div className="flex">
+                      <div className="ml-3">
+                        <p className={`text-sm ${textColor}`}>{activity.title}</p>
+                        <p className={`mt-1 text-xs ${timeColor}`}>{new Date(activity.timestamp).toLocaleString()}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick Actions */}
       <Card className="bg-white">
