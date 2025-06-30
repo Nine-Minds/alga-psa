@@ -100,14 +100,35 @@ export function OnboardingWizard({
     }
   };
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     if (testMode) {
       console.log('Onboarding completed (test mode):', wizardData);
+      onComplete?.(wizardData);
+      return;
     }
-    onComplete?.(wizardData);
-    if (!testMode) {
-      onOpenChange(false);
+    
+    try {
+      // In real mode, submit the data
+      await submitOnboardingData(wizardData);
+      onComplete?.(wizardData);
+    } catch (error) {
+      console.error('Error submitting onboarding data:', error);
+      alert('Failed to complete onboarding. Please try again.');
     }
+  };
+
+  const submitOnboardingData = async (data: WizardData) => {
+    // This will be implemented with actual server actions
+    if (testMode) return;
+    
+    // TODO: Implement actual data submission
+    // - Create company if needed
+    // - Invite team members
+    // - Create client and contacts
+    // - Set up billing
+    // - Configure ticketing
+    
+    console.log('Submitting onboarding data:', data);
   };
 
   const isFirstStepValid = () => {
