@@ -207,9 +207,27 @@ export function TicketList() {
 
   const columns: ColumnDefinition<ITicketListItem>[] = [
     {
+      title: 'Ticket Number',
+      dataIndex: 'ticket_number',
+      width: '150px',
+      render: (value: string, record: ITicketListItem) => (
+        <div
+          className="font-medium cursor-pointer hover:text-blue-600"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (record.ticket_id) {
+              setSelectedTicketId(record.ticket_id);
+            }
+          }}
+        >
+          {value}
+        </div>
+      ),
+    },
+    {
       title: 'Title',
       dataIndex: 'title',
-      width: '25%',
+      width: '250px',
       render: (value: string, record: ITicketListItem) => (
         <div 
           className="font-medium cursor-pointer hover:text-blue-600"
@@ -227,7 +245,7 @@ export function TicketList() {
     {
       title: 'Status',
       dataIndex: 'status_name',
-      width: '20%',
+      width: '150px',
       render: (value: string, record: ITicketListItem) => (
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
@@ -269,7 +287,7 @@ export function TicketList() {
     {
       title: 'Priority',
       dataIndex: 'priority_name',
-      width: '15%',
+      width: '150px',
       render: (value: string) => (
         <div className="capitalize">{value}</div>
       ),
@@ -277,7 +295,7 @@ export function TicketList() {
     {
       title: 'Assigned To',
       dataIndex: 'assigned_to_name',
-      width: '15%',
+      width: '150px',
       render: (value: string) => (
         <div className="text-sm">{value || '-'}</div>
       ),
@@ -285,7 +303,7 @@ export function TicketList() {
     {
       title: 'Created',
       dataIndex: 'entered_at',
-      width: '15%',
+      width: '180px',
       render: (value: string | null) => (
         <div className="text-sm text-gray-500">
           {value ? format(new Date(value), 'MMM d, yyyy h:mm a') : '-'}
@@ -295,7 +313,7 @@ export function TicketList() {
     {
       title: 'Updated',
       dataIndex: 'updated_at',
-      width: '15%',
+      width: '180px',
       render: (value: string | null) => (
         <div className="text-sm text-gray-500">
           {value ? format(new Date(value), 'MMM d, yyyy h:mm a') : '-'}
@@ -378,7 +396,7 @@ export function TicketList() {
       </h2>
 
       <div className="w-full overflow-x-auto">
-        <div className="min-w-full">
+        <div className="min-w-[1200px]">
           <DataTable
             data={tickets}
             columns={columns}
