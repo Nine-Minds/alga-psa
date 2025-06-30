@@ -123,6 +123,7 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
       icon: source.icon,
       color: source.color,
       system_type_id: source.type_id,
+      display_order: source.display_order || 0,
       tenant: tenantId,
       created_by: userId
     }),
@@ -131,7 +132,7 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
       const existing = await db('interaction_types')
         .where({
           tenant: tenantId,
-          system_type_id: data.system_type_id
+          type_name: data.type_name
         })
         .first();
       return !!existing;
@@ -214,8 +215,8 @@ export async function checkImportConflicts(
     }
     
     // Check order conflict for data types that have order (even if there's a name conflict)
-    if (dataType === 'priorities' || dataType === 'statuses' || dataType === 'service_types') {
-      const orderField = dataType === 'priorities' ? 'order_number' : 'order_number';
+    if (dataType === 'priorities' || dataType === 'statuses' || dataType === 'service_types' || dataType === 'interaction_types') {
+      const orderField = dataType === 'interaction_types' ? 'display_order' : 'order_number';
       const orderValue = mappedData[orderField];
       
       if (orderValue && !hasNameConflict) { // Only check order if no name conflict
@@ -309,12 +310,14 @@ export async function importReferenceData(
     
     // Apply conflict resolutions
     if (resolution?.action === 'rename' && resolution.newName) {
-      const nameField = item.priority_name ? 'priority_name' : 'name';
+      let nameField = 'name';
+      if (item.priority_name !== undefined) nameField = 'priority_name';
+      else if (item.type_name !== undefined) nameField = 'type_name';
       mappedData[nameField] = resolution.newName;
     }
     
     if (resolution?.action === 'reorder' && resolution.newOrder !== undefined) {
-      const orderField = dataType === 'priorities' ? 'order_number' : 'order_number';
+      const orderField = dataType === 'interaction_types' ? 'display_order' : 'order_number';
       mappedData[orderField] = resolution.newOrder;
     }
     

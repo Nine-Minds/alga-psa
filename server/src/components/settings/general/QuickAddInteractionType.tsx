@@ -7,7 +7,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { IconPicker, getIconComponent } from 'server/src/components/ui/IconPicker';
-import { createInteractionType, updateInteractionType } from 'server/src/lib/actions/interactionTypeActions';
+import { createInteractionType, updateInteractionType, getAllInteractionTypes } from 'server/src/lib/actions/interactionTypeActions';
 import { IInteractionType } from 'server/src/interfaces/interaction.interfaces';
 
 interface QuickAddInteractionTypeProps {
@@ -25,24 +25,39 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
 }) => {
   const [typeName, setTypeName] = useState('');
   const [selectedIcon, setSelectedIcon] = useState<string>('');
+  const [displayOrder, setDisplayOrder] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
-  // Populate form when editing
+  // Populate form when editing or get next order for new
   useEffect(() => {
-    if (editingType) {
-      setTypeName(editingType.type_name);
-      setSelectedIcon(editingType.icon || '');
-    } else {
-      setTypeName('');
-      setSelectedIcon('');
-    }
+    const loadData = async () => {
+      if (editingType) {
+        setTypeName(editingType.type_name);
+        setSelectedIcon(editingType.icon || '');
+        setDisplayOrder(editingType.display_order || 0);
+      } else {
+        setTypeName('');
+        setSelectedIcon('');
+        // Get next available order
+        try {
+          const types = await getAllInteractionTypes();
+          const maxOrder = types.reduce((max, t) => Math.max(max, t.display_order || 0), 0);
+          setDisplayOrder(maxOrder + 1);
+        } catch (error) {
+          console.error('Error getting max order:', error);
+          setDisplayOrder(1);
+        }
+      }
+    };
+    loadData();
   }, [editingType]);
 
   const handleClose = () => {
     setTypeName('');
     setSelectedIcon('');
+    setDisplayOrder(0);
     setError(null);
     setIsLoading(false);
     setHasAttemptedSubmit(false);
@@ -62,7 +77,8 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
     try {
       const typeData = {
         type_name: typeName.trim(),
-        icon: selectedIcon || undefined
+        icon: selectedIcon || undefined,
+        display_order: displayOrder
       };
 
       if (editingType) {
@@ -113,6 +129,22 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
             onChange={(e) => setTypeName(e.target.value)}
             placeholder="e.g., 'Client Onboarding Call', 'Sales Demo', 'Project Review'"
             className={`w-full ${hasAttemptedSubmit && !typeName.trim() ? 'border-red-500' : ''}`}
+          />
+        </div>
+
+        {/* Display Order */}
+        <div className="space-y-2">
+          <Label htmlFor="display-order" className="text-sm font-medium">
+            Display Order:
+          </Label>
+          <Input
+            id="display-order"
+            type="number"
+            min="1"
+            value={displayOrder}
+            onChange={(e) => setDisplayOrder(parseInt(e.target.value) || 0)}
+            placeholder="e.g., 1, 2, 3..."
+            className="w-full"
           />
         </div>
 

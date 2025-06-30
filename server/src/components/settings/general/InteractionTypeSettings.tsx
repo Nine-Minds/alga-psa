@@ -9,6 +9,10 @@ import {
   deleteInteractionType,
   getSystemInteractionTypes 
 } from 'server/src/lib/actions/interactionTypeActions';
+import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from 'server/src/lib/actions/referenceDataActions';
+import { toast } from 'react-hot-toast';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Input } from 'server/src/components/ui/Input';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
@@ -36,6 +40,13 @@ const InteractionTypesSettings: React.FC = () => {
   });
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingType, setEditingType] = useState<IInteractionType | null>(null);
+  
+  // State for Import Dialog
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [availableReferenceTypes, setAvailableReferenceTypes] = useState<ISystemInteractionType[]>([]);
+  const [selectedImportTypes, setSelectedImportTypes] = useState<string[]>([]);
+  const [importConflicts, setImportConflicts] = useState<ImportConflict[]>([]);
+  const [conflictResolutions, setConflictResolutions] = useState<Record<string, { action: 'skip' | 'rename' | 'reorder', newName?: string, newOrder?: number }>>({});
 
   useEffect(() => {
     fetchTypes();
@@ -81,6 +92,48 @@ const InteractionTypesSettings: React.FC = () => {
     }
   };
 
+  // Import functionality
+  const handleCheckConflicts = async () => {
+    if (selectedImportTypes.length === 0) return;
+
+    try {
+      const conflicts = await checkImportConflicts('interaction_types', selectedImportTypes);
+      setImportConflicts(conflicts);
+      
+      if (conflicts.length === 0) {
+        // No conflicts, proceed with import
+        await handleImport();
+      }
+    } catch (error) {
+      console.error('Error checking conflicts:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to check conflicts');
+    }
+  };
+
+  const handleImport = async () => {
+    try {
+      const result = await importReferenceData('interaction_types', selectedImportTypes, undefined, conflictResolutions);
+      
+      if (result.imported.length > 0) {
+        toast.success(`Imported ${result.imported.length} interaction type${result.imported.length !== 1 ? 's' : ''}`);
+      }
+      
+      if (result.skipped.length > 0) {
+        const skippedMessage = result.skipped.map(s => `${s.name}: ${s.reason}`).join(', ');
+        toast(skippedMessage, { icon: 'ℹ️' });
+      }
+      
+      setShowImportDialog(false);
+      setSelectedImportTypes([]);
+      setImportConflicts([]);
+      setConflictResolutions({});
+      await fetchTypes();
+    } catch (error) {
+      console.error('Error importing interaction types:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to import interaction types');
+    }
+  };
+
   const systemTypeColumns: ColumnDefinition<ISystemInteractionType>[] = [
     {
       title: 'Name',
@@ -115,6 +168,14 @@ const InteractionTypesSettings: React.FC = () => {
           <InteractionIcon icon={record.icon} typeName={record.type_name} />
           <span className="text-gray-700">{value}</span>
         </div>
+      ),
+    },
+    {
+      title: 'Order',
+      dataIndex: 'display_order',
+      width: '10%',
+      render: (value: number) => (
+        <span className="text-gray-600">{value || 0}</span>
       ),
     },
     {
@@ -165,16 +226,7 @@ const InteractionTypesSettings: React.FC = () => {
   ];
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm space-y-8">
-      <div>
-        <h3 className="text-lg font-semibold mb-4 text-gray-800">System Interaction Types</h3>
-        <DataTable
-          data={systemTypes}
-          columns={systemTypeColumns}
-          pagination={false}
-        />
-      </div>
-
+    <div className="bg-white p-6 rounded-lg shadow-sm">
       <div>
         <h3 className="text-lg font-semibold mb-4 text-gray-800">Custom Interaction Types</h3>
         {error && (
@@ -187,13 +239,25 @@ const InteractionTypesSettings: React.FC = () => {
           columns={tenantTypeColumns}
           pagination={false}
         />
-        <div className="mt-4">
+        <div className="mt-4 flex gap-2">
           <Button 
             id='add-interaction-type-button'
             onClick={() => setShowAddDialog(true)} 
             className="bg-primary-500 text-white hover:bg-primary-600"
           >
             <Plus className="h-4 w-4 mr-2" /> Add Interaction Type
+          </Button>
+          <Button 
+            id="import-interaction-types-button" 
+            variant="outline"
+            onClick={async () => {
+              const available = await getAvailableReferenceData('interaction_types');
+              setAvailableReferenceTypes(available);
+              setSelectedImportTypes([]);
+              setShowImportDialog(true);
+            }}
+          >
+            Import from System Types
           </Button>
         </div>
       </div>
@@ -227,6 +291,198 @@ const InteractionTypesSettings: React.FC = () => {
         }}
         editingType={editingType}
       />
+
+      {/* Import Dialog */}
+      <Dialog 
+        isOpen={showImportDialog && importConflicts.length === 0} 
+        onClose={() => {
+          setShowImportDialog(false);
+          setSelectedImportTypes([]);
+        }} 
+        title="Import System Interaction Types"
+      >
+        <DialogContent>
+          <div className="space-y-4">
+            {availableReferenceTypes.length === 0 ? (
+              <p className="text-muted-foreground">No system interaction types available to import.</p>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Select system interaction types to import into your organization:
+                </p>
+                <div className="border rounded-md">
+                  {/* Table Header */}
+                  <div className="flex items-center space-x-2 p-2 bg-muted/50 font-medium text-sm border-b">
+                    <div className="w-8"></div> {/* Checkbox column */}
+                    <div className="w-12"></div> {/* Icon column */}
+                    <div className="flex-1">Name</div>
+                    <div className="w-20 text-center">Order</div>
+                  </div>
+                  {/* Table Body */}
+                  <div className="max-h-[300px] overflow-y-auto">
+                    {availableReferenceTypes.map((type) => (
+                      <label 
+                        key={type.type_id} 
+                        className="flex items-center space-x-2 p-2 hover:bg-muted/50 border-b last:border-b-0 cursor-pointer"
+                      >
+                        <div className="w-8">
+                          <input
+                            type="checkbox"
+                            checked={selectedImportTypes.includes(type.type_id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedImportTypes([...selectedImportTypes, type.type_id]);
+                              } else {
+                                setSelectedImportTypes(selectedImportTypes.filter(id => id !== type.type_id));
+                              }
+                            }}
+                            className="rounded border-gray-300"
+                          />
+                        </div>
+                        <div className="w-12 flex justify-center">
+                          <InteractionIcon icon={type.icon} typeName={type.type_name} />
+                        </div>
+                        <div className="flex-1">{type.type_name}</div>
+                        <div className="w-20 text-center text-gray-600">
+                          {type.display_order || 0}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+        <DialogFooter>
+          <Button 
+            id="cancel-import-interaction-types"
+            variant="outline" 
+            onClick={() => {
+              setShowImportDialog(false);
+              setSelectedImportTypes([]);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            id="confirm-import-interaction-types"
+            onClick={handleCheckConflicts}
+            disabled={selectedImportTypes.length === 0}
+          >
+            Import Selected
+          </Button>
+        </DialogFooter>
+      </Dialog>
+
+      {/* Conflict Resolution Dialog */}
+      <Dialog 
+        isOpen={importConflicts.length > 0} 
+        onClose={() => {
+          setImportConflicts([]);
+          setConflictResolutions({});
+        }} 
+        title="Resolve Import Conflicts"
+      >
+        <DialogContent>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              The following items have conflicts that need to be resolved:
+            </p>
+            <div className="space-y-4 max-h-[400px] overflow-y-auto">
+              {importConflicts.map((conflict) => {
+                const itemId = conflict.referenceItem.type_id;
+                const resolution = conflictResolutions[itemId] || { action: 'skip' };
+                
+                return (
+                  <div key={itemId} className="border rounded-lg p-4 space-y-3">
+                    <div>
+                      <h4 className="font-medium">{conflict.referenceItem.type_name}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Conflict: {conflict.conflictType === 'name' 
+                          ? 'Name already exists' 
+                          : `Order ${conflict.referenceItem.display_order} is already in use`}
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          name={`conflict-${itemId}`}
+                          checked={resolution.action === 'skip'}
+                          onChange={() => setConflictResolutions({
+                            ...conflictResolutions,
+                            [itemId]: { action: 'skip' }
+                          })}
+                        />
+                        <span>Skip this item</span>
+                      </label>
+                      
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          name={`conflict-${itemId}`}
+                          checked={resolution.action === 'rename'}
+                          onChange={() => setConflictResolutions({
+                            ...conflictResolutions,
+                            [itemId]: { action: 'rename', newName: conflict.referenceItem.type_name + ' (2)' }
+                          })}
+                        />
+                        <span>Import with different name:</span>
+                        {resolution.action === 'rename' && (
+                          <Input
+                            value={resolution.newName || ''}
+                            onChange={(e) => setConflictResolutions({
+                              ...conflictResolutions,
+                              [itemId]: { ...resolution, newName: e.target.value }
+                            })}
+                            className="ml-2 flex-1"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        )}
+                      </label>
+                      
+                      {conflict.conflictType === 'order' && (
+                        <label className="flex items-center space-x-2">
+                          <input
+                            type="radio"
+                            name={`conflict-${itemId}`}
+                            checked={resolution.action === 'reorder'}
+                            onChange={() => setConflictResolutions({
+                              ...conflictResolutions,
+                              [itemId]: { action: 'reorder', newOrder: conflict.suggestedOrder }
+                            })}
+                          />
+                          <span>Import with order {conflict.suggestedOrder}</span>
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </DialogContent>
+        <DialogFooter>
+          <Button 
+            id="cancel-resolve-conflicts"
+            variant="outline" 
+            onClick={() => {
+              setImportConflicts([]);
+              setConflictResolutions({});
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            id="confirm-import-with-resolutions"
+            onClick={handleImport}
+          >
+            Import with Resolutions
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </div>
   );
 };
