@@ -6,7 +6,7 @@ exports.seed = function(knex) {
                 {
                     tenant: tenant.tenant,
                     priority_name: 'Whimsical Wish',
-                    display_order: 1,
+                    order_number: 1,
                     created_by: knex('users')
                         .where({
                             tenant: tenant.tenant,
@@ -18,7 +18,7 @@ exports.seed = function(knex) {
                 {
                     tenant: tenant.tenant,
                     priority_name: 'Curious Conundrum',
-                    display_order: 2,
+                    order_number: 2,
                     created_by: knex('users')
                         .where({
                             tenant: tenant.tenant,
@@ -30,7 +30,7 @@ exports.seed = function(knex) {
                 {
                     tenant: tenant.tenant,
                     priority_name: 'Enchanted Emergency',
-                    display_order: 3,
+                    order_number: 3,
                     created_by: knex('users')
                         .where({
                             tenant: tenant.tenant,
