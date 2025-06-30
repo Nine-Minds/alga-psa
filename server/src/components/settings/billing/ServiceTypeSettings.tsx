@@ -272,27 +272,32 @@ const ServiceTypeSettings: React.FC = () => {
 
   // --- Column Definitions ---
   const tenantColumns: ColumnDefinition<IServiceType>[] = [
-    { title: 'Name', dataIndex: 'name' },
+    { 
+      title: 'Name',
+      dataIndex: 'name',
+      width: '35%'
+    },
     { 
       title: 'Billing Method', 
-      dataIndex: 'billing_method', 
+      dataIndex: 'billing_method',
+      width: '20%', 
       render: (value) => value === 'fixed' ? 'Fixed' : 'Per Unit'
     },
-    { title: 'Description', dataIndex: 'description', render: (value) => value || '-' },
     { 
-      title: 'Active', 
-      dataIndex: 'is_active', 
-      render: (value, record) => (
-        <Switch 
-          checked={value} 
-          disabled // Read-only for now, edit via dialog
-        />
-      ) 
+      title: 'Description',
+      dataIndex: 'description',
+      width: '20%',
+      render: (value) => value || '-' 
     },
-    { title: 'Order', dataIndex: 'order_number', width: '80px' },
+    { 
+      title: 'Order',
+      dataIndex: 'order_number',
+      width: '10%' 
+    },
     {
       title: 'Actions',
       dataIndex: 'id',
+      width: '5%',
       render: (id, record) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

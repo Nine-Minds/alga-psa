@@ -89,18 +89,10 @@ export const ServiceForm: React.FC = () => {
         tax_rate_id: taxRateId // Use tax_rate_id instead
       }
 
-      // Create the final data with the correct service type ID based on is_standard flag
-      let submitData
-      if (selectedServiceType.is_standard) {
-        submitData = {
-          ...baseData,
-          standard_service_type_id: serviceTypeId,
-        }
-      } else {
-        submitData = {
-          ...baseData,
-          custom_service_type_id: serviceTypeId,
-        }
+      // Create the final data with the service type ID
+      const submitData = {
+        ...baseData,
+        custom_service_type_id: serviceTypeId,
       }
 
       await createService(submitData)

@@ -798,8 +798,7 @@ export const paymentTermsListResponseSchema = z.array(paymentTermSchema);
 export const serviceBaseSchema = z.object({
   service_id: uuidSchema.optional(),
   service_name: z.string(),
-  standard_service_type_id: uuidSchema.nullable().optional(),
-  custom_service_type_id: uuidSchema.nullable().optional(),
+  custom_service_type_id: uuidSchema,
   billing_method: billingMethodSchema,
   default_rate: z.number(),
   category_id: uuidSchema.nullable().optional(),

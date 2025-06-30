@@ -119,11 +119,11 @@ export async function getHoursByServiceType(
         .select(
           'sc.service_id',
           'sc.service_name',
-          trx.raw('COALESCE(sc.standard_service_type_id, sc.custom_service_type_id) as service_type_id'),
+          'sc.custom_service_type_id as service_type_id',
           trx.raw(`${groupBySelect}`), // Select either service_name or service_type_name based on flag
           trx.raw('SUM(time_entries.billable_duration) as total_duration') // Summing billable_duration (assuming it's in minutes)
         )
-        .groupBy('sc.service_id', 'sc.service_name', trx.raw('COALESCE(sc.standard_service_type_id, sc.custom_service_type_id)'), groupByColumn) // Group by selected columns
+        .groupBy('sc.service_id', 'sc.service_name', 'sc.custom_service_type_id', groupByColumn) // Group by selected columns
         .orderBy(groupByColumn); // Order by the grouped column
 
       // Knex type inference might not capture the aggregated structure, so treat as 'any' initially

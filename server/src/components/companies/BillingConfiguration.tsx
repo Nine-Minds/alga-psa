@@ -69,8 +69,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
     const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]>([]);
     const [newService, setNewService] = useState<Partial<IService>>({
         unit_of_measure: 'hour',
-        // Use standard_service_type_id for default Time service
-        standard_service_type_id: '', // Will be set after fetching service types
+        custom_service_type_id: '', // Will be set after fetching service types
         service_name: '',
         default_rate: 0,
         category_id: null,
@@ -148,12 +147,8 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
             // Find a default "Time" service type if it exists
             const timeType = types.find(t => t.name === 'Time');
             if (timeType) {
-                // Set the appropriate ID based on whether it's standard or custom
-                if (timeType.is_standard) {
-                    setNewService(prev => ({ ...prev, standard_service_type_id: timeType.id, billing_method: timeType.billing_method }));
-                } else {
-                    setNewService(prev => ({ ...prev, custom_service_type_id: timeType.id, billing_method: timeType.billing_method }));
-                }
+                // Set the custom service type ID
+                setNewService(prev => ({ ...prev, custom_service_type_id: timeType.id, billing_method: timeType.billing_method }));
             }
 
             const fetchedTaxRates = await getTaxRates();
@@ -327,8 +322,8 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
 
     const handleAddService = async () => {
         try {
-            // Ensure we have either standard_service_type_id or custom_service_type_id
-            if (!newService.standard_service_type_id && !newService.custom_service_type_id) {
+            // Ensure we have custom_service_type_id
+            if (!newService.custom_service_type_id) {
                 setErrorMessage('Please select a service type');
                 return;
             }
@@ -338,8 +333,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
             // Reset the form
             setNewService({
                 unit_of_measure: 'hour',
-                standard_service_type_id: undefined,
-                custom_service_type_id: undefined,
+                custom_service_type_id: '',
                 service_name: '',
                 default_rate: 0,
                 category_id: null,
@@ -350,22 +344,13 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
             // Find a default "Time" service type if it exists
             const timeType = serviceTypes.find(t => t.name === 'Time');
             if (timeType) {
-                // Set the appropriate ID based on whether it's standard or custom
-                if (timeType.is_standard) {
-                    setNewService(prev => ({
-                        ...prev,
-                        standard_service_type_id: timeType.id,
-                        billing_method: timeType.billing_method,
-                        description: prev.description || '' // Preserve description
-                    }));
-                } else {
-                    setNewService(prev => ({
-                        ...prev,
-                        custom_service_type_id: timeType.id,
-                        billing_method: timeType.billing_method,
-                        description: prev.description || '' // Preserve description
-                    }));
-                }
+                // Set the custom service type ID
+                setNewService(prev => ({
+                    ...prev,
+                    custom_service_type_id: timeType.id,
+                    billing_method: timeType.billing_method,
+                    description: prev.description || '' // Preserve description
+                }));
             }
 
             const servicesResponse = await getServices();

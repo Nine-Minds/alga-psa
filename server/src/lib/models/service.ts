@@ -25,8 +25,7 @@ const baseServiceSchema = z.object({
   service_id: z.string().uuid(),
   tenant: z.string().min(1, 'Tenant is required'),
   service_name: z.string(),
-  standard_service_type_id: z.string().uuid().nullable(), // Matches DB FK (nullable)
-  custom_service_type_id: z.string().uuid().nullable(),   // Matches DB FK (nullable)
+  custom_service_type_id: z.string().uuid(),   // Now required, not nullable
   billing_method: z.enum(['fixed', 'per_unit']),
   default_rate: z.union([z.string(), z.number()]).transform(val =>
     typeof val === 'string' ? parseFloat(val) || 0 : val
@@ -38,14 +37,8 @@ const baseServiceSchema = z.object({
   service_type_name: z.string().optional(), // Add service_type_name to the schema
 });
 
-// Refine check for exactly one FK ID being non-null
-// Export this schema as it's needed for validation before transformation
-export const refinedServiceSchema = baseServiceSchema.refine(
-  (data) => (data.standard_service_type_id != null) !== (data.custom_service_type_id != null), {
-  message: "Exactly one of standard_service_type_id or custom_service_type_id must be provided",
-  path: ["standard_service_type_id", "custom_service_type_id"], // Specify path for clarity
-}
-);
+// No need for refine check anymore since we only have custom_service_type_id
+export const refinedServiceSchema = baseServiceSchema;
 
 // Final schema for validation, transforming nulls to match IService interface
 // IService uses string | null for category_id, tax_region
@@ -59,9 +52,7 @@ export const serviceSchema = refinedServiceSchema.transform((data) => {
     category_id: inputData.category_id,
     description: inputData.description,
     tax_rate_id: inputData.tax_rate_id,   // Keep null for string | null
-    // Map null to undefined for fields that are optional (T | undefined) in IService
-    standard_service_type_id: inputData.standard_service_type_id ?? undefined,
-    custom_service_type_id: inputData.custom_service_type_id ?? undefined,
+    custom_service_type_id: inputData.custom_service_type_id,
   };
 });
 
@@ -72,13 +63,8 @@ export type ServiceSchemaType = z.infer<typeof serviceSchema>;
 // We omit tenant because it will be added by the server-side code after validation
 const baseCreateServiceSchema = baseServiceSchema.omit({ service_id: true, tenant: true });
 
-// Apply the refine check to the base create schema
-const refinedCreateServiceSchema = baseCreateServiceSchema.refine(
-  (data) => (data.standard_service_type_id != null) !== (data.custom_service_type_id != null), {
-  message: "Exactly one of standard_service_type_id or custom_service_type_id must be provided",
-  path: ["standard_service_type_id", "custom_service_type_id"],
-}
-);
+// No need for refine check anymore
+const refinedCreateServiceSchema = baseCreateServiceSchema;
 
 // Apply the same transformation logic to the create schema
 export const createServiceSchema = refinedCreateServiceSchema.transform((data) => {
@@ -89,8 +75,7 @@ export const createServiceSchema = refinedCreateServiceSchema.transform((data) =
     category_id: inputData.category_id,
     description: inputData.description,
     tax_rate_id: inputData.tax_rate_id,   // Keep null for string | null
-    standard_service_type_id: inputData.standard_service_type_id ?? undefined,
-    custom_service_type_id: inputData.custom_service_type_id ?? undefined,
+    custom_service_type_id: inputData.custom_service_type_id,
   };
 });
 
@@ -111,10 +96,9 @@ const Service = {
 
 
     try {
-      // Fetch services, joining with both standard and custom service types to get type names
+      // Fetch services, joining with custom service types to get type names
       const servicesData = await knexOrTrx('service_catalog as sc')
         .where({ 'sc.tenant': tenant })
-        .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
         .leftJoin('service_types as ct', function() {
           this.on('sc.custom_service_type_id', '=', 'ct.id')
               .andOn('ct.tenant', '=', knexOrTrx.raw('?', [tenant]));
@@ -122,7 +106,6 @@ const Service = {
         .select(
           'sc.service_id',
           'sc.service_name',
-          'sc.standard_service_type_id',
           'sc.custom_service_type_id',
           'sc.billing_method',
           knexOrTrx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
@@ -130,8 +113,8 @@ const Service = {
           'sc.category_id',
           'sc.description',
           'sc.tenant',
-          // Select the service type name from either standard or custom type
-          knexOrTrx.raw('COALESCE(sst.name, ct.name) as service_type_name')
+          // Select the service type name from custom type
+          'ct.name as service_type_name'
         );
       log.info(`[Service.getAll] Found ${servicesData.length} services`);
 
@@ -161,13 +144,12 @@ const Service = {
     log.info(`[Service.getById] Fetching service with ID: ${service_id} for tenant: ${tenant}`);
 
     try {
-      // Fetch service by ID, joining with both standard and custom service types
+      // Fetch service by ID, joining with custom service types
       const serviceData = await knexOrTrx('service_catalog as sc')
         .where({
           'sc.service_id': service_id,
           'sc.tenant': tenant
         })
-        .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
         .leftJoin('service_types as ct', function() {
           this.on('sc.custom_service_type_id', '=', 'ct.id')
               .andOn('ct.tenant', '=', knexOrTrx.raw('?', [tenant]));
@@ -175,7 +157,6 @@ const Service = {
         .select(
           'sc.service_id',
           'sc.service_name',
-          'sc.standard_service_type_id',
           'sc.custom_service_type_id',
           'sc.billing_method',
           knexOrTrx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
@@ -183,8 +164,8 @@ const Service = {
           'sc.category_id',
           'sc.description',
           'sc.tenant',
-          // Select the service type name from either standard or custom type
-          knexOrTrx.raw('COALESCE(sst.name, ct.name) as service_type_name')
+          // Select the service type name from custom type
+          'ct.name as service_type_name'
         )
         .first(); // Use .first() as we expect only one
 
@@ -254,9 +235,7 @@ const Service = {
       service_id: uuidv4(),
       tenant: effectiveTenant,
       service_name: validatedData.service_name,
-      // Use validatedData fields. Nullish coalescing handles undefined -> null for DB.
-      standard_service_type_id: validatedData.standard_service_type_id ?? null,
-      custom_service_type_id: validatedData.custom_service_type_id ?? null,
+      custom_service_type_id: validatedData.custom_service_type_id,
       billing_method: validatedData.billing_method,
       default_rate: validatedData.default_rate,
       unit_of_measure: validatedData.unit_of_measure,
@@ -281,7 +260,6 @@ const Service = {
           'sc.service_id': createdService.service_id,
           'sc.tenant': effectiveTenant
         })
-        .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
         .leftJoin('service_types as ct', function() {
           this.on('sc.custom_service_type_id', '=', 'ct.id')
               .andOn('ct.tenant', '=', knexOrTrx.raw('?', [effectiveTenant]));
@@ -289,7 +267,6 @@ const Service = {
         .select(
           'sc.service_id',
           'sc.service_name',
-          'sc.standard_service_type_id',
           'sc.custom_service_type_id',
           'sc.billing_method',
           knexOrTrx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
@@ -297,8 +274,8 @@ const Service = {
           'sc.category_id',
           'sc.description',
           'sc.tenant',
-          // Select the service type name from either standard or custom type
-          knexOrTrx.raw('COALESCE(sst.name, ct.name) as service_type_name')
+          // Select the service type name from custom type
+          'ct.name as service_type_name'
         )
         .first();
 
@@ -331,20 +308,8 @@ const Service = {
       // service_type_name is a virtual field from JOIN and doesn't exist in the table
       const { tenant: _, service_type_name, ...updateData } = serviceData;
 
-      // Handle service type ID changes to ensure exactly one type ID is set
+      // No need to handle type ID changes anymore
       let finalUpdateData = { ...updateData };
-      
-      // If custom_service_type_id is being set, ensure standard_service_type_id is null
-      if ('custom_service_type_id' in updateData && updateData.custom_service_type_id) {
-        finalUpdateData.standard_service_type_id = null;
-        log.info(`[Service.update] Setting custom_service_type_id and clearing standard_service_type_id`);
-      }
-      
-      // If standard_service_type_id is being set, ensure custom_service_type_id is null
-      if ('standard_service_type_id' in updateData && updateData.standard_service_type_id) {
-        finalUpdateData.custom_service_type_id = null;
-        log.info(`[Service.update] Setting standard_service_type_id and clearing custom_service_type_id`);
-      }
 
       // Ensure updateData conforms to Partial<IService> based on the *new* interface
       // Zod validation could be added here too if needed for partial updates.
@@ -367,7 +332,6 @@ const Service = {
           'sc.service_id': service_id,
           'sc.tenant': tenant
         })
-        .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
         .leftJoin('service_types as ct', function() {
           this.on('sc.custom_service_type_id', '=', 'ct.id')
               .andOn('ct.tenant', '=', knexOrTrx.raw('?', [tenant]));
@@ -375,7 +339,6 @@ const Service = {
         .select(
           'sc.service_id',
           'sc.service_name',
-          'sc.standard_service_type_id',
           'sc.custom_service_type_id',
           'sc.billing_method',
           knexOrTrx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
@@ -383,8 +346,8 @@ const Service = {
           'sc.category_id',
           'sc.description',
           'sc.tenant',
-          // Select the service type name from either standard or custom type
-          knexOrTrx.raw('COALESCE(sst.name, ct.name) as service_type_name')
+          // Select the service type name from custom type
+          'ct.name as service_type_name'
         )
         .first();
 
@@ -478,13 +441,12 @@ const Service = {
     }
 
     try {
-      // Fetch services by category ID, joining with both standard and custom service types
+      // Fetch services by category ID, joining with custom service types
       const servicesData = await knexOrTrx('service_catalog as sc')
         .where({
           'sc.category_id': category_id,
           'sc.tenant': tenant
         })
-        .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
         .leftJoin('service_types as ct', function() {
           this.on('sc.custom_service_type_id', '=', 'ct.id')
               .andOn('ct.tenant', '=', knexOrTrx.raw('?', [tenant]));
@@ -492,7 +454,6 @@ const Service = {
         .select(
           'sc.service_id',
           'sc.service_name',
-          'sc.standard_service_type_id',
           'sc.custom_service_type_id',
           'sc.billing_method',
           knexOrTrx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
@@ -500,8 +461,8 @@ const Service = {
           'sc.category_id',
           'sc.description',
           'sc.tenant',
-          // Select the service type name from either standard or custom type
-          knexOrTrx.raw('COALESCE(sst.name, ct.name) as service_type_name')
+          // Select the service type name from custom type
+          'ct.name as service_type_name'
         );
 
       log.info(`[Service.getByCategoryId] Found ${servicesData.length} services for category ${category_id}`);
