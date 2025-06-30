@@ -204,7 +204,6 @@ const InteractionTypesSettings: React.FC = () => {
         <DataTable
           data={interactionTypes}
           columns={tenantTypeColumns}
-          pagination={false}
         />
         <div className="mt-4 flex gap-2">
           <Button 

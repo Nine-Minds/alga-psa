@@ -29,6 +29,8 @@ import {
 } from 'server/src/components/ui/DropdownMenu';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
+import CategoriesSettings from './CategoriesSettings';
+import ChannelsSettings from './ChannelsSettings';
 
 interface SettingSectionProps<T extends object> {
   title: string;
@@ -231,7 +233,6 @@ function SettingSection<T extends object>({
       <DataTable
         data={items}
         columns={allColumns}
-        pagination={false}
       />
       <div className="flex space-x-2 mt-4">
         <Input
@@ -834,15 +835,9 @@ const TicketingSettings = (): JSX.Element => {
         width: '30%',
       },
       {
-        title: 'Order',
-        dataIndex: 'order_number',
-        width: '10%',
-        render: (value) => value || 0,
-      },
-      {
         title: 'Status',
         dataIndex: 'is_closed',
-        width: '50%',
+        width: '25%',
         render: (value, record) => (
           <div className="flex items-center space-x-2 text-gray-500">
             <span className="text-sm mr-2">
@@ -879,6 +874,7 @@ const TicketingSettings = (): JSX.Element => {
       baseColumns.push({
         title: 'Default',
         dataIndex: 'is_default',
+        width: '25%',
         render: (value, record) => (
           <div className="flex items-center space-x-2 text-gray-500">
             <Switch
@@ -940,6 +936,14 @@ const TicketingSettings = (): JSX.Element => {
       });
     }
 
+    // Add Order column right before Actions
+    baseColumns.push({
+      title: 'Order',
+      dataIndex: 'order_number',
+      width: '10%',
+      render: (value) => value || 0,
+    });
+
     return baseColumns;
   };
 
@@ -968,11 +972,6 @@ const TicketingSettings = (): JSX.Element => {
       ),
     },
     {
-      title: 'Order',
-      dataIndex: 'order_number',
-      render: (value) => value,
-    },
-    {
       title: 'Color',
       dataIndex: 'color',
       render: (value) => (
@@ -984,6 +983,11 @@ const TicketingSettings = (): JSX.Element => {
           <span className="text-xs text-gray-500">{value}</span>
         </div>
       ),
+    },
+    {
+      title: 'Order',
+      dataIndex: 'order_number',
+      render: (value) => value,
     },
   ];
 
@@ -1061,51 +1065,7 @@ const TicketingSettings = (): JSX.Element => {
     },
     {
       label: "Channels",
-      content: (
-        <div>
-          {/* Info Box - Moved before SettingSection */}
-          <div className="bg-blue-50 p-4 rounded-md mb-4">
-            <p className="text-sm text-blue-700">
-              <strong>Default Channel:</strong> When clients create tickets through the client portal,
-              they will automatically be assigned to the channel marked as default. Only one channel can
-              be set as default at a time.
-            </p>
-          </div>
-          {/* Setting Section */}
-          <SettingSection<IChannel>
-            title="Channels"
-            items={filteredChannels}
-            newItem={newChannel}
-            setNewItem={setNewChannel}
-            addItem={addChannel}
-            updateItem={updateChannelItem}
-            deleteItem={handleDeleteChannelRequestWrapper}
-            getItemName={(channel) => channel.channel_name || ''}
-            getItemKey={(channel) => channel.channel_id || ''}
-            columns={channelColumns}
-            headerControls={
-              <div className="flex items-center gap-6">
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search channels"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
-                  />
-                  <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                </div>
-                <CustomSelect
-                  value={filterStatus}
-                  onValueChange={(value: string) => setFilterStatus(value as 'all' | 'active' | 'inactive')}
-                  options={filterStatusOptions}
-                  className="w-64"
-                />
-              </div>
-            }
-          />
-        </div>
-      )
+      content: <ChannelsSettings />
     },
     {
       label: "Statuses",
@@ -1198,8 +1158,7 @@ const TicketingSettings = (): JSX.Element => {
                   </DropdownMenu>
                 ),
               }]}
-              pagination={false}
-            />
+                  />
             
             <div className="mt-4 flex gap-2">
               <Button 
@@ -1257,7 +1216,10 @@ const TicketingSettings = (): JSX.Element => {
             </div>
 
             <DataTable
-              data={priorities.filter(p => p.item_type === selectedPriorityType)}
+              data={priorities
+                .filter(p => p.item_type === selectedPriorityType)
+                .sort((a, b) => (a.order_number || 0) - (b.order_number || 0))
+              }
               columns={[...priorityColumns, {
                 title: 'Actions',
                 dataIndex: 'action',
@@ -1301,8 +1263,7 @@ const TicketingSettings = (): JSX.Element => {
                   </DropdownMenu>
                 ),
               }]}
-              pagination={false}
-            />
+                  />
             
             <div className="mt-4 flex gap-2">
               <Button 
@@ -1335,131 +1296,7 @@ const TicketingSettings = (): JSX.Element => {
     },
     {
       label: "Categories",
-      content: (
-        <div>
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Categories</h3>
-              <CustomSelect
-                value={categoryChannelFilter}
-                onValueChange={(value: string) => setCategoryChannelFilter(value)}
-                options={channelFilterOptions}
-                className="w-64"
-              />
-            </div>
-            <DataTable
-              data={visibleCategories}
-              columns={[...categoryColumns, {
-                title: 'Actions',
-                dataIndex: 'action',
-                width: '5%',
-                render: (_, item) => (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        className="h-8 w-8 p-0"
-                        id={`category-actions-menu-${item.category_id}`}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <span className="sr-only">Open menu</span>
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {editingCategory === item.category_id ? (
-                        <>
-                          <DropdownMenuItem
-                            id={`save-category-${item.category_id}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSaveCategory(item.category_id);
-                            }}
-                          >
-                            Save
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            id={`cancel-edit-category-${item.category_id}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingCategory('');
-                            }}
-                          >
-                            Cancel
-                          </DropdownMenuItem>
-                        </>
-                      ) : (
-                        <>
-                          <DropdownMenuItem
-                            id={`edit-category-${item.category_id}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditCategory(item);
-                            }}
-                          >
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            id={`add-subcategory-${item.category_id}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedParentCategory(item.category_id);
-                            }}
-                          >
-                            Add Subcategory
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            id={`delete-category-${item.category_id}`}
-                            className="text-red-600 focus:text-red-600"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteCategoryRequestWrapper(item.category_id);
-                            }}
-                          >
-                            Delete
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ),
-              }]}
-              pagination={true}
-            />
-            <div className="flex space-x-2 mt-4">
-              <Input
-                type="text"
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
-                placeholder={selectedParentCategory ? "New Subcategory" : "New Category"}
-                className="flex-grow"
-              />
-              <Button 
-                id='add-button'
-                onClick={addCategory} 
-                className="bg-primary-500 text-white hover:bg-primary-600"
-                disabled={!newCategory.trim()}
-              >
-                <Plus className="h-4 w-4 mr-2" /> Add
-              </Button>
-            </div>
-            {selectedParentCategory && (
-              <div className="mt-2 text-sm text-gray-500">
-                Adding subcategory to: {categories.find(c => c.category_id === selectedParentCategory)?.category_name}
-                <Button
-                  id='cancel-button'
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedParentCategory('')}
-                  className="ml-2"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-      )
+      content: <CategoriesSettings />
     }
   ];
 
@@ -1681,7 +1518,20 @@ const TicketingSettings = (): JSX.Element => {
               <div className="border rounded-md">
                 {/* Table Header */}
                 <div className="flex items-center space-x-2 p-2 bg-muted/50 font-medium text-sm border-b">
-                  <div className="w-8"></div> {/* Checkbox column */}
+                  <div className="w-8">
+                    <input
+                      type="checkbox"
+                      checked={availableReferencePriorities.length > 0 && selectedImportPriorities.length === availableReferencePriorities.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedImportPriorities(availableReferencePriorities.map(p => p.priority_id));
+                        } else {
+                          setSelectedImportPriorities([]);
+                        }
+                      }}
+                      className="rounded border-gray-300"
+                    />
+                  </div>
                   <div className="w-12"></div> {/* Color column */}
                   <div className="flex-1">Name</div>
                   <div className="w-16 text-center">Order</div>
@@ -1723,24 +1573,6 @@ const TicketingSettings = (): JSX.Element => {
                 </div>
               </div>
               
-              <div className="mt-4 flex items-center gap-2">
-                <Button
-                  id="import-priorities-select-all"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setSelectedImportPriorities(availableReferencePriorities.map(p => p.priority_id))}
-                >
-                  Select All
-                </Button>
-                <Button
-                  id="import-priorities-clear-selection"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setSelectedImportPriorities([])}
-                >
-                  Clear Selection
-                </Button>
-              </div>
             </div>
           )}
           
@@ -1998,7 +1830,20 @@ const TicketingSettings = (): JSX.Element => {
               <div className="border rounded-md">
                 {/* Table Header */}
                 <div className="flex items-center space-x-2 p-2 bg-muted/50 font-medium text-sm border-b">
-                  <div className="w-8"></div> {/* Checkbox column */}
+                  <div className="w-8">
+                    <input
+                      type="checkbox"
+                      checked={availableReferenceStatuses.length > 0 && selectedImportStatuses.length === availableReferenceStatuses.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedImportStatuses(availableReferenceStatuses.map(s => s.standard_status_id));
+                        } else {
+                          setSelectedImportStatuses([]);
+                        }
+                      }}
+                      className="rounded border-gray-300"
+                    />
+                  </div>
                   <div className="flex-1">Name</div>
                   <div className="w-20 text-center">Closed</div>
                   <div className="w-20 text-center">Default</div>
@@ -2049,24 +1894,6 @@ const TicketingSettings = (): JSX.Element => {
                 </div>
               </div>
               
-              <div className="mt-4 flex items-center gap-2">
-                <Button
-                  id="import-statuses-select-all"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setSelectedImportStatuses(availableReferenceStatuses.map(s => s.standard_status_id))}
-                >
-                  Select All
-                </Button>
-                <Button
-                  id="import-statuses-clear-selection"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setSelectedImportStatuses([])}
-                >
-                  Clear Selection
-                </Button>
-              </div>
             </div>
           )}
           
