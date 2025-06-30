@@ -85,7 +85,7 @@ export async function createTicketFromAsset(data: CreateTicketFromAssetData, use
             status_id: await getDefaultStatusId(trx, tenant),
             entered_by: user.user_id,
             priority_id: validatedData.priority_id,
-            entered_at: new Date().toISOString(),
+            entered_at: trx.fn.now(),
             attributes: {
               description: validatedData.description
             },
@@ -205,7 +205,7 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
             priority_id: validatedData.priority_id,
             category_id: validatedData.category_id,
             subcategory_id: validatedData.subcategory_id,
-            entered_at: new Date().toISOString(),
+            entered_at: trx.fn.now(),
             attributes: {
               description: validatedData.description
             },
