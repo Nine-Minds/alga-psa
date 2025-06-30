@@ -64,12 +64,12 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
           id: String(item.item_id ?? ''), // Corrected property name
           description: String(item.description ?? ''),
           quantity: Number(item.quantity ?? 0),
-          unitPrice: Number(item.unit_price ?? 0),
-          total: Number(item.total_price ?? 0), // Corrected property name
+          unitPrice: Number(item.unit_price ?? 0) / 100,
+          total: Number(item.total_price ?? 0) / 100, // Corrected property name
         })),
-        subtotal: Number(dbData.subtotal ?? 0),
-        tax: Number(dbData.tax ?? 0),
-        total: Number(dbData.total ?? 0),
+        subtotal: Number(dbData.subtotal ?? 0) / 100,
+        tax: Number(dbData.tax ?? 0) / 100,
+        total: Number((dbData as any).total_amount ?? dbData.total ?? 0) / 100,
         // notes: dbData.notes, // Add if needed
       };
     }
