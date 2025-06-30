@@ -218,10 +218,9 @@ export async function fetchServicesForTimeEntry(workItemType?: string): Promise<
   const {knex: db, tenant} = await createTenantKnex();
 
   let query = db('service_catalog as sc')
-    .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
-    .leftJoin('service_types as tst', function() {
-      this.on('sc.custom_service_type_id', '=', 'tst.id')
-          .andOn('sc.tenant', '=', 'tst.tenant');
+    .leftJoin('service_types as st', function() {
+      this.on('sc.custom_service_type_id', '=', 'st.id')
+          .andOn('sc.tenant', '=', 'st.tenant');
     })
     .where({ 'sc.tenant': tenant })
     .select(

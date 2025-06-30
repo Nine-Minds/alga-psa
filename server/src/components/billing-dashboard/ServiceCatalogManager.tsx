@@ -81,11 +81,8 @@ const ServiceCatalogManager: React.FC = () => {
   const [pageSize, setPageSize] = useState(10); // Default page size
   const [totalCount, setTotalCount] = useState(0);
   const filteredServices = services.filter(service => {
-    // Get the effective service type ID (either standard or custom)
-    const effectiveServiceTypeId = service.standard_service_type_id || service.custom_service_type_id;
-    
-    // Match based on the effective service type ID
-    const categoryMatch = selectedCategory === 'all' || effectiveServiceTypeId === selectedCategory;
+    // Match based on the custom service type ID
+    const categoryMatch = selectedCategory === 'all' || service.custom_service_type_id === selectedCategory;
     const billingMethodMatch = selectedBillingMethod === 'all' || service.billing_method === selectedBillingMethod;
     return categoryMatch && billingMethodMatch;
   });
@@ -170,8 +167,7 @@ const ServiceCatalogManager: React.FC = () => {
         
         // Update total count based on filtered results
         const filteredCount = response.services.filter(service => {
-          const effectiveServiceTypeId = service.standard_service_type_id || service.custom_service_type_id;
-          const categoryMatch = selectedCategory === 'all' || effectiveServiceTypeId === selectedCategory;
+          const categoryMatch = selectedCategory === 'all' || service.custom_service_type_id === selectedCategory;
           const billingMethodMatch = selectedBillingMethod === 'all' || service.billing_method === selectedBillingMethod;
           return categoryMatch && billingMethodMatch;
         }).length;
@@ -225,8 +221,8 @@ const ServiceCatalogManager: React.FC = () => {
 
   const handleUpdateService = async () => {
     if (!editingService) return;
-    // Check for either standard_service_type_id or custom_service_type_id
-    if (!editingService.standard_service_type_id && !editingService.custom_service_type_id) {
+    // Check for custom_service_type_id
+    if (!editingService.custom_service_type_id) {
       setError('Service Type is required');
       return;
     }
@@ -332,9 +328,7 @@ const ServiceCatalogManager: React.FC = () => {
         title: 'Service Type',
         dataIndex: 'service_type_name', // Use the service_type_name field that comes from the join
         render: (value, record) => {
-          // Get the effective service type ID (either standard or custom)
-          const effectiveServiceTypeId = record.standard_service_type_id || record.custom_service_type_id;
-          const type = allServiceTypes.find(t => t.id === effectiveServiceTypeId);
+          const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
           return type?.name || value || 'N/A';
         },
       },
@@ -383,9 +377,7 @@ const ServiceCatalogManager: React.FC = () => {
         title: 'SKU',
         dataIndex: 'sku',
         render: (value, record) => {
-          // Get the effective service type ID (either standard or custom)
-          const effectiveServiceTypeId = record.standard_service_type_id || record.custom_service_type_id;
-          const type = allServiceTypes.find(t => t.id === effectiveServiceTypeId);
+          const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
           return type?.name === 'Hardware' ? value || 'N/A' : 'N/A';
         },
       },
@@ -393,9 +385,7 @@ const ServiceCatalogManager: React.FC = () => {
         title: 'Inventory',
         dataIndex: 'inventory_count',
         render: (value, record) => {
-          // Get the effective service type ID (either standard or custom)
-          const effectiveServiceTypeId = record.standard_service_type_id || record.custom_service_type_id;
-          const type = allServiceTypes.find(t => t.id === effectiveServiceTypeId);
+          const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
           return type?.name === 'Hardware' ? (value ?? 'N/A') : 'N/A'; // Use ?? for 0
         },
       },
@@ -403,9 +393,7 @@ const ServiceCatalogManager: React.FC = () => {
         title: 'Seat Limit',
         dataIndex: 'seat_limit',
         render: (value, record) => {
-          // Get the effective service type ID (either standard or custom)
-          const effectiveServiceTypeId = record.standard_service_type_id || record.custom_service_type_id;
-          const type = allServiceTypes.find(t => t.id === effectiveServiceTypeId);
+          const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
           return type?.name === 'Software License' ? (value ?? 'N/A') : 'N/A'; // Use ?? for 0
         },
       },
@@ -413,9 +401,7 @@ const ServiceCatalogManager: React.FC = () => {
         title: 'License Term',
         dataIndex: 'license_term',
         render: (value, record) => {
-          // Get the effective service type ID (either standard or custom)
-          const effectiveServiceTypeId = record.standard_service_type_id || record.custom_service_type_id;
-          const type = allServiceTypes.find(t => t.id === effectiveServiceTypeId);
+          const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
           return type?.name === 'Software License' ? (value ?? 'N/A') : 'N/A'; // Use ?? for 0
         }
       }
@@ -538,30 +524,15 @@ const ServiceCatalogManager: React.FC = () => {
               value={editingService?.service_name || ''}
               onChange={(e) => setEditingService({ ...editingService!, service_name: e.target.value })}
             />
-            {/* Updated CustomSelect to use standard_service_type_id or custom_service_type_id */}
+            {/* Updated CustomSelect to use custom_service_type_id */}
             <CustomSelect
               options={allServiceTypes.map(type => ({ value: type.id, label: type.name }))} // Use fetched types
-              // Use the effective service type ID for the value
-              value={(editingService?.standard_service_type_id || editingService?.custom_service_type_id) || ''}
+              value={editingService?.custom_service_type_id || ''}
               onValueChange={(value) => {
-                // Find if the selected type is standard or custom
-                const selectedType = allServiceTypes.find(t => t.id === value);
-                if (!selectedType) return;
-                
-                // Update the appropriate field based on whether it's a standard or custom type
-                if (selectedType.is_standard) {
-                  setEditingService({
-                    ...editingService!,
-                    standard_service_type_id: value,
-                    custom_service_type_id: undefined
-                  });
-                } else {
-                  setEditingService({
-                    ...editingService!,
-                    standard_service_type_id: undefined,
-                    custom_service_type_id: value
-                  });
-                }
+                setEditingService({
+                  ...editingService!,
+                  custom_service_type_id: value
+                });
               }}
               placeholder="Select service type..."
             />
@@ -653,8 +624,8 @@ const ServiceCatalogManager: React.FC = () => {
 
             {/* Removed conditional rendering based on old service_type */}
             {/* Conditional Fields based on Service Type Name */}
-            {/* Get the effective service type ID for conditional rendering */}
-            {allServiceTypes.find(t => t.id === (editingService?.standard_service_type_id || editingService?.custom_service_type_id))?.name === 'Hardware' && (
+            {/* Get the service type for conditional rendering */}
+            {allServiceTypes.find(t => t.id === editingService?.custom_service_type_id)?.name === 'Hardware' && (
               <>
                 <Input
                   placeholder="SKU"
@@ -683,8 +654,8 @@ const ServiceCatalogManager: React.FC = () => {
                 />
               </>
             )}
-            {/* Get the effective service type ID for conditional rendering */}
-            {allServiceTypes.find(t => t.id === (editingService?.standard_service_type_id || editingService?.custom_service_type_id))?.name === 'Software License' && (
+            {/* Get the service type for conditional rendering */}
+            {allServiceTypes.find(t => t.id === editingService?.custom_service_type_id)?.name === 'Software License' && (
               <>
                 <Input
                   type="number"

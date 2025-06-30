@@ -2,7 +2,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { IInteraction, IInteractionType, ISystemInteractionType } from 'server/src/interfaces/interaction.interfaces';
+import { IInteraction, IInteractionType } from 'server/src/interfaces/interaction.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IContact } from 'server/src/interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
@@ -34,7 +34,7 @@ interface OverallInteractionsFeedProps {
 
 const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users, contacts, companies }) => {
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
-  const [interactionTypes, setInteractionTypes] = useState<(IInteractionType | ISystemInteractionType)[]>([]);
+  const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
   const [statuses, setStatuses] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>('all');
   const [selectedContact, setSelectedContact] = useState<string>('all');
@@ -138,14 +138,11 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
     }
   }, []);
 
-  const getTypeLabel = (type: IInteractionType | ISystemInteractionType) => {
-    const isSystemType = 'created_at' in type;
-    const suffix = isSystemType ? ' (System)' : ' (Custom)';
-    
+  const getTypeLabel = (type: IInteractionType) => {
     return (
       <div className="flex items-center gap-2">
         <InteractionIcon icon={type.icon} typeName={type.type_name} />
-        <span>{type.type_name}{suffix}</span>
+        <span>{type.type_name}</span>
       </div>
     );
   };

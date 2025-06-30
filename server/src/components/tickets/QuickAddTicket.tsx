@@ -101,7 +101,7 @@ export function QuickAddTicket({
   const [users, setUsers] = useState<IUser[]>([]);
   const [channels, setChannels] = useState<IChannel[]>([]);
   const [statuses, setStatuses] = useState<ITicketStatus[]>([]);
-  const [priorities, setPriorities] = useState<(IPriority | IStandardPriority)[]>([]);
+  const [priorities, setPriorities] = useState<IPriority[]>([]);
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [locations, setLocations] = useState<ICompanyLocation[]>([]);
@@ -389,7 +389,15 @@ export function QuickAddTicket({
     () =>
       priorities.map((priority): SelectOption => ({
         value: priority.priority_id,
-        label: priority.priority_name
+        label: (
+          <div className="flex items-center gap-2">
+            <div 
+              className="w-3 h-3 rounded-full border border-gray-300" 
+              style={{ backgroundColor: priority.color || '#6B7280' }}
+            />
+            <span>{priority.priority_name}</span>
+          </div>
+        )
       })),
     [priorities]
   );

@@ -28,10 +28,14 @@ export async function findChannelById(id: string): Promise<IChannel | undefined>
 }
 
 export async function getAllChannels(includeAll: boolean = true): Promise<IChannel[]> {
-  const { knex: db } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const channels = await Channel.getAll(trx, includeAll);
+      const channels = await trx('channels')
+        .where({ tenant })
+        .where(includeAll ? {} : { is_inactive: false })
+        .orderBy('display_order', 'asc')
+        .orderBy('channel_name', 'asc');
       return channels;
     });
   } catch (error) {
@@ -41,12 +45,30 @@ export async function getAllChannels(includeAll: boolean = true): Promise<IChann
 }
 
 export async function createChannel(channelData: Omit<IChannel, 'channel_id' | 'tenant'>): Promise<IChannel> {
-  const { knex: db } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      channelData.is_inactive = false;
-      channelData.is_default = false;
-      const newChannel = await Channel.insert(trx, channelData);
+      // If no display_order provided, get the next available order
+      let displayOrder = channelData.display_order;
+      if (displayOrder === undefined || displayOrder === 0) {
+        const maxOrder = await trx('channels')
+          .where({ tenant })
+          .max('display_order as max')
+          .first();
+        displayOrder = (maxOrder?.max || 0) + 1;
+      }
+
+      const [newChannel] = await trx('channels')
+        .insert({
+          channel_name: channelData.channel_name,
+          description: channelData.description || null,
+          display_order: displayOrder,
+          is_inactive: false,
+          is_default: false,
+          tenant
+        })
+        .returning('*');
+      
       return newChannel;
     });
   } catch (error) {
@@ -75,10 +97,14 @@ export async function deleteChannel(channelId: string): Promise<boolean> {
 }
 
 export async function updateChannel(channelId: string, channelData: Partial<Omit<IChannel, 'tenant'>>): Promise<IChannel> {
-  const { knex: db } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const updatedChannel = await Channel.update(trx, channelId, channelData);
+      const [updatedChannel] = await trx('channels')
+        .where({ channel_id: channelId, tenant })
+        .update(channelData)
+        .returning('*');
+      
       if (!updatedChannel) {
         throw new Error('Channel not found');
       }

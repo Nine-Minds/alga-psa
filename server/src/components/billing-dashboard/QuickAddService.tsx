@@ -8,7 +8,7 @@ import CustomSelect from 'server/src/components/ui/CustomSelect'
 import { SearchableSelect } from 'server/src/components/ui/SearchableSelect'
 import { Switch } from 'server/src/components/ui/Switch'
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert'
-import { createService } from 'server/src/lib/actions/serviceActions'
+import { createService, type CreateServiceInput } from 'server/src/lib/actions/serviceActions'
 // Import getTaxRates and ITaxRate instead
 import { getTaxRates } from 'server/src/lib/actions/taxSettingsActions'; // Removed getActiveTaxRegions
 import { ITaxRate } from 'server/src/interfaces/tax.interfaces'; // Removed ITaxRegion
@@ -20,22 +20,20 @@ import { useTenant } from '../TenantProvider'
 
 interface QuickAddServiceProps {
   onServiceAdded: () => void;
-  allServiceTypes: { id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]; // Updated type
+  allServiceTypes: { id: string; name: string; billing_method: 'fixed' | 'per_unit' }[]; // Removed is_standard
 }
 
-// Updated interface to use standard_service_type_id or custom_service_type_id
+// Updated interface to use custom_service_type_id
 // and tax_rate_id instead of old tax fields
-interface ServiceFormData extends Omit<IService, 'service_id' | 'tenant' | 'category_id' | 'billing_method'> { // Added billing_method to Omit
-  // Temporary field for UI selection - not sent to API
-  service_type_id: string;
-  // Override billing_method to allow empty string for form state
+interface ServiceFormData {
+  service_name: string;
+  custom_service_type_id: string; // Required for form state
   billing_method: 'fixed' | 'per_unit' | '';
-  // Fields that will be sent to API
-  standard_service_type_id?: string;
-  custom_service_type_id?: string;
-  tax_rate_id?: string | null; // Added tax_rate_id
+  default_rate: number;
+  unit_of_measure: string;
+  tax_rate_id?: string | null;
   description?: string | null;
-  // Fields to remove from final submission (or add to IService if needed)
+  // Additional fields for form
   sku?: string;
   inventory_count?: number;
   seat_limit?: number;
@@ -81,12 +79,10 @@ export function QuickAddService({ onServiceAdded, allServiceTypes }: QuickAddSer
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const tenant = useTenant()
 
-  // Initialize service state with service_type_id for UI selection
+  // Initialize service state
   const [serviceData, setServiceData] = useState<ServiceFormData>({
     service_name: '',
-    service_type_id: '', // Used for UI selection only
-    standard_service_type_id: undefined,
-    custom_service_type_id: undefined,
+    custom_service_type_id: '',
     billing_method: '',
     default_rate: 0,
     unit_of_measure: '',
@@ -145,7 +141,7 @@ export function QuickAddService({ onServiceAdded, allServiceTypes }: QuickAddSer
       if (!serviceData.service_name.trim()) {
         errors.push('Service name is required')
       }
-      if (!serviceData.service_type_id) { // Check ID
+      if (!serviceData.custom_service_type_id || serviceData.custom_service_type_id.trim() === '') { // Check ID is not empty
         errors.push('Service type is required') // Updated label
       }
       if (!serviceData.default_rate || serviceData.default_rate === 0) {
@@ -164,7 +160,7 @@ export function QuickAddService({ onServiceAdded, allServiceTypes }: QuickAddSer
       // Removed category_id validation
 
       // Find the selected service type name for conditional checks
-      const selectedServiceTypeName = allServiceTypes.find(t => t.id === serviceData.service_type_id)?.name;
+      const selectedServiceTypeName = allServiceTypes.find(t => t.id === serviceData.custom_service_type_id)?.name;
 
       // Validate product-specific fields
       if (selectedServiceTypeName === 'Hardware') { // Check name
@@ -181,8 +177,8 @@ export function QuickAddService({ onServiceAdded, allServiceTypes }: QuickAddSer
           return
         }
       }
-// Find the selected service type to determine if it's standard or custom
-const selectedServiceType = allServiceTypes.find(t => t.id === serviceData.service_type_id);
+// Find the selected service type
+const selectedServiceType = allServiceTypes.find(t => t.id === serviceData.custom_service_type_id);
 
 if (!selectedServiceType) {
   setError('Selected service type not found');
@@ -201,19 +197,12 @@ const baseData = {
   description: serviceData.description || '', // Include description field
 };
 
-// Create the final data with the correct service type ID based on is_standard flag
-let submitData;
-if (selectedServiceType.is_standard) {
-  submitData = {
-    ...baseData,
-    standard_service_type_id: serviceData.service_type_id,
-  };
-} else {
-  submitData = {
-    ...baseData,
-    custom_service_type_id: serviceData.service_type_id,
-  };
-}
+// Create the final data with the custom service type ID
+// At this point, we've already validated that custom_service_type_id is not empty
+const submitData: CreateServiceInput = {
+  ...baseData,
+  custom_service_type_id: serviceData.custom_service_type_id,
+};
 
 console.log('[QuickAddService] Submitting service data:', submitData);
 console.log('[QuickAddService] Unit of measure value:', submitData.unit_of_measure);
@@ -225,9 +214,7 @@ console.log('[QuickAddService] Service created successfully');
       // Reset form
       setServiceData({
         service_name: '',
-        service_type_id: '', // Reset UI selection ID
-        standard_service_type_id: undefined,
-        custom_service_type_id: undefined,
+        custom_service_type_id: '',
         billing_method: '',
         default_rate: 0,
         unit_of_measure: '',
@@ -306,7 +293,7 @@ console.log('[QuickAddService] Service created successfully');
               <SearchableSelect
                 id="serviceType"
                 options={allServiceTypes.map(type => ({ value: type.id, label: type.name }))}
-                value={serviceData.service_type_id}
+                value={serviceData.custom_service_type_id}
                 onChange={(value) => {
                   // Find the selected service type to get its billing method
                   const selectedType = allServiceTypes.find(t => t.id === value);
@@ -314,20 +301,14 @@ console.log('[QuickAddService] Service created successfully');
                   // Update service data with the selected type ID and its billing method
                   setServiceData({
                     ...serviceData,
-                    service_type_id: value,
+                    custom_service_type_id: value,
                     // Update billing_method based on the selected service type
                     billing_method: selectedType?.billing_method || serviceData.billing_method,
                   });
-                  
-                  // Reset the service_id when service type changes
-                  setServiceData((prev) => ({
-                    ...prev,
-                    service_id: null,
-                  }));
                 }}
                 placeholder="Select service type..."
                 emptyMessage="No service types found"
-                className={`w-full ${hasAttemptedSubmit && !serviceData.service_type_id ? 'ring-1 ring-red-500' : ''}`}
+                className={`w-full ${hasAttemptedSubmit && !serviceData.custom_service_type_id ? 'ring-1 ring-red-500' : ''}`}
               />
             </div>
 
@@ -376,7 +357,7 @@ console.log('[QuickAddService] Service created successfully');
                     setServiceData({ ...serviceData, unit_of_measure: value });
                   }}
                   placeholder="Select unit of measure..."
-                  serviceType={allServiceTypes.find(t => t.id === serviceData.service_type_id)?.name}
+                  serviceType={allServiceTypes.find(t => t.id === serviceData.custom_service_type_id)?.name}
                 />
               </div>
             )}
@@ -416,7 +397,7 @@ console.log('[QuickAddService] Service created successfully');
 
             {/* Product-specific fields */}
             {/* Conditional fields based on Service Type Name */}
-            {allServiceTypes.find(t => t.id === serviceData.service_type_id)?.name === 'Hardware' && (
+            {allServiceTypes.find(t => t.id === serviceData.custom_service_type_id)?.name === 'Hardware' && (
               <>
                 <div>
                   <Label htmlFor="sku" className="block text-sm font-medium text-gray-700 mb-1">SKU</Label>
@@ -441,7 +422,7 @@ console.log('[QuickAddService] Service created successfully');
             )}
 
             {/* License-specific fields */}
-            {allServiceTypes.find(t => t.id === serviceData.service_type_id)?.name === 'Software License' && (
+            {allServiceTypes.find(t => t.id === serviceData.custom_service_type_id)?.name === 'Software License' && (
               <>
                 <div>
                   <Label htmlFor="seatLimit" className="block text-sm font-medium text-gray-700 mb-1">Seat Limit</Label>
@@ -474,7 +455,7 @@ console.log('[QuickAddService] Service created successfully');
               }}>
                 Cancel
               </Button>
-              <Button id='save-button' type="submit" className={!serviceData.service_name || !serviceData.service_type_id || !serviceData.default_rate || !serviceData.billing_method ? 'opacity-50' : ''}>Save Service</Button>
+              <Button id='save-button' type="submit" className={!serviceData.service_name || !serviceData.custom_service_type_id || !serviceData.default_rate || !serviceData.billing_method ? 'opacity-50' : ''}>Save Service</Button>
             </div>
           </form>
         </DialogContent>
