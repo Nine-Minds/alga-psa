@@ -106,7 +106,7 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
     <Dialog 
       isOpen={isOpen} 
       onClose={handleClose}
-      title={editingType ? "Edit Interaction Type" : "Create Custom Interaction Type"}
+      title={editingType ? "Edit Interaction Type" : "Create Interaction Type"}
       id={editingType ? "edit-interaction-type-dialog" : "add-interaction-type-dialog"}
       className="max-w-xl"
     >

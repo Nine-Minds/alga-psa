@@ -143,17 +143,14 @@ export interface ILicenseCharge extends IBillingCharge, TenantEntity {
 export interface IService extends TenantEntity {
   service_id: string;
   service_name: string;
-  // service_type_id: string; // Removed
-  standard_service_type_id?: string | null; // FK to standard_service_types
-  custom_service_type_id?: string | null;   // FK to service_types
+  custom_service_type_id: string;   // FK to service_types (now required)
   billing_method: 'fixed' | 'per_unit'; // Billing method specific to this service instance (Now required)
   default_rate: number;
   category_id: string | null;
   unit_of_measure: string;
   tax_rate_id?: string | null; // Added: FK to tax_rates table
   description?: string | null; // Added: Description field from the database
-  service_type_name?: string; // Added: Name of the service type (from standard or custom)
-  // Note: The CHECK constraint ensures exactly one of standard_service_type_id or custom_service_type_id is non-null.
+  service_type_name?: string; // Added: Name of the service type (from custom)
 }
 
 // New interface for standard service types (cross-tenant)

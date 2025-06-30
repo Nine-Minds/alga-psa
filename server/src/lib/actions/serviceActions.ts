@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import Service, { serviceSchema, refinedServiceSchema } from 'server/src/lib/models/service'; // Import both schemas
-import { IService, IServiceType, IStandardServiceType } from '../../interfaces/billing.interfaces';
+import { IService, IServiceType } from '../../interfaces/billing.interfaces';
 import { withTransaction } from '@shared/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
@@ -33,10 +33,9 @@ export async function getServices(page: number = 1, pageSize: number = 999): Pro
             
         const totalCount = parseInt(countResult?.count as string) || 0;
         
-        // Fetch services with service type names by joining with both standard and custom service type tables
+        // Fetch services with service type names by joining with custom service type table
         const servicesData = await trx('service_catalog as sc')
             .where({ 'sc.tenant': tenant })
-            .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
             .leftJoin('service_types as st', function() {
                 this.on('sc.custom_service_type_id', '=', 'st.id')
                     .andOn('sc.tenant', '=', 'st.tenant');
@@ -44,7 +43,6 @@ export async function getServices(page: number = 1, pageSize: number = 999): Pro
             .select(
                 'sc.service_id',
                 'sc.service_name',
-                'sc.standard_service_type_id',
                 'sc.custom_service_type_id',
                 'sc.billing_method',
                 trx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
@@ -53,7 +51,7 @@ export async function getServices(page: number = 1, pageSize: number = 999): Pro
                 'sc.tenant',
                 'sc.description',
                 'sc.tax_rate_id', // Corrected: Use tax_rate_id based on schema
-                trx.raw('COALESCE(sst.name, st.name) as service_type_name') // Add service type name
+                'st.name as service_type_name' // Add service type name
             )
             .limit(pageSize)
             .offset(offset);
@@ -90,12 +88,8 @@ export async function getServiceById(serviceId: string): Promise<IService | null
     }
 }
 
-// Define a type for the input data, accepting one of the two IDs
-type CreateServiceInput = Omit<IService, 'service_id' | 'tenant' | 'standard_service_type_id' | 'custom_service_type_id'> &
-  (
-    | { standard_service_type_id: string; custom_service_type_id?: never }
-    | { standard_service_type_id?: never; custom_service_type_id: string }
-  );
+// Define a type for the input data
+export type CreateServiceInput = Omit<IService, 'service_id' | 'tenant'>;
 
 
 export async function createService(
@@ -103,63 +97,37 @@ export async function createService(
 ): Promise<IService> {
     try {
         console.log('[serviceActions] createService called with data:', serviceData);
-        const { standard_service_type_id, custom_service_type_id } = serviceData;
+        const { custom_service_type_id } = serviceData;
 
-        if (!standard_service_type_id && !custom_service_type_id) {
-            throw new Error('Either standard_service_type_id or custom_service_type_id is required to create a service.');
-        }
-        if (standard_service_type_id && custom_service_type_id) {
-             throw new Error('Provide either standard_service_type_id or custom_service_type_id, not both.');
+        if (!custom_service_type_id) {
+            throw new Error('custom_service_type_id is required to create a service.');
         }
 
         const { knex: db, tenant } = await createTenantKnex();
         return withTransaction(db, async (trx: Knex.Transaction) => {
 
-        // 1. Determine the billing method based on the provided ID
-        let derivedBillingMethod: 'fixed' | 'per_unit' | undefined | null = null;
-        let typeId: string;
-
-        if (standard_service_type_id) {
-            typeId = standard_service_type_id;
-            const standardServiceType = await trx<IStandardServiceType>('standard_service_types')
-                .where({ id: typeId })
-                .first();
-            if (!standardServiceType) {
-                 throw new Error(`Standard ServiceType ID '${typeId}' not found.`);
-            }
-            derivedBillingMethod = standardServiceType.billing_method;
-            console.log(`[serviceActions] Billing method '${derivedBillingMethod}' derived from standard type: ${typeId}`);
-        } else if (custom_service_type_id) {
-            typeId = custom_service_type_id;
-            const customServiceType = await trx<IServiceType>('service_types')
-                .where('id', typeId)
-                .andWhere('tenant', tenant) // Match tenant
-                .first();
-             if (!customServiceType) {
-                 throw new Error(`Custom ServiceType ID '${typeId}' not found for tenant '${tenant}'.`);
-            }
-            derivedBillingMethod = customServiceType.billing_method;
-            console.log(`[serviceActions] Billing method '${derivedBillingMethod}' derived from custom type: ${typeId} for tenant ${tenant}`);
-        } else {
-             // This case is already handled by the initial check, but added for completeness
-             throw new Error('No service type ID provided.');
+        // 1. Verify the custom service type exists and get billing method
+        const customServiceType = await trx<IServiceType>('service_types')
+            .where('id', custom_service_type_id)
+            .andWhere('tenant', tenant) // Match tenant
+            .first();
+        if (!customServiceType) {
+            throw new Error(`ServiceType ID '${custom_service_type_id}' not found for tenant '${tenant}'.`);
         }
-
+        const derivedBillingMethod = customServiceType.billing_method;
+        console.log(`[serviceActions] Billing method '${derivedBillingMethod}' derived from custom type: ${custom_service_type_id} for tenant ${tenant}`);
 
         // 2. Ensure a billing method was determined (as it's required on IService)
-        // This check might be redundant if the source tables enforce non-null billing_method, but good for safety.
         if (!derivedBillingMethod) {
-            throw new Error(`Could not determine billing method for ServiceType ID '${typeId}'. The source type might lack a billing method.`);
+            throw new Error(`Could not determine billing method for ServiceType ID '${custom_service_type_id}'. The source type might lack a billing method.`);
         }
 
-        // 3. Prepare final data, ensuring derived billing_method and correct FK ID is used
+        // 3. Prepare final data
         const finalServiceData = {
             ...serviceData,
             tenant: tenant, // Explicitly add tenant to the data
             billing_method: derivedBillingMethod, // Use the derived billing method
-            // Ensure only the correct FK field is included based on input
-            standard_service_type_id: standard_service_type_id || null,
-            custom_service_type_id: custom_service_type_id || null,
+            custom_service_type_id: custom_service_type_id,
             // Ensure default_rate is a number
             default_rate: typeof serviceData.default_rate === 'string'
                 ? parseFloat(serviceData.default_rate) || 0
@@ -169,8 +137,7 @@ export async function createService(
         };
 
             // 4. Create the service using the model
-            // Assuming Service.create accepts the IService structure (or relevant parts)
-            const service = await Service.create(trx, finalServiceData as Omit<IService, 'service_id' | 'tenant'>); // Cast might be needed depending on model input type
+            const service = await Service.create(trx, finalServiceData as Omit<IService, 'service_id'>);
             console.log('[serviceActions] Service created successfully:', service);
             revalidatePath('/msp/billing'); // Revalidate the billing page
             return service; // Assuming Service.create returns the full IService object

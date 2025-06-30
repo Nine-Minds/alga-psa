@@ -434,14 +434,11 @@ export function QuickAddInteraction({
     }
   };
 
-  const getTypeLabel = (type: IInteractionType | ISystemInteractionType) => {
-    const isSystemType = 'created_at' in type;
-    const suffix = isSystemType ? ' (System)' : ' (Custom)';
-    
+  const getTypeLabel = (type: IInteractionType) => {
     return (
       <div className="flex items-center gap-2">
         <InteractionIcon icon={type.icon} typeName={type.type_name} />
-        <span>{type.type_name}{suffix}</span>
+        <span>{type.type_name}</span>
       </div>
     );
   };

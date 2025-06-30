@@ -27,7 +27,6 @@ import {
 } from 'server/src/components/ui/DropdownMenu';
 const InteractionTypesSettings: React.FC = () => {
   const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
-  const [systemTypes, setSystemTypes] = useState<ISystemInteractionType[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
@@ -43,7 +42,7 @@ const InteractionTypesSettings: React.FC = () => {
   
   // State for Import Dialog
   const [showImportDialog, setShowImportDialog] = useState(false);
-  const [availableReferenceTypes, setAvailableReferenceTypes] = useState<ISystemInteractionType[]>([]);
+  const [availableReferenceTypes, setAvailableReferenceTypes] = useState<IInteractionType[]>([]);
   const [selectedImportTypes, setSelectedImportTypes] = useState<string[]>([]);
   const [importConflicts, setImportConflicts] = useState<ImportConflict[]>([]);
   const [conflictResolutions, setConflictResolutions] = useState<Record<string, { action: 'skip' | 'rename' | 'reorder', newName?: string, newOrder?: number }>>({});
@@ -54,16 +53,8 @@ const InteractionTypesSettings: React.FC = () => {
 
   const fetchTypes = async () => {
     try {
-      const [allTypes, sysTypes] = await Promise.all([
-        getAllInteractionTypes(),
-        getSystemInteractionTypes()
-      ]);
-      
-      // Filter out system types from allTypes since they'll be displayed separately
-      const tenantTypes = allTypes.filter(type => !sysTypes.some(sysType => sysType.type_id === type.type_id));
-      
-      setInteractionTypes(tenantTypes);
-      setSystemTypes(sysTypes);
+      const allTypes = await getAllInteractionTypes();
+      setInteractionTypes(allTypes);
     } catch (error) {
       console.error('Error fetching types:', error);
       setError('Failed to fetch interaction types');
@@ -134,30 +125,6 @@ const InteractionTypesSettings: React.FC = () => {
     }
   };
 
-  const systemTypeColumns: ColumnDefinition<ISystemInteractionType>[] = [
-    {
-      title: 'Name',
-      dataIndex: 'type_name',
-      render: (value: string, record: ISystemInteractionType) => (
-        <div className="flex items-center space-x-2">
-          <InteractionIcon icon={record.icon} typeName={record.type_name} />
-          <span className="text-gray-700 font-medium">{value}</span>
-          <span className="text-xs text-gray-400">(System)</span>
-          <Lock className="h-4 w-4 text-gray-400" />
-        </div>
-      ),
-    },
-    {
-      title: 'Actions',
-      dataIndex: 'type_id',
-      width: '10%',
-      render: () => (
-        <div className="flex items-center justify-end">
-          <span className="text-xs text-gray-400">Read-only</span>
-        </div>
-      ),
-    },
-  ];
 
   const tenantTypeColumns: ColumnDefinition<IInteractionType>[] = [
     {
@@ -228,7 +195,7 @@ const InteractionTypesSettings: React.FC = () => {
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">
       <div>
-        <h3 className="text-lg font-semibold mb-4 text-gray-800">Custom Interaction Types</h3>
+        <h3 className="text-lg font-semibold mb-4 text-gray-800">Interaction Types</h3>
         {error && (
           <Alert variant="destructive" className="mb-4">
             <AlertDescription>{error}</AlertDescription>
@@ -251,13 +218,18 @@ const InteractionTypesSettings: React.FC = () => {
             id="import-interaction-types-button" 
             variant="outline"
             onClick={async () => {
-              const available = await getAvailableReferenceData('interaction_types');
-              setAvailableReferenceTypes(available);
-              setSelectedImportTypes([]);
-              setShowImportDialog(true);
+              try {
+                const available = await getAvailableReferenceData('interaction_types');
+                setAvailableReferenceTypes(available || []);
+                setSelectedImportTypes([]);
+                setShowImportDialog(true);
+              } catch (error) {
+                console.error('Error fetching available interaction types:', error);
+                toast.error('Failed to fetch available interaction types for import');
+              }
             }}
           >
-            Import from System Types
+            Import from Standard Types
           </Button>
         </div>
       </div>
@@ -299,16 +271,16 @@ const InteractionTypesSettings: React.FC = () => {
           setShowImportDialog(false);
           setSelectedImportTypes([]);
         }} 
-        title="Import System Interaction Types"
+        title="Import Standard Interaction Types"
       >
         <DialogContent>
           <div className="space-y-4">
-            {availableReferenceTypes.length === 0 ? (
-              <p className="text-muted-foreground">No system interaction types available to import.</p>
+            {!availableReferenceTypes || availableReferenceTypes.length === 0 ? (
+              <p className="text-muted-foreground">No standard interaction types available to import.</p>
             ) : (
               <>
                 <p className="text-sm text-muted-foreground">
-                  Select system interaction types to import into your organization:
+                  Select standard interaction types to import into your organization:
                 </p>
                 <div className="border rounded-md">
                   {/* Table Header */}
