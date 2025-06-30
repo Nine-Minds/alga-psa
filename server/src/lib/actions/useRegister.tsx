@@ -13,6 +13,8 @@ import { getEmailService } from 'server/src/services/emailService';
 import { EmailProviderManager } from 'server/src/services/email/EmailProviderManager';
 import { TenantEmailSettings, EmailMessage } from 'server/src/types/email.types';
 import logger from 'server/src/utils/logger';
+import { analytics } from '../analytics/posthog';
+import { AnalyticsEvents } from '../analytics/events';
 
 const VERIFY_EMAIL_ENABLED = process.env.VERIFY_EMAIL_ENABLED === 'true';
 const EMAIL_ENABLE = process.env.EMAIL_ENABLE === 'true';
@@ -51,6 +53,14 @@ export async function verifyRegisterUser(token: string): Promise<VerifyResponse>
         user_type: userInfo.user_type
       };
       await User.insert(db, newUser);
+      
+      // Track user registration
+      analytics.capture(AnalyticsEvents.USER_SIGNED_UP, {
+        user_type: newUser.user_type,
+        registration_method: 'email_verification',
+        company_created: true,
+      }, newUser.user_id);
+      
       return {
         message: 'User verified and registered successfully',
         wasSuccess: true,
@@ -194,6 +204,15 @@ export async function registerUser({ username, email, password, companyName }: I
         user_type: 'msp'
       };
       await User.insert(db, newUser);
+      
+      // Track user registration (direct, no email verification)
+      analytics.capture(AnalyticsEvents.USER_SIGNED_UP, {
+        user_type: 'msp',
+        registration_method: 'direct',
+        company_created: true,
+        email_verification_required: VERIFY_EMAIL_ENABLED,
+      }, newUser.user_id);
+      
       logger.info(`User [ ${email} ] registered successfully`);
       return true;
     } catch (error) {

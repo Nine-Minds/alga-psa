@@ -10,6 +10,25 @@ const nextConfig = {
   reactStrictMode: true,
   output: 'standalone', // Disable static generation entirely
   transpilePackages: ['@blocknote/core', '@blocknote/react', '@blocknote/mantine'],
+  // Rewrites required for PostHog
+  async rewrites() {
+    return [
+      {
+        source: '/ingest/static/:path*',
+        destination: 'https://us-assets.i.posthog.com/static/:path*',
+      },
+      {
+        source: '/ingest/:path*',
+        destination: 'https://us.i.posthog.com/:path*',
+      },
+      {
+        source: '/ingest/decide',
+        destination: 'https://us.i.posthog.com/decide',
+      },
+    ];
+  },
+  // This is required to support PostHog trailing slash API requests
+  skipTrailingSlashRedirect: true,
   webpack: (config, { isServer }) => {
     // Disable webpack cache
     config.cache = false;
@@ -120,7 +139,6 @@ const nextConfig = {
       //   })
       // );
     }
-
 
     return config;
   },

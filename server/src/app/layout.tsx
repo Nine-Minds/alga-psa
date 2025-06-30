@@ -10,6 +10,7 @@ import { ThemeProvider } from '../context/ThemeContext';
 import { TagProvider } from '../context/TagContext';
 import { ClientUIStateProvider } from '../types/ui-reflection/ClientUIStateProvider';
 import { DynamicExtensionProvider } from '../components/extensions/DynamicExtensionProvider';
+import { PostHogProvider } from "../components/PostHogProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -75,10 +76,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.className}>
       <body className={`${inter.className} light`}>
-        <Suspense fallback={<Loading />}>
-          <MainContent>{children}</MainContent>
-        </Suspense>
-        <Toaster position="top-right" />
+        <PostHogProvider>
+          <Suspense fallback={<Loading />}>
+            <MainContent>{children}</MainContent>
+          </Suspense>
+          <Toaster position="top-right" />
+        </PostHogProvider>
       </body>
     </html>
   );

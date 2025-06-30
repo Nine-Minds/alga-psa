@@ -28,6 +28,8 @@ import {
   ticketListItemSchema,
   ticketListFiltersSchema
 } from 'server/src/lib/schemas/ticket.schema';
+import { analytics } from '../../analytics/posthog';
+import { AnalyticsEvents } from '../../analytics/events';
 
 // Helper function to safely convert dates
 function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null }>(record: T): T {
@@ -1109,6 +1111,14 @@ export async function addTicketCommentWithCache(
         isInternal
       }
     });
+    
+    // Track comment analytics
+    analytics.capture('ticket_comment_added', {
+      is_internal: isInternal,
+      is_resolution: isResolution,
+      content_length: markdownContent.length,
+      has_formatting: content.includes('"type"'), // BlockNote content has type field
+    }, user.user_id);
 
     // Revalidate paths to update UI
     revalidatePath(`/msp/tickets/${ticketId}`);

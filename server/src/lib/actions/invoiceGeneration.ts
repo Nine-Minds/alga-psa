@@ -30,6 +30,8 @@ import { getCompanyLogoUrl } from '../utils/avatarUtils';
 import { getCompanyDetails, persistInvoiceItems, updateInvoiceTotalsAndRecordTransaction } from 'server/src/lib/services/invoiceService';
 import { getCurrentUser } from './user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
+import { analytics } from '../analytics/posthog';
+import { AnalyticsEvents } from '../analytics/events';
 // TODO: Import these from billingAndTax.ts once created
 import { getNextBillingDate, getDueDate } from './billingAndTax'; // Updated import
 import { getCompanyDefaultTaxRegionCode } from './company-actions/companyTaxRateActions';
@@ -914,6 +916,21 @@ export async function createInvoiceFromBillingResult(
       // expirationDate is optional and not needed here
     );
   });
+
+  // Track analytics
+  analytics.capture(AnalyticsEvents.INVOICE_GENERATED, {
+    invoice_id: newInvoice.invoice_id,
+    invoice_number: newInvoice.invoice_number,
+    company_id: companyId,
+    subtotal: newInvoice.subtotal,
+    tax: newInvoice.tax,
+    total_amount: newInvoice.total_amount,
+    billing_period_start: cycleStart,
+    billing_period_end: cycleEnd,
+    charge_count: billingResult.charges.length,
+    discount_count: billingResult.discounts.length,
+    is_manual: false
+  }, userId);
 
   return newInvoice;
 }

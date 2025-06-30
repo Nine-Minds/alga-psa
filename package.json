@@ -99,6 +99,8 @@
     "pg": "^8.16.0",
     "pg-boss": "^10.1.5",
     "pg-query-stream": "^4.6.0",
+    "posthog-js": "^1.255.1",
+    "posthog-node": "^4.18.0",
     "prosemirror-view": "1.37.2",
     "puppeteer": "^24.10.1",
     "qrcode": "^1.5.4",

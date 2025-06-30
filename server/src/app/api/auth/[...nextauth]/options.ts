@@ -9,6 +9,8 @@ import { decodeToken } from "server/src/utils/tokenizer";
 import User from "server/src/lib/models/user";
 import logger from '@shared/core/logger';
 import "server/src/types/next-auth";
+import { analytics } from "server/src/lib/analytics/posthog";
+import { AnalyticsEvents } from "server/src/lib/analytics/events";
 // import { getAdminConnection } from "server/src/lib/db/admin";
 
 const NEXTAUTH_SESSION_EXPIRES = Number(process.env.NEXTAUTH_SESSION_EXPIRES) || 60 * 60 * 24; // 1 day
@@ -43,6 +45,11 @@ export const options: NextAuthOptions = {
                 // Check if user is inactive
                 if (user.is_inactive) {
                     logger.warn(`Inactive user attempted to login via Google: ${profile.email}`);
+                    // Track failed Google login due to inactive account
+                    analytics.capture('login_failed', {
+                        reason: 'inactive_account',
+                        provider: 'google',
+                    });
                     throw new Error("User not found");
                 }
                 
@@ -274,6 +281,18 @@ export const options: NextAuthOptions = {
         maxAge: NEXTAUTH_SESSION_EXPIRES,
     },
     callbacks: {
+        async signIn({ user, account, profile }) {
+            // Track successful login
+            const extendedUser = user as ExtendedUser;
+            analytics.capture(AnalyticsEvents.USER_LOGGED_IN, {
+                provider: account?.provider || 'credentials',
+                user_type: extendedUser.user_type,
+                has_two_factor: false, // We'd need to check this from the user object
+                login_method: account?.provider || 'email',
+            }, extendedUser.id);
+            
+            return true; // Allow sign in
+        },
         async jwt({ token, user }) {
             if (user) {
                 const extendedUser = user as ExtendedUser;

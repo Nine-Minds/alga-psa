@@ -9,6 +9,8 @@ import { JobStatus } from 'server/src/types/job.d';
 import logger from '@shared/core/logger';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
+import { analytics } from '../../analytics/posthog';
+import { AnalyticsEvents } from '../../analytics/events';
 
 export const scheduleInvoiceEmailAction = async (invoiceIds: string[]) => {
   const { tenant } = await createTenantKnex();
@@ -69,6 +71,18 @@ export const scheduleInvoiceEmailAction = async (invoiceIds: string[]) => {
     if (!scheduledJobId) {
       throw new Error('Failed to schedule job - no job ID returned');
     }
+
+    // Track analytics for each invoice sent
+    for (const detail of invoiceDetails) {
+      analytics.capture(AnalyticsEvents.INVOICE_SENT, {
+        invoice_id: detail.invoiceId,
+        invoice_number: detail.invoiceNumber,
+        company_name: detail.companyName,
+        batch_size: invoiceIds.length,
+        job_id: jobRecord.id
+      }, currentUser.user_id);
+    }
+
     return { jobId: jobRecord.id };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
