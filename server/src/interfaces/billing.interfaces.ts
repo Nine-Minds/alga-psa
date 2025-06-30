@@ -118,6 +118,7 @@ export interface IServiceCategory extends TenantEntity {
   category_id: string | null;
   category_name: string;
   description?: string;
+  display_order?: number;
 }
 
 export interface IProductCharge extends IBillingCharge, TenantEntity {

@@ -263,3 +263,162 @@ export async function getTicketCategoriesByChannel(channelId: string) {
     }
   });
 }
+
+export async function getAllCategories(): Promise<ITicketCategory[]> {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('Unauthorized');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
+      const categories = await trx<ITicketCategory>('categories')
+        .where('tenant', tenant!)
+        .select('category_id', 'category_name', 'display_order', 'parent_category', 'channel_id')
+        .orderBy('display_order', 'asc');
+
+      return categories;
+    } catch (error) {
+      console.error('Error fetching all categories:', error);
+      throw new Error('Failed to fetch categories');
+    }
+  });
+}
+
+export async function createCategory(data: { 
+  category_name: string; 
+  display_order?: number;
+  channel_id: string;
+  parent_category?: string;
+}): Promise<ITicketCategory> {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('Unauthorized');
+  }
+
+  if (!data.channel_id) {
+    throw new Error('Channel ID is required');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
+      // If no display_order provided, get the next available order
+      let displayOrder = data.display_order;
+      if (displayOrder === undefined || displayOrder === 0) {
+        if (data.parent_category) {
+          // For subcategories, get max order within the parent
+          const maxOrder = await trx('categories')
+            .where({ tenant, parent_category: data.parent_category })
+            .max('display_order as max')
+            .first();
+          displayOrder = (maxOrder?.max || 0) + 1;
+        } else {
+          // For parent categories
+          const maxOrder = await trx('categories')
+            .where({ tenant })
+            .whereNull('parent_category')
+            .max('display_order as max')
+            .first();
+          displayOrder = (maxOrder?.max || 0) + 1;
+        }
+      }
+
+      const [newCategory] = await trx('categories')
+        .insert({
+          category_name: data.category_name,
+          display_order: displayOrder,
+          channel_id: data.channel_id,
+          parent_category: data.parent_category || null,
+          tenant,
+          created_by: user.user_id
+        })
+        .returning(['category_id', 'category_name', 'display_order', 'channel_id', 'parent_category']);
+      
+      return newCategory;
+    } catch (error) {
+      console.error('Error creating category:', error);
+      throw new Error('Failed to create category');
+    }
+  });
+}
+
+export async function updateCategory(
+  categoryId: string, 
+  data: { 
+    category_name?: string; 
+    display_order?: number;
+    channel_id?: string;
+  }
+): Promise<ITicketCategory> {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('Unauthorized');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
+      // Check if this is a parent category and channel is being changed
+      const currentCategory = await trx('categories')
+        .where({ category_id: categoryId, tenant })
+        .first();
+      
+      if (!currentCategory) {
+        throw new Error('Category not found');
+      }
+
+      // Update the category
+      const [updatedCategory] = await trx('categories')
+        .where({ category_id: categoryId, tenant })
+        .update(data)
+        .returning(['category_id', 'category_name', 'display_order', 'channel_id', 'parent_category']);
+      
+      // If this is a parent category and channel_id was changed, update all subcategories
+      if (!currentCategory.parent_category && data.channel_id && data.channel_id !== currentCategory.channel_id) {
+        await trx('categories')
+          .where({ parent_category: categoryId, tenant })
+          .update({ channel_id: data.channel_id });
+      }
+      
+      return updatedCategory;
+    } catch (error) {
+      console.error('Error updating category:', error);
+      throw new Error('Failed to update category');
+    }
+  });
+}
+
+export async function deleteCategory(categoryId: string): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('Unauthorized');
+  }
+
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
+      // Check if category is in use by tickets
+      const ticketsCount = await trx('tickets')
+        .where({ category_id: categoryId, tenant })
+        .count('* as count')
+        .first();
+      
+      if (ticketsCount && Number(ticketsCount.count) > 0) {
+        throw new Error('Cannot delete category: tickets are using this category');
+      }
+
+      const deletedCount = await trx('categories')
+        .where({ category_id: categoryId, tenant })
+        .delete();
+      
+      if (deletedCount === 0) {
+        throw new Error('Category not found');
+      }
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      throw new Error(error instanceof Error ? error.message : 'Failed to delete category');
+    }
+  });
+}

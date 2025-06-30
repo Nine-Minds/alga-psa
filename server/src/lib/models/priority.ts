@@ -12,7 +12,7 @@ class Priority {
     if (itemType) {
       query.where({ item_type: itemType });
     }
-    return query;
+    return query.orderBy('order_number', 'asc');
   }
 
   static async getAllWithStandard(knexOrTrx: Knex | Knex.Transaction, itemType?: 'ticket' | 'project_task'): Promise<IPriority[]> {

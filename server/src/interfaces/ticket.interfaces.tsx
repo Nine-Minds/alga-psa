@@ -87,9 +87,11 @@ export interface ITicketCategory extends TenantEntity {
   category_id: string;
   category_name: string;
   parent_category?: string;
-  channel_id: string;
-  created_by: string;
+  channel_id?: string;
+  created_by?: string;
   created_at?: Date;
+  description?: string;
+  display_order?: number;
 }
 
 export interface IAgentSchedule {
