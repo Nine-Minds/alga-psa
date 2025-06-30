@@ -6,7 +6,7 @@ import { showUsageStatsNotice } from './terminal-notice';
 
 export class UsageAnalytics {
   private client: PostHog | null = null;
-  private isEnabled: boolean;
+  public isEnabled: boolean;
   private isHosted: boolean;
   
   constructor() {
@@ -142,6 +142,13 @@ export class UsageAnalytics {
     }
     
     return anonymized;
+  }
+
+  /**
+   * Get the PostHog client instance (for feature flags)
+   */
+  getClient(): PostHog | null {
+    return this.client;
   }
 }
 

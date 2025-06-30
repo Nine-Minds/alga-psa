@@ -134,6 +134,13 @@ export async function createTicketFromAsset(data: CreateTicketFromAssetData, use
                 asset_type: validatedData.asset_type,
             }, user.user_id);
 
+            // Track feature adoption
+            featureAdoptionTracker.trackFeatureUsage('ticket_creation', user.user_id, {
+                ticket_source: 'asset',
+                used_template: false,
+                automation_triggered: false
+            });
+
             return convertDates(newTicket);
         });
 
@@ -279,6 +286,13 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
         channel_id: newTicket.channel_id,
         created_via: 'web_app',
       }, user.user_id);
+
+      // Track feature adoption
+      featureAdoptionTracker.trackFeatureUsage('ticket_creation', user.user_id, {
+        ticket_source: 'manual',
+        used_template: false,
+        automation_triggered: false
+      });
 
           return convertDates(newTicket);
         });

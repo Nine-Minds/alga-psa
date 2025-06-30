@@ -65,6 +65,32 @@ export enum AnalyticsEvents {
   SLOW_QUERY = 'slow_query',
   API_ERROR = 'api_error',
   API_TIMEOUT = 'api_timeout',
+  
+  // Journey Tracking
+  JOURNEY_STARTED = 'journey_started',
+  JOURNEY_STEP_COMPLETED = 'journey_step_completed',
+  JOURNEY_COMPLETED = 'journey_completed',
+  JOURNEY_ABANDONED = 'journey_abandoned',
+  ERROR_RECOVERY_ATTEMPTED = 'error_recovery_attempted',
+  
+  // Performance Metrics
+  PERFORMANCE_METRIC = 'performance_metric',
+  SLOW_OPERATION_DETECTED = 'slow_operation_detected',
+  PAGE_PERFORMANCE = 'page_performance',
+  API_PERFORMANCE = 'api_performance',
+  SEARCH_PERFORMANCE = 'search_performance',
+  REPORT_GENERATION_PERFORMANCE = 'report_generation_performance',
+  SLOW_DATABASE_QUERY = 'slow_database_query',
+  BULK_OPERATION_PERFORMANCE = 'bulk_operation_performance',
+  
+  // Feature Adoption
+  FEATURE_USED = 'feature_used',
+  FEATURE_DISCOVERED = 'feature_discovered',
+  FEATURE_FIRST_USE = 'feature_first_use',
+  FEATURE_RETENTION = 'feature_retention',
+  POWER_USER_SCORE_CALCULATED = 'power_user_score_calculated',
+  ROLE_BASED_USAGE_PATTERN = 'role_based_usage_pattern',
+  NEW_FEATURE_ADOPTION = 'new_feature_adoption',
 }
 
 // Helper function to create consistent event properties
