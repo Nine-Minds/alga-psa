@@ -121,6 +121,13 @@ export interface IServiceCategory extends TenantEntity {
   display_order?: number;
 }
 
+export interface IStandardServiceCategory {
+  id: string;
+  category_name: string;
+  description?: string | null;
+  display_order: number;
+}
+
 export interface IProductCharge extends IBillingCharge, TenantEntity {
   serviceId: string;
   serviceName: string;

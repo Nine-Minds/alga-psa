@@ -362,7 +362,7 @@ const ServiceTypeSettings: React.FC = () => {
                   setShowImportDialog(true);
                 }}
               >
-                Import from Standard Types
+                Import from Standard Service Types
               </Button>
               <Button id="add-custom-service-type-button" onClick={handleOpenAddDialog}>
                 <Plus className="mr-2 h-4 w-4" /> Add Custom Type

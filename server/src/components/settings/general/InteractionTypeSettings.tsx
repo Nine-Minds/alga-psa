@@ -228,7 +228,7 @@ const InteractionTypesSettings: React.FC = () => {
               }
             }}
           >
-            Import from Standard Types
+            Import from Standard Interaction Types
           </Button>
         </div>
       </div>

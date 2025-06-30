@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Plus, MoreVertical } from "lucide-react";
-import { IServiceCategory } from 'server/src/interfaces/billing.interfaces';
+import { IServiceCategory, IStandardServiceCategory } from 'server/src/interfaces/billing.interfaces';
 import { 
   getServiceCategories, 
   createServiceCategory,
@@ -50,7 +50,7 @@ const ServiceCategoriesSettings: React.FC = () => {
   
   // State for Import Dialog
   const [showImportDialog, setShowImportDialog] = useState(false);
-  const [availableReferenceCategories, setAvailableReferenceCategories] = useState<any[]>([]);
+  const [availableReferenceCategories, setAvailableReferenceCategories] = useState<IStandardServiceCategory[]>([]);
   const [selectedImportCategories, setSelectedImportCategories] = useState<string[]>([]);
   const [importConflicts, setImportConflicts] = useState<ImportConflict[]>([]);
   const [conflictResolutions, setConflictResolutions] = useState<Record<string, { action: 'skip' | 'rename' | 'reorder', newName?: string, newOrder?: number }>>({});
@@ -82,6 +82,10 @@ const ServiceCategoriesSettings: React.FC = () => {
 
   const handleDeleteCategory = async () => {
     try {
+      if (!deleteDialog.categoryId) {
+        toast.error('Category ID is missing');
+        return;
+      }
       await deleteServiceCategory(deleteDialog.categoryId);
       toast.success('Service category deleted successfully');
       await fetchCategories();
@@ -101,6 +105,10 @@ const ServiceCategoriesSettings: React.FC = () => {
       }
 
       if (editingCategory) {
+        if (!editingCategory.category_id) {
+          setError('Category ID is missing');
+          return;
+        }
         await updateServiceCategory(editingCategory.category_id, formData);
         toast.success('Service category updated successfully');
       } else {
@@ -169,30 +177,35 @@ const ServiceCategoriesSettings: React.FC = () => {
       title: 'Actions',
       dataIndex: 'category_id',
       width: '10%',
-      render: (value: string, record: IServiceCategory) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => startEditing(record)}>
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => setDeleteDialog({
-                isOpen: true,
-                categoryId: value,
-                categoryName: record.category_name
-              })}
-              className="text-red-600"
-            >
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
+      render: (value: string | null, record: IServiceCategory) => {
+        if (!value) {
+          return null;
+        }
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button id="service-category-actions" variant="ghost" className="h-8 w-8 p-0">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => startEditing(record)}>
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => setDeleteDialog({
+                  isOpen: true,
+                  categoryId: value,
+                  categoryName: record.category_name
+                })}
+                className="text-red-600"
+              >
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
     },
   ];
 
@@ -211,6 +224,7 @@ const ServiceCategoriesSettings: React.FC = () => {
         />
         <div className="mt-4 flex gap-2">
           <Button 
+            id="add-service-category"
             onClick={() => {
               setEditingCategory(null);
               setFormData({ category_name: '', description: '', display_order: categories.length + 1 });
@@ -221,6 +235,7 @@ const ServiceCategoriesSettings: React.FC = () => {
             <Plus className="h-4 w-4 mr-2" /> Add Service Category
           </Button>
           <Button 
+            id="import-service-categories"
             variant="outline"
             onClick={async () => {
               try {
@@ -234,7 +249,7 @@ const ServiceCategoriesSettings: React.FC = () => {
               }
             }}
           >
-            Import from Standard Types
+            Import from Standard Categories
           </Button>
         </div>
       </div>
@@ -245,8 +260,7 @@ const ServiceCategoriesSettings: React.FC = () => {
         onConfirm={handleDeleteCategory}
         title="Delete Service Category"
         message={`Are you sure you want to delete "${deleteDialog.categoryName}"? This action cannot be undone.`}
-        confirmText="Delete"
-        confirmVariant="destructive"
+        confirmLabel="Delete"
       />
 
       {/* Add/Edit Dialog */}
@@ -299,6 +313,7 @@ const ServiceCategoriesSettings: React.FC = () => {
         </DialogContent>
         <DialogFooter>
           <Button 
+            id="cancel-service-category"
             variant="outline" 
             onClick={() => {
               setShowAddEditDialog(false);
@@ -309,7 +324,7 @@ const ServiceCategoriesSettings: React.FC = () => {
           >
             Cancel
           </Button>
-          <Button onClick={handleSaveCategory}>
+          <Button id="save-service-category" onClick={handleSaveCategory}>
             {editingCategory ? 'Update' : 'Create'}
           </Button>
         </DialogFooter>
@@ -390,6 +405,7 @@ const ServiceCategoriesSettings: React.FC = () => {
         </DialogContent>
         <DialogFooter>
           <Button 
+            id="cancel-import"
             variant="outline" 
             onClick={() => {
               setShowImportDialog(false);
@@ -399,6 +415,7 @@ const ServiceCategoriesSettings: React.FC = () => {
             Cancel
           </Button>
           <Button 
+            id="import-selected"
             onClick={handleImport} 
             disabled={selectedImportCategories.length === 0}
           >
@@ -423,12 +440,13 @@ const ServiceCategoriesSettings: React.FC = () => {
             </p>
             <div className="space-y-4 max-h-[400px] overflow-y-auto">
               {importConflicts.map((conflict) => {
-                const itemId = conflict.referenceItem.id;
+                const referenceItem = conflict.referenceItem as IStandardServiceCategory;
+                const itemId = referenceItem.id;
                 const resolution = conflictResolutions[itemId];
                 
                 return (
                   <div key={itemId} className="border rounded-lg p-4 space-y-3">
-                    <div className="font-medium">{conflict.referenceItem.category_name}</div>
+                    <div className="font-medium">{referenceItem.category_name}</div>
                     
                     {conflict.conflictType === 'name' && (
                       <div className="space-y-2">
@@ -455,7 +473,7 @@ const ServiceCategoriesSettings: React.FC = () => {
                               checked={resolution?.action === 'rename'}
                               onChange={() => setConflictResolutions({
                                 ...conflictResolutions,
-                                [itemId]: { action: 'rename', newName: conflict.referenceItem.category_name + ' (2)' }
+                                [itemId]: { action: 'rename', newName: referenceItem.category_name + ' (2)' }
                               })}
                             />
                             <span>Import with new name:</span>
@@ -477,7 +495,7 @@ const ServiceCategoriesSettings: React.FC = () => {
                     {conflict.conflictType === 'order' && (
                       <div className="space-y-2">
                         <p className="text-sm text-muted-foreground">
-                          Display order {conflict.referenceItem.display_order} is already in use.
+                          Display order {referenceItem.display_order} is already in use.
                         </p>
                         <label className="flex items-center space-x-2">
                           <input
@@ -501,6 +519,7 @@ const ServiceCategoriesSettings: React.FC = () => {
         </DialogContent>
         <DialogFooter>
           <Button 
+            id="cancel-conflicts"
             variant="outline" 
             onClick={() => {
               setImportConflicts([]);
@@ -509,7 +528,7 @@ const ServiceCategoriesSettings: React.FC = () => {
           >
             Cancel
           </Button>
-          <Button onClick={handleImport}>
+          <Button id="import-with-resolutions" onClick={handleImport}>
             Import with Resolutions
           </Button>
         </DialogFooter>

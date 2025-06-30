@@ -382,7 +382,7 @@ const CategoriesSettings: React.FC = () => {
               }
             }}
           >
-            Import from Standard Types
+            Import from Standard Categories
           </Button>
         </div>
       </div>
