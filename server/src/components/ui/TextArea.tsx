@@ -27,19 +27,24 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps & Automati
     const adjustHeight = (element: HTMLTextAreaElement) => {
       // Temporarily collapse to get the minimum height
       element.style.height = 'auto';
-      
+
       // Get the computed line height to ensure proper minimum height
       const computedStyle = window.getComputedStyle(element);
       const lineHeight = parseInt(computedStyle.lineHeight);
-      
+
       // Calculate height based on content
       const newHeight = Math.max(
         element.scrollHeight,
         lineHeight * 1.5 // Minimum height of ~1.5 lines
       );
-      
+
       // Set the new height
       element.style.height = `${newHeight}px`;
+
+      // Ensure the bottom of the textarea remains visible if it's inside a
+      // scrollable container. This prevents the focus ring from appearing
+      // clipped when the textarea expands.
+      element.scrollIntoView({ block: 'nearest' });
     };
 
     // Initial setup and content-based adjustment
