@@ -312,7 +312,7 @@ const ChannelsSettings: React.FC = () => {
               }
             }}
           >
-            Import from Standard Types
+            Import from Standard Channels
           </Button>
         </div>
       </div>

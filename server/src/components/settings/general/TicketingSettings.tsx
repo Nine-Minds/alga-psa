@@ -1181,7 +1181,7 @@ const TicketingSettings = (): JSX.Element => {
                 }} 
                 variant="outline"
               >
-                Import from Standard Types
+                Import from Standard Statuses
               </Button>
             </div>
           </div>
@@ -1287,7 +1287,7 @@ const TicketingSettings = (): JSX.Element => {
                 }} 
                 variant="outline"
               >
-                Import from Standard Types
+                Import from Standard Priorities
               </Button>
             </div>
           </div>
