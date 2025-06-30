@@ -11,6 +11,7 @@ import { getServices } from '../../lib/actions/serviceActions';
 import AutomaticInvoices from './AutomaticInvoices';
 import PrepaymentInvoices from './PrepaymentInvoices';
 import ManualInvoices from './ManualInvoices';
+import SuccessDialog from '../ui/SuccessDialog';
 
 type InvoiceType = 'automatic' | 'manual' | 'prepayment';
 
@@ -41,6 +42,7 @@ const GenerateInvoices: React.FC = () => {
   })[]>([]);
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -75,6 +77,7 @@ const GenerateInvoices: React.FC = () => {
 
   const handleGenerateSuccess = () => {
     loadData();
+    setShowSuccessDialog(true);
   };
 
   const renderContent = () => {
@@ -107,17 +110,18 @@ const GenerateInvoices: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <div className="p-4">
-          <div className="mb-6">
-            <CustomSelect
-              value={invoiceType}
-              onValueChange={(value: string) => setInvoiceType(value as InvoiceType)}
-              options={invoiceTypeOptions}
-              className="w-full md:w-64"
-            />
-          </div>
+    <>
+      <div className="space-y-4">
+        <Card>
+          <div className="p-4">
+            <div className="mb-6">
+              <CustomSelect
+                value={invoiceType}
+                onValueChange={(value: string) => setInvoiceType(value as InvoiceType)}
+                options={invoiceTypeOptions}
+                className="w-full md:w-64"
+              />
+            </div>
 
           {error && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
@@ -128,7 +132,14 @@ const GenerateInvoices: React.FC = () => {
           {renderContent()}
         </div>
       </Card>
-    </div>
+      </div>
+      <SuccessDialog
+        isOpen={showSuccessDialog}
+        onClose={() => setShowSuccessDialog(false)}
+        message="Invoice generated successfully!"
+        id="invoice-success-dialog"
+      />
+    </>
   );
 };
 
