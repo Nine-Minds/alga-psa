@@ -111,7 +111,7 @@ export async function createBillingPlan(
                 plan_type: plan.plan_type,
                 hourly_rate: plan.hourly_rate,
                 minimum_billable_time: plan.minimum_billable_time,
-                is_sla_plan: plan.is_sla_plan || false
+                is_sla_plan: (plan as any).is_sla_plan || false
             }, currentUser.user_id);
 
             return plan;

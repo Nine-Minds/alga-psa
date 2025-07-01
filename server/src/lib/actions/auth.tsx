@@ -47,7 +47,7 @@ export async function authenticateUser( email: string, password: string): Promis
     // Track successful authentication (login success tracked in NextAuth callbacks)
     analytics.capture('auth_validated', {
         has_two_factor: user.two_factor_enabled,
-        is_admin: user.is_admin,
+        is_admin: (user as any).is_admin || false,
     }, user.user_id);
     
     return user;

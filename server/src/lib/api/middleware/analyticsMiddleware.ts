@@ -23,7 +23,7 @@ export function withAnalytics(handler: Function) {
   return async (req: ApiRequest, ...args: any[]) => {
     const startTime = Date.now();
     const method = req.method || 'GET';
-    const url = new URL(req.url || '', `http://${req.headers?.host || 'localhost'}`);
+    const url = new URL(req.url || '', `http://${req.headers?.get?.('host') || 'localhost'}`);
     const endpoint = url.pathname;
     
     try {
@@ -100,7 +100,7 @@ export function trackPerformance(operationName: string) {
         // Track operation errors
         analytics.capture('operation_error', {
           operation: operationName,
-          error_type: error.name || 'UnknownError',
+          error_type: (error as Error).name || 'UnknownError',
           class_name: target.constructor.name,
           method_name: propertyName,
         }, context?.userId);

@@ -155,7 +155,7 @@ export function useFeatureFlags(): {
     try {
       // Get all feature flags from PostHog
       const allFlags = posthog.featureFlags || {};
-      setFlags(allFlags);
+      setFlags(allFlags as unknown as Record<string, string | boolean>);
       setLoading(false);
     } catch (err) {
       console.error('Error getting all feature flags:', err);

@@ -89,7 +89,7 @@ export class HierarchicalTelemetryManager {
         }
 
         // Check specific category if provided
-        if (category && !userPreferences[category]) {
+        if (category && !(userPreferences as any)[category]) {
           return this.createDecision(
             false,
             `User: Opted out of ${category}`,

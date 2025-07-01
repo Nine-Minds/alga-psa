@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "serve
 import { Switch } from "server/src/components/ui/Switch";
 import { Label } from "server/src/components/ui/Label";
 import { Button } from "server/src/components/ui/Button";
-import { CustomSelect } from "server/src/components/ui/CustomSelect";
+import CustomSelect from "server/src/components/ui/CustomSelect";
 import type { TenantTelemetrySettings, AnonymizationLevel } from "server/src/config/telemetry";
 
 interface TenantTelemetrySettingsProps {

@@ -21,7 +21,7 @@ import {
 import { ListOptions } from '../controllers/BaseController';
 import { analytics } from '../../analytics/posthog';
 import { AnalyticsEvents } from '../../analytics/events';
-import { performanceTracker } from '../../analytics/performanceTracking';
+// import { performanceTracker } from '../../analytics/performanceTracking';
 
 export class TicketService extends BaseService<ITicket> {
   constructor() {
@@ -586,23 +586,23 @@ export class TicketService extends BaseService<ITicket> {
       limit: searchData.limit || 25,
     }, context.userId);
 
-    // Track search performance
-    performanceTracker.trackSearchPerformance(
-      'ticket',
-      searchData.query,
-      tickets.length,
-      searchDuration,
-      context.userId,
-      {
-        search_complexity: searchFields.length,
-        filter_count: Object.values({
-          status: !!searchData.status_ids?.length,
-          priority: !!searchData.priority_ids?.length,
-          company: !!searchData.company_ids?.length,
-          assigned_to: !!searchData.assigned_to_ids?.length,
-        }).filter(Boolean).length
-      }
-    );
+    // Track search performance - commented out due to removed performanceTracker
+    // performanceTracker.trackSearchPerformance(
+    //   'ticket',
+    //   searchData.query,
+    //   tickets.length,
+    //   searchDuration,
+    //   context.userId,
+    //   {
+    //     search_complexity: searchFields.length,
+    //     filter_count: Object.values({
+    //       status: !!searchData.status_ids?.length,
+    //       priority: !!searchData.priority_ids?.length,
+    //       company: !!searchData.company_ids?.length,
+    //       assigned_to: !!searchData.assigned_to_ids?.length,
+    //     }).filter(Boolean).length
+    //   }
+    // );
 
     return tickets as ITicket[];
   }

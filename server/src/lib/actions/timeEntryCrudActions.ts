@@ -733,8 +733,8 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
       has_billing_plan: !!billing_plan_id,
       approval_status: approval_status || 'pending',
       // Track if this was a duration adjustment
-      duration_changed: isUpdate ? (oldDuration !== finalBillableDuration) : false,
-      duration_delta: isUpdate ? (finalBillableDuration - oldDuration) : finalBillableDuration,
+      duration_changed: isUpdate ? (entry.billable_duration !== finalBillableDuration) : false,
+      duration_delta: isUpdate ? (finalBillableDuration - entry.billable_duration) : finalBillableDuration,
     }, currentUser.user_id);
 
     // Return the complete time entry with work item details
