@@ -847,6 +847,72 @@ export interface ImportCompanyResult {
   originalData: Record<string, any>;
 }
 
+// Helper function to extract multiple location data from CSV row
+function extractLocationData(companyData: any, tenant: string): Array<any> {
+  const locations: Array<any> = [];
+  
+  // Check for up to 3 locations
+  for (let i = 1; i <= 3; i++) {
+    const prefix = `location_${i}_`;
+    
+    // Check if this location has any data
+    const hasLocationData = 
+      companyData[`${prefix}name`] || 
+      companyData[`${prefix}address_line1`] || 
+      companyData[`${prefix}city`];
+    
+    if (hasLocationData) {
+      locations.push({
+        location_name: companyData[`${prefix}name`] || `Location ${i}`,
+        address_line1: companyData[`${prefix}address_line1`] || '',
+        address_line2: companyData[`${prefix}address_line2`] || '',
+        address_line3: companyData[`${prefix}address_line3`] || '',
+        city: companyData[`${prefix}city`] || '',
+        state_province: companyData[`${prefix}state_province`] || '',
+        postal_code: companyData[`${prefix}postal_code`] || '',
+        country_code: companyData[`${prefix}country_code`] || 'US',
+        country_name: companyData[`${prefix}country_name`] || 'United States',
+        is_billing_address: companyData[`${prefix}is_billing_address`] === 'true' || companyData[`${prefix}is_billing_address`] === true || false,
+        is_shipping_address: companyData[`${prefix}is_shipping_address`] === 'true' || companyData[`${prefix}is_shipping_address`] === true || false,
+        is_default: companyData[`${prefix}is_default`] === 'true' || companyData[`${prefix}is_default`] === true || (i === 1), // First location defaults to true
+        phone: companyData[`${prefix}phone`] || '',
+        fax: companyData[`${prefix}fax`] || '',
+        email: companyData[`${prefix}email`] || '',
+        notes: companyData[`${prefix}notes`] || '',
+        is_active: companyData[`${prefix}is_active`] !== undefined ? 
+          (companyData[`${prefix}is_active`] === 'true' || companyData[`${prefix}is_active`] === true) : true,
+        tenant: tenant,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+    }
+  }
+  
+  return locations;
+}
+
+// Helper function to extract and create company tags
+async function createCompanyTags(companyId: string, tagsString: string, tenant: string, trx: any): Promise<void> {
+  if (!tagsString || tagsString.trim() === '') return;
+  
+  // Split tags by comma and clean them
+  const tags = tagsString.split(',')
+    .map(tag => tag.trim())
+    .filter(tag => tag.length > 0);
+  
+  if (tags.length === 0) return;
+  
+  // Create tag entries for the company
+  const tagInserts = tags.map(tag => ({
+    company_id: companyId,
+    tag_name: tag,
+    tenant: tenant,
+    created_at: new Date().toISOString()
+  }));
+  
+  await trx('company_tags').insert(tagInserts);
+}
+
 export async function importCompaniesFromCSV(
   companiesData: Array<Partial<Omit<ICompany, 'account_manager_full_name'>>>,
   updateExisting: boolean = false
@@ -918,67 +984,51 @@ export async function importCompaniesFromCSV(
             originalData: companyData
           });
 
-          // Handle location update/creation for existing companies
-          const hasLocationData = companyData.address_line1 || companyData.city || companyData.location_name;
-          if (hasLocationData && savedCompany) {
-            try {
-              // Check if company already has a location
-              const existingLocation = await trx('company_locations')
+          // Handle multiple locations and tags for existing companies
+          try {
+            // Extract multiple locations from numbered fields
+            const locations = extractLocationData(companyData, tenant);
+            
+            if (locations.length > 0) {
+              // Delete existing locations for this company and recreate
+              await trx('company_locations')
                 .where({ company_id: savedCompany.company_id, tenant })
-                .first();
-
-              const locationData = {
-                company_id: savedCompany.company_id,
-                tenant: tenant,
-                location_name: companyData.location_name || 'Default Location',
-                address_line1: companyData.address_line1 || '',
-                address_line2: companyData.address_line2 || '',
-                address_line3: companyData.address_line3 || '',
-                city: companyData.city || '',
-                state_province: companyData.state_province || '',
-                postal_code: companyData.postal_code || '',
-                country_code: companyData.country_code || 'US',
-                country_name: companyData.country_name || 'United States',
-                is_billing_address: companyData.is_billing_address || false,
-                is_shipping_address: companyData.is_shipping_address || false,
-                is_default: companyData.is_default !== undefined ? companyData.is_default : true,
-                phone: companyData.location_phone || '',
-                fax: companyData.location_fax || '',
-                email: companyData.location_email || '',
-                notes: companyData.location_notes || '',
-                is_active: companyData.is_location_active !== undefined ? companyData.is_location_active : true,
-                updated_at: new Date().toISOString()
-              };
-
-              if (existingLocation) {
-                // Update existing location
-                await trx('company_locations')
-                  .where({ location_id: existingLocation.location_id })
-                  .update(locationData);
-                
-                // Update the result message
-                const lastResult = results[results.length - 1];
-                if (lastResult) {
-                  lastResult.message += ' with location updated';
-                }
-              } else {
-                // Create new location
-                locationData.created_at = new Date().toISOString();
+                .delete();
+              
+              // Create all new locations
+              for (const locationData of locations) {
+                locationData.company_id = savedCompany.company_id;
                 await trx('company_locations').insert(locationData);
-                
-                // Update the result message
-                const lastResult = results[results.length - 1];
-                if (lastResult) {
-                  lastResult.message += ' with location created';
-                }
               }
-            } catch (locationError) {
-              console.error('Error handling company location:', locationError);
-              // Don't fail the entire import if location handling fails
+              
+              // Update result message
               const lastResult = results[results.length - 1];
               if (lastResult) {
-                lastResult.message += ' (location update failed)';
+                lastResult.message += ` with ${locations.length} location(s)`;
               }
+            }
+            
+            // Handle tags
+            if (companyData.tags) {
+              // Delete existing tags and recreate
+              await trx('company_tags')
+                .where({ company_id: savedCompany.company_id, tenant })
+                .delete();
+              
+              await createCompanyTags(savedCompany.company_id, companyData.tags, tenant, trx);
+              
+              // Update result message
+              const lastResult = results[results.length - 1];
+              if (lastResult) {
+                lastResult.message += ' with tags';
+              }
+            }
+          } catch (error) {
+            console.error('Error handling company locations/tags:', error);
+            // Don't fail the entire import if location/tag handling fails
+            const lastResult = results[results.length - 1];
+            if (lastResult) {
+              lastResult.message += ' (locations/tags failed)';
             }
           }
         } else {
@@ -1031,49 +1081,42 @@ export async function importCompaniesFromCSV(
             company: savedCompany,
             originalData: companyData
           });
-        }
-
-        // Create company location if location data is provided
-        const hasLocationData = companyData.address_line1 || companyData.city || companyData.location_name;
-        if (hasLocationData && savedCompany) {
+          
+          // Handle multiple locations and tags for new companies
           try {
-            const locationData = {
-              company_id: savedCompany.company_id,
-              tenant: tenant,
-              location_name: companyData.location_name || 'Default Location',
-              address_line1: companyData.address_line1 || '',
-              address_line2: companyData.address_line2 || '',
-              address_line3: companyData.address_line3 || '',
-              city: companyData.city || '',
-              state_province: companyData.state_province || '',
-              postal_code: companyData.postal_code || '',
-              country_code: companyData.country_code || 'US',
-              country_name: companyData.country_name || 'United States',
-              is_billing_address: companyData.is_billing_address || false,
-              is_shipping_address: companyData.is_shipping_address || false,
-              is_default: companyData.is_default !== undefined ? companyData.is_default : true,
-              phone: companyData.location_phone || '',
-              fax: companyData.location_fax || '',
-              email: companyData.location_email || '',
-              notes: companyData.location_notes || '',
-              is_active: companyData.is_location_active !== undefined ? companyData.is_location_active : true,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            };
-
-            await trx('company_locations').insert(locationData);
+            // Extract multiple locations from numbered fields
+            const locations = extractLocationData(companyData, tenant);
             
-            // Update the result message to indicate location was also created
-            const lastResult = results[results.length - 1];
-            if (lastResult) {
-              lastResult.message += ' with location';
+            if (locations.length > 0) {
+              // Create all new locations
+              for (const locationData of locations) {
+                locationData.company_id = savedCompany.company_id;
+                await trx('company_locations').insert(locationData);
+              }
+              
+              // Update result message
+              const lastResult = results[results.length - 1];
+              if (lastResult) {
+                lastResult.message += ` with ${locations.length} location(s)`;
+              }
             }
-          } catch (locationError) {
-            console.error('Error creating company location:', locationError);
-            // Don't fail the entire import if location creation fails
+            
+            // Handle tags
+            if (companyData.tags) {
+              await createCompanyTags(savedCompany.company_id, companyData.tags, tenant, trx);
+              
+              // Update result message
+              const lastResult = results[results.length - 1];
+              if (lastResult) {
+                lastResult.message += ' with tags';
+              }
+            }
+          } catch (error) {
+            console.error('Error handling company locations/tags:', error);
+            // Don't fail the entire import if location/tag handling fails
             const lastResult = results[results.length - 1];
             if (lastResult) {
-              lastResult.message += ' (location creation failed)';
+              lastResult.message += ' (locations/tags failed)';
             }
           }
         }

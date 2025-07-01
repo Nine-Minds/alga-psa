@@ -29,24 +29,61 @@ type MappableCompanyField =
   | 'client_type'
   | 'is_inactive'
   | 'notes'
-  // Location fields
-  | 'location_name'
-  | 'address_line1'
-  | 'address_line2'
-  | 'address_line3'
-  | 'city'
-  | 'state_province'
-  | 'postal_code'
-  | 'country_code'
-  | 'country_name'
-  | 'is_billing_address'
-  | 'is_shipping_address'
-  | 'is_default'
-  | 'location_phone'
-  | 'location_fax'
-  | 'location_email'
-  | 'location_notes'
-  | 'is_location_active';
+  | 'tags'
+  // Location 1 fields
+  | 'location_1_name'
+  | 'location_1_address_line1'
+  | 'location_1_address_line2'
+  | 'location_1_address_line3'
+  | 'location_1_city'
+  | 'location_1_state_province'
+  | 'location_1_postal_code'
+  | 'location_1_country_code'
+  | 'location_1_country_name'
+  | 'location_1_is_billing_address'
+  | 'location_1_is_shipping_address'
+  | 'location_1_is_default'
+  | 'location_1_phone'
+  | 'location_1_fax'
+  | 'location_1_email'
+  | 'location_1_notes'
+  | 'location_1_is_active'
+  // Location 2 fields
+  | 'location_2_name'
+  | 'location_2_address_line1'
+  | 'location_2_address_line2'
+  | 'location_2_address_line3'
+  | 'location_2_city'
+  | 'location_2_state_province'
+  | 'location_2_postal_code'
+  | 'location_2_country_code'
+  | 'location_2_country_name'
+  | 'location_2_is_billing_address'
+  | 'location_2_is_shipping_address'
+  | 'location_2_is_default'
+  | 'location_2_phone'
+  | 'location_2_fax'
+  | 'location_2_email'
+  | 'location_2_notes'
+  | 'location_2_is_active'
+  // Location 3 fields
+  | 'location_3_name'
+  | 'location_3_address_line1'
+  | 'location_3_address_line2'
+  | 'location_3_address_line3'
+  | 'location_3_city'
+  | 'location_3_state_province'
+  | 'location_3_postal_code'
+  | 'location_3_country_code'
+  | 'location_3_country_name'
+  | 'location_3_is_billing_address'
+  | 'location_3_is_shipping_address'
+  | 'location_3_is_default'
+  | 'location_3_phone'
+  | 'location_3_fax'
+  | 'location_3_email'
+  | 'location_3_notes'
+  | 'location_3_is_active';
 
 interface ICSVColumnMapping {
   csvHeader: string;
@@ -80,24 +117,61 @@ const COMPANY_FIELDS: Record<MappableCompanyField, string> = {
   client_type: 'Client Type',
   is_inactive: 'Is Inactive',
   notes: 'Notes',
-  // Location fields
-  location_name: 'Location Name',
-  address_line1: 'Address Line 1',
-  address_line2: 'Address Line 2',
-  address_line3: 'Address Line 3',
-  city: 'City',
-  state_province: 'State/Province',
-  postal_code: 'Postal Code',
-  country_code: 'Country Code',
-  country_name: 'Country Name',
-  is_billing_address: 'Is Billing Address',
-  is_shipping_address: 'Is Shipping Address',
-  is_default: 'Is Default Location',
-  location_phone: 'Location Phone',
-  location_fax: 'Location Fax',
-  location_email: 'Location Email',
-  location_notes: 'Location Notes',
-  is_location_active: 'Is Location Active'
+  tags: 'Tags',
+  // Location 1 fields
+  location_1_name: 'Location 1 Name',
+  location_1_address_line1: 'Location 1 Address Line 1',
+  location_1_address_line2: 'Location 1 Address Line 2',
+  location_1_address_line3: 'Location 1 Address Line 3',
+  location_1_city: 'Location 1 City',
+  location_1_state_province: 'Location 1 State/Province',
+  location_1_postal_code: 'Location 1 Postal Code',
+  location_1_country_code: 'Location 1 Country Code',
+  location_1_country_name: 'Location 1 Country Name',
+  location_1_is_billing_address: 'Location 1 Is Billing Address',
+  location_1_is_shipping_address: 'Location 1 Is Shipping Address',
+  location_1_is_default: 'Location 1 Is Default',
+  location_1_phone: 'Location 1 Phone',
+  location_1_fax: 'Location 1 Fax',
+  location_1_email: 'Location 1 Email',
+  location_1_notes: 'Location 1 Notes',
+  location_1_is_active: 'Location 1 Is Active',
+  // Location 2 fields
+  location_2_name: 'Location 2 Name',
+  location_2_address_line1: 'Location 2 Address Line 1',
+  location_2_address_line2: 'Location 2 Address Line 2',
+  location_2_address_line3: 'Location 2 Address Line 3',
+  location_2_city: 'Location 2 City',
+  location_2_state_province: 'Location 2 State/Province',
+  location_2_postal_code: 'Location 2 Postal Code',
+  location_2_country_code: 'Location 2 Country Code',
+  location_2_country_name: 'Location 2 Country Name',
+  location_2_is_billing_address: 'Location 2 Is Billing Address',
+  location_2_is_shipping_address: 'Location 2 Is Shipping Address',
+  location_2_is_default: 'Location 2 Is Default',
+  location_2_phone: 'Location 2 Phone',
+  location_2_fax: 'Location 2 Fax',
+  location_2_email: 'Location 2 Email',
+  location_2_notes: 'Location 2 Notes',
+  location_2_is_active: 'Location 2 Is Active',
+  // Location 3 fields
+  location_3_name: 'Location 3 Name',
+  location_3_address_line1: 'Location 3 Address Line 1',
+  location_3_address_line2: 'Location 3 Address Line 2',
+  location_3_address_line3: 'Location 3 Address Line 3',
+  location_3_city: 'Location 3 City',
+  location_3_state_province: 'Location 3 State/Province',
+  location_3_postal_code: 'Location 3 Postal Code',
+  location_3_country_code: 'Location 3 Country Code',
+  location_3_country_name: 'Location 3 Country Name',
+  location_3_is_billing_address: 'Location 3 Is Billing Address',
+  location_3_is_shipping_address: 'Location 3 Is Shipping Address',
+  location_3_is_default: 'Location 3 Is Default',
+  location_3_phone: 'Location 3 Phone',
+  location_3_fax: 'Location 3 Fax',
+  location_3_email: 'Location 3 Email',
+  location_3_notes: 'Location 3 Notes',
+  location_3_is_active: 'Location 3 Is Active'
 } as const;
 
 const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
@@ -178,29 +252,28 @@ const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
       warnings.push('Is tax exempt should be true/false');
     }
 
-    // Location field validation
-    if (mappedData.location_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mappedData.location_email)) {
-      errors.push('Invalid location email format');
-    }
+    // Multiple location field validation
+    for (let i = 1; i <= 3; i++) {
+      const prefix = `location_${i}_`;
+      
+      // Validate location emails
+      if (mappedData[`${prefix}email`] && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mappedData[`${prefix}email`])) {
+        errors.push(`Invalid location ${i} email format`);
+      }
 
-    if (mappedData.country_code && mappedData.country_code.length !== 2) {
-      warnings.push('Country code should be 2 characters (e.g., US, CA)');
-    }
+      // Validate country codes
+      if (mappedData[`${prefix}country_code`] && mappedData[`${prefix}country_code`].length !== 2) {
+        warnings.push(`Location ${i} country code should be 2 characters (e.g., US, CA)`);
+      }
 
-    if (mappedData.is_billing_address && !['true', 'false', true, false].includes(mappedData.is_billing_address)) {
-      warnings.push('Is billing address should be true/false');
-    }
-
-    if (mappedData.is_shipping_address && !['true', 'false', true, false].includes(mappedData.is_shipping_address)) {
-      warnings.push('Is shipping address should be true/false');
-    }
-
-    if (mappedData.is_default && !['true', 'false', true, false].includes(mappedData.is_default)) {
-      warnings.push('Is default location should be true/false');
-    }
-
-    if (mappedData.is_location_active && !['true', 'false', true, false].includes(mappedData.is_location_active)) {
-      warnings.push('Is location active should be true/false');
+      // Validate boolean fields
+      const booleanFields = ['is_billing_address', 'is_shipping_address', 'is_default', 'is_active'];
+      booleanFields.forEach(field => {
+        const fieldName = `${prefix}${field}`;
+        if (mappedData[fieldName] && !['true', 'false', true, false].includes(mappedData[fieldName])) {
+          warnings.push(`Location ${i} ${field.replace('is_', '').replace('_', ' ')} should be true/false`);
+        }
+      });
     }
 
     // Validate client_type
@@ -208,23 +281,34 @@ const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
       errors.push('Client type must be either "company" or "individual"');
     }
 
+    // Convert boolean fields for multiple locations
+    const processedData: Record<string, any> = {
+      ...mappedData,
+      tenant: 'default',
+      is_inactive: mappedData.is_inactive === 'true' || mappedData.is_inactive === true,
+      is_tax_exempt: mappedData.is_tax_exempt === 'true' || mappedData.is_tax_exempt === true,
+      auto_invoice: mappedData.auto_invoice === 'true' || mappedData.auto_invoice === true,
+      credit_limit: mappedData.credit_limit ? Number(mappedData.credit_limit) : undefined
+    };
+
+    // Process boolean fields for each location
+    for (let i = 1; i <= 3; i++) {
+      const prefix = `location_${i}_`;
+      const booleanFields = ['is_billing_address', 'is_shipping_address', 'is_default', 'is_active'];
+      
+      booleanFields.forEach(field => {
+        const fieldName = `${prefix}${field}`;
+        if (mappedData[fieldName] !== undefined) {
+          processedData[fieldName] = mappedData[fieldName] === 'true' || mappedData[fieldName] === true;
+        }
+      });
+    }
+
     return {
       isValid: errors.length === 0,
       errors,
       warnings,
-      data: {
-        ...mappedData,
-        tenant: 'default',
-        is_inactive: mappedData.is_inactive === 'true' || mappedData.is_inactive === true,
-        is_tax_exempt: mappedData.is_tax_exempt === 'true' || mappedData.is_tax_exempt === true,
-        auto_invoice: mappedData.auto_invoice === 'true' || mappedData.auto_invoice === true,
-        credit_limit: mappedData.credit_limit ? Number(mappedData.credit_limit) : undefined,
-        // Location boolean conversions
-        is_billing_address: mappedData.is_billing_address === 'true' || mappedData.is_billing_address === true,
-        is_shipping_address: mappedData.is_shipping_address === 'true' || mappedData.is_shipping_address === true,
-        is_default: mappedData.is_default === 'true' || mappedData.is_default === true,
-        is_location_active: mappedData.is_location_active === 'true' || mappedData.is_location_active === true || mappedData.is_location_active === undefined ? true : false
-      }
+      data: processedData
     };
   }, []);
 
@@ -274,47 +358,22 @@ const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
           companyField = 'is_inactive';
         } else if (headerLower.includes('notes') && !headerLower.includes('location')) {
           companyField = 'notes';
+        } else if (headerLower.includes('tags') && !headerLower.includes('location')) {
+          companyField = 'tags';
         } 
-        // Location field mappings
-        else if (headerLower.includes('location') && headerLower.includes('name')) {
-          companyField = 'location_name';
-        } else if (headerLower.includes('address') && headerLower.includes('line') && headerLower.includes('1')) {
-          companyField = 'address_line1';
-        } else if (headerLower.includes('address') && headerLower.includes('line') && headerLower.includes('2')) {
-          companyField = 'address_line2';
-        } else if (headerLower.includes('address') && headerLower.includes('line') && headerLower.includes('3')) {
-          companyField = 'address_line3';
-        } else if (headerLower.includes('city')) {
-          companyField = 'city';
-        } else if (headerLower.includes('state') || headerLower.includes('province')) {
-          companyField = 'state_province';
-        } else if (headerLower.includes('postal') || headerLower.includes('zip')) {
-          companyField = 'postal_code';
-        } else if (headerLower.includes('country') && headerLower.includes('code')) {
-          companyField = 'country_code';
-        } else if (headerLower.includes('country') && headerLower.includes('name')) {
-          companyField = 'country_name';
-        } else if (headerLower.includes('billing') && headerLower.includes('address')) {
-          companyField = 'is_billing_address';
-        } else if (headerLower.includes('shipping') && headerLower.includes('address')) {
-          companyField = 'is_shipping_address';
-        } else if (headerLower.includes('default') && headerLower.includes('location')) {
-          companyField = 'is_default';
-        } else if (headerLower.includes('location') && headerLower.includes('phone')) {
-          companyField = 'location_phone';
-        } else if (headerLower.includes('location') && headerLower.includes('fax')) {
-          companyField = 'location_fax';
-        } else if (headerLower.includes('location') && headerLower.includes('email')) {
-          companyField = 'location_email';
-        } else if (headerLower.includes('location') && headerLower.includes('notes')) {
-          companyField = 'location_notes';
-        } else if (headerLower.includes('location') && headerLower.includes('active')) {
-          companyField = 'is_location_active';
-        } else {
-          // Fallback to existing mapping logic
+        // Enhanced numbered location field mappings
+        else if (/location_[123]_/.test(headerLower)) {
+          // Try to match exactly with the defined fields
           Object.entries(COMPANY_FIELDS).forEach(([field, label]) => {
-            if (headerLower.includes(field.toLowerCase()) || 
-                headerLower.includes(label.toLowerCase())) {
+            if (field.toLowerCase() === headerLower) {
+              companyField = field as MappableCompanyField;
+            }
+          });
+        } else {
+          // Fallback to existing mapping logic for exact matches
+          Object.entries(COMPANY_FIELDS).forEach(([field, label]) => {
+            if (headerLower === field.toLowerCase() || 
+                headerLower === label.toLowerCase()) {
               companyField = field as MappableCompanyField;
             }
           });
