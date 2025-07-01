@@ -20,6 +20,7 @@ interface ChannelPickerProps {
   filterState: 'active' | 'inactive' | 'all';
   onFilterStateChange: (state: 'active' | 'inactive' | 'all') => void;
   fitContent?: boolean;
+  placeholder?: string;
 }
 
 export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
@@ -30,6 +31,7 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
   filterState,
   onFilterStateChange,
   fitContent = false,
+  placeholder = 'Select Channel',
   "data-automation-type": dataAutomationType = 'picker'
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -161,7 +163,7 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
             variant="outline"
             onClick={handleToggle}
             className="w-full justify-between"
-            label={selectedChannel?.channel_name || 'Select Channel'}
+            label={selectedChannel?.channel_name || placeholder}
             type="button"
             ref={dropdownRef}
             aria-expanded={isOpen}
@@ -169,7 +171,7 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
             {...withDataAutomationId({ id })}
             data-automation-type={dataAutomationType}
           >
-            <span className={`flex-1 text-left ${!selectedChannel ? 'text-gray-400' : ''}`}>{selectedChannel?.channel_name || 'Select Channel'}</span>
+            <span className={`flex-1 text-left ${!selectedChannel ? 'text-gray-400' : ''}`}>{selectedChannel?.channel_name || placeholder}</span>
             <ChevronDownIcon className="h-4 w-4 text-gray-500" />
           </Button>
         </Popover.Trigger>
