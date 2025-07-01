@@ -10,6 +10,7 @@ import { hasPermission } from 'server/src/lib/auth/rbac';
 import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
+import { deleteEntityTags } from '../../utils/tagCleanup';
 import { 
   ticketFormSchema, 
   ticketSchema, 
@@ -763,6 +764,9 @@ export async function deleteTicket(ticketId: string, user: IUser): Promise<void>
           tenant: tenant
         })
         .delete();
+
+      // Delete associated tags
+      await deleteEntityTags(trx, ticketId, 'ticket');
 
       // Delete the ticket
       await trx('tickets')

@@ -83,15 +83,13 @@ export const TagList: React.FC<TagListProps> = ({
                 allowColorEdit={allowColorEdit}
                 trigger={
                   <button
-                    className="inline-flex items-center justify-center h-full px-2 py-1 hover:opacity-70 transition-opacity cursor-pointer"
+                    className="inline-flex items-center justify-center h-full px-2 py-1 hover:opacity-70 transition-opacity"
                     style={{
                       borderRight: `1px dotted ${tag.text_color || colors.text}`,
                       marginRight: '4px',
-                      minWidth: '20px'
                     }}
-                    onClick={(e) => e.stopPropagation()}
                   >
-                    <ChevronDown size={12} />
+                    <ChevronDown size={10} />
                   </button>
                 }
               />

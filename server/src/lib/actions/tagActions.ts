@@ -1,6 +1,6 @@
 'use server'
 
-import Tag from 'server/src/lib/models/tag';
+import Tag from 'server/src/lib/models/tagConfig';
 import { ITag, TaggedEntityType } from 'server/src/interfaces/tag.interfaces';
 import { withTransaction } from '@shared/db';
 import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
@@ -37,8 +37,9 @@ export async function findTagById(tagId: string): Promise<ITag | undefined> {
 
 export async function createTag(tag: Omit<ITag, 'tag_id' | 'tenant'>): Promise<ITag> {
   const { knex: db } = await createTenantKnex();
-  try {
-    return await withTransaction(db, async (trx: Knex.Transaction) => {
+  
+  return await withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
       const existingTags = await Tag.getAllUniqueTagsByType(trx, tag.tagged_type);
       const existingTag = existingTags.find(t => t.tag_text === tag.tag_text);
 
@@ -66,35 +67,37 @@ export async function createTag(tag: Omit<ITag, 'tag_id' | 'tenant'>): Promise<I
         tenant: await getCurrentTenantId() || ''
       };
       return createdTag;
-    });
-  } catch (error) {
-    console.error(`Error creating tag:`, error);
-    throw new Error(`Failed to create tag`);
-  }
+    } catch (error) {
+      console.error(`Error creating tag:`, error);
+      throw new Error(`Failed to create tag`);
+    }
+  });
 }
 
 export async function updateTag(id: string, tag: Partial<ITag>): Promise<void> {
   const { knex: db } = await createTenantKnex();
-  try {
-    await withTransaction(db, async (trx: Knex.Transaction) => {
+  
+  return await withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
       await Tag.update(trx, id, tag);
-    });
-  } catch (error) {
-    console.error(`Error updating tag with id ${id}:`, error);
-    throw new Error(`Failed to update tag with id ${id}`);
-  }
+    } catch (error) {
+      console.error(`Error updating tag with id ${id}:`, error);
+      throw new Error(`Failed to update tag with id ${id}`);
+    }
+  });
 }
 
 export async function deleteTag(id: string): Promise<void> {
   const { knex: db } = await createTenantKnex();
-  try {
-    await withTransaction(db, async (trx: Knex.Transaction) => {
+  
+  return await withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
       await Tag.delete(trx, id);
-    });
-  } catch (error) {
-    console.error(`Error deleting tag with id ${id}:`, error);
-    throw new Error(`Failed to delete tag with id ${id}`);
-  }
+    } catch (error) {
+      console.error(`Error deleting tag with id ${id}:`, error);
+      throw new Error(`Failed to delete tag with id ${id}`);
+    }
+  });
 }
 
 export async function findTagsByEntityIds(entityIds: string[], entityType: TaggedEntityType): Promise<ITag[]> {
