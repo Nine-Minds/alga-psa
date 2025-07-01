@@ -5,11 +5,8 @@ import { ITaggable } from './tag.interfaces';
 export interface ICompany extends TenantEntity, ITaggable {
   company_id: string;
   company_name: string;
-  phone_no: string;
   credit_balance: number;
-  email: string;
   url: string;
-  address?: string;
   created_at: string;
   updated_at: string;
   is_inactive: boolean;
@@ -23,8 +20,6 @@ export interface ICompany extends TenantEntity, ITaggable {
     annual_revenue?: string;
     primary_contact_id?: string;
     primary_contact_name?: string;
-    status?: string;
-    type?: string;
     billing_address?: string;
     tax_id?: string;
     notes?: string;

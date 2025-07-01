@@ -26,7 +26,7 @@ export class CompanyService extends BaseService<ICompany> {
       tableName: 'companies',
       primaryKey: 'company_id',
       tenantColumn: 'tenant',
-      searchableFields: ['company_name', 'email', 'phone_no', 'address'],
+      searchableFields: ['company_name', 'phone_no'],
       defaultSort: 'company_name',
       defaultOrder: 'asc'
     });
@@ -138,10 +138,7 @@ export class CompanyService extends BaseService<ICompany> {
           const companyData = {
             company_id: knex.raw('gen_random_uuid()'),
             company_name: data.company_name,
-            phone_no: data.phone_no || '',
-            email: data.email || '',
             url: data.url || '',
-            address: data.address,
             client_type: data.client_type,
             tax_id_number: data.tax_id_number,
             notes: data.notes,

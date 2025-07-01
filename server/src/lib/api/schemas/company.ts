@@ -39,10 +39,7 @@ const companyPropertiesSchema = z.object({
 // Create company schema
 export const createCompanySchema = z.object({
   company_name: z.string().min(1, 'Company name is required').max(255),
-  phone_no: phoneSchema,
-  email: emailSchema.optional(),
   url: urlSchema,
-  address: z.string().optional(),
   client_type: z.string().optional(),
   tax_id_number: z.string().optional(),
   notes: z.string().optional(),
@@ -92,11 +89,8 @@ export const companyListQuerySchema = createListQuerySchema(companyFilterSchema)
 export const companyResponseSchema = z.object({
   company_id: uuidSchema,
   company_name: z.string(),
-  phone_no: z.string().nullable(),
   credit_balance: z.number(),
-  email: z.string().nullable(),
   url: z.string().nullable(),
-  address: z.string().nullable(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   is_inactive: z.boolean(),

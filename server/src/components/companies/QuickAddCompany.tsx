@@ -5,6 +5,7 @@ import { ICompany, ICompanyLocation } from 'server/src/interfaces/company.interf
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { Input } from 'server/src/components/ui/Input';
+import { PhoneInput } from 'server/src/components/ui/PhoneInput';
 import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
@@ -25,7 +26,7 @@ import CountryPicker from 'server/src/components/ui/CountryPicker';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import toast from 'react-hot-toast';
 
-type CreateCompanyData = Omit<ICompany, "company_id" | "created_at" | "updated_at" | "notes_document_id" | "status" | "tenant" | "deleted_at" | "address">;
+type CreateCompanyData = Omit<ICompany, "company_id" | "created_at" | "updated_at" | "notes_document_id" | "tenant" | "deleted_at">;
 
 type CreateLocationData = Omit<ICompanyLocation, "location_id" | "tenant" | "created_at" | "updated_at">;
 
@@ -47,8 +48,6 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
   const initialFormData: CreateCompanyData = {
     company_name: '',
     client_type: 'company',
-    phone_no: '',
-    email: '',
     url: '',
     notes: '',
     is_inactive: false,
@@ -477,18 +476,15 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="location_phone" className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone
-                  </Label>
-                  <Input
-                    data-automation-id="location_phone"
-                    value={locationData.phone || ''}
-                    onChange={(e) => handleLocationChange('phone', e.target.value)}
-                    disabled={isSubmitting}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
+                <PhoneInput
+                  label="Phone"
+                  value={locationData.phone || ''}
+                  onChange={(value) => handleLocationChange('phone', value)}
+                  countryCode={locationData.country_code}
+                  phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
+                  disabled={isSubmitting}
+                  data-automation-id="location_phone"
+                />
 
                 <div>
                   <Label htmlFor="location_email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -541,18 +537,15 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="contact_phone" className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone
-                  </Label>
-                  <Input
-                    data-automation-id="contact_phone"
-                    value={contactData.phone_number}
-                    onChange={(e) => handleContactChange('phone_number', e.target.value)}
-                    disabled={isSubmitting}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
+                <PhoneInput
+                  label="Phone"
+                  value={contactData.phone_number}
+                  onChange={(value) => handleContactChange('phone_number', value)}
+                  countryCode={locationData.country_code}
+                  phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
+                  disabled={isSubmitting}
+                  data-automation-id="contact_phone"
+                />
               </div>
             </div>
 

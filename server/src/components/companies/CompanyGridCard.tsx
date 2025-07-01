@@ -86,11 +86,15 @@ const CompanyGridCard = ({
                         </p>
                         <p className="truncate">
                             <span className="font-medium text-gray-700">Phone:</span>
-                            <span className="ml-1">{company.phone_no || 'N/A'}</span>
+                            <span className="ml-1">{(company as any).location_phone || 'N/A'}</span>
                         </p>
                         <p className="truncate">
                             <span className="font-medium text-gray-700">Address:</span>
-                            <span className="ml-1">{company.address || 'N/A'}</span>
+                            <span className="ml-1">{(
+                                (company as any).address_line1 
+                                    ? [(company as any).address_line1, (company as any).city, (company as any).state_province].filter(Boolean).join(', ')
+                                    : 'N/A'
+                            )}</span>
                         </p>
                         <div className="truncate">
                             <span className="font-medium text-gray-700">URL:</span>

@@ -23,9 +23,7 @@ interface CompaniesImportDialogProps {
 type MappableCompanyField = 
   | 'company_name'
   | 'phone_no'
-  | 'email'
   | 'url'
-  | 'address'
   | 'client_type'
   | 'is_inactive'
   | 'notes'
@@ -111,9 +109,7 @@ interface ImportOptions {
 const COMPANY_FIELDS: Record<MappableCompanyField, string> = {
   company_name: 'Company Name',
   phone_no: 'Phone Number',
-  email: 'Email',
   url: 'URL',
-  address: 'Address',
   client_type: 'Client Type',
   is_inactive: 'Is Inactive',
   notes: 'Notes',
@@ -346,8 +342,6 @@ const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
           companyField = 'company_name';
         } else if (headerLower.includes('phone') && !headerLower.includes('location')) {
           companyField = 'phone_no'; // phone_number maps to phone_no in DB
-        } else if (headerLower.includes('email') && !headerLower.includes('location')) {
-          companyField = 'email';
         } else if (headerLower.includes('website')) {
           companyField = 'url'; // website maps to url in DB
         } else if (headerLower.includes('url')) {
