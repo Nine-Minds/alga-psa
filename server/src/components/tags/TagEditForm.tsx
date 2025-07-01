@@ -1,11 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@radix-ui/react-popover';
+import { Dialog } from 'server/src/components/ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
@@ -169,24 +165,23 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
   };
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
-      <PopoverContent
-        className="w-80 p-4 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
-        sideOffset={5}
-        onInteractOutside={(e) => {
-          // Prevent closing when clicking inside the popover
-          const target = e.target as HTMLElement;
-          if (target.closest('[role="dialog"]')) {
-            e.preventDefault();
-          }
-        }}
+    <>
+      {React.cloneElement(trigger as React.ReactElement, {
+        onClick: (e: React.MouseEvent) => {
+          e.stopPropagation();
+          setIsOpen(true);
+        }
+      })}
+      <Dialog
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        className="max-w-sm"
+        draggable={true}
+        title="Edit Tag"
       >
         <div className="space-y-4">
-          <h3 className="text-sm font-semibold text-gray-900">Edit Tag</h3>
-          
           {/* Preview */}
-          <div className="flex justify-center p-3 bg-gray-50 rounded">
+          <div className="flex justify-center rounded">
             <span
               className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold"
               style={{
@@ -343,7 +338,7 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
             </div>
           </div>
         </div>
-      </PopoverContent>
+      </Dialog>
       
       {/* Delete Confirmation Dialog */}
       <ConfirmationDialog
@@ -356,6 +351,6 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
         cancelLabel="Cancel"
         isConfirming={isDeleting}
       />
-    </Popover>
+    </>
   );
 };
