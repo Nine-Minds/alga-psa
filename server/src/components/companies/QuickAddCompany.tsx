@@ -288,6 +288,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
 
 
   return (
+    <>
     <Dialog
       id="quick-add-company-dialog"
       isOpen={open}
@@ -625,6 +626,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
         onOpenChange(true);
       }}
     />
+    </>
   );
 };
 
