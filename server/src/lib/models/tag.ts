@@ -163,6 +163,59 @@ const Tag = {
       console.error(`Error updating color for tags with text "${tag_text}" and type "${tagged_type}":`, error);
       throw error;
     }
+  },
+
+  updateTextByText: async (knexOrTrx: Knex | Knex.Transaction, old_tag_text: string, new_tag_text: string, tagged_type: TaggedEntityType): Promise<number> => {
+    try {
+      const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required for tag operations');
+      }
+      
+      // Check if new tag text already exists for any entity of this type
+      const existingTag = await knexOrTrx<ITag>('tags')
+        .where('tag_text', new_tag_text)
+        .where('tagged_type', tagged_type)
+        .where('tenant', tenant)
+        .first();
+      
+      if (existingTag) {
+        throw new Error(`Tag "${new_tag_text}" already exists for ${tagged_type} entities`);
+      }
+      
+      const result = await knexOrTrx<ITag>('tags')
+        .where('tag_text', old_tag_text)
+        .where('tagged_type', tagged_type)
+        .where('tenant', tenant)
+        .update({
+          tag_text: new_tag_text,
+        });
+      
+      return result;
+    } catch (error) {
+      console.error(`Error updating tag text from "${old_tag_text}" to "${new_tag_text}" for type "${tagged_type}":`, error);
+      throw error;
+    }
+  },
+
+  deleteByText: async (knexOrTrx: Knex | Knex.Transaction, tag_text: string, tagged_type: TaggedEntityType): Promise<number> => {
+    try {
+      const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required for tag operations');
+      }
+      
+      const result = await knexOrTrx<ITag>('tags')
+        .where('tag_text', tag_text)
+        .where('tagged_type', tagged_type)
+        .where('tenant', tenant)
+        .del();
+      
+      return result;
+    } catch (error) {
+      console.error(`Error deleting tags with text "${tag_text}" and type "${tagged_type}":`, error);
+      throw error;
+    }
   }
 };
 

@@ -24,6 +24,8 @@ import {
   tagListQuerySchema,
   createBulkTagsSchema,
   updateTagColorSchema,
+  updateTagTextSchema,
+  deleteTagsByTextSchema,
   // Entity Tagging Schemas
   tagEntitySchema,
   untagEntitySchema,
@@ -418,6 +420,30 @@ export class CategoryTagController extends BaseController {
       permissions: { resource: 'category', action: 'delete' },
       requestSchema: bulkDeleteCategoriesSchema,
       tags: ['categories', 'bulk-operations']
+    });
+
+    // Tag Text Update Endpoint
+    ApiRegistry.registerEndpoint({
+      path: '/api/v1/tags/{id}/text',
+      method: 'PUT',
+      resource: 'tag',
+      action: 'update',
+      description: 'Update tag text for all instances',
+      permissions: { resource: 'tag', action: 'update' },
+      requestSchema: updateTagTextSchema,
+      tags: ['tags']
+    });
+
+    // Delete Tags by Text Endpoint
+    ApiRegistry.registerEndpoint({
+      path: '/api/v1/tags/by-text',
+      method: 'DELETE',
+      resource: 'tag',
+      action: 'delete',
+      description: 'Delete all tags with specific text and type',
+      permissions: { resource: 'tag', action: 'delete' },
+      requestSchema: deleteTagsByTextSchema,
+      tags: ['tags', 'bulk-operations']
     });
   }
 
@@ -1271,6 +1297,64 @@ export class CategoryTagController extends BaseController {
         },
         metadata: {
           operation: 'update_tag_colors',
+          processed_at: new Date().toISOString()
+        }
+      });
+    });
+  }
+
+  /**
+   * PUT /api/v1/tags/{id}/text - Update tag text
+   */
+  updateTagText() {
+    const middleware = compose(
+      withAuth,
+      withPermission('tag', 'update'),
+      withValidation(updateTagTextSchema)
+    );
+
+    return middleware(async (req: ApiRequest, validatedData: any) => {
+      const id = this.extractIdFromPath(req);
+      
+      const result = await this.categoryTagService.updateTagText(
+        id,
+        validatedData.tag_text,
+        req.context!
+      );
+      
+      return createSuccessResponse({
+        ...result,
+        metadata: {
+          operation: 'update_tag_text',
+          processed_at: new Date().toISOString()
+        }
+      });
+    });
+  }
+
+  /**
+   * DELETE /api/v1/tags/by-text - Delete all tags with specific text
+   */
+  deleteTagsByText() {
+    const middleware = compose(
+      withAuth,
+      withPermission('tag', 'delete'),
+      withValidation(deleteTagsByTextSchema)
+    );
+
+    return middleware(async (req: ApiRequest, validatedData: any) => {
+      const result = await this.categoryTagService.deleteTagsByText(
+        validatedData.tag_text,
+        validatedData.tagged_type,
+        req.context!
+      );
+      
+      return createSuccessResponse({
+        ...result,
+        tag_text: validatedData.tag_text,
+        tagged_type: validatedData.tagged_type,
+        metadata: {
+          operation: 'delete_tags_by_text',
           processed_at: new Date().toISOString()
         }
       });
