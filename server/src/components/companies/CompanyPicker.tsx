@@ -24,6 +24,7 @@ interface CompanyPickerProps {
   onClientTypeFilterChange: (type: 'all' | 'company' | 'individual') => void;
   fitContent?: boolean;
   className?: string;
+  placeholder?: string;
 }
 
 // Component for individual option buttons that registers with UI reflection
@@ -65,6 +66,7 @@ export const CompanyPicker: React.FC<CompanyPickerProps & AutomationProps> = ({
   onClientTypeFilterChange,
   fitContent = false,
   className = '',
+  placeholder = 'Select Client',
   "data-automation-type": dataAutomationType = 'picker',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -240,7 +242,7 @@ export const CompanyPicker: React.FC<CompanyPickerProps & AutomationProps> = ({
             setIsOpen(!isOpen);
           }}
           className="w-full justify-between px-2 bg-white"
-          label={selectedCompany ? selectedCompany.company_name : 'Select Client'}
+          label={selectedCompany ? selectedCompany.company_name : placeholder}
           {...companyPickerProps}
           id={`${id}-toggle`}
           data-automation-type={dataAutomationType}
@@ -257,7 +259,7 @@ export const CompanyPicker: React.FC<CompanyPickerProps & AutomationProps> = ({
                 <span>{selectedCompany.company_name}</span>
               </div>
             ) : (
-              <span className="text-gray-400">Select Client</span>
+              <span className="text-gray-400">{placeholder}</span>
             )}
           </div>
           <ChevronDown className="h-4 w-4 text-gray-500" />
