@@ -237,7 +237,7 @@ export function FeatureFlagsSettings() {
       case 'beta':
         return <Badge variant="warning">Beta</Badge>;
       case 'experimental':
-        return <Badge variant="danger">Experimental</Badge>;
+        return <Badge variant="error">Experimental</Badge>;
     }
   };
 
@@ -247,7 +247,7 @@ export function FeatureFlagsSettings() {
 
   if (error) {
     return (
-      <Alert variant="error">
+      <Alert variant="destructive">
         <AlertDescription>
           Error loading feature flags: {error.message}
         </AlertDescription>
@@ -312,7 +312,7 @@ export function FeatureFlagsSettings() {
                               </Label>
                               {getCategoryBadge(feature.category)}
                               {feature.requiresRestart && (
-                                <Badge variant="outline">Requires restart</Badge>
+                                <Badge variant="default">Requires restart</Badge>
                               )}
                             </div>
                             <p className="text-sm text-muted-foreground">
@@ -343,6 +343,7 @@ export function FeatureFlagsSettings() {
 
       <div className="flex justify-end space-x-2">
         <Button
+          id="reset-feature-flags"
           variant="outline"
           onClick={handleReset}
           disabled={!unsavedChanges || saving}
@@ -350,6 +351,7 @@ export function FeatureFlagsSettings() {
           Reset
         </Button>
         <Button
+          id="save-feature-flags"
           onClick={handleSave}
           disabled={!unsavedChanges || saving}
         >

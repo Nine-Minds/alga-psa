@@ -31,6 +31,7 @@ export function WizardNavigation({
   return (
     <div className="flex justify-between items-center mt-8 pt-6 border-t">
       <Button
+        id="wizard-back"
         type="button"
         variant="ghost"
         onClick={onBack}
@@ -44,6 +45,7 @@ export function WizardNavigation({
       <div className="flex gap-2">
         {!isLastStep && !isSkipDisabled && (
           <Button
+            id="wizard-skip"
             type="button"
             variant="outline"
             onClick={onSkip}
@@ -54,6 +56,7 @@ export function WizardNavigation({
         
         {isLastStep ? (
           <Button
+            id="wizard-finish"
             type="button"
             onClick={onFinish}
             disabled={isNextDisabled}
@@ -62,6 +65,7 @@ export function WizardNavigation({
           </Button>
         ) : (
           <Button
+            id="wizard-next"
             type="button"
             onClick={onNext}
             disabled={isNextDisabled}

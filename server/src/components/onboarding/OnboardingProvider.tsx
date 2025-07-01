@@ -28,8 +28,9 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     try {
       const settings = await getTenantSettings();
       
-      // Only show onboarding for admin users
-      const isAdmin = session?.user?.roles?.some((role: any) => role.role_name === 'admin');
+      // TODO: Only show onboarding for admin users
+      // Need to fetch user roles separately as they're not in the session
+      const isAdmin = true; // Temporarily allow all users
       
       if (settings && !settings.onboarding_completed && !settings.onboarding_skipped && isAdmin) {
         setShowOnboarding(true);

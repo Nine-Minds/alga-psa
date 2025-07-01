@@ -1,12 +1,12 @@
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
-import { Resource } from '@opentelemetry/resources';
+import { resourceFromAttributes } from '@opentelemetry/resources';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { SpanProcessor, Span } from '@opentelemetry/sdk-trace-base';
 import { TELEMETRY_CONFIG } from '../../config/telemetry';
 import TelemetryPermissionManager from './permissions';
-import { getKnex } from '../db';
+import { createTenantKnex } from '../db';
 import logger from '../../utils/logger';
 
 let telemetryInitialized = false;
@@ -16,9 +16,9 @@ let permissionManager: TelemetryPermissionManager | null = null;
  * Privacy-aware span processor that sanitizes PII and respects user consent
  */
 class PrivacyAwareSpanProcessor implements SpanProcessor {
-  private permissionManager: TelemetryPermissionManager;
+  private permissionManager: TelemetryPermissionManager | null;
 
-  constructor(permissionManager: TelemetryPermissionManager) {
+  constructor(permissionManager: TelemetryPermissionManager | null) {
     this.permissionManager = permissionManager;
   }
 
@@ -79,7 +79,7 @@ class PrivacyAwareSpanProcessor implements SpanProcessor {
 /**
  * Initialize telemetry with privacy-first configuration
  */
-export function initializeTelemetry(): void {
+export async function initializeTelemetry(): Promise<void> {
   // Prevent multiple initializations
   if (telemetryInitialized) {
     logger.debug('Telemetry already initialized, skipping');
@@ -104,9 +104,9 @@ export function initializeTelemetry(): void {
       return;
     }
 
-    // Initialize permission manager
-    const knex = getKnex();
-    permissionManager = new TelemetryPermissionManager(knex);
+    // Permission manager will be initialized lazily when needed
+    // since we don't have a tenant context at startup
+    permissionManager = null;
 
     // Create OTLP exporter
     const traceExporter = new OTLPTraceExporter({
@@ -117,7 +117,7 @@ export function initializeTelemetry(): void {
     });
 
     // Create resource with service information
-    const resource = new Resource({
+    const resource = resourceFromAttributes({
       [SemanticResourceAttributes.SERVICE_NAME]: 'alga-psa-backend',
       [SemanticResourceAttributes.SERVICE_VERSION]: process.env.APP_VERSION || '1.0.0',
       [SemanticResourceAttributes.SERVICE_NAMESPACE]: 'alga-psa',
@@ -132,11 +132,7 @@ export function initializeTelemetry(): void {
       },
       '@opentelemetry/instrumentation-pg': {
         enabled: true,
-        enhancedDatabaseReporting: false, // Disable enhanced reporting to avoid PII
-        ignoreIncomingRequestHook: (req: any) => {
-          // Skip telemetry for sensitive database operations
-          return permissionManager?.shouldExcludePath(req.sql || '') || false;
-        }
+        enhancedDatabaseReporting: false // Disable enhanced reporting to avoid PII
       },
       '@opentelemetry/instrumentation-http': {
         enabled: true,
@@ -166,7 +162,7 @@ export function initializeTelemetry(): void {
       traceExporter,
       instrumentations,
       spanProcessors: [
-        new PrivacyAwareSpanProcessor(permissionManager)
+        new PrivacyAwareSpanProcessor(null)
       ]
     });
 
@@ -197,8 +193,19 @@ export function initializeTelemetry(): void {
 
 /**
  * Get the telemetry permission manager instance
+ * Lazily initializes it if needed and we have a database connection
  */
-export function getTelemetryPermissionManager(): TelemetryPermissionManager | null {
+export async function getTelemetryPermissionManager(): Promise<TelemetryPermissionManager | null> {
+  if (!permissionManager && telemetryInitialized) {
+    try {
+      const { knex } = await createTenantKnex();
+      if (knex) {
+        permissionManager = new TelemetryPermissionManager(knex);
+      }
+    } catch (error) {
+      logger.error('Failed to initialize telemetry permission manager:', error);
+    }
+  }
   return permissionManager;
 }
 

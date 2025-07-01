@@ -1,8 +1,8 @@
 'use server';
 
-import { getAuthenticatedUser } from '@/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import { getTenantForCurrentRequest } from '@/lib/tenant';
-import { knexClient } from '@/lib/db';
+import { createTenantKnex } from '@/lib/db';
 import { WizardData } from '@/components/onboarding/types';
 
 export interface TenantSettings {
@@ -23,7 +23,8 @@ export async function getTenantSettings(): Promise<TenantSettings | null> {
       throw new Error('No tenant found');
     }
 
-    const settings = await knexClient
+    const { knex } = await createTenantKnex();
+    const settings = await knex
       .select('*')
       .from('tenant_settings')
       .where({ tenant })
@@ -48,19 +49,21 @@ export async function updateTenantOnboardingStatus(
     }
 
     // Check if user has admin permissions
-    const user = await getAuthenticatedUser();
-    if (!user || !user.roles.some(role => role.role_name === 'admin')) {
+    const user = await getCurrentUser();
+    if (!user || !user.roles.some((role: any) => role.role_name === 'admin')) {
       throw new Error('Only admin users can update onboarding status');
     }
 
+    const { knex } = await createTenantKnex();
+    
     const updateData: any = {
       onboarding_completed: completed,
       onboarding_skipped: skipped,
-      updated_at: knexClient.fn.now(),
+      updated_at: knex.fn.now(),
     };
 
     if (completed) {
-      updateData.onboarding_completed_at = knexClient.fn.now();
+      updateData.onboarding_completed_at = knex.fn.now();
     }
 
     if (wizardData) {
@@ -68,7 +71,7 @@ export async function updateTenantOnboardingStatus(
     }
 
     // Upsert the tenant settings
-    await knexClient('tenant_settings')
+    await knex('tenant_settings')
       .insert({
         tenant,
         ...updateData,
@@ -92,8 +95,8 @@ export async function saveTenantOnboardingProgress(
     }
 
     // Check if user has admin permissions
-    const user = await getAuthenticatedUser();
-    if (!user || !user.roles.some(role => role.role_name === 'admin')) {
+    const user = await getCurrentUser();
+    if (!user || !user.roles.some((role: any) => role.role_name === 'admin')) {
       throw new Error('Only admin users can save onboarding progress');
     }
 
@@ -106,16 +109,18 @@ export async function saveTenantOnboardingProgress(
       ...wizardData,
     };
 
-    await knexClient('tenant_settings')
+    const { knex } = await createTenantKnex();
+    
+    await knex('tenant_settings')
       .insert({
         tenant,
         onboarding_data: JSON.stringify(mergedData),
-        updated_at: knexClient.fn.now(),
+        updated_at: knex.fn.now(),
       })
       .onConflict('tenant')
       .merge({
         onboarding_data: JSON.stringify(mergedData),
-        updated_at: knexClient.fn.now(),
+        updated_at: knex.fn.now(),
       });
 
   } catch (error) {
@@ -132,20 +137,92 @@ export async function clearTenantOnboardingData(): Promise<void> {
     }
 
     // Check if user has admin permissions
-    const user = await getAuthenticatedUser();
-    if (!user || !user.roles.some(role => role.role_name === 'admin')) {
+    const user = await getCurrentUser();
+    if (!user || !user.roles.some((role: any) => role.role_name === 'admin')) {
       throw new Error('Only admin users can clear onboarding data');
     }
 
-    await knexClient('tenant_settings')
+    const { knex } = await createTenantKnex();
+    
+    await knex('tenant_settings')
       .where({ tenant })
       .update({
         onboarding_data: null,
-        updated_at: knexClient.fn.now(),
+        updated_at: knex.fn.now(),
       });
 
   } catch (error) {
     console.error('Error clearing tenant onboarding data:', error);
+    throw error;
+  }
+}
+
+export async function updateTenantSettings(
+  settings: Record<string, any>
+): Promise<void> {
+  try {
+    const tenant = await getTenantForCurrentRequest();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
+    // Get existing settings to merge
+    const existingSettings = await getTenantSettings();
+    const currentSettings = existingSettings?.settings || {};
+
+    const updatedSettings = {
+      ...currentSettings,
+      ...settings
+    };
+
+    const { knex } = await createTenantKnex();
+    
+    await knex('tenant_settings')
+      .insert({
+        tenant,
+        settings: JSON.stringify(updatedSettings),
+        updated_at: knex.fn.now(),
+      })
+      .onConflict('tenant')
+      .merge({
+        settings: JSON.stringify(updatedSettings),
+        updated_at: knex.fn.now(),
+      });
+
+  } catch (error) {
+    console.error('Error updating tenant settings:', error);
+    throw error;
+  }
+}
+
+export async function getTenantAnalyticsSettings(): Promise<any> {
+  try {
+    const settings = await getTenantSettings();
+    return settings?.settings?.analytics || null;
+  } catch (error) {
+    console.error('Error getting tenant analytics settings:', error);
+    return null;
+  }
+}
+
+export async function updateTenantAnalyticsSettings(
+  analyticsSettings: Record<string, any>
+): Promise<void> {
+  try {
+    const existingSettings = await getTenantSettings();
+    const currentSettings = existingSettings?.settings || {};
+
+    await updateTenantSettings({
+      ...currentSettings,
+      analytics: {
+        ...currentSettings.analytics,
+        ...analyticsSettings,
+        last_updated_at: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Error updating tenant analytics settings:', error);
     throw error;
   }
 }

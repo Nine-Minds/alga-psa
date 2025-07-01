@@ -4,7 +4,7 @@ import posthog from "posthog-js"
 import { PostHogProvider as PHProvider, usePostHog } from "posthog-js/react"
 import { Suspense, useEffect, useState } from "react"
 import { usePathname, useSearchParams } from "next/navigation"
-import { PrivacyHelper } from '../lib/analytics/privacy'
+import { PrivacyHelper } from '../lib/analytics/privacy.client'
 import { posthogConfig, isPostHogEnabled } from '../config/posthog.config'
 
 function SuspendedPostHogPageView() {
@@ -14,7 +14,7 @@ function SuspendedPostHogPageView() {
 
   useEffect(() => {
     if (!posthogClient) return
-    const search = searchParams.toString()
+    const search = searchParams?.toString() ?? ''
     const url = search ? `${pathname}?${search}` : pathname
     posthogClient.capture('$pageview', { path: pathname, url })
   }, [posthogClient, pathname, searchParams])

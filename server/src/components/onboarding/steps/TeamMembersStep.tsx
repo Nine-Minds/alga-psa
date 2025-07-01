@@ -44,6 +44,7 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
             <h3 className="font-medium">Team Member {index + 1}</h3>
             {data.teamMembers.length > 1 && (
               <Button
+                id={`remove-member-${index}`}
                 type="button"
                 variant="ghost"
                 size="sm"
@@ -103,6 +104,7 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
       ))}
 
       <Button
+        id="add-team-member"
         type="button"
         variant="outline"
         onClick={addTeamMember}

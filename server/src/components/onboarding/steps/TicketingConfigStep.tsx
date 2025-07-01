@@ -71,6 +71,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
               <div key={category} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                 <span className="text-sm">{category}</span>
                 <Button
+                  id={`remove-category-${category}`}
                   type="button"
                   variant="ghost"
                   size="sm"
@@ -81,6 +82,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
               </div>
             ))}
             <Button
+              id="add-category"
               type="button"
               variant="outline"
               size="sm"
@@ -100,6 +102,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
               <div key={priority} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                 <span className="text-sm">{priority}</span>
                 <Button
+                  id={`remove-priority-${priority}`}
                   type="button"
                   variant="ghost"
                   size="sm"
@@ -110,6 +113,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
               </div>
             ))}
             <Button
+              id="add-priority"
               type="button"
               variant="outline"
               size="sm"

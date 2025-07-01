@@ -6,7 +6,13 @@ import logger from '../../utils/logger';
 const TELEMETRY_SETTING_PREFIX = 'telemetry_';
 const TELEMETRY_CONSENT_SETTING = 'telemetry_consent_version';
 
-export interface TelemetryConsentData extends TelemetryPreferences {
+export interface TelemetryConsentData {
+  // Preference flags
+  error_tracking: boolean;
+  performance_metrics: boolean;
+  usage_analytics: boolean;
+  system_metrics: boolean;
+  // Metadata
   last_updated: string;
   consent_version: string;
   user_id: string;
@@ -45,7 +51,8 @@ export const TelemetryPreferencesModel = {
           preferences.last_updated = pref.updated_at.toISOString();
         } else if (pref.setting_name.startsWith(TELEMETRY_SETTING_PREFIX)) {
           const category = pref.setting_name.replace(TELEMETRY_SETTING_PREFIX, '');
-          if (category in preferences) {
+          if (category === 'error_tracking' || category === 'performance_metrics' || 
+              category === 'usage_analytics' || category === 'system_metrics') {
             preferences[category] = Boolean(pref.setting_value);
           }
         }

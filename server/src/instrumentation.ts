@@ -5,10 +5,17 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     try {
       const { initializeTelemetry } = await import('./lib/telemetry/initialization');
-      initializeTelemetry();
+      await initializeTelemetry();
     } catch (error) {
       // Don't break the application if telemetry fails to initialize
       console.error('Failed to initialize telemetry:', error);
+    }
+
+    try {
+      const { initializeApp } = await import('./lib/initializeApp');
+      await initializeApp();
+    } catch (error) {
+      console.error('Failed to initialize application:', error);
     }
   }
 }

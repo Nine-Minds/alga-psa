@@ -276,6 +276,7 @@ export function TelemetrySettings({ onSettingsUpdate }: TelemetrySettingsProps) 
 
       <div className="flex justify-between items-center pt-4 border-t">
         <Button
+          id="opt-out-all"
           variant="outline"
           onClick={handleDisableAll}
           disabled={saving || effectivelyDisabled || userCannotOptOut}
@@ -285,6 +286,7 @@ export function TelemetrySettings({ onSettingsUpdate }: TelemetrySettingsProps) 
         
         <div className="flex space-x-3">
           <Button
+            id="reset-preferences"
             variant="outline"
             onClick={loadTelemetryPreferences}
             disabled={saving}
@@ -292,6 +294,7 @@ export function TelemetrySettings({ onSettingsUpdate }: TelemetrySettingsProps) 
             Reset
           </Button>
           <Button
+            id="save-preferences"
             onClick={handleSave}
             disabled={saving || effectivelyDisabled || userCannotOptOut}
           >

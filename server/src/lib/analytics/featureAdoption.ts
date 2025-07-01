@@ -1,5 +1,5 @@
 import { analytics } from './posthog';
-import { createTenantKnex } from '../../db';
+import { createTenantKnex } from '../db';
 
 export interface FeatureUsage {
   feature_name: string;
@@ -23,6 +23,7 @@ export class FeatureAdoptionTracker {
   private readonly FEATURES = {
     // Ticket Management
     TICKET_CREATION: 'ticket_creation',
+    TICKET_VIEWING: 'ticket_viewing',
     TICKET_BULK_UPDATE: 'ticket_bulk_update',
     TICKET_TEMPLATES: 'ticket_templates',
     TICKET_AUTOMATION: 'ticket_automation',
@@ -123,7 +124,7 @@ export class FeatureAdoptionTracker {
       const { knex, tenant } = await createTenantKnex();
       
       // Get user's activity metrics (simplified example)
-      const metrics = await this.getUserActivityMetrics(knex, userId, tenant);
+      const metrics = await this.getUserActivityMetrics(knex, userId, tenant || 'default');
       
       let score = 0;
       

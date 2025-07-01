@@ -7,7 +7,7 @@ import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContain
 import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
 import { ButtonComponent, ContainerComponent } from '../../types/ui-reflection/types';
 import { usePostHog } from 'posthog-js/react';
-import { performanceTracker, usePerformanceTracking } from '../../lib/analytics/performanceTracking';
+import { performanceTracker, usePerformanceTracking } from '../../lib/analytics/client';
 import {
   Ticket,
   BarChart3,

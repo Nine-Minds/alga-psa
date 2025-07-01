@@ -30,7 +30,7 @@ exports.up = function(knex) {
       table.jsonb('preferences_after');
       table.string('consent_version').notNullable();
       table.text('user_agent');
-      table.inet('ip_address');
+      table.string('ip_address', 45); // Support IPv4 and IPv6
       table.text('notes');
       table.timestamps(true, true);
 

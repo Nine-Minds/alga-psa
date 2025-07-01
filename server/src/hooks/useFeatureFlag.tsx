@@ -154,7 +154,7 @@ export function useFeatureFlags(): {
 
     try {
       // Get all feature flags from PostHog
-      const allFlags = posthog.feature_flags || {};
+      const allFlags = posthog.featureFlags || {};
       setFlags(allFlags);
       setLoading(false);
     } catch (err) {

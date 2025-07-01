@@ -31,6 +31,7 @@ import {
 import { NumberingService } from 'server/src/lib/services/numberingService';
 import { analytics } from '../../analytics/posthog';
 import { AnalyticsEvents } from '../../analytics/events';
+import { featureAdoptionTracker } from '../../analytics/featureAdoption';
 
 // Helper function to safely convert dates
 function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null }>(record: T): T {
@@ -131,7 +132,7 @@ export async function createTicketFromAsset(data: CreateTicketFromAssetData, use
                 is_assigned: !!newTicket.assigned_to,
                 channel_id: newTicket.channel_id,
                 created_via: 'asset_page',
-                asset_type: validatedData.asset_type,
+                has_asset: true,
             }, user.user_id);
 
             // Track feature adoption
@@ -1086,6 +1087,21 @@ export async function getTicketById(id: string, user: IUser): Promise<DetailedTi
     delete (detailedTicket as any).assigned_to_first_name;
     delete (detailedTicket as any).assigned_to_last_name;
 
+    // Track ticket view analytics
+    analytics.capture('ticket_viewed', {
+      ticket_id: id,
+      status_id: ticket.status_id,
+      status_name: ticket.status_name,
+      is_closed: ticket.is_closed,
+      priority_id: ticket.priority_id,
+      category_id: ticket.category_id,
+      channel_id: ticket.channel_id,
+      assigned_to: ticket.assigned_to,
+      company_id: ticket.company_id,
+      has_additional_agents: additionalAgents.length > 0,
+      additional_agent_count: additionalAgents.length,
+      view_source: 'ticket_by_id'
+    }, user.user_id);
 
       return convertDates(detailedTicket);
     });

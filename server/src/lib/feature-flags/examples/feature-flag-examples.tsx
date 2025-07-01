@@ -1,3 +1,16 @@
+/*
+ * Feature Flag Usage Examples
+ * These are example patterns showing how to use feature flags in different scenarios.
+ * The components referenced here are placeholders and don't actually exist.
+ */
+
+// Export empty component to satisfy TypeScript
+export default function FeatureFlagExamples() {
+  return null;
+}
+
+/* EXAMPLES COMMENTED OUT TO AVOID COMPILATION ERRORS
+
 // Example 1: Using feature flags in a React component
 'use client';
 
@@ -75,73 +88,71 @@ export default async function BillingPage() {
   );
 }
 
-// Example 5: Feature flags in API routes
+// Example 5: Using feature flags in API routes
 import { checkFeatureFlag } from '../../serverFeatureFlags';
 
-export async function createTicketHandler(request: Request) {
-  const aiSuggestionsEnabled = await checkFeatureFlag('ai_ticket_suggestions', {
-    // Optional: override context
-    companySize: 'enterprise',
-  });
-
-  if (aiSuggestionsEnabled) {
-    // Use AI to suggest ticket properties
+export async function POST(request: Request) {
+  const aiEnabled = await checkFeatureFlag('ai_ticket_suggestions');
+  
+  if (aiEnabled) {
+    // Use AI to generate suggestions
     const suggestions = await generateAISuggestions(ticketData);
-    ticketData = { ...ticketData, ...suggestions };
+    ticketData.suggestions = suggestions;
   }
 
-  // Continue with ticket creation
-  return createTicket(ticketData);
+  // Continue with normal ticket creation
+  const ticket = await createTicket(ticketData);
+  return Response.json(ticket);
 }
 
 // Example 6: Progressive feature rollout
-export function FeatureRolloutExample() {
-  const { enabled: phase1 } = useFeatureFlag('new_reporting_phase1');
-  const { enabled: phase2 } = useFeatureFlag('new_reporting_phase2');
-  const { enabled: phase3 } = useFeatureFlag('new_reporting_phase3');
+export function ReportsPage() {
+  const { enabled: phase1 } = useFeatureFlag('reports_phase_1');
+  const { enabled: phase2 } = useFeatureFlag('reports_phase_2');
+  const { enabled: phase3 } = useFeatureFlag('reports_phase_3');
 
   return (
     <div>
       <h1>Reports</h1>
       
-      {/* Always available */}
       <BasicReports />
       
-      {/* Phase 1: Advanced filters */}
       {phase1 && <AdvancedFilters />}
       
-      {/* Phase 2: Custom report builder */}
       {phase2 && <CustomReportBuilder />}
       
-      {/* Phase 3: AI insights */}
       {phase3 && <AIInsights />}
     </div>
   );
 }
 
-// Example 7: Feature flags with user role context
-export function AdminFeatures() {
-  const { enabled } = useFeatureFlag('admin_analytics_dashboard', {
-    properties: {
-      userRole: 'admin',
-      requiredPermission: 'analytics:view',
-    },
-  });
-
-  if (!enabled) return null;
-
-  return <AdminAnalyticsDashboard />;
+// Example 7: User-specific feature flags
+export function AdminSettings() {
+  const user = useCurrentUser();
+  
+  return (
+    <FeatureFlag 
+      flag="admin_analytics_dashboard"
+      context={{ userId: user.id }}
+    >
+      <AdminAnalyticsDashboard />
+    </FeatureFlag>
+  );
 }
 
-// Example 8: Feature flags for integrations
+// Example 8: Multiple feature flag checks
 export function IntegrationsPage() {
-  const { flags } = useFeatureFlags();
+  const { flags } = useFeatureFlags([
+    'slack_integration',
+    'teams_integration',
+    'jira_integration'
+  ]);
 
   return (
     <div>
       <h1>Integrations</h1>
       
-      {flags.enable_slack_integration && (
+      {flags.slack_integration && (
         <IntegrationCard
           name="Slack"
           description="Connect your Slack workspace"
@@ -149,7 +160,7 @@ export function IntegrationsPage() {
         />
       )}
       
-      {flags.enable_teams_integration && (
+      {flags.teams_integration && (
         <IntegrationCard
           name="Microsoft Teams"
           description="Connect your Teams workspace"
@@ -157,11 +168,10 @@ export function IntegrationsPage() {
         />
       )}
       
-      {flags.enable_jira_sync && (
+      {flags.jira_integration && (
         <IntegrationCard
           name="Jira"
           description="Sync tickets with Jira"
-          beta={true}
           onConnect={connectJira}
         />
       )}
@@ -169,46 +179,37 @@ export function IntegrationsPage() {
   );
 }
 
-// Example 9: Performance optimization with feature flags
-export function OptimizedTicketList() {
-  const { enabled: lazyLoadingEnabled } = useFeatureFlag('enable_lazy_loading');
-  const { enabled: websocketEnabled } = useFeatureFlag('enable_websocket_updates');
-
+// Example 9: Feature flag with metadata
+export function TicketList() {
+  const { enabled, metadata } = useFeatureFlag('new_ticket_filters');
+  
   return (
     <TicketList
-      lazyLoad={lazyLoadingEnabled}
-      realtimeUpdates={websocketEnabled}
-      pageSize={lazyLoadingEnabled ? 20 : 50}
+      enableAdvancedFilters={enabled}
+      filterConfig={metadata?.filterConfig}
     />
   );
 }
 
-// Example 10: Feature flag with polling for real-time updates
-export function LiveFeatureToggle() {
-  const { enabled } = useFeatureFlag('maintenance_mode', {
-    pollInterval: 30000, // Check every 30 seconds
+// Example 10: Feature flags in configuration
+export const featureFlaggedConfig = {
+  maxUploadSize: await checkFeatureFlag('large_file_uploads') ? 100 : 10, // MB
+  allowedFileTypes: await checkFeatureFlag('extended_file_types') 
+    ? ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.png', '.jpg', '.zip']
+    : ['.pdf', '.doc', '.docx'],
+  autoSaveInterval: await checkFeatureFlag('aggressive_autosave') ? 10 : 60, // seconds
+};
+
+// Example 11: Feature flags with deployment types
+import { checkFeatureFlag, getFeatureFlagVariant } from '../../serverFeatureFlags';
+
+export async function BackupSettings() {
+  const isHosted = process.env.DEPLOYMENT_TYPE === 'hosted';
+  const cloudBackupEnabled = await checkFeatureFlag('cloud_backup', {
+    deploymentType: 'hosted'
   });
 
-  if (enabled) {
-    return (
-      <div className="maintenance-banner">
-        System is currently in maintenance mode
-      </div>
-    );
-  }
-
-  return null;
-}
-
-// Example 11: Conditional feature based on deployment type
-export function CloudOnlyFeature() {
-  const { enabled } = useFeatureFlag('cloud_backup_feature', {
-    properties: {
-      deploymentType: 'hosted',
-    },
-  });
-
-  if (!enabled) {
+  if (!isHosted || !cloudBackupEnabled) {
     return (
       <div className="feature-unavailable">
         This feature is only available in hosted deployments
@@ -229,3 +230,5 @@ export async function featureFlagMiddleware(request: Request) {
 
   return NextResponse.next();
 }
+
+*/ // END OF EXAMPLES

@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getKnex } from 'server/src/lib/db';
-import { getCurrentTenantId } from 'server/src/lib/db';
+import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import TenantTelemetrySettingsModel from 'server/src/lib/models/tenantTelemetrySettings';
 import logger from 'server/src/utils/logger';
 
 export async function GET(request: NextRequest) {
   try {
-    const knex = getKnex();
+    const { knex, tenant: tenantId } = await createTenantKnex();
     const currentUser = await getCurrentUser();
-    const tenantId = await getCurrentTenantId();
     
     if (!currentUser || !tenantId) {
       return NextResponse.json(
@@ -50,9 +48,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const knex = getKnex();
+    const { knex, tenant: tenantId } = await createTenantKnex();
     const currentUser = await getCurrentUser();
-    const tenantId = await getCurrentTenantId();
     
     if (!currentUser || !tenantId) {
       return NextResponse.json(

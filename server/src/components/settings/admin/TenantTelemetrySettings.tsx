@@ -5,8 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "serve
 import { Switch } from "server/src/components/ui/Switch";
 import { Label } from "server/src/components/ui/Label";
 import { Button } from "server/src/components/ui/Button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "server/src/components/ui/Select";
-import { TenantTelemetrySettings, AnonymizationLevel } from "server/src/config/telemetry";
+import { CustomSelect } from "server/src/components/ui/CustomSelect";
+import type { TenantTelemetrySettings, AnonymizationLevel } from "server/src/config/telemetry";
 
 interface TenantTelemetrySettingsProps {
   onSettingsUpdate?: (settings: TenantTelemetrySettings) => void;
@@ -174,35 +174,42 @@ export function TenantTelemetrySettings({ onSettingsUpdate }: TenantTelemetrySet
             </p>
           </div>
           
-          <Select 
+          <CustomSelect
+            id="anonymization-level"
             value={settings.anonymizationLevel} 
-            onValueChange={(value: AnonymizationLevel) => handleSettingChange('anonymizationLevel', value)}
+            onValueChange={(value: string) => handleSettingChange('anonymizationLevel', value as AnonymizationLevel)}
             disabled={!settings.enabled}
-          >
-            <SelectTrigger className="w-full max-w-md">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">
-                <div>
-                  <div className="font-medium">No Anonymization</div>
-                  <div className="text-sm text-gray-600">Collect data as-is (not recommended)</div>
-                </div>
-              </SelectItem>
-              <SelectItem value="partial">
-                <div>
-                  <div className="font-medium">Partial Anonymization</div>
-                  <div className="text-sm text-gray-600">Remove PII, keep correlation IDs</div>
-                </div>
-              </SelectItem>
-              <SelectItem value="full">
-                <div>
-                  <div className="font-medium">Full Anonymization</div>
-                  <div className="text-sm text-gray-600">Maximum privacy, minimal correlation</div>
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
+            className="w-full max-w-md"
+            options={[
+              {
+                value: "none",
+                label: (
+                  <div>
+                    <div className="font-medium">No Anonymization</div>
+                    <div className="text-sm text-gray-600">Collect data as-is (not recommended)</div>
+                  </div>
+                )
+              },
+              {
+                value: "partial",
+                label: (
+                  <div>
+                    <div className="font-medium">Partial Anonymization</div>
+                    <div className="text-sm text-gray-600">Remove PII, keep correlation IDs</div>
+                  </div>
+                )
+              },
+              {
+                value: "full",
+                label: (
+                  <div>
+                    <div className="font-medium">Full Anonymization</div>
+                    <div className="text-sm text-gray-600">Maximum privacy, minimal correlation</div>
+                  </div>
+                )
+              }
+            ]}
+          />
         </div>
 
         {/* Compliance Notes */}
@@ -246,6 +253,7 @@ export function TenantTelemetrySettings({ onSettingsUpdate }: TenantTelemetrySet
           
           <div className="flex space-x-3">
             <Button
+              id="reset-telemetry-settings"
               variant="outline"
               onClick={loadTenantSettings}
               disabled={saving}
@@ -253,6 +261,7 @@ export function TenantTelemetrySettings({ onSettingsUpdate }: TenantTelemetrySet
               Reset
             </Button>
             <Button
+              id="save-telemetry-settings"
               onClick={handleSave}
               disabled={saving}
             >

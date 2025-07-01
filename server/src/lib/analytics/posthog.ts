@@ -2,7 +2,6 @@ import { PostHog } from 'posthog-node';
 import crypto from 'crypto';
 import os from 'os';
 import { posthogConfig, isPostHogEnabled } from '../../config/posthog.config';
-import { showUsageStatsNotice } from './terminal-notice';
 
 export class UsageAnalytics {
   private client: PostHog | null = null;
@@ -13,9 +12,13 @@ export class UsageAnalytics {
     this.isHosted = process.env.DEPLOYMENT_TYPE === 'hosted';
     this.isEnabled = isPostHogEnabled();
     
-    // Show usage stats notice in terminal for on-premise deployments
-    if (!this.isHosted) {
-      showUsageStatsNotice();
+    // Show usage stats notice in terminal for on-premise deployments (server-side only)
+    if (!this.isHosted && typeof window === 'undefined') {
+      import('./terminal-notice').then(({ showUsageStatsNotice }) => {
+        showUsageStatsNotice();
+      }).catch(() => {
+        // Ignore errors in client-side environment
+      });
     }
     
     if (this.isEnabled) {
@@ -34,10 +37,10 @@ export class UsageAnalytics {
     }
   }
   
-  capture(event: string, properties: Record<string, any> = {}, userId?: string) {
+  async capture(event: string, properties: Record<string, any> = {}, userId?: string) {
     if (!this.client) return;
     
-    const distinctId = this.getDistinctId(userId);
+    const distinctId = await this.getDistinctId(userId);
     const sanitizedProperties = this.sanitizeProperties(properties);
     
     this.client.capture({
@@ -52,10 +55,40 @@ export class UsageAnalytics {
     });
   }
   
-  identify(userId: string, properties: Record<string, any> = {}) {
+  captureSync(event: string, properties: Record<string, any> = {}, userId?: string) {
     if (!this.client) return;
     
-    const distinctId = this.getDistinctId(userId);
+    const distinctId = this.getDistinctIdSync(userId);
+    const sanitizedProperties = this.sanitizeProperties(properties);
+    
+    this.client.capture({
+      distinctId,
+      event,
+      properties: {
+        ...sanitizedProperties,
+        deployment_type: this.isHosted ? 'hosted' : 'on-premise',
+        app_version: process.env.npm_package_version || process.env.APP_VERSION,
+        environment: process.env.NODE_ENV,
+      },
+    });
+  }
+  
+  async identify(userId: string, properties: Record<string, any> = {}) {
+    if (!this.client) return;
+    
+    const distinctId = await this.getDistinctId(userId);
+    const sanitizedProperties = this.sanitizeProperties(properties);
+    
+    this.client.identify({
+      distinctId,
+      properties: sanitizedProperties,
+    });
+  }
+  
+  identifySync(userId: string, properties: Record<string, any> = {}) {
+    if (!this.client) return;
+    
+    const distinctId = this.getDistinctIdSync(userId);
     const sanitizedProperties = this.sanitizeProperties(properties);
     
     this.client.identify({
@@ -70,12 +103,41 @@ export class UsageAnalytics {
     }
   }
   
-  getDistinctId(userId?: string): string {
+  private cachedInstanceId: string | null = null;
+  
+  async getDistinctId(userId?: string): Promise<string> {
     if (this.isHosted && userId) {
       return `hosted_${userId}`;
     }
     
-    // For on-premise, use hashed instance ID
+    // For on-premise, use stable instance ID
+    try {
+      if (!this.cachedInstanceId) {
+        const { getOrCreateInstanceId } = await import('./analyticsSettingsServer');
+        const stableId = await getOrCreateInstanceId();
+        this.cachedInstanceId = crypto.createHash('sha256')
+          .update(stableId)
+          .digest('hex')
+          .substring(0, 16);
+      }
+      return this.cachedInstanceId;
+    } catch (error) {
+      console.error('Error getting stable instance ID:', error);
+      // Fallback to hostname-based ID
+      const instanceId = process.env.INSTANCE_ID || os.hostname();
+      return crypto.createHash('sha256')
+        .update(instanceId)
+        .digest('hex')
+        .substring(0, 16);
+    }
+  }
+  
+  getDistinctIdSync(userId?: string): string {
+    if (this.isHosted && userId) {
+      return `hosted_${userId}`;
+    }
+    
+    // Synchronous fallback for cases where async is not possible
     const instanceId = process.env.INSTANCE_ID || os.hostname();
     return crypto.createHash('sha256')
       .update(instanceId)
@@ -144,6 +206,24 @@ export class UsageAnalytics {
     return anonymized;
   }
 
+  async trackPerformance(metricName: string, value: number, metadata?: Record<string, any>) {
+    await this.capture('performance_metric', {
+      metric_name: metricName,
+      value,
+      unit: 'ms',
+      ...metadata
+    });
+  }
+  
+  trackPerformanceSync(metricName: string, value: number, metadata?: Record<string, any>) {
+    this.captureSync('performance_metric', {
+      metric_name: metricName,
+      value,
+      unit: 'ms',
+      ...metadata
+    });
+  }
+
   /**
    * Get the PostHog client instance (for feature flags)
    */
@@ -162,5 +242,45 @@ export function getAnalytics(): UsageAnalytics {
   return analyticsInstance;
 }
 
+// Create a proxy that handles both sync and async calls for backward compatibility
+const analyticsProxy = new Proxy(getAnalytics(), {
+  get(target, prop, receiver) {
+    if (prop === 'capture') {
+      // Return a function that works both sync and async
+      return (event: string, properties?: Record<string, any>, userId?: string) => {
+        // Use sync version for now to maintain backward compatibility
+        target.captureSync(event, properties, userId);
+        // Also queue the async version for better accuracy
+        target.capture(event, properties, userId).catch(err => 
+          console.error('Async analytics capture failed:', err)
+        );
+      };
+    }
+    if (prop === 'identify') {
+      // Return a function that works both sync and async
+      return (userId: string, properties?: Record<string, any>) => {
+        // Use sync version for now to maintain backward compatibility
+        target.identifySync(userId, properties);
+        // Also queue the async version for better accuracy
+        target.identify(userId, properties).catch(err => 
+          console.error('Async analytics identify failed:', err)
+        );
+      };
+    }
+    if (prop === 'trackPerformance') {
+      // Return a function that works both sync and async
+      return (metricName: string, value: number, metadata?: Record<string, any>) => {
+        // Use sync version for now to maintain backward compatibility
+        target.trackPerformanceSync(metricName, value, metadata);
+        // Also queue the async version for better accuracy
+        target.trackPerformance(metricName, value, metadata).catch(err => 
+          console.error('Async analytics trackPerformance failed:', err)
+        );
+      };
+    }
+    return Reflect.get(target, prop, receiver);
+  }
+});
+
 // Export singleton for convenience
-export const analytics = getAnalytics();
+export const analytics = analyticsProxy as UsageAnalytics;

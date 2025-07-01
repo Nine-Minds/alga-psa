@@ -27,11 +27,12 @@ export default function OnboardingTestPage() {
         <h2 className="text-lg font-semibold mb-4">Test Controls</h2>
         <div className="space-y-4">
           <div className="space-x-4">
-            <Button onClick={() => setShowWizard(true)}>
+            <Button id="launch-wizard" onClick={() => setShowWizard(true)}>
               Launch Onboarding Wizard
             </Button>
             
             <Button 
+              id="launch-prefilled"
               variant="outline"
               onClick={() => {
                 setShowWizard(true);
@@ -43,6 +44,7 @@ export default function OnboardingTestPage() {
 
             {completedData && (
               <Button 
+                id="clear-results"
                 variant="ghost"
                 onClick={() => setCompletedData(null)}
               >

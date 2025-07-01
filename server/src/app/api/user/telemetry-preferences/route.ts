@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getKnex } from 'server/src/lib/db';
-import { getCurrentTenantId } from 'server/src/lib/db';
+import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import TelemetryPreferencesModel from 'server/src/lib/models/telemetryPreferences';
 import { TELEMETRY_CONFIG } from 'server/src/config/telemetry';
@@ -8,7 +7,7 @@ import logger from 'server/src/utils/logger';
 
 export async function GET(request: NextRequest) {
   try {
-    const knex = getKnex();
+    const { knex } = await createTenantKnex();
     const currentUser = await getCurrentUser();
     
     if (!currentUser) {
@@ -50,7 +49,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const knex = getKnex();
+    const { knex } = await createTenantKnex();
     const currentUser = await getCurrentUser();
     
     if (!currentUser) {
@@ -111,7 +110,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const knex = getKnex();
+    const { knex } = await createTenantKnex();
     const currentUser = await getCurrentUser();
     
     if (!currentUser) {
