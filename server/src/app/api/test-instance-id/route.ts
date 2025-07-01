@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOrCreateInstanceId, getAnalyticsSettings, isAnalyticsEnabled } from '../../../lib/analytics/analyticsSettings';
-import { PrivacyHelper } from '../../../lib/analytics/privacy';
 import { getTenantSettings } from '../../../lib/actions/tenant-settings-actions/tenantSettingsActions';
 import { analytics } from '../../../lib/analytics/posthog';
 
@@ -9,15 +8,11 @@ export async function GET(request: NextRequest) {
     // Get various instance ID implementations
     const [
       stableInstanceId,
-      privacyInstanceId,
-      legacyInstanceId,
       analyticsSettings,
       tenantSettings,
       analyticsEnabled
     ] = await Promise.all([
       getOrCreateInstanceId(),
-      PrivacyHelper.getInstanceIdAsync(),
-      Promise.resolve(PrivacyHelper.getInstanceId()),
       getAnalyticsSettings(),
       getTenantSettings(),
       isAnalyticsEnabled()
@@ -32,8 +27,6 @@ export async function GET(request: NextRequest) {
     const results = {
       instance_ids: {
         stable: stableInstanceId,
-        privacy_async: privacyInstanceId,
-        privacy_sync: legacyInstanceId,
         env_override: process.env.INSTANCE_ID || null
       },
       analytics_settings: analyticsSettings,

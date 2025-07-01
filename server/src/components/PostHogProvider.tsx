@@ -4,7 +4,7 @@ import posthog from "posthog-js"
 import { PostHogProvider as PHProvider, usePostHog } from "posthog-js/react"
 import { Suspense, useEffect, useState } from "react"
 import { usePathname, useSearchParams } from "next/navigation"
-import { PrivacyHelper } from '../lib/analytics/privacy.client'
+// Removed PrivacyHelper - PostHog handles data privacy natively
 import { posthogConfig, isPostHogEnabled } from '../config/posthog.config'
 
 function SuspendedPostHogPageView() {
@@ -38,16 +38,12 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       ...posthogConfig.defaultConfig,
       debug: process.env.NODE_ENV === "development",
       loaded: (posthog) => {
-        // For on-premise deployments, use anonymous ID
+        // For on-premise deployments, use simple anonymous ID
         if (process.env.NEXT_PUBLIC_DEPLOYMENT_TYPE !== 'hosted') {
-          const anonymousId = PrivacyHelper.getInstanceId()
+          const anonymousId = `onpremise_${typeof window !== 'undefined' ? window.location.hostname : 'server'}`
           posthog.identify(anonymousId)
         }
         setIsInitialized(true)
-      },
-      // Sanitize properties before sending
-      sanitize_properties: (properties) => {
-        return PrivacyHelper.sanitizeProperties(properties)
       },
       // Disable session recording for privacy
       disable_session_recording: posthogConfig.features.sessionRecording === false,

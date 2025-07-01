@@ -41,13 +41,12 @@ export class UsageAnalytics {
     if (!this.client) return;
     
     const distinctId = await this.getDistinctId(userId);
-    const sanitizedProperties = this.sanitizeProperties(properties);
     
     this.client.capture({
       distinctId,
       event,
       properties: {
-        ...sanitizedProperties,
+        ...properties,
         deployment_type: this.isHosted ? 'hosted' : 'on-premise',
         app_version: process.env.npm_package_version || process.env.APP_VERSION,
         environment: process.env.NODE_ENV,
@@ -59,11 +58,10 @@ export class UsageAnalytics {
     if (!this.client) return;
     
     const distinctId = await this.getDistinctId(userId);
-    const sanitizedProperties = this.sanitizeProperties(properties);
     
     this.client.identify({
       distinctId,
-      properties: sanitizedProperties,
+      properties,
     });
   }
   
@@ -102,67 +100,6 @@ export class UsageAnalytics {
     }
   }
   
-  
-  private sanitizeProperties(properties: Record<string, any>): Record<string, any> {
-    if (this.isHosted) {
-      // For hosted, include tenant context but remove PII
-      return this.removePII(properties);
-    }
-    
-    // For on-premise, aggressively anonymize
-    return this.anonymizeProperties(properties);
-  }
-  
-  private removePII(properties: Record<string, any>): Record<string, any> {
-    const sanitized = { ...properties };
-    
-    // Remove common PII fields
-    const piiFields = [
-      'email', 'name', 'phone', 'address', 'ssn', 
-      'credit_card', 'password', 'ip_address', 'ip',
-      'first_name', 'last_name', 'full_name', 'username',
-      'user_email', 'customer_name', 'client_name'
-    ];
-    
-    for (const field of piiFields) {
-      delete sanitized[field];
-    }
-    
-    // Recursively clean nested objects
-    for (const [key, value] of Object.entries(sanitized)) {
-      if (typeof value === 'object' && value !== null) {
-        sanitized[key] = this.removePII(value);
-      }
-    }
-    
-    return sanitized;
-  }
-  
-  private anonymizeProperties(properties: Record<string, any>): Record<string, any> {
-    const anonymized: Record<string, any> = {};
-    
-    // Whitelist of safe properties for on-premise
-    const safeProperties = [
-      'feature', 'action', 'type', 'category', 'status',
-      'count', 'duration', 'size', 'format', 'method',
-      'success', 'error_type', 'version', 'browser',
-      'os', 'device_type', 'screen_size', 'language'
-    ];
-    
-    for (const [key, value] of Object.entries(properties)) {
-      if (safeProperties.includes(key)) {
-        anonymized[key] = value;
-      } else if (typeof value === 'number') {
-        // Numbers are generally safe
-        anonymized[key] = value;
-      } else if (typeof value === 'boolean') {
-        // Booleans are safe
-        anonymized[key] = value;
-      }
-    }
-    
-    return anonymized;
-  }
 
   async trackPerformance(metricName: string, value: number, metadata?: Record<string, any>) {
     await this.capture('performance_metric', {
