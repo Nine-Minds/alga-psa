@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import TelemetryPreferencesModel from 'server/src/lib/models/telemetryPreferences';
-import { TELEMETRY_CONFIG } from 'server/src/config/telemetry';
+import { isUsageStatsEnabled } from 'server/src/config/telemetry';
 import logger from 'server/src/utils/logger';
 
 export async function GET(request: NextRequest) {
   try {
-    const { knex } = await createTenantKnex();
     const currentUser = await getCurrentUser();
     
     if (!currentUser) {
@@ -17,39 +14,28 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    const userId = currentUser.user_id;
-
-    const preferences = await TelemetryPreferencesModel.getTelemetryPreferences(
-      knex,
-      userId
-    );
-
-    const tenantId = await getCurrentTenantId();
-    const response = {
-      ...preferences,
-      tenant_id: tenantId || '',
-    };
-
-    return NextResponse.json(response);
+    const enabled = isUsageStatsEnabled();
+    
+    return NextResponse.json({
+      usageStatsEnabled: enabled,
+      controlledBy: 'environment',
+      message: enabled 
+        ? 'Usage stats are enabled via ALGA_USAGE_STATS environment variable'
+        : 'Usage stats are disabled via ALGA_USAGE_STATS environment variable'
+    });
   } catch (error) {
     logger.error('Error getting telemetry preferences:', error);
     
-    // Return safe defaults on error
-    const currentUser = await getCurrentUser().catch(() => null);
-    const userId = currentUser?.user_id || 'unknown';
     return NextResponse.json({
-      ...TELEMETRY_CONFIG.DEFAULT_PREFERENCES,
-      last_updated: new Date().toISOString(),
-      consent_version: TELEMETRY_CONFIG.PRIVACY.CONSENT_VERSION,
-      user_id: userId,
-      tenant_id: '',
+      usageStatsEnabled: false,
+      controlledBy: 'environment',
+      message: 'Error checking usage stats status'
     });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { knex } = await createTenantKnex();
     const currentUser = await getCurrentUser();
     
     if (!currentUser) {
@@ -59,50 +45,17 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const userId = currentUser.user_id;
-
-    const body = await request.json();
+    const enabled = isUsageStatsEnabled();
     
-    // Validate the request body
-    const validCategories = Object.keys(TELEMETRY_CONFIG.DEFAULT_PREFERENCES);
-    const preferences: Record<string, boolean> = {};
-    
-    for (const category of validCategories) {
-      if (category in body) {
-        preferences[category] = Boolean(body[category]);
-      }
-    }
-
-    // Save preferences
-    await TelemetryPreferencesModel.setTelemetryPreferences(
-      knex,
-      userId,
-      preferences
-    );
-
-    // Return updated preferences
-    const updatedPreferences = await TelemetryPreferencesModel.getTelemetryPreferences(
-      knex,
-      userId
-    );
-
-    const tenantId = await getCurrentTenantId();
-    const response = {
-      ...updatedPreferences,
-      tenant_id: tenantId || '',
-    };
-
-    logger.info(`Updated telemetry preferences for user ${userId}`, {
-      userId,
-      enabledCategories: Object.entries(preferences).filter(([_, enabled]) => enabled).map(([category]) => category),
-      totalCategories: Object.keys(preferences).length
+    return NextResponse.json({
+      usageStatsEnabled: enabled,
+      controlledBy: 'environment',
+      message: 'Telemetry preferences are controlled via the ALGA_USAGE_STATS environment variable and cannot be changed through the API'
     });
-
-    return NextResponse.json(response);
   } catch (error) {
-    logger.error('Error saving telemetry preferences:', error);
+    logger.error('Error handling telemetry preferences update:', error);
     return NextResponse.json(
-      { error: 'Failed to save preferences' },
+      { error: 'Failed to process request' },
       { status: 500 }
     );
   }
@@ -110,7 +63,6 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const { knex } = await createTenantKnex();
     const currentUser = await getCurrentUser();
     
     if (!currentUser) {
@@ -120,18 +72,13 @@ export async function DELETE(request: NextRequest) {
       );
     }
     
-    const userId = currentUser.user_id;
-
-    // Disable all telemetry for the user
-    await TelemetryPreferencesModel.disableAllTelemetry(knex, userId);
-
-    logger.info(`Disabled all telemetry for user ${userId}`);
-
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      message: 'Telemetry preferences are controlled via the ALGA_USAGE_STATS environment variable and cannot be changed through the API'
+    });
   } catch (error) {
-    logger.error('Error disabling telemetry:', error);
+    logger.error('Error handling telemetry disable request:', error);
     return NextResponse.json(
-      { error: 'Failed to disable telemetry' },
+      { error: 'Failed to process request' },
       { status: 500 }
     );
   }

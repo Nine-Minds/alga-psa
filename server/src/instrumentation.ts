@@ -7,8 +7,8 @@ export async function register() {
       const { initializeTelemetry } = await import('./lib/telemetry/initialization');
       await initializeTelemetry();
     } catch (error) {
-      // Don't break the application if telemetry fails to initialize
-      console.error('Failed to initialize telemetry:', error);
+      // Don't break the application if observability fails to initialize
+      console.error('Failed to initialize observability:', error);
     }
 
     try {

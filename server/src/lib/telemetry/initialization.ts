@@ -28,50 +28,26 @@ import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
 import { DebugOTLPTraceExporter, DebugOTLPMetricExporter } from '../observability/debug-exporter';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { SpanProcessor, Span, BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
-import { TELEMETRY_CONFIG } from '../../config/telemetry';
-import TelemetryPermissionManager from './permissions';
-import { createTenantKnex } from '../db';
+import { isUsageStatsEnabled } from '../../config/telemetry';
 import logger from '../../utils/logger';
 
 let observabilityInitialized = false;
-let permissionManager: TelemetryPermissionManager | null = null;
 let sdk: NodeSDK | null = null;
 
 /**
- * Privacy-aware span processor that sanitizes PII and respects user consent
+ * Basic span processor for observability data
  */
-class PrivacyAwareSpanProcessor implements SpanProcessor {
-  private permissionManager: TelemetryPermissionManager | null;
-
-  constructor(permissionManager: TelemetryPermissionManager | null) {
-    this.permissionManager = permissionManager;
+class BasicSpanProcessor implements SpanProcessor {
+  constructor() {
+    // Simple processor without complex permission checking
   }
 
   onStart(span: Span): void {
-    // logger.debug('Span started', {
-    //   spanName: span.name,
-    //   spanId: span.spanContext().spanId,
-    //   traceId: span.spanContext().traceId,
-    //   timestamp: Date.now()
-    // });
-    
-    // Remove PII from span attributes immediately
-  //   if (TELEMETRY_CONFIG.PRIVACY.SANITIZE_PII) {
-  //     this.sanitizeSpanAttributes(span);
-  //   }
+    // Basic span processing - no complex logic needed
   }
 
   onEnd(span: Span): void {
-  //   logger.debug('Span ended', {
-  //     spanName: span.name,
-  //     spanId: span.spanContext().spanId,
-  //     traceId: span.spanContext().traceId,
-  //     duration: span.duration || 'unknown',
-  //     timestamp: Date.now()
-  //   });
-    
-    // Final sanitization before export
-  //   this.sanitizeOperationName(span);
+    // Basic span processing - no complex logic needed
   }
 
   forceFlush(): Promise<void> {
@@ -82,38 +58,6 @@ class PrivacyAwareSpanProcessor implements SpanProcessor {
     return Promise.resolve();
   }
 
-  private sanitizeSpanAttributes(span: Span): void {
-    const attributes = span.attributes || {};
-    const sensitiveKeys = [
-      'user.email', 'user.name', 'user.phone', 'user.ssn', 
-      'customer.email', 'customer.name', 'client.email',
-      'password', 'token', 'key', 'secret', 'api_key',
-      'credit_card', 'ssn', 'tax_id', 'authorization'
-    ];
-    
-    sensitiveKeys.forEach(key => {
-      delete attributes[key];
-      // Also check for keys containing these terms
-      Object.keys(attributes).forEach(attrKey => {
-        if (attrKey.toLowerCase().includes(key.toLowerCase())) {
-          delete attributes[attrKey];
-        }
-      });
-    });
-  }
-
-  private sanitizeOperationName(span: Span): void {
-    const name = span.name;
-    const sanitizedName = name
-      .replace(/user_\d+/g, 'user_[id]')
-      .replace(/tenant_[a-f0-9-]+/g, 'tenant_[id]')
-      .replace(/email=[^&\s]+/g, 'email=[redacted]')
-      .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, '[email]');
-    
-    if (sanitizedName !== name) {
-      span.updateName(sanitizedName);
-    }
-  }
 }
 
 /**
@@ -191,9 +135,7 @@ export async function initializeTelemetry(): Promise<void> {
       return;
     }
 
-    // Permission manager will be initialized lazily when needed
-    // since we don't have a tenant context at startup
-    permissionManager = null;
+    // Basic observability without complex permission management
 
     // Create OTLP exporters for Grafana Alloy with debug logging
     const traceExporter = new DebugOTLPTraceExporter({
@@ -234,8 +176,10 @@ export async function initializeTelemetry(): Promise<void> {
       '@opentelemetry/instrumentation-http': {
         enabled: true,
         ignoreIncomingRequestHook: (req: any) => {
-          // Skip telemetry for excluded paths
-          return permissionManager?.shouldExcludePath(req.url || req.path || '') || false;
+          // Skip telemetry for sensitive paths
+          const excludedPaths = ['/api/auth', '/api/user/preferences', '/health', '/api/telemetry'];
+          const path = req.url || req.path || '';
+          return excludedPaths.some(excludedPath => path.includes(excludedPath));
         },
         responseHook: (span: any, response: any) => {
           // Remove sensitive headers
@@ -314,8 +258,8 @@ export async function initializeTelemetry(): Promise<void> {
       serviceVersion: process.env.npm_package_version || '1.0.0',
       samplingRate: 0.1,
       environment: process.env.NODE_ENV,
-      piiSanitization: TELEMETRY_CONFIG.PRIVACY.SANITIZE_PII,
-      ipAnonymization: TELEMETRY_CONFIG.PRIVACY.ANONYMIZE_IPS,
+      piiSanitization: true,
+      ipAnonymization: true,
       exporterType: 'HTTP',
       autoInstrumentations: 'enabled'
     });
@@ -369,23 +313,6 @@ export async function initializeTelemetry(): Promise<void> {
   }
 }
 
-/**
- * Get the telemetry permission manager instance
- * Lazily initializes it if needed and we have a database connection
- */
-export async function getTelemetryPermissionManager(): Promise<TelemetryPermissionManager | null> {
-  if (!permissionManager && observabilityInitialized) {
-    try {
-      const { knex } = await createTenantKnex();
-      if (knex) {
-        permissionManager = new TelemetryPermissionManager(knex);
-      }
-    } catch (error) {
-      logger.error('Failed to initialize telemetry permission manager:', error);
-    }
-  }
-  return permissionManager;
-}
 
 /**
  * Check if observability is initialized and available
@@ -452,7 +379,6 @@ export async function shutdownObservability(): Promise<void> {
     await sdk.shutdown();
     observabilityInitialized = false;
     sdk = null;
-    permissionManager = null;
     logger.info('Observability shutdown completed');
   } catch (error) {
     logger.error('Error during observability shutdown:', error);

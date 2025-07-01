@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import TenantTelemetrySettingsModel from 'server/src/lib/models/tenantTelemetrySettings';
+import { isUsageStatsEnabled } from 'server/src/config/telemetry';
 import logger from 'server/src/utils/logger';
 
 export async function GET(request: NextRequest) {
@@ -31,12 +31,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const settings = await TenantTelemetrySettingsModel.getTenantTelemetrySettings(
-      knex,
-      tenantId
-    );
+    const enabled = isUsageStatsEnabled();
+    const envVar = process.env.ALGA_USAGE_STATS || 'not set';
 
-    return NextResponse.json(settings);
+    return NextResponse.json({
+      usageStatsEnabled: enabled,
+      environmentVariable: 'ALGA_USAGE_STATS',
+      currentValue: envVar,
+      controlledBy: 'environment',
+      message: enabled 
+        ? 'Usage stats are enabled via ALGA_USAGE_STATS environment variable'
+        : 'Usage stats are disabled. Set ALGA_USAGE_STATS=true to enable.'
+    });
   } catch (error) {
     logger.error('Error getting tenant telemetry settings:', error);
     return NextResponse.json(
@@ -73,49 +79,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
-    
-    // Validate the request body
-    const allowedFields = [
-      'enabled', 'allowUserOverride', 'anonymizationLevel', 
-      'excludePatterns', 'complianceNotes'
-    ];
-    
-    const updates: any = {};
-    for (const field of allowedFields) {
-      if (field in body) {
-        updates[field] = body[field];
-      }
-    }
+    const enabled = isUsageStatsEnabled();
 
-    // Update settings
-    const updatedSettings = await TenantTelemetrySettingsModel.updateTenantTelemetrySettings(
-      knex,
-      updates,
-      tenantId
-    );
-
-    // Log the consent change for compliance
-    await TenantTelemetrySettingsModel.logConsentChange(knex, {
-      tenantId,
-      consentGiven: updatedSettings.enabled,
-      changedBy: userId,
-      reason: `Tenant settings updated: enabled=${updatedSettings.enabled}, allowUserOverride=${updatedSettings.allowUserOverride}`,
-      ipAddress: request.ip || request.headers.get('x-forwarded-for') || 'unknown'
+    return NextResponse.json({
+      usageStatsEnabled: enabled,
+      controlledBy: 'environment',
+      message: 'Telemetry settings are controlled via the ALGA_USAGE_STATS environment variable and cannot be changed through the API'
     });
-
-    logger.info(`Updated tenant telemetry settings for tenant ${tenantId}`, {
-      tenantId,
-      updatedBy: userId,
-      enabled: updatedSettings.enabled,
-      allowUserOverride: updatedSettings.allowUserOverride
-    });
-
-    return NextResponse.json(updatedSettings);
   } catch (error) {
-    logger.error('Error saving tenant telemetry settings:', error);
+    logger.error('Error handling telemetry settings update:', error);
     return NextResponse.json(
-      { error: 'Failed to save settings' },
+      { error: 'Failed to process request' },
       { status: 500 }
     );
   }
