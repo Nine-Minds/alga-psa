@@ -141,7 +141,7 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
           {/* Drag handle area - always present for consistent dragging */}
           <div 
             data-drag-handle
-            className={`${draggable ? 'cursor-move hover:bg-gray-50' : ''} ${title ? 'p-6 pb-4' : 'p-3'} ${title ? 'border-b border-gray-100' : ''} rounded-t-lg transition-colors`}
+            className={`${draggable ? 'cursor-move hover:bg-gray-50' : ''} ${title ? 'px-6 py-3 pb-2' : 'p-2'} ${title ? 'border-b border-gray-100' : ''} rounded-t-lg transition-colors`}
             onMouseDown={handleMouseDown}
           >
             {title ? (
@@ -152,7 +152,7 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
               </div>
             )}
           </div>
-          <div className="p-6">
+          <div className="px-6 pt-3 pb-6">
             <ReflectionParentContext.Provider value={updateDialog.id}>
               {children}
             </ReflectionParentContext.Provider>
