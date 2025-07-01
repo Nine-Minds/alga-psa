@@ -23,8 +23,8 @@ export const posthogConfig = {
     capture_pageview: 'history_change' as const,
     capture_pageleave: true,
     capture_exceptions: true,
-    autocapture: false, // We manually track important events
-    disable_session_recording: true, // Enable only when needed
+    autocapture: true,
+    disable_session_recording: true,
   },
   
   // Feature flags
