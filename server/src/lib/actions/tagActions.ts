@@ -3,7 +3,7 @@
 import Tag from 'server/src/lib/models/tag';
 import { ITag, TaggedEntityType } from 'server/src/interfaces/tag.interfaces';
 import { withTransaction } from '@shared/db';
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
 import { Knex } from 'knex';
 
 export async function findTagsByEntityId(entityId: string, entityType: string): Promise<ITag[]> {
@@ -42,15 +42,30 @@ export async function createTag(tag: Omit<ITag, 'tag_id' | 'tenant'>): Promise<I
       const existingTags = await Tag.getAllUniqueTagsByType(trx, tag.tagged_type);
       const existingTag = existingTags.find(t => t.tag_text === tag.tag_text);
 
-      const tagWithTenant = { ...tag };
+      const tagWithTenant: Omit<ITag, 'tag_id' | 'tenant'> & { 
+        background_color?: string | null; 
+        text_color?: string | null 
+      } = { ...tag };
 
       if (existingTag && (existingTag.background_color || existingTag.text_color)) {
+        // Use existing colors if this text already exists
         tagWithTenant.background_color = existingTag.background_color;
         tagWithTenant.text_color = existingTag.text_color;
+      } else if (!tagWithTenant.background_color || !tagWithTenant.text_color) {
+        // Generate and save colors for new tags
+        const { generateEntityColor } = await import('server/src/utils/colorUtils');
+        const colors = generateEntityColor(tag.tag_text);
+        tagWithTenant.background_color = tagWithTenant.background_color || colors.background;
+        tagWithTenant.text_color = tagWithTenant.text_color || colors.text;
       }
 
       const newTagId = await Tag.insert(trx, tagWithTenant);
-      return { ...tagWithTenant, tag_id: newTagId.tag_id };
+      const createdTag: ITag = { 
+        ...tagWithTenant, 
+        tag_id: newTagId.tag_id,
+        tenant: await getCurrentTenantId() || ''
+      };
+      return createdTag;
     });
   } catch (error) {
     console.error(`Error creating tag:`, error);
@@ -153,5 +168,74 @@ export async function updateTagColor(tagId: string, backgroundColor: string | nu
   } catch (error) {
     console.error(`Error updating tag color for tag id ${tagId}:`, error);
     throw new Error(`Failed to update tag color for tag id ${tagId}`);
+  }
+}
+
+export async function updateTagText(tagId: string, newTagText: string): Promise<{ old_tag_text: string; new_tag_text: string; tagged_type: TaggedEntityType; updated_count: number; }> {
+  const { knex: db } = await createTenantKnex();
+  
+  // Validate tag text
+  if (!newTagText || !newTagText.trim()) {
+    throw new Error('Tag text cannot be empty');
+  }
+  
+  const trimmedNewText = newTagText.trim();
+  
+  try {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const tag = await Tag.get(trx, tagId);
+      if (!tag) {
+        throw new Error(`Tag with id ${tagId} not found`);
+      }
+      
+      // Don't update if text is the same
+      if (tag.tag_text === trimmedNewText) {
+        return {
+          old_tag_text: tag.tag_text,
+          new_tag_text: trimmedNewText,
+          tagged_type: tag.tagged_type,
+          updated_count: 0,
+        };
+      }
+      
+      const updatedCount = await Tag.updateTextByText(trx, tag.tag_text, trimmedNewText, tag.tagged_type);
+      
+      return {
+        old_tag_text: tag.tag_text,
+        new_tag_text: trimmedNewText,
+        tagged_type: tag.tagged_type,
+        updated_count: updatedCount,
+      };
+    });
+  } catch (error) {
+    console.error(`Error updating tag text for tag id ${tagId}:`, error);
+    if (error instanceof Error && error.message.includes('already exists')) {
+      throw error;
+    }
+    throw new Error(`Failed to update tag text for tag id ${tagId}`);
+  }
+}
+
+export async function deleteAllTagsByText(tagText: string, taggedType: TaggedEntityType): Promise<{ deleted_count: number }> {
+  const { knex: db } = await createTenantKnex();
+  
+  // Validate tag text
+  if (!tagText || !tagText.trim()) {
+    throw new Error('Tag text cannot be empty');
+  }
+  
+  const trimmedText = tagText.trim();
+  
+  try {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const deletedCount = await Tag.deleteByText(trx, trimmedText, taggedType);
+      
+      return {
+        deleted_count: deletedCount,
+      };
+    });
+  } catch (error) {
+    console.error(`Error deleting tags with text "${tagText}" and type ${taggedType}:`, error);
+    throw new Error(`Failed to delete tags with text "${tagText}"`);
   }
 }

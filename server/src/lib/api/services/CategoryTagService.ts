@@ -1049,6 +1049,95 @@ export class CategoryTagService extends BaseService {
     });
   }
 
+  /**
+   * Update tag text for all instances of a tag
+   */
+  async updateTagText(
+    tagId: string,
+    newTagText: string,
+    context: ServiceContext
+  ): Promise<{ 
+    old_tag_text: string; 
+    new_tag_text: string; 
+    tagged_type: TaggedEntityType; 
+    updated_count: number; 
+  }> {
+    const { knex } = await this.getKnex();
+
+    return withTransaction(knex, async (trx) => {
+      // Validate tag text
+      if (!newTagText || !newTagText.trim()) {
+        throw new Error('Tag text cannot be empty');
+      }
+
+      const trimmedNewText = newTagText.trim();
+
+      // Get the original tag
+      const tag = await Tag.get(trx, tagId);
+      if (!tag) {
+        throw new Error(`Tag with id ${tagId} not found`);
+      }
+
+      // Don't update if text is the same
+      if (tag.tag_text === trimmedNewText) {
+        return {
+          old_tag_text: tag.tag_text,
+          new_tag_text: trimmedNewText,
+          tagged_type: tag.tagged_type,
+          updated_count: 0,
+        };
+      }
+
+      // Update all tags with the same text and type
+      const updatedCount = await Tag.updateTextByText(
+        trx, 
+        tag.tag_text, 
+        trimmedNewText, 
+        tag.tagged_type
+      );
+
+      return {
+        old_tag_text: tag.tag_text,
+        new_tag_text: trimmedNewText,
+        tagged_type: tag.tagged_type,
+        updated_count: updatedCount,
+      };
+    });
+  }
+
+  /**
+   * Delete all tags with specific text and type
+   */
+  async deleteTagsByText(
+    tagText: string,
+    taggedType: TaggedEntityType,
+    context: ServiceContext
+  ): Promise<{ 
+    deleted_count: number; 
+  }> {
+    const { knex } = await this.getKnex();
+
+    return withTransaction(knex, async (trx) => {
+      // Validate tag text
+      if (!tagText || !tagText.trim()) {
+        throw new Error('Tag text cannot be empty');
+      }
+
+      const trimmedText = tagText.trim();
+
+      // Delete all tags with the specified text and type
+      const deletedCount = await Tag.deleteByText(
+        trx, 
+        trimmedText, 
+        taggedType
+      );
+
+      return {
+        deleted_count: deletedCount,
+      };
+    });
+  }
+
   // ========================================================================
   // SEARCH AND FILTERING
   // ========================================================================

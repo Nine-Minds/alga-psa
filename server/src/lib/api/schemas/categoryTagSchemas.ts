@@ -137,6 +137,23 @@ export const updateTagColorSchema = z.object({
   text_color: hexColorSchema
 });
 
+// Tag Text Update Schema
+export const updateTagTextSchema = z.object({
+  tag_text: z.string()
+    .min(1, 'Tag text is required')
+    .max(50, 'Tag text too long')
+    .trim()
+});
+
+// Delete Tags by Text Schema
+export const deleteTagsByTextSchema = z.object({
+  tag_text: z.string()
+    .min(1, 'Tag text is required')
+    .max(50, 'Tag text too long')
+    .trim(),
+  tagged_type: taggedEntityTypeSchema
+});
+
 // Bulk Tag Creation Schema
 export const createBulkTagsSchema = z.object({
   tag_texts: z.array(z.string()
