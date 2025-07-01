@@ -1,5 +1,4 @@
 import { Knex } from 'knex';
-import { TELEMETRY_CONFIG } from '../../config/telemetry';
 import TenantTelemetrySettingsModel from '../models/tenantTelemetrySettings';
 import TelemetryPreferencesModel from '../models/telemetryPreferences';
 import { getCurrentTenantId } from '../db';
@@ -41,14 +40,7 @@ export class HierarchicalTelemetryManager {
         return this.createDecision(false, 'No tenant context available');
       }
 
-      // 1. Check environment-level overrides first
-      if (TELEMETRY_CONFIG.ENVIRONMENT_OVERRIDES.TELEMETRY_FORCE_DISABLE) {
-        return this.createDecision(false, 'Environment: Force disabled by admin');
-      }
-
-      if (!TELEMETRY_CONFIG.ENVIRONMENT_OVERRIDES.TELEMETRY_ENABLED) {
-        return this.createDecision(false, 'Environment: Telemetry disabled');
-      }
+      // 1. Telemetry is enabled by default (no legacy environment overrides)
 
       // 2. Get tenant settings
       const tenantSettings = await TenantTelemetrySettingsModel.getTenantTelemetrySettings(
@@ -232,7 +224,7 @@ export class HierarchicalTelemetryManager {
       return userId;
     }
 
-    const salt = TELEMETRY_CONFIG.ENVIRONMENT_OVERRIDES.TELEMETRY_SALT;
+    const salt = 'default-salt-change-in-production';
     const crypto = require('crypto');
     
     if (level === 'partial') {
@@ -260,7 +252,7 @@ export class HierarchicalTelemetryManager {
       return tenantId;
     }
 
-    const salt = TELEMETRY_CONFIG.ENVIRONMENT_OVERRIDES.TELEMETRY_SALT;
+    const salt = 'default-salt-change-in-production';
     const crypto = require('crypto');
     
     if (level === 'partial') {

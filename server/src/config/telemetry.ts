@@ -15,19 +15,11 @@ export const TELEMETRY_CONFIG = {
     system_metrics: true
   },
   
-  ENVIRONMENT_OVERRIDES: {
-    TELEMETRY_ENABLED: process.env.TELEMETRY_ENABLED !== 'false', // Enabled by default, must explicitly disable
-    TELEMETRY_FORCE_DISABLE: process.env.TELEMETRY_FORCE_DISABLE === 'true',
-    TELEMETRY_ENDPOINT: process.env.TELEMETRY_ENDPOINT || process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
-    TELEMETRY_SAMPLE_RATE: parseFloat(process.env.TELEMETRY_SAMPLE_RATE || '0.1'),
-    TELEMETRY_SALT: process.env.TELEMETRY_SALT || 'default-salt-change-in-production'
-  },
-  
   // Privacy settings
   PRIVACY: {
-    SANITIZE_PII: process.env.TELEMETRY_PII_SANITIZATION !== 'false',
-    ANONYMIZE_IPS: process.env.TELEMETRY_IP_ANONYMIZATION !== 'false',
-    CONSENT_VERSION: process.env.TELEMETRY_CONSENT_VERSION || '1.0'
+    SANITIZE_PII: true,
+    ANONYMIZE_IPS: true,
+    CONSENT_VERSION: '1.0'
   },
   
   // Sensitive endpoints to exclude from telemetry
@@ -78,7 +70,7 @@ export const USER_TELEMETRY_DEFAULTS: UserTelemetryPreferences = {
   optedOut: false, // When tenant allows, users are opted-in by default but can opt-out
   excludeFeatures: [],
   lastUpdated: new Date().toISOString(),
-  consentVersion: TELEMETRY_CONFIG.PRIVACY.CONSENT_VERSION
+  consentVersion: '1.0'
 };
 
 // Industry-specific defaults

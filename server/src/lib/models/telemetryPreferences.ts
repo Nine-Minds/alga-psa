@@ -125,14 +125,7 @@ export const TelemetryPreferencesModel = {
     category: string
   ): Promise<boolean> => {
     try {
-      // First check environment override
-      if (TELEMETRY_CONFIG.ENVIRONMENT_OVERRIDES.TELEMETRY_FORCE_DISABLE) {
-        return false;
-      }
-
-      if (!TELEMETRY_CONFIG.ENVIRONMENT_OVERRIDES.TELEMETRY_ENABLED) {
-        return false;
-      }
+      // Check if telemetry is globally enabled (no longer using legacy environment overrides)
 
       const preference = await UserPreferences.get(
         knexOrTrx,

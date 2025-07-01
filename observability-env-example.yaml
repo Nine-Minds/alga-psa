@@ -1,0 +1,89 @@
+# Observability Environment Variables for Grafana Stack
+# Add these to your deployment configuration for operational observability
+
+# =============================================================================
+# OBSERVABILITY MASTER CONTROLS
+# =============================================================================
+
+# Observability toggle for on-premise deployments (hosted deployments auto-enable)
+ALGA_OBSERVABILITY: "true"
+
+# Deployment type - affects observability behavior
+DEPLOYMENT_TYPE: "on-premise"  # Options: on-premise, hosted
+
+# =============================================================================
+# GRAFANA STACK CONFIGURATION
+# =============================================================================
+
+# Grafana Alloy OTLP endpoint (traces and metrics)
+OTLP_ENDPOINT: "https://alloy.yourcompany.com"
+
+# Optional: Direct Grafana stack endpoints for dashboard links
+GRAFANA_ENDPOINT: "https://grafana.yourcompany.com"
+PROMETHEUS_ENDPOINT: "https://prometheus.yourcompany.com"
+LOKI_ENDPOINT: "https://loki.yourcompany.com"
+TEMPO_ENDPOINT: "https://tempo.yourcompany.com"
+
+# Tenant ID for hosted deployments (multi-tenant separation)
+# TENANT_ID: "your-tenant-id-here"
+
+# =============================================================================
+# LOGGING CONFIGURATION
+# =============================================================================
+
+# Log level affects observability logging detail
+LOG_LEVEL: "INFO"
+
+# Optional: Include OpenTelemetry trace context in logs
+# LOG_INCLUDE_TRACE_CONTEXT: "true"
+
+# =============================================================================
+# ENVIRONMENT-SPECIFIC OVERRIDES
+# =============================================================================
+
+# Development Environment
+development:
+  ALGA_OBSERVABILITY: "true"
+  OTLP_ENDPOINT: "http://localhost:4317"
+  LOG_LEVEL: "DEBUG"
+  
+# Staging Environment  
+staging:
+  ALGA_OBSERVABILITY: "true"
+  LOG_LEVEL: "INFO"
+
+# Production Environment
+production:
+  ALGA_OBSERVABILITY: "true"
+  LOG_LEVEL: "INFO"
+
+# =============================================================================
+# DEPLOYMENT NOTES
+# =============================================================================
+
+# 1. Update OTLP_ENDPOINT with your actual Grafana Alloy deployment URL
+# 2. Ensure Grafana Alloy is configured with OTLP receivers for traces and metrics
+# 3. Alloy should forward traces to Tempo and metrics to Prometheus
+# 4. For hosted deployments, observability is automatically enabled
+# 5. For on-premise deployments, set ALGA_OBSERVABILITY=true to enable
+# 6. This is separate from PostHog usage analytics (configured separately)
+
+# =============================================================================
+# GRAFANA ALLOY REQUIREMENTS
+# =============================================================================
+
+# Your Alloy configuration should include:
+# - OTLP receivers on port 4317 (gRPC) and 4318 (HTTP)
+# - Trace export to Tempo
+# - Metric export to Prometheus
+# - Log collection to Loki (separate from OTLP)
+
+# =============================================================================
+# PRIVACY & SECURITY
+# =============================================================================
+
+# ✓ PII sanitization is built-in and enabled by default
+# ✓ IP anonymization is enabled
+# ✓ Sensitive endpoints are automatically excluded
+# ✓ HTTPS endpoints are recommended for production
+# ✓ Network access should be restricted to internal infrastructure

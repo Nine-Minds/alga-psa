@@ -135,8 +135,7 @@ export function TelemetrySettings({ onSettingsUpdate }: TelemetrySettingsProps) 
   }
 
   // Check if telemetry is disabled at various levels
-  const environmentDisabled = !TELEMETRY_CONFIG.ENVIRONMENT_OVERRIDES.TELEMETRY_ENABLED ||
-                              TELEMETRY_CONFIG.ENVIRONMENT_OVERRIDES.TELEMETRY_FORCE_DISABLE;
+  const environmentDisabled = false; // No longer using legacy environment overrides
   const tenantDisabled = !tenantSettings.tenantSettings.enabled;
   const userCannotOptOut = !tenantSettings.userSettings.canOptOut;
   const effectivelyDisabled = environmentDisabled || tenantDisabled;

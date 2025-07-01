@@ -29,14 +29,7 @@ export class TelemetryPermissionManager {
     tenantId?: string
   ): Promise<boolean> {
     try {
-      // Environment-level checks first
-      if (TELEMETRY_CONFIG.ENVIRONMENT_OVERRIDES.TELEMETRY_FORCE_DISABLE) {
-        return false;
-      }
-
-      if (!TELEMETRY_CONFIG.ENVIRONMENT_OVERRIDES.TELEMETRY_ENABLED) {
-        return false;
-      }
+      // Telemetry is enabled by default (no legacy environment overrides)
 
       // User-level consent check
       const isEnabled = await TelemetryPreferencesModel.isCategoryEnabled(
@@ -144,7 +137,7 @@ export class TelemetryPermissionManager {
    * Hash user ID for anonymous correlation
    */
   private hashUserId(userId: string): string {
-    const salt = TELEMETRY_CONFIG.ENVIRONMENT_OVERRIDES.TELEMETRY_SALT;
+    const salt = 'default-salt-change-in-production';
     return crypto
       .createHash('sha256')
       .update(userId + salt + 'user')
@@ -156,7 +149,7 @@ export class TelemetryPermissionManager {
    * Hash tenant ID for anonymous correlation
    */
   private hashTenantId(tenantId: string): string {
-    const salt = TELEMETRY_CONFIG.ENVIRONMENT_OVERRIDES.TELEMETRY_SALT;
+    const salt = 'default-salt-change-in-production';
     return crypto
       .createHash('sha256')
       .update(tenantId + salt + 'tenant')
@@ -169,10 +162,7 @@ export class TelemetryPermissionManager {
    */
   async needsConsentPrompt(userId: string): Promise<boolean> {
     try {
-      // Don't prompt if telemetry is disabled at environment level
-      if (!TELEMETRY_CONFIG.ENVIRONMENT_OVERRIDES.TELEMETRY_ENABLED) {
-        return false;
-      }
+      // Telemetry is enabled by default (no legacy environment overrides)
 
       const hasSetPreferences = await TelemetryPreferencesModel.hasSetPreferences(
         this.knex,
@@ -218,7 +208,7 @@ export class TelemetryPermissionManager {
    * Get sampling rate for telemetry based on configuration
    */
   getSamplingRate(): number {
-    return TELEMETRY_CONFIG.ENVIRONMENT_OVERRIDES.TELEMETRY_SAMPLE_RATE;
+    return 0.1;
   }
 
   /**
