@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { ICompany, ICompanyLocation } from 'server/src/interfaces/company.interfaces';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
@@ -24,6 +25,7 @@ import { getAllCountries, ICountry } from 'server/src/lib/actions/company-action
 import CountryPicker from 'server/src/components/ui/CountryPicker';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import toast from 'react-hot-toast';
+import ClientCreatedDialog from './ClientCreatedDialog';
 
 type CreateCompanyData = Omit<ICompany, "company_id" | "created_at" | "updated_at" | "notes_document_id" | "status" | "tenant" | "deleted_at" | "address">;
 
@@ -105,6 +107,9 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [createdCompany, setCreatedCompany] = useState<ICompany | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     if (open) {
@@ -214,10 +219,11 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       }
 
 
-      toast.success(`Company "${newCompany.company_name}" created successfully.`);
+      setCreatedCompany(newCompany);
+      setShowSuccess(true);
       onCompanyAdded(newCompany);
       onOpenChange(false);
-    } catch (error: any) {
+      } catch (error: any) {
       console.error("Error creating company:", error);
       const errorMessage = error.message || "Failed to create company. Please try again.";
       setError(errorMessage);
@@ -604,6 +610,21 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    <ClientCreatedDialog
+      isOpen={showSuccess}
+      company={createdCompany}
+      onClose={() => setShowSuccess(false)}
+      onViewClient={() => {
+        if (createdCompany) {
+          setShowSuccess(false);
+          router.push(`/msp/companies/${createdCompany.company_id}`);
+        }
+      }}
+      onAddAnother={() => {
+        setShowSuccess(false);
+        onOpenChange(true);
+      }}
+    />
   );
 };
 
