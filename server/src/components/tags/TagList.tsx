@@ -12,6 +12,7 @@ interface TagListProps {
   onRemoveTag?: (tagId: string) => Promise<void>;
   allowColorEdit?: boolean;
   allowTextEdit?: boolean;
+  allowDeleteAll?: boolean;
   maxDisplay?: number;
 }
 
@@ -20,6 +21,7 @@ export const TagList: React.FC<TagListProps> = ({
   onRemoveTag, 
   allowColorEdit = true, 
   allowTextEdit = true,
+  allowDeleteAll = true,
   maxDisplay 
 }) => {
   const { updateTagColor, updateTagText, deleteAllTagsByText } = useTags();
@@ -74,31 +76,30 @@ export const TagList: React.FC<TagListProps> = ({
               position: 'relative'
             }}
           >
-            {(allowColorEdit || allowTextEdit) && (
-              <TagEditForm
-                tag={tag}
-                onSave={handleTagUpdate}
-                onDeleteAll={handleDeleteAll}
-                allowTextEdit={allowTextEdit}
-                allowColorEdit={allowColorEdit}
-                trigger={
-                  <button
-                    className="inline-flex items-center justify-center h-full px-2 py-1 hover:opacity-70 transition-opacity"
-                    style={{
-                      borderRight: `1px dotted ${tag.text_color || colors.text}`,
-                      marginRight: '4px',
-                    }}
-                  >
-                    <ChevronDown size={10} />
-                  </button>
-                }
-              />
-            )}
+            <TagEditForm
+              tag={tag}
+              onSave={handleTagUpdate}
+              onDeleteAll={allowDeleteAll ? handleDeleteAll : undefined}
+              allowTextEdit={allowTextEdit}
+              allowColorEdit={allowColorEdit}
+              trigger={
+                <button
+                  className="inline-flex items-center justify-center h-full px-2 py-1 hover:opacity-70 transition-opacity"
+                  style={{
+                    borderRight: `1px dotted ${tag.text_color || colors.text}`,
+                    marginRight: '4px',
+                  }}
+                >
+                  <ChevronDown size={10} />
+                </button>
+              }
+            />
             {tag.tag_text}
             {onRemoveTag && (
               <button
                 onClick={() => void onRemoveTag(tag.tag_id)}
                 className="ml-1 text-red-500 hover:text-red-700"
+                title="Remove tag"
               >
                 <X size={12} />
               </button>

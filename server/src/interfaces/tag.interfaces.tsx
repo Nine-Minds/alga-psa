@@ -10,6 +10,7 @@ export interface ITag extends TenantEntity {
   tagged_type: TaggedEntityType;
   background_color?: string | null;
   text_color?: string | null;
+  created_by?: string | null;
 }
 
 export interface ITaggable {

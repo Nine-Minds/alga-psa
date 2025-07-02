@@ -69,7 +69,7 @@ const TagDefinition = {
         throw new Error('Tenant context is required for tag operations');
       }
       const definition = await knexOrTrx<ITagDefinition>('tag_definitions')
-        .where('tag_text', tag_text.toLowerCase())
+        .whereRaw('LOWER(tag_text) = LOWER(?)', [tag_text.trim()])
         .where('tagged_type', tagged_type)
         .where('tenant', tenant)
         .first();
@@ -116,10 +116,10 @@ const TagDefinition = {
         throw new Error('Tenant context is required for tag operations');
       }
       
-      // Normalize tag text
+      // Preserve case but trim whitespace
       const normalizedDefinition = {
         ...definition,
-        tag_text: definition.tag_text.toLowerCase().trim(),
+        tag_text: definition.tag_text.trim(),
         tag_id: uuidv4(),
         tenant
       };

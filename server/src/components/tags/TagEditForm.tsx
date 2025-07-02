@@ -9,8 +9,9 @@ import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { generateEntityColor } from 'server/src/utils/colorUtils';
 import { toast } from 'react-hot-toast';
 import tinycolor from 'tinycolor2';
-import { Trash2 } from 'lucide-react';
+import { Trash2, ShieldAlert } from 'lucide-react';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { handleError } from 'server/src/lib/utils/errorHandling';
 
 const PRESET_COLORS = [
   // Bright and distinct colors (Row 1)
@@ -45,6 +46,7 @@ interface TagEditFormProps {
   onDeleteAll?: (tagText: string, taggedType: string) => Promise<void>;
   allowTextEdit?: boolean;
   allowColorEdit?: boolean;
+  allowDeleteAll?: boolean;
 }
 
 export const TagEditForm: React.FC<TagEditFormProps> = ({
@@ -53,7 +55,8 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
   onSave,
   onDeleteAll,
   allowTextEdit = true,
-  allowColorEdit = true
+  allowColorEdit = true,
+  allowDeleteAll = true
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [tagText, setTagText] = useState(tag.tag_text);
@@ -73,8 +76,9 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
       setShowDeleteConfirm(false);
       toast.success(`All "${tag.tag_text}" tags deleted successfully`);
     } catch (error) {
-      console.error('Failed to delete tags:', error);
-      toast.error('Failed to delete tags');
+      handleError(error, 'Failed to delete tags');
+      // Don't close the dialog on error
+      setShowDeleteConfirm(false);
     } finally {
       setIsDeleting(false);
     }
@@ -142,12 +146,8 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
       setIsOpen(false);
       toast.success('Tag updated successfully');
     } catch (error) {
-      console.error('Failed to save tag changes:', error);
-      if (error instanceof Error) {
-        toast.error(error.message);
-      } else {
-        toast.error('Failed to save tag changes');
-      }
+      handleError(error, 'Failed to save tag changes');
+      // Don't close the dialog on error
     } finally {
       setIsSaving(false);
     }
@@ -180,6 +180,16 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
         title="Edit Tag"
       >
         <div className="space-y-4">
+          {/* Show warning if no permissions */}
+          {!allowColorEdit && !allowTextEdit && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 flex items-start">
+              <ShieldAlert className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+              <div className="ml-2 text-sm text-yellow-800">
+                You don't have permission to edit tags. Contact your administrator for access.
+              </div>
+            </div>
+          )}
+          
           {/* Preview */}
           <div className="flex justify-center rounded">
             <span
@@ -291,29 +301,33 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
           {/* Action buttons */}
           <div className="space-y-2 pt-2">
             {/* Delete and Reset buttons */}
-            <div className="flex gap-2">
-              <Button
-                id={`tag-reset-${tag.tag_id}`}
-                variant="outline"
-                size="sm"
-                onClick={handleReset}
-                className="flex-1"
-              >
-                Reset colors
-              </Button>
-              {onDeleteAll && (
-                <Button
-                  id={`tag-delete-all-${tag.tag_id}`}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
-                >
-                  <Trash2 size={14} className="mr-1" />
-                  Delete All
-                </Button>
-              )}
-            </div>
+            {(allowColorEdit || (onDeleteAll && allowDeleteAll)) && (
+              <div className="flex gap-2">
+                {allowColorEdit && (
+                  <Button
+                    id={`tag-reset-${tag.tag_id}`}
+                    variant="outline"
+                    size="sm"
+                    onClick={handleReset}
+                    className="flex-1"
+                  >
+                    Reset colors
+                  </Button>
+                )}
+                {onDeleteAll && allowDeleteAll && (
+                  <Button
+                    id={`tag-delete-all-${tag.tag_id}`}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 size={14} className="mr-1" />
+                    Delete All
+                  </Button>
+                )}
+              </div>
+            )}
             
             {/* Cancel and Save buttons */}
             <div className="flex gap-2">
@@ -324,17 +338,19 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
                 onClick={() => setIsOpen(false)}
                 className="flex-1"
               >
-                Cancel
+                {(allowColorEdit || allowTextEdit) ? 'Cancel' : 'Close'}
               </Button>
-              <Button
-                id={`tag-save-${tag.tag_id}`}
-                size="sm"
-                onClick={() => void handleSave()}
-                disabled={isSaving}
-                className="flex-1"
-              >
-                {isSaving ? 'Saving...' : 'Save'}
-              </Button>
+              {(allowColorEdit || allowTextEdit) && (
+                <Button
+                  id={`tag-save-${tag.tag_id}`}
+                  size="sm"
+                  onClick={() => void handleSave()}
+                  disabled={isSaving}
+                  className="flex-1"
+                >
+                  {isSaving ? 'Saving...' : 'Save'}
+                </Button>
+              )}
             </div>
           </div>
         </div>
