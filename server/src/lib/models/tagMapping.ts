@@ -24,6 +24,7 @@ export interface ITagWithDefinition {
   background_color?: string | null;
   text_color?: string | null;
   created_at?: Date;
+  created_by?: string | null;
 }
 
 const TagMapping = {
@@ -58,7 +59,8 @@ const TagMapping = {
           'td.channel_id',
           'td.background_color',
           'td.text_color',
-          'tm.created_at'
+          'tm.created_at',
+          'tm.created_by'
         )
         .orderBy('td.tag_text', 'asc');
       
@@ -104,7 +106,8 @@ const TagMapping = {
           'td.channel_id',
           'td.background_color',
           'td.text_color',
-          'tm.created_at'
+          'tm.created_at',
+          'tm.created_by'
         );
       
       return tags;
@@ -119,7 +122,8 @@ const TagMapping = {
    */
   insert: async (
     knexOrTrx: Knex | Knex.Transaction,
-    mapping: Omit<ITagMapping, 'mapping_id' | 'tenant' | 'created_at'>
+    mapping: Omit<ITagMapping, 'mapping_id' | 'tenant' | 'created_at'>,
+    userId?: string
   ): Promise<ITagMapping> => {
     try {
       const tenant = await getCurrentTenantId();
@@ -130,7 +134,8 @@ const TagMapping = {
       const fullMapping = {
         ...mapping,
         mapping_id: uuidv4(),
-        tenant
+        tenant,
+        created_by: userId || mapping.created_by || null
       };
       
       const [inserted] = await knexOrTrx<ITagMapping>('tag_mappings')

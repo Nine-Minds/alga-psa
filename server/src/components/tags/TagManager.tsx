@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ITag, TaggedEntityType } from 'server/src/interfaces/tag.interfaces';
-import { createTag, deleteTag, getAllTags, updateTagColor } from 'server/src/lib/actions/tagActions';
+import { createTag, deleteTag, getAllTags, updateTagColor, checkTagPermissions } from 'server/src/lib/actions/tagActions';
 import { TagList } from './TagList';
 import { TagInput } from './TagInput';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
@@ -8,6 +8,7 @@ import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionCo
 import { ContainerComponent } from 'server/src/types/ui-reflection/types';
 import { toast } from 'react-hot-toast';
 import { useTags } from 'server/src/context/TagContext';
+import { handleError } from 'server/src/lib/utils/errorHandling';
 
 interface TagManagerProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -33,6 +34,14 @@ export const TagManager: React.FC<TagManagerProps> = ({
   const tagContext = useTags();
   const [tags, setTags] = useState<ITag[]>(initialTags);
   const [localAllTags, setLocalAllTags] = useState<ITag[]>([]);
+  const [permissions, setPermissions] = useState({
+    canAddExisting: false,
+    canCreateNew: false,
+    canEditColors: false,
+    canEditText: false,
+    canDelete: false,
+    canDeleteAll: false
+  });
   const lastGlobalTagsRef = useRef<ITag[]>([]);
 
   // Use context if available, otherwise use local state
@@ -65,6 +74,19 @@ export const TagManager: React.FC<TagManagerProps> = ({
   useEffect(() => {
     setTags(initialTags);
   }, [initialTags]);
+
+  // Fetch permissions when entity type changes
+  useEffect(() => {
+    async function fetchPermissions() {
+      try {
+        const perms = await checkTagPermissions(entityType);
+        setPermissions(perms);
+      } catch (error) {
+        console.error('Failed to check tag permissions:', error);
+      }
+    }
+    fetchPermissions();
+  }, [entityType]);
 
   // Update local tags when global tags change (for color and text updates)
   useEffect(() => {
@@ -141,8 +163,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
       onTagsChange?.(updatedTags);
       await refetchTags();
     } catch (error) {
-      console.error('Error adding tag:', error);
-      toast.error('Failed to add tag');
+      handleError(error, 'Failed to add tag');
     }
   };
 
@@ -154,7 +175,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
       onTagsChange?.(updatedTags);
       await refetchTags();
     } catch (error) {
-      console.error('Error removing tag:', error);
+      handleError(error, 'Failed to remove tag');
     }
   };
 
@@ -165,18 +186,21 @@ export const TagManager: React.FC<TagManagerProps> = ({
           <TagList
             tags={tags}
             onRemoveTag={handleRemoveTag}
-            allowColorEdit={allowColorEdit}
-            allowTextEdit={allowTextEdit}
+            allowColorEdit={allowColorEdit && permissions.canEditColors}
+            allowTextEdit={allowTextEdit && permissions.canEditText}
+            allowDeleteAll={permissions.canDeleteAll}
           />
         </div>
-        <div className="flex-shrink-0 overflow-visible">
-          <TagInput
-            id={`${id}-input`}
-            existingTags={allTags.filter(t => t.tagged_type === entityType)}
-            currentTags={tags}
-            onAddTag={handleAddTag}
-          />
-        </div>
+        {permissions.canAddExisting && (
+          <div className="flex-shrink-0 overflow-visible">
+            <TagInput
+              id={`${id}-input`}
+              existingTags={allTags.filter(t => t.tagged_type === entityType)}
+              currentTags={tags}
+              onAddTag={handleAddTag}
+            />
+          </div>
+        )}
       </div>
     </ReflectionContainer>
   );

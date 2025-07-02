@@ -56,7 +56,8 @@ const Tag = {
         tagged_id: tm.tagged_id,
         tagged_type: tm.tagged_type,
         background_color: tm.background_color,
-        text_color: tm.text_color
+        text_color: tm.text_color,
+        created_by: tm.created_by
       }));
     } catch (error) {
       console.error(`Error getting tags for ${tagged_type} with id ${tagged_id}:`, error);
@@ -98,7 +99,7 @@ const Tag = {
     }
   },
 
-  insert: async (knexOrTrx: Knex | Knex.Transaction, tag: Omit<ITag, 'tag_id' | 'tenant'>): Promise<Pick<ITag, "tag_id">> => {
+  insert: async (knexOrTrx: Knex | Knex.Transaction, tag: Omit<ITag, 'tag_id' | 'tenant'>, userId?: string): Promise<Pick<ITag, "tag_id">> => {
     try {
       const tenant = await getCurrentTenantId();
       if (!tenant) {
@@ -117,12 +118,12 @@ const Tag = {
         }
       );
       
-      // Create mapping
+      // Create mapping with user ID
       const mapping = await TagMapping.insert(knexOrTrx, {
         tag_id: definition.tag_id,
         tagged_id: tag.tagged_id,
         tagged_type: tag.tagged_type
-      });
+      }, userId);
       
       return { tag_id: mapping.mapping_id }; // Return mapping_id as tag_id for backward compatibility
     } catch (error) {
