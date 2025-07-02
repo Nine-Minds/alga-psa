@@ -75,17 +75,17 @@ exports.up = async function(knex) {
     ),
     tag_color_counts AS (
       SELECT 
-        tenant,
-        original_text,
-        lower_text,
-        tagged_type,
-        channel_id,
-        background_color,
-        text_color,
+        original_tags.tenant,
+        original_tags.original_text,
+        original_tags.lower_text,
+        original_tags.tagged_type,
+        original_tags.channel_id,
+        original_tags.background_color,
+        original_tags.text_color,
         COUNT(*) as usage_count
       FROM tags
       JOIN original_tags ON tags.tenant = original_tags.tenant AND LOWER(tags.tag_text) = original_tags.lower_text AND tags.tagged_type = original_tags.tagged_type
-      GROUP BY tenant, original_text, lower_text, tagged_type, channel_id, background_color, text_color
+      GROUP BY original_tags.tenant, original_tags.original_text, original_tags.lower_text, original_tags.tagged_type, original_tags.channel_id, original_tags.background_color, original_tags.text_color
     ),
     ranked_tags AS (
       SELECT 
