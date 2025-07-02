@@ -255,12 +255,13 @@ const TagMapping = {
         throw new Error('Tenant context is required for tag operations');
       }
       
-      const [{ count }] = await knexOrTrx<ITagMapping>('tag_mappings')
+      const result = await knexOrTrx('tag_mappings')
         .where('tag_id', tag_id)
         .where('tenant', tenant)
-        .count('* as count');
+        .count('* as count')
+        .first();
       
-      return parseInt(count as string);
+      return Number(result?.count || 0);
     } catch (error) {
       console.error(`Error getting usage count for tag ${tag_id}:`, error);
       throw error;
