@@ -10,7 +10,7 @@ import fs from 'fs/promises';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { ZipGenerationService } from 'server/src/services/zip-generation.service';
 import { PDFGenerationService, createPDFGenerationService } from 'server/src/services/pdf-generation.service';
-import { JobStatus } from 'server/src/types/job.d';
+import { JobStatus } from 'server/src/types/job';
 
 export interface InvoiceZipJobData extends Record<string, unknown> {
   jobServiceId: string;

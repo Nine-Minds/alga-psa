@@ -9,5 +9,6 @@ import { MetadataController } from '../../../../../lib/api/controllers/MetadataC
 const controller = new MetadataController();
 
 export async function GET(request: NextRequest) {
-  return controller.generateSdk(request);
+  const { searchParams } = request.nextUrl;
+  return controller.generateSdk(request, searchParams);
 }

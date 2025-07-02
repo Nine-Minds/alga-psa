@@ -25,7 +25,8 @@ import { NodeSDK } from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
-import { DebugOTLPTraceExporter, DebugOTLPMetricExporter } from '../observability/debug-exporter';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
+import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-grpc';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { SpanProcessor, Span, BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
 import { isUsageStatsEnabled } from '../../config/telemetry';
@@ -137,15 +138,15 @@ export async function initializeTelemetry(): Promise<void> {
 
     // Basic observability without complex permission management
 
-    // Create OTLP exporters for Grafana Alloy with debug logging
-    const traceExporter = new DebugOTLPTraceExporter({
+    // Create OTLP exporters for Grafana Alloy
+    const traceExporter = new OTLPTraceExporter({
       url: `${endpoint}/v1/traces`,  // Add OTLP traces path
       headers: isHosted && process.env.TENANT_ID ? {
         'X-Tenant-Id': process.env.TENANT_ID,
       } : {},
     });
 
-    const metricExporter = new DebugOTLPMetricExporter({
+    const metricExporter = new OTLPMetricExporter({
       url: `${endpoint}/v1/metrics`,  // Add OTLP metrics path
       headers: isHosted && process.env.TENANT_ID ? {
         'X-Tenant-Id': process.env.TENANT_ID,

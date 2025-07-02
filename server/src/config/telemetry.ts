@@ -3,6 +3,18 @@
  * Checks ALGA_USAGE_STATS environment variable to determine if usage stats are enabled
  */
 
+// Types for compatibility with existing components
+export type AnonymizationLevel = 'none' | 'partial' | 'full';
+
+export interface TenantTelemetrySettings {
+  enabled: boolean;
+  allowUserOverride: boolean;
+  anonymizationLevel: AnonymizationLevel;
+  complianceNotes?: string;
+  lastUpdated: string;
+  updatedBy?: string;
+}
+
 /**
  * Check if usage stats are enabled via environment variable
  * @returns {boolean} True if usage stats are enabled, false otherwise

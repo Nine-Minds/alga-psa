@@ -44,7 +44,7 @@ export async function getCurrentTenantId(): Promise<string | null> {
     // If still no tenant, try headers
     if (!tenant) {
         try {
-            const headersList = headers();
+            const headersList = await headers();
             tenant = getTenantFromHeaders(headersList);
         } catch (e) {
             // console.warn('Failed to get tenant from headers:', e); // Reduce noise

@@ -11,10 +11,11 @@ const controller = new BillingPlanController();
 // GET /api/v1/billing-plans/[id]/services/[serviceId] - Get billing plan service details
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string; serviceId: string } }
+  { params }: { params: Promise<{ id: string; serviceId: string }> }
 ) {
+  const resolvedParams = await params;
   // Add route params to the request for controller access
-  (request as any).routeParams = { id: params.id, serviceId: params.serviceId };
+  (request as any).routeParams = { id: resolvedParams.id, serviceId: resolvedParams.serviceId };
   
   // This endpoint gets a specific service from the plan's service list
   return controller.getPlanServices()(request);
@@ -23,10 +24,11 @@ export async function GET(
 // PUT /api/v1/billing-plans/[id]/services/[serviceId] - Update billing plan service configuration
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string; serviceId: string } }
+  { params }: { params: Promise<{ id: string; serviceId: string }> }
 ) {
+  const resolvedParams = await params;
   // Add route params to the request for controller access
-  (request as any).routeParams = { id: params.id, serviceId: params.serviceId };
+  (request as any).routeParams = { id: resolvedParams.id, serviceId: resolvedParams.serviceId };
   
   return controller.updatePlanService()(request);
 }
@@ -34,10 +36,11 @@ export async function PUT(
 // DELETE /api/v1/billing-plans/[id]/services/[serviceId] - Remove service from billing plan
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; serviceId: string } }
+  { params }: { params: Promise<{ id: string; serviceId: string }> }
 ) {
+  const resolvedParams = await params;
   // Add route params to the request for controller access
-  (request as any).routeParams = { id: params.id, serviceId: params.serviceId };
+  (request as any).routeParams = { id: resolvedParams.id, serviceId: resolvedParams.serviceId };
   
   return controller.removeServiceFromPlan()(request);
 }

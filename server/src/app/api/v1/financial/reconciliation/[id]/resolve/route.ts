@@ -6,7 +6,7 @@
 import { FinancialController } from 'server/src/lib/api/controllers/FinancialController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const financialController = new FinancialController();
     const req = request as any;

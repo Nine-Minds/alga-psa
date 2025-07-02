@@ -17,7 +17,7 @@ function getController() {
   return controller;
 }
 
-export async function DELETE(request: Request, { params }: { params: { mapping_id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ mapping_id: string }> }) {
   try {
     const req = request as any;
     req.params = params;

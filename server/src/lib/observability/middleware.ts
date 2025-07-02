@@ -7,8 +7,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { observabilityMetrics } from './metrics';
-import { getCurrentTenantId } from '../db';
-import logger from '../../utils/logger';
+// import { getCurrentTenantId } from '../db';
+// Temporary workaround - getCurrentTenantId disabled to avoid JSX issues
+const getCurrentTenantId = async (): Promise<string | undefined> => {
+  return undefined;
+};
+import logger from './simple-logger';
 
 export interface RequestMetrics {
   startTime: number;

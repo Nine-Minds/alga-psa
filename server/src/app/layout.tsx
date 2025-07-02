@@ -15,6 +15,7 @@ import { PostHogProvider } from "../components/PostHogProvider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const dynamic = 'force-dynamic';
+//export const revalidate = false;
 
 export async function generateMetadata(): Promise<Metadata> {
   // App initialization is now handled by instrumentation.ts

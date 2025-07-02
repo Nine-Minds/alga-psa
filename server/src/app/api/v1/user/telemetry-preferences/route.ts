@@ -3,6 +3,8 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { isUsageStatsEnabled } from 'server/src/config/telemetry';
 import logger from 'server/src/utils/logger';
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     const currentUser = await getCurrentUser();

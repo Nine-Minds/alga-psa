@@ -23,7 +23,7 @@ export {
   initializeTelemetry as initializeObservability,
   isTelemetryInitialized as isObservabilityInitialized,
   shutdownTelemetry as shutdownObservability,
-} from '../telemetry/initialization';
+} from './initialization';
 
 // Metrics
 export {
@@ -50,6 +50,10 @@ export {
   getCurrentRequestContext,
   logPerformanceTiming,
 } from './logging';
+
+// Import instances for internal use
+import { observabilityMetrics } from './metrics';
+import { observabilityLogger, logPerformanceTiming } from './logging';
 
 // Re-export types and interfaces
 export type { RequestMetrics } from './middleware';

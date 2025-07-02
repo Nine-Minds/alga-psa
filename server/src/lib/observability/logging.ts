@@ -7,9 +7,9 @@
  * IMPORTANT: This is for operational logging, not user behavior analytics.
  */
 
-import winston from 'winston';
+import * as winston from 'winston';
 import { trace, context } from '@opentelemetry/api';
-import logger from '../../utils/logger';
+import logger from './simple-logger';
 
 /**
  * Winston format that adds OpenTelemetry trace context to log entries

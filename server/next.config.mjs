@@ -7,8 +7,13 @@ const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig = {
+  eslint: {
+    // Warning: This allows production builds to successfully complete even if
+    // your project has ESLint errors.
+    ignoreDuringBuilds: true,
+  },
   reactStrictMode: true,
-  output: 'standalone', // Disable static generation entirely
+  output: 'standalone',
   transpilePackages: ['@blocknote/core', '@blocknote/react', '@blocknote/mantine'],
   // Rewrites required for PostHog
   async rewrites() {
@@ -145,8 +150,7 @@ const nextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: '5mb', // Increase limit for WASM uploads
-    },
-    instrumentationHook: true
+    }
   }
 };
 

@@ -70,10 +70,11 @@ const dummyStatements = [
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { extensionId: string } }
+  { params }: { params: Promise<{ extensionId: string }> }
 ) {
   try {
-    const { extensionId } = params;
+    const resolvedParams = await params;
+  const { extensionId } = resolvedParams;
     
     console.log(`[Statements API] Extension ID: ${extensionId}`);
     

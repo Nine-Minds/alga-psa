@@ -8,7 +8,7 @@
  */
 
 import { metrics } from '@opentelemetry/api';
-import logger from '../../utils/logger';
+import logger from './simple-logger';
 
 export class ObservabilityMetrics {
   private meter = metrics.getMeter('alga-psa-observability');

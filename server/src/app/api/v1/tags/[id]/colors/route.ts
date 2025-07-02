@@ -8,10 +8,11 @@ import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
 const controller = new CategoryTagController();
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const resolvedParams = await params;
     const req = request as any;
-    req.params = params;
+    req.params = resolvedParams;
     return await controller.updateTagColors()(req);
   } catch (error) {
     return handleApiError(error);

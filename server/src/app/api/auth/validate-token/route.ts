@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
-    const token = await getToken({ req });
+    const token = await getToken({ req: req as any });
     
     if (!token) {
       return NextResponse.json({ isValid: false }, { status: 401 });

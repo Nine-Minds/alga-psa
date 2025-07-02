@@ -17,7 +17,7 @@ function getController() {
   return controller;
 }
 
-export async function POST(request: Request, { params }: { params: { sync_id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ sync_id: string }> }) {
   try {
     const req = request as any;
     req.params = params;

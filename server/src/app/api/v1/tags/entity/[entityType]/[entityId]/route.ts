@@ -11,40 +11,44 @@ import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
 const controller = new CategoryTagController();
 
-export async function GET(request: Request, { params }: { params: { entityType: string; entityId: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ entityType: string; entityId: string }> }) {
   try {
+    const resolvedParams = await params;
     const req = request as any;
-    req.params = params;
+    req.params = resolvedParams;
     return await controller.list()(req);
   } catch (error) {
     return handleApiError(error);
   }
 }
 
-export async function POST(request: Request, { params }: { params: { entityType: string; entityId: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ entityType: string; entityId: string }> }) {
   try {
+    const resolvedParams = await params;
     const req = request as any;
-    req.params = params;
+    req.params = resolvedParams;
     return await controller.create()(req);
   } catch (error) {
     return handleApiError(error);
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { entityType: string; entityId: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ entityType: string; entityId: string }> }) {
   try {
+    const resolvedParams = await params;
     const req = request as any;
-    req.params = params;
+    req.params = resolvedParams;
     return await controller.delete()(req);
   } catch (error) {
     return handleApiError(error);
   }
 }
 
-export async function PUT(request: Request, { params }: { params: { entityType: string; entityId: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ entityType: string; entityId: string }> }) {
   try {
+    const resolvedParams = await params;
     const req = request as any;
-    req.params = params;
+    req.params = resolvedParams;
     return await controller.update()(req);
   } catch (error) {
     return handleApiError(error);

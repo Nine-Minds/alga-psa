@@ -137,10 +137,11 @@ const dummyAgreements = [
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const resolvedParams = await params;
+  const { id } = resolvedParams;
     
     // Find the agreement by ID
     const agreement = dummyAgreements.find(agr => agr.id === id);

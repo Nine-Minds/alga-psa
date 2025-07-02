@@ -5,7 +5,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from '../user-actions/userActions';
 import { getInvoiceForRendering } from '../invoiceQueries';
 import { getCompanyById } from '../company-actions/companyActions';
-import { JobStatus } from 'server/src/types/job.d';
+import { JobStatus } from 'server/src/types/job';
 import logger from '@shared/core/logger';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';

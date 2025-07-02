@@ -2,9 +2,9 @@ import { Metadata } from 'next';
 import AssetForm from 'server/src/components/assets/AssetForm';
 
 interface AssetEditPageProps {
-  params: {
+  params: Promise<{
     asset_id: string;
-  };
+  }>;
 }
 
 export const metadata: Metadata = {
@@ -12,10 +12,11 @@ export const metadata: Metadata = {
   description: 'Edit asset details'
 };
 
-export default function AssetEditPage({ params }: AssetEditPageProps) {
+export default async function AssetEditPage({ params }: AssetEditPageProps) {
+  const resolvedParams = await params;
   return (
     <div className="container mx-auto px-4 py-8">
-      <AssetForm assetId={params.asset_id} />
+      <AssetForm assetId={resolvedParams.asset_id} />
     </div>
   );
 }
