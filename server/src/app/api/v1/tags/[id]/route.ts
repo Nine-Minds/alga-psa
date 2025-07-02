@@ -5,16 +5,16 @@
  * DELETE /api/v1/tags/[id] - Delete tag
  */
 
-import { CategoryTagController } from 'server/src/lib/api/controllers/CategoryTagController';
+import { TagController } from 'server/src/lib/api/controllers/TagController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new CategoryTagController();
+const controller = new TagController();
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const req = request as any;
     req.params = params;
-    return await controller.getTagById()(req);
+    return await controller.getTag()(req);
   } catch (error) {
     return handleApiError(error);
   }

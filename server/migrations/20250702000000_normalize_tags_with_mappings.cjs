@@ -59,26 +59,40 @@ exports.up = async function(knex) {
   const [{ count: totalTags }] = await knex('tags').count('* as count');
   console.log(`Found ${totalTags} total tags to process...`);
   
-  // Insert unique tag definitions
-  // For tags with same text but different colors, we'll pick the most commonly used color combination
+  // Insert unique tag definitions, preserving original case
   const insertedDefinitions = await knex.raw(`
-    WITH tag_color_counts AS (
+    WITH original_tags AS (
+      SELECT DISTINCT ON (tenant, LOWER(tag_text), tagged_type)
+        tenant,
+        tag_text as original_text,
+        LOWER(tag_text) as lower_text,
+        tagged_type,
+        channel_id,
+        background_color,
+        text_color,
+        created_at
+      FROM tags
+      ORDER BY tenant, LOWER(tag_text), tagged_type, created_at ASC
+    ),
+    tag_color_counts AS (
       SELECT 
         tenant,
-        LOWER(tag_text) as tag_text,
+        original_text,
+        lower_text,
         tagged_type,
         channel_id,
         background_color,
         text_color,
         COUNT(*) as usage_count
       FROM tags
-      GROUP BY tenant, LOWER(tag_text), tagged_type, channel_id, background_color, text_color
+      JOIN original_tags ON tags.tenant = original_tags.tenant AND LOWER(tags.tag_text) = original_tags.lower_text AND tags.tagged_type = original_tags.tagged_type
+      GROUP BY tenant, original_text, lower_text, tagged_type, channel_id, background_color, text_color
     ),
     ranked_tags AS (
       SELECT 
         *,
         ROW_NUMBER() OVER (
-          PARTITION BY tenant, tag_text, tagged_type 
+          PARTITION BY tenant, lower_text, tagged_type 
           ORDER BY usage_count DESC
         ) as rn
       FROM tag_color_counts
@@ -87,7 +101,7 @@ exports.up = async function(knex) {
     SELECT 
       tenant,
       gen_random_uuid() as tag_id,
-      tag_text,
+      original_text,
       tagged_type,
       channel_id,
       background_color,
@@ -118,7 +132,7 @@ exports.up = async function(knex) {
     FROM tags t
     JOIN tag_definitions td ON 
       t.tenant = td.tenant AND 
-      LOWER(t.tag_text) = td.tag_text AND 
+      LOWER(t.tag_text) = LOWER(td.tag_text) AND 
       t.tagged_type = td.tagged_type
     ON CONFLICT (tenant, tag_id, tagged_id) DO NOTHING
     RETURNING *
@@ -155,26 +169,58 @@ exports.up = async function(knex) {
     console.log('✓ All tags successfully migrated');
   }
   
-  // Step 6: Add comment to indicate migration status
-  await knex.raw(`
-    COMMENT ON TABLE tags IS 'DEPRECATED: Migrated to tag_definitions and tag_mappings. To be removed after verification.';
-  `);
+  // Step 6: Drop the original tags table
+  await knex.schema.dropTableIfExists('tags');
+
   
   console.log('Tag normalization migration completed successfully');
-  console.log('Note: Original tags table preserved for rollback capability');
 };
 
 exports.down = async function(knex) {
   console.log('Rolling back tag normalization...');
   
+  // Recreate tags table
+  await knex.schema.createTable('tags', (table) => {
+    table.uuid('tenant').notNullable();
+    table.uuid('tag_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
+    table.text('tag_text').notNullable();
+    table.uuid('tagged_id').notNullable();
+    table.text('tagged_type').notNullable();
+    table.uuid('channel_id');
+    table.timestamp('created_at').defaultTo(knex.fn.now());
+    table.uuid('created_by');
+    table.string('background_color');
+    table.string('text_color');
+
+    table.primary(['tenant', 'tag_id']);
+    table.foreign('tenant').references('tenants.tenant');
+    table.foreign(['tenant', 'channel_id']).references(['tenant', 'channel_id']).inTable('channels');
+    table.foreign(['tenant', 'created_by']).references(['tenant', 'user_id']).inTable('users');
+    table.index(['tenant', 'tagged_id', 'tagged_type']);
+    table.index(['tenant', 'tag_text']);
+  });
+
+  // Restore data (best effort)
+  await knex.raw(`
+    INSERT INTO tags (tenant, tag_id, tag_text, tagged_id, tagged_type, channel_id, created_at, created_by, background_color, text_color)
+    SELECT 
+      tm.tenant,
+      tm.mapping_id,
+      td.tag_text,
+      tm.tagged_id,
+      tm.tagged_type,
+      td.channel_id,
+      tm.created_at,
+      tm.created_by,
+      td.background_color,
+      td.text_color
+    FROM tag_mappings tm
+    JOIN tag_definitions td ON tm.tenant = td.tenant AND tm.tag_id = td.tag_id
+  `);
+
   // Drop the new tables in reverse order
   await knex.schema.dropTableIfExists('tag_mappings');
   await knex.schema.dropTableIfExists('tag_definitions');
-  
-  // Remove deprecation comment
-  await knex.raw(`
-    COMMENT ON TABLE tags IS NULL;
-  `);
   
   console.log('Tag normalization rollback completed');
 };
