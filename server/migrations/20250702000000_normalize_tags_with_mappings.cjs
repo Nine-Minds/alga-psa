@@ -69,10 +69,9 @@ exports.up = async function(knex) {
         tagged_type,
         channel_id,
         background_color,
-        text_color,
-        created_at
+        text_color
       FROM tags
-      ORDER BY tenant, LOWER(tag_text), tagged_type, created_at ASC
+      ORDER BY tenant, LOWER(tag_text), tagged_type, tag_text ASC
     ),
     tag_color_counts AS (
       SELECT 
