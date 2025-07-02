@@ -3,10 +3,10 @@
  * GET /api/v1/categories/analytics - Get category analytics
  */
 
-import { CategoryTagController } from 'server/src/lib/api/controllers/CategoryTagController';
+import { CategoryController } from 'server/src/lib/api/controllers/CategoryController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new CategoryTagController();
+const controller = new CategoryController();
 
 export async function GET(request: Request) {
   try {

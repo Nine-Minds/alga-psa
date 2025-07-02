@@ -4,18 +4,27 @@ import React from 'react';
 import { X, ChevronDown } from 'lucide-react';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { generateEntityColor } from 'server/src/utils/colorUtils';
-import ColorPicker from 'server/src/components/ui/ColorPicker';
+import { TagEditForm } from './TagEditForm';
 import { useTags } from 'server/src/context/TagContext';
 
 interface TagListProps {
   tags: ITag[];
   onRemoveTag?: (tagId: string) => Promise<void>;
   allowColorEdit?: boolean;
+  allowTextEdit?: boolean;
+  allowDeleteAll?: boolean;
   maxDisplay?: number;
 }
 
-export const TagList: React.FC<TagListProps> = ({ tags, onRemoveTag, allowColorEdit = true, maxDisplay }) => {
-  const { updateTagColor } = useTags();
+export const TagList: React.FC<TagListProps> = ({ 
+  tags, 
+  onRemoveTag, 
+  allowColorEdit = true, 
+  allowTextEdit = true,
+  allowDeleteAll = true,
+  maxDisplay 
+}) => {
+  const { updateTagColor, updateTagText, deleteAllTagsByText } = useTags();
 
   const displayTags = maxDisplay && tags.length > maxDisplay
     ? tags.slice(0, maxDisplay)
@@ -24,10 +33,34 @@ export const TagList: React.FC<TagListProps> = ({ tags, onRemoveTag, allowColorE
     ? tags.length - maxDisplay
     : 0;
 
+  const handleTagUpdate = async (tagId: string, updates: { text?: string; backgroundColor?: string | null; textColor?: string | null }) => {
+    // Handle text update
+    if (updates.text !== undefined) {
+      await updateTagText(tagId, updates.text);
+    }
+    
+    // Handle color update
+    if (updates.backgroundColor !== undefined || updates.textColor !== undefined) {
+      const tag = tags.find(t => t.tag_id === tagId);
+      if (tag) {
+        await updateTagColor(
+          tagId, 
+          updates.backgroundColor !== undefined ? updates.backgroundColor : (tag.background_color ?? null),
+          updates.textColor !== undefined ? updates.textColor : (tag.text_color ?? null)
+        );
+      }
+    }
+  };
+
+  const handleDeleteAll = async (tagText: string, taggedType: string) => {
+    await deleteAllTagsByText(tagText, taggedType as any);
+  };
+
   return (
     <div className="flex flex-wrap gap-1">
-      {displayTags.map(tag => {
+      {displayTags.map((tag): JSX.Element => {
         const colors = generateEntityColor(tag.tag_text);
+
         return (
           <span
             key={tag.tag_id}
@@ -43,30 +76,30 @@ export const TagList: React.FC<TagListProps> = ({ tags, onRemoveTag, allowColorE
               position: 'relative'
             }}
           >
-            {allowColorEdit && (
-              <ColorPicker
-                currentBackgroundColor={tag.background_color}
-                currentTextColor={tag.text_color}
-                onSave={(bg, text) => updateTagColor(tag.tag_id, bg, text)}
-                trigger={
-                  <button
-                    className="inline-flex items-center justify-center h-full px-1 hover:opacity-70 transition-opacity"
-                    style={{
-                      borderRight: `1px dotted ${tag.text_color || colors.text}`,
-                      marginRight: '4px'
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <ChevronDown size={10} />
-                  </button>
-                }
-              />
-            )}
+            <TagEditForm
+              tag={tag}
+              onSave={handleTagUpdate}
+              onDeleteAll={allowDeleteAll ? handleDeleteAll : undefined}
+              allowTextEdit={allowTextEdit}
+              allowColorEdit={allowColorEdit}
+              trigger={
+                <button
+                  className="inline-flex items-center justify-center h-full px-2 py-1 hover:opacity-70 transition-opacity"
+                  style={{
+                    borderRight: `1px dotted ${tag.text_color || colors.text}`,
+                    marginRight: '4px',
+                  }}
+                >
+                  <ChevronDown size={10} />
+                </button>
+              }
+            />
             {tag.tag_text}
             {onRemoveTag && (
               <button
-                onClick={() => onRemoveTag(tag.tag_id)}
+                onClick={() => void onRemoveTag(tag.tag_id)}
                 className="ml-1 text-red-500 hover:text-red-700"
+                title="Remove tag"
               >
                 <X size={12} />
               </button>

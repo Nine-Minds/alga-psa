@@ -5,16 +5,16 @@
  * DELETE /api/v1/categories/service/[id] - Delete service category
  */
 
-import { CategoryTagController } from 'server/src/lib/api/controllers/CategoryTagController';
+import { CategoryController } from 'server/src/lib/api/controllers/CategoryController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new CategoryTagController();
+const controller = new CategoryController();
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const req = request as any;
     req.params = params;
-    return await controller.getServiceCategoryById()(req);
+    return await controller.getServiceCategory()(req);
   } catch (error) {
     return handleApiError(error);
   }

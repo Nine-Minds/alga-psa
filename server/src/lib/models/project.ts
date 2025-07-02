@@ -4,6 +4,7 @@ import { IProject, IProjectPhase, IProjectTask, IProjectStatusMapping } from 'se
 import { IStatus, IStandardStatus, ItemType } from 'server/src/interfaces/status.interface'
 import { Knex } from 'knex';
 import { getCurrentTenantId } from 'server/src/lib/db';
+import { deleteEntityTags, deleteEntitiesTags } from '../utils/tagCleanup';
 
 const ProjectModel = {
   updatePhase: async (knexOrTrx: Knex | Knex.Transaction, phaseId: string, phaseData: Partial<IProjectPhase>): Promise<IProjectPhase> => {
@@ -266,6 +267,21 @@ const ProjectModel = {
             .del();
         }
 
+        // Get all task IDs before deleting tasks
+        let taskIds: string[] = [];
+        if (phaseIds.length > 0) {
+          const tasks = await trx('project_tasks')
+            .whereIn('phase_id', phaseIds)
+            .andWhere('tenant', tenant)
+            .select('task_id');
+          taskIds = tasks.map(t => t.task_id);
+        }
+
+        // Delete tags for all project tasks
+        if (taskIds.length > 0) {
+          await deleteEntitiesTags(trx, taskIds, 'project_task');
+        }
+
         // Delete all tasks in all phases
         if (phaseIds.length > 0) {
           await trx('project_tasks')
@@ -291,6 +307,9 @@ const ProjectModel = {
           .where('project_id', projectId)
           .andWhere('tenant', tenant)
           .del();
+        
+        // Delete project tags
+        await deleteEntityTags(trx, projectId, 'project');
         
         // Finally, delete the project
         await trx('projects')

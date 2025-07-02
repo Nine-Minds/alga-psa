@@ -3,10 +3,10 @@
  * PUT /api/v1/categories/ticket/[id]/move - Move category in hierarchy
  */
 
-import { CategoryTagController } from 'server/src/lib/api/controllers/CategoryTagController';
+import { CategoryController } from 'server/src/lib/api/controllers/CategoryController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new CategoryTagController();
+const controller = new CategoryController();
 
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
