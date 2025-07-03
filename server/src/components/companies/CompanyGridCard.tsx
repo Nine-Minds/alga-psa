@@ -1,4 +1,3 @@
-import { useRouter } from 'next/navigation';
 import { Button } from 'server/src/components/ui/Button';
 import { ReflectedDropdownMenu } from "server/src/components/ui/ReflectedDropdownMenu";
 import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
@@ -7,6 +6,8 @@ import { ICompany } from "server/src/interfaces/company.interfaces";
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
 import { TagManager } from 'server/src/components/tags';
+import { useDrawer } from 'server/src/context/DrawerContext';
+import CompanyDetails from './CompanyDetails';
 
 interface CompanyGridCardProps {
     company: ICompany;
@@ -29,10 +30,17 @@ const CompanyGridCard = ({
     allUniqueTags = [],
     onTagsChange
 }: CompanyGridCardProps) => {
-    const router = useRouter();
+    const { openDrawer } = useDrawer();
 
     const handleCardClick = () => {
-        router.push(`/msp/companies/${company.company_id}`);
+        openDrawer(
+            <CompanyDetails
+                company={company}
+                documents={[]}
+                contacts={[]}
+                isInDrawer={true}
+            />
+        );
     };
 
     const stopPropagation = (e: MouseEvent) => {
@@ -72,8 +80,8 @@ const CompanyGridCard = ({
                 <div className="flex-1 min-w-0">
                     <h2 className="text-md font-semibold text-gray-800 truncate" title={company.company_name}>
                         <a
-                          href={`/msp/companies/${company.company_id}`}
-                          onClick={stopPropagation}
+                          href="#"
+                          onClick={(e) => { e.preventDefault(); }}
                           className="text-blue-600 hover:underline"
                         >
                             {company.company_name}

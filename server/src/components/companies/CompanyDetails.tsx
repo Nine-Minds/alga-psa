@@ -21,6 +21,7 @@ import { updateCompany, uploadCompanyLogo, deleteCompanyLogo, getCompanyById } f
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
 import { Button } from 'server/src/components/ui/Button';
+import { ExternalLink } from 'lucide-react';
 import BackNav from 'server/src/components/ui/BackNav';
 import TaxSettingsForm from 'server/src/components/TaxSettingsForm';
 import InteractionsFeed from '../interactions/InteractionsFeed';
@@ -855,6 +856,18 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
         <BackNav href={!isInDrawer ? "/msp/companies" : undefined}>
           {isInDrawer ? 'Back' : 'Back to Clients'}
         </BackNav>
+        {isInDrawer && (
+          <Button
+            id={`${id}-go-to-company-button`}
+            onClick={() => window.open(`/msp/companies/${company.company_id}`, '_blank')}
+            variant="soft"
+            size="sm"
+            className="flex items-center"
+          >
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Go to client
+          </Button>
+        )}
         
         {/* Logo Display and Edit Container */}
         <div className="flex items-center space-x-3">
