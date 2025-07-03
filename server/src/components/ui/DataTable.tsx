@@ -129,6 +129,8 @@ const ReflectedTableCell: React.FC<ReflectedTableCellProps> = ({
 export interface ExtendedDataTableProps<T extends object> extends DataTableProps<T>, AutomationProps {
   /** Unique identifier for UI reflection system */
   id?: string;
+  /** Show pagination controls above the table */
+  showTopPagination?: boolean;
 }
 
 export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): React.ReactElement => {
@@ -142,7 +144,8 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     onPageChange,
     pageSize = 10,
     totalItems,
-    editableConfig
+    editableConfig,
+    showTopPagination = false
   } = props;
   
   // Reference to the table container for measuring available width
@@ -413,6 +416,30 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
               </svg>
               {columns.length - visibleColumnIds.length} columns hidden due to limited space. Resize browser to see more.
             </span>
+          </div>
+        )}
+        {pagination && data.length > 0 && showTopPagination && (
+          <div className="px-6 py-4 border-b border-gray-100 bg-white">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={handlePreviousPage}
+                disabled={!table.getCanPreviousPage()}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-[rgb(var(--color-text-700))] bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-[rgb(var(--color-text-700))]">
+                Page {pageIndex + 1} of{' '}
+                {totalPages} ({total} total records)
+              </span>
+              <button
+                onClick={handleNextPage}
+                disabled={!table.getCanNextPage()}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-[rgb(var(--color-text-700))] bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
         <div className="overflow-x-auto">
