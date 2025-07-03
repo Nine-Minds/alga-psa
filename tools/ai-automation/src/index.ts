@@ -108,6 +108,12 @@ function setupSocketHandlers(io: Server) {
     socket.on('UI_STATE_UPDATE', (pageState) => {
       console.log('\x1b[104m[WEBSOCKET] 📡 UI_STATE_UPDATE received\x1b[0m');
       
+      // Check if pageState is null or undefined
+      if (!pageState) {
+        console.error('\x1b[41m[WEBSOCKET] ❌ Received null or undefined pageState\x1b[0m');
+        return;
+      }
+      
       const stateChanged = !previousState || 
         previousState.id !== pageState.id ||
         previousState.title !== pageState.title ||
