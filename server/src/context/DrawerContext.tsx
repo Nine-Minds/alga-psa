@@ -345,54 +345,56 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         isOpen={state.isOpen}
         onClose={closeDrawer}
         isInDrawer={state.history.length > 1}
-        hideCloseButton={true}
+        hideCloseButton={canGoBack || canGoForward || !!currentEntry?.title}
         drawerVariant="nested"
       >
         {currentEntry && (
           <div className="flex flex-col h-full">
-            <div className="flex items-center justify-between mb-6 border-b pb-4">
-              <div className="flex items-center">
-                {canGoBack && (
+            {(canGoBack || canGoForward || currentEntry.title) && (
+              <div className="flex items-center justify-between mb-6 border-b pb-4">
+                <div className="flex items-center">
+                  {canGoBack && (
+                    <Button
+                      id="drawer-back-button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={goBack}
+                      className="mr-2"
+                      aria-label="Go back"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {currentEntry.title && (
+                    <h2 className="text-xl font-semibold">{currentEntry.title}</h2>
+                  )}
+                </div>
+                <div className="flex items-center">
+                  {canGoForward && (
+                    <Button
+                      id="drawer-forward-button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={goForward}
+                      className="mr-2"
+                      aria-label="Go forward"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {/* Always show the close button for better UX */}
                   <Button
-                    id="drawer-back-button"
+                    id="drawer-close-button"
                     variant="ghost"
                     size="sm"
-                    onClick={goBack}
-                    className="mr-2"
-                    aria-label="Go back"
+                    onClick={closeDrawer}
+                    aria-label="Close drawer"
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    <X className="h-4 w-4" />
                   </Button>
-                )}
-                {currentEntry.title && (
-                  <h2 className="text-xl font-semibold">{currentEntry.title}</h2>
-                )}
+                </div>
               </div>
-              <div className="flex items-center">
-                {canGoForward && (
-                  <Button
-                    id="drawer-forward-button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={goForward}
-                    className="mr-2"
-                    aria-label="Go forward"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                )}
-                {/* Always show the close button for better UX */}
-                <Button
-                  id="drawer-close-button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={closeDrawer}
-                  aria-label="Close drawer"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+            )}
             <div className="flex-1 overflow-auto">
               <DrawerContent
                 content={currentEntry.content}
