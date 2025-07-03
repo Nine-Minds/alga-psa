@@ -2,8 +2,9 @@ import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
-import { useRouter } from 'next/navigation';
 import { MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { useDrawer } from 'server/src/context/DrawerContext';
+import CompanyDetails from './CompanyDetails';
 import { ReflectedDropdownMenu } from 'server/src/components/ui/ReflectedDropdownMenu';
 import { Button } from 'server/src/components/ui/Button';
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
@@ -76,7 +77,7 @@ const CompanyLink: React.FC<CompanyLinkProps> = ({ company, onClick }) => {
   return (
     <a
       data-automation-id={linkId}
-      href={`/msp/companies/${company.company_id}`}
+      href="#"
       onClick={onClick}
       className="text-blue-600 hover:underline font-medium truncate"
       title={company.company_name}
@@ -101,10 +102,17 @@ const CompaniesList = ({
   allUniqueTags = [],
   onTagsChange
 }: CompaniesListProps) => {
-  const router = useRouter(); // Get router instance
+  const { openDrawer } = useDrawer();
 
   const handleRowClick = (company: ICompany) => {
-    router.push(`/msp/companies/${company.company_id}`);
+    openDrawer(
+      <CompanyDetails
+        company={company}
+        documents={[]}
+        contacts={[]}
+        isInDrawer={true}
+      />
+    );
   };
 
     const columns: ColumnDefinition<ICompany>[] = [

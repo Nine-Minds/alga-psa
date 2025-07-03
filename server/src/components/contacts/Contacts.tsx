@@ -27,7 +27,6 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/documentActions';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
-import { useRouter } from 'next/navigation';
 
 interface ContactsProps {
   initialContacts: IContact[];
@@ -49,7 +48,6 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
   const [currentPage, setCurrentPage] = useState(1);
   const [isFiltered, setIsFiltered] = useState(false);
   const { openDrawer } = useDrawer();
-  const router = useRouter();
   const contactTagsRef = useRef<Record<string, ITag[]>>({});
   const [allUniqueTags, setAllUniqueTags] = useState<string[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -154,11 +152,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
   };
 
   const handleViewDetails = async (contact: IContact) => {
-    // If this is being used within a company context (companyId prop exists),
-    // maintain the drawer behavior. Otherwise, navigate to the new contact details page.
-    if (companyId) {
-      // Company context - keep existing drawer behavior
-      if (!currentUser) return;
+    if (!currentUser) return;
 
       try {
         setDocumentLoading(prev => ({
@@ -212,10 +206,6 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
           [contact.contact_name_id]: false
         }));
       }
-    } else {
-      // Main contacts list - navigate to new contact details page
-      router.push(`/msp/contacts/${contact.contact_name_id}`);
-    }
   };
 
   const handleEditContact = (contact: IContact) => {

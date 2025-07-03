@@ -99,7 +99,7 @@ function drawerReducer(state: DrawerState, action: DrawerAction): DrawerState {
       const newEntry: DrawerHistoryEntry = {
         id: `drawer-${Date.now()}`,
         type: 'custom',
-        title: 'Drawer',
+        title: '',
         content,
         onMount,
       };
@@ -121,7 +121,7 @@ function drawerReducer(state: DrawerState, action: DrawerAction): DrawerState {
       const newEntry: DrawerHistoryEntry = {
         id: `drawer-${Date.now()}`,
         type: 'custom',
-        title: 'Drawer',
+        title: '',
         content,
         onMount,
       };
@@ -364,7 +364,9 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                 )}
-                <h2 className="text-xl font-semibold">{currentEntry.title}</h2>
+                {currentEntry.title && (
+                  <h2 className="text-xl font-semibold">{currentEntry.title}</h2>
+                )}
               </div>
               <div className="flex items-center">
                 {canGoForward && (
