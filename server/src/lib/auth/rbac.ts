@@ -7,11 +7,15 @@ export class Role implements IRole {
   role_id: string;
   role_name: string;
   description: string;
+  msp: boolean;
+  client: boolean;
 
-  constructor(role_id: string, role_name: string, description: string) {
+  constructor(role_id: string, role_name: string, description: string, msp: boolean = true, client: boolean = false) {
     this.role_id = role_id;
     this.role_name = role_name;
     this.description = description;
+    this.msp = msp;
+    this.client = client;
   }
 }
 
@@ -20,12 +24,16 @@ export class RoleWithPermissions implements IRoleWithPermissions {
   role_name: string;
   description: string;
   permissions: IPermission[];
+  msp: boolean;
+  client: boolean;
 
   constructor(role: IRole, permissions: IPermission[]) {
     this.role_id = role.role_id;
     this.role_name = role.role_name;
     this.description = role.description;
     this.permissions = permissions;
+    this.msp = role.msp;
+    this.client = role.client;
   }
 
   addPermission(permission: IPermission) {
@@ -41,11 +49,15 @@ export class Permission implements IPermission {
   permission_id: string;
   resource: string;
   action: string;
+  msp: boolean;
+  client: boolean;
 
-  constructor(permission_id: string, resource: string, action: string) {
+  constructor(permission_id: string, resource: string, action: string, msp: boolean = true, client: boolean = false) {
     this.permission_id = permission_id;
     this.resource = resource;
     this.action = action;
+    this.msp = msp;
+    this.client = client;
   }
 }
 
