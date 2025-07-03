@@ -232,7 +232,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
           </div>
         )}
         <div className="mb-6">
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex justify-between items-start mb-2">
             <div className="flex items-center">
               {/* Contact Avatar */}
               {userId && (
@@ -247,8 +247,8 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
               )}
               <Heading size="6">{contact.full_name}</Heading>
             </div>
-            <div className="flex items-center space-x-2">
-              {!isInDrawer && (
+            {!isInDrawer && (
+              <div className="flex items-center space-x-2">
                 <Button
                   id={`${id}-back-button`}
                   onClick={goBack}
@@ -259,20 +259,6 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
                 </Button>
-              )}
-              {isInDrawer && (
-                <Button
-                  id={`${id}-go-to-contact-button`}
-                  onClick={() => window.open(`/msp/contacts/${contact.contact_name_id}`, '_blank')}
-                  variant="soft"
-                  size="sm"
-                  className="flex items-center"
-                >
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Go to contact
-                </Button>
-              )}
-              {!isInDrawer && (
                 <Button
                   id={`${id}-edit-button`}
                   variant="soft"
@@ -283,9 +269,24 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
                   <Pen className="h-4 w-4 mr-2" />
                   Edit
                 </Button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
+
+          {isInDrawer && (
+            <div className="mb-4">
+              <Button
+                id={`${id}-go-to-contact-button`}
+                onClick={() => window.open(`/msp/contacts/${contact.contact_name_id}`, '_blank')}
+                variant="soft"
+                size="sm"
+                className="flex items-center"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Go to contact
+              </Button>
+            </div>
+          )}
         </div>
         <table className="min-w-full">
           <tbody>

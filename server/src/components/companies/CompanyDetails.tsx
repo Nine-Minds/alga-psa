@@ -855,23 +855,11 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
 
   return (
     <ReflectionContainer id={id} label="Company Details">
-      <div className="flex items-center space-x-5 mb-4 pt-2">
+      <div className="flex items-center space-x-5 mb-2 pt-2">
         {!isInDrawer && (
           <BackNav href="/msp/companies">Back to Clients</BackNav>
         )}
-        {isInDrawer && (
-          <Button
-            id={`${id}-go-to-company-button`}
-            onClick={() => window.open(`/msp/companies/${company.company_id}`, '_blank')}
-            variant="soft"
-            size="sm"
-            className="flex items-center"
-          >
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Go to client
-          </Button>
-        )}
-        
+
         {/* Logo Display and Edit Container */}
         <div className="flex items-center space-x-3">
           <EntityImageUpload
@@ -901,8 +889,24 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           />
         </div>
 
+
         <Heading size="6">{editedCompany.company_name}</Heading>
       </div>
+
+      {isInDrawer && (
+        <div className="mb-4">
+          <Button
+            id={`${id}-go-to-company-button`}
+            onClick={() => window.open(`/msp/companies/${company.company_id}`, '_blank')}
+            variant="soft"
+            size="sm"
+            className="flex items-center"
+          >
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Go to client
+          </Button>
+        </div>
+      )}
 
       {/* Content Area */}
       <div>
