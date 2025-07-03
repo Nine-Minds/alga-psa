@@ -19,9 +19,9 @@ export const businessMetricsDashboard = {
   templating: {
     list: [
       {
-        name: 'deployment_type',
+        name: 'environment',
         type: 'query',
-        query: 'label_values(ticket_operations_total, deployment_type)',
+        query: 'label_values(ticket_operations_total, environment)',
         current: {
           selected: false,
           text: 'All',
@@ -33,7 +33,7 @@ export const businessMetricsDashboard = {
       {
         name: 'tenant_id',
         type: 'query',
-        query: 'label_values(ticket_operations_total{deployment_type="hosted"}, tenant_id)',
+        query: 'label_values(ticket_operations_total{environment="hosted"}, tenant_id)',
         current: {
           selected: false,
           text: 'All',
@@ -63,7 +63,7 @@ export const businessMetricsDashboard = {
       gridPos: { h: 8, w: 6, x: 0, y: 1 },
       targets: [
         {
-          expr: 'sum(rate(ticket_operations_total{deployment_type=~"$deployment_type",tenant_id=~"$tenant_id"}[5m]))',
+          expr: 'sum(rate(ticket_operations_total{environment=~"$environment",tenant_id=~"$tenant_id"}[5m]))',
           refId: 'A',
         },
       ],
@@ -93,7 +93,7 @@ export const businessMetricsDashboard = {
       gridPos: { h: 8, w: 6, x: 6, y: 1 },
       targets: [
         {
-          expr: 'sum(rate(billing_operations_total{deployment_type=~"$deployment_type",tenant_id=~"$tenant_id"}[5m]))',
+          expr: 'sum(rate(billing_operations_total{environment=~"$environment",tenant_id=~"$tenant_id"}[5m]))',
           refId: 'A',
         },
       ],
@@ -123,7 +123,7 @@ export const businessMetricsDashboard = {
       gridPos: { h: 8, w: 6, x: 12, y: 1 },
       targets: [
         {
-          expr: 'sum(user_sessions_active{deployment_type=~"$deployment_type",tenant_id=~"$tenant_id"})',
+          expr: 'sum(user_sessions_active{environment=~"$environment",tenant_id=~"$tenant_id"})',
           refId: 'A',
         },
       ],
@@ -152,7 +152,7 @@ export const businessMetricsDashboard = {
       gridPos: { h: 8, w: 6, x: 18, y: 1 },
       targets: [
         {
-          expr: 'sum(db_connections_active{deployment_type=~"$deployment_type",tenant_id=~"$tenant_id"})',
+          expr: 'sum(db_connections_active{environment=~"$environment",tenant_id=~"$tenant_id"})',
           refId: 'A',
         },
       ],
@@ -190,7 +190,7 @@ export const businessMetricsDashboard = {
       gridPos: { h: 8, w: 12, x: 0, y: 10 },
       targets: [
         {
-          expr: 'sum by (action) (rate(ticket_operations_total{deployment_type=~"$deployment_type",tenant_id=~"$tenant_id"}[5m]))',
+          expr: 'sum by (action) (rate(ticket_operations_total{environment=~"$environment",tenant_id=~"$tenant_id"}[5m]))',
           refId: 'A',
           legendFormat: '{{action}}',
         },
@@ -221,7 +221,7 @@ export const businessMetricsDashboard = {
       gridPos: { h: 8, w: 12, x: 12, y: 10 },
       targets: [
         {
-          expr: 'sum by (action) (rate(billing_operations_total{deployment_type=~"$deployment_type",tenant_id=~"$tenant_id"}[5m]))',
+          expr: 'sum by (action) (rate(billing_operations_total{environment=~"$environment",tenant_id=~"$tenant_id"}[5m]))',
           refId: 'A',
           legendFormat: '{{action}}',
         },
@@ -261,7 +261,7 @@ export const businessMetricsDashboard = {
       gridPos: { h: 8, w: 8, x: 0, y: 19 },
       targets: [
         {
-          expr: 'sum(system_memory_usage_bytes{deployment_type=~"$deployment_type"})',
+          expr: 'sum(system_memory_usage_bytes{environment=~"$environment"})',
           refId: 'A',
           legendFormat: 'Memory Usage',
         },
@@ -289,12 +289,12 @@ export const businessMetricsDashboard = {
       gridPos: { h: 8, w: 8, x: 8, y: 19 },
       targets: [
         {
-          expr: 'histogram_quantile(0.95, sum(rate(db_query_duration_seconds_bucket{deployment_type=~"$deployment_type",tenant_id=~"$tenant_id"}[5m])) by (le)) * 1000',
+          expr: 'histogram_quantile(0.95, sum(rate(db_query_duration_seconds_bucket{environment=~"$environment",tenant_id=~"$tenant_id"}[5m])) by (le)) * 1000',
           refId: 'A',
           legendFormat: 'P95 Query Time',
         },
         {
-          expr: 'sum(rate(db_query_duration_seconds_sum{deployment_type=~"$deployment_type",tenant_id=~"$tenant_id"}[5m])) / sum(rate(db_query_duration_seconds_count{deployment_type=~"$deployment_type",tenant_id=~"$tenant_id"}[5m])) * 1000',
+          expr: 'sum(rate(db_query_duration_seconds_sum{environment=~"$environment",tenant_id=~"$tenant_id"}[5m])) / sum(rate(db_query_duration_seconds_count{environment=~"$environment",tenant_id=~"$tenant_id"}[5m])) * 1000',
           refId: 'B',
           legendFormat: 'Avg Query Time',
         },
@@ -321,12 +321,12 @@ export const businessMetricsDashboard = {
       gridPos: { h: 8, w: 8, x: 16, y: 19 },
       targets: [
         {
-          expr: 'sum(system_connections_active{deployment_type=~"$deployment_type"})',
+          expr: 'sum(system_connections_active{environment=~"$environment"})',
           refId: 'A',
           legendFormat: 'Active Connections',
         },
         {
-          expr: 'sum(db_connections_active{deployment_type=~"$deployment_type",tenant_id=~"$tenant_id"})',
+          expr: 'sum(db_connections_active{environment=~"$environment",tenant_id=~"$tenant_id"})',
           refId: 'B',
           legendFormat: 'DB Connections',
         },
@@ -362,7 +362,7 @@ export const businessMetricsDashboard = {
       gridPos: { h: 8, w: 12, x: 0, y: 28 },
       targets: [
         {
-          expr: 'sum(user_sessions_active{deployment_type=~"$deployment_type",tenant_id=~"$tenant_id"})',
+          expr: 'sum(user_sessions_active{environment=~"$environment",tenant_id=~"$tenant_id"})',
           refId: 'A',
           legendFormat: 'Active Sessions',
         },
@@ -390,7 +390,7 @@ export const businessMetricsDashboard = {
       gridPos: { h: 8, w: 12, x: 12, y: 28 },
       targets: [
         {
-          expr: 'sum by (operation, table) (rate(db_queries_total{deployment_type=~"$deployment_type",tenant_id=~"$tenant_id"}[5m]))',
+          expr: 'sum by (operation, table) (rate(db_queries_total{environment=~"$environment",tenant_id=~"$tenant_id"}[5m]))',
           refId: 'A',
           format: 'table',
           instant: true,

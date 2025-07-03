@@ -37,12 +37,10 @@ export function createHttpMetricsMiddleware() {
     const route = sanitizeRouteForMetrics(pathname);
     
     try {
-      // Get tenant ID for hosted deployments (if available)
+      // Get tenant ID if available
       let tenantId: string | undefined;
       try {
-        if (process.env.DEPLOYMENT_TYPE === 'hosted') {
-          tenantId = await getCurrentTenantId();
-        }
+        tenantId = await getCurrentTenantId();
       } catch (error) {
         // Tenant ID not available, continue without it
         logger.debug('Could not get tenant ID for metrics:', error);

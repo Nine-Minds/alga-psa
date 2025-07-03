@@ -12,7 +12,6 @@ import logger from './simple-logger';
 
 export class ObservabilityMetrics {
   private meter = metrics.getMeter('alga-psa-observability');
-  private isHosted = process.env.DEPLOYMENT_TYPE === 'hosted';
   private isInitialized = false;
 
   // HTTP Metrics (RED method: Rate, Errors, Duration)
@@ -117,7 +116,7 @@ export class ObservabilityMetrics {
         method,
         route,
         status_code: statusCode.toString(),
-        ...(this.isHosted && tenantId ? { tenant_id: tenantId } : {}),
+        ...(tenantId ? { tenant_id: tenantId } : {}),
       };
 
       // Request count (Rate)
@@ -155,7 +154,7 @@ export class ObservabilityMetrics {
         operation,
         table,
         success: success.toString(),
-        ...(this.isHosted && tenantId ? { tenant_id: tenantId } : {}),
+        ...(tenantId ? { tenant_id: tenantId } : {}),
       };
 
       this.dbQueryCount.add(1, attributes);
@@ -172,7 +171,7 @@ export class ObservabilityMetrics {
     if (!this.isInitialized) return;
 
     try {
-      const attributes = this.isHosted && tenantId ? { tenant_id: tenantId } : {};
+      const attributes = tenantId ? { tenant_id: tenantId } : {};
       this.dbConnectionCount.add(change, attributes);
     } catch (error) {
       logger.error('Failed to record database connection metrics:', error);
@@ -189,7 +188,7 @@ export class ObservabilityMetrics {
     try {
       const attributes = {
         action,
-        ...(this.isHosted && tenantId ? { tenant_id: tenantId } : {}),
+        ...(tenantId ? { tenant_id: tenantId } : {}),
       };
 
       this.ticketOperations.add(1, attributes);
@@ -208,7 +207,7 @@ export class ObservabilityMetrics {
     try {
       const attributes = {
         action,
-        ...(this.isHosted && tenantId ? { tenant_id: tenantId } : {}),
+        ...(tenantId ? { tenant_id: tenantId } : {}),
       };
 
       this.billingOperations.add(1, attributes);
@@ -224,7 +223,7 @@ export class ObservabilityMetrics {
     if (!this.isInitialized) return;
 
     try {
-      const attributes = this.isHosted && tenantId ? { tenant_id: tenantId } : {};
+      const attributes = tenantId ? { tenant_id: tenantId } : {};
       this.userSessions.add(change, attributes);
     } catch (error) {
       logger.error('Failed to record user session metrics:', error);

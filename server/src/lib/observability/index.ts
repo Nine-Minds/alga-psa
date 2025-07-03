@@ -140,7 +140,7 @@ export const observability = {
   getStatus(): {
     initialized: boolean;
     metricsReady: boolean;
-    deploymentType: string;
+    environment: string;
     serviceName: string;
     serviceVersion: string;
   } {
@@ -149,7 +149,7 @@ export const observability = {
     return {
       initialized: isObservabilityInitialized(),
       metricsReady: observabilityMetrics.isReady(),
-      deploymentType: process.env.DEPLOYMENT_TYPE || 'on-premise',
+      environment: process.env.NODE_ENV || 'development',
       serviceName: 'alga-psa',
       serviceVersion: process.env.npm_package_version || '1.0.0',
     };

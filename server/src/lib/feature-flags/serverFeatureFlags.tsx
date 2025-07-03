@@ -19,7 +19,6 @@ export const checkFeatureFlag = cache(async (
     const fullContext: FeatureFlagContext = {
       userId: session?.user?.id,
       tenantId: session?.user?.tenant,
-      deploymentType: process.env.DEPLOYMENT_TYPE as 'hosted' | 'on-premise',
       ...context,
     };
 
@@ -43,7 +42,6 @@ export const getFeatureFlagVariant = cache(async (
     const fullContext: FeatureFlagContext = {
       userId: session?.user?.id,
       tenantId: session?.user?.tenant,
-      deploymentType: process.env.DEPLOYMENT_TYPE as 'hosted' | 'on-premise',
       ...context,
     };
 

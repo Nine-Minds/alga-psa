@@ -8,7 +8,6 @@ export interface FeatureFlagContext {
   tenantId?: string;
   userRole?: string;
   companySize?: 'small' | 'medium' | 'large' | 'enterprise';
-  deploymentType?: 'hosted' | 'on-premise';
   subscriptionPlan?: string;
   customProperties?: Record<string, any>;
 }
@@ -23,8 +22,10 @@ export class FeatureFlags {
   private client: PostHog | null = null;
   private flagCache: Map<string, { value: boolean | string; timestamp: number }> = new Map();
   private readonly CACHE_TTL = 60000; // 1 minute cache
+  private anonymizeUserIds: boolean;
 
   constructor() {
+    this.anonymizeUserIds = process.env.ANALYTICS_ANONYMIZE_USER_IDS !== 'false';
     // Use the same client as analytics if available
     if (analytics.isEnabled && analytics.getClient()) {
       this.client = analytics.getClient();
@@ -83,7 +84,6 @@ export class FeatureFlags {
           evaluation_context: {
             has_user: !!context.userId,
             has_tenant: !!context.tenantId,
-            deployment_type: context.deploymentType,
           }
         }, context.userId);
       }
@@ -204,9 +204,10 @@ export class FeatureFlags {
    */
   private getDistinctId(context: FeatureFlagContext): string {
     if (context.userId) {
-      return context.deploymentType === 'hosted' 
-        ? `hosted_${context.userId}`
-        : `on-premise_${this.hashUserId(context.userId)}`;
+      // Use the same logic as analytics - anonymize based on env var
+      return !this.anonymizeUserIds
+        ? `user_${context.userId}`
+        : `user_${this.hashUserId(context.userId)}`;
     }
     
     if (context.tenantId) {
@@ -222,7 +223,7 @@ export class FeatureFlags {
    */
   private async buildProperties(context: FeatureFlagContext): Promise<Record<string, any>> {
     const properties: Record<string, any> = {
-      deployment_type: context.deploymentType || process.env.DEPLOYMENT_TYPE || 'on-premise',
+      environment: process.env.NODE_ENV || 'development',
       ...context.customProperties,
     };
 
@@ -239,7 +240,7 @@ export class FeatureFlags {
     }
 
     // Add tenant-specific properties if needed
-    if (context.tenantId && context.deploymentType === 'hosted') {
+    if (context.tenantId) {
       try {
         const { knex } = await createTenantKnex();
         const tenantInfo = await knex('tenants')

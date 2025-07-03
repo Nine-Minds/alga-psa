@@ -19,9 +19,9 @@ export const apiPerformanceDashboard = {
   templating: {
     list: [
       {
-        name: 'deployment_type',
+        name: 'environment',
         type: 'query',
-        query: 'label_values(http_requests_total, deployment_type)',
+        query: 'label_values(http_requests_total, environment)',
         current: {
           selected: false,
           text: 'All',
@@ -33,7 +33,7 @@ export const apiPerformanceDashboard = {
       {
         name: 'tenant_id',
         type: 'query',
-        query: 'label_values(http_requests_total{deployment_type="hosted"}, tenant_id)',
+        query: 'label_values(http_requests_total, tenant_id)',
         current: {
           selected: false,
           text: 'All',
@@ -46,7 +46,7 @@ export const apiPerformanceDashboard = {
       {
         name: 'route',
         type: 'query',
-        query: 'label_values(http_requests_total{deployment_type=~"$deployment_type",tenant_id=~"$tenant_id"}, route)',
+        query: 'label_values(http_requests_total{environment=~"$environment",tenant_id=~"$tenant_id"}, route)',
         current: {
           selected: false,
           text: 'All',
@@ -58,7 +58,7 @@ export const apiPerformanceDashboard = {
       {
         name: 'method',
         type: 'query',
-        query: 'label_values(http_requests_total{deployment_type=~"$deployment_type",tenant_id=~"$tenant_id"}, method)',
+        query: 'label_values(http_requests_total{environment=~"$environment",tenant_id=~"$tenant_id"}, method)',
         current: {
           selected: false,
           text: 'All',
@@ -87,7 +87,7 @@ export const apiPerformanceDashboard = {
       gridPos: { h: 8, w: 12, x: 0, y: 1 },
       targets: [
         {
-          expr: 'topk(10, sum by (route, method) (rate(http_requests_total{deployment_type=~"$deployment_type",tenant_id=~"$tenant_id",route=~"$route",method=~"$method"}[5m])))',
+          expr: 'topk(10, sum by (route, method) (rate(http_requests_total{environment=~"$environment",tenant_id=~"$tenant_id",route=~"$route",method=~"$method"}[5m])))',
           refId: 'A',
           format: 'table',
           instant: true,
@@ -146,7 +146,7 @@ export const apiPerformanceDashboard = {
       gridPos: { h: 8, w: 12, x: 12, y: 1 },
       targets: [
         {
-          expr: 'topk(10, histogram_quantile(0.95, sum by (route, method, le) (rate(http_request_duration_seconds_bucket{deployment_type=~"$deployment_type",tenant_id=~"$tenant_id",route=~"$route",method=~"$method"}[5m])))) * 1000',
+          expr: 'topk(10, histogram_quantile(0.95, sum by (route, method, le) (rate(http_request_duration_seconds_bucket{environment=~"$environment",tenant_id=~"$tenant_id",route=~"$route",method=~"$method"}[5m])))) * 1000',
           refId: 'A',
           format: 'table',
           instant: true,
@@ -225,7 +225,7 @@ export const apiPerformanceDashboard = {
       gridPos: { h: 8, w: 12, x: 0, y: 10 },
       targets: [
         {
-          expr: 'sum by (route) (rate(http_requests_total{deployment_type=~"$deployment_type",tenant_id=~"$tenant_id",route=~"$route",method=~"$method"}[5m]))',
+          expr: 'sum by (route) (rate(http_requests_total{environment=~"$environment",tenant_id=~"$tenant_id",route=~"$route",method=~"$method"}[5m]))',
           refId: 'A',
           legendFormat: '{{route}}',
         },
@@ -264,7 +264,7 @@ export const apiPerformanceDashboard = {
       gridPos: { h: 8, w: 12, x: 12, y: 10 },
       targets: [
         {
-          expr: 'sum by (status_code) (rate(http_requests_total{deployment_type=~"$deployment_type",tenant_id=~"$tenant_id",route=~"$route",method=~"$method"}[5m]))',
+          expr: 'sum by (status_code) (rate(http_requests_total{environment=~"$environment",tenant_id=~"$tenant_id",route=~"$route",method=~"$method"}[5m]))',
           refId: 'A',
           legendFormat: '{{status_code}}',
         },
@@ -330,7 +330,7 @@ export const apiPerformanceDashboard = {
       gridPos: { h: 8, w: 24, x: 0, y: 19 },
       targets: [
         {
-          expr: 'sum(rate(http_request_duration_seconds_bucket{deployment_type=~"$deployment_type",tenant_id=~"$tenant_id",route=~"$route",method=~"$method"}[5m])) by (le)',
+          expr: 'sum(rate(http_request_duration_seconds_bucket{environment=~"$environment",tenant_id=~"$tenant_id",route=~"$route",method=~"$method"}[5m])) by (le)',
           refId: 'A',
           format: 'heatmap',
           legendFormat: '{{le}}',
@@ -369,7 +369,7 @@ export const apiPerformanceDashboard = {
       gridPos: { h: 8, w: 12, x: 0, y: 28 },
       targets: [
         {
-          expr: '(sum by (route) (rate(http_errors_total{deployment_type=~"$deployment_type",tenant_id=~"$tenant_id",route=~"$route",method=~"$method"}[5m])) / sum by (route) (rate(http_requests_total{deployment_type=~"$deployment_type",tenant_id=~"$tenant_id",route=~"$route",method=~"$method"}[5m]))) * 100',
+          expr: '(sum by (route) (rate(http_errors_total{environment=~"$environment",tenant_id=~"$tenant_id",route=~"$route",method=~"$method"}[5m])) / sum by (route) (rate(http_requests_total{environment=~"$environment",tenant_id=~"$tenant_id",route=~"$route",method=~"$method"}[5m]))) * 100',
           refId: 'A',
           legendFormat: '{{route}}',
         },
@@ -401,7 +401,7 @@ export const apiPerformanceDashboard = {
       gridPos: { h: 8, w: 12, x: 12, y: 28 },
       targets: [
         {
-          expr: 'topk(10, sum by (route, method, status_code) (increase(http_requests_total{deployment_type=~"$deployment_type",tenant_id=~"$tenant_id",status_code=~"[45].*",route=~"$route",method=~"$method"}[1h])))',
+          expr: 'topk(10, sum by (route, method, status_code) (increase(http_requests_total{environment=~"$environment",tenant_id=~"$tenant_id",status_code=~"[45].*",route=~"$route",method=~"$method"}[1h])))',
           refId: 'A',
           format: 'table',
           instant: true,

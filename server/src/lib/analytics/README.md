@@ -8,7 +8,7 @@ The analytics system is designed to:
 - Collect anonymous usage statistics to improve the product
 - Respect user privacy with easy opt-out
 - Separate operational metrics (Grafana) from product analytics (PostHog)
-- Work differently for hosted vs on-premise deployments
+- Provide configurable privacy controls
 
 ## Configuration
 
@@ -18,9 +18,9 @@ The analytics system is designed to:
 # Enable/disable usage statistics
 ALGA_USAGE_STATS=true  # Set to false to opt out
 
-# Deployment type
-DEPLOYMENT_TYPE=on-premise  # or 'hosted'
-NEXT_PUBLIC_DEPLOYMENT_TYPE=on-premise  # Must match DEPLOYMENT_TYPE
+# Analytics anonymization
+ANALYTICS_ANONYMIZE_USER_IDS=true  # Set to false to use actual user IDs
+NEXT_PUBLIC_ANALYTICS_ANONYMIZE_USER_IDS=true  # Must match ANALYTICS_ANONYMIZE_USER_IDS
 
 # Instance identification (optional)
 INSTANCE_ID=my-company-instance
@@ -43,13 +43,13 @@ analytics.capture(AnalyticsEvents.TICKET_CREATED, {
   has_attachments: true,
 });
 
-// Track with user context (hosted deployments)
+// Track with user context (when anonymization is disabled)
 analytics.capture(AnalyticsEvents.USER_LOGGED_IN, {
   login_method: 'email',
   two_factor_enabled: true,
 }, userId);
 
-// Identify a user (hosted deployments)
+// Identify a user (when anonymization is disabled)
 analytics.identify(userId, {
   plan: 'enterprise',
   company_size: 'medium',
@@ -119,22 +119,22 @@ export async function POST(req: Request) {
 ### Data Collection Principles
 
 1. **No PII**: Never collect personally identifiable information
-2. **Anonymization**: Hash all identifiers for on-premise deployments
+2. **Anonymization**: Configurable user ID anonymization via ANALYTICS_ANONYMIZE_USER_IDS
 3. **Transparency**: Show notice on first load
 4. **User Control**: Easy opt-out via environment variable
 
 ### What We Collect
 
-**Hosted Deployments:**
-- Feature usage with tenant context
-- Performance metrics
-- Error patterns
-- User journeys (anonymized)
+**When Anonymization is Disabled (ANALYTICS_ANONYMIZE_USER_IDS=false):**
+- Feature usage with user context
+- Performance metrics per user
+- Error patterns with user association
+- User journeys
 
-**On-Premise Deployments:**
+**When Anonymization is Enabled (ANALYTICS_ANONYMIZE_USER_IDS=true):**
 - Anonymous feature usage
 - Aggregate performance data
-- Error types (no stack traces)
+- Error types (no user association)
 - Version information
 
 ### What We Don't Collect
@@ -162,8 +162,8 @@ if (PrivacyHelper.shouldCollectTelemetry()) {
 export ALGA_USAGE_STATS=true
 
 # Run your application and check console logs
-# You should see: "Usage statistics enabled"
-# Plus a notice box on first run (on-premise only)
+# You should see: "Usage statistics enabled (user IDs anonymized)" or "Usage statistics enabled (user IDs preserved)"
+# Plus a notice box on first run
 ```
 
 3. **Test opt-out:**

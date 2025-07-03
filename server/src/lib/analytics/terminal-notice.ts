@@ -25,11 +25,6 @@ export function markUsageStatsNoticeShown(): void {
 }
 
 export function showUsageStatsNotice(): void {
-  const isHosted = process.env.DEPLOYMENT_TYPE === 'hosted';
-  
-  // Don't show notice for hosted deployments
-  if (isHosted) return;
-  
   // Check if we've already shown the notice
   if (hasShownUsageStatsNotice()) return;
   

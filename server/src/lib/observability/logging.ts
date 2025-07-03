@@ -31,11 +31,10 @@ export const traceContextFormat = winston.format((info) => {
         
         // Add service information for better filtering in Grafana
         info.service_name = 'alga-psa';
-        info.deployment_type = process.env.DEPLOYMENT_TYPE || 'on-premise';
         
-        // Add tenant ID for hosted deployments (if available)
-        if (process.env.DEPLOYMENT_TYPE === 'hosted' && process.env.TENANT_ID) {
-          info.tenant_id = process.env.TENANT_ID;
+        // Add deployment ID (if available)
+        if (process.env.DEPLOYMENT_ID) {
+          info.deployment_id = process.env.DEPLOYMENT_ID;
         }
       }
     }
@@ -214,7 +213,6 @@ export class ObservabilityLogger {
       timestamp: new Date().toISOString(),
       service_name: 'alga-psa',
       service_version: process.env.npm_package_version || '1.0.0',
-      deployment_type: process.env.DEPLOYMENT_TYPE || 'on-premise',
       node_env: process.env.NODE_ENV || 'development',
     };
   }

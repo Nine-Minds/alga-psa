@@ -190,7 +190,7 @@ const Header: React.FC<HeaderProps> = ({
                 <PersonIcon className="mr-2 h-3.5 w-3.5" />
                 <span>Profile</span>
               </DropdownMenu.Item>
-              {isDevelopment && (
+              {/* {isDevelopment && (
                 <>
                   <DropdownMenu.Separator className="h-[1px] bg-gray-200 m-[5px]" />
                   <DropdownMenu.Item
@@ -204,7 +204,7 @@ const Header: React.FC<HeaderProps> = ({
                     <span>Test Onboarding</span>
                   </DropdownMenu.Item>
                 </>
-              )}
+              )} */}
               <DropdownMenu.Item
                 className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer"
                 onSelect={handleSignOut}

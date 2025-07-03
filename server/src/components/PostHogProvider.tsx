@@ -38,9 +38,9 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       ...posthogConfig.defaultConfig,
       debug: process.env.NODE_ENV === "development",
       loaded: (posthog) => {
-        // For on-premise deployments, use simple anonymous ID
-        if (process.env.NEXT_PUBLIC_DEPLOYMENT_TYPE !== 'hosted') {
-          const anonymousId = `onpremise_${typeof window !== 'undefined' ? window.location.hostname : 'server'}`
+        // If user IDs should be anonymized, use simple anonymous ID
+        if (process.env.NEXT_PUBLIC_ANALYTICS_ANONYMIZE_USER_IDS !== 'false') {
+          const anonymousId = `anonymous_${typeof window !== 'undefined' ? window.location.hostname : 'server'}`
           posthog.identify(anonymousId)
         }
         setIsInitialized(true)

@@ -37,7 +37,6 @@ export async function GET(request: NextRequest) {
     const context = {
       userId: session.user.id,
       tenantId: session.user.tenant,
-      deploymentType: process.env.DEPLOYMENT_TYPE as 'hosted' | 'on-premise',
       userRole: session.user.user_type,
     };
 
@@ -57,7 +56,7 @@ export async function GET(request: NextRequest) {
         flags: results,
         context: {
           userId: context.userId,
-          deployment: context.deploymentType,
+          environment: process.env.NODE_ENV || 'development',
         },
       });
     } else {
@@ -68,7 +67,7 @@ export async function GET(request: NextRequest) {
         flags: allFlags,
         context: {
           userId: context.userId,
-          deployment: context.deploymentType,
+          environment: process.env.NODE_ENV || 'development',
         },
       });
     }
@@ -101,7 +100,6 @@ export async function POST(request: NextRequest) {
     const context = {
       userId: session.user.id,
       tenantId: session.user.tenant,
-      deploymentType: process.env.DEPLOYMENT_TYPE as 'hosted' | 'on-premise',
       userRole: validatedData.context?.userRole || session.user.user_type,
       companySize: validatedData.context?.companySize,
       subscriptionPlan: validatedData.context?.subscriptionPlan,
@@ -124,7 +122,7 @@ export async function POST(request: NextRequest) {
         flags: results,
         context: {
           userId: context.userId,
-          deployment: context.deploymentType,
+          environment: process.env.NODE_ENV || 'development',
         },
       });
     } else {
@@ -135,7 +133,7 @@ export async function POST(request: NextRequest) {
         flags: allFlags,
         context: {
           userId: context.userId,
-          deployment: context.deploymentType,
+          environment: process.env.NODE_ENV || 'development',
         },
       });
     }

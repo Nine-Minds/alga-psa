@@ -10,7 +10,7 @@ interface AnalyticsSettings {
   instance_created_at: string;
   usage_stats_enabled: boolean;
   first_seen_version: string;
-  deployment_type: 'on-premise' | 'hosted';
+  environment: string;
   last_updated_at?: string;
 }
 
@@ -56,7 +56,7 @@ export async function getOrCreateInstanceId(): Promise<string> {
       instance_created_at: new Date().toISOString(),
       usage_stats_enabled: process.env.ALGA_USAGE_STATS !== 'false',
       first_seen_version: process.env.npm_package_version || process.env.APP_VERSION || 'unknown',
-      deployment_type: process.env.DEPLOYMENT_TYPE === 'hosted' ? 'hosted' : 'on-premise'
+      environment: process.env.NODE_ENV || 'development'
     });
 
     instanceIdCache.set(tenant, newInstanceId);
@@ -139,7 +139,7 @@ export async function updateAnalyticsPreferences(preferences: Partial<AnalyticsS
       instance_created_at: new Date().toISOString(),
       usage_stats_enabled: true,
       first_seen_version: process.env.npm_package_version || 'unknown',
-      deployment_type: process.env.DEPLOYMENT_TYPE === 'hosted' ? 'hosted' : 'on-premise'
+      environment: process.env.NODE_ENV || 'development'
     };
 
     await saveAnalyticsSettings(tenant, {

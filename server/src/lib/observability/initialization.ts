@@ -34,19 +34,17 @@ export async function initializeTelemetry(): Promise<void> {
   try {
     // Log environment configuration for debugging
     logger.info('Observability initialization starting', {
-      DEPLOYMENT_TYPE: process.env.DEPLOYMENT_TYPE,
       ALGA_OBSERVABILITY: process.env.ALGA_OBSERVABILITY,
       OTLP_ENDPOINT: process.env.OTLP_ENDPOINT,
-      TENANT_ID: process.env.TENANT_ID ? '[PRESENT]' : '[NOT_SET]',
+      DEPLOYMENT_ID: process.env.DEPLOYMENT_ID ? '[PRESENT]' : '[NOT_SET]',
       NODE_ENV: process.env.NODE_ENV,
     });
 
-    // Deployment type detection
-    const isHosted = process.env.DEPLOYMENT_TYPE === 'hosted';
-    const observabilityEnabled = isHosted || process.env.ALGA_OBSERVABILITY === 'true';
+    // Check if observability is enabled
+    const observabilityEnabled = process.env.ALGA_OBSERVABILITY === 'true';
     
     if (!observabilityEnabled) {
-      logger.info('Observability disabled - set ALGA_OBSERVABILITY=true to enable for on-premise deployments');
+      logger.info('Observability disabled - set ALGA_OBSERVABILITY=true to enable');
       return;
     }
 
@@ -57,18 +55,18 @@ export async function initializeTelemetry(): Promise<void> {
       return;
     }
 
-    // Create OTLP exporters
+    // Create OTLP exporters with deployment ID headers
     const traceExporter = new OTLPTraceExporter({
       url: `${endpoint}/v1/traces`,
-      headers: isHosted && process.env.TENANT_ID ? {
-        'X-Tenant-Id': process.env.TENANT_ID,
+      headers: process.env.DEPLOYMENT_ID ? {
+        'X-Deployment-Id': process.env.DEPLOYMENT_ID,
       } : {},
     });
 
     const metricExporter = new OTLPMetricExporter({
       url: `${endpoint}/v1/metrics`,
-      headers: isHosted && process.env.TENANT_ID ? {
-        'X-Tenant-Id': process.env.TENANT_ID,
+      headers: process.env.DEPLOYMENT_ID ? {
+        'X-Deployment-Id': process.env.DEPLOYMENT_ID,
       } : {},
     });
 
@@ -77,9 +75,8 @@ export async function initializeTelemetry(): Promise<void> {
       [SemanticResourceAttributes.SERVICE_NAME]: 'alga-psa',
       [SemanticResourceAttributes.SERVICE_VERSION]: process.env.npm_package_version || '1.0.0',
       [SemanticResourceAttributes.SERVICE_NAMESPACE]: 'alga-psa',
-      [SemanticResourceAttributes.DEPLOYMENT_ENVIRONMENT]: isHosted ? 'hosted' : 'on-premise',
-      'tenant.id': isHosted ? process.env.TENANT_ID || 'unknown' : 'self-hosted',
-      'deployment.type': isHosted ? 'hosted' : 'on-premise',
+      [SemanticResourceAttributes.DEPLOYMENT_ENVIRONMENT]: process.env.NODE_ENV,
+      'deployment.id': process.env.DEPLOYMENT_ID || 'unknown',
       environment: process.env.NODE_ENV || 'development',
     });
 
@@ -127,7 +124,6 @@ export async function initializeTelemetry(): Promise<void> {
 
     logger.info('Observability initialized successfully', {
       endpoint,
-      deploymentType: isHosted ? 'hosted' : 'on-premise',
       serviceName: 'alga-psa',
       environment: process.env.NODE_ENV,
     });

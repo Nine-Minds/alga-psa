@@ -95,31 +95,28 @@ export async function initializeTelemetry(): Promise<void> {
   try {
     // Log environment configuration for debugging
     logger.info('Observability initialization starting', {
-      DEPLOYMENT_TYPE: process.env.DEPLOYMENT_TYPE,
       ALGA_OBSERVABILITY: process.env.ALGA_OBSERVABILITY,
       OTLP_ENDPOINT: process.env.OTLP_ENDPOINT,
-      TENANT_ID: process.env.TENANT_ID ? '[PRESENT]' : '[NOT_SET]',
+      DEPLOYMENT_ID: process.env.DEPLOYMENT_ID ? '[PRESENT]' : '[NOT_SET]',
       NODE_ENV: process.env.NODE_ENV,
     });
 
-    // Deployment type detection
-    const isHosted = process.env.DEPLOYMENT_TYPE === 'hosted';
-    const observabilityEnabled = isHosted || process.env.ALGA_OBSERVABILITY === 'true';
+    // Check if observability is enabled
+    const observabilityEnabled = process.env.ALGA_OBSERVABILITY === 'true';
     
     logger.info('Deployment configuration', {
-      isHosted,
       observabilityEnabled,
-      reason: isHosted ? 'hosted deployment' : (process.env.ALGA_OBSERVABILITY === 'true' ? 'explicitly enabled' : 'disabled')
+      reason: observabilityEnabled ? 'explicitly enabled' : 'disabled'
     });
     
     if (!observabilityEnabled) {
-      logger.info('Observability disabled - set ALGA_OBSERVABILITY=true to enable for on-premise deployments');
+      logger.info('Observability disabled - set ALGA_OBSERVABILITY=true to enable');
       return;
     }
 
 
-    // Show notice on first load for on-premise deployments
-    if (!isHosted && !hasShownObservabilityNotice()) {
+    // Show notice on first load
+    if (!hasShownObservabilityNotice()) {
       showObservabilityNotice();
       markObservabilityNoticeShown();
     }
@@ -141,15 +138,15 @@ export async function initializeTelemetry(): Promise<void> {
     // Create OTLP exporters for Grafana Alloy
     const traceExporter = new OTLPTraceExporter({
       url: `${endpoint}/v1/traces`,  // Add OTLP traces path
-      headers: isHosted && process.env.TENANT_ID ? {
-        'X-Tenant-Id': process.env.TENANT_ID,
+      headers: process.env.DEPLOYMENT_ID ? {
+        'X-Deployment-Id': process.env.DEPLOYMENT_ID,
       } : {},
     });
 
     const metricExporter = new OTLPMetricExporter({
       url: `${endpoint}/v1/metrics`,  // Add OTLP metrics path
-      headers: isHosted && process.env.TENANT_ID ? {
-        'X-Tenant-Id': process.env.TENANT_ID,
+      headers: process.env.DEPLOYMENT_ID ? {
+        'X-Deployment-Id': process.env.DEPLOYMENT_ID,
       } : {},
     });
 
@@ -158,10 +155,9 @@ export async function initializeTelemetry(): Promise<void> {
       [SemanticResourceAttributes.SERVICE_NAME]: 'alga-psa',
       [SemanticResourceAttributes.SERVICE_VERSION]: process.env.npm_package_version || '1.0.0',
       [SemanticResourceAttributes.SERVICE_NAMESPACE]: 'alga-psa',
-      [SemanticResourceAttributes.DEPLOYMENT_ENVIRONMENT]: isHosted ? 'hosted' : 'on-premise',
-      'tenant.id': isHosted ? process.env.TENANT_ID || 'unknown' : 'self-hosted',
+      [SemanticResourceAttributes.DEPLOYMENT_ENVIRONMENT]: process.env.NODE_ENV,
+      'deployment.id': process.env.DEPLOYMENT_ID || 'unknown',
       'app.version': process.env.APP_VERSION || '1.0.0',
-      'deployment.type': isHosted ? 'hosted' : 'on-premise',
       environment: process.env.NODE_ENV || 'development',
     });
 
@@ -253,8 +249,7 @@ export async function initializeTelemetry(): Promise<void> {
 
     logger.info('Privacy-aware observability initialized successfully', {
       endpoint,
-      deploymentType: isHosted ? 'hosted' : 'on-premise',
-      tenantId: isHosted ? process.env.TENANT_ID : 'self-hosted',
+      deploymentId: process.env.DEPLOYMENT_ID || 'unknown',
       serviceName: 'alga-psa',
       serviceVersion: process.env.npm_package_version || '1.0.0',
       samplingRate: 0.1,
@@ -272,7 +267,7 @@ export async function initializeTelemetry(): Promise<void> {
       traceExporter: {
         type: 'OTLPTraceExporter',
         url: endpoint,
-        headers: isHosted && process.env.TENANT_ID ? { 'X-Tenant-Id': process.env.TENANT_ID } : {},
+        headers: process.env.DEPLOYMENT_ID ? { 'X-Tenant-Id': process.env.DEPLOYMENT_ID } : {},
       },
       metricExporter: {
         type: 'OTLPMetricExporter', 
@@ -289,7 +284,7 @@ export async function initializeTelemetry(): Promise<void> {
       span.setAttributes({
         'test.type': 'initialization',
         'test.timestamp': Date.now(),
-        'deployment.type': isHosted ? 'hosted' : 'on-premise',
+        'environment': process.env.NODE_ENV || 'development',
       });
       span.end();
       logger.info('Test trace span created successfully');

@@ -200,19 +200,17 @@ export const featureFlaggedConfig = {
   autoSaveInterval: await checkFeatureFlag('aggressive_autosave') ? 10 : 60, // seconds
 };
 
-// Example 11: Feature flags with deployment types
+// Example 11: Feature flags based on environment
 import { checkFeatureFlag, getFeatureFlagVariant } from '../../serverFeatureFlags';
 
 export async function BackupSettings() {
-  const isHosted = process.env.DEPLOYMENT_TYPE === 'hosted';
-  const cloudBackupEnabled = await checkFeatureFlag('cloud_backup', {
-    deploymentType: 'hosted'
-  });
+  const isProduction = process.env.NODE_ENV === 'production';
+  const cloudBackupEnabled = await checkFeatureFlag('cloud_backup');
 
-  if (!isHosted || !cloudBackupEnabled) {
+  if (!isProduction || !cloudBackupEnabled) {
     return (
       <div className="feature-unavailable">
-        This feature is only available in hosted deployments
+        This feature is only available in production environment
       </div>
     );
   }

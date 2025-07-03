@@ -6,14 +6,14 @@ import { posthogConfig, isPostHogEnabled } from '../../config/posthog.config';
 export class UsageAnalytics {
   private client: PostHog | null = null;
   public isEnabled: boolean;
-  private isHosted: boolean;
+  private anonymizeUserIds: boolean;
   
   constructor() {
-    this.isHosted = process.env.DEPLOYMENT_TYPE === 'hosted';
+    this.anonymizeUserIds = process.env.ANALYTICS_ANONYMIZE_USER_IDS !== 'false';
     this.isEnabled = isPostHogEnabled();
     
-    // Show usage stats notice in terminal for on-premise deployments (server-side only)
-    if (!this.isHosted && typeof window === 'undefined') {
+    // Show usage stats notice in terminal on first run (server-side only)
+    if (typeof window === 'undefined') {
       import('./terminal-notice').then(({ showUsageStatsNotice }) => {
         showUsageStatsNotice();
       }).catch(() => {
@@ -31,7 +31,7 @@ export class UsageAnalytics {
         }
       );
       
-      console.log(`Usage statistics enabled (${this.isHosted ? 'hosted' : 'on-premise'} mode)`);
+      console.log(`Usage statistics enabled (user IDs ${this.anonymizeUserIds ? 'anonymized' : 'preserved'})`);
     } else {
       console.log('Usage statistics disabled by ALGA_USAGE_STATS=false');
     }
@@ -47,7 +47,7 @@ export class UsageAnalytics {
       event,
       properties: {
         ...properties,
-        deployment_type: this.isHosted ? 'hosted' : 'on-premise',
+        user_ids_anonymized: this.anonymizeUserIds,
         app_version: process.env.npm_package_version || process.env.APP_VERSION,
         environment: process.env.NODE_ENV,
       },
@@ -74,24 +74,21 @@ export class UsageAnalytics {
   private cachedInstanceId: string | null = null;
   
   async getDistinctId(userId?: string): Promise<string> {
-    if (this.isHosted && userId) {
-      return `hosted_${userId}`;
+    // If user IDs should not be anonymized and we have a user ID, use it
+    if (!this.anonymizeUserIds && userId) {
+      return `user_${userId}`;
     }
     
-    // For on-premise, use stable instance ID
+    // For anonymized mode or when no userId, use stable instance ID
     try {
       if (!this.cachedInstanceId) {
         const { getOrCreateInstanceId } = await import('./analyticsSettingsServer');
-        const stableId = await getOrCreateInstanceId();
-        this.cachedInstanceId = crypto.createHash('sha256')
-          .update(stableId)
-          .digest('hex')
-          .substring(0, 16);
+        this.cachedInstanceId = await getOrCreateInstanceId();
       }
       return this.cachedInstanceId;
     } catch (error) {
       console.error('Error getting stable instance ID:', error);
-      // Fallback to hostname-based ID
+      // Use the fallback from analyticsSettings
       const instanceId = process.env.INSTANCE_ID || os.hostname();
       return crypto.createHash('sha256')
         .update(instanceId)
