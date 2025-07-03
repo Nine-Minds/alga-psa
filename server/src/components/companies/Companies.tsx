@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import GenericDialog from '../ui/GenericDialog';
@@ -33,6 +33,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { useToast } from 'server/src/hooks/use-toast';
+import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 
 const COMPANY_VIEW_MODE_SETTING = 'company_list_view_mode';
 
@@ -73,6 +74,10 @@ interface CompanyResultsProps {
   pageSize: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
+  onCompanyTagsLoaded?: (companyTags: Record<string, ITag[]>, allUniqueTags: string[]) => void;
+  // Add props to receive parent's tag state
+  companyTags?: Record<string, ITag[]>;
+  allUniqueTagsFromParent?: string[];
 }
 
 const CompanyResults = memo(({
@@ -89,13 +94,20 @@ const CompanyResults = memo(({
   currentPage,
   pageSize,
   onPageChange,
-  onPageSizeChange
+  onPageSizeChange,
+  onCompanyTagsLoaded,
+  companyTags: parentCompanyTags,
+  allUniqueTagsFromParent
 }: CompanyResultsProps) => {
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const companyTagsRef = useRef<Record<string, ITag[]>>({});
+  const [localCompanyTags, setLocalCompanyTags] = useState<Record<string, ITag[]>>({});
   const [allUniqueTags, setAllUniqueTags] = useState<string[]>([]);
+  
+  // Use parent's tag state if available, otherwise use local state
+  const effectiveCompanyTags = parentCompanyTags || localCompanyTags;
+  const effectiveAllUniqueTags = allUniqueTagsFromParent || allUniqueTags;
 
   // Load companies when filters change
   useEffect(() => {
@@ -129,6 +141,7 @@ const CompanyResults = memo(({
       if (companies.length === 0) return;
       
       try {
+        // Fetch both company-specific tags and all unique tags
         const [companyTags, allTags] = await Promise.all([
           findTagsByEntityIds(
             companies.map((company: ICompany): string => company.company_id),
@@ -145,8 +158,14 @@ const CompanyResults = memo(({
           newCompanyTags[tag.tagged_id].push(tag);
         });
 
-        companyTagsRef.current = newCompanyTags;
-        setAllUniqueTags(allTags.map(tag => tag.tag_text));
+        setLocalCompanyTags(newCompanyTags);
+        const uniqueTags = allTags.map(tag => tag.tag_text);
+        setAllUniqueTags(uniqueTags);
+        
+        // Notify parent component about loaded tags
+        if (onCompanyTagsLoaded) {
+          onCompanyTagsLoaded(newCompanyTags, uniqueTags);
+        }
       } catch (error) {
         console.error('Error fetching tags:', error);
       }
@@ -158,8 +177,8 @@ const CompanyResults = memo(({
   const filteredCompanies = companies.filter(company => {
     if (selectedTags.length === 0) return true;
     
-    const companyTags = companyTagsRef.current[company.company_id] || [];
-    const companyTagTexts = companyTags.map(tag => tag.tag_text);
+    const entityCompanyTags = effectiveCompanyTags[company.company_id] || [];
+    const companyTagTexts = entityCompanyTags.map(tag => tag.tag_text);
     
     return selectedTags.some(selectedTag => companyTagTexts.includes(selectedTag));
   });
@@ -198,8 +217,8 @@ const CompanyResults = memo(({
           totalCount={totalCount}
           onPageChange={onPageChange}
           onPageSizeChange={onPageSizeChange}
-          companyTags={companyTagsRef.current}
-          allUniqueTags={allUniqueTags}
+          companyTags={effectiveCompanyTags}
+          allUniqueTags={effectiveAllUniqueTags}
           onTagsChange={onTagsChange}
         />
       ) : (
@@ -214,8 +233,8 @@ const CompanyResults = memo(({
           pageSize={pageSize}
           totalCount={totalCount}
           onPageChange={onPageChange}
-          companyTags={companyTagsRef.current}
-          allUniqueTags={allUniqueTags}
+          companyTags={effectiveCompanyTags}
+          allUniqueTags={effectiveAllUniqueTags}
           onTagsChange={onTagsChange}
         />
       )}
@@ -228,35 +247,36 @@ CompanyResults.displayName = 'CompanyResults';
 const Companies: React.FC = () => {
   const { toast } = useToast();
   
-  // UI Reflection Integration
-  const { automationIdProps: containerProps, updateMetadata } = useAutomationIdAndRegister({
-    id: 'companies-page',
-    type: 'container',
-    label: 'Companies Page',
-    helperText: "Main companies management page with search, filters, and company grid/list view"
-  });
+  useTagPermissions(['company']);
+  
 
+   const { automationIdProps: containerProps, updateMetadata } = useAutomationIdAndRegister({
+     id: 'companies-page',
+     type: 'container',
+     label: 'Companies Page',
+     helperText: "Main companies management page with search, filters, and company grid/list view"
+   });
 
-  const { automationIdProps: createButtonProps } = useAutomationIdAndRegister({
-    id: 'create-client-btn',
-    type: 'button',
-    label: 'Create Client',
-    helperText: "Opens dialog to create a new client/company"
-  });
+   const { automationIdProps: createButtonProps } = useAutomationIdAndRegister({
+     id: 'create-client-btn',
+     type: 'button',
+     label: 'Create Client',
+     helperText: "Opens dialog to create a new client/company"
+   });
 
-  const { automationIdProps: actionsMenuProps } = useAutomationIdAndRegister({
-    id: 'actions-menu-btn',
-    type: 'button',
-    label: 'Actions Menu',
-    helperText: "Menu for importing/exporting companies"
-  });
+   const { automationIdProps: actionsMenuProps } = useAutomationIdAndRegister({
+     id: 'actions-menu-btn',
+     type: 'button',
+     label: 'Actions Menu',
+     helperText: "Menu for importing/exporting companies"
+   });
 
-  const { automationIdProps: deleteSelectedProps } = useAutomationIdAndRegister({
-    id: 'delete-selected-btn',
-    type: 'button',
-    label: 'Delete Selected',
-    helperText: "Delete multiple selected companies"
-  });
+   const { automationIdProps: deleteSelectedProps } = useAutomationIdAndRegister({
+     id: 'delete-selected-btn',
+     type: 'button',
+     label: 'Delete Selected',
+     helperText: "Delete multiple selected companies"
+   });
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const router = useRouter();
@@ -287,6 +307,7 @@ const Companies: React.FC = () => {
   // Tag-related state
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [allUniqueTags, setAllUniqueTags] = useState<string[]>([]);
+  const [companyTags, setCompanyTags] = useState<Record<string, ITag[]>>({});
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -306,18 +327,7 @@ const Companies: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  // Load all unique tags on mount
-  useEffect(() => {
-    const fetchAllTags = async () => {
-      try {
-        const allTags = await findAllTagsByType('company');
-        setAllUniqueTags(allTags.map(tag => tag.tag_text));
-      } catch (error) {
-        console.error('Error fetching tags:', error);
-      }
-    };
-    fetchAllTags();
-  }, []);
+  // Tags will be loaded by CompanyResults component
 
   useEffect(() => {
     const initializeComponent = async () => {
@@ -389,18 +399,26 @@ const Companies: React.FC = () => {
     });
   };
 
-  const handleTagsChange = (companyId: string, tags: ITag[]) => {
-    // Refresh all tags when tags are updated
-    const fetchAllTags = async () => {
-      try {
-        const allTags = await findAllTagsByType('company');
-        setAllUniqueTags(allTags.map(tag => tag.tag_text));
-      } catch (error) {
-        console.error('Error fetching tags:', error);
-      }
-    };
-    fetchAllTags();
-  };
+  const handleTagsChange = useCallback((companyId: string, tags: ITag[]) => {
+    // Update local tag state for optimistic UI updates
+    setCompanyTags(current => ({
+      ...current,
+      [companyId]: tags
+    }));
+    
+    // Update unique tags list if needed
+    setAllUniqueTags(current => {
+      const allTagTexts = new Set(current);
+      tags.forEach(tag => allTagTexts.add(tag.tag_text));
+      return Array.from(allTagTexts);
+    });
+  }, []);
+  
+  const handleCompanyTagsLoaded = useCallback((loadedCompanyTags: Record<string, ITag[]>, uniqueTags: string[]) => {
+    // Update the main component's tag state when CompanyResults loads tags
+    setCompanyTags(loadedCompanyTags);
+    setAllUniqueTags(uniqueTags);
+  }, []);
   
 
   const handleEditCompany = (companyId: string) => {
@@ -633,8 +651,7 @@ const Companies: React.FC = () => {
   }
 
   return (
-    <ReflectionContainer {...containerProps}>
-      <div className="flex flex-col min-h-full">
+    <div className="flex flex-col min-h-full">
         {/* Quick Add Company Dialog */}
         <QuickAddCompany
           open={isDialogOpen}
@@ -706,7 +723,6 @@ const Companies: React.FC = () => {
             {/* Actions */}
             <div className="flex gap-2">
               <button
-                {...createButtonProps}
                 onClick={() => setIsDialogOpen(true)}
                 className="px-4 py-2 text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 rounded"
               >
@@ -715,7 +731,7 @@ const Companies: React.FC = () => {
 
               <DropdownMenu.Root>
                 <DropdownMenu.Trigger asChild>
-                  <button {...actionsMenuProps} className="border border-gray-300 rounded-md p-2 flex items-center gap-2">
+                  <button className="border border-gray-300 rounded-md p-2 flex items-center gap-2">
                     <MoreVertical size={16} />
                     Actions
                   </button>
@@ -766,7 +782,6 @@ const Companies: React.FC = () => {
           </span>}
 
         <button
-          {...deleteSelectedProps}
           className="flex gap-1 text-sm font-medium text-gray-500"
           disabled={selectedCompanies.length === 0}
           onClick={handleMultiDelete}
@@ -795,6 +810,9 @@ const Companies: React.FC = () => {
           setPageSize(size);
           setCurrentPage(1); // Reset to first page when changing page size
         }}
+        onCompanyTagsLoaded={handleCompanyTagsLoaded}
+        companyTags={companyTags}
+        allUniqueTagsFromParent={allUniqueTags}
       />
 
       {/* Multi-delete confirmation dialog */}
@@ -883,7 +901,6 @@ const Companies: React.FC = () => {
         onImportComplete={(companies, updateExisting) => void handleImportComplete(companies, updateExisting)}
       />
     </div>
-    </ReflectionContainer>
   );
 };
 

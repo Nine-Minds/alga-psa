@@ -100,24 +100,25 @@ const ReflectedTableCell: React.FC<ReflectedTableCellProps> = ({
   className, 
   style 
 }) => {
-  // Register the cell content as a text component if it contains meaningful text
-  const shouldRegister = content !== null && content !== undefined && content.trim() !== '';
-  
-  // Use conditional registration - only register if content is meaningful
-  const registrationId = shouldRegister ? id : `__skip_registration_${id}`;
-  
-  useRegisterChild<TextComponent>({
-    id: registrationId,
+  // Register the cell with UI reflection system
+  const updateCellMetadata = id ? useRegisterChild<TextComponent>({
+    id,
     type: 'text',
-    text: content,
-    visible: shouldRegister
-  });
-
+    text: content
+  }) : undefined;
+  
+  // Only update metadata when content changes
+  useEffect(() => {
+    if (updateCellMetadata && content) {
+      updateCellMetadata({ text: content });
+    }
+  }, [content, updateCellMetadata]);
+  
   return (
     <td
       className={className}
       style={style}
-      data-automation-id={shouldRegister ? id : undefined}
+      data-automation-id={id}
     >
       <div className="truncate w-full">
         {children}
@@ -126,7 +127,7 @@ const ReflectedTableCell: React.FC<ReflectedTableCellProps> = ({
   );
 };
 
-export interface ExtendedDataTableProps<T extends object> extends DataTableProps<T>, AutomationProps {
+export interface ExtendedDataTableProps<T extends object> extends DataTableProps<T> {
   /** Unique identifier for UI reflection system */
   id?: string;
 }
@@ -259,11 +260,9 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     };
   }, [columns]); // Re-run when columns change
 
-  // Register with UI reflection system if id is provided
-  const updateMetadata = id ? useRegisterUIComponent<DataTableComponent>({
-    id: `${id}-table`,
-    type: 'dataTable',
-    columns: columns.map((col): { id: string; title: string; dataIndex: string | string[]; hasCustomRender: boolean; visible: boolean } => {
+  // Memoize the initial column configuration to prevent loops
+  const columnConfig = useMemo(() => {
+    return columns.map((col): { id: string; title: string; dataIndex: string | string[]; hasCustomRender: boolean; visible: boolean } => {
       const colId = Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex;
       return {
         id: colId,
@@ -272,7 +271,14 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
         hasCustomRender: !!col.render,
         visible: visibleColumnIds.includes(colId)
       };
-    }),
+    });
+  }, [columns, visibleColumnIds]);
+
+  // Register with UI reflection system with stable references
+  const updateMetadata = id ? useRegisterUIComponent<DataTableComponent>({
+    id: `${id}-table`,
+    type: 'dataTable',
+    columns: columnConfig,
     pagination: {
       enabled: pagination,
       currentPage,
@@ -351,14 +357,21 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     }
   };
 
-  // Notify parent component of page changes and update reflection metadata
+  // Notify parent component of page changes
   React.useEffect(() => {
     if (onPageChange) {
       onPageChange(pageIndex + 1);
     }
+  }, [pageIndex, onPageChange]);
 
-    // Update reflection metadata when pagination, sorting, or column visibility changes
-    if (updateMetadata) {
+  // Update reflection metadata with debouncing to prevent loops
+  React.useEffect(() => {
+    if (!updateMetadata) return;
+
+    const timeoutId = setTimeout(() => {
+      const paginationRowModel = table.getPaginationRowModel();
+      const sortingState = table.getState().sorting;
+      
       updateMetadata({
         pagination: {
           enabled: pagination,
@@ -368,27 +381,20 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
           totalPages: Math.ceil((totalItems ?? data.length) / currentPageSize)
         },
         rowCount: data.length,
-        visibleRows: table.getPaginationRowModel().rows.map((row): { id: string; values: Record<string, unknown> } => ({
+        visibleRows: paginationRowModel.rows.slice(0, 10).map((row): { id: string; values: Record<string, unknown> } => ({
           id: ('id' in row.original) ? (row.original as { id: string }).id : '',
           values: row.original as Record<string, unknown>
         })),
-        sortedBy: table.getState().sorting[0] ? {
-          column: table.getState().sorting[0].id,
-          direction: table.getState().sorting[0].desc ? 'desc' : 'asc'
+        sortedBy: sortingState[0] ? {
+          column: sortingState[0].id,
+          direction: sortingState[0].desc ? 'desc' : 'asc'
         } : undefined,
-        columns: columns.map((col): { id: string; title: string; dataIndex: string | string[]; hasCustomRender: boolean; visible: boolean } => {
-          const colId = Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex;
-          return {
-            id: colId,
-            title: String(col.title),
-            dataIndex: col.dataIndex,
-            hasCustomRender: !!col.render,
-            visible: visibleColumnIds.includes(colId)
-          };
-        })
+        columns: columnConfig
       });
-    }
-  }, [pageIndex, currentPageSize, data.length, totalItems, pagination, onPageChange, updateMetadata, table, visibleColumnIds, columns]);
+    }, 100); // Debounce updates by 100ms
+
+    return () => clearTimeout(timeoutId);
+  }, [pageIndex, currentPageSize, data.length, totalItems, pagination, updateMetadata, columnConfig]);
 
   const handlePreviousPage = () => {
     table.previousPage();
@@ -404,7 +410,6 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
       data-automation-id={id}
       ref={tableContainerRef}
     >
-      <ReflectionContainer id={`${id}-table`}>
         {visibleColumnIds.length < columns.length && (
           <div className="px-4 py-2 bg-blue-50 text-blue-700 text-sm border-b border-gray-200">
             <span className="flex items-center">
@@ -514,7 +519,6 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
             </div>
           </div>
         )}
-      </ReflectionContainer>
     </div>
   );
 };

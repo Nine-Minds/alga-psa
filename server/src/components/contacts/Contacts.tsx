@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { getAllContacts, getContactsByCompany, getAllCompanies, exportContactsToCSV, deleteContact } from 'server/src/lib/actions/contact-actions/contactActions';
-import { findTagsByEntityIds, createTag, deleteTag, findAllTagsByType } from 'server/src/lib/actions/tagActions';
+import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
 import { Button } from 'server/src/components/ui/Button';
 import { SearchInput } from 'server/src/components/ui/SearchInput';
 import { Pen, Eye, CloudDownload, MoreVertical, Upload, Trash2, XCircle } from 'lucide-react';
@@ -20,7 +20,8 @@ import CompanyDetails from '../companies/CompanyDetails';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { TagManager, TagFilter } from 'server/src/components/tags';
-import { getUniqueTagTexts, getAvatarUrl } from 'server/src/utils/colorUtils';
+import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
+import { getUniqueTagTexts } from 'server/src/utils/colorUtils';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
@@ -28,7 +29,7 @@ import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/do
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import { useRouter } from 'next/navigation';
-
+import ContactsSkeleton from './ContactsSkeleton';
 interface ContactsProps {
   initialContacts: IContact[];
   companyId?: string;
@@ -36,6 +37,9 @@ interface ContactsProps {
 }
 
 const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSelectedCompanyId }) => {
+  // Pre-fetch tag permissions to prevent individual API calls
+  useTagPermissions(['contact']);
+  
   const [contacts, setContacts] = useState<IContact[]>(initialContacts);
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [documents, setDocuments] = useState<Record<string, IDocument[]>>({});
@@ -55,6 +59,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<IContact | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const statusOptions = [
     { value: 'all', label: 'All contacts' },
@@ -65,6 +70,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
   // Fetch contacts and companies when filter status changes
   useEffect(() => {
     const fetchContactsAndCompanies = async () => {
+      setIsLoading(true);
       try {
         let fetchedContacts: IContact[] = [];
 
@@ -100,23 +106,24 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
         }
       } catch (error) {
         console.error('Error fetching contacts and companies:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchContactsAndCompanies();
   }, [companyId, filterStatus]);
 
-  // Fetch tags separately - no need to refetch when filter changes
+  // Fetch tags separately - only fetch contact-specific tags when contacts change
   useEffect(() => {
     const fetchTags = async () => {
+      if (contacts.length === 0) return;
+      
       try {
-        
-        const [contactTags, allTags] = await Promise.all([
-          findTagsByEntityIds(
-            contacts.map((contact: IContact): string => contact.contact_name_id),
-            'contact'
-          ),
-          findAllTagsByType('contact')
-        ]);
+        // Only fetch contact-specific tags, not all tags again
+        const contactTags = await findTagsByEntityIds(
+          contacts.map((contact: IContact): string => contact.contact_name_id),
+          'contact'
+        );
 
         const newContactTags: Record<string, ITag[]> = {};
         contactTags.forEach(tag => {
@@ -127,14 +134,25 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
         });
 
         contactTagsRef.current = newContactTags;
-        setAllUniqueTags(allTags.map(tag => tag.tag_text));
-        
       } catch (error) {
         console.error('Error fetching tags:', error);
       }
     };
     fetchTags();
-  }, [contacts]); // Only re-fetch tags when contacts change
+  }, [contacts]);
+
+  // Fetch all unique tags only once on mount
+  useEffect(() => {
+    const fetchAllTags = async () => {
+      try {
+        const allTags = await findAllTagsByType('contact');
+        setAllUniqueTags(allTags.map(tag => tag.tag_text));
+      } catch (error) {
+        console.error('Error fetching all tags:', error);
+      }
+    };
+    fetchAllTags();
+  }, []);
 
   const handleTagsChange = (contactId: string, updatedTags: ITag[]) => {
     contactTagsRef.current = {
@@ -485,31 +503,18 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
     });
   }, [contacts, searchTerm, filterStatus, selectedTags]);
 
+  // Memoize the data transformation for DataTable
+  const tableData = useMemo(() => filteredContacts.map((contact) => ({
+    ...contact,
+    id: contact.contact_name_id
+  })), [filteredContacts]);
+
+  if (isLoading) {
+    return <ContactsSkeleton />;
+  }
+
   return (
-    <Suspense fallback={
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4 animate-pulse"></div>
-          <div className="h-10 bg-gray-200 rounded w-32 animate-pulse"></div>
-        </div>
-        <div className="bg-white shadow rounded-lg p-4">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-4">
-              <div className="h-10 bg-gray-200 rounded w-64 animate-pulse"></div>
-              <div className="h-10 bg-gray-200 rounded w-40 animate-pulse"></div>
-              <div className="h-10 bg-gray-200 rounded w-40 animate-pulse"></div>
-            </div>
-            <div className="h-10 bg-gray-200 rounded w-32 animate-pulse"></div>
-          </div>
-          <div className="animate-pulse space-y-4">
-            {[...Array(10)].map((_, i) => (
-              <div key={i} className="h-16 bg-gray-200 rounded w-full"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    }>
-      <div className="p-6">
+    <div className="p-6">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold">Contacts</h1>
           <Button
@@ -606,10 +611,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
           </ReflectionContainer>
           <DataTable
             id="contacts-table"
-            data={useMemo(() => filteredContacts.map((contact): typeof filteredContacts[number] & { id: string } => ({
-              ...contact,
-              id: contact.contact_name_id
-            })), [filteredContacts])}
+            data={tableData}
             columns={columns}
             pagination={true}
             currentPage={currentPage}
@@ -653,7 +655,6 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
           isConfirming={false}
         />
       </div>
-    </Suspense >
   );
 };
 

@@ -4,7 +4,6 @@ import "./globals.css";
 import { Toaster } from 'react-hot-toast';
 import { getCurrentTenant } from "../lib/actions/tenantActions";
 import { TenantProvider } from "../components/TenantProvider";
-import { Suspense } from "react";
 import { Theme } from '@radix-ui/themes';
 import { ThemeProvider } from '../context/ThemeContext';
 import { TagProvider } from '../context/TagContext';
@@ -38,10 +37,6 @@ export async function generateMetadata(): Promise<Metadata> {
       ],
     },
   };
-}
-
-function Loading() {
-  return <div>Loading...</div>;
 }
 
 async function MainContent({ children }: { children: React.ReactNode }) {
@@ -78,9 +73,7 @@ export default function RootLayout({
     <html lang="en" className={inter.className}>
       <body className={`${inter.className} light`}>
         <PostHogProvider>
-          <Suspense fallback={<Loading />}>
-            <MainContent>{children}</MainContent>
-          </Suspense>
+           <MainContent>{children}</MainContent>
           <Toaster position="top-right" />
         </PostHogProvider>
       </body>

@@ -866,7 +866,6 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             uploadAction={uploadCompanyLogo}
             deleteAction={deleteCompanyLogo}
             onImageChange={async (newLogoUrl) => {
-              console.log("CompanyDetails: Logo URL changed:", newLogoUrl);
               setEditedCompany(prev => {
                 if (!prev) return prev;
                 return {
