@@ -30,7 +30,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
       
       // TODO: Only show onboarding for admin users
       // Need to fetch user roles separately as they're not in the session
-      const isAdmin = true; // Temporarily allow all users
+      const isAdmin = false; // Temporarily disabled - onboarding feature not ready
       
       if (settings && !settings.onboarding_completed && !settings.onboarding_skipped && isAdmin) {
         setShowOnboarding(true);
