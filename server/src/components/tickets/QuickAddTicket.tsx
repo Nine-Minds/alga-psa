@@ -101,7 +101,7 @@ export function QuickAddTicket({
   const [users, setUsers] = useState<IUser[]>([]);
   const [channels, setChannels] = useState<IChannel[]>([]);
   const [statuses, setStatuses] = useState<ITicketStatus[]>([]);
-  const [priorities, setPriorities] = useState<(IPriority | IStandardPriority)[]>([]);
+  const [priorities, setPriorities] = useState<IPriority[]>([]);
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [locations, setLocations] = useState<ICompanyLocation[]>([]);
@@ -389,7 +389,15 @@ export function QuickAddTicket({
     () =>
       priorities.map((priority): SelectOption => ({
         value: priority.priority_id,
-        label: priority.priority_name
+        label: (
+          <div className="flex items-center gap-2">
+            <div 
+              className="w-3 h-3 rounded-full border border-gray-300" 
+              style={{ backgroundColor: priority.color || '#6B7280' }}
+            />
+            <span>{priority.priority_name}</span>
+          </div>
+        )
       })),
     [priorities]
   );
@@ -456,49 +464,42 @@ export function QuickAddTicket({
                       onFilterStateChange={setCompanyFilterState}
                       clientTypeFilter={clientTypeFilter}
                       onClientTypeFilterChange={setClientTypeFilter}
+                      placeholder="Select Client *"
                     />
                   </div>
 
-                  <ContactPicker
-                    id={`${id}-contact`}
-                    contacts={contacts}
-                    value={contactId || ''}
-                    onValueChange={(value) => {
-                      setContactId(value || null);
-                      clearErrorIfSubmitted();
-                    }}
-                    companyId={companyId}
-                    placeholder={
-                      !companyId || selectedCompanyType !== 'company'
-                        ? "Select client first"
-                        : contacts.length === 0
-                        ? "No contacts for selected client"
-                        : "Select Contact"
-                    }
-                    disabled={
-                      !companyId ||
-                      selectedCompanyType !== 'company' ||
-                      !!(companyId && selectedCompanyType === 'company' && contacts.length === 0)
-                    }
-                    buttonWidth="full"
-                  />
-                  {companyId && locations.length > 0 && (
-                    <CustomSelect
-                      id={`${id}-location`}
-                      value={locationId || 'none'}
+                  {companyId && selectedCompanyType === 'company' && (
+                    <ContactPicker
+                      id={`${id}-contact`}
+                      contacts={contacts}
+                      value={contactId || ''}
                       onValueChange={(value) => {
-                        setLocationId(value === 'none' ? null : value);
+                        setContactId(value || null);
                         clearErrorIfSubmitted();
                       }}
-                      options={[
-                        { value: 'none', label: 'No specific location' },
-                        ...locations.map(location => ({
-                          value: location.location_id,
-                          label: formatLocationDisplay(location) + (location.is_default ? ' (Default)' : '')
-                        }))
-                      ]}
-                      placeholder="Select Location (Optional)"
-                      className=""
+                      companyId={companyId}
+                      placeholder={
+                        contacts.length === 0
+                          ? "No contacts for selected client"
+                          : "Select contact"
+                      }
+                      disabled={contacts.length === 0}
+                      buttonWidth="full"
+                    />
+                  )}
+                  {companyId && (
+                    <CustomSelect
+                      id={`${id}-location`}
+                      value={locationId || ''}
+                      onValueChange={(value) => {
+                        setLocationId(value || null);
+                        clearErrorIfSubmitted();
+                      }}
+                      options={locations.map(location => ({
+                        value: location.location_id,
+                        label: formatLocationDisplay(location) + (location.is_default ? ' (Default)' : '')
+                      }))}
+                      placeholder={locations.length === 0 ? "No locations for selected client" : "No specific location"}
                     />
                   )}
                   <div className={hasAttemptedSubmit && !assignedTo ? 'ring-1 ring-red-500 rounded-lg' : ''}>
@@ -526,22 +527,24 @@ export function QuickAddTicket({
                       selectedChannelId={channelId}
                       onFilterStateChange={setQuickAddChannelFilterState}
                       filterState={quickAddChannelFilterState}
+                      placeholder="Select Channel *"
                     />
                   </div>
 
-                  <CategoryPicker
-                    id={`${id}-category-picker`}
-                    categories={categories}
-                    selectedCategories={selectedCategories}
-                    onSelect={(categoryIds) => {
-                      setSelectedCategories(categoryIds);
-                      clearErrorIfSubmitted();
-                    }}
-                    placeholder={channelId ? "Select category" : "Select a channel first"}
-                    multiSelect={false}
-                    className="w-full"
-                    disabled={!channelId}
-                  />
+                  {channelId && (
+                    <CategoryPicker
+                      id={`${id}-category-picker`}
+                      categories={categories}
+                      selectedCategories={selectedCategories}
+                      onSelect={(categoryIds) => {
+                        setSelectedCategories(categoryIds);
+                        clearErrorIfSubmitted();
+                      }}
+                      placeholder="Select category"
+                      multiSelect={false}
+                      className="w-full"
+                    />
+                  )}
 
                   <CustomSelect
                     id={`${id}`}

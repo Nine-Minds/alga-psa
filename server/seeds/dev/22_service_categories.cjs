@@ -13,10 +13,10 @@ exports.seed = async function (knex) { // Changed to async
 
     // Insert new categories using the fetched tenant ID
     return knex('service_categories').insert([
-        { tenant: tenantId, category_name: 'Network Services', description: 'Services related to network infrastructure' },
-        { tenant: tenantId, category_name: 'Security Services', description: 'Services focused on cybersecurity' },
-        { tenant: tenantId, category_name: 'Cloud Services', description: 'Cloud-based solutions and management' },
+        { tenant: tenantId, category_name: 'Network Services', description: 'Services related to network infrastructure', display_order: 1 },
+        { tenant: tenantId, category_name: 'Security Services', description: 'Services focused on cybersecurity', display_order: 2 },
+        { tenant: tenantId, category_name: 'Cloud Services', description: 'Cloud-based solutions and management', display_order: 3 },
         // Add the missing 'Support Services' category needed by 23_service_catalog.cjs
-        { tenant: tenantId, category_name: 'Support Services', description: 'Customer support and helpdesk services'}
+        { tenant: tenantId, category_name: 'Support Services', description: 'Customer support and helpdesk services', display_order: 4 }
     ]);
 };

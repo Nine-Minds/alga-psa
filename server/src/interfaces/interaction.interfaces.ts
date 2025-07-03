@@ -27,6 +27,7 @@ export interface ISystemInteractionType {
   type_id: string;
   type_name: string;
   icon?: string;
+  display_order?: number;
   created_at: Date;
   updated_at: Date;
 }
@@ -35,4 +36,5 @@ export interface IInteractionType extends TenantEntity {
   type_id: string;
   type_name: string;
   icon?: string;
+  display_order?: number;
 }

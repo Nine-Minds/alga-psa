@@ -215,6 +215,15 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
     {
       title: 'Priority',
       dataIndex: 'priority_name',
+      render: (value: string, record: ITicketListItem) => (
+        <div className="flex items-center gap-2">
+          <div 
+            className="w-3 h-3 rounded-full border border-gray-300" 
+            style={{ backgroundColor: record.priority_color || '#6B7280' }}
+          />
+          <span>{value}</span>
+        </div>
+      ),
     },
     {
       title: 'Channel',

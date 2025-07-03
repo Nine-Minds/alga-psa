@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader } from 'server/src/components/ui/Card';
 import { Filter, Plus, RefreshCw } from 'lucide-react';
 import InteractionIcon from 'server/src/components/ui/InteractionIcon';
-import { IInteraction, IInteractionType, ISystemInteractionType } from 'server/src/interfaces/interaction.interfaces';
+import { IInteraction, IInteractionType } from 'server/src/interfaces/interaction.interfaces';
 import { QuickAddInteraction } from 'server/src/components/interactions/QuickAddInteraction';
 import { getInteractionsForEntity, getInteractionById } from 'server/src/lib/actions/interactionActions';
 import { getAllInteractionTypes } from 'server/src/lib/actions/interactionTypeActions';
@@ -37,7 +37,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
 }) => {
   const { openDrawer } = useDrawer();
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [interactionTypes, setInteractionTypes] = useState<(IInteractionType | ISystemInteractionType)[]>([]);
+  const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
   const [selectedType, setSelectedType] = useState<string>('all');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
@@ -140,14 +140,11 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
     }
   };
 
-  const getTypeLabel = (type: IInteractionType | ISystemInteractionType) => {
-    const isSystemType = 'created_at' in type;
-    const suffix = isSystemType ? ' (System)' : ' (Custom)';
-    
+  const getTypeLabel = (type: IInteractionType) => {
     return (
       <div className="flex items-center gap-2">
         <InteractionIcon icon={type.icon} typeName={type.type_name} />
-        <span>{type.type_name}{suffix}</span>
+        <span>{type.type_name}</span>
       </div>
     );
   };

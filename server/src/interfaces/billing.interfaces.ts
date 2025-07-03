@@ -118,6 +118,14 @@ export interface IServiceCategory extends TenantEntity {
   category_id: string | null;
   category_name: string;
   description?: string;
+  display_order?: number;
+}
+
+export interface IStandardServiceCategory {
+  id: string;
+  category_name: string;
+  description?: string | null;
+  display_order: number;
 }
 
 export interface IProductCharge extends IBillingCharge, TenantEntity {
@@ -143,17 +151,14 @@ export interface ILicenseCharge extends IBillingCharge, TenantEntity {
 export interface IService extends TenantEntity {
   service_id: string;
   service_name: string;
-  // service_type_id: string; // Removed
-  standard_service_type_id?: string | null; // FK to standard_service_types
-  custom_service_type_id?: string | null;   // FK to service_types
+  custom_service_type_id: string;   // FK to service_types (now required)
   billing_method: 'fixed' | 'per_unit'; // Billing method specific to this service instance (Now required)
   default_rate: number;
   category_id: string | null;
   unit_of_measure: string;
   tax_rate_id?: string | null; // Added: FK to tax_rates table
   description?: string | null; // Added: Description field from the database
-  service_type_name?: string; // Added: Name of the service type (from standard or custom)
-  // Note: The CHECK constraint ensures exactly one of standard_service_type_id or custom_service_type_id is non-null.
+  service_type_name?: string; // Added: Name of the service type (from custom)
 }
 
 // New interface for standard service types (cross-tenant)
@@ -161,6 +166,7 @@ export interface IStandardServiceType {
   id: string;
   name: string;
   billing_method: 'fixed' | 'per_unit'; // Added
+  display_order: number;
   created_at: ISO8601String;
   updated_at: ISO8601String;
 }
@@ -173,6 +179,8 @@ export interface IServiceType extends TenantEntity {
   // standard_service_type_id removed
   is_active: boolean;
   description?: string | null;
+  order_number: number;
+  standard_service_type_id?: string | null;
   created_at: ISO8601String;
   updated_at: ISO8601String;
 }

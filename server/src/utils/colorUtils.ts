@@ -32,8 +32,8 @@ export const generateEntityColor = (tagOrString: string | ITag): ColorResult => 
   const baseColor = tinycolor({ h: hue, s: 85, l: 45 });
   
   return {
-    background: tinycolor({ h: hue, s: 85, l: 92 }).toString(),
-    text: tinycolor({ h: hue, s: 90, l: hue >= 30 && hue <= 210 ? 20 : 25 }).toString()
+    background: tinycolor({ h: hue, s: 85, l: 92 }).toHexString(),
+    text: tinycolor({ h: hue, s: 90, l: hue >= 30 && hue <= 210 ? 20 : 25 }).toHexString()
   };
 };
 

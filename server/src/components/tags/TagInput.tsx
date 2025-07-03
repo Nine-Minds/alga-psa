@@ -66,13 +66,13 @@ export const TagInput: React.FC<TagInputProps> = ({
 
   // Update dropdown position when suggestions change or input is focused
   useLayoutEffect(() => {
-    if (suggestions.length > 0 && inputValue.trim() && inputRef.current && isEditing) {
-      const rect = inputRef.current.getBoundingClientRect();
-      // Use fixed positioning based on viewport, not document scroll
+    if (suggestions.length > 0 && inputValue.trim() && containerRef.current && isEditing) {
+      const rect = containerRef.current.getBoundingClientRect();
+      // Position dropdown below the input form
       setDropdownPosition({
-        top: rect.bottom,
+        top: rect.bottom + 2,
         left: rect.left,
-        width: rect.width
+        width: Math.max(rect.width, 200) // Ensure minimum width for suggestions
       });
     }
   }, [suggestions, inputValue, isEditing]);
@@ -128,50 +128,77 @@ export const TagInput: React.FC<TagInputProps> = ({
     }
   };
 
+  const [buttonPosition, setButtonPosition] = useState({ top: 0, left: 0 });
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  // Update button position when editing starts
+  useLayoutEffect(() => {
+    if (isEditing && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setButtonPosition({
+        top: rect.top,
+        left: rect.left
+      });
+    }
+  }, [isEditing]);
+
   return (
     <>
       <ReflectionContainer id={id} label="Tag Input">
         <div className="inline-flex items-center">
-          {!isEditing ? (
-            <Button
-              id="tag-add-button"
-              onClick={() => setIsEditing(true)}
-              className="text-gray-500 hover:text-gray-700"
-              variant="icon"
-              size="icon"
-            >
-              <Plus size={16} />
-            </Button>
-          ) : (
-            <div ref={containerRef} className={`relative flex items-center ${className}`}>
-              <div className="relative flex">
-                <Input
-                  ref={inputRef}
-                  type="text"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={handleKeyPress}
-                  className="rounded-l-md px-2 py-1 text-sm w-32 focus:ring-offset-0 focus:z-10"
-                  placeholder={placeholder}
-                  autoFocus
-                  autoComplete="off"
-                  containerClassName="m-0.5"
-                />
-                <Button
-                  id="tag-save-button"
-                  onClick={() => handleSave()}
-                  disabled={isSaving || !inputValue.trim()}
-                  className="rounded-r-md px-3 py-1 text-sm font-medium ml-px"
-                  variant={isSaving || !inputValue.trim() ? "outline" : "default"}
-                  size="sm"
-                >
-                  {isSaving ? '...' : 'Save'}
-                </Button>
-              </div>
-            </div>
-          )}
+          <Button
+            ref={buttonRef}
+            id="tag-add-button"
+            onClick={() => setIsEditing(true)}
+            className="text-gray-500 hover:text-gray-700"
+            variant="icon"
+            size="icon"
+            style={{ visibility: isEditing ? 'hidden' : 'visible' }}
+          >
+            <Plus size={16} />
+          </Button>
         </div>
       </ReflectionContainer>
+      
+      {/* Render input form using a portal when editing */}
+      {isEditing && typeof document !== 'undefined' &&
+        createPortal(
+          <div 
+            ref={containerRef}
+            className="fixed z-[10001] flex items-center"
+            style={{ 
+              top: `${buttonPosition.top}px`,
+              left: `${buttonPosition.left}px`
+            }}
+          >
+            <div className="flex shadow-md rounded-md bg-white border border-gray-200">
+              <Input
+                ref={inputRef}
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyPress}
+                className="rounded-l-md px-2 py-1 text-sm w-32 focus:ring-offset-0 focus:z-10 border-0"
+                placeholder={placeholder}
+                autoFocus
+                autoComplete="off"
+                containerClassName="m-0"
+              />
+              <Button
+                id="tag-save-button"
+                onClick={() => handleSave()}
+                disabled={isSaving || !inputValue.trim()}
+                className="rounded-r-md px-3 py-1 text-sm font-medium border-0 whitespace-nowrap"
+                variant={isSaving || !inputValue.trim() ? "outline" : "default"}
+                size="sm"
+              >
+                {isSaving ? '...' : 'Save'}
+              </Button>
+            </div>
+          </div>,
+          document.body
+        )
+      }
       
       {/* Render suggestions dropdown using a portal to avoid table event interference */}
       {suggestions.length > 0 && inputValue.trim() && isEditing && typeof document !== 'undefined' &&

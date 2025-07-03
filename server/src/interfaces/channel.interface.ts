@@ -5,4 +5,6 @@ export interface IChannel extends TenantEntity {
   channel_name?: string;
   is_inactive: boolean;
   is_default?: boolean;
+  description?: string;
+  display_order?: number;
 }

@@ -37,6 +37,7 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   entered_by: string | null;
   status_name: string;
   priority_name: string;
+  priority_color?: string;
   channel_name: string;
   category_name: string;
   entered_by_name: string;
@@ -86,9 +87,11 @@ export interface ITicketCategory extends TenantEntity {
   category_id: string;
   category_name: string;
   parent_category?: string;
-  channel_id: string;
-  created_by: string;
+  channel_id?: string;
+  created_by?: string;
   created_at?: Date;
+  description?: string;
+  display_order?: number;
 }
 
 export interface IAgentSchedule {

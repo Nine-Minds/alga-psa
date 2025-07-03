@@ -55,41 +55,26 @@ export const ServiceTypeModel = {
     return deletedCount > 0;
   },
 
-  // Find service types including standard ones (useful for dropdowns) - CORRECTED LOGIC
-  // Find service types including standard ones (useful for dropdowns) - REVISED for simplified model
+  // Find all tenant-specific service types (only returns tenant-specific types, not standard ones)
   async findAllIncludingStandard(knexOrTrx: Knex | Knex.Transaction): Promise<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]> {
     const tenant = await getCurrentTenantId();
 
-    // 1. Fetch all active tenant-specific custom types with their referenced standard service type IDs
-    const customTypes = await knexOrTrx<IServiceType>(TABLE_NAME)
+    // Fetch all active tenant-specific service types
+    const tenantTypes = await knexOrTrx<IServiceType>(TABLE_NAME)
       .where('tenant', tenant)
       .andWhere('is_active', true)
-      .select('id', 'name', 'billing_method', 'standard_service_type_id')
-      .then(types => types.map(ct => ({ ...ct, is_standard: false })));
-
-    // 2. Get the list of standard service type IDs that are already represented by custom types
-    const referencedStandardTypeIds = customTypes
-      .map(ct => ct.standard_service_type_id)
-      .filter(id => id !== null && id !== undefined);
-
-    // 3. Fetch standard types that are NOT already represented by custom types
-    const standardTypes = await knexOrTrx('standard_service_types')
       .select('id', 'name', 'billing_method')
-      .whereNotIn('id', referencedStandardTypeIds)
-      .then(types => types.map(st => ({ ...st, is_standard: true })));
+      .then(types => types.map(type => ({ 
+        id: type.id, 
+        name: type.name, 
+        billing_method: type.billing_method, 
+        is_standard: false // All tenant-specific types are marked as non-standard
+      })));
 
-    // 4. Combine the lists (only custom types and unreferenced standard types)
-    const combinedTypes = [...standardTypes, ...customTypes.map(ct => ({ 
-      id: ct.id, 
-      name: ct.name, 
-      billing_method: ct.billing_method, 
-      is_standard: ct.is_standard 
-    }))];
-
-    // 5. Sort alphabetically by name
-    combinedTypes.sort((a, b) => a.name.localeCompare(b.name));
+    // Sort alphabetically by name
+    tenantTypes.sort((a, b) => a.name.localeCompare(b.name));
 
     // Ensure the return type matches the promise signature
-    return combinedTypes as { id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[];
+    return tenantTypes as { id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[];
   }
 };

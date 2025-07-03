@@ -3,10 +3,10 @@
  * PUT /api/v1/tags/[id]/colors - Update tag colors
  */
 
-import { CategoryTagController } from 'server/src/lib/api/controllers/CategoryTagController';
+import { TagController } from 'server/src/lib/api/controllers/TagController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new CategoryTagController();
+const controller = new TagController();
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {

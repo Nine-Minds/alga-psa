@@ -12,6 +12,7 @@ import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/En
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { addCompanyEmailSetting } from '../company-settings/emailSettings';
+import { deleteEntityTags } from '../../utils/tagCleanup';
 
 // Helper function to extract domain from URL
 function extractDomainFromUrl(url: string): string | null {
@@ -736,13 +737,7 @@ export async function deleteCompany(companyId: string): Promise<{
     // If no dependencies, proceed with deletion
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Delete associated tags first
-      await trx('tags')
-        .where({ 
-          tagged_id: companyId, 
-          tagged_type: 'company',
-          tenant
-        })
-        .delete();
+      await deleteEntityTags(trx, companyId, 'company');
 
       // Delete company tax settings
       await trx('company_tax_settings')

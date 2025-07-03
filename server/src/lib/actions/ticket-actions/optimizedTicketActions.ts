@@ -188,6 +188,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
           tenant: tenant,
           status_type: 'ticket'
         })
+        .orderBy('order_number', 'asc')
         .orderBy('name', 'asc'),
       
       // Channels
@@ -195,15 +196,10 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
         .where({ tenant })
         .orderBy('channel_name', 'asc'),
       
-      // Priorities - fetch both standard and tenant-specific (tickets only)
-      Promise.all([
-        trx('standard_priorities')
-          .where({ item_type: 'ticket' })
-          .orderBy('priority_name', 'asc'),
-        trx('priorities')
-          .where({ tenant, item_type: 'ticket' })
-          .orderBy('priority_name', 'asc')
-      ]).then(([standardPriorities, tenantPriorities]) => [...standardPriorities, ...tenantPriorities]),
+      // Priorities - fetch only tenant-specific ticket priorities
+      trx('priorities')
+        .where({ tenant, item_type: 'ticket' })
+        .orderBy('priority_name', 'asc'),
       
       // Categories
       trx('categories')
@@ -384,7 +380,8 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
 
     const priorityOptions = priorities.map((priority) => ({
       value: priority.priority_id,
-      label: priority.priority_name
+      label: priority.priority_name,
+      color: priority.color
     }));
 
     // Get scheduled hours for ticket
@@ -573,6 +570,7 @@ export async function getTicketsForListWithCursor(
         't.*',
         's.name as status_name',
         'p.priority_name',
+        'p.color as priority_color',
         'c.channel_name',
         'cat.category_name',
         trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
@@ -582,12 +580,10 @@ export async function getTicketsForListWithCursor(
         this.on('t.status_id', 's.status_id')
            .andOn('t.tenant', 's.tenant')
       })
-      .leftJoin(db.raw(`(
-        SELECT priority_id, priority_name, NULL as tenant FROM standard_priorities WHERE item_type = 'ticket'
-        UNION ALL
-        SELECT priority_id, priority_name, tenant FROM priorities WHERE tenant = ? AND item_type = 'ticket'
-      ) as p`, [tenant]), function() {
+      .leftJoin('priorities as p', function() {
         this.on('t.priority_id', 'p.priority_id')
+           .andOn('t.tenant', 'p.tenant')
+           .andOnVal('p.item_type', '=', 'ticket')
       })
       .leftJoin('channels as c', function() {
         this.on('t.channel_id', 'c.channel_id')
@@ -721,6 +717,7 @@ export async function getTicketsForListWithCursor(
         entered_by,
         status_name,
         priority_name,
+        priority_color,
         channel_name,
         category_name,
         entered_by_name,
@@ -736,6 +733,7 @@ export async function getTicketsForListWithCursor(
         entered_by: entered_by || null,
         status_name: status_name || 'Unknown',
         priority_name: priority_name || 'Unknown',
+        priority_color: priority_color || '#6B7280',
         channel_name: channel_name || 'Unknown',
         category_name: category_name || 'Unknown',
         entered_by_name: entered_by_name || 'Unknown',
@@ -786,16 +784,13 @@ export async function getTicketFormOptions(user: IUser) {
           tenant: tenant,
           status_type: 'ticket'  // Changed from item_type to status_type
         })
+        .orderBy('order_number', 'asc')
         .orderBy('name', 'asc'),
       
-      // Priorities - fetch both standard and tenant-specific
-      Promise.all([
-        trx('standard_priorities')
-          .orderBy('priority_name', 'asc'),
-        trx('priorities')
-          .where({ tenant })
-          .orderBy('priority_name', 'asc')
-      ]).then(([standardPriorities, tenantPriorities]) => [...standardPriorities, ...tenantPriorities]),
+      // Priorities - fetch only tenant-specific ticket priorities
+      trx('priorities')
+        .where({ tenant, item_type: 'ticket' })
+        .orderBy('priority_name', 'asc'),
       
       trx('channels')
         .where({ tenant })
@@ -830,7 +825,8 @@ export async function getTicketFormOptions(user: IUser) {
       { value: 'all', label: 'All Priorities' },
       ...priorities.map((priority: any) => ({
         value: priority.priority_id,
-        label: priority.priority_name
+        label: priority.priority_name,
+        color: priority.color
       }))
     ];
 

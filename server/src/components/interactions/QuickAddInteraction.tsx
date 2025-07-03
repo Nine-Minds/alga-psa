@@ -13,7 +13,7 @@ import { PartialBlock } from '@blocknote/core';
 import InteractionIcon from 'server/src/components/ui/InteractionIcon';
 import { addInteraction, updateInteraction, getInteractionById, getInteractionStatuses } from 'server/src/lib/actions/interactionActions';
 import { getAllInteractionTypes } from 'server/src/lib/actions/interactionTypeActions';
-import { IInteraction, IInteractionType, ISystemInteractionType } from 'server/src/interfaces/interaction.interfaces';
+import { IInteraction, IInteractionType } from 'server/src/interfaces/interaction.interfaces';
 import { useTenant } from 'server/src/components/TenantProvider';
 import { useSession } from 'next-auth/react';
 import UserPicker from '../ui/UserPicker';
@@ -62,7 +62,7 @@ export function QuickAddInteraction({
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [selectedContactId, setSelectedContactId] = useState<string>('');
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
-  const [interactionTypes, setInteractionTypes] = useState<(IInteractionType | ISystemInteractionType)[]>([]);
+  const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
   const [statuses, setStatuses] = useState<any[]>([]);
   const [users, setUsers] = useState<IUserWithRoles[]>([]);
   const [companies, setCompanies] = useState<ICompany[]>([]);
@@ -189,15 +189,9 @@ export function QuickAddInteraction({
     
     const fetchData = async () => {
       try {
-        // Fetch interaction types
+        // Fetch interaction types (already sorted by display_order from the server)
         const types = await getAllInteractionTypes();
-        const sortedTypes = types.sort((a, b) => {
-          if (('created_at' in a) === ('created_at' in b)) {
-            return a.type_name.localeCompare(b.type_name);
-          }
-          return 'created_at' in a ? -1 : 1;
-        });
-        setInteractionTypes(sortedTypes);
+        setInteractionTypes(types);
 
         // Fetch interaction statuses
         const statusList = await getInteractionStatuses();
@@ -440,14 +434,11 @@ export function QuickAddInteraction({
     }
   };
 
-  const getTypeLabel = (type: IInteractionType | ISystemInteractionType) => {
-    const isSystemType = 'created_at' in type;
-    const suffix = isSystemType ? ' (System)' : ' (Custom)';
-    
+  const getTypeLabel = (type: IInteractionType) => {
     return (
       <div className="flex items-center gap-2">
         <InteractionIcon icon={type.icon} typeName={type.type_name} />
-        <span>{type.type_name}{suffix}</span>
+        <span>{type.type_name}</span>
       </div>
     );
   };

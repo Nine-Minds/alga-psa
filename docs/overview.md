@@ -157,7 +157,27 @@ This document provides a high-level architectural overview of the open-source MS
 
 * **Security:** Implements security measures. RBAC and ABAC logic is under `server/src/lib/auth/`. Authentication is handled in `server/src/pages/api/auth/[...nextauth]/route.ts`.
 
-* **Settings:** Configuration settings. See components under `server/src/components/settings`. User management is under `server/src/components/settings/general/`.
+* **Settings:** Configuration settings with advanced reference data management:
+  * Core Components:
+    - General settings and user management
+    - Reference data import system for standardized configurations
+    - Multi-tenant reference data isolation
+  * Reference Data Import System:
+    - Import pre-defined standard configurations (priorities, statuses, channels, categories)
+    - Conflict resolution for duplicate names and display orders
+    - Hierarchical category management with parent-child relationships
+    - Channel-based category organization (channels as organizational containers/boards)
+  * Key Files:
+    - `server/src/components/settings/`: All settings UI components
+    - `server/src/components/settings/general/`: User management and ticketing settings
+    - `server/src/lib/actions/referenceDataActions.ts`: Server-side import logic
+    - `server/migrations/20250630140000_create_standard_reference_tables.cjs`: Standard data definitions
+  * Features:
+    - "Import from Standard Types" functionality for all reference data
+    - Visual selection interface with checkboxes
+    - Automatic conflict detection and resolution
+    - Preservation of hierarchical relationships during import
+    - Display order management and conflict resolution
 
 * **Support Ticketing:** Manages support tickets. See `server/src/lib/models/ticket.tsx` and components under `server/src/components/tickets`.
 

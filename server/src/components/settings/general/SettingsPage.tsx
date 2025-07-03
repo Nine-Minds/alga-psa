@@ -14,7 +14,7 @@ import UserManagement from './UserManagement';
 import TeamManagement from './TeamManagement';
 import InteractionTypesSettings from './InteractionTypeSettings';
 import TimePeriodSettings from '../billing/TimePeriodSettings';
-import ServiceTypeSettings from '../billing/ServiceTypeSettings'; // Import the new component
+import BillingSettings from '../billing/BillingSettings'; // Import the new component
 import NumberingSettings from './NumberingSettings';
 import NotificationsTab from './NotificationsTab';
 import { TaxRegionsManager } from '../tax/TaxRegionsManager'; // Import the new component
@@ -136,14 +136,7 @@ const SettingsPage = (): JSX.Element =>  {
             <CardDescription>Manage your billing and subscription</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
-              <div className="space-y-6">
-                <NumberingSettings entityType="INVOICE" />
-                <ZeroDollarInvoiceSettings />
-                <CreditExpirationSettings />
-                <ServiceTypeSettings /> {/* Add the new component here */}
-              </div>
-            </div>
+            <BillingSettings />
           </CardContent>
         </Card>
       ),

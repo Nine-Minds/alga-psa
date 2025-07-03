@@ -152,10 +152,9 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
 
     // Fetch service information with new schema (using billing_method instead of service_type)
     const [service] = await db('service_catalog as sc')
-      .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
-      .leftJoin('service_types as tst', function() {
-        this.on('sc.custom_service_type_id', '=', 'tst.id')
-            .andOn('sc.tenant', '=', 'tst.tenant');
+      .leftJoin('service_types as st', function() {
+        this.on('sc.custom_service_type_id', '=', 'st.id')
+            .andOn('sc.tenant', '=', 'st.tenant');
       })
       .where({
         'sc.service_id': entry.service_id,
