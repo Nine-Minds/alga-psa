@@ -115,10 +115,11 @@ const dummyStatements = [
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const resolvedParams = await params;
+  const { id } = resolvedParams;
     
     // Find the statement by ID
     const statement = dummyStatements.find(stmt => stmt.id === id);

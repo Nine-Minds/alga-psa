@@ -8,7 +8,7 @@ import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
 const controller = new TeamController();
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const req = request as any;
     req.params = params;

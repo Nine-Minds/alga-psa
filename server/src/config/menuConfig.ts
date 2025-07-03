@@ -192,6 +192,11 @@ export const bottomMenuItems: MenuItem[] = [
         href: '/msp/security-settings',
         icon: RadixIcons.LockClosedIcon,
       },
+      {
+        name: 'Analytics Test',
+        href: '/analytics-test',
+        icon: RadixIcons.BarChartIcon,
+      },
     ]
   },
   { name: 'Support', icon: RadixIcons.QuestionMarkCircledIcon },

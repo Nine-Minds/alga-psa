@@ -6,7 +6,7 @@
 import { BillingPlanController } from 'server/src/lib/api/controllers/BillingPlanController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const billingPlanController = new BillingPlanController();
     const req = request as any;

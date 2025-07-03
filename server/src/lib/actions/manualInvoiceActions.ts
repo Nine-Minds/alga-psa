@@ -12,6 +12,8 @@ import { IWorkflowEvent } from '@shared/workflow/persistence/workflowInterfaces'
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import * as invoiceService from 'server/src/lib/services/invoiceService';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
+import { analytics } from '../analytics/posthog';
+import { AnalyticsEvents } from '../analytics/events';
 
 export interface ManualInvoiceItem { // Add export
   service_id: string;
@@ -99,6 +101,19 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
     const updatedItems = await trx('invoice_items')
       .where({ invoice_id: invoiceId })
       .orderBy('created_at', 'asc');
+
+    // Track analytics
+    analytics.capture(AnalyticsEvents.INVOICE_GENERATED, {
+      invoice_id: invoiceId,
+      invoice_number: invoiceNumber,
+      company_id: companyId,
+      subtotal: Math.ceil(subtotal),
+      tax: Math.ceil(computedTotalTax),
+      total_amount: Math.ceil(subtotal + computedTotalTax),
+      item_count: updatedItems.length,
+      is_manual: true,
+      is_prepayment: isPrepayment || false
+    }, session.user.id);
 
     // Return invoice view model
     return {

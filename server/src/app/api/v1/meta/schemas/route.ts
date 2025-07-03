@@ -9,5 +9,6 @@ import { MetadataController } from 'server/src/lib/api/controllers/MetadataContr
 const controller = new MetadataController();
 
 export async function GET(request: NextRequest) {
-  return controller.getSchemas(request);
+  const { searchParams } = request.nextUrl;
+  return controller.getSchemas(request, searchParams);
 }

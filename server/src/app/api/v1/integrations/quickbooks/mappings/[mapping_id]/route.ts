@@ -19,7 +19,7 @@ function getController() {
   return controller;
 }
 
-export async function GET(request: Request, { params }: { params: { mapping_id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ mapping_id: string }> }) {
   try {
     const req = request as any;
     req.params = params;
@@ -29,7 +29,7 @@ export async function GET(request: Request, { params }: { params: { mapping_id: 
   }
 }
 
-export async function PUT(request: Request, { params }: { params: { mapping_id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ mapping_id: string }> }) {
   try {
     const req = request as any;
     req.params = params;
@@ -39,7 +39,7 @@ export async function PUT(request: Request, { params }: { params: { mapping_id: 
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { mapping_id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ mapping_id: string }> }) {
   try {
     const req = request as any;
     req.params = params;

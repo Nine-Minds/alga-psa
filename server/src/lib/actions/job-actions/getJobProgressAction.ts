@@ -6,7 +6,7 @@ import { withAdminTransaction } from 'server/src/lib/db/admin';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 
-import { JobStatus } from 'server/src/types/job.d';
+import { JobStatus } from 'server/src/types/job';
 import type { JobHeader, JobDetail } from 'server/src/services/job.service';
 import { JobMetrics } from 'server/src/lib/actions/job-actions';
 

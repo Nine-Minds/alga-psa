@@ -1,33 +1,21 @@
-/**
- * Next.js instrumentation file
- * 
- * This file runs once when the Next.js server starts.
- * Despite the name "instrumentation", it's commonly used for
- * application initialization tasks.
- * 
- * @see https://nextjs.org/docs/app/api-reference/file-conventions/instrumentation
- */
-
+// Next.js instrumentation hook - runs before the application starts
+// This file is automatically loaded by Next.js 13.4+ when present
 export async function register() {
-  // Only run initialization in Node.js runtime (not Edge runtime)
-  // and skip during build time
-  if (process.env.NEXT_RUNTIME === 'nodejs' && process.env.NEXT_PHASE !== 'phase-production-build') {
-    console.log('[Instrumentation] Starting application initialization...');
-    
+  // Only initialize telemetry on the server side
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
     try {
-      // Import initializeApp dynamically to avoid issues with Edge runtime
-      const { initializeApp } = await import('./lib/initializeApp');
-      
-      // Initialize the application (runs startup tasks, syncs templates, etc.)
-      await initializeApp();
-      
-      console.log('[Instrumentation] Application initialization completed successfully');
+      const { initializeTelemetry } = await import('./lib/telemetry/initialization');
+      await initializeTelemetry();
     } catch (error) {
-      console.error('[Instrumentation] Failed to initialize application:', error);
-      // Note: We don't throw here to allow the server to start even if initialization fails
-      // This is a decision point - you might want to fail fast in production
+      // Don't break the application if observability fails to initialize
+      console.error('Failed to initialize observability:', error);
     }
-  } else if (process.env.NEXT_PHASE === 'phase-production-build') {
-    console.log('[Instrumentation] Skipping initialization during build phase');
+
+    try {
+      const { initializeApp } = await import('./lib/initializeApp');
+      await initializeApp();
+    } catch (error) {
+      console.error('Failed to initialize application:', error);
+    }
   }
 }

@@ -7,8 +7,9 @@ import { getContactsByCompany } from 'server/src/lib/actions/contact-actions/con
 import { getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
 import { notFound } from 'next/navigation';
 
-const CompanyPage = async ({ params }: { params: { id: string } }) => {
-  const { id } = params;
+const CompanyPage = async ({ params }: { params: Promise<{ id: string }> }) => {
+  const resolvedParams = await params;
+  const { id } = resolvedParams;
  
   try {
     // Fetch all data in parallel

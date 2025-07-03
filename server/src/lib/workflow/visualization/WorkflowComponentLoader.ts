@@ -9,6 +9,5 @@ export type WorkflowComponentType = ComponentType<WorkflowProps>;
 export const DynamicWorkflowComponent = dynamic<WorkflowProps>(
   () => import('@ee/components/flow/DnDFlow')
     .then(mod => mod.default)
-    .catch(() => import('@/empty/components/flow/DnDFlow').then(mod => mod.default)),
-  { ssr: false }
+    .catch(() => import('@/empty/components/flow/DnDFlow').then(mod => mod.default))
 );

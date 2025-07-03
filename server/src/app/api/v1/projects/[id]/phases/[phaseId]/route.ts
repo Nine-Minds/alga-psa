@@ -11,20 +11,22 @@ const controller = new ProjectController();
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string; phaseId: string } }
+  { params }: { params: Promise<{ id: string; phaseId: string }> }
 ) {
+  const resolvedParams = await params;
   // Add route params to the request for controller access
-  (request as any).routeParams = { id: params.id, phaseId: params.phaseId };
+  (request as any).routeParams = { id: resolvedParams.id, phaseId: resolvedParams.phaseId };
   
   return controller.updatePhase()(request);
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; phaseId: string } }
+  { params }: { params: Promise<{ id: string; phaseId: string }> }
 ) {
+  const resolvedParams = await params;
   // Add route params to the request for controller access
-  (request as any).routeParams = { id: params.id, phaseId: params.phaseId };
+  (request as any).routeParams = { id: resolvedParams.id, phaseId: resolvedParams.phaseId };
   
   return controller.deletePhase()(request);
 }

@@ -5,7 +5,7 @@ import { headers } from 'next/headers';
 
 export async function getTenantForCurrentRequest(fallbackTenant?: string): Promise<string | null> {
     try {
-        const headerValues = headers();
+        const headerValues = await headers();
         if (headerValues.get('x-tenant-id')) {
             return headerValues.get('x-tenant-id') as string;
         }

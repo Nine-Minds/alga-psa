@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { signOut } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import { Dialog, DialogDescription, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
+import { usePostHog } from 'posthog-js/react';
 
 interface SignOutDialogProps {
   isOpen: boolean;
@@ -12,9 +13,19 @@ interface SignOutDialogProps {
 
 export default function SignOutDialog({ isOpen, onClose }: SignOutDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const { data: session } = useSession();
+  const posthog = usePostHog();
 
   const handleSignOut = async () => {
     setIsLoading(true);
+    
+    // Track logout event
+    if (posthog && session?.user) {
+      posthog.capture('user_logged_out', {
+        user_type: (session.user as any).user_type || 'unknown',
+      });
+    }
+    
     await signOut({ callbackUrl: '/auth/signin?callbackUrl=/client-portal/dashboard' });
   };
 

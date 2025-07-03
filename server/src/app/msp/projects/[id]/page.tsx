@@ -21,27 +21,39 @@ interface ProjectDetails {
   companies: ICompany[];
 }
 
-export default function ProjectPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
+  const [projectId, setProjectId] = useState<string | null>(null);
   const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
   const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
 
   useEffect(() => {
+    const initializeParams = async () => {
+      const resolvedParams = await params;
+      setProjectId(resolvedParams.id);
+    };
+    initializeParams();
+  }, [params]);
+
+  useEffect(() => {
+    if (!projectId) return;
+
     const fetchProjectDetails = async () => {
-      const details = await getProjectDetails(id);
+      const details = await getProjectDetails(projectId);
       setProjectDetails(details);
     };
     fetchProjectDetails();
-  }, [id]);
+  }, [projectId]);
 
   const handleAssignedUserChange = async (userId: string | null) => {
+    if (!projectId) return;
+    
     try {
-      await updateProject(id, {
+      await updateProject(projectId, {
         assigned_to: userId
       });
       // Refresh project details after update
-      const updatedDetails = await getProjectDetails(id);
+      const updatedDetails = await getProjectDetails(projectId);
       setProjectDetails(updatedDetails);
     } catch (error) {
       console.error('Error updating assigned user:', error);
@@ -49,12 +61,14 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   };
 
   const handleContactChange = async (contactId: string | null) => {
+    if (!projectId) return;
+    
     try {
-      await updateProject(id, {
+      await updateProject(projectId, {
         contact_name_id: contactId
       });
       // Refresh project details after update
-      const updatedDetails = await getProjectDetails(id);
+      const updatedDetails = await getProjectDetails(projectId);
       setProjectDetails(updatedDetails);
     } catch (error) {
       console.error('Error updating contact:', error);
@@ -62,10 +76,12 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   };
 
   const handleProjectUpdate = async (updatedProject: IProject) => {
+    if (!projectId) return;
+    
     try {
-      await updateProject(id, updatedProject);
+      await updateProject(projectId, updatedProject);
       // Refresh project details after update
-      const updatedDetails = await getProjectDetails(id);
+      const updatedDetails = await getProjectDetails(projectId);
       setProjectDetails(updatedDetails);
     } catch (error) {
       console.error('Error updating project:', error);

@@ -13,16 +13,17 @@ import { StorageService } from 'server/src/lib/storage/StorageService';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 
-export async function GET(req: NextRequest, { params }: { params: { fileId: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ fileId: string }> }) {
+  const resolvedParams = await params;
   const session = await getServerSession(options);
   // Session check is important for both PDF generation and direct download
   if (!session || !session.user || !session.user.tenant) {
-    logger.warn(`Unauthorized attempt to download document/generate PDF for ID: ${params.fileId}`);
+    logger.warn(`Unauthorized attempt to download document/generate PDF for ID: ${resolvedParams.fileId}`);
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   // The URL parameter is named fileId but it's actually the document_id
-  const documentId = params.fileId;
+  const documentId = resolvedParams.fileId;
   const format = req.nextUrl.searchParams.get('format');
 
   if (!documentId || typeof documentId !== 'string') {

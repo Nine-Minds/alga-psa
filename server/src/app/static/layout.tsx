@@ -1,14 +1,11 @@
-export default function RootLayout({
+export default function StaticLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-
   return (
-    <html lang="en">
-      <body>
-        {children}
-      </body>
-    </html>
+    <div className="static-pages">
+      {children}
+    </div>
   );
 }

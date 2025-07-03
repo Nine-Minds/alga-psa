@@ -4,10 +4,11 @@ import { getInteractionsForEntity } from 'server/src/lib/actions/interactionActi
 import ContactModel from 'server/src/lib/models/contact';
 import { getConnection } from 'server/src/lib/db/db';
 
-export default async function ContactActivityPage({ params }: { params: { id: string } }) {
+export default async function ContactActivityPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
   const knex = await getConnection();
-  const contact = await ContactModel.get(knex, params.id);
-  const interactions = await getInteractionsForEntity(params.id, 'contact');
+  const contact = await ContactModel.get(knex, resolvedParams.id);
+  const interactions = await getInteractionsForEntity(resolvedParams.id, 'contact');
 
   if (!contact) {
     return <div>Contact not found</div>;

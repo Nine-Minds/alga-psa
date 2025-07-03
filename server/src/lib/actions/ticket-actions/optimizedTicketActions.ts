@@ -28,6 +28,8 @@ import {
   ticketListItemSchema,
   ticketListFiltersSchema
 } from 'server/src/lib/schemas/ticket.schema';
+import { analytics } from '../../analytics/posthog';
+import { AnalyticsEvents } from '../../analytics/events';
 
 // Helper function to safely convert dates
 function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null }>(record: T): T {
@@ -467,6 +469,28 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       location_is_default,
       ...ticketData
     } = ticket;
+
+    // Track ticket view analytics
+    analytics.capture('ticket_viewed', {
+      ticket_id: ticketId,
+      status_id: ticketData.status_id,
+      status_name: ticketData.status_name,
+      is_closed: ticketData.is_closed,
+      priority_id: ticketData.priority_id,
+      category_id: ticketData.category_id,
+      channel_id: ticketData.channel_id,
+      assigned_to: ticketData.assigned_to,
+      company_id: ticketData.company_id,
+      has_comments: comments.length > 0,
+      comment_count: comments.length,
+      has_documents: documents.length > 0,
+      document_count: documents.length,
+      has_additional_agents: resources.length > 0,
+      additional_agent_count: resources.length,
+      has_schedule: agentSchedulesList.length > 0,
+      total_scheduled_minutes: agentSchedulesList.reduce((sum, schedule) => sum + schedule.minutes, 0),
+      view_source: 'ticket_details'
+    }, user.user_id);
 
     // Return all data in a single consolidated object
     return {
@@ -1105,6 +1129,14 @@ export async function addTicketCommentWithCache(
         isInternal
       }
     });
+    
+    // Track comment analytics
+    analytics.capture('ticket_comment_added', {
+      is_internal: isInternal,
+      is_resolution: isResolution,
+      content_length: markdownContent.length,
+      has_formatting: content.includes('"type"'), // BlockNote content has type field
+    }, user.user_id);
 
     // Revalidate paths to update UI
     revalidatePath(`/msp/tickets/${ticketId}`);

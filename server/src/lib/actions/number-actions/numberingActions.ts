@@ -120,5 +120,5 @@ export async function updateNumberSettings(
 }
 
 // Legacy support
-export const getTicketNumberSettings = () => getNumberSettings('TICKET');
-export const getInvoiceNumberSettings = () => getNumberSettings('INVOICE');
+export const getTicketNumberSettings = async () => await getNumberSettings('TICKET');
+export const getInvoiceNumberSettings = async () => await getNumberSettings('INVOICE');

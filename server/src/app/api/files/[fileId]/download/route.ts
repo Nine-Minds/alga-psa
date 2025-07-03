@@ -4,9 +4,10 @@ import { createTenantKnex } from 'server/src/lib/db';
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { fileId: string } }
+    { params }: { params: Promise<{ fileId: string }> }
 ) {
-    console.log('GET request received for file download with params:', params);
+    const resolvedParams = await params;
+    console.log('GET request received for file download with params:', resolvedParams);
     try {
         console.log('Creating tenant knex connection...');
         const { tenant } = await createTenantKnex();
@@ -16,7 +17,7 @@ export async function GET(
         }
         console.log('Tenant found:', tenant);
 
-        const fileId = params.fileId;
+        const fileId = resolvedParams.fileId;
         console.log('Attempting to download file with ID:', fileId);
         
         // Use the static downloadFile method with just the fileId

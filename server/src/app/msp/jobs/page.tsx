@@ -7,7 +7,7 @@ import WorkflowMetricsDisplay from 'server/src/components/workflows/WorkflowMetr
 import WorkflowExecutionsTable from 'server/src/components/workflows/WorkflowExecutionsTable';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 
-export const revalidate = 5; // Revalidate every 5 seconds
+export const dynamic = 'force-dynamic';
 
 export default async function JobMonitorPage() {
   // Fetch job data

@@ -6,7 +6,7 @@
 import { TimeSheetController } from 'server/src/lib/api/controllers/TimeSheetController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const timeSheetController = new TimeSheetController();
     const req = request as any;

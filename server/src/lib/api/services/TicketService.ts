@@ -19,6 +19,9 @@ import {
   CreateTicketFromAssetData
 } from '../schemas/ticket';
 import { ListOptions } from '../controllers/BaseController';
+import { analytics } from '../../analytics/posthog';
+import { AnalyticsEvents } from '../../analytics/events';
+// import { performanceTracker } from '../../analytics/performanceTracking';
 
 export class TicketService extends BaseService<ITicket> {
   constructor() {
@@ -496,6 +499,7 @@ export class TicketService extends BaseService<ITicket> {
    */
   async search(searchData: TicketSearchData, context: ServiceContext): Promise<ITicket[]> {
     const { knex } = await this.getKnex();
+    const searchStartTime = Date.now();
 
     let query = knex('tickets as t')
       .leftJoin('companies as comp', function() {
@@ -564,6 +568,41 @@ export class TicketService extends BaseService<ITicket> {
       .select('t.*', 'comp.company_name', 'cont.full_name as contact_name')
       .limit(searchData.limit || 25)
       .orderBy('t.entered_at', 'desc');
+
+    const searchDuration = Date.now() - searchStartTime;
+
+    // Track search analytics
+    analytics.capture(AnalyticsEvents.TICKET_SEARCHED, {
+      query_length: searchData.query.length,
+      search_fields: searchFields,
+      filters_used: {
+        status: !!searchData.status_ids?.length,
+        priority: !!searchData.priority_ids?.length,
+        company: !!searchData.company_ids?.length,
+        assigned_to: !!searchData.assigned_to_ids?.length,
+        include_closed: searchData.include_closed,
+      },
+      result_count: tickets.length,
+      limit: searchData.limit || 25,
+    }, context.userId);
+
+    // Track search performance - commented out due to removed performanceTracker
+    // performanceTracker.trackSearchPerformance(
+    //   'ticket',
+    //   searchData.query,
+    //   tickets.length,
+    //   searchDuration,
+    //   context.userId,
+    //   {
+    //     search_complexity: searchFields.length,
+    //     filter_count: Object.values({
+    //       status: !!searchData.status_ids?.length,
+    //       priority: !!searchData.priority_ids?.length,
+    //       company: !!searchData.company_ids?.length,
+    //       assigned_to: !!searchData.assigned_to_ids?.length,
+    //     }).filter(Boolean).length
+    //   }
+    // );
 
     return tickets as ITicket[];
   }

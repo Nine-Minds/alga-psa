@@ -23,6 +23,8 @@ import {
   SaveTimeEntryParams
 } from './timeEntrySchemas'; // Import schemas
 import { getCompanyIdForWorkItem } from './timeEntryHelpers'; // Import helper
+import { analytics } from '../analytics/posthog';
+import { AnalyticsEvents } from '../analytics/events';
 
 export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise<ITimeEntryWithWorkItem[]> {
   const currentUser = await getCurrentUser();
@@ -718,6 +720,22 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
         throw new Error(`Unknown work item type: ${entry.work_item_type}`);
     }
 
+    // Track time entry analytics
+    const isUpdate = !!entry_id;
+    analytics.capture(isUpdate ? AnalyticsEvents.TIME_ENTRY_UPDATED : AnalyticsEvents.TIME_ENTRY_CREATED, {
+      work_item_type: entry.work_item_type,
+      duration_minutes: finalBillableDuration,
+      is_billable: finalBillableDuration > 0,
+      has_notes: !!notes,
+      has_service: !!service_id,
+      has_tax_region: !!tax_region,
+      has_billing_plan: !!billing_plan_id,
+      approval_status: approval_status || 'pending',
+      // Track if this was a duration adjustment
+      duration_changed: isUpdate ? (entry.billable_duration !== finalBillableDuration) : false,
+      duration_delta: isUpdate ? (finalBillableDuration - entry.billable_duration) : finalBillableDuration,
+    }, currentUser.user_id);
+
     // Return the complete time entry with work item details
     const result: ITimeEntryWithWorkItem = {
       ...entry,
@@ -827,6 +845,17 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
          console.warn(`Attempted to delete time entry ${entryId}, but it was not found (possibly deleted concurrently).`);
       } else {
          console.log(`Successfully deleted time entry ${entryId}`);
+         
+         // Track time entry deletion analytics
+         analytics.capture(AnalyticsEvents.TIME_ENTRY_DELETED, {
+           work_item_type: timeEntry.work_item_type,
+           duration_minutes: timeEntry.billable_duration || 0,
+           was_billable: (timeEntry.billable_duration || 0) > 0,
+           had_notes: !!timeEntry.notes,
+           approval_status: timeEntry.approval_status || 'pending',
+           age_in_days: timeEntry.created_at ? 
+             Math.round((Date.now() - new Date(timeEntry.created_at).getTime()) / 1000 / 60 / 60 / 24) : 0,
+         }, currentUser.user_id);
       }
 
       // If this was a project task, update the actual_hours in the project_tasks table

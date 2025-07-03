@@ -7,12 +7,13 @@ import AssetDetails from 'server/src/components/assets/AssetDetails';
 import { getConnection } from 'server/src/lib/db/db';
 
 interface Props {
-  params: {
+  params: Promise<{
     asset_id: string;
-  };
+  }>;
 }
 
 export default async function AssetPage({ params }: Props) {
+  const resolvedParams = await params;
   const session = await getServerSession();
   if (!session?.user) {
     redirect('/auth/signin');
@@ -34,7 +35,7 @@ export default async function AssetPage({ params }: Props) {
       redirect('/auth/signin');
     }
 
-    const asset = await getAsset(params.asset_id);
+    const asset = await getAsset(resolvedParams.asset_id);
     if (!asset) {
       return <div>Asset not found</div>;
     }

@@ -10,8 +10,9 @@ import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
 const controller = new TagController();
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const resolvedParams = await params;
     const req = request as any;
     req.params = params;
     return await controller.getTag()(req);
@@ -20,20 +21,22 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const resolvedParams = await params;
     const req = request as any;
-    req.params = params;
+    req.params = resolvedParams;
     return await controller.updateTag()(req);
   } catch (error) {
     return handleApiError(error);
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const resolvedParams = await params;
     const req = request as any;
-    req.params = params;
+    req.params = resolvedParams;
     return await controller.deleteTag()(req);
   } catch (error) {
     return handleApiError(error);

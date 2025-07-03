@@ -6,7 +6,7 @@
 import { UserController } from 'server/src/lib/api/controllers/UserController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const controller = new UserController();
     const req = request as any;
