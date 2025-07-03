@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
@@ -29,7 +29,7 @@ import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/do
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import { useRouter } from 'next/navigation';
-
+import ContactsSkeleton from './ContactsSkeleton';
 interface ContactsProps {
   initialContacts: IContact[];
   companyId?: string;
@@ -59,6 +59,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<IContact | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const statusOptions = [
     { value: 'all', label: 'All contacts' },
@@ -69,6 +70,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
   // Fetch contacts and companies when filter status changes
   useEffect(() => {
     const fetchContactsAndCompanies = async () => {
+      setIsLoading(true);
       try {
         let fetchedContacts: IContact[] = [];
 
@@ -104,6 +106,8 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
         }
       } catch (error) {
         console.error('Error fetching contacts and companies:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchContactsAndCompanies();
@@ -499,31 +503,18 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
     });
   }, [contacts, searchTerm, filterStatus, selectedTags]);
 
+  // Memoize the data transformation for DataTable
+  const tableData = useMemo(() => filteredContacts.map((contact) => ({
+    ...contact,
+    id: contact.contact_name_id
+  })), [filteredContacts]);
+
+  if (isLoading) {
+    return <ContactsSkeleton />;
+  }
+
   return (
-    <Suspense fallback={
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4 animate-pulse"></div>
-          <div className="h-10 bg-gray-200 rounded w-32 animate-pulse"></div>
-        </div>
-        <div className="bg-white shadow rounded-lg p-4">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-4">
-              <div className="h-10 bg-gray-200 rounded w-64 animate-pulse"></div>
-              <div className="h-10 bg-gray-200 rounded w-40 animate-pulse"></div>
-              <div className="h-10 bg-gray-200 rounded w-40 animate-pulse"></div>
-            </div>
-            <div className="h-10 bg-gray-200 rounded w-32 animate-pulse"></div>
-          </div>
-          <div className="animate-pulse space-y-4">
-            {[...Array(10)].map((_, i) => (
-              <div key={i} className="h-16 bg-gray-200 rounded w-full"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    }>
-      <div className="p-6">
+    <div className="p-6">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold">Contacts</h1>
           <Button
@@ -620,10 +611,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
           </ReflectionContainer>
           <DataTable
             id="contacts-table"
-            data={useMemo(() => filteredContacts.map((contact): typeof filteredContacts[number] & { id: string } => ({
-              ...contact,
-              id: contact.contact_name_id
-            })), [filteredContacts])}
+            data={tableData}
             columns={columns}
             pagination={true}
             currentPage={currentPage}
@@ -667,7 +655,6 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
           isConfirming={false}
         />
       </div>
-    </Suspense >
   );
 };
 

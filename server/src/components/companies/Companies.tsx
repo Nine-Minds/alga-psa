@@ -30,9 +30,8 @@ import CompaniesImportDialog from './CompaniesImportDialog';
 import { ConfirmationDialog } from '../ui/ConfirmationDialog';
 import { Dialog, DialogContent, DialogFooter } from '../ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';
-// Temporarily disabled UI reflection imports to prevent infinite loops
-// import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
-// import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { useToast } from 'server/src/hooks/use-toast';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 
@@ -248,37 +247,36 @@ CompanyResults.displayName = 'CompanyResults';
 const Companies: React.FC = () => {
   const { toast } = useToast();
   
-  // Re-enable tag permissions now that infinite loops are fixed
   useTagPermissions(['company']);
   
-  // Temporarily disabled UI reflection to prevent infinite loops
-  // const { automationIdProps: containerProps, updateMetadata } = useAutomationIdAndRegister({
-  //   id: 'companies-page',
-  //   type: 'container',
-  //   label: 'Companies Page',
-  //   helperText: "Main companies management page with search, filters, and company grid/list view"
-  // });
 
-  // const { automationIdProps: createButtonProps } = useAutomationIdAndRegister({
-  //   id: 'create-client-btn',
-  //   type: 'button',
-  //   label: 'Create Client',
-  //   helperText: "Opens dialog to create a new client/company"
-  // });
+   const { automationIdProps: containerProps, updateMetadata } = useAutomationIdAndRegister({
+     id: 'companies-page',
+     type: 'container',
+     label: 'Companies Page',
+     helperText: "Main companies management page with search, filters, and company grid/list view"
+   });
 
-  // const { automationIdProps: actionsMenuProps } = useAutomationIdAndRegister({
-  //   id: 'actions-menu-btn',
-  //   type: 'button',
-  //   label: 'Actions Menu',
-  //   helperText: "Menu for importing/exporting companies"
-  // });
+   const { automationIdProps: createButtonProps } = useAutomationIdAndRegister({
+     id: 'create-client-btn',
+     type: 'button',
+     label: 'Create Client',
+     helperText: "Opens dialog to create a new client/company"
+   });
 
-  // const { automationIdProps: deleteSelectedProps } = useAutomationIdAndRegister({
-  //   id: 'delete-selected-btn',
-  //   type: 'button',
-  //   label: 'Delete Selected',
-  //   helperText: "Delete multiple selected companies"
-  // });
+   const { automationIdProps: actionsMenuProps } = useAutomationIdAndRegister({
+     id: 'actions-menu-btn',
+     type: 'button',
+     label: 'Actions Menu',
+     helperText: "Menu for importing/exporting companies"
+   });
+
+   const { automationIdProps: deleteSelectedProps } = useAutomationIdAndRegister({
+     id: 'delete-selected-btn',
+     type: 'button',
+     label: 'Delete Selected',
+     helperText: "Delete multiple selected companies"
+   });
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const router = useRouter();

@@ -1,7 +1,6 @@
 import { useRouter } from 'next/navigation';
 import { Button } from 'server/src/components/ui/Button';
-// import { ReflectedDropdownMenu } from "server/src/components/ui/ReflectedDropdownMenu";
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { ReflectedDropdownMenu } from "server/src/components/ui/ReflectedDropdownMenu";
 import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { MouseEvent } from 'react';
 import { ICompany } from "server/src/interfaces/company.interfaces";
@@ -127,9 +126,12 @@ const CompanyGridCard = ({
 
                 {/* Actions Menu */}
                 <div onClick={stopPropagation} className="flex-shrink-0">
-                    <DropdownMenu.Root>
-                        <DropdownMenu.Trigger asChild>
+                    <ReflectedDropdownMenu
+                        id={`company-actions-${company.company_id}`}
+                        triggerLabel="Company Actions"
+                        trigger={
                             <Button
+                                id={`company-actions-trigger-${company.company_id}`}
                                 variant="ghost"
                                 size="sm"
                                 className="h-6 w-6 p-0 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
@@ -138,29 +140,30 @@ const CompanyGridCard = ({
                                 <MoreVertical className="h-4 w-4" />
                                 <span className="sr-only">Company Actions</span>
                             </Button>
-                        </DropdownMenu.Trigger>
-                        <DropdownMenu.Content 
-                            align="end" 
-                            sideOffset={5}
-                            className="bg-white rounded-md shadow-lg p-1 border border-gray-200 min-w-[120px] z-50"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <DropdownMenu.Item 
-                                className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center rounded"
-                                onSelect={() => handleEditCompany(company.company_id)}
-                            >
-                                <Pencil size={14} className="mr-2" />
-                                Edit
-                            </DropdownMenu.Item>
-                            <DropdownMenu.Item 
-                                className="px-2 py-1 text-sm cursor-pointer hover:bg-red-100 text-red-600 flex items-center rounded"
-                                onSelect={() => handleDeleteCompany(company)}
-                            >
-                                <Trash2 size={14} className="mr-2" />
-                                Delete
-                            </DropdownMenu.Item>
-                        </DropdownMenu.Content>
-                    </DropdownMenu.Root>
+                        }
+                        items={[
+                            {
+                                id: 'edit',
+                                text: 'Edit',
+                                icon: <Pencil size={14} />,
+                                variant: 'default',
+                                onSelect: () => handleEditCompany(company.company_id)
+                            },
+                            {
+                                id: 'delete',
+                                text: 'Delete',
+                                icon: <Trash2 size={14} />,
+                                variant: 'destructive',
+                                onSelect: () => handleDeleteCompany(company)
+                            }
+                        ]}
+                        contentProps={{
+                            align: "end",
+                            sideOffset: 5,
+                            className: "bg-white rounded-md shadow-lg p-1 border border-gray-200 min-w-[120px]",
+                            onClick: (e) => e.stopPropagation()
+                        }}
+                    />
                 </div>
             </div>
         </div>

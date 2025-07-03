@@ -1,10 +1,9 @@
 'use client'; // Added directive
 
 import React, { useMemo, useRef, useEffect, useState } from 'react';
-// Temporarily disabled UI reflection imports to prevent infinite loops
-// import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
-// import { DataTableComponent, AutomationProps, TextComponent } from 'server/src/types/ui-reflection/types';
-// import { useRegisterChild } from 'server/src/types/ui-reflection/useRegisterChild';
+import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
+import { DataTableComponent, AutomationProps, TextComponent } from 'server/src/types/ui-reflection/types';
+import { useRegisterChild } from 'server/src/types/ui-reflection/useRegisterChild';
 import {
   useReactTable,
   getCoreRowModel,
@@ -17,7 +16,7 @@ import {
   SortingFn,
 } from '@tanstack/react-table';
 import { ColumnDefinition, DataTableProps } from 'server/src/interfaces/dataTable.interfaces';
-// import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 
 // Helper function to get nested property value
 const getNestedValue = (obj: unknown, path: string | string[]): unknown => {
@@ -101,8 +100,19 @@ const ReflectedTableCell: React.FC<ReflectedTableCellProps> = ({
   className, 
   style 
 }) => {
-  // Temporarily disable UI reflection registration to prevent circular references
-  // TODO: Re-enable once UI reflection system circular reference issue is resolved
+  // Register the cell with UI reflection system
+  const updateCellMetadata = id ? useRegisterChild<TextComponent>({
+    id,
+    type: 'text',
+    text: content
+  }) : undefined;
+  
+  // Only update metadata when content changes
+  useEffect(() => {
+    if (updateCellMetadata && content) {
+      updateCellMetadata({ text: content });
+    }
+  }, [content, updateCellMetadata]);
   
   return (
     <td
@@ -250,35 +260,39 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     };
   }, [columns]); // Re-run when columns change
 
-  // Temporarily disabled UI reflection registration to prevent infinite loops
-  // const updateMetadata = id ? useRegisterUIComponent<DataTableComponent>({
-  //   id: `${id}-table`,
-  //   type: 'dataTable',
-  //   columns: columns.map((col): { id: string; title: string; dataIndex: string | string[]; hasCustomRender: boolean; visible: boolean } => {
-  //     const colId = Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex;
-  //     return {
-  //       id: colId,
-  //       title: String(col.title), // Convert ReactNode to string
-  //       dataIndex: col.dataIndex,
-  //       hasCustomRender: !!col.render,
-  //       visible: visibleColumnIds.includes(colId)
-  //     };
-  //   }),
-  //   pagination: {
-  //     enabled: pagination,
-  //     currentPage,
-  //     pageSize,
-  //     totalItems: totalItems ?? data.length,
-  //     totalPages: Math.ceil((totalItems ?? data.length) / pageSize)
-  //   },
-  //   rowCount: data.length,
-  //   visibleRows: data.slice(0, pageSize).map((row): { id: string; values: Record<string, unknown> } => ({
-  //     id: ('id' in row) ? (row as { id: string }).id : '',
-  //     values: row as Record<string, unknown>
-  //   })),
-  //   isEditable: !!editableConfig
-  // }) : undefined;
-  const updateMetadata = undefined;
+  // Memoize the initial column configuration to prevent loops
+  const columnConfig = useMemo(() => {
+    return columns.map((col): { id: string; title: string; dataIndex: string | string[]; hasCustomRender: boolean; visible: boolean } => {
+      const colId = Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex;
+      return {
+        id: colId,
+        title: String(col.title), // Convert ReactNode to string
+        dataIndex: col.dataIndex,
+        hasCustomRender: !!col.render,
+        visible: visibleColumnIds.includes(colId)
+      };
+    });
+  }, [columns, visibleColumnIds]);
+
+  // Register with UI reflection system with stable references
+  const updateMetadata = id ? useRegisterUIComponent<DataTableComponent>({
+    id: `${id}-table`,
+    type: 'dataTable',
+    columns: columnConfig,
+    pagination: {
+      enabled: pagination,
+      currentPage,
+      pageSize,
+      totalItems: totalItems ?? data.length,
+      totalPages: Math.ceil((totalItems ?? data.length) / pageSize)
+    },
+    rowCount: data.length,
+    visibleRows: data.slice(0, pageSize).map((row): { id: string; values: Record<string, unknown> } => ({
+      id: ('id' in row) ? (row as { id: string }).id : '',
+      values: row as Record<string, unknown>
+    })),
+    isEditable: !!editableConfig
+  }) : undefined;
 
   // Create stable column definitions, filtering out columns that shouldn't be visible
   const tableColumns = useMemo<ColumnDef<T>[]>(
@@ -343,14 +357,21 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     }
   };
 
-  // Notify parent component of page changes and update reflection metadata
+  // Notify parent component of page changes
   React.useEffect(() => {
     if (onPageChange) {
       onPageChange(pageIndex + 1);
     }
+  }, [pageIndex, onPageChange]);
 
-    // Update reflection metadata when pagination, sorting, or column visibility changes
-    if (updateMetadata) {
+  // Update reflection metadata with debouncing to prevent loops
+  React.useEffect(() => {
+    if (!updateMetadata) return;
+
+    const timeoutId = setTimeout(() => {
+      const paginationRowModel = table.getPaginationRowModel();
+      const sortingState = table.getState().sorting;
+      
       updateMetadata({
         pagination: {
           enabled: pagination,
@@ -360,27 +381,20 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
           totalPages: Math.ceil((totalItems ?? data.length) / currentPageSize)
         },
         rowCount: data.length,
-        visibleRows: table.getPaginationRowModel().rows.map((row): { id: string; values: Record<string, unknown> } => ({
+        visibleRows: paginationRowModel.rows.slice(0, 10).map((row): { id: string; values: Record<string, unknown> } => ({
           id: ('id' in row.original) ? (row.original as { id: string }).id : '',
           values: row.original as Record<string, unknown>
         })),
-        sortedBy: table.getState().sorting[0] ? {
-          column: table.getState().sorting[0].id,
-          direction: table.getState().sorting[0].desc ? 'desc' : 'asc'
+        sortedBy: sortingState[0] ? {
+          column: sortingState[0].id,
+          direction: sortingState[0].desc ? 'desc' : 'asc'
         } : undefined,
-        columns: columns.map((col): { id: string; title: string; dataIndex: string | string[]; hasCustomRender: boolean; visible: boolean } => {
-          const colId = Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex;
-          return {
-            id: colId,
-            title: String(col.title),
-            dataIndex: col.dataIndex,
-            hasCustomRender: !!col.render,
-            visible: visibleColumnIds.includes(colId)
-          };
-        })
+        columns: columnConfig
       });
-    }
-  }, [pageIndex, currentPageSize, data.length, totalItems, pagination, onPageChange, updateMetadata, table, visibleColumnIds, columns]);
+    }, 100); // Debounce updates by 100ms
+
+    return () => clearTimeout(timeoutId);
+  }, [pageIndex, currentPageSize, data.length, totalItems, pagination, updateMetadata, columnConfig]);
 
   const handlePreviousPage = () => {
     table.previousPage();

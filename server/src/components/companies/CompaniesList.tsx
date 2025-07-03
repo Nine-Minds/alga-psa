@@ -5,18 +5,16 @@ import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { useRouter } from 'next/navigation';
 import { MoreVertical, Pencil, Trash2 } from "lucide-react";
-// import { ReflectedDropdownMenu } from 'server/src/components/ui/ReflectedDropdownMenu';
+import { ReflectedDropdownMenu } from 'server/src/components/ui/ReflectedDropdownMenu';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Button } from 'server/src/components/ui/Button';
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
 import { TagManager } from 'server/src/components/tags';
-// Temporarily disabled UI reflection imports to prevent infinite loops
-// import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
-// import { useRegisterChild } from 'server/src/types/ui-reflection/useRegisterChild';
-// import { FormFieldComponent, ButtonComponent } from 'server/src/types/ui-reflection/types';
-// import { CommonActions } from 'server/src/types/ui-reflection/actionBuilders';
+ import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
+ import { useRegisterChild } from 'server/src/types/ui-reflection/useRegisterChild';
+ import { FormFieldComponent, ButtonComponent } from 'server/src/types/ui-reflection/types';
+ import { CommonActions } from 'server/src/types/ui-reflection/actionBuilders';
 
-// Removed MemoizedTagManager - using regular TagManager for debugging
 
 interface CompaniesListProps {
     selectedCompanies: string[];
@@ -44,14 +42,13 @@ interface CompanyCheckboxProps {
 const CompanyCheckbox: React.FC<CompanyCheckboxProps> = ({ companyId, checked, onChange }) => {
   const checkboxId = `company-checkbox-${companyId}`;
   
-  // Temporarily disabled UI reflection registration to prevent infinite loops
-  // useRegisterChild<FormFieldComponent>({
-  //   id: checkboxId,
-  //   type: 'formField',
-  //   label: 'Select Company',
-  //   value: checked ? 'true' : 'false',
-  //   fieldType: 'checkbox'
-  // });
+   useRegisterChild<FormFieldComponent>({
+     id: checkboxId,
+     type: 'formField',
+     label: 'Select Company',
+     value: checked ? 'true' : 'false',
+     fieldType: 'checkbox'
+   });
 
   return (
     <input
@@ -73,13 +70,12 @@ interface CompanyLinkProps {
 const CompanyLink: React.FC<CompanyLinkProps> = ({ company, onClick }) => {
   const linkId = `company-link-${company.company_id}`;
   
-  // Temporarily disabled UI reflection registration to prevent infinite loops
-  // useRegisterChild<ButtonComponent>({
-  //   id: linkId,
-  //   type: 'button',
-  //   label: company.company_name,
-  //   actions: [CommonActions.click('Click this button')]
-  // });
+   useRegisterChild<ButtonComponent>({
+     id: linkId,
+     type: 'button',
+     label: company.company_name,
+     actions: [CommonActions.click('Click this button')]
+   });
 
   return (
     <a
@@ -219,6 +215,7 @@ const CompaniesList = ({
                         <DropdownMenu.Trigger asChild>
                             <Button
                                 variant="ghost"
+                                id="companies-actions-menu"
                                 size="sm"
                                 className="h-8 w-8 p-0"
                             >
