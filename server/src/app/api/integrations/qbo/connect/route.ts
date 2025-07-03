@@ -19,7 +19,7 @@ const QBO_REDIRECT_URI = process.env.QBO_REDIRECT_URI || 'http://localhost:3000/
 
 export async function GET(
   request: Request,
-  { params }: { params: Record<string, string> }
+  { params }: { params: Promise<Record<string, string>>}
 ) {
   let tenantId: string | null = null;
   // Get the secret provider instance

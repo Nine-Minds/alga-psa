@@ -10,10 +10,11 @@ const controller = new ProjectController();
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string; phaseId: string } }
+  { params }: { params: Promise<{ id: string; phaseId: string }> }
 ) {
+  const resolvedParams = await params;
   // Add route params to the request for controller access
-  (request as any).routeParams = { id: params.id, phaseId: params.phaseId };
+  (request as any).routeParams = { id: resolvedParams.id, phaseId: resolvedParams.phaseId };
   
   return controller.createTask()(request);
 }

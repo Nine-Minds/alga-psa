@@ -26,6 +26,8 @@ import { validateArray, validateData } from '../utils/validation';
 import { Temporal } from '@js-temporal/polyfill';
 import { getCurrentUser } from './user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
+import { analytics } from '../analytics/posthog';
+import { AnalyticsEvents } from '../analytics/events';
 
 // Database schema types
 interface DbTimePeriod {
@@ -218,6 +220,8 @@ export async function bulkApproveTimeSheets(timeSheetIds: string[], managerId: s
     }
 
     const {knex: db, tenant} = await createTenantKnex();
+    const approvedSheets: any[] = [];
+
     await db.transaction(async (trx) => {
       for (const id of timeSheetIds) {
         const timeSheet = await trx('time_sheets')
@@ -248,6 +252,18 @@ export async function bulkApproveTimeSheets(timeSheetIds: string[], managerId: s
           throw new Error(`Unauthorized: Not a manager for time sheet ${id}`);
         }
 
+        // Get analytics data before approval
+        const entriesInfo = await trx('time_entries')
+          .where({
+            time_sheet_id: id,
+            tenant
+          })
+          .select(
+            trx.raw('COUNT(*) as entry_count'),
+            trx.raw('SUM(billable_duration) / 60 as total_hours')
+          )
+          .first();
+
         // Update time sheet status
         await trx('time_sheets')
           .where({
@@ -267,8 +283,26 @@ export async function bulkApproveTimeSheets(timeSheetIds: string[], managerId: s
             tenant
           })
           .update({ approval_status: 'APPROVED' });
+
+        approvedSheets.push({
+          time_sheet_id: id,
+          user_id: timeSheet.user_id,
+          entry_count: entriesInfo?.entry_count || 0,
+          total_hours: parseFloat(entriesInfo?.total_hours || '0')
+        });
       }
     });
+
+    // Track analytics for each approved sheet
+    for (const sheet of approvedSheets) {
+      analytics.capture(AnalyticsEvents.TIME_SHEET_APPROVED, {
+        time_sheet_id: sheet.time_sheet_id,
+        employee_id: sheet.user_id,
+        entry_count: sheet.entry_count,
+        total_hours: sheet.total_hours,
+        approval_type: 'bulk'
+      }, managerId);
+    }
 
     return { success: true };
   } catch (error) {
@@ -456,6 +490,8 @@ export async function approveTimeSheet(timeSheetId: string, approverId: string):
     }
 
     const {knex: db, tenant} = await createTenantKnex();
+    let analyticsData: any = {};
+
     await db.transaction(async (trx) => {
       const timeSheet = await trx('time_sheets')
         .where({ 
@@ -467,6 +503,25 @@ export async function approveTimeSheet(timeSheetId: string, approverId: string):
       if (!timeSheet) {
         throw new Error('Time sheet not found');
       }
+
+      // Get analytics data
+      const entriesInfo = await trx('time_entries')
+        .where({
+          time_sheet_id: timeSheetId,
+          tenant
+        })
+        .select(
+          trx.raw('COUNT(*) as entry_count'),
+          trx.raw('SUM(billable_duration) / 60 as total_hours')
+        )
+        .first();
+
+      analyticsData = {
+        time_sheet_id: timeSheetId,
+        employee_id: timeSheet.user_id,
+        entry_count: entriesInfo?.entry_count || 0,
+        total_hours: parseFloat(entriesInfo?.total_hours || '0')
+      };
 
       // Update time sheet status
       await trx('time_sheets')
@@ -497,6 +552,12 @@ export async function approveTimeSheet(timeSheetId: string, approverId: string):
         tenant
       });
     });
+
+    // Track analytics
+    analytics.capture(AnalyticsEvents.TIME_SHEET_APPROVED, {
+      ...analyticsData,
+      approval_type: 'single'
+    }, approverId);
   } catch (error) {
     console.error('Error approving time sheet:', error);
     throw new Error('Failed to approve time sheet');

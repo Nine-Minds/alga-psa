@@ -9,7 +9,7 @@ import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
 const controller = new InvoiceController();
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const req = request as any;
     req.params = params;
@@ -19,7 +19,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const req = request as any;
     req.params = params;

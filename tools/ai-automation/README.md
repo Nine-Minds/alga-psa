@@ -85,11 +85,11 @@ npm run dev  # Starts on port 3000
 ```bash
 # Build AI API service
 cd tools/ai-automation
-docker build -t ai-automation-api .
+docker buildx build --platform linux/amd64 -t harbor.nineminds.com/nineminds/alga-ai-api:latest --push .
 
 # Build AI Web service  
 cd tools/ai-automation/web
-docker build -t ai-automation-web .
+docker build --platform linux/amd64 -t ai-automation-web .
 ```
 
 ### Environment Variables

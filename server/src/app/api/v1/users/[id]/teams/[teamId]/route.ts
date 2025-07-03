@@ -6,7 +6,7 @@
 import { UserController } from 'server/src/lib/api/controllers/UserController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-export async function DELETE(request: Request, { params }: { params: { id: string; teamId: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string; teamId: string }> }) {
   try {
     const controller = new UserController();
     const req = request as any;

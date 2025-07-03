@@ -2,7 +2,7 @@ import PgBoss, { Job, WorkHandler } from 'pg-boss';
 import { getPostgresConnection } from '../db/knexfile';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { JobService } from '../../services/job.service';
-import { JobStatus } from '../../types/job.d';
+import { JobStatus } from '../../types/job';
 
 export interface JobFilter {
   state?: 'completed' | 'failed' | 'active' | 'expired';

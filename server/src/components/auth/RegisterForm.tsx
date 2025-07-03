@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
@@ -10,6 +10,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { verifyContactEmail } from 'server/src/lib/actions/user-actions/userActions';
 import { initiateRegistration } from 'server/src/lib/actions/user-actions/registrationActions';
 import { verifyEmailSuffix } from 'server/src/lib/actions/company-settings/emailSettings';
+import { usePostHog } from 'posthog-js/react';
 
 export default function RegisterForm() {
   const [email, setEmail] = useState('');
@@ -25,6 +26,10 @@ export default function RegisterForm() {
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const posthog = usePostHog();
+  const journeyStartTime = useRef<number>(Date.now());
+  const emailEnteredTime = useRef<number | null>(null);
+  const passwordEnteredTime = useRef<number | null>(null);
 
   // Password strength validation
   useEffect(() => {
@@ -47,10 +52,25 @@ export default function RegisterForm() {
     else setPasswordStrength('strong');
   }, [password]);
 
+  // Track form load
+  useEffect(() => {
+    posthog?.capture('registration_form_viewed', {
+      form_type: 'standard_registration'
+    });
+  }, [posthog]);
+
   // Debounced email check
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (!email || !email.includes('@')) return;
+
+      // Track email entered if not already tracked
+      if (!emailEnteredTime.current && email.length > 3) {
+        emailEnteredTime.current = Date.now();
+        posthog?.capture('registration_email_entered', {
+          time_to_enter_email: emailEnteredTime.current - journeyStartTime.current
+        });
+      }
 
       setIsCheckingEmail(true);
       setEmailStatus('checking');
@@ -63,23 +83,37 @@ export default function RegisterForm() {
         if (verifyResult.exists) {
           setShowNameFields(false);
           setEmailStatus('valid');
+          posthog?.capture('registration_email_verified', {
+            verification_type: 'existing_contact',
+            email_domain: email.split('@')[1]
+          });
         } else if (isValidSuffix) {
           setShowNameFields(true);
           setEmailStatus('valid');
+          posthog?.capture('registration_email_verified', {
+            verification_type: 'valid_suffix',
+            email_domain: email.split('@')[1]
+          });
         } else {
           setEmailStatus('invalid');
           setShowNameFields(false);
+          posthog?.capture('registration_email_invalid', {
+            email_domain: email.split('@')[1]
+          });
         }
       } catch (error) {
         console.error('Email verification error:', error);
         setEmailStatus('invalid');
+        posthog?.capture('registration_email_verification_error', {
+          error_type: 'email_check_failed'
+        });
       } finally {
         setIsCheckingEmail(false);
       }
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [email]);
+  }, [email, posthog]);
 
   const validateForm = () => {
     const validationErrors = [];
@@ -105,10 +139,21 @@ export default function RegisterForm() {
     const validationErrors = validateForm();
     if (validationErrors.length > 0) {
       setError(`Please complete the following: ${validationErrors.join(', ')}`);
+      posthog?.capture('registration_validation_failed', {
+        validation_errors: validationErrors,
+        form_completion_time: Date.now() - journeyStartTime.current
+      });
       return;
     }
 
     setIsLoading(true);
+    const submissionStartTime = Date.now();
+
+    posthog?.capture('registration_submitted', {
+      form_completion_time: Date.now() - journeyStartTime.current,
+      password_strength: passwordStrength,
+      registration_type: showNameFields ? 'email_suffix' : 'existing_contact'
+    });
 
     try {
       // For both contact-based and email suffix registration
@@ -121,16 +166,33 @@ export default function RegisterForm() {
 
       if (!result.success) {
         setError(result.error || 'Registration failed');
+        posthog?.capture('registration_failed', {
+          error_message: result.error,
+          submission_duration: Date.now() - submissionStartTime,
+          registration_type: showNameFields ? 'email_suffix' : 'existing_contact'
+        });
       } else if (result.registrationId) {
         // Email suffix registration - needs verification
+        posthog?.capture('registration_success_pending_verification', {
+          submission_duration: Date.now() - submissionStartTime,
+          total_journey_time: Date.now() - journeyStartTime.current
+        });
         router.push(`/auth/verify?registrationId=${result.registrationId}`);
       } else {
         // Contact-based registration - direct to login
+        posthog?.capture('registration_success_immediate', {
+          submission_duration: Date.now() - submissionStartTime,
+          total_journey_time: Date.now() - journeyStartTime.current
+        });
         router.push('/auth/signin?registered=true&callbackUrl=/client-portal/dashboard');
       }
     } catch (error) {
       setError('An unexpected error occurred during registration.');
       console.error('Registration error:', error);
+      posthog?.capture('registration_error', {
+        error_type: 'unexpected_error',
+        submission_duration: Date.now() - submissionStartTime
+      });
     } finally {
       setIsLoading(false);
     }
@@ -151,6 +213,11 @@ export default function RegisterForm() {
             onChange={(e) => {
               setEmail(e.target.value);
               clearErrorIfSubmitted();
+            }}
+            onFocus={() => {
+              posthog?.capture('registration_field_focused', {
+                field_name: 'email'
+              });
             }}
             disabled={isLoading}
             className={`mt-1 ${
@@ -196,6 +263,11 @@ export default function RegisterForm() {
               onChange={(e) => {
                 setFirstName(e.target.value);
                 clearErrorIfSubmitted();
+              }}
+              onFocus={() => {
+                posthog?.capture('registration_field_focused', {
+                  field_name: 'first_name'
+                });
               }}
               disabled={isLoading}
               className={`mt-1 ${hasAttemptedSubmit && !firstName.trim() ? 'border-red-500' : ''}`}

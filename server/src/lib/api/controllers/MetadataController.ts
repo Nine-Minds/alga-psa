@@ -39,8 +39,7 @@ export class MetadataController {
     };
   }
 
-  private validateQuery(request: NextRequest, schema: any) {
-    const { searchParams } = new URL(request.url);
+  private validateQuery(searchParams: URLSearchParams, schema: any) {
     const query: any = {};
     
     // Extract query parameters
@@ -61,10 +60,10 @@ export class MetadataController {
    * GET /api/v1/meta/endpoints
    * List all available API endpoints with metadata
    */
-  async getEndpoints(request: NextRequest) {
+  async getEndpoints(request: NextRequest, searchParams: URLSearchParams) {
     try {
       const context = await this.getContext(request);
-      const query = this.validateQuery(request, metadataQuerySchema);
+      const query = this.validateQuery(searchParams, metadataQuerySchema);
 
       const result = await this.metadataService.getApiEndpoints(query, context.tenant);
       const validatedResult = apiEndpointsResponseSchema.parse(result);
@@ -86,10 +85,10 @@ export class MetadataController {
    * GET /api/v1/meta/schemas
    * List all API schemas and data models
    */
-  async getSchemas(request: NextRequest) {
+  async getSchemas(request: NextRequest, searchParams: URLSearchParams) {
     try {
       const context = await this.getContext(request);
-      const query = this.validateQuery(request, metadataQuerySchema);
+      const query = this.validateQuery(searchParams, metadataQuerySchema);
 
       const result = await this.metadataService.getApiSchemas(query, context.tenant);
       const validatedResult = apiSchemasResponseSchema.parse(result);
@@ -134,10 +133,10 @@ export class MetadataController {
    * GET /api/v1/meta/openapi
    * Generate OpenAPI 3.0 specification for the entire API
    */
-  async getOpenApiSpec(request: NextRequest) {
+  async getOpenApiSpec(request: NextRequest, searchParams: URLSearchParams) {
     try {
       const context = await this.getContext(request);
-      const query = this.validateQuery(request, metadataQuerySchema);
+      const query = this.validateQuery(searchParams, metadataQuerySchema);
 
       const result = await this.metadataService.generateOpenApiSpec(query, context.tenant);
       const validatedResult = openApiResponseSchema.parse(result);
@@ -192,10 +191,9 @@ export class MetadataController {
    * GET /api/v1/meta/stats
    * Get API usage statistics and metrics
    */
-  async getStats(request: NextRequest) {
+  async getStats(request: NextRequest, searchParams: URLSearchParams) {
     try {
       const context = await this.getContext(request);
-      const { searchParams } = new URL(request.url);
       const period = searchParams.get('period') || '24h';
 
       const result = await this.metadataService.getApiStats(context.tenant, period);
@@ -218,9 +216,8 @@ export class MetadataController {
    * GET /api/v1/meta/docs
    * Serve interactive API documentation (Swagger UI)
    */
-  async getDocs(request: NextRequest) {
+  async getDocs(request: NextRequest, searchParams: URLSearchParams) {
     try {
-      const { searchParams } = new URL(request.url);
       const format = searchParams.get('format') || 'html';
 
       if (format === 'html') {
@@ -233,7 +230,7 @@ export class MetadataController {
         });
       } else {
         // Redirect to OpenAPI spec for other formats
-        return Response.redirect(new URL('/api/v1/meta/openapi', request.url));
+        return Response.redirect(new URL('/api/v1/meta/openapi', request.nextUrl.origin));
       }
     } catch (error) {
       return this.handleError(error, 'Failed to serve API documentation');
@@ -243,9 +240,8 @@ export class MetadataController {
     /**
      * Generate and download SDK for specified language
      */
-    async generateSdk(request: NextRequest) {
+    async generateSdk(request: NextRequest, searchParams: URLSearchParams) {
       try {
-        const { searchParams } = new URL(request.url);
         const language = searchParams.get('language') as 'typescript' | 'javascript' | 'python' | 'java' || 'typescript';
         const packageName = searchParams.get('package_name') || '@alga-psa/api-client';
         const version = searchParams.get('version') || '1.0.0';

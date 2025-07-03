@@ -8,10 +8,11 @@ import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
 const controller = new BillingPlanController();
 
-export async function DELETE(request: Request, { params }: { params: { bundleId: string; planId: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ bundleId: string; planId: string }> }) {
   try {
+    const resolvedParams = await params;
     const req = request as any;
-    req.params = params;
+    req.params = resolvedParams;
     return await controller.removePlanFromBundle()(req);
   } catch (error) {
     return handleApiError(error);

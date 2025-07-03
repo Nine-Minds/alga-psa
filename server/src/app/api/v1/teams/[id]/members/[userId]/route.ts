@@ -8,7 +8,7 @@ import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
 const controller = new TeamController();
 
-export async function DELETE(request: Request, { params }: { params: { id: string; userId: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string; userId: string }> }) {
   try {
     const req = request as any;
     req.params = params;

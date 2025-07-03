@@ -3,7 +3,7 @@
 import { headers } from 'next/headers';
 
 export async function cleanupDatabaseConnection() {
-  const headersList = headers();
+  const headersList = await headers();
   const cleanupTenantId = headersList.get('X-Cleanup-Connection');
 
   if (cleanupTenantId) {

@@ -30,6 +30,9 @@ import {
   TicketClosedEvent
 } from '../../../lib/eventBus/events';
 import { NumberingService } from 'server/src/lib/services/numberingService';
+import { analytics } from '../../analytics/posthog';
+import { AnalyticsEvents } from '../../analytics/events';
+import { featureAdoptionTracker } from '../../analytics/featureAdoption';
 
 // Helper function to safely convert dates
 function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null }>(record: T): T {
@@ -118,6 +121,26 @@ export async function createTicketFromAsset(data: CreateTicketFromAssetData, use
                 tenantId: tenant,
                 ticketId: newTicket.ticket_id,
                 userId: user.user_id,
+            });
+
+            // Track ticket creation from asset analytics
+            analytics.capture(AnalyticsEvents.TICKET_CREATED, {
+                ticket_type: 'from_asset',
+                priority_id: newTicket.priority_id,
+                has_description: !!validatedData.description,
+                has_category: !!newTicket.category_id,
+                has_subcategory: !!newTicket.subcategory_id,
+                is_assigned: !!newTicket.assigned_to,
+                channel_id: newTicket.channel_id,
+                created_via: 'asset_page',
+                has_asset: true,
+            }, user.user_id);
+
+            // Track feature adoption
+            featureAdoptionTracker.trackFeatureUsage('ticket_creation', user.user_id, {
+                ticket_source: 'asset',
+                used_template: false,
+                automation_triggered: false
             });
 
             return convertDates(newTicket);
@@ -253,6 +276,25 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
           userId: user.user_id,
         });
       }
+
+      // Track ticket creation analytics
+      analytics.capture(AnalyticsEvents.TICKET_CREATED, {
+        ticket_type: 'manual',
+        priority_id: newTicket.priority_id,
+        has_description: !!validatedData.description,
+        has_category: !!newTicket.category_id,
+        has_subcategory: !!newTicket.subcategory_id,
+        is_assigned: !!newTicket.assigned_to,
+        channel_id: newTicket.channel_id,
+        created_via: 'web_app',
+      }, user.user_id);
+
+      // Track feature adoption
+      featureAdoptionTracker.trackFeatureUsage('ticket_creation', user.user_id, {
+        ticket_source: 'manual',
+        used_template: false,
+        automation_triggered: false
+      });
 
           return convertDates(newTicket);
         });
@@ -488,6 +530,15 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
           userId: user.user_id,
           changes: updateData
         });
+        
+        // Track ticket resolved analytics
+        analytics.capture(AnalyticsEvents.TICKET_RESOLVED, {
+          time_to_resolution: currentTicket.entered_at ? 
+            Math.round((Date.now() - new Date(currentTicket.entered_at).getTime()) / 1000 / 60) : 0, // minutes
+          priority_id: updatedTicket.priority_id,
+          category_id: updatedTicket.category_id,
+          had_assignment: !!updatedTicket.assigned_to,
+        }, user.user_id);
       } else if (updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
         // Ticket was assigned
         await safePublishEvent('TICKET_ASSIGNED', {
@@ -496,6 +547,13 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
           userId: user.user_id,
           changes: updateData
         });
+        
+        // Track ticket assignment analytics
+        analytics.capture(AnalyticsEvents.TICKET_ASSIGNED, {
+          was_reassignment: !!currentTicket.assigned_to,
+          time_to_assignment: currentTicket.entered_at && !currentTicket.assigned_to ? 
+            Math.round((Date.now() - new Date(currentTicket.entered_at).getTime()) / 1000 / 60) : 0, // minutes
+        }, user.user_id);
       } else {
         // Regular update
         await safePublishEvent('TICKET_UPDATED', {
@@ -505,6 +563,15 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
           changes: updateData
         });
       }
+      
+      // Track general ticket update analytics
+      analytics.capture(AnalyticsEvents.TICKET_UPDATED, {
+        fields_updated: Object.keys(updateData),
+        updated_priority: 'priority_id' in updateData,
+        updated_status: 'status_id' in updateData,
+        updated_category: 'category_id' in updateData || 'subcategory_id' in updateData,
+        updated_assignment: 'assigned_to' in updateData,
+      }, user.user_id);
 
       return updatedTicket;
     });
@@ -782,6 +849,14 @@ export async function deleteTicket(ticketId: string, user: IUser): Promise<void>
         ticketId: ticketId,
         userId: user.user_id
       });
+      
+      // Track ticket deletion analytics
+      analytics.capture('ticket_deleted', {
+        was_resolved: !!ticket.closed_at,
+        had_comments: false, // We could query this if needed
+        age_in_days: ticket.entered_at ? 
+          Math.round((Date.now() - new Date(ticket.entered_at).getTime()) / 1000 / 60 / 60 / 24) : 0,
+      }, user.user_id);
     });
 
     // Revalidate relevant paths
@@ -1016,6 +1091,21 @@ export async function getTicketById(id: string, user: IUser): Promise<DetailedTi
     delete (detailedTicket as any).assigned_to_first_name;
     delete (detailedTicket as any).assigned_to_last_name;
 
+    // Track ticket view analytics
+    analytics.capture('ticket_viewed', {
+      ticket_id: id,
+      status_id: ticket.status_id,
+      status_name: ticket.status_name,
+      is_closed: ticket.is_closed,
+      priority_id: ticket.priority_id,
+      category_id: ticket.category_id,
+      channel_id: ticket.channel_id,
+      assigned_to: ticket.assigned_to,
+      company_id: ticket.company_id,
+      has_additional_agents: additionalAgents.length > 0,
+      additional_agent_count: additionalAgents.length,
+      view_source: 'ticket_by_id'
+    }, user.user_id);
 
       return convertDates(detailedTicket);
     });

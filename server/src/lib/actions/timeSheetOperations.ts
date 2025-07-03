@@ -20,6 +20,8 @@ import {
   fetchOrCreateTimeSheetParamsSchema,
   FetchOrCreateTimeSheetParams
 } from './timeEntrySchemas'; // Import schemas from the new module
+import { analytics } from '../analytics/posthog';
+import { AnalyticsEvents } from '../analytics/events';
 
 export async function fetchTimeSheets(): Promise<ITimeSheet[]> {
   const session = await getServerSession(options);
@@ -66,10 +68,41 @@ export async function submitTimeSheet(timeSheetId: string): Promise<ITimeSheet> 
   // Validate input
   const validatedParams = validateData<SubmitTimeSheetParams>(submitTimeSheetParamsSchema, { timeSheetId });
 
+  const session = await getServerSession(options);
+  const userId = session?.user?.id;
+
   const {knex: db, tenant} = await createTenantKnex();
 
   try {
     return await db.transaction(async (trx) => {
+      // Get timesheet info for analytics
+      const timeSheetInfo = await trx('time_sheets')
+        .where({
+          id: validatedParams.timeSheetId,
+          tenant
+        })
+        .first();
+
+      // Get entry count and total hours for analytics
+      const entriesInfo = await trx('time_entries')
+        .where({
+          time_sheet_id: validatedParams.timeSheetId,
+          tenant
+        })
+        .select(
+          trx.raw('COUNT(*) as entry_count'),
+          trx.raw('SUM(billable_duration) / 60 as total_hours')
+        )
+        .first();
+
+      // Get period info
+      const periodInfo = await trx('time_periods')
+        .where({
+          period_id: timeSheetInfo.period_id,
+          tenant
+        })
+        .first();
+
       // Update the time sheet status
       const [updatedTimeSheet] = await trx('time_sheets')
         .where({
@@ -92,6 +125,17 @@ export async function submitTimeSheet(timeSheetId: string): Promise<ITimeSheet> 
           approval_status: 'SUBMITTED',
           updated_at: trx.fn.now()
         });
+
+      // Track analytics
+      if (userId) {
+        analytics.capture(AnalyticsEvents.TIME_SHEET_SUBMITTED, {
+          time_sheet_id: validatedParams.timeSheetId,
+          entry_count: entriesInfo?.entry_count || 0,
+          total_hours: parseFloat(entriesInfo?.total_hours || '0'),
+          period_start: periodInfo?.start_date,
+          period_end: periodInfo?.end_date
+        }, userId);
+      }
 
       return updatedTimeSheet;
     });
