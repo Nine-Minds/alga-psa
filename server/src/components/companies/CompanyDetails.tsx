@@ -850,12 +850,15 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     return matchingTab?.label || 'Details';
   };
 
+  // When rendered inside a drawer, only show the Details tab content
+  const detailsTab = tabContent.find(tab => tab.label === 'Details');
+
   return (
     <ReflectionContainer id={id} label="Company Details">
       <div className="flex items-center space-x-5 mb-4 pt-2">
-        <BackNav href={!isInDrawer ? "/msp/companies" : undefined}>
-          {isInDrawer ? 'Back' : 'Back to Clients'}
-        </BackNav>
+        {!isInDrawer && (
+          <BackNav href="/msp/companies">Back to Clients</BackNav>
+        )}
         {isInDrawer && (
           <Button
             id={`${id}-go-to-company-button`}
@@ -903,11 +906,15 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
 
       {/* Content Area */}
       <div>
-        <CustomTabs
-          tabs={tabContent}
-          defaultTab={findTabLabel(searchParams?.get('tab'))}
-          onTabChange={handleTabChange}
-        />
+        {isInDrawer ? (
+          detailsTab?.content || null
+        ) : (
+          <CustomTabs
+            tabs={tabContent}
+            defaultTab={findTabLabel(searchParams?.get('tab'))}
+            onTabChange={handleTabChange}
+          />
+        )}
 
         <QuickAddTicket
           id={`${id}-quick-add-ticket`}
