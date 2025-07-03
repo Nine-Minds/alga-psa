@@ -616,20 +616,35 @@ export async function registerClientUser(
         })
         .returning('*');
 
-      // Get the default client role
+      // Get the default client portal user role
+      // After migration, "Client" role is now "User" in client portal
       let clientRole = await trx('roles')
-        .where({ tenant: contact.tenant })
-        .whereRaw('LOWER(role_name) = ?', ['client'])
+        .where({ 
+          tenant: contact.tenant,
+          client: true,
+          msp: false
+        })
+        .whereRaw('LOWER(role_name) = ?', ['user'])
         .first();
+
+      // Fallback: try old "client" role name for backwards compatibility
+      if (!clientRole) {
+        clientRole = await trx('roles')
+          .where({ tenant: contact.tenant })
+          .whereRaw('LOWER(role_name) = ?', ['client'])
+          .first();
+      }
 
       if (!clientRole) {
         // If role doesn't exist, create it. This is a fallback.
         // The primary mechanism should be the migration.
         [clientRole] = await trx('roles')
           .insert({
-            role_name: 'Client', // Store with capitalization
-            description: 'Default client user role',
-            tenant: contact.tenant
+            role_name: 'User',
+            description: 'Standard client portal user',
+            tenant: contact.tenant,
+            msp: false,
+            client: true
           })
           .returning('*');
       }

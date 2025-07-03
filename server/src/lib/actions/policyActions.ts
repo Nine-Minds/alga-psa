@@ -11,10 +11,16 @@ import { Knex } from 'knex';
 const policyEngine = new PolicyEngine();
 
 // Role actions
-export async function createRole(roleName: string, description: string): Promise<IRole> {
+export async function createRole(roleName: string, description: string, msp: boolean = true, client: boolean = false): Promise<IRole> {
     const { knex: db, tenant } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        const [role] = await trx('roles').insert({ role_name: roleName, description, tenant }).returning('*');
+        const [role] = await trx('roles').insert({ 
+            role_name: roleName, 
+            description, 
+            tenant,
+            msp,
+            client
+        }).returning('*');
         return role;
     });
 }
