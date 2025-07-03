@@ -133,23 +133,36 @@ export const TagManager: React.FC<TagManagerProps> = ({
   // Removed problematic global tag syncing that was causing infinite loops
   // Individual TagManager instances will handle their own optimistic updates
 
-  // Simplified permissions - avoid TagContext interaction for now
+  // Re-enable proper permissions checking
   useEffect(() => {
     if (passedPermissions) {
       setPermissions(passedPermissions);
       return;
     }
     
-    // Set basic permissions for now to avoid async issues
-    setPermissions({
-      canAddExisting: true,
-      canCreateNew: true,
-      canEditColors: true,
-      canEditText: true,
-      canDelete: true,
-      canDeleteAll: true
-    });
-  }, [passedPermissions]);
+    // Fetch permissions from TagContext if not passed as props
+    const fetchPermissions = async () => {
+      if (tagContext?.getPermissions) {
+        try {
+          const perms = await tagContext.getPermissions(entityType);
+          setPermissions(perms);
+        } catch (error) {
+          console.error('Failed to get tag permissions:', error);
+          // Fallback to restrictive permissions on error
+          setPermissions({
+            canAddExisting: false,
+            canCreateNew: false,
+            canEditColors: false,
+            canEditText: false,
+            canDelete: false,
+            canDeleteAll: false
+          });
+        }
+      }
+    };
+    
+    fetchPermissions();
+  }, [passedPermissions, tagContext?.getPermissions, entityType]);
 
 
   const handleAddTag = async (tagText: string) => {

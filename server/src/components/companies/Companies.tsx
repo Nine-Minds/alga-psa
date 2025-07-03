@@ -248,8 +248,8 @@ CompanyResults.displayName = 'CompanyResults';
 const Companies: React.FC = () => {
   const { toast } = useToast();
   
-  // Temporarily disabled to debug re-render issues
-  // useTagPermissions(['company']);
+  // Re-enable tag permissions now that infinite loops are fixed
+  useTagPermissions(['company']);
   
   // Temporarily disabled UI reflection to prevent infinite loops
   // const { automationIdProps: containerProps, updateMetadata } = useAutomationIdAndRegister({
