@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus } from 'lucide-react';
 import { generateEntityColor } from 'server/src/utils/colorUtils';
-import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
-import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
-import { ButtonComponent, FormFieldComponent } from 'server/src/types/ui-reflection/types';
+// import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+// import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+// import { ButtonComponent, FormFieldComponent } from 'server/src/types/ui-reflection/types';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
@@ -144,21 +144,19 @@ export const TagInput: React.FC<TagInputProps> = ({
 
   return (
     <>
-      <ReflectionContainer id={id} label="Tag Input">
-        <div className="inline-flex items-center">
-          <Button
-            ref={buttonRef}
-            id="tag-add-button"
-            onClick={() => setIsEditing(true)}
-            className="text-gray-500 hover:text-gray-700"
-            variant="icon"
-            size="icon"
-            style={{ visibility: isEditing ? 'hidden' : 'visible' }}
-          >
-            <Plus size={16} />
-          </Button>
-        </div>
-      </ReflectionContainer>
+      <div className="inline-flex items-center">
+        <Button
+          ref={buttonRef}
+          id="tag-add-button"
+          onClick={() => setIsEditing(true)}
+          className="text-gray-500 hover:text-gray-700"
+          variant="icon"
+          size="icon"
+          style={{ visibility: isEditing ? 'hidden' : 'visible' }}
+        >
+          <Plus size={16} />
+        </Button>
+      </div>
       
       {/* Render input form using a portal when editing */}
       {isEditing && typeof document !== 'undefined' &&

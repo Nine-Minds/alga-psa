@@ -6,7 +6,7 @@ import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { getAllContacts, getContactsByCompany, getAllCompanies, exportContactsToCSV, deleteContact } from 'server/src/lib/actions/contact-actions/contactActions';
-import { findTagsByEntityIds, createTag, deleteTag, findAllTagsByType } from 'server/src/lib/actions/tagActions';
+import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
 import { Button } from 'server/src/components/ui/Button';
 import { SearchInput } from 'server/src/components/ui/SearchInput';
 import { Pen, Eye, CloudDownload, MoreVertical, Upload, Trash2, XCircle } from 'lucide-react';
@@ -20,7 +20,8 @@ import CompanyDetails from '../companies/CompanyDetails';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { TagManager, TagFilter } from 'server/src/components/tags';
-import { getUniqueTagTexts, getAvatarUrl } from 'server/src/utils/colorUtils';
+import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
+import { getUniqueTagTexts } from 'server/src/utils/colorUtils';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
@@ -36,6 +37,9 @@ interface ContactsProps {
 }
 
 const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSelectedCompanyId }) => {
+  // Pre-fetch tag permissions to prevent individual API calls
+  useTagPermissions(['contact']);
+  
   const [contacts, setContacts] = useState<IContact[]>(initialContacts);
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [documents, setDocuments] = useState<Record<string, IDocument[]>>({});
@@ -105,18 +109,17 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
     fetchContactsAndCompanies();
   }, [companyId, filterStatus]);
 
-  // Fetch tags separately - no need to refetch when filter changes
+  // Fetch tags separately - only fetch contact-specific tags when contacts change
   useEffect(() => {
     const fetchTags = async () => {
+      if (contacts.length === 0) return;
+      
       try {
-        
-        const [contactTags, allTags] = await Promise.all([
-          findTagsByEntityIds(
-            contacts.map((contact: IContact): string => contact.contact_name_id),
-            'contact'
-          ),
-          findAllTagsByType('contact')
-        ]);
+        // Only fetch contact-specific tags, not all tags again
+        const contactTags = await findTagsByEntityIds(
+          contacts.map((contact: IContact): string => contact.contact_name_id),
+          'contact'
+        );
 
         const newContactTags: Record<string, ITag[]> = {};
         contactTags.forEach(tag => {
@@ -127,14 +130,25 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
         });
 
         contactTagsRef.current = newContactTags;
-        setAllUniqueTags(allTags.map(tag => tag.tag_text));
-        
       } catch (error) {
         console.error('Error fetching tags:', error);
       }
     };
     fetchTags();
-  }, [contacts]); // Only re-fetch tags when contacts change
+  }, [contacts]);
+
+  // Fetch all unique tags only once on mount
+  useEffect(() => {
+    const fetchAllTags = async () => {
+      try {
+        const allTags = await findAllTagsByType('contact');
+        setAllUniqueTags(allTags.map(tag => tag.tag_text));
+      } catch (error) {
+        console.error('Error fetching all tags:', error);
+      }
+    };
+    fetchAllTags();
+  }, []);
 
   const handleTagsChange = (contactId: string, updatedTags: ITag[]) => {
     contactTagsRef.current = {

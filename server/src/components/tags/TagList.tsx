@@ -14,6 +14,8 @@ interface TagListProps {
   allowTextEdit?: boolean;
   allowDeleteAll?: boolean;
   maxDisplay?: number;
+  onTagUpdate?: (tagId: string, updates: { text?: string; backgroundColor?: string | null; textColor?: string | null }) => Promise<void>;
+  onDeleteAll?: (tagText: string, taggedType: string) => Promise<void>;
 }
 
 export const TagList: React.FC<TagListProps> = ({ 
@@ -22,9 +24,12 @@ export const TagList: React.FC<TagListProps> = ({
   allowColorEdit = true, 
   allowTextEdit = true,
   allowDeleteAll = true,
-  maxDisplay 
+  maxDisplay,
+  onTagUpdate,
+  onDeleteAll: onDeleteAllProp
 }) => {
-  const { updateTagColor, updateTagText, deleteAllTagsByText } = useTags();
+  const tagContext = useTags();
+  const { updateTagColor, updateTagText, deleteAllTagsByText } = tagContext || {};
 
   const displayTags = maxDisplay && tags.length > maxDisplay
     ? tags.slice(0, maxDisplay)
@@ -34,26 +39,36 @@ export const TagList: React.FC<TagListProps> = ({
     : 0;
 
   const handleTagUpdate = async (tagId: string, updates: { text?: string; backgroundColor?: string | null; textColor?: string | null }) => {
-    // Handle text update
-    if (updates.text !== undefined) {
-      await updateTagText(tagId, updates.text);
-    }
-    
-    // Handle color update
-    if (updates.backgroundColor !== undefined || updates.textColor !== undefined) {
-      const tag = tags.find(t => t.tag_id === tagId);
-      if (tag) {
-        await updateTagColor(
-          tagId, 
-          updates.backgroundColor !== undefined ? updates.backgroundColor : (tag.background_color ?? null),
-          updates.textColor !== undefined ? updates.textColor : (tag.text_color ?? null)
-        );
+    // Use passed handler if available, otherwise fall back to TagContext
+    if (onTagUpdate) {
+      await onTagUpdate(tagId, updates);
+    } else {
+      // Handle text update
+      if (updates.text !== undefined && updateTagText) {
+        await updateTagText(tagId, updates.text);
+      }
+      
+      // Handle color update
+      if ((updates.backgroundColor !== undefined || updates.textColor !== undefined) && updateTagColor) {
+        const tag = tags.find(t => t.tag_id === tagId);
+        if (tag) {
+          await updateTagColor(
+            tagId, 
+            updates.backgroundColor !== undefined ? updates.backgroundColor : (tag.background_color ?? null),
+            updates.textColor !== undefined ? updates.textColor : (tag.text_color ?? null)
+          );
+        }
       }
     }
   };
 
   const handleDeleteAll = async (tagText: string, taggedType: string) => {
-    await deleteAllTagsByText(tagText, taggedType as any);
+    // Use passed handler if available, otherwise fall back to TagContext
+    if (onDeleteAllProp) {
+      await onDeleteAllProp(tagText, taggedType);
+    } else if (deleteAllTagsByText) {
+      await deleteAllTagsByText(tagText, taggedType as any);
+    }
   };
 
   return (

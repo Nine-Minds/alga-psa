@@ -16,6 +16,7 @@ import { ChannelPicker } from 'server/src/components/settings/general/ChannelPic
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
 import { TagFilter, TagManager } from 'server/src/components/tags';
+import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import { IChannel, ICompany, IUser } from 'server/src/interfaces';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
@@ -73,6 +74,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   isLoadingMore,
   user
 }) => {
+  // Pre-fetch tag permissions to prevent individual API calls
+  useTagPermissions(['ticket']);
+  
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
   const [ticketToDeleteName, setTicketToDeleteName] = useState<string | null>(null);
@@ -121,7 +125,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setTickets(initialTickets);
   }, [initialTickets]);
 
-  // Fetch tags when initial tickets change
+  // Fetch ticket-specific tags when initial tickets change
   useEffect(() => {
     const fetchTags = async () => {
       if (initialTickets.length === 0) return;
@@ -129,10 +133,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       try {
         const ticketIds = initialTickets.map(ticket => ticket.ticket_id).filter((id): id is string => id !== undefined);
         
-        const [ticketTags, allTags] = await Promise.all([
-          findTagsByEntityIds(ticketIds, 'ticket'),
-          findAllTagsByType('ticket')
-        ]);
+        // Only fetch ticket-specific tags, not all tags again
+        const ticketTags = await findTagsByEntityIds(ticketIds, 'ticket');
 
         const newTicketTags: Record<string, ITag[]> = {};
         ticketTags.forEach(tag => {
@@ -143,13 +145,25 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         });
 
         ticketTagsRef.current = newTicketTags;
-        setAllUniqueTags(allTags.map(tag => tag.tag_text));
       } catch (error) {
         console.error('Error fetching tags:', error);
       }
     };
     fetchTags();
-  }, [initialTickets]); // Changed dependency to initialTickets to prevent cascade
+  }, [initialTickets]);
+
+  // Fetch all unique tags only once on mount
+  useEffect(() => {
+    const fetchAllTags = async () => {
+      try {
+        const allTags = await findAllTagsByType('ticket');
+        setAllUniqueTags(allTags.map(tag => tag.tag_text));
+      } catch (error) {
+        console.error('Error fetching all tags:', error);
+      }
+    };
+    fetchAllTags();
+  }, []);
 
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 

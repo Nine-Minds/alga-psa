@@ -14,6 +14,7 @@ import { getContactByContactNameId } from 'server/src/lib/actions/contact-action
 import { findUserById } from 'server/src/lib/actions/user-actions/userActions';
 import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
 import { TagFilter, TagManager } from 'server/src/components/tags';
+import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
 import { Search, MoreVertical, Pen, Trash2, XCircle } from 'lucide-react';
@@ -37,6 +38,9 @@ interface ProjectsProps {
 }
 
 export default function Projects({ initialProjects, companies }: ProjectsProps) {
+  // Pre-fetch tag permissions to prevent individual API calls
+  useTagPermissions(['project']);
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
   const [projects, setProjects] = useState<IProject[]>(initialProjects);
@@ -73,7 +77,7 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
     setAllUniqueTags(Array.from(allTags));
   };
 
-  // Fetch tags when projects change
+  // Fetch project-specific tags when projects change
   useEffect(() => {
     const fetchTags = async () => {
       if (projects.length === 0) return;
@@ -81,10 +85,8 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
       try {
         const projectIds = projects.map(project => project.project_id).filter((id): id is string => id !== undefined);
         
-        const [projectTags, allTags] = await Promise.all([
-          findTagsByEntityIds(projectIds, 'project'),
-          findAllTagsByType('project')
-        ]);
+        // Only fetch project-specific tags, not all tags again
+        const projectTags = await findTagsByEntityIds(projectIds, 'project');
 
         const newProjectTags: Record<string, ITag[]> = {};
         projectTags.forEach(tag => {
@@ -95,13 +97,25 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
         });
 
         projectTagsRef.current = newProjectTags;
-        setAllUniqueTags(allTags.map(tag => tag.tag_text));
       } catch (error) {
         console.error('Error fetching tags:', error);
       }
     };
     fetchTags();
   }, [projects]);
+
+  // Fetch all unique tags only once on mount
+  useEffect(() => {
+    const fetchAllTags = async () => {
+      try {
+        const allTags = await findAllTagsByType('project');
+        setAllUniqueTags(allTags.map(tag => tag.tag_text));
+      } catch (error) {
+        console.error('Error fetching all tags:', error);
+      }
+    };
+    fetchAllTags();
+  }, []);
 
   // Fetch contacts and users
   useEffect(() => {

@@ -1,17 +1,23 @@
+import React, { memo } from 'react';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { useRouter } from 'next/navigation';
 import { MoreVertical, Pencil, Trash2 } from "lucide-react";
-import { ReflectedDropdownMenu } from 'server/src/components/ui/ReflectedDropdownMenu';
+// import { ReflectedDropdownMenu } from 'server/src/components/ui/ReflectedDropdownMenu';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Button } from 'server/src/components/ui/Button';
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
 import { TagManager } from 'server/src/components/tags';
-import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
-import { useRegisterChild } from 'server/src/types/ui-reflection/useRegisterChild';
-import { FormFieldComponent, ButtonComponent } from 'server/src/types/ui-reflection/types';
-import { CommonActions } from 'server/src/types/ui-reflection/actionBuilders';
+// Temporarily disabled UI reflection imports to prevent infinite loops
+// import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
+// import { useRegisterChild } from 'server/src/types/ui-reflection/useRegisterChild';
+// import { FormFieldComponent, ButtonComponent } from 'server/src/types/ui-reflection/types';
+// import { CommonActions } from 'server/src/types/ui-reflection/actionBuilders';
+
+// Removed MemoizedTagManager - using regular TagManager for debugging
+
 interface CompaniesListProps {
     selectedCompanies: string[];
     filteredCompanies: ICompany[];
@@ -38,13 +44,14 @@ interface CompanyCheckboxProps {
 const CompanyCheckbox: React.FC<CompanyCheckboxProps> = ({ companyId, checked, onChange }) => {
   const checkboxId = `company-checkbox-${companyId}`;
   
-  useRegisterChild<FormFieldComponent>({
-    id: checkboxId,
-    type: 'formField',
-    label: 'Select Company',
-    value: checked ? 'true' : 'false',
-    fieldType: 'checkbox'
-  });
+  // Temporarily disabled UI reflection registration to prevent infinite loops
+  // useRegisterChild<FormFieldComponent>({
+  //   id: checkboxId,
+  //   type: 'formField',
+  //   label: 'Select Company',
+  //   value: checked ? 'true' : 'false',
+  //   fieldType: 'checkbox'
+  // });
 
   return (
     <input
@@ -66,12 +73,13 @@ interface CompanyLinkProps {
 const CompanyLink: React.FC<CompanyLinkProps> = ({ company, onClick }) => {
   const linkId = `company-link-${company.company_id}`;
   
-  useRegisterChild<ButtonComponent>({
-    id: linkId,
-    type: 'button',
-    label: company.company_name,
-    actions: [CommonActions.click('Click this button')]
-  });
+  // Temporarily disabled UI reflection registration to prevent infinite loops
+  // useRegisterChild<ButtonComponent>({
+  //   id: linkId,
+  //   type: 'button',
+  //   label: company.company_name,
+  //   actions: [CommonActions.click('Click this button')]
+  // });
 
   return (
     <a
@@ -186,12 +194,14 @@ const CompaniesList = ({
             render: (value: string, record: ICompany) => {
                 if (!record.company_id || !onTagsChange) return null;
                 
+                const initialTags = companyTags[record.company_id] || [];
+                
                 return (
                     <div onClick={(e) => e.stopPropagation()}>
                         <TagManager
                             entityId={record.company_id}
                             entityType="company"
-                            initialTags={companyTags[record.company_id] || []}
+                            initialTags={initialTags}
                             onTagsChange={(tags) => onTagsChange(record.company_id, tags)}
                         />
                     </div>
@@ -205,12 +215,9 @@ const CompaniesList = ({
             render: (value: string, record: ICompany) => (
                 // Wrap DropdownMenu in a div and stop propagation on its click
                 <div onClick={(e) => e.stopPropagation()}>
-                    <ReflectedDropdownMenu
-                        id={`company-list-actions-${record.company_id}`}
-                        triggerLabel="Company Actions"
-                        trigger={
+                    <DropdownMenu.Root>
+                        <DropdownMenu.Trigger asChild>
                             <Button
-                                id={`company-actions-trigger-${record.company_id}`}
                                 variant="ghost"
                                 size="sm"
                                 className="h-8 w-8 p-0"
@@ -218,28 +225,27 @@ const CompaniesList = ({
                                 <span className="sr-only">Open menu</span>
                                 <MoreVertical className="h-4 w-4" />
                             </Button>
-                        }
-                        items={[
-                            {
-                                id: 'edit',
-                                text: 'Edit',
-                                icon: <Pencil size={14} />,
-                                variant: 'default',
-                                onSelect: () => handleEditCompany(record.company_id)
-                            },
-                            {
-                                id: 'delete',
-                                text: 'Delete',
-                                icon: <Trash2 size={14} />,
-                                variant: 'destructive',
-                                onSelect: () => handleDeleteCompany(record)
-                            }
-                        ]}
-                        contentProps={{
-                            align: "end",
-                            className: "bg-white z-50"
-                        }}
-                    />
+                        </DropdownMenu.Trigger>
+                        <DropdownMenu.Content 
+                            align="end" 
+                            className="bg-white rounded-md shadow-lg p-1 border border-gray-200 min-w-[120px] z-50"
+                        >
+                            <DropdownMenu.Item 
+                                className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center rounded"
+                                onSelect={() => handleEditCompany(record.company_id)}
+                            >
+                                <Pencil size={14} className="mr-2" />
+                                Edit
+                            </DropdownMenu.Item>
+                            <DropdownMenu.Item 
+                                className="px-2 py-1 text-sm cursor-pointer hover:bg-red-100 text-red-600 flex items-center rounded"
+                                onSelect={() => handleDeleteCompany(record)}
+                            >
+                                <Trash2 size={14} className="mr-2" />
+                                Delete
+                            </DropdownMenu.Item>
+                        </DropdownMenu.Content>
+                    </DropdownMenu.Root>
                 </div>
             ),
         },
@@ -249,12 +255,9 @@ const CompaniesList = ({
         <div className="w-full">
             <DataTable
                 id="companies-table"
-                data={filteredCompanies.map((company): ICompany => ({
-                    ...company,
-                    company_id: company.company_id
-                }))}
+                data={filteredCompanies}
                 columns={columns}
-                onRowClick={handleRowClick} // Use the original onRowClick signature
+                onRowClick={handleRowClick}
                 pagination={true}
                 currentPage={currentPage}
                 pageSize={pageSize}

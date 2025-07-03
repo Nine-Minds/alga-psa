@@ -1,9 +1,10 @@
 'use client'; // Added directive
 
 import React, { useMemo, useRef, useEffect, useState } from 'react';
-import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
-import { DataTableComponent, AutomationProps, TextComponent } from 'server/src/types/ui-reflection/types';
-import { useRegisterChild } from 'server/src/types/ui-reflection/useRegisterChild';
+// Temporarily disabled UI reflection imports to prevent infinite loops
+// import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
+// import { DataTableComponent, AutomationProps, TextComponent } from 'server/src/types/ui-reflection/types';
+// import { useRegisterChild } from 'server/src/types/ui-reflection/useRegisterChild';
 import {
   useReactTable,
   getCoreRowModel,
@@ -16,7 +17,7 @@ import {
   SortingFn,
 } from '@tanstack/react-table';
 import { ColumnDefinition, DataTableProps } from 'server/src/interfaces/dataTable.interfaces';
-import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+// import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 
 // Helper function to get nested property value
 const getNestedValue = (obj: unknown, path: string | string[]): unknown => {
@@ -100,24 +101,14 @@ const ReflectedTableCell: React.FC<ReflectedTableCellProps> = ({
   className, 
   style 
 }) => {
-  // Register the cell content as a text component if it contains meaningful text
-  const shouldRegister = content !== null && content !== undefined && content.trim() !== '';
+  // Temporarily disable UI reflection registration to prevent circular references
+  // TODO: Re-enable once UI reflection system circular reference issue is resolved
   
-  // Use conditional registration - only register if content is meaningful
-  const registrationId = shouldRegister ? id : `__skip_registration_${id}`;
-  
-  useRegisterChild<TextComponent>({
-    id: registrationId,
-    type: 'text',
-    text: content,
-    visible: shouldRegister
-  });
-
   return (
     <td
       className={className}
       style={style}
-      data-automation-id={shouldRegister ? id : undefined}
+      data-automation-id={id}
     >
       <div className="truncate w-full">
         {children}
@@ -126,7 +117,7 @@ const ReflectedTableCell: React.FC<ReflectedTableCellProps> = ({
   );
 };
 
-export interface ExtendedDataTableProps<T extends object> extends DataTableProps<T>, AutomationProps {
+export interface ExtendedDataTableProps<T extends object> extends DataTableProps<T> {
   /** Unique identifier for UI reflection system */
   id?: string;
 }
@@ -259,34 +250,35 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     };
   }, [columns]); // Re-run when columns change
 
-  // Register with UI reflection system if id is provided
-  const updateMetadata = id ? useRegisterUIComponent<DataTableComponent>({
-    id: `${id}-table`,
-    type: 'dataTable',
-    columns: columns.map((col): { id: string; title: string; dataIndex: string | string[]; hasCustomRender: boolean; visible: boolean } => {
-      const colId = Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex;
-      return {
-        id: colId,
-        title: String(col.title), // Convert ReactNode to string
-        dataIndex: col.dataIndex,
-        hasCustomRender: !!col.render,
-        visible: visibleColumnIds.includes(colId)
-      };
-    }),
-    pagination: {
-      enabled: pagination,
-      currentPage,
-      pageSize,
-      totalItems: totalItems ?? data.length,
-      totalPages: Math.ceil((totalItems ?? data.length) / pageSize)
-    },
-    rowCount: data.length,
-    visibleRows: data.slice(0, pageSize).map((row): { id: string; values: Record<string, unknown> } => ({
-      id: ('id' in row) ? (row as { id: string }).id : '',
-      values: row as Record<string, unknown>
-    })),
-    isEditable: !!editableConfig
-  }) : undefined;
+  // Temporarily disabled UI reflection registration to prevent infinite loops
+  // const updateMetadata = id ? useRegisterUIComponent<DataTableComponent>({
+  //   id: `${id}-table`,
+  //   type: 'dataTable',
+  //   columns: columns.map((col): { id: string; title: string; dataIndex: string | string[]; hasCustomRender: boolean; visible: boolean } => {
+  //     const colId = Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex;
+  //     return {
+  //       id: colId,
+  //       title: String(col.title), // Convert ReactNode to string
+  //       dataIndex: col.dataIndex,
+  //       hasCustomRender: !!col.render,
+  //       visible: visibleColumnIds.includes(colId)
+  //     };
+  //   }),
+  //   pagination: {
+  //     enabled: pagination,
+  //     currentPage,
+  //     pageSize,
+  //     totalItems: totalItems ?? data.length,
+  //     totalPages: Math.ceil((totalItems ?? data.length) / pageSize)
+  //   },
+  //   rowCount: data.length,
+  //   visibleRows: data.slice(0, pageSize).map((row): { id: string; values: Record<string, unknown> } => ({
+  //     id: ('id' in row) ? (row as { id: string }).id : '',
+  //     values: row as Record<string, unknown>
+  //   })),
+  //   isEditable: !!editableConfig
+  // }) : undefined;
+  const updateMetadata = undefined;
 
   // Create stable column definitions, filtering out columns that shouldn't be visible
   const tableColumns = useMemo<ColumnDef<T>[]>(
@@ -404,7 +396,6 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
       data-automation-id={id}
       ref={tableContainerRef}
     >
-      <ReflectionContainer id={`${id}-table`}>
         {visibleColumnIds.length < columns.length && (
           <div className="px-4 py-2 bg-blue-50 text-blue-700 text-sm border-b border-gray-200">
             <span className="flex items-center">
@@ -514,7 +505,6 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
             </div>
           </div>
         )}
-      </ReflectionContainer>
     </div>
   );
 };
