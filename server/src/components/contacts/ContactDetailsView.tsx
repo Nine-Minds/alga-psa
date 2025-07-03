@@ -32,6 +32,11 @@ interface ContactDetailsViewProps {
   userId?: string;
   documents?: IDocument[];
   onDocumentCreated?: () => Promise<void>;
+  /**
+   * Whether to include extended sections like documents and interactions.
+   * Defaults to `false` when rendered inside a drawer and `true` otherwise.
+   */
+  showExtended?: boolean;
 }
 
 interface TableRowProps {
@@ -58,14 +63,15 @@ const TableRow: React.FC<TableRowProps> = ({ label, value, onClick }) => (
   </tr>
 );
 
-const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({ 
+const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   id = 'contact-details',
-  initialContact, 
+  initialContact,
   companies,
   isInDrawer = false,
   userId,
   documents: initialDocuments = [],
-  onDocumentCreated
+  onDocumentCreated,
+  showExtended = !isInDrawer
 }) => {
   const [contact, setContact] = useState<IContact>(initialContact);
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
@@ -313,7 +319,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
           </tbody>
         </table>
 
-        {userId && (
+        {showExtended && userId && (
           <div className="mt-6">
             <Heading size="4" className="mb-4">Documents</Heading>
             <Documents
@@ -328,16 +334,18 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
           </div>
         )}
 
-        <div className="mt-6">
-          <InteractionsFeed 
-            id={`${id}-interactions`}
-            entityId={contact.contact_name_id} 
-            entityType="contact"
-            companyId={contact.company_id!}
-            interactions={interactions}
-            setInteractions={setInteractions}
-          />
-        </div>
+        {showExtended && (
+          <div className="mt-6">
+            <InteractionsFeed
+              id={`${id}-interactions`}
+              entityId={contact.contact_name_id}
+              entityType="contact"
+              companyId={contact.company_id!}
+              interactions={interactions}
+              setInteractions={setInteractions}
+            />
+          </div>
+        )}
       </div>
     </ReflectionContainer>
   );
