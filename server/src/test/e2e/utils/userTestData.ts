@@ -7,7 +7,7 @@ import { hash } from 'bcryptjs';
 export function createUserTestData(overrides: Partial<any> = {}) {
   const firstName = overrides.first_name || faker.person.firstName();
   const lastName = overrides.last_name || faker.person.lastName();
-  const username = overrides.username || faker.internet.userName({ firstName, lastName }).toLowerCase();
+  const username = overrides.username || faker.internet.username({ firstName, lastName }).toLowerCase();
   
   return {
     username,
@@ -15,7 +15,7 @@ export function createUserTestData(overrides: Partial<any> = {}) {
     first_name: firstName,
     last_name: lastName,
     password: overrides.password || 'TestPassword123!',
-    user_type: overrides.user_type || faker.helpers.arrayElement(['employee', 'contractor', 'client', 'internal']),
+    user_type: overrides.user_type || faker.helpers.arrayElement(['internal', 'client']),
     is_inactive: overrides.is_inactive ?? false,
     bio: overrides.bio || faker.lorem.sentence(),
     phone: overrides.phone || faker.phone.number(),
