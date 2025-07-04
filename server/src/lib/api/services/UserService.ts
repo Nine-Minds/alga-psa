@@ -32,6 +32,7 @@ import User from 'server/src/lib/models/user';
 import Team from 'server/src/lib/models/team';
 import UserPreferences from 'server/src/lib/models/userPreferences';
 import { generateResourceLinks, addHateoasLinks } from '../utils/responseHelpers';
+import { NotFoundError } from '../middleware/apiMiddleware';
 import logger from '@shared/core/logger';
 
 // Extended interfaces for service operations
@@ -1085,6 +1086,36 @@ export class UserService extends BaseService<IUser> {
       data: activities,
       total: parseInt(count as string)
     };
+  }
+
+  /**
+   * Get user permissions (method alias for controller)
+   */
+  async getUserPermissions(userId: string, context: ServiceContext): Promise<string[]> {
+    await this.ensurePermission(context, 'user', 'read');
+    
+    const user = await this.getById(userId, context, {
+      includePermissions: true,
+      includeRoles: true
+    });
+
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    return user.permissions || [];
+  }
+
+  /**
+   * Get user activity (method alias for getUserActivityLogs)
+   */
+  async getUserActivity(
+    filters: UserActivityFilter,
+    context: ServiceContext,
+    page: number = 1,
+    limit: number = 25
+  ): Promise<ListResult<UserActivityLog>> {
+    return this.getUserActivityLogs(filters, context, page, limit);
   }
 
   /**

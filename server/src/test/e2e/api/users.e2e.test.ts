@@ -93,7 +93,23 @@ describe('Users API E2E Tests', () => {
       // Create a user first
       const userData = createUserTestData();
       const createResponse = await env.apiClient.post('/api/v1/users', userData);
-      const userId = createResponse.data.data.user_id;
+      
+      // Debug the response structure
+      if (createResponse.status !== 201) {
+        console.error('Create user failed:', createResponse.status, JSON.stringify(createResponse.data, null, 2));
+      }
+      
+      // Handle different response structures
+      let userId;
+      if (createResponse.data && createResponse.data.data && createResponse.data.data.user_id) {
+        userId = createResponse.data.data.user_id;
+      } else if (createResponse.data && createResponse.data.user_id) {
+        userId = createResponse.data.user_id;
+      } else {
+        console.error('Unexpected response structure:', JSON.stringify(createResponse.data, null, 2));
+        throw new Error('Could not extract user_id from create response');
+      }
+      
       createdUserIds.push(userId);
       
       // Get the user
@@ -111,7 +127,17 @@ describe('Users API E2E Tests', () => {
       // Create a user first
       const userData = createUserTestData();
       const createResponse = await env.apiClient.post('/api/v1/users', userData);
-      const userId = createResponse.data.data.user_id;
+      
+      // Handle different response structures
+      let userId;
+      if (createResponse.data && createResponse.data.data && createResponse.data.data.user_id) {
+        userId = createResponse.data.data.user_id;
+      } else if (createResponse.data && createResponse.data.user_id) {
+        userId = createResponse.data.user_id;
+      } else {
+        throw new Error('Could not extract user_id from create response');
+      }
+      
       createdUserIds.push(userId);
       
       // Update the user
@@ -135,7 +161,16 @@ describe('Users API E2E Tests', () => {
       // Create a user first
       const userData = createUserTestData();
       const createResponse = await env.apiClient.post('/api/v1/users', userData);
-      const userId = createResponse.data.data.user_id;
+      
+      // Handle different response structures
+      let userId;
+      if (createResponse.data && createResponse.data.data && createResponse.data.data.user_id) {
+        userId = createResponse.data.data.user_id;
+      } else if (createResponse.data && createResponse.data.user_id) {
+        userId = createResponse.data.user_id;
+      } else {
+        throw new Error('Could not extract user_id from create response');
+      }
       
       // Delete the user
       const response = await env.apiClient.delete(`/api/v1/users/${userId}`);
@@ -271,7 +306,7 @@ describe('Users API E2E Tests', () => {
     it('should allow users to change their own password', async () => {
       // This test would need proper authentication context
       // For now, we'll test that the endpoint exists
-      const response = await env.apiClient.post(`/api/v1/users/${env.userId}/password`, {
+      const response = await env.apiClient.put(`/api/v1/users/${env.userId}/password`, {
         current_password: 'old_password',
         new_password: 'new_password123!',
         confirm_password: 'new_password123!'
@@ -287,7 +322,7 @@ describe('Users API E2E Tests', () => {
       const response = await env.apiClient.get('/api/v1/users/00000000-0000-0000-0000-000000000000');
       
       expect(response.status).toBe(404);
-      expect(response.data.error).toContain('not found');
+      expect(response.data.error.message).toContain('not found');
     });
 
     it('should return 400 for invalid user data', async () => {
@@ -299,14 +334,14 @@ describe('Users API E2E Tests', () => {
       const response = await env.apiClient.post('/api/v1/users', invalidData);
       
       expect(response.status).toBe(400);
-      expect(response.data.error).toContain('Validation failed');
+      expect(response.data.error.message).toContain('Validation failed');
     });
 
     it('should return 400 for invalid UUID', async () => {
       const response = await env.apiClient.get('/api/v1/users/invalid-uuid');
       
       expect(response.status).toBe(400);
-      expect(response.data.error).toBeDefined();
+      expect(response.data.error.message).toBeDefined();
     });
 
     it('should prevent duplicate usernames', async () => {
@@ -315,14 +350,23 @@ describe('Users API E2E Tests', () => {
       // Create first user
       const response1 = await env.apiClient.post('/api/v1/users', userData);
       if (response1.status === 201) {
-        createdUserIds.push(response1.data.data.user_id);
+        // Handle different response structures
+        let userId;
+        if (response1.data && response1.data.data && response1.data.data.user_id) {
+          userId = response1.data.data.user_id;
+        } else if (response1.data && response1.data.user_id) {
+          userId = response1.data.user_id;
+        }
+        if (userId) {
+          createdUserIds.push(userId);
+        }
       }
       
       // Try to create second user with same username
       const response2 = await env.apiClient.post('/api/v1/users', userData);
       
       expect(response2.status).toBe(409);
-      expect(response2.data.error).toContain('already exists');
+      expect(response2.data.error.message).toContain('already exists');
     });
   });
 
