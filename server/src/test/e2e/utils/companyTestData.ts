@@ -17,7 +17,7 @@ export function createCompanyTestData(overrides: Partial<any> = {}) {
     notes: faker.lorem.sentence(),
     is_inactive: false,
     tax_id_number: faker.string.alphanumeric(10),
-    billing_cycle: faker.helpers.arrayElement(['monthly', 'quarterly', 'annually', 'custom']),
+    billing_cycle: faker.helpers.arrayElement(['monthly', 'quarterly', 'annually', 'weekly', 'bi-weekly', 'semi-annually']),
     tags: [faker.word.noun(), faker.word.adjective()],
     ...overrides
   };
