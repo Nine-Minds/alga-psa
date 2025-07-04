@@ -3,17 +3,11 @@
  * PUT /api/v1/tickets/{id}/status - Update ticket status
  */
 
-import { TicketController } from 'server/src/lib/api/controllers/TicketController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiTicketControllerV2 } from 'server/src/lib/api/controllers/ApiTicketControllerV2';
 
-export async function PUT(request: Request) {
-  try {
-    const controller = new TicketController();
-    return await controller.updateTicketStatus()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+const controller = new ApiTicketControllerV2();
+
+export const PUT = controller.updateStatus();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
