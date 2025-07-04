@@ -19,6 +19,10 @@ export async function withTestSetup(): Promise<TestSetup> {
   const userId = faker.string.uuid();
   const apiKeyId = faker.string.uuid();
   const apiKey = faker.string.alphanumeric(32);
+  
+  // Import crypto for hashing
+  const crypto = await import('crypto');
+  const hashedApiKey = crypto.createHash('sha256').update(apiKey).digest('hex');
 
   // Set up test data in database
   await runWithTenant(tenantId, async () => {
@@ -28,8 +32,14 @@ export async function withTestSetup(): Promise<TestSetup> {
     await db('tenants').insert({
       tenant: tenantId,
       company_name: `Test Company ${faker.company.name()}`,
-      is_active: true,
-      created_at: new Date()
+      phone_number: faker.phone.number(),
+      email: faker.internet.email(),
+      created_at: new Date(),
+      updated_at: new Date(),
+      payment_platform_id: `test-platform-${tenantId.substring(0, 8)}`,
+      payment_method_id: `test-method-${tenantId.substring(0, 8)}`,
+      auth_service_id: `test-auth-${tenantId.substring(0, 8)}`,
+      plan: 'test'
     });
 
     // Create user
@@ -48,14 +58,14 @@ export async function withTestSetup(): Promise<TestSetup> {
 
     // Create API key
     await db('api_keys').insert({
-      key_id: apiKeyId,
+      api_key_id: apiKeyId,
       tenant: tenantId,
       user_id: userId,
-      key: apiKey,
-      name: 'Test API Key',
-      is_active: true,
+      api_key: hashedApiKey,
+      description: 'Test API Key',
+      active: true,
       created_at: new Date(),
-      created_by: userId
+      updated_at: new Date()
     });
 
     // Create basic admin role and assign to user
@@ -65,7 +75,6 @@ export async function withTestSetup(): Promise<TestSetup> {
       tenant: tenantId,
       role_name: 'Admin',
       description: 'Administrator role with full permissions',
-      is_system: true,
       created_at: new Date(),
       updated_at: new Date()
     });

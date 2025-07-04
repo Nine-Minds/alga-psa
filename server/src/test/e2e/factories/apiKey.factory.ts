@@ -4,38 +4,34 @@
  */
 
 import { faker } from '@faker-js/faker';
+import crypto from 'crypto';
 
 interface ApiKeyInput {
   tenant: string;
   user_id: string;
-  name?: string;
-  is_active?: boolean;
+  description?: string;
+  active?: boolean;
 }
 
 export async function apiKeyFactory(db: any, input: ApiKeyInput) {
+  const plaintextKey = faker.string.alphanumeric(32);
+  const hashedKey = crypto.createHash('sha256').update(plaintextKey).digest('hex');
+  
   const apiKey = {
-    key_id: faker.string.uuid(),
+    api_key_id: faker.string.uuid(),
     tenant: input.tenant,
     user_id: input.user_id,
-    key: faker.string.alphanumeric(32),
-    name: input.name || 'Test API Key',
-    is_active: input.is_active !== undefined ? input.is_active : true,
+    api_key: hashedKey,
+    description: input.description || 'Test API Key',
+    active: input.active !== undefined ? input.active : true,
     created_at: new Date(),
-    created_by: input.user_id
+    updated_at: new Date()
   };
 
   const result = await db('api_keys')
-    .insert({
-      key_id: apiKey.key_id,
-      tenant: apiKey.tenant,
-      user_id: apiKey.user_id,
-      key: apiKey.key,
-      name: apiKey.name,
-      is_active: apiKey.is_active,
-      created_at: apiKey.created_at,
-      created_by: apiKey.created_by
-    })
+    .insert(apiKey)
     .returning('*');
 
-  return result[0];
+  // Return both the record and the plaintext key
+  return { ...result[0], key: plaintextKey };
 }

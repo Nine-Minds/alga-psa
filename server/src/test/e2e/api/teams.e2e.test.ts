@@ -57,15 +57,17 @@ describe('Teams API E2E Tests', () => {
 
   afterAll(async () => {
     // Clean up test data
-    await runWithTenant(tenantId, async () => {
-      const db = await getConnection();
-      
-      // Delete team members first
-      await db('team_members').where('tenant', tenantId).delete();
-      
-      // Delete teams
-      await db('teams').where('tenant', tenantId).delete();
-    });
+    if (tenantId) {
+      await runWithTenant(tenantId, async () => {
+        const db = await getConnection();
+        
+        // Delete team members first
+        await db('team_members').where('tenant', tenantId).delete();
+        
+        // Delete teams
+        await db('teams').where('tenant', tenantId).delete();
+      });
+    }
   });
 
   describe('Basic CRUD Operations', () => {
