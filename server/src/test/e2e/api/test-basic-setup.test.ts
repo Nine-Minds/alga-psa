@@ -42,6 +42,7 @@ describe('Basic Test Setup', () => {
       await db('api_keys').where('tenant', setup.tenantId).delete();
       await db('user_roles').where('tenant', setup.tenantId).delete();
       await db('role_permissions').where('tenant', setup.tenantId).delete();
+      await db('permissions').where('tenant', setup.tenantId).delete();
       await db('roles').where('tenant', setup.tenantId).delete();
       await db('users').where('tenant', setup.tenantId).delete();
       await db('tenants').where('tenant', setup.tenantId).delete();
