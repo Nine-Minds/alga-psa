@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  temporal-worker:
+    build:
+      context: .
+      target: development
+    environment:
+      - NODE_ENV=development
+      - LOG_LEVEL=info
+      - TEMPORAL_ADDRESS=temporal-frontend.temporal.svc.cluster.local:7233
+      - TEMPORAL_NAMESPACE=default
+      - TEMPORAL_TASK_QUEUE=tenant-workflows
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/alga_psa
+      - ADMIN_DATABASE_URL=postgresql://postgres:password@postgres:5432/alga_psa
+      - ENABLE_HEALTH_CHECK=true
+      - HEALTH_CHECK_PORT=8080
+    ports:
+      - "8080:8080"  # Health check endpoint
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run dev
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - temporal-network
+
+  temporal-client-example:
+    build:
+      context: .
+      target: development
+    environment:
+      - NODE_ENV=development
+      - LOG_LEVEL=info
+      - TEMPORAL_ADDRESS=temporal-frontend.temporal.svc.cluster.local:7233
+      - TEMPORAL_NAMESPACE=default
+      - TEMPORAL_TASK_QUEUE=tenant-workflows
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/alga_psa
+      - ADMIN_DATABASE_URL=postgresql://postgres:password@postgres:5432/alga_psa
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run start:client
+    depends_on:
+      - postgres
+      - temporal-worker
+    networks:
+      - temporal-network
+    profiles:
+      - example  # Only run when explicitly requested
+
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=alga_psa
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - temporal-network
+
+networks:
+  temporal-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

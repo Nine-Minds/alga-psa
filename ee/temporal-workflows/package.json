@@ -1,0 +1,41 @@
+{
+  "name": "temporal-workflows",
+  "version": "1.0.0",
+  "description": "Temporal workflows for tenant creation and management",
+  "main": "dist/worker.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && tsc-alias",
+    "dev": "tsx watch src/worker.ts",
+    "start": "node dist/worker.js",
+    "start:worker": "node dist/worker.js",
+    "start:client": "node dist/client.js",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "type-check": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@temporalio/client": "^1.8.0",
+    "@temporalio/worker": "^1.8.0",
+    "@temporalio/workflow": "^1.8.0",
+    "@temporalio/activity": "^1.8.0",
+    "dotenv": "^16.4.5",
+    "pg": "^8.12.0",
+    "winston": "^3.13.1",
+    "uuid": "^10.0.0",
+    "knex": "^3.0.0"
+  },
+  "devDependencies": {
+    "@temporalio/testing": "^1.8.0",
+    "@types/node": "^20.11.24",
+    "@types/pg": "^8.11.6",
+    "@types/uuid": "^10.0.0",
+    "tsx": "^4.19.3",
+    "tsc-alias": "^1.8.11",
+    "typescript": "^5.3.3",
+    "vitest": "^1.0.0"
+  }
+}

@@ -1,0 +1,279 @@
+import { 
+  proxyActivities, 
+  defineSignal, 
+  defineQuery, 
+  setHandler, 
+  log, 
+  condition,
+  sleep
+} from '@temporalio/workflow';
+import type {
+  TenantCreationInput,
+  TenantCreationResult,
+  TenantCreationWorkflowState,
+  TenantCreationCancelSignal,
+  TenantCreationUpdateSignal,
+  CreateTenantActivityResult,
+  CreateAdminUserActivityResult,
+  SetupTenantDataActivityResult,
+  SendWelcomeEmailActivityResult
+} from '../types/workflow-types';
+
+// Define activity proxies with appropriate timeouts and retry policies
+const activities = proxyActivities<{
+  createTenant(input: { tenantName: string; companyName?: string }): Promise<CreateTenantActivityResult>;
+  createAdminUser(input: {
+    tenantId: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    companyId?: string;
+  }): Promise<CreateAdminUserActivityResult>;
+  setupTenantData(input: {
+    tenantId: string;
+    adminUserId: string;
+    companyId?: string;
+    billingPlan?: string;
+  }): Promise<SetupTenantDataActivityResult>;
+  sendWelcomeEmail(input: {
+    tenantId: string;
+    tenantName: string;
+    adminUser: {
+      userId: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+    };
+    temporaryPassword: string;
+    companyName?: string;
+    loginUrl?: string;
+  }): Promise<SendWelcomeEmailActivityResult>;
+  rollbackTenant(tenantId: string): Promise<void>;
+  rollbackUser(userId: string, tenantId: string): Promise<void>;
+}>({
+  startToCloseTimeout: '5m',
+  retry: {
+    maximumAttempts: 3,
+    backoffCoefficient: 2.0,
+    initialInterval: '1s',
+    maximumInterval: '30s',
+    nonRetryableErrorTypes: ['ValidationError', 'DuplicateError'],
+  },
+});
+
+// Define signals for workflow control
+export const cancelWorkflowSignal = defineSignal<[TenantCreationCancelSignal]>('cancel');
+export const updateWorkflowSignal = defineSignal<[TenantCreationUpdateSignal]>('update');
+
+// Define queries for workflow state
+export const getWorkflowStateQuery = defineQuery<TenantCreationWorkflowState>('getState');
+
+/**
+ * Main tenant creation workflow
+ * 
+ * This workflow orchestrates the creation of a new tenant, including:
+ * 1. Creating the tenant record in the database
+ * 2. Creating an admin user for the tenant
+ * 3. Setting up initial tenant data (billing plans, default settings, etc.)
+ * 
+ * The workflow supports cancellation and provides detailed state tracking.
+ */
+export async function tenantCreationWorkflow(
+  input: TenantCreationInput
+): Promise<TenantCreationResult> {
+  let workflowState: TenantCreationWorkflowState = {
+    step: 'initializing',
+    progress: 0,
+  };
+
+  let cancelled = false;
+  let cancelReason = '';
+  let tenantCreated = false;
+  let userCreated = false;
+  let temporaryPassword = '';
+  let emailSent = false;
+
+  // Set up signal handlers
+  setHandler(cancelWorkflowSignal, (signal: TenantCreationCancelSignal) => {
+    log.info('Received cancel signal', { reason: signal.reason, cancelledBy: signal.cancelledBy });
+    cancelled = true;
+    cancelReason = signal.reason;
+    workflowState.step = 'failed';
+    workflowState.error = `Cancelled: ${signal.reason}`;
+  });
+
+  setHandler(updateWorkflowSignal, (signal: TenantCreationUpdateSignal) => {
+    log.info('Received update signal', { field: signal.field, value: signal.value });
+    // Handle dynamic updates if needed
+  });
+
+  // Set up query handler
+  setHandler(getWorkflowStateQuery, () => workflowState);
+
+  try {
+    log.info('Starting tenant creation workflow', { input });
+    
+    // Step 1: Create tenant
+    workflowState.step = 'creating_tenant';
+    workflowState.progress = 10;
+    
+    if (cancelled) {
+      throw new Error(`Workflow cancelled: ${cancelReason}`);
+    }
+
+    log.info('Creating tenant', { tenantName: input.tenantName });
+    const tenantResult = await activities.createTenant({
+      tenantName: input.tenantName,
+      companyName: input.companyName,
+    });
+    
+    tenantCreated = true;
+    workflowState.tenantId = tenantResult.tenantId;
+    workflowState.companyId = tenantResult.companyId;
+    workflowState.progress = 40;
+
+    log.info('Tenant created successfully', { 
+      tenantId: tenantResult.tenantId, 
+      companyId: tenantResult.companyId 
+    });
+
+    // Step 2: Create admin user
+    workflowState.step = 'creating_admin_user';
+    workflowState.progress = 50;
+
+    if (cancelled) {
+      throw new Error(`Workflow cancelled: ${cancelReason}`);
+    }
+
+    log.info('Creating admin user', { email: input.adminUser.email });
+    const userResult = await activities.createAdminUser({
+      tenantId: tenantResult.tenantId,
+      firstName: input.adminUser.firstName,
+      lastName: input.adminUser.lastName,
+      email: input.adminUser.email,
+      companyId: tenantResult.companyId,
+    });
+
+    userCreated = true;
+    workflowState.adminUserId = userResult.userId;
+    temporaryPassword = userResult.temporaryPassword;
+    workflowState.progress = 60;
+
+    log.info('Admin user created successfully', { 
+      userId: userResult.userId, 
+      roleId: userResult.roleId 
+    });
+
+    // Step 3: Setup tenant data
+    workflowState.step = 'setting_up_data';
+    workflowState.progress = 70;
+
+    if (cancelled) {
+      throw new Error(`Workflow cancelled: ${cancelReason}`);
+    }
+
+    log.info('Setting up tenant data');
+    const setupResult = await activities.setupTenantData({
+      tenantId: tenantResult.tenantId,
+      adminUserId: userResult.userId,
+      companyId: tenantResult.companyId,
+      billingPlan: input.billingPlan,
+    });
+
+    workflowState.progress = 85;
+
+    log.info('Tenant data setup completed', {
+      setupSteps: setupResult.setupSteps,
+    });
+
+    // Step 4: Send welcome email
+    workflowState.step = 'sending_welcome_email';
+    workflowState.progress = 90;
+
+    if (cancelled) {
+      throw new Error(`Workflow cancelled: ${cancelReason}`);
+    }
+
+    log.info('Sending welcome email to admin user');
+    const emailResult = await activities.sendWelcomeEmail({
+      tenantId: tenantResult.tenantId,
+      tenantName: input.tenantName,
+      adminUser: {
+        userId: userResult.userId,
+        firstName: input.adminUser.firstName,
+        lastName: input.adminUser.lastName,
+        email: input.adminUser.email,
+      },
+      temporaryPassword,
+      companyName: input.companyName,
+    });
+
+    emailSent = emailResult.emailSent;
+    workflowState.emailSent = emailSent;
+    workflowState.progress = 100;
+    workflowState.step = 'completed';
+
+    log.info('Tenant creation completed successfully', {
+      tenantId: tenantResult.tenantId,
+      adminUserId: userResult.userId,
+      setupSteps: setupResult.setupSteps,
+      emailSent,
+    });
+
+    return {
+      tenantId: tenantResult.tenantId,
+      adminUserId: userResult.userId,
+      companyId: tenantResult.companyId,
+      temporaryPassword,
+      emailSent,
+      success: true,
+      createdAt: new Date().toISOString(),
+    };
+
+  } catch (error) {
+    workflowState.step = 'failed';
+    workflowState.error = error instanceof Error ? error.message : 'Unknown error';
+    
+    log.error('Tenant creation workflow failed', { 
+      error: workflowState.error,
+      tenantCreated,
+      userCreated 
+    });
+
+    // Rollback operations in reverse order
+    try {
+      if (userCreated && workflowState.adminUserId && workflowState.tenantId) {
+        log.info('Rolling back user creation', { userId: workflowState.adminUserId });
+        await activities.rollbackUser(workflowState.adminUserId, workflowState.tenantId);
+      }
+
+      if (tenantCreated && workflowState.tenantId) {
+        log.info('Rolling back tenant creation', { tenantId: workflowState.tenantId });
+        await activities.rollbackTenant(workflowState.tenantId);
+      }
+    } catch (rollbackError) {
+      log.error('Rollback failed', { 
+        rollbackError: rollbackError instanceof Error ? rollbackError.message : 'Unknown rollback error'
+      });
+      // Continue with the original error - rollback failure shouldn't mask the original issue
+    }
+
+    // Re-throw the original error
+    throw error;
+  }
+}
+
+/**
+ * Simple workflow for testing connectivity and basic functionality
+ */
+export async function healthCheckWorkflow(): Promise<{ status: string; timestamp: string }> {
+  log.info('Health check workflow started');
+  
+  // Small delay to simulate work
+  await sleep('100ms');
+  
+  return {
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+  };
+}
