@@ -5,7 +5,13 @@
 
 import { Knex } from 'knex';
 import { createTenantKnex } from '../../db';
-import { withTransaction } from '@shared/db';
+// withTransaction helper
+async function withTransaction<T>(
+  knex: Knex,
+  callback: (trx: Knex.Transaction) => Promise<T>
+): Promise<T> {
+  return knex.transaction(callback);
+}
 // Import and re-export for services
 export interface ListOptions {
   page?: number;
