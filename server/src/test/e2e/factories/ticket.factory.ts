@@ -30,28 +30,21 @@ export async function ticketFactory(db: any, input: TicketInput) {
     updated_at: new Date()
   };
 
-  const result = await db.query(
-    `INSERT INTO tickets (
-      ticket_id, ticket_number, tenant, company_id, 
-      title, description, status, priority, 
-      assigned_to, created_at, updated_at
-    ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
-    ) RETURNING *`,
-    [
-      ticket.ticket_id,
-      ticket.ticket_number,
-      ticket.tenant,
-      ticket.company_id,
-      ticket.title,
-      ticket.description,
-      ticket.status,
-      ticket.priority,
-      ticket.assigned_to,
-      ticket.created_at,
-      ticket.updated_at
-    ]
-  );
+  const result = await db('tickets')
+    .insert({
+      ticket_id: ticket.ticket_id,
+      ticket_number: ticket.ticket_number,
+      tenant: ticket.tenant,
+      company_id: ticket.company_id,
+      title: ticket.title,
+      description: ticket.description,
+      status: ticket.status,
+      priority: ticket.priority,
+      assigned_to: ticket.assigned_to,
+      created_at: ticket.created_at,
+      updated_at: ticket.updated_at
+    })
+    .returning('*');
 
-  return result.rows[0];
+  return result[0];
 }

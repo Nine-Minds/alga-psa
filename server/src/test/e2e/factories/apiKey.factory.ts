@@ -24,24 +24,18 @@ export async function apiKeyFactory(db: any, input: ApiKeyInput) {
     created_by: input.user_id
   };
 
-  const result = await db.query(
-    `INSERT INTO api_keys (
-      key_id, tenant, user_id, key, 
-      name, is_active, created_at, created_by
-    ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8
-    ) RETURNING *`,
-    [
-      apiKey.key_id,
-      apiKey.tenant,
-      apiKey.user_id,
-      apiKey.key,
-      apiKey.name,
-      apiKey.is_active,
-      apiKey.created_at,
-      apiKey.created_by
-    ]
-  );
+  const result = await db('api_keys')
+    .insert({
+      key_id: apiKey.key_id,
+      tenant: apiKey.tenant,
+      user_id: apiKey.user_id,
+      key: apiKey.key,
+      name: apiKey.name,
+      is_active: apiKey.is_active,
+      created_at: apiKey.created_at,
+      created_by: apiKey.created_by
+    })
+    .returning('*');
 
-  return result.rows[0];
+  return result[0];
 }

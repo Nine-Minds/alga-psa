@@ -40,32 +40,25 @@ export async function timeEntryFactory(db: any, input: TimeEntryInput) {
     updated_at: new Date()
   };
 
-  const result = await db.query(
-    `INSERT INTO time_entries (
-      entry_id, tenant, user_id, project_id, ticket_id,
-      work_date, start_time, end_time, hours, description,
-      billable, approval_status, notes, created_at, updated_at
-    ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
-    ) RETURNING *`,
-    [
-      timeEntry.entry_id,
-      timeEntry.tenant,
-      timeEntry.user_id,
-      timeEntry.project_id,
-      timeEntry.ticket_id,
-      timeEntry.work_date,
-      timeEntry.start_time,
-      timeEntry.end_time,
-      timeEntry.hours,
-      timeEntry.description,
-      timeEntry.billable,
-      timeEntry.approval_status,
-      timeEntry.notes,
-      timeEntry.created_at,
-      timeEntry.updated_at
-    ]
-  );
+  const result = await db('time_entries')
+    .insert({
+      entry_id: timeEntry.entry_id,
+      tenant: timeEntry.tenant,
+      user_id: timeEntry.user_id,
+      project_id: timeEntry.project_id,
+      ticket_id: timeEntry.ticket_id,
+      work_date: timeEntry.work_date,
+      start_time: timeEntry.start_time,
+      end_time: timeEntry.end_time,
+      hours: timeEntry.hours,
+      description: timeEntry.description,
+      billable: timeEntry.billable,
+      approval_status: timeEntry.approval_status,
+      notes: timeEntry.notes,
+      created_at: timeEntry.created_at,
+      updated_at: timeEntry.updated_at
+    })
+    .returning('*');
 
-  return result.rows[0];
+  return result[0];
 }

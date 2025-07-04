@@ -31,28 +31,21 @@ export async function contactFactory(db: any, input: ContactInput) {
     updated_at: new Date()
   };
 
-  const result = await db.query(
-    `INSERT INTO contacts (
-      contact_name_id, tenant, company_id, full_name, 
-      email, phone_number, role, notes, is_inactive, 
-      created_at, updated_at
-    ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
-    ) RETURNING *`,
-    [
-      contact.contact_name_id,
-      contact.tenant,
-      contact.company_id,
-      contact.full_name,
-      contact.email,
-      contact.phone_number,
-      contact.role,
-      contact.notes,
-      contact.is_inactive,
-      contact.created_at,
-      contact.updated_at
-    ]
-  );
+  const result = await db('contacts')
+    .insert({
+      contact_name_id: contact.contact_name_id,
+      tenant: contact.tenant,
+      company_id: contact.company_id,
+      full_name: contact.full_name,
+      email: contact.email,
+      phone_number: contact.phone_number,
+      role: contact.role,
+      notes: contact.notes,
+      is_inactive: contact.is_inactive,
+      created_at: contact.created_at,
+      updated_at: contact.updated_at
+    })
+    .returning('*');
 
-  return result.rows[0];
+  return result[0];
 }

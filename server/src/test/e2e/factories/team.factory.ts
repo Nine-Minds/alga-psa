@@ -27,26 +27,19 @@ export async function teamFactory(db: any, input: TeamInput) {
     updated_at: new Date()
   };
 
-  const result = await db.query(
-    `INSERT INTO teams (
-      team_id, tenant, team_name, description, 
-      manager_id, parent_team_id, is_active, 
-      created_at, updated_at
-    ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9
-    ) RETURNING *`,
-    [
-      team.team_id,
-      team.tenant,
-      team.team_name,
-      team.description,
-      team.manager_id,
-      team.parent_team_id,
-      team.is_active,
-      team.created_at,
-      team.updated_at
-    ]
-  );
+  const result = await db('teams')
+    .insert({
+      team_id: team.team_id,
+      tenant: team.tenant,
+      team_name: team.team_name,
+      description: team.description,
+      manager_id: team.manager_id,
+      parent_team_id: team.parent_team_id,
+      is_active: team.is_active,
+      created_at: team.created_at,
+      updated_at: team.updated_at
+    })
+    .returning('*');
 
-  return result.rows[0];
+  return result[0];
 }
