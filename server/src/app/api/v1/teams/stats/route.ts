@@ -1,19 +1,13 @@
 /**
- * Teams Statistics API Route
+ * Team Statistics API Route
  * GET /api/v1/teams/stats - Get team statistics
  */
 
-import { TeamController } from 'server/src/lib/api/controllers/TeamController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiTeamControllerV2 } from '@/lib/api/controllers/ApiTeamControllerV2';
 
-export async function GET(request: Request) {
-  try {
-    const controller = new TeamController();
-    return await controller.list()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+const controller = new ApiTeamControllerV2();
+
+export const GET = controller.stats();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
