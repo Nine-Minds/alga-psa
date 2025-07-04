@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll } from 'vitest';
 import { 
   setupE2ETestEnvironment, 
   E2ETestEnvironment 
@@ -19,6 +19,8 @@ import {
 describe('Contact API E2E Tests', () => {
   let env: E2ETestEnvironment;
   const API_BASE = '/api/v1/contacts';
+
+  // Skip health check for now - assume server is running
 
   beforeEach(async () => {
     env = await setupE2ETestEnvironment();

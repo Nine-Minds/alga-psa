@@ -40,10 +40,11 @@ export async function setupE2ETestEnvironment(options: {
     // Create API key for the test user
     const apiKeyRecord = await createTestApiKey(db, userId, tenantId);
 
-    // Create API client with the API key
+    // Create API client with the API key and tenant ID
     const apiClient = new ApiTestClient({
-      baseUrl: options.baseUrl || process.env.TEST_API_BASE_URL || 'http://localhost:3000',
-      apiKey: apiKeyRecord.api_key
+      baseUrl: options.baseUrl || process.env.TEST_API_BASE_URL || 'http://127.0.0.1:3000',
+      apiKey: apiKeyRecord.api_key,
+      tenantId: tenantId
     });
 
     // Create cleanup function
