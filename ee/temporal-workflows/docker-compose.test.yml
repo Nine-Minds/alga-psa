@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   temporal:
-    image: temporalio/auto-setup:1.24.2
+    image: temporalio/auto-setup:1.23.0
     ports:
       - "7233:7233"   # gRPC
       - "8233:8233"   # Web UI
@@ -12,11 +10,9 @@ services:
       - POSTGRES_USER=temporal
       - POSTGRES_PWD=temporal
       - POSTGRES_SEEDS=postgres
-      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
     depends_on:
-      - postgres
-    volumes:
-      - ./scripts/server/config/dynamicconfig:/etc/temporal/config/dynamicconfig
+      postgres:
+        condition: service_healthy
     networks:
       - temporal-test
 
@@ -30,11 +26,16 @@ services:
       - "5433:5432"  # Different port to avoid conflicts
     volumes:
       - temporal_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - temporal-test
 
   temporal-admin-tools:
-    image: temporalio/admin-tools:1.24.2
+    image: temporalio/admin-tools:1.23.0
     depends_on:
       - temporal
     environment:
