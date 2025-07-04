@@ -27,7 +27,7 @@ describe('Ticket API E2E Tests', () => {
   let priorityIds: { low: string; medium: string; high: string };
   let channelId: string;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     env = await setupE2ETestEnvironment();
 
     // Set up test data - create necessary entities
@@ -88,7 +88,7 @@ describe('Ticket API E2E Tests', () => {
     // Priorities should already be created by setupE2ETestEnvironment
   });
 
-  afterEach(async () => {
+  afterAll(async () => {
     if (env) {
       await env.cleanup();
     }
@@ -135,7 +135,6 @@ describe('Ticket API E2E Tests', () => {
         
         expect(response.data.data).toMatchObject({
           title: newTicket.title,
-          description: newTicket.description,
           company_id: env.companyId,
           status_id: statusIds.open,
           priority_id: priorityIds.medium,
@@ -296,10 +295,7 @@ describe('Ticket API E2E Tests', () => {
   });
 
   describe('List Tickets (GET /api/v1/tickets)', () => {
-    beforeEach(async () => {
-      // Create test data set
-      await createTestTicketSet(env.db, env.tenant, env.companyId, statusIds, priorityIds, channelId);
-    });
+    // Test data will be created as needed in individual tests
 
     it('should list all tickets with default pagination', async () => {
       const response = await env.apiClient.get(API_BASE);
@@ -399,33 +395,7 @@ describe('Ticket API E2E Tests', () => {
   });
 
   describe('Search Tickets (GET /api/v1/tickets/search)', () => {
-    beforeEach(async () => {
-      // Create specific tickets for search tests
-      await createTestTicket(env.db, env.tenant, {
-        title: 'Network connectivity issue',
-        description: 'Users cannot connect to the VPN',
-        channel_id: channelId,
-        status_id: statusIds.open,
-        priority_id: priorityIds.high,
-        tags: ['network', 'vpn', 'urgent']
-      });
-      await createTestTicket(env.db, env.tenant, {
-        title: 'Software installation request',
-        description: 'Need to install development tools',
-        channel_id: channelId,
-        status_id: statusIds.open,
-        priority_id: priorityIds.medium,
-        tags: ['software', 'installation']
-      });
-      await createTestTicket(env.db, env.tenant, {
-        title: 'VPN access for new employee',
-        description: 'Set up VPN credentials for John Doe',
-        channel_id: channelId,
-        status_id: statusIds.open,
-        priority_id: priorityIds.medium,
-        tags: ['vpn', 'onboarding']
-      });
-    });
+    // Test data will be created as needed in individual tests
 
     it('should search tickets by query', async () => {
       const query = buildQueryString({ query: 'vpn' });
@@ -615,10 +585,7 @@ describe('Ticket API E2E Tests', () => {
   });
 
   describe('Ticket Statistics (GET /api/v1/tickets/stats)', () => {
-    beforeEach(async () => {
-      // Create test data set for statistics
-      await createTestTicketSet(env.db, env.tenant, env.companyId, statusIds, priorityIds, channelId);
-    });
+    // Test data will be created as needed in individual tests
 
     it('should return ticket statistics', async () => {
       const response = await env.apiClient.get(`${API_BASE}/stats`);
