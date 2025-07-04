@@ -112,6 +112,34 @@ export async function withTestSetup(): Promise<TestSetup> {
       });
     }
 
+    // Create a default channel for tickets
+    await db('channels').insert({
+      channel_id: faker.string.uuid(),
+      tenant: tenantId,
+      channel_name: 'Default',
+      is_default: true,
+      display_order: 1
+    });
+    
+    // Create default priorities for tickets
+    const priorities = [
+      { name: 'Low', order: 1, color: '#10B981' },
+      { name: 'Medium', order: 2, color: '#F59E0B' },
+      { name: 'High', order: 3, color: '#EF4444' }
+    ];
+    
+    for (const priority of priorities) {
+      await db('priorities').insert({
+        priority_id: faker.string.uuid(),
+        tenant: tenantId,
+        priority_name: priority.name,
+        order_number: priority.order,
+        color: priority.color,
+        created_by: userId,
+        created_at: new Date()
+      });
+    }
+
     // Create permissions for the admin role
     // The permission system expects resource/action pairs stored in the role_permissions table
     const permissions = [

@@ -54,12 +54,7 @@ describe('Ticket API - Minimal Test', () => {
         .first();
       priorityId = lowPriority?.priority_id;
       
-      console.log('Found channel:', channel);
-      console.log('Found status:', newStatus);
-      console.log('Found priority:', lowPriority);
     });
-    
-    console.log('IDs:', { channelId, statusId, priorityId, companyId });
     
     // Test creating a ticket with required fields
     const createResponse = await fetch(`${API_BASE_URL}/tickets`, {
@@ -88,26 +83,13 @@ describe('Ticket API - Minimal Test', () => {
     const createResult = await createResponse.json();
     console.log('Create result:', JSON.stringify(createResult, null, 2));
     
-    // Test listing tickets
-    const listResponse = await fetch(`${API_BASE_URL}/tickets`, {
-      method: 'GET',
-      headers: {
-        'x-api-key': setup.apiKey,
-        'x-tenant-id': setup.tenantId
-      }
-    });
-    
-    console.log('List tickets response:', listResponse.status);
-    expect(listResponse.status).toBe(200);
-    const listResult = await listResponse.json();
-    console.log('List result:', JSON.stringify(listResult, null, 2));
-    
-    // Should have at least the ticket we created
-    expect(listResult.data.length).toBeGreaterThanOrEqual(1);
-    
     // Check if we created the ticket successfully
-    if (createResult.data) {
-      expect(createResult.data.title).toBe('Test Ticket');
-    }
+    expect(createResult.data.title).toBe('Test Ticket');
+    expect(createResult.data.ticket_id).toBeTruthy();
+    expect(createResult.data.ticket_number).toBeTruthy();
+    expect(createResult.data.company_id).toBe(companyId);
+    expect(createResult.data.channel_id).toBe(channelId);
+    expect(createResult.data.status_id).toBe(statusId);
+    expect(createResult.data.priority_id).toBe(priorityId);
   });
 });
