@@ -60,6 +60,11 @@ export async function setupE2ETestEnvironment(options: {
     const cleanup = async () => {
       try {
         // Clean up test data in reverse order of creation
+        // Delete tickets first as they reference contacts
+        await db('tickets')
+          .where('tenant', tenantId)
+          .delete();
+          
         await cleanupTestContacts(db, tenantId);
         
         // Clean up role permissions first

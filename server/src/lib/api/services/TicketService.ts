@@ -278,6 +278,8 @@ export class TicketService extends BaseService<ITicket> {
         // Handle tags if provided
         if (data.tags && data.tags.length > 0) {
           await this.handleTags(ticket.ticket_id, data.tags, context, trx);
+          // Temporarily add tags to the returned object until proper tag system is implemented
+          (ticket as any).tags = data.tags;
         }
   
         // Publish ticket created event
@@ -731,7 +733,9 @@ export class TicketService extends BaseService<ITicket> {
         return acc;
       }, {}),
       average_resolution_time: null, // Would need to calculate from closed tickets
-      ...timeStats
+      tickets_created_today: parseInt(timeStats.tickets_created_today),
+      tickets_created_this_week: parseInt(timeStats.tickets_created_this_week),
+      tickets_created_this_month: parseInt(timeStats.tickets_created_this_month)
     };
   }
 

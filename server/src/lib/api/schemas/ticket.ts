@@ -9,7 +9,8 @@ import {
   createListQuerySchema, 
   createUpdateSchema,
   baseFilterSchema,
-  booleanTransform
+  booleanTransform,
+  arrayTransform
 } from './common';
 
 // Ticket attributes schema (flexible JSON object)
@@ -221,11 +222,26 @@ export const ticketStatsResponseSchema = z.object({
 // Ticket search schema
 export const ticketSearchSchema = z.object({
   query: z.string().min(1, 'Search query is required'),
-  fields: z.array(z.enum(['title', 'ticket_number', 'company_name', 'contact_name'])).optional(),
-  status_ids: z.array(uuidSchema).optional(),
-  priority_ids: z.array(uuidSchema).optional(),
-  company_ids: z.array(uuidSchema).optional(),
-  assigned_to_ids: z.array(uuidSchema).optional(),
+  fields: z.union([
+    z.array(z.enum(['title', 'ticket_number', 'company_name', 'contact_name'])),
+    arrayTransform(z.enum(['title', 'ticket_number', 'company_name', 'contact_name']))
+  ]).optional(),
+  status_ids: z.union([
+    z.array(uuidSchema),
+    arrayTransform(uuidSchema)
+  ]).optional(),
+  priority_ids: z.union([
+    z.array(uuidSchema),
+    arrayTransform(uuidSchema)
+  ]).optional(),
+  company_ids: z.union([
+    z.array(uuidSchema),
+    arrayTransform(uuidSchema)
+  ]).optional(),
+  assigned_to_ids: z.union([
+    z.array(uuidSchema),
+    arrayTransform(uuidSchema)
+  ]).optional(),
   include_closed: booleanTransform.optional().default("false"),
   limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25')
 });
