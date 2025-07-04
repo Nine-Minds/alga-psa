@@ -29,6 +29,7 @@ import {
   createSuccessResponse,
   createPaginatedResponse,
   NotFoundError,
+  ValidationError,
   ApiRequest,
   compose
 } from '../middleware/apiMiddleware';
@@ -412,6 +413,16 @@ export class TicketController extends BaseController {
 
     return middleware(async (req: ApiRequest) => {
       const id = this.extractIdFromPath(req);
+      
+      // Validate UUID format
+      const { z } = await import('zod');
+      const uuidSchema = z.string().uuid();
+      try {
+        uuidSchema.parse(id);
+      } catch (error) {
+        throw new ValidationError('Invalid ticket ID format');
+      }
+      
       const ticket = await this.ticketService.getById(id, req.context!);
       
       if (!ticket) {

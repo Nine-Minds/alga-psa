@@ -231,14 +231,14 @@ export async function createTestTicketComment(
     comment_id: uuidv4(),
     ticket_id: ticketId,
     tenant,
-    created_by: userId,
-    comment_text: data.comment_text || `Test comment at ${new Date().toISOString()}`,
+    user_id: userId,
+    note: data.comment_text || `Test comment at ${new Date().toISOString()}`,
     is_internal: data.is_internal || false,
-    time_spent: data.time_spent || null,
+    is_resolution: false,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
 
-  const [comment] = await db('ticket_comments').insert(commentData).returning('*');
+  const [comment] = await db('comments').insert(commentData).returning('*');
   return comment;
 }

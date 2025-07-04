@@ -44,7 +44,7 @@ export const updateTicketStatusSchema = z.object({
 
 // Ticket assignment schema
 export const updateTicketAssignmentSchema = z.object({
-  assigned_to: uuidSchema.optional()
+  assigned_to: uuidSchema.nullable().optional()
 });
 
 // Ticket filter schema
