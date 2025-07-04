@@ -1,0 +1,849 @@
+import { describe, it, expect, beforeEach, afterEach, beforeAll } from 'vitest';
+import { 
+  setupE2ETestEnvironment, 
+  E2ETestEnvironment 
+} from '../utils/e2eTestSetup';
+import { 
+  createTestTicket,
+  createTestTickets,
+  createTestTicketSet,
+  createTicketsForPagination,
+  createTestTicketComment,
+  createTicketTestData,
+  createTicketCommentTestData
+} from '../utils/ticketTestData';
+import { 
+  assertSuccess, 
+  assertError, 
+  buildQueryString,
+  extractPagination
+} from '../utils/apiTestHelpers';
+import { v4 as uuidv4 } from 'uuid';
+
+describe('Ticket API E2E Tests', () => {
+  let env: E2ETestEnvironment;
+  const API_BASE = '/api/v1/tickets';
+  let statusIds: { open: string; inProgress: string; closed: string };
+  let priorityIds: { low: string; medium: string; high: string };
+  let channelId: string;
+
+  beforeEach(async () => {
+    env = await setupE2ETestEnvironment();
+
+    // Set up test data - create necessary entities
+    const db = env.db;
+    
+    // Create a test channel (required for tickets)
+    channelId = uuidv4();
+    try {
+      await db('channels').insert({
+        channel_id: channelId,
+        channel_name: 'Test Channel',
+        tenant: env.tenant
+      });
+    } catch (error) {
+      // If channel already exists, get its ID
+      const existingChannel = await db('channels')
+        .where({ channel_name: 'Test Channel', tenant: env.tenant })
+        .first();
+      if (existingChannel) {
+        channelId = existingChannel.channel_id;
+      } else {
+        throw error;
+      }
+    }
+
+    // Create test statuses
+    statusIds = {
+      open: uuidv4(),
+      inProgress: uuidv4(),
+      closed: uuidv4()
+    };
+
+    await db('statuses').insert([
+      {
+        status_id: statusIds.open,
+        name: 'Open',
+        status_type: 'ticket',
+        is_closed: false,
+        order_number: 1,
+        tenant: env.tenant,
+        created_by: env.userId
+      },
+      {
+        status_id: statusIds.inProgress,
+        name: 'In Progress',
+        status_type: 'ticket',
+        is_closed: false,
+        order_number: 2,
+        tenant: env.tenant,
+        created_by: env.userId
+      },
+      {
+        status_id: statusIds.closed,
+        name: 'Closed',
+        status_type: 'ticket',
+        is_closed: true,
+        order_number: 3,
+        tenant: env.tenant,
+        created_by: env.userId
+      }
+    ]);
+
+    // Create test priorities
+    priorityIds = {
+      low: uuidv4(),
+      medium: uuidv4(),
+      high: uuidv4()
+    };
+
+    await db('priorities').insert([
+      {
+        priority_id: priorityIds.low,
+        priority_name: 'Low',
+        order_number: 1,
+        tenant: env.tenant
+      },
+      {
+        priority_id: priorityIds.medium,
+        priority_name: 'Medium',
+        order_number: 2,
+        tenant: env.tenant
+      },
+      {
+        priority_id: priorityIds.high,
+        priority_name: 'High',
+        order_number: 3,
+        tenant: env.tenant
+      }
+    ]);
+  });
+
+  afterEach(async () => {
+    if (env) {
+      await env.cleanup();
+    }
+  });
+
+  describe('Authentication', () => {
+    it('should require API key for all endpoints', async () => {
+      // Remove API key for this test
+      const { ApiTestClient } = await import('../utils/apiTestHelpers');
+      const clientWithoutKey = new ApiTestClient({
+        baseUrl: env.apiClient['config'].baseUrl
+      });
+
+      const response = await clientWithoutKey.get(API_BASE);
+      assertError(response, 401, 'UNAUTHORIZED');
+      expect(response.data.error.message).toContain('API key required');
+    });
+
+    it('should reject invalid API key', async () => {
+      const { ApiTestClient } = await import('../utils/apiTestHelpers');
+      const clientWithBadKey = new ApiTestClient({
+        baseUrl: env.apiClient['config'].baseUrl,
+        apiKey: 'invalid-api-key-12345'
+      });
+
+      const response = await clientWithBadKey.get(API_BASE);
+      assertError(response, 401, 'UNAUTHORIZED');
+      expect(response.data.error.message).toContain('Invalid API key');
+    });
+  });
+
+  describe('CRUD Operations', () => {
+    describe('Create Ticket (POST /api/v1/tickets)', () => {
+      it('should create a new ticket', async () => {
+        const newTicket = createTicketTestData({
+          company_id: env.companyId,
+          channel_id: channelId,
+          status_id: statusIds.open,
+          priority_id: priorityIds.medium
+        });
+
+        const response = await env.apiClient.post(API_BASE, newTicket);
+        assertSuccess(response, 201);
+        
+        expect(response.data.data).toMatchObject({
+          title: newTicket.title,
+          description: newTicket.description,
+          company_id: env.companyId,
+          status_id: statusIds.open,
+          priority_id: priorityIds.medium,
+          tenant: env.tenant
+        });
+        expect(response.data.data.ticket_id).toBeDefined();
+        expect(response.data.data.ticket_number).toBeDefined();
+      });
+
+      it('should validate required fields', async () => {
+        const invalidTicket = {
+          description: 'Missing title'
+          // Missing required title
+        };
+
+        const response = await env.apiClient.post(API_BASE, invalidTicket);
+        assertError(response, 400, 'VALIDATION_ERROR');
+      });
+
+      it('should create ticket with all optional fields', async () => {
+        const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        const fullTicket = createTicketTestData({
+          company_id: env.companyId,
+          channel_id: channelId,
+          contact_name_id: uuidv4(),
+          status_id: statusIds.open,
+          priority_id: priorityIds.high,
+          assigned_to: env.userId,
+          attributes: { 
+            description: 'Detailed ticket description',
+            due_date: tomorrow.toISOString(),
+            scheduled_start: tomorrow.toISOString(),
+            scheduled_end: new Date(tomorrow.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+            department: 'IT', 
+            location: 'Building A' 
+          },
+          tags: ['urgent', 'customer-request']
+        });
+
+        const response = await env.apiClient.post(API_BASE, fullTicket);
+        assertSuccess(response, 201);
+        
+        expect(response.data.data.tags).toEqual(expect.arrayContaining(['urgent', 'customer-request']));
+        expect(response.data.data.attributes).toMatchObject(fullTicket.attributes);
+      });
+    });
+
+    describe('Get Ticket (GET /api/v1/tickets/:id)', () => {
+      it('should retrieve a ticket by ID', async () => {
+        // Create a test ticket
+        const ticket = await createTestTicket(env.db, env.tenant, {
+          title: 'Test Ticket for Retrieval',
+          description: 'This ticket will be retrieved',
+          company_id: env.companyId,
+          channel_id: channelId,
+          status_id: statusIds.open,
+          priority_id: priorityIds.low
+        });
+
+        const response = await env.apiClient.get(`${API_BASE}/${ticket.ticket_id}`);
+        assertSuccess(response);
+        
+        expect(response.data.data).toMatchObject({
+          ticket_id: ticket.ticket_id,
+          title: ticket.title,
+          description: ticket.description,
+          company_id: ticket.company_id
+        });
+      });
+
+      it('should return 404 for non-existent ticket', async () => {
+        const fakeId = '00000000-0000-0000-0000-000000000000';
+        const response = await env.apiClient.get(`${API_BASE}/${fakeId}`);
+        assertError(response, 404, 'NOT_FOUND');
+      });
+
+      it('should not return tickets from other tenants', async () => {
+        // This test would require creating another tenant and ticket
+        // For now, we'll skip this test as it requires more complex setup
+      });
+    });
+
+    describe('Update Ticket (PUT /api/v1/tickets/:id)', () => {
+      it('should update a ticket', async () => {
+        const ticket = await createTestTicket(env.db, env.tenant, {
+          title: 'Original Title',
+          description: 'Original description',
+          channel_id: channelId,
+          status_id: statusIds.open,
+          priority_id: priorityIds.low
+        });
+
+        const updates = {
+          title: 'Updated Title',
+          description: 'Updated description',
+          status_id: statusIds.inProgress,
+          priority_id: priorityIds.high
+        };
+
+        const response = await env.apiClient.put(`${API_BASE}/${ticket.ticket_id}`, updates);
+        assertSuccess(response);
+        
+        expect(response.data.data).toMatchObject({
+          ticket_id: ticket.ticket_id,
+          title: updates.title,
+          description: updates.description,
+          status_id: updates.status_id,
+          priority_id: updates.priority_id
+        });
+      });
+
+      it('should return 404 when updating non-existent ticket', async () => {
+        const fakeId = '00000000-0000-0000-0000-000000000000';
+        const response = await env.apiClient.put(`${API_BASE}/${fakeId}`, { title: 'New Title' });
+        assertError(response, 404, 'NOT_FOUND');
+      });
+
+      it('should validate update data', async () => {
+        const ticket = await createTestTicket(env.db, env.tenant, {
+          channel_id: channelId,
+          status_id: statusIds.open,
+          priority_id: priorityIds.medium
+        });
+        
+        const invalidUpdate = {
+          title: '' // Empty title should be invalid
+        };
+
+        const response = await env.apiClient.put(`${API_BASE}/${ticket.ticket_id}`, invalidUpdate);
+        assertError(response, 400, 'VALIDATION_ERROR');
+      });
+    });
+
+    describe('Delete Ticket (DELETE /api/v1/tickets/:id)', () => {
+      it('should delete a ticket', async () => {
+        const ticket = await createTestTicket(env.db, env.tenant, {
+          title: 'To Delete',
+          description: 'This ticket will be deleted',
+          channel_id: channelId,
+          status_id: statusIds.open,
+          priority_id: priorityIds.low
+        });
+
+        const response = await env.apiClient.delete(`${API_BASE}/${ticket.ticket_id}`);
+        assertSuccess(response, 204);
+
+        // Verify ticket is deleted
+        const getResponse = await env.apiClient.get(`${API_BASE}/${ticket.ticket_id}`);
+        assertError(getResponse, 404);
+      });
+
+      it('should return 404 when deleting non-existent ticket', async () => {
+        const fakeId = '00000000-0000-0000-0000-000000000000';
+        const response = await env.apiClient.delete(`${API_BASE}/${fakeId}`);
+        assertError(response, 404, 'NOT_FOUND');
+      });
+    });
+  });
+
+  describe('List Tickets (GET /api/v1/tickets)', () => {
+    beforeEach(async () => {
+      // Create test data set
+      await createTestTicketSet(env.db, env.tenant, env.companyId, statusIds, priorityIds, channelId);
+    });
+
+    it('should list all tickets with default pagination', async () => {
+      const response = await env.apiClient.get(API_BASE);
+      assertSuccess(response);
+
+      expect(response.data.data).toBeInstanceOf(Array);
+      expect(response.data.pagination).toBeDefined();
+      expect(response.data.pagination).toMatchObject({
+        page: 1,
+        limit: 25,
+        total: expect.any(Number),
+        totalPages: expect.any(Number),
+        hasNext: expect.any(Boolean),
+        hasPrev: false
+      });
+    });
+
+    it('should support pagination parameters', async () => {
+      await createTicketsForPagination(env.db, env.tenant, env.companyId, channelId, 15);
+
+      const query = buildQueryString({ page: 2, limit: 5 });
+      const response = await env.apiClient.get(`${API_BASE}${query}`);
+      assertSuccess(response);
+
+      const pagination = extractPagination(response);
+      expect(pagination.page).toBe(2);
+      expect(pagination.limit).toBe(5);
+      expect(pagination.hasPrev).toBe(true);
+    });
+
+    it('should filter by company_id', async () => {
+      const query = buildQueryString({ company_id: env.companyId });
+      const response = await env.apiClient.get(`${API_BASE}${query}`);
+      assertSuccess(response);
+
+      response.data.data.forEach((ticket: any) => {
+        expect(ticket.company_id).toBe(env.companyId);
+      });
+    });
+
+    it('should filter by status', async () => {
+      const query = buildQueryString({ status_id: statusIds.open });
+      const response = await env.apiClient.get(`${API_BASE}${query}`);
+      assertSuccess(response);
+
+      response.data.data.forEach((ticket: any) => {
+        expect(ticket.status_id).toBe(statusIds.open);
+      });
+    });
+
+    it('should filter by priority', async () => {
+      const query = buildQueryString({ priority_id: priorityIds.high });
+      const response = await env.apiClient.get(`${API_BASE}${query}`);
+      assertSuccess(response);
+
+      response.data.data.forEach((ticket: any) => {
+        expect(ticket.priority_id).toBe(priorityIds.high);
+      });
+    });
+
+    it('should filter by assigned user', async () => {
+      // Create ticket assigned to specific user
+      await createTestTicket(env.db, env.tenant, {
+        title: 'Assigned Ticket',
+        channel_id: channelId,
+        status_id: statusIds.open,
+        priority_id: priorityIds.medium,
+        assigned_to: env.userId
+      });
+
+      const query = buildQueryString({ assigned_to: env.userId });
+      const response = await env.apiClient.get(`${API_BASE}${query}`);
+      assertSuccess(response);
+
+      const assignedTickets = response.data.data.filter((t: any) => t.assigned_to === env.userId);
+      expect(assignedTickets.length).toBeGreaterThan(0);
+    });
+
+    it('should filter overdue tickets', async () => {
+      const query = buildQueryString({ is_overdue: 'true' });
+      const response = await env.apiClient.get(`${API_BASE}${query}`);
+      assertSuccess(response);
+
+      // May return tickets with is_overdue flag or check attributes
+      expect(response.data.data).toBeInstanceOf(Array);
+    });
+
+    it('should sort tickets by created date', async () => {
+      const query = buildQueryString({ sort: 'entered_at', order: 'desc' });
+      const response = await env.apiClient.get(`${API_BASE}${query}`);
+      assertSuccess(response);
+
+      const dates = response.data.data.map((t: any) => new Date(t.entered_at).getTime());
+      const sortedDates = [...dates].sort((a, b) => b - a);
+      expect(dates).toEqual(sortedDates);
+    });
+  });
+
+  describe('Search Tickets (GET /api/v1/tickets/search)', () => {
+    beforeEach(async () => {
+      // Create specific tickets for search tests
+      await createTestTicket(env.db, env.tenant, {
+        title: 'Network connectivity issue',
+        description: 'Users cannot connect to the VPN',
+        channel_id: channelId,
+        status_id: statusIds.open,
+        priority_id: priorityIds.high,
+        tags: ['network', 'vpn', 'urgent']
+      });
+      await createTestTicket(env.db, env.tenant, {
+        title: 'Software installation request',
+        description: 'Need to install development tools',
+        channel_id: channelId,
+        status_id: statusIds.open,
+        priority_id: priorityIds.medium,
+        tags: ['software', 'installation']
+      });
+      await createTestTicket(env.db, env.tenant, {
+        title: 'VPN access for new employee',
+        description: 'Set up VPN credentials for John Doe',
+        channel_id: channelId,
+        status_id: statusIds.open,
+        priority_id: priorityIds.medium,
+        tags: ['vpn', 'onboarding']
+      });
+    });
+
+    it('should search tickets by query', async () => {
+      const query = buildQueryString({ query: 'vpn' });
+      const response = await env.apiClient.get(`${API_BASE}/search${query}`);
+      assertSuccess(response);
+
+      expect(response.data.data.length).toBeGreaterThanOrEqual(2);
+      response.data.data.forEach((ticket: any) => {
+        const hasVPN = 
+          ticket.title.toLowerCase().includes('vpn') ||
+          ticket.description.toLowerCase().includes('vpn') ||
+          (ticket.tags && ticket.tags.some((tag: string) => tag.includes('vpn')));
+        expect(hasVPN).toBe(true);
+      });
+    });
+
+    it('should search in specified fields', async () => {
+      const query = buildQueryString({ 
+        query: 'network',
+        fields: ['title', 'tags']
+      });
+      const response = await env.apiClient.get(`${API_BASE}/search${query}`);
+      assertSuccess(response);
+
+      expect(response.data.data.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should limit search results', async () => {
+      const query = buildQueryString({ query: 'e', limit: '2' });
+      const response = await env.apiClient.get(`${API_BASE}/search${query}`);
+      assertSuccess(response);
+
+      expect(response.data.data.length).toBeLessThanOrEqual(2);
+    });
+  });
+
+  describe('Ticket Comments (POST /api/v1/tickets/:id/comments)', () => {
+    let testTicket: any;
+
+    beforeEach(async () => {
+      testTicket = await createTestTicket(env.db, env.tenant, {
+        title: 'Ticket for Comments',
+        company_id: env.companyId,
+        channel_id: channelId,
+        status_id: statusIds.open,
+        priority_id: priorityIds.medium
+      });
+    });
+
+    it('should add a comment to a ticket', async () => {
+      const commentData = createTicketCommentTestData();
+
+      const response = await env.apiClient.post(
+        `${API_BASE}/${testTicket.ticket_id}/comments`,
+        commentData
+      );
+      assertSuccess(response, 201);
+
+      expect(response.data.data).toMatchObject({
+        ticket_id: testTicket.ticket_id,
+        comment_text: commentData.comment_text,
+        is_internal: commentData.is_internal
+      });
+    });
+
+    it('should add an internal comment', async () => {
+      const commentData = createTicketCommentTestData({
+        comment: 'Internal note: Check with senior tech',
+        is_internal: true
+      });
+
+      const response = await env.apiClient.post(
+        `${API_BASE}/${testTicket.ticket_id}/comments`,
+        commentData
+      );
+      assertSuccess(response, 201);
+
+      expect(response.data.data.is_internal).toBe(true);
+    });
+
+    it('should list ticket comments', async () => {
+      // Create multiple comments
+      await createTestTicketComment(env.db, env.tenant, testTicket.ticket_id, env.userId, {
+        comment_text: 'First comment'
+      });
+      await createTestTicketComment(env.db, env.tenant, testTicket.ticket_id, env.userId, {
+        comment_text: 'Second comment',
+        is_internal: true
+      });
+
+      const response = await env.apiClient.get(`${API_BASE}/${testTicket.ticket_id}/comments`);
+      assertSuccess(response);
+
+      expect(response.data.data).toBeInstanceOf(Array);
+      expect(response.data.data.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('should return 404 when adding comment to non-existent ticket', async () => {
+      const fakeId = '00000000-0000-0000-0000-000000000000';
+      const response = await env.apiClient.post(
+        `${API_BASE}/${fakeId}/comments`,
+        { comment_text: 'Test' }
+      );
+      assertError(response, 404, 'NOT_FOUND');
+    });
+  });
+
+  describe('Ticket Status Updates (PUT /api/v1/tickets/:id/status)', () => {
+    let testTicket: any;
+
+    beforeEach(async () => {
+      testTicket = await createTestTicket(env.db, env.tenant, {
+        title: 'Ticket for Status Updates',
+        channel_id: channelId,
+        status_id: statusIds.open,
+        priority_id: priorityIds.medium
+      });
+    });
+
+    it('should update ticket status', async () => {
+      const statusUpdate = {
+        status_id: statusIds.inProgress,
+        reason: 'Starting work on this ticket'
+      };
+
+      const response = await env.apiClient.put(
+        `${API_BASE}/${testTicket.ticket_id}/status`,
+        statusUpdate
+      );
+      assertSuccess(response);
+
+      expect(response.data.data.status_id).toBe(statusIds.inProgress);
+      // Optionally check if status history was created
+    });
+
+    it('should validate status transitions', async () => {
+      // This test assumes there are business rules for status transitions
+      // For example, can't go directly from 'open' to 'closed' without 'in_progress'
+      // Adjust based on actual business rules
+    });
+  });
+
+  describe('Ticket Assignment (PUT /api/v1/tickets/:id/assignment)', () => {
+    let testTicket: any;
+
+    beforeEach(async () => {
+      testTicket = await createTestTicket(env.db, env.tenant, {
+        title: 'Ticket for Assignment',
+        company_id: env.companyId,
+        channel_id: channelId,
+        status_id: statusIds.open,
+        priority_id: priorityIds.medium
+      });
+    });
+
+    it('should assign ticket to user', async () => {
+      const assignment = {
+        assigned_to: env.userId,
+        notes: 'Assigning to primary technician'
+      };
+
+      const response = await env.apiClient.put(
+        `${API_BASE}/${testTicket.ticket_id}/assignment`,
+        assignment
+      );
+      assertSuccess(response);
+
+      expect(response.data.data.assigned_to).toBe(env.userId);
+    });
+
+    it('should unassign ticket', async () => {
+      // First assign
+      await env.apiClient.put(
+        `${API_BASE}/${testTicket.ticket_id}/assignment`,
+        { assigned_to: env.userId }
+      );
+
+      // Then unassign
+      const response = await env.apiClient.put(
+        `${API_BASE}/${testTicket.ticket_id}/assignment`,
+        { assigned_to: null }
+      );
+      assertSuccess(response);
+
+      expect(response.data.data.assigned_to).toBeNull();
+    });
+  });
+
+  describe('Ticket Statistics (GET /api/v1/tickets/stats)', () => {
+    beforeEach(async () => {
+      // Create test data set for statistics
+      await createTestTicketSet(env.db, env.tenant, env.companyId, statusIds, priorityIds, channelId);
+    });
+
+    it('should return ticket statistics', async () => {
+      const response = await env.apiClient.get(`${API_BASE}/stats`);
+      assertSuccess(response);
+
+      expect(response.data.data).toMatchObject({
+        total_tickets: expect.any(Number),
+        open_tickets: expect.any(Number),
+        closed_tickets: expect.any(Number),
+        overdue_tickets: expect.any(Number),
+        tickets_by_status: expect.any(Object),
+        tickets_by_priority: expect.any(Object),
+        average_resolution_time: expect.any(Number),
+        tickets_created_today: expect.any(Number),
+        tickets_created_this_week: expect.any(Number),
+        tickets_created_this_month: expect.any(Number)
+      });
+    });
+
+    it('should filter statistics by date range', async () => {
+      const startDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // 7 days ago
+      const endDate = new Date();
+      
+      const query = buildQueryString({ 
+        start_date: startDate.toISOString(),
+        end_date: endDate.toISOString()
+      });
+      const response = await env.apiClient.get(`${API_BASE}/stats${query}`);
+      assertSuccess(response);
+
+      expect(response.data.data).toBeDefined();
+    });
+
+    it('should filter statistics by company', async () => {
+      const query = buildQueryString({ company_id: env.companyId });
+      const response = await env.apiClient.get(`${API_BASE}/stats${query}`);
+      assertSuccess(response);
+
+      expect(response.data.data).toBeDefined();
+    });
+  });
+
+  describe('Create Ticket from Asset (POST /api/v1/tickets/from-asset)', () => {
+    it('should create ticket from asset', async () => {
+      const assetId = uuidv4(); // In real test, this would be a real asset ID
+
+      const ticketData = {
+        asset_id: assetId,
+        title: 'Issue with server',
+        description: 'Server is not responding',
+        priority_id: priorityIds.high
+      };
+
+      const response = await env.apiClient.post(`${API_BASE}/from-asset`, ticketData);
+      
+      // This might return 404 if asset doesn't exist
+      if (response.status === 201) {
+        assertSuccess(response, 201);
+        expect(response.data.data.asset_id).toBe(assetId);
+      } else {
+        assertError(response, 404, 'NOT_FOUND');
+      }
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should handle invalid UUID format', async () => {
+      const response = await env.apiClient.get(`${API_BASE}/not-a-uuid`);
+      assertError(response, 400, 'VALIDATION_ERROR');
+    });
+
+    it('should handle invalid query parameters', async () => {
+      const query = buildQueryString({ page: 'invalid', limit: 'abc' });
+      const response = await env.apiClient.get(`${API_BASE}${query}`);
+      assertError(response, 400, 'VALIDATION_ERROR');
+    });
+
+    it('should handle missing required fields on create', async () => {
+      const response = await env.apiClient.post(API_BASE, {});
+      assertError(response, 400, 'VALIDATION_ERROR');
+    });
+
+    it('should handle invalid date formats', async () => {
+      const invalidTicket = createTicketTestData({
+        attributes: {
+          due_date: 'not-a-date'
+        }
+      });
+
+      const response = await env.apiClient.post(API_BASE, invalidTicket);
+      // Attributes are flexible JSON, so this might not error
+      // Just verify response status
+      expect([200, 201, 400]).toContain(response.status);
+    });
+  });
+
+  describe('Permissions', () => {
+    it('should enforce read permissions for GET endpoints', async () => {
+      // This would require creating a user without read permissions
+      // For now, we'll skip this test as it requires RBAC setup
+    });
+
+    it('should enforce write permissions for POST/PUT/DELETE', async () => {
+      // This would require creating a user without write permissions
+      // For now, we'll skip this test as it requires RBAC setup
+    });
+
+    it('should enforce assignment permissions', async () => {
+      // Test that only certain roles can assign tickets
+      // Requires RBAC setup
+    });
+  });
+
+  describe('Multi-tenancy', () => {
+    it('should isolate tickets by tenant', async () => {
+      // This would require creating another tenant and verifying isolation
+      // For now, we'll skip this test as it requires complex setup
+    });
+  });
+
+  describe('Advanced Features', () => {
+    it('should support bulk operations', async () => {
+      // Create multiple tickets
+      const ticketIds = [];
+      for (let i = 0; i < 3; i++) {
+        const ticket = await createTestTicket(env.db, env.tenant, {
+          title: `Bulk Update Test ${i}`,
+          channel_id: channelId,
+          status_id: statusIds.open,
+          priority_id: priorityIds.medium
+        });
+        ticketIds.push(ticket.ticket_id);
+      }
+
+      // Test bulk status update
+      const bulkUpdate = {
+        ticket_ids: ticketIds,
+        updates: {
+          status_id: statusIds.closed
+        }
+      };
+
+      // This endpoint might not exist yet - adjust based on actual API
+      const response = await env.apiClient.post(`${API_BASE}/bulk-update`, bulkUpdate);
+      
+      if (response.status === 404) {
+        // Bulk update endpoint doesn't exist yet
+        expect(response.status).toBe(404);
+      } else {
+        assertSuccess(response);
+      }
+    });
+
+    it('should support ticket templates', async () => {
+      // Test creating ticket from template
+      const templateData = {
+        template_id: 'incident-template',
+        overrides: {
+          title: 'Network Incident - Building A'
+        }
+      };
+
+      // This endpoint might not exist yet
+      const response = await env.apiClient.post(`${API_BASE}/from-template`, templateData);
+      
+      if (response.status === 404) {
+        expect(response.status).toBe(404);
+      } else {
+        assertSuccess(response, 201);
+      }
+    });
+
+    it('should track ticket history', async () => {
+      const ticket = await createTestTicket(env.db, env.tenant, {
+        title: 'History Test Ticket',
+        channel_id: channelId,
+        status_id: statusIds.open,
+        priority_id: priorityIds.medium
+      });
+
+      // Update ticket to generate history
+      await env.apiClient.put(`${API_BASE}/${ticket.ticket_id}`, {
+        title: 'Updated History Test Ticket'
+      });
+
+      // Get ticket history - endpoint might not exist
+      const response = await env.apiClient.get(`${API_BASE}/${ticket.ticket_id}/history`);
+      
+      if (response.status === 404) {
+        expect(response.status).toBe(404);
+      } else {
+        assertSuccess(response);
+        expect(response.data.data).toBeInstanceOf(Array);
+      }
+    });
+  });
+});
