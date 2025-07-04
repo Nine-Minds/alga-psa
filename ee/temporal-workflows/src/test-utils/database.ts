@@ -1,7 +1,48 @@
-// TODO: Update to use new database connection pattern
-// import { getAdminDatabase, executeTransaction } from '../db/connection';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+
+// Local database connection for testing
+async function getTestDbConnection(): Promise<Knex> {
+  const knex = require('knex');
+  
+  // Use environment variables for test database connection
+  // If no database is configured, use in-memory SQLite for testing
+  if (!process.env.DATABASE_URL && !process.env.DB_HOST) {
+    // Use SQLite in-memory for testing when no database is configured
+    return knex({
+      client: 'better-sqlite3',
+      connection: ':memory:',
+      useNullAsDefault: true,
+    });
+  }
+  
+  const dbConfig = {
+    client: 'pg',
+    connection: process.env.DATABASE_URL || {
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432'),
+      user: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || undefined, // Use undefined instead of empty string
+      database: process.env.DB_NAME || 'test_database',
+    },
+    pool: {
+      min: 1,
+      max: 5,
+    },
+  };
+  
+  return knex(dbConfig);
+}
+
+// Execute operation with database transaction
+async function withAdminTransaction<T>(operation: (trx: Knex.Transaction) => Promise<T>): Promise<T> {
+  const db = await getTestDbConnection();
+  try {
+    return await db.transaction(operation);
+  } finally {
+    await db.destroy();
+  }
+}
 
 export interface TestDatabase {
   tenantId: string;

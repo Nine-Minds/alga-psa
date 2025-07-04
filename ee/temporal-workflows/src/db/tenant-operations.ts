@@ -22,30 +22,36 @@ export async function createTenantInDB(
     const adminDb = getAdminDatabase();
     
     const result = await executeTransaction(adminDb, async (client) => {
-      // Create company if companyName is provided
+      // Create tenant first (include admin email since it's required)
+      const tenantResult = await client.query(
+        `INSERT INTO tenants (company_name, email, created_at, updated_at) 
+         VALUES ($1, $2, NOW(), NOW()) 
+         RETURNING tenant`,
+        [input.tenantName, input.email]
+      );
+      
+      const tenantId = tenantResult.rows[0].tenant;
+      log.info('Tenant created successfully', { tenantId });
+
+      // Create company if companyName is provided (now with tenant ID)
       let companyId: string | undefined;
       
       if (input.companyName) {
         const companyResult = await client.query(
-          `INSERT INTO companies (company_name, created_at, updated_at) 
-           VALUES ($1, NOW(), NOW()) 
+          `INSERT INTO companies (company_name, tenant, created_at, updated_at) 
+           VALUES ($1, $2, NOW(), NOW()) 
            RETURNING company_id`,
-          [input.companyName]
+          [input.companyName, tenantId]
         );
         companyId = companyResult.rows[0].company_id;
-        log.info('Company created', { companyId, companyName: input.companyName });
+        log.info('Company created', { companyId, companyName: input.companyName, tenantId });
+        
+        // Update tenant with company_id reference
+        await client.query(
+          `UPDATE tenants SET company_id = $1, updated_at = NOW() WHERE tenant = $2`,
+          [companyId, tenantId]
+        );
       }
-
-      // Create tenant
-      const tenantResult = await client.query(
-        `INSERT INTO tenants (company_name, company_id, is_active, created_at, updated_at) 
-         VALUES ($1, $2, true, NOW(), NOW()) 
-         RETURNING tenant_id`,
-        [input.tenantName, companyId || null]
-      );
-      
-      const tenantId = tenantResult.rows[0].tenant_id;
-      log.info('Tenant created successfully', { tenantId, companyId });
 
       return { tenantId, companyId };
     });

@@ -27,8 +27,7 @@
   "exclude": [
     "node_modules",
     "dist",
-    "**/*.test.ts",
-    "src/test-utils/database.ts"
+    "**/*.test.ts"
   ],
   "ts-node": {
     "esm": true

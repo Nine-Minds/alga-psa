@@ -9,14 +9,14 @@ interface DatabaseConfig {
   password: string;
 }
 
-// Get database configuration from environment variables
+// Get database configuration from environment variables (Alga format)
 function getDatabaseConfig(): DatabaseConfig {
   return {
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT || '5432'),
-    database: process.env.DB_NAME || 'server',
-    user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'password',
+    host: process.env.DB_HOST || 'pgbouncer',
+    port: parseInt(process.env.DB_PORT || '6432'),
+    database: process.env.DB_NAME_SERVER || 'server',
+    user: process.env.DB_USER_SERVER || 'postgres',
+    password: process.env.DB_PASSWORD_SERVER || 'postpass123',
   };
 }
 
@@ -37,11 +37,11 @@ let adminDbPool: Pool | null = null;
 export function getAdminDatabase(): Pool {
   if (!adminDbPool) {
     const config = getDatabaseConfig();
-    // Use admin credentials if available
+    // Use admin credentials if available (from Alga .env)
     const adminConfig = {
       ...config,
-      user: process.env.DB_ADMIN_USER || config.user,
-      password: process.env.DB_ADMIN_PASSWORD || config.password,
+      user: process.env.DB_USER_ADMIN || config.user,
+      password: process.env.DB_PASSWORD_ADMIN || config.password,
     };
     adminDbPool = new Pool(adminConfig);
   }
