@@ -1,22 +1,13 @@
 /**
  * Role Clone API Route
- * POST /api/v1/roles/[id]/clone - Clone role
+ * POST /api/v1/roles/{id}/clone - Clone a role
  */
 
-import { PermissionRoleController } from 'server/src/lib/api/controllers/PermissionRoleController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiRoleControllerV2 } from '@/lib/api/controllers/ApiRoleControllerV2';
 
-const controller = new PermissionRoleController();
+const controller = new ApiRoleControllerV2();
 
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const req = request as any;
-    req.params = params;
-    return await controller.cloneRole()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+export const POST = controller.cloneRole();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
