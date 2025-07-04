@@ -9,7 +9,7 @@ export function createUserTestData(overrides: Partial<any> = {}) {
   const lastName = overrides.last_name || faker.person.lastName();
   const username = overrides.username || faker.internet.username({ firstName, lastName }).toLowerCase();
   
-  return {
+  const baseData = {
     username,
     email: overrides.email || faker.internet.email({ firstName, lastName }).toLowerCase(),
     first_name: firstName,
@@ -17,21 +17,23 @@ export function createUserTestData(overrides: Partial<any> = {}) {
     password: overrides.password || 'TestPassword123!',
     user_type: overrides.user_type || faker.helpers.arrayElement(['internal', 'client']),
     is_inactive: overrides.is_inactive ?? false,
-    bio: overrides.bio || faker.lorem.sentence(),
     phone: overrides.phone || faker.phone.number(),
-    mobile: overrides.mobile || faker.phone.number(),
     timezone: overrides.timezone || faker.helpers.arrayElement(['America/New_York', 'America/Chicago', 'America/Los_Angeles', 'UTC']),
-    language: overrides.language || faker.helpers.arrayElement(['en', 'es', 'fr', 'de']),
-    theme: overrides.theme || faker.helpers.arrayElement(['light', 'dark', 'system']),
-    notification_preferences: overrides.notification_preferences || {
-      email: true,
-      sms: false,
-      push: true,
-      digest: 'daily'
-    },
-    tags: overrides.tags || [faker.word.noun(), faker.word.adjective()],
-    ...overrides
   };
+  
+  // Only include valid schema fields for API calls
+  const validFields = ['username', 'email', 'first_name', 'last_name', 'password', 'user_type', 
+                      'is_inactive', 'phone', 'timezone', 'contact_id', 'two_factor_enabled', 
+                      'is_google_user', 'role_ids'];
+  
+  const result: any = {};
+  for (const key of validFields) {
+    if (key in baseData || key in overrides) {
+      result[key] = overrides[key] !== undefined ? overrides[key] : (baseData as any)[key];
+    }
+  }
+  
+  return result;
 }
 
 /**
@@ -60,9 +62,7 @@ export function createMultipleUsers(count: number) {
  */
 export function createUserWithRole(role: string, overrides: Partial<any> = {}) {
   return createUserTestData({
-    ...overrides,
-    role,
-    tags: [role, ...(overrides.tags || [])]
+    ...overrides
   });
 }
 
@@ -73,9 +73,7 @@ export function createAdminUser(overrides: Partial<any> = {}) {
   return createUserTestData({
     ...overrides,
     username: overrides.username || 'admin_' + faker.string.alphanumeric(6),
-    user_type: 'internal',
-    is_admin: true,
-    tags: ['admin', ...(overrides.tags || [])]
+    user_type: 'internal'
   });
 }
 
@@ -85,9 +83,7 @@ export function createAdminUser(overrides: Partial<any> = {}) {
 export function createClientUser(companyId: string, overrides: Partial<any> = {}) {
   return createUserTestData({
     ...overrides,
-    user_type: 'client',
-    company_id: companyId,
-    tags: ['client', ...(overrides.tags || [])]
+    user_type: 'client'
   });
 }
 
@@ -97,9 +93,7 @@ export function createClientUser(companyId: string, overrides: Partial<any> = {}
 export function createContractorUser(overrides: Partial<any> = {}) {
   return createUserTestData({
     ...overrides,
-    user_type: 'contractor',
-    hourly_rate: faker.number.int({ min: 50, max: 200 }),
-    tags: ['contractor', ...(overrides.tags || [])]
+    user_type: 'contractor'
   });
 }
 

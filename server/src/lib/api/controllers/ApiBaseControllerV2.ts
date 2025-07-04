@@ -27,6 +27,7 @@ import {
   ForbiddenError,
   NotFoundError,
   ValidationError,
+  ConflictError,
   createSuccessResponse,
   createPaginatedResponse,
   handleApiError
@@ -257,8 +258,15 @@ export abstract class ApiBaseControllerV2 {
             data = await apiRequest.json();
           }
 
-          const created = await this.service.create(data, apiRequest.context);
-          return createSuccessResponse(created, 201);
+          try {
+            const created = await this.service.create(data, apiRequest.context);
+            return createSuccessResponse(created, 201);
+          } catch (error: any) {
+            if (error.message && error.message.includes('already exists')) {
+              throw new ConflictError(error.message);
+            }
+            throw error;
+          }
         });
       } catch (error) {
         return handleApiError(error);

@@ -282,16 +282,22 @@ export class ApiUserControllerV2 extends ApiBaseControllerV2 {
             throw error;
           }
 
+          const url = new URL(req.url);
+          const page = parseInt(url.searchParams.get('page') || '1');
+          const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), 100);
+
           const result = await this.userService.getUserActivity(
             validatedQuery,
-            apiRequest.context!
+            apiRequest.context!,
+            page,
+            limit
           );
 
           return createPaginatedResponse(
             result.data,
             result.total,
-            validatedQuery.page || 1,
-            validatedQuery.limit || 25
+            page,
+            limit
           );
         });
       } catch (error) {
@@ -374,8 +380,7 @@ export class ApiUserControllerV2 extends ApiBaseControllerV2 {
           }
 
           await this.userService.changePassword(
-            targetUserId,
-            data,
+            { ...data, user_id: targetUserId },
             apiRequest.context!
           );
           
@@ -447,12 +452,26 @@ export class ApiUserControllerV2 extends ApiBaseControllerV2 {
             throw new ForbiddenError('Permission denied: Cannot read user');
           }
 
-          const permissions = await this.userService.getUserPermissions(
-            targetUserId,
-            apiRequest.context!
-          );
+          const targetUser = await this.userService.getById(targetUserId, apiRequest.context!, {
+            includePermissions: true,
+            includeRoles: true
+          });
+
+          if (!targetUser) {
+            throw new NotFoundError('User not found');
+          }
           
-          return createSuccessResponse(permissions);
+          return createSuccessResponse({
+            user_id: targetUserId,
+            permissions: targetUser.permissions || [],
+            roles: targetUser.roles || [],
+            effective_permissions: targetUser.permissions || [],
+            _links: {
+              self: `/api/v1/users/${targetUserId}/permissions`,
+              user: `/api/v1/users/${targetUserId}`,
+              roles: `/api/v1/users/${targetUserId}/roles`
+            }
+          });
         });
       } catch (error) {
         return handleApiError(error);
