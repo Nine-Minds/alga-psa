@@ -1,0 +1,324 @@
+/**
+ * API Base Controller V2
+ * Simplified version that properly handles API key authentication
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { ZodSchema } from 'zod';
+import { BaseService, CrudOptions } from './BaseController';
+import { 
+  ApiKeyServiceForApi 
+} from '../../services/apiKeyServiceForApi';
+import { 
+  findUserById 
+} from '../../actions/user-actions/userActions';
+import { 
+  runWithTenant 
+} from '../../db';
+import { 
+  hasPermission 
+} from '../../auth/rbac';
+import { 
+  ApiRequest,
+  UnauthorizedError,
+  ForbiddenError,
+  NotFoundError,
+  ValidationError,
+  createSuccessResponse,
+  createPaginatedResponse,
+  handleApiError
+} from '../middleware/apiMiddleware';
+
+export abstract class ApiBaseControllerV2 {
+  constructor(
+    protected service: BaseService,
+    protected options: CrudOptions
+  ) {}
+
+  /**
+   * Authenticate request and set context
+   */
+  private async authenticate(req: NextRequest): Promise<ApiRequest> {
+    const apiKey = req.headers.get('x-api-key');
+    
+    if (!apiKey) {
+      throw new UnauthorizedError('API key required');
+    }
+
+    // Extract tenant ID from header
+    let tenantId = req.headers.get('x-tenant-id');
+    let keyRecord;
+
+    if (tenantId) {
+      // If tenant is provided, validate key for that specific tenant
+      keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+    } else {
+      // Otherwise, search across all tenants
+      keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+      if (keyRecord) {
+        tenantId = keyRecord.tenant;
+      }
+    }
+    
+    if (!keyRecord) {
+      throw new UnauthorizedError('Invalid API key');
+    }
+
+    // Get user within tenant context
+    let user;
+    await runWithTenant(tenantId!, async () => {
+      user = await findUserById(keyRecord.user_id);
+    });
+
+    if (!user) {
+      throw new UnauthorizedError('User not found');
+    }
+
+    // Create extended request with context
+    const apiRequest = req as ApiRequest;
+    apiRequest.context = {
+      userId: keyRecord.user_id,
+      tenant: keyRecord.tenant,
+      user
+    };
+
+    return apiRequest;
+  }
+
+  /**
+   * Check permissions
+   */
+  private async checkPermission(req: ApiRequest, action: string): Promise<void> {
+    if (!req.context?.user) {
+      throw new UnauthorizedError('User context required');
+    }
+
+    const hasAccess = await hasPermission(req.context.user, this.options.resource, action);
+    if (!hasAccess) {
+      throw new ForbiddenError(`Permission denied: Cannot ${action} ${this.options.resource}`);
+    }
+  }
+
+  /**
+   * Validate request data
+   */
+  private async validateData(req: ApiRequest, schema: ZodSchema): Promise<any> {
+    try {
+      const body = await req.json().catch(() => ({}));
+      return schema.parse(body);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throw new ValidationError('Validation failed', error.errors);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Validate query parameters
+   */
+  private validateQuery(req: ApiRequest, schema: ZodSchema): any {
+    try {
+      const url = new URL(req.url);
+      const query: Record<string, any> = {};
+      url.searchParams.forEach((value, key) => {
+        query[key] = value;
+      });
+      return schema.parse(query);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throw new ValidationError('Query validation failed', error.errors);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Extract ID from request path
+   */
+  protected extractIdFromPath(req: ApiRequest): string {
+    const url = new URL(req.url);
+    const pathParts = url.pathname.split('/');
+    const resourceIndex = pathParts.findIndex(part => part === this.options.resource + 's');
+    return pathParts[resourceIndex + 1] || '';
+  }
+
+  /**
+   * List resources
+   */
+  list() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, this.options.permissions?.list || 'read');
+
+          // Validate query if schema provided
+          let validatedQuery = {};
+          if (this.options.querySchema) {
+            validatedQuery = this.validateQuery(apiRequest, this.options.querySchema);
+          }
+
+          // Parse pagination parameters
+          const url = new URL(apiRequest.url);
+          const page = parseInt(url.searchParams.get('page') || '1');
+          const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), 100);
+          const sort = url.searchParams.get('sort') || 'created_at';
+          const order = (url.searchParams.get('order') || 'desc') as 'asc' | 'desc';
+
+          const filters = { ...validatedQuery };
+          delete filters.page;
+          delete filters.limit;
+          delete filters.sort;
+          delete filters.order;
+
+          const listOptions = { page, limit, filters, sort, order };
+          const result = await this.service.list(listOptions, apiRequest.context);
+          
+          return createPaginatedResponse(
+            result.data,
+            result.total,
+            page,
+            limit,
+            { sort, order, filters }
+          );
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Get by ID
+   */
+  getById() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
+
+          const id = this.extractIdFromPath(apiRequest);
+          const resource = await this.service.getById(id, apiRequest.context);
+          
+          if (!resource) {
+            throw new NotFoundError(`${this.options.resource} not found`);
+          }
+          
+          return createSuccessResponse(resource);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Create resource
+   */
+  create() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, this.options.permissions?.create || 'create');
+
+          // Validate data if schema provided
+          let data;
+          if (this.options.createSchema) {
+            data = await this.validateData(apiRequest, this.options.createSchema);
+          } else {
+            data = await apiRequest.json();
+          }
+
+          const created = await this.service.create(data, apiRequest.context);
+          return createSuccessResponse(created, 201);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Update resource
+   */
+  update() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const id = this.extractIdFromPath(apiRequest);
+
+          // Validate data if schema provided
+          let data;
+          if (this.options.updateSchema) {
+            data = await this.validateData(apiRequest, this.options.updateSchema);
+          } else {
+            data = await apiRequest.json();
+          }
+
+          const updated = await this.service.update(id, data, apiRequest.context);
+          
+          if (!updated) {
+            throw new NotFoundError(`${this.options.resource} not found`);
+          }
+          
+          return createSuccessResponse(updated);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Delete resource
+   */
+  delete() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, this.options.permissions?.delete || 'delete');
+
+          const id = this.extractIdFromPath(apiRequest);
+          const resource = await this.service.getById(id, apiRequest.context);
+          
+          if (!resource) {
+            throw new NotFoundError(`${this.options.resource} not found`);
+          }
+          
+          await this.service.delete(id, apiRequest.context);
+          
+          return new NextResponse(null, { status: 204 });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+}
