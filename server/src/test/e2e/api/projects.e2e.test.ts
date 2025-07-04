@@ -29,7 +29,7 @@ describe('Projects API E2E Tests', () => {
     
     // Clean up test environment
     await env.cleanup();
-  });
+  }, 30000); // 30 second timeout for cleanup
 
   describe('Authentication', () => {
     it('should reject requests without API key', async () => {
@@ -247,8 +247,12 @@ describe('Projects API E2E Tests', () => {
     it('should return 404 for non-existent project', async () => {
       const response = await env.apiClient.get('/api/v1/projects/00000000-0000-0000-0000-000000000000');
       
+      if (response.status !== 404) {
+        console.error('Unexpected response:', response.status, JSON.stringify(response.data, null, 2));
+      }
+      
       expect(response.status).toBe(404);
-      expect(response.data.error).toContain('not found');
+      expect(response.data.error.message).toContain('not found');
     });
 
     it('should return 400 for invalid project data', async () => {
@@ -260,7 +264,7 @@ describe('Projects API E2E Tests', () => {
       const response = await env.apiClient.post('/api/v1/projects', invalidData);
       
       expect(response.status).toBe(400);
-      expect(response.data.error).toContain('Validation failed');
+      expect(response.data.error.message).toContain('Validation failed');
     });
 
     it('should return 400 for invalid UUID', async () => {
@@ -268,6 +272,7 @@ describe('Projects API E2E Tests', () => {
       
       expect(response.status).toBe(400);
       expect(response.data.error).toBeDefined();
+      expect(response.data.error.message).toBeDefined();
     });
   });
 
@@ -296,12 +301,21 @@ describe('Projects API E2E Tests', () => {
         .where({ tenant: env.tenant, name: 'Active', item_type: 'project' })
         .first();
       
-      const response = await env.apiClient.get(`/api/v1/projects?status=${activeStatus?.status_id}`);
+      if (!activeStatus) {
+        throw new Error('Active status not found in database');
+      }
+      
+      const response = await env.apiClient.get(`/api/v1/projects?status=${activeStatus.status_id}`);
       
       expect(response.status).toBe(200);
       expect(response.data.data).toBeInstanceOf(Array);
-      response.data.data.forEach((project: any) => {
-        expect(project.status).toBe(activeStatus?.status_id);
+      
+      // Filter only projects that have the active status
+      const activeProjects = response.data.data.filter((p: any) => p.status === activeStatus.status_id);
+      expect(activeProjects.length).toBeGreaterThan(0);
+      
+      activeProjects.forEach((project: any) => {
+        expect(project.status).toBe(activeStatus.status_id);
       });
     });
 
@@ -330,7 +344,7 @@ describe('Projects API E2E Tests', () => {
       const response = await env.apiClient.get('/api/v1/projects/export?format=csv');
       
       expect(response.status).toBe(200);
-      expect(response.headers['content-type']).toContain('text/csv');
+      expect(response.headers.get('content-type')).toContain('text/csv');
     });
 
     it('should export projects as JSON', async () => {

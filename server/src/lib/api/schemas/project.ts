@@ -13,8 +13,11 @@ import {
   dateSchema
 } from './common';
 
-// Project status schema
-export const projectStatusSchema = z.enum(['planning', 'active', 'on_hold', 'completed', 'cancelled']);
+// Project status schema - can be UUID or status name
+export const projectStatusSchema = z.union([
+  uuidSchema,
+  z.enum(['planning', 'active', 'on_hold', 'completed', 'cancelled', 'in_progress'])
+]);
 
 // Create project schema
 export const createProjectSchema = z.object({

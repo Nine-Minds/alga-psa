@@ -143,7 +143,15 @@ export abstract class ApiBaseControllerV2 {
     const url = new URL(req.url);
     const pathParts = url.pathname.split('/');
     const resourceIndex = pathParts.findIndex(part => part === this.options.resource + 's');
-    return pathParts[resourceIndex + 1] || '';
+    const id = pathParts[resourceIndex + 1] || '';
+    
+    // Validate UUID format (including nil UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (id && !uuidRegex.test(id)) {
+      throw new ValidationError(`Invalid ${this.options.resource} ID format`);
+    }
+    
+    return id;
   }
 
   /**
