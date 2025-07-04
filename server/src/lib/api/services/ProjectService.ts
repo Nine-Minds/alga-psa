@@ -187,14 +187,15 @@ export class ProjectService extends BaseService<IProject> {
       
       // Get default status if not provided
       let status = data.status;
-      try {
-        if (!data.status) {
+      if (!data.status) {
+        try {
           const defaultStatus = await this.getDefaultProjectStatus(context);
           status = defaultStatus?.status_id;
+        } catch (error) {
+          // If status lookup fails, throw error since status is required
+          console.error('Could not get default project status:', error);
+          throw new Error('Unable to determine project status. Please ensure project statuses are configured.');
         }
-      } catch (error) {
-        // If status lookup fails, don't set status
-        console.log('Could not get default project status:', error);
       }
       
       // Remove fields that don't belong in the database
@@ -203,15 +204,11 @@ export class ProjectService extends BaseService<IProject> {
       const projectData: any = {
         ...dataForInsert,
         wbs_code: wbsCode,
+        status: status, // Status is required in the database
         tenant: context.tenant,
         created_at: new Date(),
         updated_at: new Date()
       };
-      
-      // Only add status if we have one
-      if (status) {
-        projectData.status = status;
-      }
 
       const [project] = await trx(this.tableName).insert(projectData).returning('*');
 
@@ -716,13 +713,25 @@ export class ProjectService extends BaseService<IProject> {
   private async getDefaultProjectStatus(context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
       
-      const status = await knex('statuses')
+      // First try to find a status marked as default
+      let status = await knex('statuses')
         .where({ 
           tenant: context.tenant,
-          item_type: 'project'
+          item_type: 'project',
+          is_default: true
         })
-        .orderBy('display_order')
         .first();
+      
+      // If no default status, get the first one by order
+      if (!status) {
+        status = await knex('statuses')
+          .where({ 
+            tenant: context.tenant,
+            item_type: 'project'
+          })
+          .orderBy('order_number')
+          .first();
+      }
   
       if (!status) {
         throw new Error('No default project status found');

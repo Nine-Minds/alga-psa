@@ -4,6 +4,7 @@ import { createTestEnvironment } from '../../../../test-utils/testDataFactory';
 import { createTestApiKey, ApiTestClient } from './apiTestHelpers';
 import { cleanupTestContacts } from './contactTestDataFactory';
 import { setupTestUserWithPermissions } from './simpleRoleSetup';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * E2E test environment containing all necessary test data and utilities
@@ -41,6 +42,9 @@ export async function setupE2ETestEnvironment(options: {
 
     // Setup permissions for the test user
     await setupTestUserWithPermissions(db, userId, tenantId);
+    
+    // Create default statuses for projects and tickets
+    await createDefaultStatuses(db, tenantId, userId);
 
     // Create API key for the test user
     const apiKeyRecord = await createTestApiKey(db, userId, tenantId);
@@ -73,6 +77,11 @@ export async function setupE2ETestEnvironment(options: {
           .where('tenant', tenantId)
           .delete();
         
+        // Clean up statuses first (they reference users via created_by)
+        await db('statuses')
+          .where('tenant', tenantId)
+          .delete();
+          
         // Clean up users
         await db('users')
           .where('tenant', tenantId)
@@ -252,4 +261,36 @@ export async function withDatabaseTransaction<T>(
       throw error;
     }
   });
+}
+
+/**
+ * Create default statuses for projects and tickets
+ */
+async function createDefaultStatuses(db: Knex, tenantId: string, userId: string): Promise<void> {
+  // Create default statuses for projects and tickets
+  const statusTypes = [
+    { item_type: 'project', name: 'Planning', order: 1, is_default: true },
+    { item_type: 'project', name: 'Active', order: 2 },
+    { item_type: 'project', name: 'On Hold', order: 3 },
+    { item_type: 'project', name: 'Completed', order: 4 },
+    { item_type: 'ticket', name: 'New', order: 1, is_default: true },
+    { item_type: 'ticket', name: 'In Progress', order: 2 },
+    { item_type: 'ticket', name: 'Resolved', order: 3 },
+    { item_type: 'ticket', name: 'Closed', order: 4 }
+  ];
+
+  for (const status of statusTypes) {
+    await db('statuses').insert({
+      status_id: uuidv4(),
+      tenant: tenantId,
+      name: status.name,
+      status_type: status.item_type, // Still required as NOT NULL
+      item_type: status.item_type, // Also set this for future compatibility
+      order_number: status.order,
+      created_by: userId,
+      created_at: new Date(),
+      is_closed: status.name === 'Completed' || status.name === 'Closed' || status.name === 'Resolved',
+      is_default: status.is_default || false
+    });
+  }
 }
