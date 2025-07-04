@@ -63,7 +63,9 @@ function createHeaderSection_StdDetailed(viewModel: InvoiceViewModel, children: 
   // Check if tenantCompany and logoUrl exist
   if (viewModel.tenantCompany != null && viewModel.tenantCompany!.logoUrl != null && viewModel.tenantCompany!.logoUrl!.length > 0) {
     const logoElement = new ImageElement(viewModel.tenantCompany!.logoUrl!, "Tenant Company Logo");
-    logoElement.style = instantiateStyle(new PartialStyle("width", "150px")); // Keep existing style for now
+    const logoStyle = new PartialStyle();
+    logoStyle.width = "150px";
+    logoElement.style = instantiateStyle(logoStyle);
     logoCol = new ColumnElement([logoElement]);
   } else {
     // Placeholder if no logo URL is provided
@@ -353,10 +355,14 @@ function createTotalsSection_StdDetailed(subtotal: f64, tax: f64, total: f64, ch
     totalsLabelStyle.paddingRight = "1em"; // Add right padding to labels
     applyStyle(labelCol, instantiateStyle(totalsLabelStyle));
 
+    const totalStyle = new PartialStyle();
+    totalStyle.fontWeight = "bold";
+    const totalText = applyStyle(new TextElement(formatCurrency(total)), instantiateStyle(totalStyle));
+    
     const valueCol = new ColumnElement([
         new TextElement(formatCurrency(subtotal)),
         new TextElement(formatCurrency(tax)),
-        applyStyle(new TextElement(formatCurrency(total)), instantiateStyle(new PartialStyle(null, "bold"))) // Keep bold style separate for now
+        totalText
     ]);
     valueCol.span = 3;
     // Apply right alignment separately
