@@ -67,7 +67,7 @@ export async function createAdminUser(
         email: input.email.toLowerCase(),
         username: input.email.toLowerCase(),
         hashed_password: hashedPassword,
-        user_type: 'admin',
+        user_type: 'internal',
         is_inactive: false,
         created_at: new Date(),
         updated_at: new Date(),
