@@ -3,6 +3,7 @@ import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { createTestEnvironment } from '../../../../test-utils/testDataFactory';
 import { createTestApiKey, ApiTestClient } from './apiTestHelpers';
 import { cleanupTestContacts } from './contactTestDataFactory';
+import { setupTestUserWithPermissions } from './simpleRoleSetup';
 
 /**
  * E2E test environment containing all necessary test data and utilities
@@ -17,6 +18,7 @@ export interface E2ETestEnvironment {
   apiClient: ApiTestClient;
   cleanup: () => Promise<void>;
 }
+
 
 /**
  * Setup a complete E2E test environment
@@ -36,6 +38,9 @@ export async function setupE2ETestEnvironment(options: {
       companyName: options.companyName,
       userName: options.userName
     });
+
+    // Setup permissions for the test user
+    await setupTestUserWithPermissions(db, userId, tenantId);
 
     // Create API key for the test user
     const apiKeyRecord = await createTestApiKey(db, userId, tenantId);
