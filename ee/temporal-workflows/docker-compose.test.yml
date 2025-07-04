@@ -1,6 +1,6 @@
 services:
   temporal:
-    image: temporalio/auto-setup:1.23.0
+    image: temporalio/auto-setup:1.24.2
     ports:
       - "7233:7233"   # gRPC
       - "8233:8233"   # Web UI
@@ -10,11 +10,19 @@ services:
       - POSTGRES_USER=temporal
       - POSTGRES_PWD=temporal
       - POSTGRES_SEEDS=postgres
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+      - ENABLE_ES=false
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - temporal-test
+    healthcheck:
+      test: ["CMD", "tctl", "--address", "localhost:7233", "workflow", "list"]
+      interval: 2s
+      timeout: 10s
+      retries: 30
+      start_period: 30s
 
   postgres:
     image: postgres:13
@@ -28,14 +36,15 @@ services:
       - temporal_postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U temporal"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 10s
     networks:
       - temporal-test
 
   temporal-admin-tools:
-    image: temporalio/admin-tools:1.23.0
+    image: temporalio/admin-tools:1.24.2
     depends_on:
       - temporal
     environment:

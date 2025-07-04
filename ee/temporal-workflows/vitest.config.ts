@@ -6,13 +6,17 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: ['./src/test-utils/setup.ts'],
-    testTimeout: 60000, // 1 minute for E2E tests
-    hookTimeout: 30000, // 30 seconds for setup/teardown
+    testTimeout: 120000, // 2 minutes for E2E tests
+    hookTimeout: 60000, // 1 minute for setup/teardown
     pool: 'forks', // Required for Temporal tests
     poolOptions: {
       forks: {
         singleFork: true, // Prevent issues with concurrent Temporal environments
       },
+    },
+    // Different configurations for different test types
+    env: {
+      NODE_ENV: 'test',
     },
     coverage: {
       provider: 'v8',
@@ -22,6 +26,7 @@ export default defineConfig({
         'dist/**',
         '**/*.d.ts',
         'src/test-utils/**',
+        'src/__tests__/**',
         'scripts/**',
       ],
     },
