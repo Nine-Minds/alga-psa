@@ -86,6 +86,32 @@ export async function withTestSetup(): Promise<TestSetup> {
       role_id: adminRoleId
     });
 
+    // Create default statuses for projects and tickets
+    const statusTypes = [
+      { item_type: 'project', name: 'Planning', order: 1 },
+      { item_type: 'project', name: 'Active', order: 2 },
+      { item_type: 'project', name: 'On Hold', order: 3 },
+      { item_type: 'project', name: 'Completed', order: 4 },
+      { item_type: 'ticket', name: 'New', order: 1 },
+      { item_type: 'ticket', name: 'In Progress', order: 2 },
+      { item_type: 'ticket', name: 'Resolved', order: 3 },
+      { item_type: 'ticket', name: 'Closed', order: 4 }
+    ];
+
+    for (const status of statusTypes) {
+      await db('statuses').insert({
+        status_id: faker.string.uuid(),
+        tenant: tenantId,
+        name: status.name,
+        status_type: status.item_type, // Still required as NOT NULL
+        item_type: status.item_type, // Also set this for future compatibility
+        order_number: status.order,
+        created_by: userId,
+        created_at: new Date(),
+        is_closed: status.name === 'Completed' || status.name === 'Closed' || status.name === 'Resolved'
+      });
+    }
+
     // Create permissions for the admin role
     // The permission system expects resource/action pairs stored in the role_permissions table
     const permissions = [

@@ -13,6 +13,7 @@ export function createProjectTestData(overrides: Partial<any> = {}) {
     description: overrides.description || faker.lorem.paragraph(),
     start_date: overrides.start_date || startDate.toISOString(),
     end_date: overrides.end_date || endDate.toISOString(),
+    // Don't set status - let the API use the default status_id from the statuses table
     ...overrides
   };
 }
