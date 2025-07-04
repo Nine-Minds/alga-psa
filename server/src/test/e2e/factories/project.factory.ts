@@ -31,28 +31,21 @@ export async function projectFactory(db: any, input: ProjectInput) {
     updated_at: new Date()
   };
 
-  const result = await db.query(
-    `INSERT INTO projects (
-      project_id, tenant, company_id, project_name, 
-      description, status, start_date, end_date, 
-      is_inactive, created_at, updated_at
-    ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
-    ) RETURNING *`,
-    [
-      project.project_id,
-      project.tenant,
-      project.company_id,
-      project.project_name,
-      project.description,
-      project.status,
-      project.start_date,
-      project.end_date,
-      project.is_inactive,
-      project.created_at,
-      project.updated_at
-    ]
-  );
+  const result = await db('projects')
+    .insert({
+      project_id: project.project_id,
+      tenant: project.tenant,
+      company_id: project.company_id,
+      project_name: project.project_name,
+      description: project.description,
+      status: project.status,
+      start_date: project.start_date,
+      end_date: project.end_date,
+      is_inactive: project.is_inactive,
+      created_at: project.created_at,
+      updated_at: project.updated_at
+    })
+    .returning('*');
 
-  return result.rows[0];
+  return result[0];
 }

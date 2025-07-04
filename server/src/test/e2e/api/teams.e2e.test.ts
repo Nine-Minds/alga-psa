@@ -61,10 +61,10 @@ describe('Teams API E2E Tests', () => {
       const db = await getConnection();
       
       // Delete team members first
-      await db.query('DELETE FROM team_members WHERE tenant = $1', [tenantId]);
+      await db('team_members').where('tenant', tenantId).delete();
       
       // Delete teams
-      await db.query('DELETE FROM teams WHERE tenant = $1', [tenantId]);
+      await db('teams').where('tenant', tenantId).delete();
     });
   });
 
@@ -521,10 +521,12 @@ describe('Teams API E2E Tests', () => {
         });
 
         // Add members to original team
-        await db.query(
-          'INSERT INTO team_members (tenant, team_id, user_id, role) VALUES ($1, $2, $3, $4)',
-          [tenantId, team.team_id, teamMemberId, 'member']
-        );
+        await db('team_members').insert({
+          tenant: tenantId,
+          team_id: team.team_id,
+          user_id: teamMemberId,
+          role: 'member'
+        });
 
         return team;
       });

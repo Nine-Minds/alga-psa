@@ -23,23 +23,17 @@ export async function roleFactory(db: any, input: RoleInput) {
     updated_at: new Date()
   };
 
-  const result = await db.query(
-    `INSERT INTO roles (
-      role_id, tenant, role_name, description, 
-      is_system, created_at, updated_at
-    ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7
-    ) RETURNING *`,
-    [
-      role.role_id,
-      role.tenant,
-      role.role_name,
-      role.description,
-      role.is_system,
-      role.created_at,
-      role.updated_at
-    ]
-  );
+  const result = await db('roles')
+    .insert({
+      role_id: role.role_id,
+      tenant: role.tenant,
+      role_name: role.role_name,
+      description: role.description,
+      is_system: role.is_system,
+      created_at: role.created_at,
+      updated_at: role.updated_at
+    })
+    .returning('*');
 
-  return result.rows[0];
+  return result[0];
 }

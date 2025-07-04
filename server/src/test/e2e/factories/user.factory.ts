@@ -29,27 +29,20 @@ export async function userFactory(db: any, input: UserInput) {
     created_at: new Date()
   };
 
-  const result = await db.query(
-    `INSERT INTO users (
-      user_id, tenant, email, username, 
-      first_name, last_name, hashed_password, 
-      is_inactive, user_type, created_at
-    ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
-    ) RETURNING *`,
-    [
-      user.user_id,
-      user.tenant,
-      user.email,
-      user.username,
-      user.first_name,
-      user.last_name,
-      user.hashed_password,
-      user.is_inactive,
-      user.user_type,
-      user.created_at
-    ]
-  );
+  const result = await db('users')
+    .insert({
+      user_id: user.user_id,
+      tenant: user.tenant,
+      email: user.email,
+      username: user.username,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      hashed_password: user.hashed_password,
+      is_inactive: user.is_inactive,
+      user_type: user.user_type,
+      created_at: user.created_at
+    })
+    .returning('*');
 
-  return result.rows[0];
+  return result[0];
 }

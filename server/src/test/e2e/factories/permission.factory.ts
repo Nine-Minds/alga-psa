@@ -36,24 +36,18 @@ export async function permissionFactory(db: any, input: PermissionInput) {
     updated_at: new Date()
   };
 
-  const result = await db.query(
-    `INSERT INTO permissions (
-      permission_id, tenant, permission_name, description, 
-      category, is_system, created_at, updated_at
-    ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8
-    ) RETURNING *`,
-    [
-      permission.permission_id,
-      permission.tenant,
-      permission.permission_name,
-      permission.description,
-      permission.category,
-      permission.is_system,
-      permission.created_at,
-      permission.updated_at
-    ]
-  );
+  const result = await db('permissions')
+    .insert({
+      permission_id: permission.permission_id,
+      tenant: permission.tenant,
+      permission_name: permission.permission_name,
+      description: permission.description,
+      category: permission.category,
+      is_system: permission.is_system,
+      created_at: permission.created_at,
+      updated_at: permission.updated_at
+    })
+    .returning('*');
 
-  return result.rows[0];
+  return result[0];
 }

@@ -27,25 +27,19 @@ export async function companyFactory(db: any, input: CompanyInput) {
     updated_at: new Date()
   };
 
-  const result = await db.query(
-    `INSERT INTO companies (
-      company_id, tenant, company_name, company_type, 
-      email, phone, is_inactive, created_at, updated_at
-    ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9
-    ) RETURNING *`,
-    [
-      company.company_id,
-      company.tenant,
-      company.company_name,
-      company.company_type,
-      company.email,
-      company.phone,
-      company.is_inactive,
-      company.created_at,
-      company.updated_at
-    ]
-  );
+  const result = await db('companies')
+    .insert({
+      company_id: company.company_id,
+      tenant: company.tenant,
+      company_name: company.company_name,
+      company_type: company.company_type,
+      email: company.email,
+      phone: company.phone,
+      is_inactive: company.is_inactive,
+      created_at: company.created_at,
+      updated_at: company.updated_at
+    })
+    .returning('*');
 
-  return result.rows[0];
+  return result[0];
 }

@@ -25,72 +25,57 @@ export async function withTestSetup(): Promise<TestSetup> {
     const db = await getConnection();
     
     // Create tenant
-    await db.query(
-      'INSERT INTO tenants (tenant, company_name, is_active, created_at) VALUES ($1, $2, $3, $4)',
-      [tenantId, `Test Company ${faker.company.name()}`, true, new Date()]
-    );
+    await db('tenants').insert({
+      tenant: tenantId,
+      company_name: `Test Company ${faker.company.name()}`,
+      is_active: true,
+      created_at: new Date()
+    });
 
     // Create user
-    await db.query(
-      `INSERT INTO users (
-        user_id, tenant, username, first_name, last_name, 
-        email, hashed_password, is_inactive, created_at, user_type
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-      [
-        userId,
-        tenantId,
-        faker.internet.username(),
-        faker.person.firstName(),
-        faker.person.lastName(),
-        faker.internet.email(),
-        'hashed_password_test',
-        false,
-        new Date(),
-        'internal'
-      ]
-    );
+    await db('users').insert({
+      user_id: userId,
+      tenant: tenantId,
+      username: faker.internet.username(),
+      first_name: faker.person.firstName(),
+      last_name: faker.person.lastName(),
+      email: faker.internet.email(),
+      hashed_password: 'hashed_password_test',
+      is_inactive: false,
+      created_at: new Date(),
+      user_type: 'internal'
+    });
 
     // Create API key
-    await db.query(
-      `INSERT INTO api_keys (
-        key_id, tenant, user_id, key, name, 
-        is_active, created_at, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [
-        apiKeyId,
-        tenantId,
-        userId,
-        apiKey,
-        'Test API Key',
-        true,
-        new Date(),
-        userId
-      ]
-    );
+    await db('api_keys').insert({
+      key_id: apiKeyId,
+      tenant: tenantId,
+      user_id: userId,
+      key: apiKey,
+      name: 'Test API Key',
+      is_active: true,
+      created_at: new Date(),
+      created_by: userId
+    });
 
     // Create basic admin role and assign to user
     const adminRoleId = faker.string.uuid();
-    await db.query(
-      `INSERT INTO roles (
-        role_id, tenant, role_name, description, 
-        is_system, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [
-        adminRoleId,
-        tenantId,
-        'Admin',
-        'Administrator role with full permissions',
-        true,
-        new Date(),
-        new Date()
-      ]
-    );
+    await db('roles').insert({
+      role_id: adminRoleId,
+      tenant: tenantId,
+      role_name: 'Admin',
+      description: 'Administrator role with full permissions',
+      is_system: true,
+      created_at: new Date(),
+      updated_at: new Date()
+    });
 
     // Assign role to user
-    await db.query(
-      'INSERT INTO user_roles (tenant, user_id, role_id) VALUES ($1, $2, $3)',
-      [tenantId, userId, adminRoleId]
-    );
+    await db('user_roles').insert({
+      tenant: tenantId,
+      user_id: userId,
+      role_id: adminRoleId
+    });
 
     // Create permissions for admin role
     const permissions = [
@@ -106,10 +91,11 @@ export async function withTestSetup(): Promise<TestSetup> {
     ];
 
     for (const permission of permissions) {
-      await db.query(
-        'INSERT INTO role_permissions (tenant, role_id, permission) VALUES ($1, $2, $3)',
-        [tenantId, adminRoleId, permission]
-      );
+      await db('role_permissions').insert({
+        tenant: tenantId,
+        role_id: adminRoleId,
+        permission: permission
+      });
     }
   });
 
