@@ -32,7 +32,7 @@ import User from 'server/src/lib/models/user';
 import Team from 'server/src/lib/models/team';
 import UserPreferences from 'server/src/lib/models/userPreferences';
 import { generateResourceLinks, addHateoasLinks } from '../utils/responseHelpers';
-import { NotFoundError } from '../middleware/apiMiddleware';
+import { NotFoundError, ConflictError } from '../middleware/apiMiddleware';
 import logger from '@shared/core/logger';
 
 // Extended interfaces for service operations
@@ -348,6 +348,47 @@ export class UserService extends BaseService<IUser> {
       }, trx);
 
       return enhancedUser;
+    });
+  }
+
+  /**
+   * Delete user with proper cleanup of related data
+   */
+  async delete(id: string, context: ServiceContext): Promise<void> {
+    await this.ensurePermission(context, 'user', 'delete');
+    
+    const { knex } = await this.getKnex();
+
+    return withTransaction(knex, async (trx) => {
+      // Verify user exists and belongs to tenant
+      const existingUser = await trx('users')
+        .where({ user_id: id, tenant: context.tenant })
+        .first();
+
+      if (!existingUser) {
+        throw new NotFoundError('User not found');
+      }
+
+      // Delete related data in correct order to avoid foreign key constraints
+      // 1. Delete user preferences
+      await trx('user_preferences')
+        .where({ user_id: id, tenant: context.tenant })
+        .delete();
+
+      // 2. Delete user roles
+      await trx('user_roles')
+        .where({ user_id: id, tenant: context.tenant })
+        .delete();
+
+      // 3. Delete API keys
+      await trx('api_keys')
+        .where({ user_id: id, tenant: context.tenant })
+        .delete();
+
+      // 4. Finally delete the user
+      await trx('users')
+        .where({ user_id: id, tenant: context.tenant })
+        .delete();
     });
   }
 
