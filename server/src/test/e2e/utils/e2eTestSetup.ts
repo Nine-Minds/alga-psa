@@ -112,6 +112,16 @@ export async function setupE2ETestEnvironment(options: {
           .where('tenant', tenantId)
           .delete();
           
+        // Clean up team members first (they reference teams and users)
+        await db('team_members')
+          .where('tenant', tenantId)
+          .delete();
+          
+        // Clean up teams (they reference users via manager_id)
+        await db('teams')
+          .where('tenant', tenantId)
+          .delete();
+          
         // Clean up user preferences (they reference users)
         await db('user_preferences')
           .where('tenant', tenantId)

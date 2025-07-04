@@ -342,7 +342,7 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Extract team ID from path
-        const teamId = this.extractIdFromPath(req.url, 'teams');
+        const teamId = this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -411,7 +411,7 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Extract team ID from path
-        const teamId = this.extractIdFromPath(req.url, 'teams');
+        const teamId = this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -492,7 +492,8 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Extract IDs from path
-        const pathParts = req.url.split('/');
+        const url = new URL(req.url);
+        const pathParts = url.pathname.split('/');
         const teamsIndex = pathParts.findIndex(part => part === 'teams');
         const teamId = pathParts[teamsIndex + 1];
         const membersIndex = pathParts.findIndex(part => part === 'members');
@@ -565,7 +566,7 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Extract team ID from path
-        const teamId = this.extractIdFromPath(req.url, 'teams');
+        const teamId = this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -646,7 +647,7 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Extract team ID from path
-        const teamId = this.extractIdFromPath(req.url, 'teams');
+        const teamId = this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -727,7 +728,7 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Extract team ID from path
-        const teamId = this.extractIdFromPath(req.url, 'teams');
+        const teamId = this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -810,7 +811,7 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Extract team ID from path
-        const teamId = this.extractIdFromPath(req.url, 'teams');
+        const teamId = this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -844,14 +845,23 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
   /**
    * Override extractIdFromPath to handle team-specific routes
    */
-  protected extractIdFromPath(url: string, resource: string): string {
-    const pathParts = url.split('/');
+  protected extractIdFromPath(req: ApiRequest): string {
+    const url = new URL(req.url);
+    const pathParts = url.pathname.split('/');
     const teamIndex = pathParts.findIndex(part => part === 'teams');
     
     if (teamIndex === -1 || teamIndex >= pathParts.length - 1) {
       throw new ValidationError('Invalid URL structure');
     }
     
-    return pathParts[teamIndex + 1];
+    const id = pathParts[teamIndex + 1];
+    
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (id && !uuidRegex.test(id)) {
+      throw new ValidationError('Invalid team ID format');
+    }
+    
+    return id;
   }
 }

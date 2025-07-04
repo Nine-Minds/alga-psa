@@ -77,6 +77,16 @@ export class ConflictError extends Error implements ApiError {
   }
 }
 
+export class BadRequestError extends Error implements ApiError {
+  statusCode = 400;
+  code = 'BAD_REQUEST';
+
+  constructor(message: string = 'Bad request') {
+    super(message);
+    this.name = 'BadRequestError';
+  }
+}
+
 /**
  * Authentication middleware - validates API key and sets user context
  */
