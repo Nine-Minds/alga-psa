@@ -92,6 +92,16 @@ export async function setupE2ETestEnvironment(options: {
           .where('tenant', tenantId)
           .delete();
           
+        // Clean up tag_mappings first (they reference users via created_by)
+        await db('tag_mappings')
+          .where('tenant', tenantId)
+          .delete();
+          
+        // Clean up tag_definitions (they reference users via created_by)
+        await db('tag_definitions')
+          .where('tenant', tenantId)
+          .delete();
+          
         // Clean up statuses (they reference users via created_by)
         await db('statuses')
           .where('tenant', tenantId)
@@ -122,6 +132,11 @@ export async function setupE2ETestEnvironment(options: {
           .where('tenant', tenantId)
           .delete();
         
+        // Clean up next_number entries first
+        await db('next_number')
+          .where('tenant', tenantId)
+          .delete();
+          
         // Clean up tenant
         await db('tenants')
           .where('tenant', tenantId)
