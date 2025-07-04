@@ -19,6 +19,7 @@ import {
 } from '../schemas/company';
 import { ListOptions } from '../controllers/BaseController';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { runWithTenant } from 'server/src/lib/db';
 
 export class CompanyService extends BaseService<ICompany> {
   constructor() {
@@ -170,11 +171,15 @@ export class CompanyService extends BaseService<ICompany> {
           // Insert company
           const [company] = await trx('companies').insert(companyData).returning('*');
     
-          // Create default tax settings for the company (call with correct parameters)
-          await createDefaultTaxSettings(company.company_id);
+          // Create default tax settings for the company with tenant context
+          await runWithTenant(context.tenant, async () => {
+            await createDefaultTaxSettings(company.company_id);
+          });
     
-          // Add default email settings (call with correct parameters)
-          await addCompanyEmailSetting(company.company_id, 'default');
+          // Add default email settings with tenant context
+          await runWithTenant(context.tenant, async () => {
+            await addCompanyEmailSetting(company.company_id, 'default');
+          });
     
           // Handle tags if provided
           if ((data as any).tags && (data as any).tags.length > 0) {
