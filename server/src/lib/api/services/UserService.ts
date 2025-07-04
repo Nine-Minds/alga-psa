@@ -32,7 +32,7 @@ import User from 'server/src/lib/models/user';
 import Team from 'server/src/lib/models/team';
 import UserPreferences from 'server/src/lib/models/userPreferences';
 import { generateResourceLinks, addHateoasLinks } from '../utils/responseHelpers';
-import { NotFoundError, ConflictError } from '../middleware/apiMiddleware';
+import { NotFoundError, ConflictError, ValidationError, ForbiddenError } from '../middleware/apiMiddleware';
 import logger from '@shared/core/logger';
 
 // Extended interfaces for service operations
@@ -421,14 +421,24 @@ export class UserService extends BaseService<IUser> {
         .first();
 
       if (!user) {
-        throw new Error('User not found');
+        throw new NotFoundError('User not found');
       }
 
-      // Verify current password if self-service
-      if (targetUserId === context.userId && data.current_password) {
+      // Verify current password
+      if (targetUserId === context.userId) {
+        // User changing their own password - current password is required
+        if (!data.current_password) {
+          throw new ValidationError('Current password is required');
+        }
         const isValidPassword = await verifyPassword(data.current_password, user.hashed_password);
         if (!isValidPassword) {
-          throw new Error('Current password is incorrect');
+          throw new ValidationError('Current password is incorrect');
+        }
+      } else {
+        // Admin changing another user's password - must have admin permission
+        const hasAdminAccess = await hasPermission(context.user!, 'user', 'admin');
+        if (!hasAdminAccess) {
+          throw new ForbiddenError('Only administrators can change other users\' passwords');
         }
       }
 
