@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
-import { createTestDbConnection } from '../../../test-utils/dbConfig';
-import { createTestEnvironment } from '../../../test-utils/testDataFactory';
+import { createTestDbConnection } from '../../../../test-utils/dbConfig';
+import { createTestEnvironment } from '../../../../test-utils/testDataFactory';
 import { createTestApiKey, ApiTestClient } from './apiTestHelpers';
 import { cleanupTestContacts } from './contactTestDataFactory';
 
