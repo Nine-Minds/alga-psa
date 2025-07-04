@@ -3,17 +3,11 @@
  * GET /api/v1/time-entries/stats - Get time entry statistics
  */
 
-import { TimeEntryController } from 'server/src/lib/api/controllers/TimeEntryController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiTimeEntryControllerV2 } from '@/lib/api/controllers/ApiTimeEntryControllerV2';
 
-export async function GET(request: Request) {
-  try {
-    const controller = new TimeEntryController();
-    return await controller.getStatistics()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+const controller = new ApiTimeEntryControllerV2();
+
+export const GET = controller.stats();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
