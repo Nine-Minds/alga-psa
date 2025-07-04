@@ -1,5 +1,4 @@
-import { getAdminConnection } from '@shared/db';
-import { withAdminTransaction } from '@shared/db';
+import { getAdminConnection, withAdminTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -10,6 +9,9 @@ export interface TestDatabase {
   getUser: (userId: string) => Promise<any>;
   getUserRoles: (userId: string) => Promise<any[]>;
   getTenantsMatching: (name: string) => Promise<any[]>;
+  getCompaniesForTenant: (tenantId: string) => Promise<any[]>;
+  getRolesForTenant: (tenantId: string) => Promise<any[]>;
+  getStatusesForTenant: (tenantId: string) => Promise<any[]>;
   blockUserTable: () => Promise<void>;
   unblockUserTable: () => Promise<void>;
 }
@@ -18,7 +20,6 @@ export interface TestDatabase {
  * Set up isolated test database environment
  */
 export async function setupTestDatabase(): Promise<TestDatabase> {
-  const db = await getAdminConnection();
   const testTenantId = uuidv4();
   const createdTenants: string[] = [];
   const createdUsers: string[] = [];
@@ -28,7 +29,7 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
     tenantId: testTenantId,
 
     async cleanup() {
-      await withAdminTransaction(db, async (trx: Knex.Transaction) => {
+      await withAdminTransaction(async (trx: Knex.Transaction) => {
         // Clean up in reverse dependency order
         
         // Remove user roles
@@ -75,19 +76,19 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
     },
 
     async getTenant(tenantId: string) {
-      return await withAdminTransaction(db, async (trx: Knex.Transaction) => {
+      return await withAdminTransaction(async (trx: Knex.Transaction) => {
         return await trx('tenants').where({ tenant: tenantId }).first();
       });
     },
 
     async getUser(userId: string) {
-      return await withAdminTransaction(db, async (trx: Knex.Transaction) => {
+      return await withAdminTransaction(async (trx: Knex.Transaction) => {
         return await trx('users').where({ user_id: userId }).first();
       });
     },
 
     async getUserRoles(userId: string) {
-      return await withAdminTransaction(db, async (trx: Knex.Transaction) => {
+      return await withAdminTransaction(async (trx: Knex.Transaction) => {
         return await trx('user_roles as ur')
           .join('roles as r', 'ur.role_id', 'r.role_id')
           .where({ 'ur.user_id': userId })
@@ -96,9 +97,33 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
     },
 
     async getTenantsMatching(name: string) {
-      return await withAdminTransaction(db, async (trx: Knex.Transaction) => {
+      return await withAdminTransaction(async (trx: Knex.Transaction) => {
         return await trx('tenants')
           .where('company_name', 'like', `%${name}%`)
+          .select('*');
+      });
+    },
+
+    async getCompaniesForTenant(tenantId: string) {
+      return await withAdminTransaction(async (trx: Knex.Transaction) => {
+        return await trx('companies')
+          .where({ tenant: tenantId })
+          .select('*');
+      });
+    },
+
+    async getRolesForTenant(tenantId: string) {
+      return await withAdminTransaction(async (trx: Knex.Transaction) => {
+        return await trx('roles')
+          .where({ tenant: tenantId })
+          .select('*');
+      });
+    },
+
+    async getStatusesForTenant(tenantId: string) {
+      return await withAdminTransaction(async (trx: Knex.Transaction) => {
+        return await trx('statuses')
+          .where({ tenant: tenantId })
           .select('*');
       });
     },

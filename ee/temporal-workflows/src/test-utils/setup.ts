@@ -1,8 +1,13 @@
 import { beforeAll, afterAll } from 'vitest';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import * as dotenv from 'dotenv';
+import path from 'path';
 
 const execAsync = promisify(exec);
+
+// Load test environment variables
+dotenv.config({ path: path.join(process.cwd(), '.env.test') });
 
 beforeAll(async () => {
   console.log('Setting up test environment...');

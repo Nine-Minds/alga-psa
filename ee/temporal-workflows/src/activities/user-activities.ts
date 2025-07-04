@@ -38,9 +38,7 @@ export async function createAdminUser(
     email: input.email 
   });
 
-  const db = await getAdminConnection();
-  
-  return await withAdminTransaction(db, async (trx: Knex.Transaction) => {
+  return await withAdminTransaction(async (trx: Knex.Transaction) => {
     try {
       // Check if user already exists globally
       const existingUser = await trx('users')
@@ -155,9 +153,7 @@ export async function rollbackUser(userId: string, tenantId: string): Promise<vo
   const log = logger();
   log.info('Rolling back user creation', { userId, tenantId });
 
-  const db = await getAdminConnection();
-
-  return await withAdminTransaction(db, async (trx: Knex.Transaction) => {
+  return await withAdminTransaction(async (trx: Knex.Transaction) => {
     try {
       // Remove user preferences
       await trx('user_preferences')

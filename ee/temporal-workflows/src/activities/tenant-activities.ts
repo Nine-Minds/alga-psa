@@ -22,9 +22,7 @@ export async function createTenant(
   const log = logger();
   log.info('Creating tenant', { tenantName: input.tenantName });
 
-  const db = await getAdminConnection();
-  
-  return await withAdminTransaction(db, async (trx: Knex.Transaction) => {
+  return await withAdminTransaction(async (trx: Knex.Transaction) => {
     try {
       // Generate tenant ID
       const tenantId = uuidv4();
@@ -95,10 +93,9 @@ export async function setupTenantData(
   const log = logger();
   log.info('Setting up tenant data', { tenantId: input.tenantId });
 
-  const db = await getAdminConnection();
   const setupSteps: string[] = [];
 
-  return await withAdminTransaction(db, async (trx: Knex.Transaction) => {
+  return await withAdminTransaction(async (trx: Knex.Transaction) => {
     try {
       // Set up default roles if they don't exist
       const existingRoles = await trx('roles')
@@ -244,9 +241,7 @@ export async function rollbackTenant(tenantId: string): Promise<void> {
   const log = logger();
   log.info('Rolling back tenant creation', { tenantId });
 
-  const db = await getAdminConnection();
-
-  return await withAdminTransaction(db, async (trx: Knex.Transaction) => {
+  return await withAdminTransaction(async (trx: Knex.Transaction) => {
     try {
       // Remove in reverse dependency order
       
