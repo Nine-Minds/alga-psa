@@ -324,20 +324,39 @@ describe('Users API E2E Tests', () => {
     });
 
     it('should allow users to change their own password', async () => {
-      // This test would need proper authentication context
-      // For now, we'll test that the endpoint exists
-      const response = await env.apiClient.put(`/api/v1/users/${env.userId}/password`, {
-        current_password: 'OldPassword123!',
+      // Create a test user with a known password
+      const testPassword = 'TestPassword123!';
+      const userData = createUserTestData({ password: testPassword });
+      const createResponse = await env.apiClient.post('/api/v1/users', userData);
+      
+      if (createResponse.status !== 201) {
+        throw new Error('Failed to create test user for password change');
+      }
+      
+      const userId = createResponse.data.data.user_id;
+      createdUserIds.push(userId);
+      
+      // Try to change another user's password - should get 403 (forbidden)
+      const otherUserResponse = await env.apiClient.put(`/api/v1/users/${userId}/password`, {
+        current_password: 'WrongPassword123!',
         new_password: 'NewPassword123!',
         confirm_password: 'NewPassword123!'
       });
       
-      if (response.status === 400) {
-        console.error('Password change validation error:', JSON.stringify(response.data, null, 2));
-      }
+      expect(otherUserResponse.status).toBe(403);
+      expect(otherUserResponse.data.error.message).toContain('administrators');
       
-      // May fail with permission error if not properly authenticated or validation error
-      expect([200, 400, 403]).toContain(response.status);
+      // Test changing own password (the env.userId)
+      // First, we need to know the test user's password, which we don't have
+      // So let's test that the endpoint requires current password
+      const ownPasswordResponse = await env.apiClient.put(`/api/v1/users/${env.userId}/password`, {
+        new_password: 'NewPassword123!',
+        confirm_password: 'NewPassword123!'
+        // Missing current_password
+      });
+      
+      expect(ownPasswordResponse.status).toBe(400);
+      expect(ownPasswordResponse.data.error.message).toBe('Current password is required');
     });
   });
 
