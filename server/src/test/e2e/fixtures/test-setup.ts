@@ -86,24 +86,64 @@ export async function withTestSetup(): Promise<TestSetup> {
       role_id: adminRoleId
     });
 
-    // Create permissions for admin role
+    // Create permissions for the admin role
+    // The permission system expects resource/action pairs stored in the role_permissions table
     const permissions = [
-      'contact:read', 'contact:create', 'contact:update', 'contact:delete',
-      'company:read', 'company:create', 'company:update', 'company:delete',
-      'user:read', 'user:create', 'user:update', 'user:delete',
-      'project:read', 'project:create', 'project:update', 'project:delete',
-      'ticket:read', 'ticket:create', 'ticket:update', 'ticket:delete',
-      'team:read', 'team:create', 'team:update', 'team:delete',
-      'role:read', 'role:create', 'role:update', 'role:delete',
-      'permission:read', 'permission:create', 'permission:update', 'permission:delete',
-      'time_entry:read', 'time_entry:create', 'time_entry:update', 'time_entry:delete', 'time_entry:approve'
+      { resource: 'contact', action: 'read' },
+      { resource: 'contact', action: 'create' },
+      { resource: 'contact', action: 'update' },
+      { resource: 'contact', action: 'delete' },
+      { resource: 'company', action: 'read' },
+      { resource: 'company', action: 'create' },
+      { resource: 'company', action: 'update' },
+      { resource: 'company', action: 'delete' },
+      { resource: 'user', action: 'read' },
+      { resource: 'user', action: 'create' },
+      { resource: 'user', action: 'update' },
+      { resource: 'user', action: 'delete' },
+      { resource: 'project', action: 'read' },
+      { resource: 'project', action: 'create' },
+      { resource: 'project', action: 'update' },
+      { resource: 'project', action: 'delete' },
+      { resource: 'ticket', action: 'read' },
+      { resource: 'ticket', action: 'create' },
+      { resource: 'ticket', action: 'update' },
+      { resource: 'ticket', action: 'delete' },
+      { resource: 'team', action: 'read' },
+      { resource: 'team', action: 'create' },
+      { resource: 'team', action: 'update' },
+      { resource: 'team', action: 'delete' },
+      { resource: 'role', action: 'read' },
+      { resource: 'role', action: 'create' },
+      { resource: 'role', action: 'update' },
+      { resource: 'role', action: 'delete' },
+      { resource: 'permission', action: 'read' },
+      { resource: 'permission', action: 'create' },
+      { resource: 'permission', action: 'update' },
+      { resource: 'permission', action: 'delete' },
+      { resource: 'time_entry', action: 'read' },
+      { resource: 'time_entry', action: 'create' },
+      { resource: 'time_entry', action: 'update' },
+      { resource: 'time_entry', action: 'delete' },
+      { resource: 'time_entry', action: 'approve' }
     ];
 
-    for (const permission of permissions) {
+    // First create permissions in the permissions table
+    for (const perm of permissions) {
+      const permissionId = faker.string.uuid();
+      await db('permissions').insert({
+        permission_id: permissionId,
+        tenant: tenantId,
+        resource: perm.resource,
+        action: perm.action,
+        created_at: new Date()
+      });
+      
+      // Then assign to role
       await db('role_permissions').insert({
         tenant: tenantId,
         role_id: adminRoleId,
-        permission: permission
+        permission_id: permissionId
       });
     }
   });
