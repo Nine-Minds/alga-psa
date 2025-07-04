@@ -78,43 +78,48 @@ export async function setupTenantDataInDB(
     const setupSteps: string[] = [];
 
     await executeTransaction(adminDb, async (client) => {
-      // Set up billing plan if provided
-      if (input.billingPlan) {
-        await client.query(
-          `INSERT INTO tenant_billing (tenant_id, plan_name, created_at, updated_at)
-           VALUES ($1, $2, NOW(), NOW())
-           ON CONFLICT (tenant_id) DO UPDATE SET 
-           plan_name = EXCLUDED.plan_name, updated_at = NOW()`,
-          [input.tenantId, input.billingPlan]
-        );
-        setupSteps.push(`billing_plan_${input.billingPlan}`);
-      }
+      // Set up tenant settings using the actual Alga schema
+      const defaultSettings = {
+        onboarding_completed: false,
+        onboarding_skipped: false,
+        settings: {
+          email_notifications: true,
+          auto_backup: true,
+          max_users: 100,
+          billing_plan: input.billingPlan || 'basic'
+        }
+      };
 
-      // Set up default tenant settings
-      const defaultSettings = [
-        { key: 'email_notifications', value: 'true' },
-        { key: 'auto_backup', value: 'true' },
-        { key: 'max_users', value: '100' },
-      ];
-
-      for (const setting of defaultSettings) {
-        await client.query(
-          `INSERT INTO tenant_settings (tenant_id, setting_key, setting_value, created_at, updated_at)
-           VALUES ($1, $2, $3, NOW(), NOW())
-           ON CONFLICT (tenant_id, setting_key) DO UPDATE SET
-           setting_value = EXCLUDED.setting_value, updated_at = NOW()`,
-          [input.tenantId, setting.key, setting.value]
-        );
-        setupSteps.push(`setting_${setting.key}`);
-      }
-
-      // Create default workspace/project if applicable
       await client.query(
-        `INSERT INTO workspaces (tenant_id, name, description, is_default, created_at, updated_at)
-         VALUES ($1, 'Default Workspace', 'Default workspace for tenant', true, NOW(), NOW())`,
+        `INSERT INTO tenant_settings (tenant, onboarding_completed, onboarding_skipped, settings, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, NOW(), NOW())
+         ON CONFLICT (tenant) DO UPDATE SET
+         settings = EXCLUDED.settings, updated_at = NOW()`,
+        [input.tenantId, defaultSettings.onboarding_completed, defaultSettings.onboarding_skipped, JSON.stringify(defaultSettings.settings)]
+      );
+      setupSteps.push('tenant_settings');
+
+      // Set up tenant email settings with defaults
+      await client.query(
+        `INSERT INTO tenant_email_settings (tenant_id, created_at, updated_at)
+         VALUES ($1, NOW(), NOW())
+         ON CONFLICT (tenant_id) DO NOTHING`,
         [input.tenantId]
       );
-      setupSteps.push('default_workspace');
+      setupSteps.push('email_settings');
+
+      // Create tenant-company association if we have a company
+      if (input.companyId) {
+        await client.query(
+          `INSERT INTO tenant_companies (tenant, company_id, created_at, updated_at)
+           VALUES ($1, $2, NOW(), NOW())
+           ON CONFLICT (tenant, company_id) DO NOTHING`,
+          [input.tenantId, input.companyId]
+        );
+        setupSteps.push('tenant_company_association');
+      }
+
+      log.info('Tenant data setup steps completed', { tenantId: input.tenantId, setupSteps });
     });
 
     log.info('Tenant data setup completed', { 
@@ -124,7 +129,6 @@ export async function setupTenantDataInDB(
 
     return {
       setupSteps,
-      success: true,
     };
 
   } catch (error) {

@@ -55,7 +55,6 @@ export interface SetupTenantDataActivityInput {
 }
 
 export interface SetupTenantDataActivityResult {
-  success: boolean;
   setupSteps: string[];
 }
 

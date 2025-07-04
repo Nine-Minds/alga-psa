@@ -162,17 +162,17 @@ export async function tenantCreationWorkflow(
       throw new Error(`Workflow cancelled: ${cancelReason}`);
     }
 
-    log.info('Skipping tenant data setup for E2E test compatibility');
-    // const setupResult = await activities.setupTenantData({
-    //   tenantId: tenantResult.tenantId,
-    //   adminUserId: userResult.userId,
-    //   companyId: tenantResult.companyId,
-    //   billingPlan: input.billingPlan,
-    // });
+    log.info('Setting up tenant data');
+    const setupResult = await activities.setupTenantData({
+      tenantId: tenantResult.tenantId,
+      adminUserId: userResult.userId,
+      companyId: tenantResult.companyId,
+      billingPlan: input.billingPlan,
+    });
 
     workflowState.progress = 85;
 
-    log.info('Tenant data setup skipped for E2E test compatibility');
+    log.info('Tenant data setup completed', { setupSteps: setupResult.setupSteps });
 
     // Step 4: Send welcome email
     workflowState.step = 'sending_welcome_email';
