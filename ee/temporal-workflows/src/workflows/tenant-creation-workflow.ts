@@ -21,7 +21,7 @@ import type {
 
 // Define activity proxies with appropriate timeouts and retry policies
 const activities = proxyActivities<{
-  createTenant(input: { tenantName: string; companyName?: string }): Promise<CreateTenantActivityResult>;
+  createTenant(input: { tenantName: string; email: string; companyName?: string }): Promise<CreateTenantActivityResult>;
   createAdminUser(input: {
     tenantId: string;
     firstName: string;
@@ -124,6 +124,7 @@ export async function tenantCreationWorkflow(
     log.info('Creating tenant', { tenantName: input.tenantName });
     const tenantResult = await activities.createTenant({
       tenantName: input.tenantName,
+      email: input.adminUser.email,
       companyName: input.companyName,
     });
     

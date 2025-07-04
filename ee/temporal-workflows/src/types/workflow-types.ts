@@ -23,6 +23,7 @@ export interface TenantCreationResult {
 
 export interface CreateTenantActivityInput {
   tenantName: string;
+  email: string;
   companyName?: string;
 }
 

@@ -33,6 +33,7 @@ export async function createTenant(
       await trx('tenants').insert({
         tenant: tenantId,
         company_name: input.tenantName,
+        email: input.email,
         created_at: new Date(),
         updated_at: new Date(),
       });
@@ -122,30 +123,35 @@ export async function setupTenantData(
         }
       }
 
-      // Set up default statuses
+      // Set up default statuses  
       const existingStatuses = await trx('statuses')
-        .where({ tenant: input.tenantId })
-        .select('status_name');
+        .where({ tenant: input.tenantId, status_type: 'ticket' })
+        .select('name');
 
       if (existingStatuses.length === 0) {
         const defaultStatuses = [
-          { name: 'Open', color: '#3B82F6', is_closed: false },
-          { name: 'In Progress', color: '#F59E0B', is_closed: false },
-          { name: 'Resolved', color: '#10B981', is_closed: true },
-          { name: 'Closed', color: '#6B7280', is_closed: true }
+          { name: 'Open', is_closed: false },
+          { name: 'In Progress', is_closed: false },
+          { name: 'Resolved', is_closed: true },
+          { name: 'Closed', is_closed: true }
         ];
 
-        for (const status of defaultStatuses) {
-          await trx('statuses').insert({
-            status_id: uuidv4(),
-            tenant: input.tenantId,
-            status_name: status.name,
-            status_color: status.color,
-            is_closed: status.is_closed,
-            created_at: new Date(),
-          });
+        // Need a valid user ID for created_by - use admin user
+        if (input.adminUserId) {
+          for (const [index, status] of defaultStatuses.entries()) {
+            await trx('statuses').insert({
+              status_id: uuidv4(),
+              tenant: input.tenantId,
+              name: status.name,
+              status_type: 'ticket',
+              order_number: index + 1,
+              created_by: input.adminUserId,
+              is_closed: status.is_closed,
+              created_at: new Date(),
+            });
+          }
+          setupSteps.push('Created default statuses');
         }
-        setupSteps.push('Created default statuses');
       }
 
       // Set up default billing plan if specified
