@@ -79,6 +79,7 @@ export class UserService extends BaseService<IUser> {
       searchableFields: ['username', 'first_name', 'last_name', 'email', 'phone'],
       defaultSort: 'created_at',
       defaultOrder: 'desc',
+      softDelete: false, // Users table doesn't have deleted_at column
       auditFields: {
         createdBy: 'created_by',
         updatedBy: 'updated_by',
@@ -163,7 +164,6 @@ export class UserService extends BaseService<IUser> {
 
     const user = await knex('users')
       .where({ user_id: id, tenant: context.tenant })
-      .whereNull('deleted_at')
       .first();
 
     if (!user) {
@@ -1167,7 +1167,6 @@ export class UserService extends BaseService<IUser> {
   private buildEnhancedUserQuery(knex: Knex, context: ServiceContext): Knex.QueryBuilder {
     return knex('users')
       .where('tenant', context.tenant)
-      .whereNull('deleted_at')
       .select('users.*');
   }
 

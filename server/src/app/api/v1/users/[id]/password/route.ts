@@ -3,19 +3,11 @@
  * PUT /api/v1/users/[id]/password - Change user password
  */
 
-import { UserController } from 'server/src/lib/api/controllers/UserController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiUserControllerV2 } from '@/lib/api/controllers/ApiUserControllerV2';
 
-export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const controller = new UserController();
-    const req = request as any;
-    req.params = params;
-    return await controller.changePassword()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+const controller = new ApiUserControllerV2();
+
+export const PUT = controller.changePassword();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

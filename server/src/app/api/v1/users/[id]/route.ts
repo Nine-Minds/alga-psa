@@ -5,41 +5,13 @@
  * DELETE /api/v1/users/[id] - Delete user
  */
 
-import { UserController } from 'server/src/lib/api/controllers/UserController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiUserControllerV2 } from '@/lib/api/controllers/ApiUserControllerV2';
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const controller = new UserController();
-    const req = request as any;
-    req.params = params;
-    return await controller.getById()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+const controller = new ApiUserControllerV2();
 
-export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const controller = new UserController();
-    const req = request as any;
-    req.params = params;
-    return await controller.update()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
-
-export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const controller = new UserController();
-    const req = request as any;
-    req.params = params;
-    return await controller.delete()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+export const GET = controller.getById();
+export const PUT = controller.update();
+export const DELETE = controller.delete();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
