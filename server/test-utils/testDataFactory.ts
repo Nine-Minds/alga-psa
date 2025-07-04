@@ -54,7 +54,7 @@ export async function createCompany(
     company_id: companyId,
     company_name: name,
     tenant: tenantId,
-    billing_cycle: options.billing_cycle || 'monthly',
+    billing_cycle: options.billing_cycle || 'monthly' as BillingCycleType,
     is_tax_exempt: options.is_tax_exempt ?? false,
     phone_no: options.phone_no || '',
     email: options.email || '',
