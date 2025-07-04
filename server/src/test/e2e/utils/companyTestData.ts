@@ -17,7 +17,7 @@ export function createCompanyTestData(overrides: Partial<any> = {}) {
     notes: faker.lorem.sentence(),
     is_inactive: false,
     tax_id_number: faker.string.alphanumeric(10),
-    billing_cycle: faker.helpers.arrayElement(['monthly', 'quarterly', 'annually', 'weekly', 'bi-weekly', 'semi-annually']),
+    billing_cycle: faker.helpers.arrayElement(['monthly', 'quarterly', 'annually', 'custom']),
     tags: [faker.word.noun(), faker.word.adjective()],
     ...overrides
   };
@@ -29,14 +29,15 @@ export function createCompanyTestData(overrides: Partial<any> = {}) {
 export function createCompanyLocationTestData(overrides: Partial<any> = {}) {
   return {
     location_name: faker.company.name() + ' ' + faker.helpers.arrayElement(['Office', 'Warehouse', 'Store']),
-    address: faker.location.streetAddress(),
-    address_2: faker.datatype.boolean() ? faker.location.secondaryAddress() : null,
+    address_line1: faker.location.streetAddress(),
+    address_line2: faker.datatype.boolean() ? faker.location.secondaryAddress() : '',
     city: faker.location.city(),
-    state: faker.location.state({ abbreviated: true }),
+    state_province: faker.location.state({ abbreviated: true }),
     postal_code: faker.location.zipCode(),
-    country: faker.location.countryCode(),
+    country_code: faker.location.countryCode('alpha-2'),
+    country_name: faker.location.country(),
     phone: faker.phone.number(),
-    is_primary: faker.datatype.boolean(),
+    is_default: faker.datatype.boolean(),
     notes: faker.lorem.sentence(),
     ...overrides
   };
@@ -70,7 +71,7 @@ export function createCompanyWithContacts() {
 export function createCompanyWithLocations() {
   const company = createCompanyTestData();
   const locations = Array.from({ length: faker.number.int({ min: 1, max: 3 }) }, (_, index) => 
-    createCompanyLocationTestData({ is_primary: index === 0 })
+    createCompanyLocationTestData({ is_default: index === 0 })
   );
   
   return { company, locations };
