@@ -808,10 +808,11 @@ export class UserService extends BaseService<IUser> {
       const searchFields = searchData.fields || this.searchableFields;
       query = query.where(subQuery => {
         searchFields.forEach((field, index) => {
+          const tableField = field.includes('.') ? field : `users.${field}`;
           if (index === 0) {
-            subQuery.whereILike(field, `%${searchData.query}%`);
+            subQuery.whereILike(tableField, `%${searchData.query}%`);
           } else {
-            subQuery.orWhereILike(field, `%${searchData.query}%`);
+            subQuery.orWhereILike(tableField, `%${searchData.query}%`);
           }
         });
       });
