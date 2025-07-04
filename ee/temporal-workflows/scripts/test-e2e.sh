@@ -10,7 +10,11 @@ echo "🧪 Starting E2E Test Environment Setup..."
 # Function to cleanup on exit
 cleanup() {
     echo "🧹 Cleaning up test environment..."
-    docker-compose -f docker-compose.test.yml down --volumes --remove-orphans || true
+    if [ ! -z "$TEMPORAL_PID" ]; then
+        echo "  - Stopping Temporal dev server (PID: $TEMPORAL_PID)..."
+        kill $TEMPORAL_PID 2>/dev/null || true
+        wait $TEMPORAL_PID 2>/dev/null || true
+    fi
     exit $1
 }
 
@@ -29,26 +33,24 @@ if ! docker ps | grep -q "alga-psa-postgres-1"; then
     exit 1
 fi
 
-# Pull latest images
-echo "📦 Pulling latest Docker images..."
-docker-compose -f docker-compose.test.yml pull
+# Start Temporal dev server
+echo "🚀 Starting Temporal dev server..."
+temporal server start-dev --headless &
+TEMPORAL_PID=$!
 
-# Start test environment
-echo "🚀 Starting Temporal test environment..."
-docker-compose -f docker-compose.test.yml up -d
+# Wait for Temporal server to be ready
+echo "⏳ Waiting for Temporal server to be ready..."
+counter=0
+until temporal workflow list > /dev/null 2>&1; do
+    if [ $counter -ge 30 ]; then
+        echo "❌ Timeout waiting for Temporal server"
+        exit 1
+    fi
+    sleep 2
+    counter=$((counter + 1))
+done
 
-# Wait for services to be healthy
-echo "⏳ Waiting for services to be ready..."
-
-# Wait for Temporal postgres
-echo "  - Waiting for Temporal PostgreSQL..."
-timeout 60 bash -c 'until docker-compose -f docker-compose.test.yml exec postgres pg_isready -U temporal; do sleep 2; done'
-
-# Wait for Temporal server
-echo "  - Waiting for Temporal server..."
-timeout 120 bash -c 'until docker-compose -f docker-compose.test.yml exec temporal tctl workflow list > /dev/null 2>&1; do sleep 2; done'
-
-echo "✅ All services are ready!"
+echo "✅ Temporal dev server is ready!"
 
 # Set environment for E2E tests
 export NODE_ENV=test

@@ -5,58 +5,8 @@ services:
       - "7233:7233"   # gRPC
       - "8233:8233"   # Web UI
     environment:
-      - DB=postgresql
-      - DB_PORT=5432
-      - POSTGRES_USER=temporal
-      - POSTGRES_PWD=temporal
-      - POSTGRES_SEEDS=postgres
-      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
-      - ENABLE_ES=false
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - temporal-test
-    healthcheck:
-      test: ["CMD", "tctl", "--address", "localhost:7233", "workflow", "list"]
-      interval: 2s
-      timeout: 10s
-      retries: 30
-      start_period: 30s
-
-  postgres:
-    image: postgres:13
-    environment:
-      POSTGRES_DB: temporal
-      POSTGRES_USER: temporal
-      POSTGRES_PASSWORD: temporal
-    ports:
-      - "5433:5432"  # Different port to avoid conflicts
-    volumes:
-      - temporal_postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U temporal"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-    networks:
-      - temporal-test
-
-  temporal-admin-tools:
-    image: temporalio/admin-tools:1.24.2
-    depends_on:
-      - temporal
-    environment:
-      - TEMPORAL_ADDRESS=temporal:7233
-      - TEMPORAL_CLI_ADDRESS=temporal:7233
-    stdin_open: true
-    tty: true
-    networks:
-      - temporal-test
-
-volumes:
-  temporal_postgres_data:
+      - CASSANDRA_SEEDS=127.0.0.1
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development.yaml
 
 networks:
   temporal-test:

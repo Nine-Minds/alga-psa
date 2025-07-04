@@ -1,15 +1,17 @@
 import { Context } from '@temporalio/activity';
+import { emailService, type EmailParams } from '../services/email-service';
 import type {
   SendWelcomeEmailActivityInput,
   SendWelcomeEmailActivityResult
 } from '../types/workflow-types';
 
-const logger = () => Context.current().logger;
+const logger = () => Context.current().log;
 
 /**
  * Generate a secure temporary password
+ * This is an activity because it involves non-deterministic random number generation
  */
-export function generateTemporaryPassword(length: number = 12): string {
+export async function generateTemporaryPassword(length: number = 12): Promise<string> {
   const charset = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*';
   let password = '';
   
@@ -174,45 +176,28 @@ export async function sendWelcomeEmail(
     // Create email content
     const { subject, htmlBody, textBody } = createWelcomeEmailContent(input);
     
-    // Import the email service (this should match your existing email service)
-    // Adjust the import path according to your actual email service location
-    let emailService;
-    try {
-      // Try to import the shared email service
-      const { emailService: sharedEmailService } = await import('@shared/services/emailService');
-      emailService = sharedEmailService;
-    } catch (importError) {
-      log.warn('Could not import shared email service, using mock implementation', {
-        error: importError instanceof Error ? importError.message : 'Unknown error'
-      });
-      
-      // Mock implementation for development/testing
-      emailService = {
-        sendEmail: async (params: any) => {
-          log.info('Mock email sent', { 
-            to: params.to,
-            subject: params.subject,
-            bodyPreview: params.html?.substring(0, 100) + '...'
-          });
-          return { messageId: `mock-${Date.now()}` };
-        }
-      };
-    }
-
-    // Send the email
-    const emailResult = await emailService.sendEmail({
+    // Prepare email parameters
+    const emailParams: EmailParams = {
       to: input.adminUser.email,
       subject,
       html: htmlBody,
       text: textBody,
-      // Add any additional email metadata
       metadata: {
         tenantId: input.tenantId,
         userId: input.adminUser.userId,
         emailType: 'tenant_welcome',
-        temporary: true
+        temporary: true,
+        workflowType: 'tenant_creation'
       }
-    });
+    };
+
+    // Validate email before sending
+    if (!emailService.validateEmail(input.adminUser.email)) {
+      throw new Error(`Invalid email address: ${input.adminUser.email}`);
+    }
+
+    // Send the email
+    const emailResult = await emailService.sendEmail(emailParams);
 
     log.info('Welcome email sent successfully', {
       tenantId: input.tenantId,

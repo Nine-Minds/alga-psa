@@ -16,6 +16,7 @@ import type {
   CreateTenantActivityResult,
   CreateAdminUserActivityResult,
   SetupTenantDataActivityResult,
+  SendWelcomeEmailActivityInput,
   SendWelcomeEmailActivityResult
 } from '../types/workflow-types';
 
@@ -35,19 +36,7 @@ const activities = proxyActivities<{
     companyId?: string;
     billingPlan?: string;
   }): Promise<SetupTenantDataActivityResult>;
-  sendWelcomeEmail(input: {
-    tenantId: string;
-    tenantName: string;
-    adminUser: {
-      userId: string;
-      firstName: string;
-      lastName: string;
-      email: string;
-    };
-    temporaryPassword: string;
-    companyName?: string;
-    loginUrl?: string;
-  }): Promise<SendWelcomeEmailActivityResult>;
+  sendWelcomeEmail(input: SendWelcomeEmailActivityInput): Promise<SendWelcomeEmailActivityResult>;
   rollbackTenant(tenantId: string): Promise<void>;
   rollbackUser(userId: string, tenantId: string): Promise<void>;
 }>({

@@ -12,13 +12,27 @@ dotenv.config({ path: path.join(process.cwd(), '.env.test') });
 beforeAll(async () => {
   console.log('Setting up test environment...');
   
+  // Check if Temporal dev server is already running (started by test script)
+  try {
+    await execAsync('temporal workflow list');
+    console.log('Temporal dev server is already running!');
+    return;
+  } catch (error) {
+    // Temporal dev server not running, start Docker containers as fallback
+    console.log('Temporal dev server not detected, starting Docker containers...');
+  }
+  
   // Start Docker containers if not already running
   try {
     const { stdout } = await execAsync('docker-compose -f docker-compose.test.yml ps --format json');
-    const containers = stdout.trim().split('\n').map(line => JSON.parse(line));
-    const runningContainers = containers.filter(c => c.State === 'running');
+    let runningContainers = [];
     
-    if (runningContainers.length < 3) {
+    if (stdout.trim()) {
+      const containers = stdout.trim().split('\n').map(line => JSON.parse(line));
+      runningContainers = containers.filter(c => c.State === 'running');
+    }
+    
+    if (runningContainers.length < 1) { // We have 1 service now (temporal only)
       console.log('Starting Docker containers...');
       await execAsync('docker-compose -f docker-compose.test.yml up -d');
       
@@ -29,11 +43,9 @@ beforeAll(async () => {
       
       while (attempts < maxAttempts) {
         try {
-          const { stdout: healthCheck } = await execAsync('curl -f http://localhost:8233/health || echo "not ready"');
-          if (!healthCheck.includes('not ready')) {
-            console.log('Temporal is ready!');
-            break;
-          }
+          await execAsync('temporal workflow list');
+          console.log('Temporal is ready!');
+          break;
         } catch (error) {
           // Expected when Temporal is not ready
         }
