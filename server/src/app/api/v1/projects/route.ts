@@ -4,26 +4,12 @@
  * POST /api/v1/projects - Create new project
  */
 
-import { ProjectController } from 'server/src/lib/api/controllers/ProjectController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiProjectControllerV2 } from '@/lib/api/controllers/ApiProjectControllerV2';
 
-const controller = new ProjectController();
+const controller = new ApiProjectControllerV2();
 
-export async function GET(request: Request) {
-  try {
-    return await controller.list()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
-
-export async function POST(request: Request) {
-  try {
-    return await controller.create()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+export const GET = controller.list();
+export const POST = controller.create();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
