@@ -185,17 +185,33 @@ export class ProjectService extends BaseService<IProject> {
       // Generate WBS code
       const wbsCode = await ProjectModel.generateNextWbsCode(trx, '');
       
-      // Get default status
-      const defaultStatus = await this.getDefaultProjectStatus(context);
+      // Get default status if not provided
+      let status = data.status;
+      try {
+        if (!data.status) {
+          const defaultStatus = await this.getDefaultProjectStatus(context);
+          status = defaultStatus?.status_id;
+        }
+      } catch (error) {
+        // If status lookup fails, don't set status
+        console.log('Could not get default project status:', error);
+      }
       
-      const projectData = {
-        ...data,
+      // Remove fields that don't belong in the database
+      const { create_default_phase, tags, budgeted_hours, project_type, budget, currency, priority, is_billable, billing_rate, estimated_hours, metadata, ...dataForInsert } = data;
+      
+      const projectData: any = {
+        ...dataForInsert,
         wbs_code: wbsCode,
-        status: data.status || defaultStatus.status_id,
         tenant: context.tenant,
         created_at: new Date(),
         updated_at: new Date()
       };
+      
+      // Only add status if we have one
+      if (status) {
+        projectData.status = status;
+      }
 
       const [project] = await trx(this.tableName).insert(projectData).returning('*');
 
@@ -703,8 +719,7 @@ export class ProjectService extends BaseService<IProject> {
       const status = await knex('statuses')
         .where({ 
           tenant: context.tenant,
-          item_type: 'project',
-          is_active: true
+          item_type: 'project'
         })
         .orderBy('display_order')
         .first();
@@ -721,7 +736,7 @@ export class ProjectService extends BaseService<IProject> {
       const { knex } = await this.getKnex();
       
       const standardStatuses = await knex('standard_statuses')
-        .where({ item_type: 'project_task', is_active: true })
+        .where({ item_type: 'project_task' })
         .orderBy('display_order');
   
       for (const status of standardStatuses) {

@@ -25,7 +25,7 @@ export const createProjectSchema = z.object({
   end_date: dateSchema.optional(),
   wbs_code: z.string().optional(),
   is_inactive: z.boolean().optional().default(false),
-  status: projectStatusSchema.optional().default('planning'),
+  status: projectStatusSchema.optional(),
   assigned_to: uuidSchema.optional(),
   contact_name_id: uuidSchema.optional(),
   budgeted_hours: z.number().min(0).optional(),
