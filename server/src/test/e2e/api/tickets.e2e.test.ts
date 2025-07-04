@@ -33,90 +33,59 @@ describe('Ticket API E2E Tests', () => {
     // Set up test data - create necessary entities
     const db = env.db;
     
-    // Create a test channel (required for tickets)
-    channelId = uuidv4();
-    try {
+    // Get the default channel created by setupE2ETestEnvironment
+    const existingChannel = await db('channels')
+      .where({ tenant: env.tenant, is_default: true })
+      .first();
+    
+    if (existingChannel) {
+      channelId = existingChannel.channel_id;
+    } else {
+      // Create a test channel if none exists
+      channelId = uuidv4();
       await db('channels').insert({
         channel_id: channelId,
         channel_name: 'Test Channel',
-        tenant: env.tenant
+        tenant: env.tenant,
+        display_order: 99
       });
-    } catch (error) {
-      // If channel already exists, get its ID
-      const existingChannel = await db('channels')
-        .where({ channel_name: 'Test Channel', tenant: env.tenant })
-        .first();
-      if (existingChannel) {
-        channelId = existingChannel.channel_id;
-      } else {
-        throw error;
-      }
     }
 
-    // Create test statuses
+    // Get existing statuses created by setupE2ETestEnvironment
+    const newStatus = await db('statuses')
+      .where({ tenant: env.tenant, name: 'New', status_type: 'ticket' })
+      .first();
+    const inProgressStatus = await db('statuses')
+      .where({ tenant: env.tenant, name: 'In Progress', status_type: 'ticket' })
+      .first();
+    const closedStatus = await db('statuses')
+      .where({ tenant: env.tenant, name: 'Closed', status_type: 'ticket' })
+      .first();
+
     statusIds = {
-      open: uuidv4(),
-      inProgress: uuidv4(),
-      closed: uuidv4()
+      open: newStatus?.status_id || uuidv4(),
+      inProgress: inProgressStatus?.status_id || uuidv4(),
+      closed: closedStatus?.status_id || uuidv4()
     };
 
-    await db('statuses').insert([
-      {
-        status_id: statusIds.open,
-        name: 'Open',
-        status_type: 'ticket',
-        is_closed: false,
-        order_number: 1,
-        tenant: env.tenant,
-        created_by: env.userId
-      },
-      {
-        status_id: statusIds.inProgress,
-        name: 'In Progress',
-        status_type: 'ticket',
-        is_closed: false,
-        order_number: 2,
-        tenant: env.tenant,
-        created_by: env.userId
-      },
-      {
-        status_id: statusIds.closed,
-        name: 'Closed',
-        status_type: 'ticket',
-        is_closed: true,
-        order_number: 3,
-        tenant: env.tenant,
-        created_by: env.userId
-      }
-    ]);
+    // Get existing priorities created by setupE2ETestEnvironment
+    const lowPriority = await db('priorities')
+      .where({ tenant: env.tenant, priority_name: 'Low' })
+      .first();
+    const mediumPriority = await db('priorities')
+      .where({ tenant: env.tenant, priority_name: 'Medium' })
+      .first();
+    const highPriority = await db('priorities')
+      .where({ tenant: env.tenant, priority_name: 'High' })
+      .first();
 
-    // Create test priorities
     priorityIds = {
-      low: uuidv4(),
-      medium: uuidv4(),
-      high: uuidv4()
+      low: lowPriority?.priority_id || uuidv4(),
+      medium: mediumPriority?.priority_id || uuidv4(),
+      high: highPriority?.priority_id || uuidv4()
     };
-
-    await db('priorities').insert([
-      {
-        priority_id: priorityIds.low,
-        priority_name: 'Low',
-        order_number: 1,
-        tenant: env.tenant
-      },
-      {
-        priority_id: priorityIds.medium,
-        priority_name: 'Medium',
-        order_number: 2,
-        tenant: env.tenant
-      },
-      {
-        priority_id: priorityIds.high,
-        priority_name: 'High',
-        order_number: 3,
-        tenant: env.tenant
-      }
-    ]);
+    
+    // Priorities should already be created by setupE2ETestEnvironment
   });
 
   afterEach(async () => {

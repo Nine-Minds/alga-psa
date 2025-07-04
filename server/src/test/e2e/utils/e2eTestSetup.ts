@@ -77,7 +77,22 @@ export async function setupE2ETestEnvironment(options: {
           .where('tenant', tenantId)
           .delete();
         
-        // Clean up statuses first (they reference users via created_by)
+        // Clean up tickets first (they reference many other tables)
+        await db('tickets')
+          .where('tenant', tenantId)
+          .delete();
+          
+        // Clean up channels (they reference tenants)
+        await db('channels')
+          .where('tenant', tenantId)
+          .delete();
+          
+        // Clean up priorities (they reference users via created_by)
+        await db('priorities')
+          .where('tenant', tenantId)
+          .delete();
+          
+        // Clean up statuses (they reference users via created_by)
         await db('statuses')
           .where('tenant', tenantId)
           .delete();
@@ -267,6 +282,12 @@ export async function withDatabaseTransaction<T>(
  * Create default statuses for projects and tickets
  */
 async function createDefaultStatuses(db: Knex, tenantId: string, userId: string): Promise<void> {
+  // Check if statuses already exist for this tenant
+  const existingStatuses = await db('statuses').where({ tenant: tenantId }).count('* as count');
+  if (parseInt(existingStatuses[0].count) > 0) {
+    return; // Statuses already exist
+  }
+
   // Create default statuses for projects and tickets
   const statusTypes = [
     { item_type: 'project', name: 'Planning', order: 1, is_default: true },
@@ -292,5 +313,39 @@ async function createDefaultStatuses(db: Knex, tenantId: string, userId: string)
       is_closed: status.name === 'Completed' || status.name === 'Closed' || status.name === 'Resolved',
       is_default: status.is_default || false
     });
+  }
+  
+  // Create a default channel for tickets
+  const existingChannels = await db('channels').where({ tenant: tenantId }).count('* as count');
+  if (parseInt(existingChannels[0].count) === 0) {
+    await db('channels').insert({
+      channel_id: uuidv4(),
+      tenant: tenantId,
+      channel_name: 'Default',
+      is_default: true,
+      display_order: 1
+    });
+  }
+  
+  // Create default priorities for tickets
+  const existingPriorities = await db('priorities').where({ tenant: tenantId }).count('* as count');
+  if (parseInt(existingPriorities[0].count) === 0) {
+    const priorities = [
+      { name: 'Low', order: 1, color: '#10B981' },
+      { name: 'Medium', order: 2, color: '#F59E0B' },
+      { name: 'High', order: 3, color: '#EF4444' }
+    ];
+    
+    for (const priority of priorities) {
+      await db('priorities').insert({
+        priority_id: uuidv4(),
+        tenant: tenantId,
+        priority_name: priority.name,
+        order_number: priority.order,
+        color: priority.color,
+        created_by: userId,
+        created_at: new Date()
+      });
+    }
   }
 }
