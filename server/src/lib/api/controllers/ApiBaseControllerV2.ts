@@ -10,8 +10,8 @@ import {
   ApiKeyServiceForApi 
 } from '../../services/apiKeyServiceForApi';
 import { 
-  findUserById 
-} from '../../actions/user-actions/userActions';
+  findUserByIdForApi 
+} from '../../actions/user-actions/findUserByIdForApi';
 import { 
   runWithTenant 
 } from '../../db';
@@ -65,10 +65,7 @@ export abstract class ApiBaseControllerV2 {
     }
 
     // Get user within tenant context
-    let user;
-    await runWithTenant(tenantId!, async () => {
-      user = await findUserById(keyRecord.user_id);
-    });
+    const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
     if (!user) {
       throw new UnauthorizedError('User not found');

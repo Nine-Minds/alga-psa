@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import crypto from 'crypto';
-import { getConnection } from '../db';
+import { getConnection } from '../db/db';
 
 interface ApiKey {
   api_key_id: string;
