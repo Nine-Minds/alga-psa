@@ -127,7 +127,7 @@ export class ApiContactControllerV2 extends ApiBaseControllerV2 {
             throw error;
           }
 
-          const result = await this.contactService.searchContacts(
+          const result = await this.contactService.search(
             validatedQuery,
             apiRequest.context!
           );
@@ -287,7 +287,7 @@ export class ApiContactControllerV2 extends ApiBaseControllerV2 {
             throw new ForbiddenError('Permission denied: Cannot read contact');
           }
 
-          const stats = await this.contactService.getStatistics(apiRequest.context!);
+          const stats = await this.contactService.getContactStats(apiRequest.context!);
           
           return createSuccessResponse(stats);
         });

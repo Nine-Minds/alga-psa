@@ -51,7 +51,6 @@ export async function setupTestUserWithPermissions(
           permission_id: permissionId,
           resource,
           action,
-          description: `${action} ${resource}`,
           tenant: tenantId
         });
         
@@ -61,9 +60,28 @@ export async function setupTestUserWithPermissions(
           permission_id: permissionId,
           tenant: tenantId
         });
+        
+        console.log(`✅ Created permission ${resource}:${action} for tenant ${tenantId}`);
       } catch (error) {
-        // Permission might already exist, that's OK
-        console.log(`Permission ${resource}:${action} might already exist`);
+        console.error(`❌ Error creating permission ${resource}:${action}:`, error);
+        
+        // If permission already exists for this tenant, try to find it and link to role
+        try {
+          const existingPermission = await db('permissions')
+            .where({ resource, action, tenant: tenantId })
+            .first();
+            
+          if (existingPermission) {
+            await db('role_permissions').insert({
+              role_id: roleId,
+              permission_id: existingPermission.permission_id,
+              tenant: tenantId
+            });
+            console.log(`✅ Linked existing permission ${resource}:${action} to role`);
+          }
+        } catch (linkError) {
+          console.error(`❌ Error linking permission:`, linkError);
+        }
       }
     }
   }

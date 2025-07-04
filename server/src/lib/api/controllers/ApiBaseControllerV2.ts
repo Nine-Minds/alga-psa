@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ZodSchema } from 'zod';
+import { ZodSchema, ZodError } from 'zod';
 import { BaseService, CrudOptions } from './BaseController';
 import { 
   ApiKeyServiceForApi 
@@ -15,6 +15,9 @@ import {
 import { 
   runWithTenant 
 } from '../../db';
+import { 
+  getConnection 
+} from '../../db/db';
 import { 
   hasPermission 
 } from '../../auth/rbac';
@@ -90,7 +93,10 @@ export abstract class ApiBaseControllerV2 {
       throw new UnauthorizedError('User context required');
     }
 
-    const hasAccess = await hasPermission(req.context.user, this.options.resource, action);
+    // Get a connection within the current tenant context
+    const knex = await getConnection(req.context.tenant);
+    
+    const hasAccess = await hasPermission(req.context.user, this.options.resource, action, knex);
     if (!hasAccess) {
       throw new ForbiddenError(`Permission denied: Cannot ${action} ${this.options.resource}`);
     }

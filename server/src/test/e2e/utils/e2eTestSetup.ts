@@ -58,6 +58,16 @@ export async function setupE2ETestEnvironment(options: {
         // Clean up test data in reverse order of creation
         await cleanupTestContacts(db, tenantId);
         
+        // Clean up role permissions first
+        await db('role_permissions')
+          .where('tenant', tenantId)
+          .delete();
+          
+        // Clean up user roles
+        await db('user_roles')
+          .where('tenant', tenantId)
+          .delete();
+        
         // Clean up API keys
         await db('api_keys')
           .where('tenant', tenantId)
@@ -65,6 +75,16 @@ export async function setupE2ETestEnvironment(options: {
         
         // Clean up users
         await db('users')
+          .where('tenant', tenantId)
+          .delete();
+          
+        // Clean up permissions
+        await db('permissions')
+          .where('tenant', tenantId)
+          .delete();
+          
+        // Clean up roles
+        await db('roles')
           .where('tenant', tenantId)
           .delete();
         
