@@ -248,9 +248,9 @@ export class TenantWorkflowClient {
       for await (const workflow of workflows) {
         results.push({
           workflowId: workflow.workflowId,
-          status: workflow.status,
+          status: workflow.status.name,
           startTime: workflow.startTime?.toISOString() || '',
-          endTime: workflow.endTime?.toISOString(),
+          endTime: workflow.closeTime?.toISOString(),
         });
       }
 
@@ -292,7 +292,6 @@ async function exampleUsage(): Promise<void> {
         firstName: 'Admin',
         lastName: 'User',
         email: 'admin@example.com',
-        password: 'securePassword123!',
       },
       companyName: 'Example Company',
       billingPlan: 'Standard',
@@ -323,4 +322,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   });
 }
 
-export { TenantWorkflowClient };
+// TenantWorkflowClient already exported above

@@ -53,7 +53,6 @@ export async function createTenantInDB(
     return {
       tenantId: result.tenantId,
       companyId: result.companyId,
-      success: true,
     };
 
   } catch (error) {

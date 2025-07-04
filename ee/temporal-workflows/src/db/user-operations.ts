@@ -105,7 +105,6 @@ export async function createAdminUserInDB(
       userId: result.userId,
       roleId: result.roleId,
       temporaryPassword: result.temporaryPassword,
-      success: true,
     };
 
   } catch (error) {

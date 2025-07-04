@@ -1,4 +1,5 @@
-import { getAdminConnection, withAdminTransaction } from '@shared/db';
+// TODO: Update to use new database connection pattern
+// import { getAdminDatabase, executeTransaction } from '../db/connection';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 

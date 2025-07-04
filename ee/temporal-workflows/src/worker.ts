@@ -75,11 +75,6 @@ async function createWorker(config: WorkerConfig): Promise<Worker> {
     maxConcurrentWorkflowTaskExecutions: config.maxConcurrentWorkflowTaskExecutions,
     // Enable detailed logging in development
     debugMode: process.env.NODE_ENV === 'development',
-    // Activity timeout configuration
-    activityTimeouts: {
-      startToCloseTimeout: '5m',
-      scheduleToCloseTimeout: '10m',
-    },
   });
 
   logger.info('Worker created successfully', {

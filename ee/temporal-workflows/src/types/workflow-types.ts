@@ -1,4 +1,5 @@
-import { ISO8601String } from '@shared/types';
+// Define ISO8601String locally to avoid import issues
+export type ISO8601String = string;
 
 export interface TenantCreationInput {
   tenantName: string;
