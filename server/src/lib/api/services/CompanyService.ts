@@ -10,6 +10,7 @@ import { withTransaction } from '@shared/db';
 import { getCompanyLogoUrl } from 'server/src/lib/utils/avatarUtils';
 import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
 import { addCompanyEmailSetting } from 'server/src/lib/actions/company-settings/emailSettings';
+import { NotFoundError } from '../../api/middleware/apiMiddleware';
 import { 
   CreateCompanyData, 
   UpdateCompanyData, 
@@ -134,7 +135,7 @@ export class CompanyService extends BaseService<ICompany> {
   async create(data: Partial<ICompany>, context: ServiceContext): Promise<ICompany> {
         const { knex } = await this.getKnex();
     
-        return withTransaction(knex, async (trx) => {
+        const company = await withTransaction(knex, async (trx) => {
           // Prepare company data
           const companyData = {
             company_id: knex.raw('gen_random_uuid()'),
@@ -256,7 +257,7 @@ export class CompanyService extends BaseService<ICompany> {
           .returning('*');
   
         if (!company) {
-          throw new Error('Company not found or permission denied');
+          throw new NotFoundError('Company not found');
         }
   
         // Handle tags if provided
@@ -321,7 +322,7 @@ export class CompanyService extends BaseService<ICompany> {
         .first();
 
       if (!company) {
-        throw new Error('Company not found');
+        throw new NotFoundError('Company not found');
       }
 
       const locationData = {
@@ -373,7 +374,7 @@ export class CompanyService extends BaseService<ICompany> {
           .returning('*');
   
         if (!location) {
-          throw new Error('Company location not found or permission denied');
+          throw new NotFoundError('Company location not found');
         }
   
         return location as ICompanyLocation;
@@ -401,7 +402,7 @@ export class CompanyService extends BaseService<ICompany> {
         .delete();
 
       if (result === 0) {
-        throw new Error('Location not found or permission denied');
+        throw new NotFoundError('Location not found');
       }
     });
   }
@@ -452,7 +453,9 @@ export class CompanyService extends BaseService<ICompany> {
     ]);
 
     return {
-      ...totalStats,
+      total_companies: parseInt(totalStats.total_companies),
+      active_companies: parseInt(totalStats.active_companies),
+      inactive_companies: parseInt(totalStats.inactive_companies),
       companies_by_billing_cycle: billingCycleStats.reduce((acc: any, row: any) => {
         acc[row.billing_cycle] = parseInt(row.count);
         return acc;

@@ -142,7 +142,9 @@ export abstract class ApiBaseControllerV2 {
   protected extractIdFromPath(req: ApiRequest): string {
     const url = new URL(req.url);
     const pathParts = url.pathname.split('/');
-    const resourceIndex = pathParts.findIndex(part => part === this.options.resource + 's');
+    // Handle both 'resources' and 'companies' (special case)
+    const resourcePlural = this.options.resource === 'company' ? 'companies' : this.options.resource + 's';
+    const resourceIndex = pathParts.findIndex(part => part === resourcePlural);
     const id = pathParts[resourceIndex + 1] || '';
     
     // Validate UUID format (including nil UUID)
