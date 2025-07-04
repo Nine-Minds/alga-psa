@@ -46,11 +46,7 @@ export async function createTenantInDB(
         companyId = companyResult.rows[0].company_id;
         log.info('Company created', { companyId, companyName: input.companyName, tenantId });
         
-        // Update tenant with company_id reference
-        await client.query(
-          `UPDATE tenants SET company_id = $1, updated_at = NOW() WHERE tenant = $2`,
-          [companyId, tenantId]
-        );
+        // Note: Not updating tenant with company_id as column doesn't exist in schema
       }
 
       return { tenantId, companyId };

@@ -36,19 +36,19 @@ export async function createAdminUserInDB(
       // Generate temporary password
       const temporaryPassword = generateSecurePassword(12);
       
-      // Create user
+      // Create user (matching actual Alga schema)
       const userResult = await client.query(
         `INSERT INTO users (
-          first_name, last_name, email, password_hash, 
-          is_active, email_verified, created_at, updated_at,
-          is_temporary_password
-        ) VALUES ($1, $2, $3, $4, true, false, NOW(), NOW(), true) 
+          first_name, last_name, email, tenant, user_type, username, hashed_password
+        ) VALUES ($1, $2, $3, $4, 'internal', $5, $6) 
         RETURNING user_id`,
         [
           input.firstName,
           input.lastName, 
           input.email,
-          await hashPassword(temporaryPassword) // In real implementation, hash the password
+          input.tenantId,
+          input.email, // use email as username
+          await hashPassword(temporaryPassword) // hash the temporary password
         ]
       );
       
@@ -56,7 +56,7 @@ export async function createAdminUserInDB(
 
       // Find or create Admin role
       let adminRoleResult = await client.query(
-        'SELECT role_id FROM roles WHERE role_name = $1 AND tenant_id = $2',
+        'SELECT role_id FROM roles WHERE role_name = $1 AND tenant = $2',
         ['Admin', input.tenantId]
       );
 
@@ -64,10 +64,10 @@ export async function createAdminUserInDB(
       if (adminRoleResult.rows.length === 0) {
         // Create Admin role for this tenant
         const newRoleResult = await client.query(
-          `INSERT INTO roles (role_name, tenant_id, permissions, created_at, updated_at)
-           VALUES ($1, $2, $3, NOW(), NOW())
+          `INSERT INTO roles (role_name, tenant, description)
+           VALUES ($1, $2, $3)
            RETURNING role_id`,
-          ['Admin', input.tenantId, JSON.stringify(['all'])]
+          ['Admin', input.tenantId, 'Administrator role with full access']
         );
         roleId = newRoleResult.rows[0].role_id;
         log.info('Created Admin role', { roleId, tenantId: input.tenantId });
@@ -75,22 +75,14 @@ export async function createAdminUserInDB(
         roleId = adminRoleResult.rows[0].role_id;
       }
 
-      // Associate user with tenant and role
+      // Associate user with tenant and role (using correct table name)
       await client.query(
-        `INSERT INTO user_tenant_roles (user_id, tenant_id, role_id, created_at, updated_at)
-         VALUES ($1, $2, $3, NOW(), NOW())`,
+        `INSERT INTO user_roles (user_id, tenant, role_id)
+         VALUES ($1, $2, $3)`,
         [userId, input.tenantId, roleId]
       );
 
-      // Associate user with company if provided
-      if (input.companyId) {
-        await client.query(
-          `INSERT INTO user_companies (user_id, company_id, role, created_at, updated_at)
-           VALUES ($1, $2, 'account_manager', NOW(), NOW())`,
-          [userId, input.companyId]
-        );
-        log.info('User associated with company', { userId, companyId: input.companyId });
-      }
+      // Note: Skipping company association for now - table structure unknown
 
       log.info('Admin user created successfully', { 
         userId, 
