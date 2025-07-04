@@ -39,7 +39,7 @@ export const userTypeSchema = z.enum(['internal', 'client', 'admin', 'contractor
 
 // Timezone schema with common timezone validation
 export const timezoneSchema = z.string()
-  .regex(/^[A-Za-z]+\/[A-Za-z_]+$/, 'Invalid timezone format')
+  .regex(/^[A-Za-z]+\/[A-Za-z_\/]+$/, 'Invalid timezone format')
   .optional();
 
 // Base user schema for creation
