@@ -77,7 +77,7 @@ export async function createTestContact(
     tenant
   };
 
-  await db('contact_name').insert(contact);
+  await db('contacts').insert(contact);
   
   return contact;
 }
@@ -215,7 +215,7 @@ export async function createContactsForPagination(
  * @param tenant Tenant ID
  */
 export async function cleanupTestContacts(db: Knex, tenant: string): Promise<void> {
-  await db('contact_name')
+  await db('contacts')
     .where('tenant', tenant)
     .delete();
 }
@@ -233,7 +233,7 @@ export async function cleanupTestContactsByIds(
 ): Promise<void> {
   if (contactIds.length === 0) return;
   
-  await db('contact_name')
+  await db('contacts')
     .where('tenant', tenant)
     .whereIn('contact_name_id', contactIds)
     .delete();
@@ -247,7 +247,7 @@ export async function getTestContactById(
   tenant: string,
   contactId: string
 ): Promise<TestContact | null> {
-  const contact = await db('contact_name')
+  const contact = await db('contacts')
     .where('tenant', tenant)
     .where('contact_name_id', contactId)
     .first();
@@ -264,7 +264,7 @@ export async function updateTestContact(
   contactId: string,
   updates: Partial<CreateContactOptions>
 ): Promise<TestContact | null> {
-  const updated = await db('contact_name')
+  const updated = await db('contacts')
     .where('tenant', tenant)
     .where('contact_name_id', contactId)
     .update({
