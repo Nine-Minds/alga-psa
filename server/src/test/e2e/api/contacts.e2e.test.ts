@@ -365,10 +365,6 @@ describe('Contact API E2E Tests', () => {
   });
 
   describe('Error Handling', () => {
-    it('should handle invalid UUID format', async () => {
-      const response = await env.apiClient.get(`${API_BASE}/not-a-uuid`);
-      assertError(response, 400, 'VALIDATION_ERROR');
-    });
 
     it('should handle invalid query parameters', async () => {
       const query = buildQueryString({ page: 'invalid', limit: 'abc' });

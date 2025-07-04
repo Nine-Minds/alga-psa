@@ -17,7 +17,7 @@ import { apiKeyFactory } from '../factories/apiKey.factory';
 import { getConnection } from '../../../lib/db/db';
 import { runWithTenant } from '../../../lib/db';
 
-const API_BASE_URL = 'http://localhost:3000/api/v1';
+const API_BASE_URL = 'http://localhost:3001/api/v1';
 
 describe('Roles API E2E Tests', () => {
   let apiKey: string;
@@ -51,13 +51,13 @@ describe('Roles API E2E Tests', () => {
       const db = await getConnection();
       
       // Delete role permissions first
-      await db.query('DELETE FROM role_permissions WHERE tenant = $1', [tenantId]);
+      await db.raw('DELETE FROM role_permissions WHERE tenant = ?', [tenantId]);
       
       // Delete user roles
-      await db.query('DELETE FROM user_roles WHERE tenant = $1', [tenantId]);
+      await db.raw('DELETE FROM user_roles WHERE tenant = ?', [tenantId]);
       
       // Delete roles
-      await db.query('DELETE FROM roles WHERE tenant = $1', [tenantId]);
+      await db.raw('DELETE FROM roles WHERE tenant = ?', [tenantId]);
     });
   });
 
@@ -355,8 +355,8 @@ describe('Roles API E2E Tests', () => {
         // Add permissions
         const permissions = ['project:read', 'project:update', 'ticket:read'];
         for (const permission of permissions) {
-          await db.query(
-            'INSERT INTO role_permissions (tenant, role_id, permission) VALUES ($1, $2, $3)',
+          await db.raw(
+            'INSERT INTO role_permissions (tenant, role_id, permission) VALUES (?, ?, ?)',
             [tenantId, role.role_id, permission]
           );
         }

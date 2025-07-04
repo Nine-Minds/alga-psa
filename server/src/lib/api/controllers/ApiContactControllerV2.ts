@@ -226,6 +226,11 @@ export class ApiContactControllerV2 extends ApiBaseControllerV2 {
             });
           }
 
+          // For JSON format, parse the string data back to array
+          if (format === 'json') {
+            return createSuccessResponse(JSON.parse(data as string));
+          }
+          
           return createSuccessResponse(data);
         });
       } catch (error) {
