@@ -35,15 +35,14 @@ COPY shared/ ./shared/
 
 # Install all workspace dependencies from root
 WORKDIR /app
-RUN npm config set cache /tmp/.npm && \
+RUN pwd && ls -la && \
+    npm config set cache /tmp/.npm && \
     npm config set network-timeout 60000 && \
     npm config set maxsockets 10 && \
     npm config set fetch-retry-mintimeout 20000 && \
     npm config set fetch-retry-maxtimeout 120000 && \
     npm config set fetch-retries 3 && \
     npm install
-
-WORKDIR /app
 
 # Install TypeScript and other necessary dependencies globally
 RUN npm install -g typescript @types/node
