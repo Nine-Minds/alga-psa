@@ -7,7 +7,7 @@ export interface TimeEntry {
   tenant: string;
   work_item_id?: string;
   work_item_type?: string;
-  service_id: string;
+  service_id?: string;
   user_id: string;
   start_time: Date;
   end_time: Date;
@@ -15,9 +15,10 @@ export interface TimeEntry {
   notes?: string;
   time_sheet_id?: string;
   approval_status?: string;
-  approved_by?: string;
-  approved_date?: Date;
   billing_plan_id?: string;
+  tax_region?: string;
+  tax_rate_id?: string;
+  invoiced?: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -26,22 +27,21 @@ export interface Service {
   service_id: string;
   tenant: string;
   service_name: string;
-  custom_service_type_id: string;
+  description?: string;
   billing_method: 'fixed' | 'per_unit';
-  default_rate: number;
-  unit_of_measure: string;
+  custom_service_type_id: string;
+  default_rate?: number;
+  unit_of_measure?: string;
   category_id?: string | null;
   tax_rate_id?: string | null;
-  description?: string | null;
 }
 
 export interface TimePeriod {
   period_id: string;
   tenant: string;
-  user_id: string;
   start_date: Date;
   end_date: Date;
-  period_status: string;
+  is_closed: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -71,8 +71,9 @@ export async function createTestTimeEntry(
     notes: overrides.notes || faker.lorem.sentence(),
     time_sheet_id: overrides.time_sheet_id,
     approval_status: overrides.approval_status || 'DRAFT',
-    approved_by: overrides.approved_by,
-    approved_date: overrides.approved_date,
+    tax_region: overrides.tax_region,
+    tax_rate_id: overrides.tax_rate_id,
+    invoiced: overrides.invoiced || false,
     billing_plan_id: overrides.billing_plan_id,
     created_at: overrides.created_at || now,
     updated_at: overrides.updated_at || now
@@ -87,34 +88,42 @@ export async function createTestService(
   tenantId: string,
   overrides: Partial<Service> = {}
 ): Promise<Service> {
-  // Create a service type first if not provided
+  // First, we need to create a service type if not provided
   let serviceTypeId = overrides.custom_service_type_id;
   if (!serviceTypeId) {
-    const serviceType = {
-      id: uuidv4(),
-      tenant: tenantId,
-      name: faker.commerce.department() + ' Type',
-      billing_method: 'fixed' as const,
-      is_active: true,
-      order_number: 1,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-    await db('service_types').insert(serviceType);
-    serviceTypeId = serviceType.id;
+    // Check if a service type exists for this tenant
+    const existingType = await db('service_types')
+      .where({ tenant: tenantId })
+      .first();
+    
+    if (existingType) {
+      serviceTypeId = existingType.id;
+    } else {
+      // Create a new service type
+      const typeData = {
+        id: uuidv4(),
+        tenant: tenantId,
+        name: 'Default Service Type',
+        billing_method: 'fixed' as const,
+        is_active: true,
+        order_number: 1
+      };
+      await db('service_types').insert(typeData);
+      serviceTypeId = typeData.id;
+    }
   }
 
   const serviceData: Service = {
     service_id: overrides.service_id || uuidv4(),
     tenant: tenantId,
     service_name: overrides.service_name || faker.commerce.department() + ' Service',
-    custom_service_type_id: serviceTypeId,
+    description: overrides.description || faker.lorem.sentence(),
     billing_method: overrides.billing_method || 'fixed',
-    default_rate: overrides.default_rate !== undefined ? overrides.default_rate : faker.number.int({ min: 50, max: 200 }),
+    custom_service_type_id: serviceTypeId,
+    default_rate: overrides.default_rate || faker.number.int({ min: 5000, max: 20000 }), // in cents
     unit_of_measure: overrides.unit_of_measure || 'hour',
-    category_id: overrides.category_id !== undefined ? overrides.category_id : null,
-    tax_rate_id: overrides.tax_rate_id !== undefined ? overrides.tax_rate_id : null,
-    description: overrides.description !== undefined ? overrides.description : faker.lorem.sentence()
+    category_id: overrides.category_id || null,
+    tax_rate_id: overrides.tax_rate_id || null
   };
 
   const [service] = await db('service_catalog').insert(serviceData).returning('*');
@@ -124,7 +133,6 @@ export async function createTestService(
 export async function createTestTimePeriod(
   db: Knex,
   tenantId: string,
-  userId: string,
   overrides: Partial<TimePeriod> = {}
 ): Promise<TimePeriod> {
   const now = new Date();
@@ -134,10 +142,9 @@ export async function createTestTimePeriod(
   const periodData: TimePeriod = {
     period_id: overrides.period_id || uuidv4(),
     tenant: tenantId,
-    user_id: userId,
     start_date: startDate,
     end_date: endDate,
-    period_status: overrides.period_status || 'open',
+    is_closed: overrides.is_closed !== undefined ? overrides.is_closed : false,
     created_at: overrides.created_at || now,
     updated_at: overrides.updated_at || now
   };
@@ -152,4 +159,5 @@ export async function cleanupTestTimeEntries(db: Knex, tenantId: string): Promis
   await db('time_entries').where({ tenant: tenantId }).delete();
   await db('time_periods').where({ tenant: tenantId }).delete();
   await db('service_catalog').where({ tenant: tenantId }).delete();
+  await db('service_types').where({ tenant: tenantId }).delete();
 }
