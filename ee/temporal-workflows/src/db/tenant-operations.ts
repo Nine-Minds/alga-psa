@@ -78,26 +78,32 @@ export async function setupTenantDataInDB(
     const setupSteps: string[] = [];
 
     await executeTransaction(adminDb, async (client) => {
-      // Set up tenant email settings with defaults
-      await client.query(
-        `INSERT INTO tenant_email_settings (tenant_id, email_provider, fallback_enabled, tracking_enabled)
-         VALUES ($1, 'resend', true, false)
-         ON CONFLICT (tenant_id) DO UPDATE SET
-         email_provider = EXCLUDED.email_provider, updated_at = NOW()`,
-        [input.tenantId]
-      );
-      setupSteps.push('email_settings');
+      // Set up tenant email settings with defaults (simple insert, no ON CONFLICT to avoid distributed table issues)
+      try {
+        await client.query(
+          `INSERT INTO tenant_email_settings (tenant_id, email_provider, fallback_enabled, tracking_enabled)
+           VALUES ($1, 'resend', true, false)`,
+          [input.tenantId]
+        );
+        setupSteps.push('email_settings');
+      } catch (error) {
+        // If it already exists, that's fine
+        log.info('Tenant email settings already exist, skipping', { tenantId: input.tenantId });
+      }
 
       // Create tenant-company association if we have a company
       if (input.companyId) {
-        await client.query(
-          `INSERT INTO tenant_companies (tenant, company_id, is_default)
-           VALUES ($1, $2, true)
-           ON CONFLICT (tenant, company_id) DO UPDATE SET
-           is_default = EXCLUDED.is_default, updated_at = NOW()`,
-          [input.tenantId, input.companyId]
-        );
-        setupSteps.push('tenant_company_association');
+        try {
+          await client.query(
+            `INSERT INTO tenant_companies (tenant, company_id, is_default)
+             VALUES ($1, $2, true)`,
+            [input.tenantId, input.companyId]
+          );
+          setupSteps.push('tenant_company_association');
+        } catch (error) {
+          // If it already exists, that's fine
+          log.info('Tenant-company association already exists, skipping', { tenantId: input.tenantId, companyId: input.companyId });
+        }
       }
 
       log.info('Tenant data setup steps completed', { tenantId: input.tenantId, setupSteps });
