@@ -59,7 +59,7 @@ export class TimeEntryController extends BaseController {
         order: order as 'asc' | 'desc' | undefined
       };
       
-      const result = await this.timeEntryService.list(listOptions, context, filters);
+      const result = await this.timeEntryService.list({ ...listOptions, filters }, context);
       
       // Add HATEOAS links to each time entry
       const entriesWithLinks = result.data.map(entry => ({
@@ -501,7 +501,7 @@ export class TimeEntryController extends BaseController {
       
       // For now, just return the time entries as JSON
       // In a real implementation, you'd generate CSV/Excel based on format
-      const timeEntries = await this.timeEntryService.list({}, context);
+      const timeEntries = await this.timeEntryService.list({ filters: {} }, context);
       
       if (query.format === 'csv') {
         // Convert to CSV format
