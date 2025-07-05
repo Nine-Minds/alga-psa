@@ -197,13 +197,42 @@ export class TimeEntryService extends BaseService<any> {
     const durationMs = endTime.getTime() - startTime.getTime();
     const billableDuration = Math.round(durationMs / (1000 * 60)); // minutes
 
+    // Check for overlapping time entries
+    const overlapping = await knex(this.tableName)
+      .where('tenant', context.tenant)
+      .where('user_id', context.userId)
+      .where(function() {
+        this.where(function() {
+          // New entry starts during existing entry
+          this.where('start_time', '<=', startTime)
+            .where('end_time', '>', startTime);
+        })
+        .orWhere(function() {
+          // New entry ends during existing entry
+          this.where('start_time', '<', endTime)
+            .where('end_time', '>=', endTime);
+        })
+        .orWhere(function() {
+          // New entry completely contains existing entry
+          this.where('start_time', '>=', startTime)
+            .where('end_time', '<=', endTime);
+        });
+      })
+      .first();
+
+    if (overlapping) {
+      const error = new Error('Time entry overlaps with existing entry');
+      (error as any).statusCode = 400;
+      throw error;
+    }
+
     // Get or create time sheet for the period
     const timeSheetId = await this.getOrCreateTimeSheet(data.start_time, context.userId, context);
 
-    const { is_billable, ...dataWithoutBillable } = data;
+    const { is_billable, user_id, ...dataWithoutBillable } = data;
     const timeEntryData = {
       ...dataWithoutBillable,
-      user_id: context.userId,
+      user_id: context.userId, // Always use authenticated user
       billable_duration: is_billable !== false ? billableDuration : 0,
       time_sheet_id: timeSheetId,
       approval_status: 'DRAFT',
@@ -253,11 +282,15 @@ export class TimeEntryService extends BaseService<any> {
 
     // Check if entry is approved (prevent modification)
     if (existing.approval_status === 'APPROVED') {
-      throw new Error('Cannot modify approved time entries');
+      const error = new Error('Cannot modify approved time entries');
+      (error as any).statusCode = 400;
+      throw error;
     }
 
+    // Extract is_billable from data as it's not a database column
+    const { is_billable, ...dataWithoutBillable } = data;
     const updateData: any = {
-      ...data,
+      ...dataWithoutBillable,
       updated_at: new Date()
     };
 
@@ -266,7 +299,23 @@ export class TimeEntryService extends BaseService<any> {
       const startTime = new Date(data.start_time || existing.start_time);
       const endTime = new Date(data.end_time || existing.end_time);
       const durationMs = endTime.getTime() - startTime.getTime();
-      updateData.billable_duration = Math.round(durationMs / (1000 * 60));
+      const totalDuration = Math.round(durationMs / (1000 * 60));
+      
+      // If is_billable is explicitly set, use it; otherwise keep existing billable status
+      if (is_billable !== undefined) {
+        updateData.billable_duration = is_billable ? totalDuration : 0;
+      } else {
+        // Keep the same billable/non-billable ratio
+        const wasBillable = existing.billable_duration > 0;
+        updateData.billable_duration = wasBillable ? totalDuration : 0;
+      }
+    } else if (is_billable !== undefined) {
+      // is_billable changed but times didn't - recalculate billable_duration
+      const startTime = new Date(existing.start_time);
+      const endTime = new Date(existing.end_time);
+      const durationMs = endTime.getTime() - startTime.getTime();
+      const totalDuration = Math.round(durationMs / (1000 * 60));
+      updateData.billable_duration = is_billable ? totalDuration : 0;
     }
 
     // Recalculate billing if relevant fields changed
@@ -308,7 +357,9 @@ export class TimeEntryService extends BaseService<any> {
 
     // Check if entry is approved
     if (existing.approval_status === 'APPROVED') {
-      throw new Error('Cannot delete approved time entries');
+      const error = new Error('Cannot delete approved time entries');
+      (error as any).statusCode = 400;
+      throw error;
     }
 
     await knex(this.tableName)
