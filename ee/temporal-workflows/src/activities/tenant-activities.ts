@@ -3,13 +3,13 @@ import {
   createTenantInDB,
   setupTenantDataInDB,
   rollbackTenantInDB
-} from '../db/tenant-operations';
+} from '../db/tenant-operations.js';
 import type {
   CreateTenantActivityInput,
   CreateTenantActivityResult,
   SetupTenantDataActivityInput,
   SetupTenantDataActivityResult
-} from '../types/workflow-types';
+} from '../types/workflow-types.js';
 
 const logger = () => Context.current().log;
 

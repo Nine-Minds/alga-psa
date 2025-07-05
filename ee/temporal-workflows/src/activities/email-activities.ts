@@ -1,9 +1,9 @@
 import { Context } from '@temporalio/activity';
-import { emailService, type EmailParams } from '../services/email-service';
+import { emailService, type EmailParams } from '../services/email-service.js';
 import type {
   SendWelcomeEmailActivityInput,
   SendWelcomeEmailActivityResult
-} from '../types/workflow-types';
+} from '../types/workflow-types.js';
 
 const logger = () => Context.current().log;
 

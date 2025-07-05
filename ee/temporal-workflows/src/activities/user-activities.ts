@@ -2,11 +2,11 @@ import { Context } from '@temporalio/activity';
 import {
   createAdminUserInDB,
   rollbackUserInDB
-} from '../db/user-operations';
+} from '../db/user-operations.js';
 import type {
   CreateAdminUserActivityInput,
   CreateAdminUserActivityResult
-} from '../types/workflow-types';
+} from '../types/workflow-types.js';
 
 const logger = () => Context.current().log;
 
