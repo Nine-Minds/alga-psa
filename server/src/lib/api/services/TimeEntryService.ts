@@ -272,7 +272,7 @@ export class TimeEntryService extends BaseService<any> {
     const { knex } = await this.getKnex();
     const existing = await this.getById(id, context);
     if (!existing) {
-      throw new Error('Time entry not found');
+      return null;
     }
 
     // Check if user can update this entry
