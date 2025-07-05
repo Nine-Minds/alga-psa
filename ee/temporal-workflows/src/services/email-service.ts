@@ -204,8 +204,8 @@ export class ResendEmailService implements EmailServiceInterface {
         from: `${this.defaultFromName} <${this.defaultFromAddress}>`,
         to: validEmails,
         subject: params.subject,
-        html: params.html || undefined,
-        text: params.text || undefined,
+        html: params.html,
+        text: params.text || params.html?.replace(/<[^>]*>/g, '') || '', // Convert HTML to text if no text provided
         cc: params.cc ? (Array.isArray(params.cc) ? params.cc : [params.cc]) : undefined,
         bcc: params.bcc ? (Array.isArray(params.bcc) ? params.bcc : [params.bcc]) : undefined,
         attachments: params.attachments?.map(attachment => ({
