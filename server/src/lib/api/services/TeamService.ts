@@ -39,7 +39,7 @@ import {
   validateTeamCapacity
 } from '../schemas/teamSchemas';
 import { ListOptions } from '../controllers/BaseController';
-import { getMultipleUsersWithRoles, getUserById } from 'server/src/lib/actions/user-actions/userActions';
+// Removed user actions import - will query users directly
 // TeamModel removed - functionality implemented directly in service
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { 
@@ -178,14 +178,20 @@ export class TeamService extends BaseService<ITeam> {
       const enhancedTeams = await Promise.all(
         teams.map(async (team: any) => {
           const memberIds = await knex('team_members')
-            .where({ team_id: team.team_id, tenant: team.tenant })
+            .where({ 'team_members.team_id': team.team_id, 'team_members.tenant': team.tenant })
             .join('users', function() {
               this.on('team_members.user_id', '=', 'users.user_id')
                   .andOn('team_members.tenant', '=', 'users.tenant');
             })
             .where('users.is_inactive', false)
             .pluck('team_members.user_id');
-          const members = memberIds.length > 0 ? await getMultipleUsersWithRoles(memberIds) : [];
+          // Get user details for members
+          const members = memberIds.length > 0 
+            ? await knex('users')
+                .whereIn('user_id', memberIds)
+                .where('tenant', team.tenant)
+                .select('user_id', 'username', 'email', 'first_name', 'last_name')
+            : [];
           
           const teamData = {
             ...team,
@@ -254,14 +260,20 @@ export class TeamService extends BaseService<ITeam> {
   
       // Get team members
       const memberIds = await knex('team_members')
-        .where({ team_id: id, tenant: team.tenant })
+        .where({ 'team_members.team_id': id, 'team_members.tenant': team.tenant })
         .join('users', function() {
           this.on('team_members.user_id', '=', 'users.user_id')
               .andOn('team_members.tenant', '=', 'users.tenant');
         })
         .where('users.is_inactive', false)
         .pluck('team_members.user_id');
-      const members = memberIds.length > 0 ? await getMultipleUsersWithRoles(memberIds) : [];
+      // Get user details for members
+      const members = memberIds.length > 0 
+        ? await knex('users')
+            .whereIn('user_id', memberIds)
+            .where('tenant', context.tenant)
+            .select('user_id', 'username', 'email', 'first_name', 'last_name')
+        : [];
   
       let enhancedTeam: any = {
         ...team,
@@ -271,7 +283,10 @@ export class TeamService extends BaseService<ITeam> {
       // Add manager details if requested
       if (options.includeManager && team.manager_id) {
         try {
-          const manager = await getUserById(team.manager_id);
+          const manager = await knex('users')
+            .where({ user_id: team.manager_id, tenant: team.tenant })
+            .select('user_id', 'username', 'email', 'first_name', 'last_name')
+            .first();
           enhancedTeam.manager = manager;
         } catch (error) {
           logger.warn(`Failed to fetch manager details for team ${id}:`, error);
@@ -449,7 +464,7 @@ export class TeamService extends BaseService<ITeam> {
 
           // Validate manager is not a member
           const memberIds = await trx('team_members')
-            .where({ team_id: id, tenant: context.tenant })
+            .where({ 'team_members.team_id': id, 'team_members.tenant': context.tenant })
             .join('users', function() {
               this.on('team_members.user_id', '=', 'users.user_id')
                   .andOn('team_members.tenant', '=', 'users.tenant');
@@ -510,39 +525,8 @@ export class TeamService extends BaseService<ITeam> {
         throw new NotFoundError('Team not found or permission denied');
       }
 
-      // Check for dependencies
-      const [projectCount, taskCount] = await Promise.all([
-        trx('project_team_assignments')
-          .where({ team_id: id, tenant: context.tenant })
-          .count('* as count')
-          .first(),
-        trx('task_assignments')
-          .where({ team_id: id, tenant: context.tenant })
-          .count('* as count')
-          .first()
-      ]);
-
-      if (parseInt(projectCount?.count as string || '0') > 0 || parseInt(taskCount?.count as string || '0') > 0) {
-        throw new BadRequestError('Cannot delete team with active project or task assignments');
-      }
-
-      // Delete team members first
+      // Delete team members first (only table that exists)
       await trx('team_members')
-        .where({ team_id: id, tenant: context.tenant })
-        .del();
-
-      // Delete team permissions
-      await trx('team_permissions')
-        .where({ team_id: id, tenant: context.tenant })
-        .del();
-
-      // Delete team communication channels
-      await trx('team_communication_channels')
-        .where({ team_id: id, tenant: context.tenant })
-        .del();
-
-      // Delete team collaboration workspaces
-      await trx('team_collaboration_workspaces')
         .where({ team_id: id, tenant: context.tenant })
         .del();
 
@@ -1408,7 +1392,13 @@ export class TeamService extends BaseService<ITeam> {
     const enhancedTeams = await Promise.all(
       teams.map(async (team: any) => {
         const memberIds = await TeamModel.getMembers(knex, team.team_id);
-        const members = memberIds.length > 0 ? await getMultipleUsersWithRoles(memberIds) : [];
+        // Get user details for members
+      const members = memberIds.length > 0 
+        ? await knex('users')
+            .whereIn('user_id', memberIds)
+            .where('tenant', context.tenant)
+            .select('user_id', 'username', 'email', 'first_name', 'last_name')
+        : [];
         
         return { ...team, members } as ITeam;
       })
@@ -1739,7 +1729,7 @@ export class TeamService extends BaseService<ITeam> {
       .first();
     
     if (!team) {
-      throw new Error('Team not found or permission denied');
+      throw new NotFoundError('Team not found or permission denied');
     }
 
     // Get team members with user details
