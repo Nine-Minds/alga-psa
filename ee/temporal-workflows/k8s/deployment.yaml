@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: temporal-workflows-worker
-  namespace: default
+  namespace: temporal
   labels:
     app: temporal-workflows-worker
     component: worker
@@ -98,7 +98,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: temporal-workflows-worker
-  namespace: default
+  namespace: temporal
   labels:
     app: temporal-workflows-worker
     component: worker
@@ -117,19 +117,18 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: database-secrets
-  namespace: default
+  namespace: temporal
 type: Opaque
 data:
-  # Base64 encoded database URLs
-  # Example: echo -n "postgresql://user:pass@host:5432/db" | base64
-  database-url: cG9zdGdyZXNxbDovL3VzZXI6cGFzc0Bob3N0OjU0MzIvZGI=
-  admin-database-url: cG9zdGdyZXNxbDovL3VzZXI6cGFzc0Bob3N0OjU0MzIvZGI=
+  # Base64 encoded database URLs for Alga PSA database
+  database-url: cG9zdGdyZXNxbDovL2FwcF91c2VyOjEyMUVENzY5LTMzQjctNDI1Mi04RDdBLTIyMjNDMTQ5MDI5OEBwZ3ZlY3Rvci5zdGFja2dyZXMtcGd2ZWN0b3Iuc3ZjLmNsdXN0ZXIubG9jYWw6NTQzMi9zZXJ2ZXI=
+  admin-database-url: cG9zdGdyZXNxbDovL3Bvc3RncmVzOmQ1NjItMzRmYi00OTMwLWIwNUBwZ3ZlY3Rvci5zdGFja2dyZXMtcGd2ZWN0b3Iuc3ZjLmNsdXN0ZXIubG9jYWw6NTQzMi9zZXJ2ZXI=
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: temporal-workflows-config
-  namespace: default
+  namespace: temporal
 data:
   temporal-address: "temporal-frontend.temporal.svc.cluster.local:7233"
   temporal-namespace: "default"
@@ -140,7 +139,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: temporal-workflows-worker-pdb
-  namespace: default
+  namespace: temporal
 spec:
   minAvailable: 1
   selector:
@@ -152,7 +151,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: temporal-workflows-worker-hpa
-  namespace: default
+  namespace: temporal
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
