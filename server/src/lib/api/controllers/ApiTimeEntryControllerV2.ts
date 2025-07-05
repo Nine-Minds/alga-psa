@@ -818,7 +818,7 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
           });
         });
 
-        return createSuccessResponse(result);
+        return createSuccessResponse({ created_count: result.filter(r => r.success).length }, 201);
       } catch (error) {
         return handleApiError(error);
       }
@@ -889,11 +889,7 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
 
         // Update entries within tenant context
         const result = await runWithTenant(tenantId!, async () => {
-          const updates = bulkData.entry_ids.map((id: string) => ({
-            entry_id: id,
-            data: bulkData.updates
-          }));
-          return await this.timeEntryService.bulkUpdateTimeEntries({ entries: updates }, {
+          return await this.timeEntryService.bulkUpdateTimeEntries(bulkData, {
             userId: user.user_id,
             user,
             tenant: tenantId!,

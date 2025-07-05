@@ -68,10 +68,14 @@ export class TimeEntryService extends BaseService<any> {
       query.where(`${this.tableName}.end_time`, '<=', filters.end_time_to);
     }
     if (filters.date_from) {
-      query.whereRaw(`${this.tableName}.start_time::date >= ?::date`, [filters.date_from]);
+      // Use timezone-aware date comparison to handle UTC timestamps correctly
+      const startOfDay = new Date(filters.date_from + 'T00:00:00.000Z');
+      query.where(`${this.tableName}.start_time`, '>=', startOfDay.toISOString());
     }
     if (filters.date_to) {
-      query.whereRaw(`${this.tableName}.start_time::date <= ?::date`, [filters.date_to]);
+      // Include the entire end date by going to the end of the day
+      const endOfDay = new Date(filters.date_to + 'T23:59:59.999Z');
+      query.where(`${this.tableName}.start_time`, '<=', endOfDay.toISOString());
     }
     if (filters.time_sheet_id) {
       query.where(`${this.tableName}.time_sheet_id`, filters.time_sheet_id);
@@ -103,11 +107,14 @@ export class TimeEntryService extends BaseService<any> {
     }
   }
 
-  async list(options: ListOptions, context: ServiceContext, filters?: TimeEntryFilterData): Promise<ListResult<any>> {
+  async list(options: ListOptions, context: ServiceContext): Promise<ListResult<any>> {
     const { knex } = await this.getKnex();
     const query = knex(this.tableName)
       .where(`${this.tableName}.tenant`, context.tenant);
 
+    // Extract filters from options
+    const filters = options.filters as TimeEntryFilterData;
+    
     // Apply filters
     this.applyFilters(query, filters, knex);
 
@@ -854,10 +861,12 @@ export class TimeEntryService extends BaseService<any> {
       query.whereIn(`${this.tableName}.service_id`, searchData.service_ids);
     }
     if (searchData.date_from) {
-      query.where(knex.raw('DATE(start_time)'), '>=', searchData.date_from);
+      const startOfDay = new Date(searchData.date_from + 'T00:00:00.000Z');
+      query.where(`${this.tableName}.start_time`, '>=', startOfDay.toISOString());
     }
     if (searchData.date_to) {
-      query.where(knex.raw('DATE(start_time)'), '<=', searchData.date_to);
+      const endOfDay = new Date(searchData.date_to + 'T23:59:59.999Z');
+      query.where(`${this.tableName}.start_time`, '<=', endOfDay.toISOString());
     }
     if (searchData.billable_only) {
       query.where(`${this.tableName}.billable_duration`, '>', 0);
@@ -895,10 +904,12 @@ export class TimeEntryService extends BaseService<any> {
 
     // Apply date filters if provided
     if (filters?.date_from) {
-      query = query.where(knex.raw('DATE(start_time)'), '>=', filters.date_from);
+      const startOfDay = new Date(filters.date_from + 'T00:00:00.000Z');
+      query = query.where(`${this.tableName}.start_time`, '>=', startOfDay.toISOString());
     }
     if (filters?.date_to) {
-      query = query.where(knex.raw('DATE(start_time)'), '<=', filters.date_to);
+      const endOfDay = new Date(filters.date_to + 'T23:59:59.999Z');
+      query = query.where(`${this.tableName}.start_time`, '<=', endOfDay.toISOString());
     }
 
     const [basicStats, typeStats, statusStats, userStats, serviceStats, topWorkItems] = await Promise.all([

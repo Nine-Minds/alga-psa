@@ -787,6 +787,13 @@ describe('Time Entries API E2E Tests', () => {
 
   describe('Bulk Operations', () => {
     it('should bulk create time entries', async () => {
+      // Create time period for January 2024
+      await createTestTimePeriod(env.db, env.tenant, {
+        start_date: new Date('2024-01-01'),
+        end_date: new Date('2024-01-31'),
+        is_closed: false
+      });
+
       const ticket = await createTestTicket(env.db, env.tenant, {
         company_id: env.companyId,
         entered_by: env.userId,
@@ -800,7 +807,6 @@ describe('Time Entries API E2E Tests', () => {
           work_item_id: ticket.ticket_id,
           work_item_type: 'ticket',
           service_id: service.service_id,
-          user_id: env.userId,
           start_time: new Date('2024-01-01T09:00:00').toISOString(),
           end_time: new Date('2024-01-01T11:00:00').toISOString(),
           notes: 'Bulk entry 1',
@@ -810,7 +816,6 @@ describe('Time Entries API E2E Tests', () => {
           work_item_id: ticket.ticket_id,
           work_item_type: 'ticket',
           service_id: service.service_id,
-          user_id: env.userId,
           start_time: new Date('2024-01-02T09:00:00').toISOString(),
           end_time: new Date('2024-01-02T12:00:00').toISOString(),
           notes: 'Bulk entry 2',
@@ -834,7 +839,7 @@ describe('Time Entries API E2E Tests', () => {
       const service = await createTestService(env.db, env.tenant);
       
       // Create entries
-      const entries = [];
+      const entryIds = [];
       for (let i = 0; i < 2; i++) {
         const entry = await createTestTimeEntry(env.db, env.tenant, {
           work_item_id: ticket.ticket_id,
@@ -842,15 +847,17 @@ describe('Time Entries API E2E Tests', () => {
           service_id: service.service_id,
           user_id: env.userId
         });
-        entries.push(entry.entry_id);
+        entryIds.push(entry.entry_id);
       }
 
       const response = await env.apiClient.put(`${API_BASE}/bulk`, {
-        entry_ids: entries,
-        updates: {
-          is_billable: false,
-          notes: 'Bulk updated'
-        }
+        entries: entryIds.map(id => ({
+          entry_id: id,
+          data: {
+            is_billable: false,
+            notes: 'Bulk updated'
+          }
+        }))
       });
       
       assertSuccess(response);
@@ -909,7 +916,21 @@ describe('Time Entries API E2E Tests', () => {
 
   describe('Permissions', () => {
     it('should enforce read permissions for listing', async () => {
-      // Create API key without permissions
+      // Create a new user without any roles
+      const restrictedUserId = uuidv4();
+      await env.db('users').insert({
+        user_id: restrictedUserId,
+        tenant: env.tenant,
+        username: `restricted_${restrictedUserId}`,
+        email: `restricted${restrictedUserId}@example.com`,
+        first_name: 'Restricted',
+        last_name: 'User',
+        hashed_password: 'dummy',
+        created_at: new Date(),
+        user_type: 'internal'
+      });
+      
+      // Create API key for the restricted user
       const plaintextKey = `test_${uuidv4()}`;
       const hashedKey = require('crypto').createHash('sha256').update(plaintextKey).digest('hex');
       
@@ -917,7 +938,7 @@ describe('Time Entries API E2E Tests', () => {
         .insert({
           api_key_id: uuidv4(),
           api_key: hashedKey,
-          user_id: env.userId,
+          user_id: restrictedUserId,
           tenant: env.tenant,
           created_at: new Date(),
           active: true
@@ -934,7 +955,21 @@ describe('Time Entries API E2E Tests', () => {
     });
 
     it('should enforce create permissions', async () => {
-      // Create API key without permissions
+      // Create a new user without any roles
+      const restrictedUserId = uuidv4();
+      await env.db('users').insert({
+        user_id: restrictedUserId,
+        tenant: env.tenant,
+        username: `restricted_${restrictedUserId}`,
+        email: `restricted${restrictedUserId}@example.com`,
+        first_name: 'Restricted',
+        last_name: 'User',
+        hashed_password: 'dummy',
+        created_at: new Date(),
+        user_type: 'internal'
+      });
+      
+      // Create API key for the restricted user
       const plaintextKey = `test_${uuidv4()}`;
       const hashedKey = require('crypto').createHash('sha256').update(plaintextKey).digest('hex');
       
@@ -942,7 +977,7 @@ describe('Time Entries API E2E Tests', () => {
         .insert({
           api_key_id: uuidv4(),
           api_key: hashedKey,
-          user_id: env.userId,
+          user_id: restrictedUserId,
           tenant: env.tenant,
           created_at: new Date(),
           active: true
@@ -975,7 +1010,21 @@ describe('Time Entries API E2E Tests', () => {
         user_id: env.userId
       });
 
-      // Create API key without permissions
+      // Create a new user without any roles
+      const restrictedUserId = uuidv4();
+      await env.db('users').insert({
+        user_id: restrictedUserId,
+        tenant: env.tenant,
+        username: `restricted_${restrictedUserId}`,
+        email: `restricted${restrictedUserId}@example.com`,
+        first_name: 'Restricted',
+        last_name: 'User',
+        hashed_password: 'dummy',
+        created_at: new Date(),
+        user_type: 'internal'
+      });
+      
+      // Create API key for the restricted user
       const plaintextKey = `test_${uuidv4()}`;
       const hashedKey = require('crypto').createHash('sha256').update(plaintextKey).digest('hex');
       
@@ -983,7 +1032,7 @@ describe('Time Entries API E2E Tests', () => {
         .insert({
           api_key_id: uuidv4(),
           api_key: hashedKey,
-          user_id: env.userId,
+          user_id: restrictedUserId,
           tenant: env.tenant,
           created_at: new Date(),
           active: true
@@ -1016,7 +1065,21 @@ describe('Time Entries API E2E Tests', () => {
         user_id: env.userId
       });
 
-      // Create API key without permissions
+      // Create a new user without any roles
+      const restrictedUserId = uuidv4();
+      await env.db('users').insert({
+        user_id: restrictedUserId,
+        tenant: env.tenant,
+        username: `restricted_${restrictedUserId}`,
+        email: `restricted${restrictedUserId}@example.com`,
+        first_name: 'Restricted',
+        last_name: 'User',
+        hashed_password: 'dummy',
+        created_at: new Date(),
+        user_type: 'internal'
+      });
+      
+      // Create API key for the restricted user
       const plaintextKey = `test_${uuidv4()}`;
       const hashedKey = require('crypto').createHash('sha256').update(plaintextKey).digest('hex');
       
@@ -1024,7 +1087,7 @@ describe('Time Entries API E2E Tests', () => {
         .insert({
           api_key_id: uuidv4(),
           api_key: hashedKey,
-          user_id: env.userId,
+          user_id: restrictedUserId,
           tenant: env.tenant,
           created_at: new Date(),
           active: true
