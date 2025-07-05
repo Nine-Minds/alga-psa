@@ -36,23 +36,23 @@ spec:
           value: "default"
         - name: TEMPORAL_TASK_QUEUE
           value: "tenant-workflows"
-        # Database configuration using the format expected by the worker code
-        - name: DB_HOST
+        # Alga PSA Database configuration (StackGres) - used by tenant/user activities
+        - name: ALGA_DB_HOST
           value: "pgvector.stackgres-pgvector.svc.cluster.local"
-        - name: DB_PORT
+        - name: ALGA_DB_PORT
           value: "5432"
-        - name: DB_NAME_SERVER
+        - name: ALGA_DB_NAME
           value: "server"
-        - name: DB_USER_SERVER
+        - name: ALGA_DB_USER
           value: "app_user"
-        - name: DB_PASSWORD_SERVER
+        - name: ALGA_DB_PASSWORD
           valueFrom:
             secretKeyRef:
               name: database-secrets
               key: server-password
-        - name: DB_USER_ADMIN
+        - name: ALGA_DB_ADMIN_USER
           value: "postgres"
-        - name: DB_PASSWORD_ADMIN
+        - name: ALGA_DB_ADMIN_PASSWORD
           valueFrom:
             secretKeyRef:
               name: database-secrets

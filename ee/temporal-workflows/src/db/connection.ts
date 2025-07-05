@@ -9,14 +9,14 @@ interface DatabaseConfig {
   password: string;
 }
 
-// Get database configuration from environment variables (Alga format)
+// Get database configuration from environment variables (Alga PSA format)
 function getDatabaseConfig(): DatabaseConfig {
   return {
-    host: process.env.DB_HOST || 'pgbouncer',
-    port: parseInt(process.env.DB_PORT || '6432'),
-    database: process.env.DB_NAME_SERVER || 'server',
-    user: process.env.DB_USER_SERVER || 'postgres',
-    password: process.env.DB_PASSWORD_SERVER || 'postpass123',
+    host: process.env.ALGA_DB_HOST || process.env.DB_HOST || 'pgvector.stackgres-pgvector.svc.cluster.local',
+    port: parseInt(process.env.ALGA_DB_PORT || process.env.DB_PORT || '5432'),
+    database: process.env.ALGA_DB_NAME || process.env.DB_NAME_SERVER || 'server',
+    user: process.env.ALGA_DB_USER || process.env.DB_USER_SERVER || 'app_user',
+    password: process.env.ALGA_DB_PASSWORD || process.env.DB_PASSWORD_SERVER || '',
   };
 }
 
@@ -37,11 +37,11 @@ let adminDbPool: Pool | null = null;
 export function getAdminDatabase(): Pool {
   if (!adminDbPool) {
     const config = getDatabaseConfig();
-    // Use admin credentials if available (from Alga .env)
+    // Use admin credentials if available (Alga PSA admin)
     const adminConfig = {
       ...config,
-      user: process.env.DB_USER_ADMIN || config.user,
-      password: process.env.DB_PASSWORD_ADMIN || config.password,
+      user: process.env.ALGA_DB_ADMIN_USER || process.env.DB_USER_ADMIN || 'postgres',
+      password: process.env.ALGA_DB_ADMIN_PASSWORD || process.env.DB_PASSWORD_ADMIN || config.password,
     };
     adminDbPool = new Pool(adminConfig);
   }
