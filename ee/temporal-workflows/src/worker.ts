@@ -1,6 +1,6 @@
 import { Worker, NativeConnection } from '@temporalio/worker';
 import { createLogger, format, transports } from 'winston';
-import * as activities from './activities';
+import * as activities from './activities/index.js';
 import * as dotenv from 'dotenv';
 
 // Load environment variables
