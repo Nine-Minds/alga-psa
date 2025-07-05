@@ -1,4 +1,5 @@
 import { Context } from '@temporalio/activity';
+import { Resend } from 'resend';
 
 const logger = () => Context.current().log;
 
@@ -160,6 +161,111 @@ export class MockEmailService implements EmailServiceInterface {
 }
 
 /**
+ * Resend Email Service - Production implementation using Resend API
+ */
+export class ResendEmailService implements EmailServiceInterface {
+  private resend: Resend;
+  private defaultFromAddress: string;
+  private defaultFromName: string;
+
+  constructor(config: {
+    apiKey: string;
+    defaultFromAddress?: string;
+    defaultFromName?: string;
+  }) {
+    this.resend = new Resend(config.apiKey);
+    this.defaultFromAddress = config.defaultFromAddress || 'noreply@example.com';
+    this.defaultFromName = config.defaultFromName || 'System';
+  }
+
+  async sendEmail(params: EmailParams): Promise<EmailResult> {
+    const log = logger();
+    
+    // Validate inputs
+    const recipients = Array.isArray(params.to) ? params.to : [params.to];
+    const validEmails = recipients.filter(email => this.validateEmail(email));
+    const invalidEmails = recipients.filter(email => !this.validateEmail(email));
+
+    if (validEmails.length === 0) {
+      throw new Error('No valid email addresses provided');
+    }
+
+    if (!params.subject?.trim()) {
+      throw new Error('Email subject is required');
+    }
+
+    if (!params.html?.trim() && !params.text?.trim()) {
+      throw new Error('Email body (HTML or text) is required');
+    }
+
+    try {
+      // Prepare Resend email data
+      const emailData = {
+        from: `${this.defaultFromName} <${this.defaultFromAddress}>`,
+        to: validEmails,
+        subject: params.subject,
+        html: params.html || undefined,
+        text: params.text || undefined,
+        cc: params.cc ? (Array.isArray(params.cc) ? params.cc : [params.cc]) : undefined,
+        bcc: params.bcc ? (Array.isArray(params.bcc) ? params.bcc : [params.bcc]) : undefined,
+        attachments: params.attachments?.map(attachment => ({
+          filename: attachment.filename,
+          content: attachment.content,
+          type: attachment.contentType,
+          disposition: attachment.disposition
+        })),
+        tags: params.metadata ? [
+          { name: 'workflow', value: params.metadata.workflowType || 'unknown' },
+          { name: 'email_type', value: params.metadata.emailType || 'unknown' },
+          { name: 'tenant_id', value: params.metadata.tenantId || 'unknown' }
+        ] : undefined
+      };
+
+      // Send email via Resend
+      const result = await this.resend.emails.send(emailData);
+
+      log.info('Email sent successfully via Resend', {
+        messageId: result.data?.id,
+        to: validEmails,
+        subject: params.subject,
+        validRecipients: validEmails.length,
+        invalidRecipients: invalidEmails.length,
+        hasHtml: !!params.html,
+        hasText: !!params.text,
+        metadata: params.metadata
+      });
+
+      return {
+        messageId: result.data?.id || 'unknown',
+        accepted: validEmails,
+        rejected: invalidEmails,
+        pending: []
+      };
+
+    } catch (error) {
+      log.error('Failed to send email via Resend', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        to: validEmails,
+        subject: params.subject,
+        resendError: error
+      });
+      throw error;
+    }
+  }
+
+  validateEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+
+  getEmailTemplate(templateName: string): EmailTemplate | null {
+    // Templates are handled in the activities layer
+    // This could be extended to support external template services
+    return null;
+  }
+}
+
+/**
  * Production Email Service adapter
  * This would integrate with your actual email service (AWS SES, SendGrid, etc.)
  */
@@ -242,7 +348,7 @@ export class ProductionEmailService implements EmailServiceInterface {
  * Creates the appropriate email service based on environment configuration
  */
 export function createEmailService(config?: {
-  provider?: 'mock' | 'aws-ses' | 'sendgrid' | 'smtp';
+  provider?: 'mock' | 'resend' | 'aws-ses' | 'sendgrid' | 'smtp';
   options?: Record<string, any>;
 }): EmailServiceInterface {
   const provider = config?.provider || process.env.EMAIL_PROVIDER || 'mock';
@@ -253,6 +359,17 @@ export function createEmailService(config?: {
       return new MockEmailService({
         failureRate: options.failureRate || 0,
         delayMs: options.delayMs || 100
+      });
+    
+    case 'resend':
+      const apiKey = process.env.RESEND_API_KEY;
+      if (!apiKey) {
+        throw new Error('RESEND_API_KEY environment variable is required for resend provider');
+      }
+      return new ResendEmailService({
+        apiKey,
+        defaultFromAddress: process.env.RESEND_DEFAULT_FROM_ADDRESS || 'noreply@example.com',
+        defaultFromName: process.env.RESEND_DEFAULT_FROM_NAME || 'System'
       });
     
     case 'aws-ses':
