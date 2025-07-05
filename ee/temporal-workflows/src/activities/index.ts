@@ -1,3 +1,3 @@
-export * from './tenant-activities';
-export * from './user-activities';
-export * from './email-activities';
+export * from './tenant-activities.js';
+export * from './user-activities.js';
+export * from './email-activities.js';
