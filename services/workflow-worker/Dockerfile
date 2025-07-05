@@ -28,9 +28,10 @@ COPY shared/ ./shared/
 WORKDIR /app/shared
 RUN npm run build 
 
-# Create node_modules/@alga-psa directory and symlink shared package
+# Create the shared package symlink after npm install
 WORKDIR /app/services/workflow-worker
-RUN mkdir -p node_modules/@alga-psa && \
+RUN npm install && \
+    mkdir -p node_modules/@alga-psa && \
     ln -sf ../../../shared node_modules/@alga-psa/shared
 
 WORKDIR /app

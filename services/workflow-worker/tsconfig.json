@@ -10,6 +10,8 @@
     "baseUrl": ".",
     "paths": {
       "@shared/*": ["../../shared/*"],
+      "@alga-psa/shared/*": ["../../shared/*"],
+      "@alga-psa/shared": ["../../shared"]
     },
     "rootDir": "../.."
   },
