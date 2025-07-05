@@ -25,8 +25,8 @@ COPY tsconfig.base.json ./
 COPY services/workflow-worker/ ./services/workflow-worker/
 COPY shared/ ./shared/
 
-# Install workflow-worker dependencies
-WORKDIR /app/services/workflow-worker
+# Install all workspace dependencies from root
+WORKDIR /app
 RUN npm config set cache /tmp/.npm && \
     npm install
 
