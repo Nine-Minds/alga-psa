@@ -25,6 +25,17 @@ describe('Time Entries API E2E Tests', () => {
 
   beforeEach(async () => {
     env = await setupE2ETestEnvironment();
+    
+    // Create time periods for testing
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    
+    await createTestTimePeriod(env.db, env.tenant, {
+      start_date: startOfMonth,
+      end_date: endOfMonth,
+      is_closed: false
+    });
   });
 
   afterEach(async () => {
@@ -237,7 +248,6 @@ describe('Time Entries API E2E Tests', () => {
           service_id: service.service_id,
           user_id: env.userId,
           approval_status: 'APPROVED',
-          approved_by: env.userId,
           approved_at: new Date()
         });
 
@@ -293,7 +303,6 @@ describe('Time Entries API E2E Tests', () => {
           service_id: service.service_id,
           user_id: env.userId,
           approval_status: 'APPROVED',
-          approved_by: env.userId,
           approved_at: new Date()
         });
 

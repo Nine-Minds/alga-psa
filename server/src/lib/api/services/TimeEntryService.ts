@@ -109,12 +109,12 @@ export class TimeEntryService extends BaseService<any> {
 
     // Add joins for additional data
     query.leftJoin('users', `${this.tableName}.user_id`, 'users.user_id')
-      .leftJoin('services', `${this.tableName}.service_id`, 'services.service_id')
+      .leftJoin('service_catalog', `${this.tableName}.service_id`, 'service_catalog.service_id')
       .leftJoin('time_sheets', `${this.tableName}.time_sheet_id`, 'time_sheets.id')
       .select(
         `${this.tableName}.*`,
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
-        'services.service_name',
+        'service_catalog.service_name',
         knex.raw(`ROUND(${this.tableName}.billable_duration / 60.0, 2) as duration_hours`),
         knex.raw(`CASE WHEN ${this.tableName}.billable_duration > 0 THEN true ELSE false END as is_billable`)
       );
@@ -148,7 +148,7 @@ export class TimeEntryService extends BaseService<any> {
     const { knex } = await this.getKnex();
     const timeEntry = await knex(this.tableName)
       .leftJoin('users', `${this.tableName}.user_id`, 'users.user_id')
-      .leftJoin('services', `${this.tableName}.service_id`, 'services.service_id')
+      .leftJoin('service_catalog', `${this.tableName}.service_id`, 'service_catalog.service_id')
       .leftJoin('time_sheets', `${this.tableName}.time_sheet_id`, 'time_sheets.id')
       .where({
         [`${this.tableName}.${this.primaryKey}`]: id,
@@ -157,7 +157,7 @@ export class TimeEntryService extends BaseService<any> {
       .select(
         `${this.tableName}.*`,
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
-        'services.service_name',
+        'service_catalog.service_name',
         knex.raw(`ROUND(${this.tableName}.billable_duration / 60.0, 2) as duration_hours`),
         knex.raw(`CASE WHEN ${this.tableName}.billable_duration > 0 THEN true ELSE false END as is_billable`)
       )
@@ -200,10 +200,11 @@ export class TimeEntryService extends BaseService<any> {
     // Get or create time sheet for the period
     const timeSheetId = await this.getOrCreateTimeSheet(data.start_time, context.userId, context);
 
+    const { is_billable, ...dataWithoutBillable } = data;
     const timeEntryData = {
-      ...data,
+      ...dataWithoutBillable,
       user_id: context.userId,
-      billable_duration: data.is_billable !== false ? billableDuration : 0,
+      billable_duration: is_billable !== false ? billableDuration : 0,
       time_sheet_id: timeSheetId,
       approval_status: 'DRAFT',
       tenant: context.tenant,
@@ -582,7 +583,7 @@ export class TimeEntryService extends BaseService<any> {
           if (field === 'user_name') {
             this.orWhere(knex.raw(`CONCAT(users.first_name, ' ', users.last_name)`), 'ilike', `%${searchData.query}%`);
           } else if (field === 'service_name') {
-            this.orWhere('services.service_name', 'ilike', `%${searchData.query}%`);
+            this.orWhere('service_catalog.service_name', 'ilike', `%${searchData.query}%`);
           } else {
             this.orWhere(`time_entries.${field}`, 'ilike', `%${searchData.query}%`);
           }
@@ -618,11 +619,11 @@ export class TimeEntryService extends BaseService<any> {
 
     // Add joins
     query.leftJoin('users', `${this.tableName}.user_id`, 'users.user_id')
-      .leftJoin('services', `${this.tableName}.service_id`, 'services.service_id')
+      .leftJoin('service_catalog', `${this.tableName}.service_id`, 'service_catalog.service_id')
       .select(
         `${this.tableName}.*`,
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
-        'services.service_name'
+        'service_catalog.service_name'
       )
       .limit(searchData.limit || 25);
 
@@ -690,9 +691,7 @@ export class TimeEntryService extends BaseService<any> {
           period_id: period.period_id,
           user_id: userId,
           approval_status: 'DRAFT',
-          tenant: context.tenant,
-          created_at: new Date(),
-          updated_at: new Date()
+          tenant: context.tenant
         })
         .returning('*');
       
@@ -719,7 +718,6 @@ export class TimeEntryService extends BaseService<any> {
     return {
       billing_plan_id: null,
       tax_rate_id: null,
-      tax_percentage: 0,
       tax_region: timeEntry.tax_region || null
     };
   }
@@ -769,9 +767,9 @@ export class TimeEntryService extends BaseService<any> {
 
   private async getServiceDetails(serviceId: string, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
-    return knex('services')
+    return knex('service_catalog')
       .where({ service_id: serviceId, tenant: context.tenant })
-      .select('service_id', 'service_name', 'default_rate', 'billing_unit')
+      .select('service_id', 'service_name', 'default_rate', 'unit_of_measure')
       .first();
   }
 
@@ -877,9 +875,9 @@ export class TimeEntryService extends BaseService<any> {
   private async getEntriesByService(query: Knex.QueryBuilder, context: ServiceContext): Promise<Record<string, number>> {
     const { knex } = await this.getKnex();
     const results = await query
-      .leftJoin('services', this.tableName + '.service_id', 'services.service_id')
-      .groupBy('services.service_name')
-      .select('services.service_name', knex.raw('COUNT(*) as count'))
+      .leftJoin('service_catalog', this.tableName + '.service_id', 'service_catalog.service_id')
+      .groupBy('service_catalog.service_name')
+      .select('service_catalog.service_name', knex.raw('COUNT(*) as count'))
       .limit(10);
 
     return results.reduce((acc: any, item: any) => {

@@ -87,10 +87,27 @@ export async function setupE2ETestEnvironment(options: {
           .where('tenant', tenantId)
           .delete();
           
+        // Clean up time sheets before time periods
+        await db('time_sheets')
+          .where('tenant', tenantId)
+          .delete();
+          
+        // Clean up time periods and types
+        await db('time_periods')
+          .where('tenant', tenantId)
+          .delete();
+          
+          
         // Clean up service catalog
         await db('service_catalog')
           .where('tenant', tenantId)
           .delete();
+          
+        // Clean up service types
+        await db('service_types')
+          .where('tenant', tenantId)
+          .delete()
+          .catch(() => {}); // Ignore if table doesn't exist
           
         // Clean up tickets first (they reference many other tables)
         await db('tickets')
