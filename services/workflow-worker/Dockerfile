@@ -28,12 +28,10 @@ COPY shared/ ./shared/
 WORKDIR /app/shared
 RUN npm run build 
 
-# Create the shared package symlink after npm install
+# Install workflow-worker dependencies
 WORKDIR /app/services/workflow-worker
 RUN npm config set cache /tmp/.npm && \
-    npm install && \
-    mkdir -p node_modules/@alga-psa && \
-    ln -sf ../../../shared node_modules/@alga-psa/shared
+    npm install
 
 WORKDIR /app
 
@@ -44,12 +42,9 @@ RUN npm install -g typescript @types/node
 WORKDIR /app/services/workflow-worker
 RUN npm run build
 
-WORKDIR /app/services/workflow-worker
-
 # Copy and make entrypoint executable
 COPY services/workflow-worker/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
-
 
 ENV NODE_ENV=production
 ENTRYPOINT ["/app/entrypoint.sh"]

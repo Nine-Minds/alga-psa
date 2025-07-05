@@ -8,7 +8,7 @@ import { getActionRegistry, type ActionRegistry, type ActionExecutionContext } f
 import logger from '@shared/core/logger.js';
 import { getTaskInboxService } from '@shared/workflow/core/taskInboxService.js';
 import axios from 'axios'; // For QBO API calls
-import { getSecretProviderInstance } from '@alga-psa/shared/core';
+import { getSecretProviderInstance } from '@shared/core';
 
 // --- Mock Secret Retrieval ---
 
