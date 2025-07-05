@@ -36,6 +36,28 @@ spec:
           value: "default"
         - name: TEMPORAL_TASK_QUEUE
           value: "tenant-workflows"
+        # Database configuration using the format expected by the worker code
+        - name: DB_HOST
+          value: "pgvector.stackgres-pgvector.svc.cluster.local"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME_SERVER
+          value: "server"
+        - name: DB_USER_SERVER
+          value: "app_user"
+        - name: DB_PASSWORD_SERVER
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: server-password
+        - name: DB_USER_ADMIN
+          value: "postgres"
+        - name: DB_PASSWORD_ADMIN
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: admin-password
+        # Legacy environment variables for compatibility
         - name: DATABASE_URL
           valueFrom:
             secretKeyRef:
