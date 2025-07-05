@@ -18,9 +18,11 @@ spec:
         app: temporal-workflows-worker
         component: worker
     spec:
+      imagePullSecrets:
+      - name: harbor-credentials
       containers:
       - name: worker
-        image: your-registry/temporal-workflows:latest
+        image: harbor.nineminds.com/nineminds/temporal-worker:e90ce14
         imagePullPolicy: Always
         command: ["npm", "run", "start"]
         env:
@@ -44,6 +46,11 @@ spec:
             secretKeyRef:
               name: database-secrets
               key: admin-database-url
+        - name: PAYLOADCMS_DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: payloadcms-database-url
         - name: ENABLE_HEALTH_CHECK
           value: "true"
         - name: HEALTH_CHECK_PORT
