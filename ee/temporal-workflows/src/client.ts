@@ -1,11 +1,11 @@
 import { Client, Connection } from '@temporalio/client';
 import { createLogger, format, transports } from 'winston';
-import { tenantCreationWorkflow, healthCheckWorkflow } from './workflows';
+import { tenantCreationWorkflow, healthCheckWorkflow } from './workflows/index.js';
 import type { 
   TenantCreationInput, 
   TenantCreationResult,
   TenantCreationWorkflowState 
-} from './types/workflow-types';
+} from './types/workflow-types.js';
 import * as dotenv from 'dotenv';
 
 // Load environment variables

@@ -5,7 +5,7 @@ import type {
   CreateTenantActivityResult,
   SetupTenantDataActivityInput,
   SetupTenantDataActivityResult
-} from '../types/workflow-types';
+} from '../types/workflow-types.js';
 
 const logger = () => Context.current().log;
 

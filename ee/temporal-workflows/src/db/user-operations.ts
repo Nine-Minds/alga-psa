@@ -3,7 +3,7 @@ import { getMainDatabase, getAdminDatabase, executeQuery, executeTransaction } f
 import type {
   CreateAdminUserActivityInput,
   CreateAdminUserActivityResult
-} from '../types/workflow-types';
+} from '../types/workflow-types.js';
 
 const logger = () => Context.current().log;
 

@@ -1,5 +1,5 @@
 import { proxyActivities } from '@temporalio/workflow';
-import type { SendWelcomeEmailActivityInput, SendWelcomeEmailActivityResult } from '../types/workflow-types';
+import type { SendWelcomeEmailActivityInput, SendWelcomeEmailActivityResult } from '../types/workflow-types.js';
 
 // Define activity proxies for the test
 const { generateTemporaryPassword, sendWelcomeEmail } = proxyActivities<{

@@ -18,7 +18,7 @@ import type {
   SetupTenantDataActivityResult,
   SendWelcomeEmailActivityInput,
   SendWelcomeEmailActivityResult
-} from '../types/workflow-types';
+} from '../types/workflow-types.js';
 
 // Define activity proxies with appropriate timeouts and retry policies
 const activities = proxyActivities<{

@@ -1,9 +1,9 @@
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 import { Client, Connection } from '@temporalio/client';
-import * as activities from '../activities';
-import { tenantCreationWorkflow } from '../workflows';
-import type { TenantCreationInput, TenantCreationResult } from '../types/workflow-types';
+import * as activities from '../activities/index.js';
+import { tenantCreationWorkflow } from '../workflows/index.js';
+import type { TenantCreationInput, TenantCreationResult } from '../types/workflow-types.js';
 
 export interface TestTemporalClient {
   startTenantCreation: (input: TenantCreationInput) => Promise<{

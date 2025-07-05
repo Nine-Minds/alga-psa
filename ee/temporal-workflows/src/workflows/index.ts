@@ -1,2 +1,2 @@
-export * from './tenant-creation-workflow';
-export * from './test-email-workflow';
+export * from './tenant-creation-workflow.js';
+export * from './test-email-workflow.js';
