@@ -178,12 +178,50 @@ describe('Time Entries API E2E Tests', () => {
       });
 
       it('should not return time entries from other tenants', async () => {
-        // Create another tenant and time entry
+        // Create another tenant with proper setup
         const otherTenant = uuidv4();
+        const otherCompanyId = uuidv4();
+        const otherUserId = uuidv4();
+        
+        // Create the other tenant
+        await env.db('tenants').insert({
+          tenant: otherTenant,
+          company_name: `Other Tenant ${otherTenant}`,
+          phone_number: '555-0200',
+          email: `other-${otherTenant.substring(0, 8)}@example.com`,
+          created_at: new Date(),
+          updated_at: new Date(),
+          payment_platform_id: `test-platform-${otherTenant.substring(0, 8)}`,
+          payment_method_id: `test-method-${otherTenant.substring(0, 8)}`,
+          auth_service_id: `test-auth-${otherTenant.substring(0, 8)}`,
+          plan: 'test'
+        });
+        
+        // Create company for other tenant
+        await env.db('companies').insert({
+          company_id: otherCompanyId,
+          tenant: otherTenant,
+          company_name: 'Other Company',
+          created_at: new Date()
+        });
+        
+        // Create user for other tenant
+        await env.db('users').insert({
+          user_id: otherUserId,
+          tenant: otherTenant,
+          username: `other_user_${otherUserId}`,
+          email: `other${otherUserId}@example.com`,
+          first_name: 'Other',
+          last_name: 'User',
+          hashed_password: 'dummy',
+          created_at: new Date(),
+          user_type: 'internal'
+        });
+        
         const ticket = await createTestTicket(env.db, otherTenant, {
-          company_id: uuidv4(),
-          entered_by: uuidv4(),
-          assigned_to: uuidv4()
+          company_id: otherCompanyId,
+          entered_by: otherUserId,
+          assigned_to: otherUserId
         });
 
         const service = await createTestService(env.db, otherTenant);
@@ -191,7 +229,7 @@ describe('Time Entries API E2E Tests', () => {
           work_item_id: ticket.ticket_id,
         work_item_type: 'ticket',
           service_id: service.service_id,
-          user_id: uuidv4()
+          user_id: otherUserId
         });
 
         const response = await env.apiClient.get(`${API_BASE}/${otherEntry.entry_id}`);
@@ -982,10 +1020,48 @@ describe('Time Entries API E2E Tests', () => {
 
       // Create entry for another tenant
       const otherTenant = uuidv4();
+      const otherCompanyId = uuidv4();
+      const otherUserId = uuidv4();
+      
+      // Create the other tenant
+      await env.db('tenants').insert({
+        tenant: otherTenant,
+        company_name: `Other Tenant ${otherTenant}`,
+        phone_number: '555-0200',
+        email: `other-${otherTenant.substring(0, 8)}@example.com`,
+        created_at: new Date(),
+        updated_at: new Date(),
+        payment_platform_id: `test-platform-${otherTenant.substring(0, 8)}`,
+        payment_method_id: `test-method-${otherTenant.substring(0, 8)}`,
+        auth_service_id: `test-auth-${otherTenant.substring(0, 8)}`,
+        plan: 'test'
+      });
+      
+      // Create company for other tenant
+      await env.db('companies').insert({
+        company_id: otherCompanyId,
+        tenant: otherTenant,
+        company_name: 'Other Company',
+        created_at: new Date()
+      });
+      
+      // Create user for other tenant
+      await env.db('users').insert({
+        user_id: otherUserId,
+        tenant: otherTenant,
+        username: `other_user_${otherUserId}`,
+        email: `other${otherUserId}@example.com`,
+        first_name: 'Other',
+        last_name: 'User',
+        hashed_password: 'dummy',
+        created_at: new Date(),
+        user_type: 'internal'
+      });
+      
       const otherTicket = await createTestTicket(env.db, otherTenant, {
-        company_id: uuidv4(),
-        entered_by: uuidv4(),
-        assigned_to: uuidv4()
+        company_id: otherCompanyId,
+        entered_by: otherUserId,
+        assigned_to: otherUserId
       });
 
       const otherService = await createTestService(env.db, otherTenant);
@@ -993,7 +1069,7 @@ describe('Time Entries API E2E Tests', () => {
         work_item_id: otherTicket.ticket_id,
         work_item_type: 'ticket',
         service_id: otherService.service_id,
-        user_id: uuidv4()
+        user_id: otherUserId
       });
 
       // Should only see current tenant's entries
