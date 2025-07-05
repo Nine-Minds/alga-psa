@@ -25,9 +25,6 @@ COPY tsconfig.base.json ./
 COPY services/workflow-worker/ ./services/workflow-worker/
 COPY shared/ ./shared/
 
-WORKDIR /app/shared
-RUN npm run build 
-
 # Install workflow-worker dependencies
 WORKDIR /app/services/workflow-worker
 RUN npm config set cache /tmp/.npm && \
@@ -38,8 +35,12 @@ WORKDIR /app
 # Install TypeScript and other necessary dependencies globally
 RUN npm install -g typescript @types/node
 
-# Build the workflow worker
+# Build the workflow worker first
 WORKDIR /app/services/workflow-worker
+RUN npm run build
+
+# Build shared last to ensure correct compiled files
+WORKDIR /app/shared
 RUN npm run build
 
 # Copy and make entrypoint executable
