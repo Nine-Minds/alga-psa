@@ -28,12 +28,18 @@ COPY shared/ ./shared/
 WORKDIR /app/shared
 RUN npm run build 
 
+# Add shared package as dependency to workflow-worker
 WORKDIR /app/services/workflow-worker
+RUN npm pkg set dependencies.@alga-psa/shared="file:../../shared"
+RUN npm install
 
-# Install TypeScript and other necessary dependencies
+WORKDIR /app
+
+# Install TypeScript and other necessary dependencies globally
 RUN npm install -g typescript @types/node
 
 # Build the workflow worker
+WORKDIR /app/services/workflow-worker
 RUN npm run build
 
 WORKDIR /app/services/workflow-worker
