@@ -1,5 +1,5 @@
 import { Context } from '@temporalio/activity';
-import { getMainDatabase, getAdminDatabase, executeQuery, executeTransaction } from './connection';
+import { getMainDatabase, getAdminDatabase, executeQuery, executeTransaction } from './connection.js';
 import type {
   CreateTenantActivityInput,
   CreateTenantActivityResult,
