@@ -15,6 +15,14 @@ COPY services/workflow-worker/package.json ./services/workflow-worker/
 COPY server/package.json ./server/
 COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/assemblyscript
 
+# Configure npm for better network resilience
+RUN npm config set registry https://registry.npmjs.org/ && \
+    npm config set network-timeout 60000 && \
+    npm config set maxsockets 10 && \
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm config set fetch-retries 3
+
 # Install dependencies
 RUN npm install
 
@@ -28,6 +36,11 @@ COPY shared/ ./shared/
 # Install all workspace dependencies from root
 WORKDIR /app
 RUN npm config set cache /tmp/.npm && \
+    npm config set network-timeout 60000 && \
+    npm config set maxsockets 10 && \
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm config set fetch-retries 3 && \
     npm install
 
 WORKDIR /app
