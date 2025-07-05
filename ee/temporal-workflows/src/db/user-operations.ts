@@ -23,10 +23,10 @@ export async function createAdminUserInDB(
     const adminDb = getAdminDatabase();
     
     const result = await executeTransaction(adminDb, async (client) => {
-      // Check if user already exists
+      // Check if user already exists in this tenant
       const existingUser = await client.query(
-        'SELECT user_id FROM users WHERE email = $1',
-        [input.email]
+        'SELECT user_id FROM users WHERE email = $1 AND tenant = $2',
+        [input.email, input.tenantId]
       );
 
       if (existingUser.rows.length > 0) {
