@@ -110,10 +110,10 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasReadPermission = await hasPermission(
-          user,
-          'time_entry',
-          'read',
-          db
+          db,
+          user.user_id,
+          'time_entry:read',
+          tenantId!
         );
 
         if (!hasReadPermission) {
@@ -194,10 +194,10 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasReadPermission = await hasPermission(
-          user,
-          'time_entry',
-          'read',
-          db
+          db,
+          user.user_id,
+          'time_entry:read',
+          tenantId!
         );
 
         if (!hasReadPermission) {
@@ -264,10 +264,10 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasReadPermission = await hasPermission(
-          user,
-          'time_entry',
-          'read',
-          db
+          db,
+          user.user_id,
+          'time_entry:read',
+          tenantId!
         );
 
         if (!hasReadPermission) {
@@ -354,10 +354,10 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasCreatePermission = await hasPermission(
-          user,
-          'time_entry',
-          'create',
-          db
+          db,
+          user.user_id,
+          'time_entry:create',
+          tenantId!
         );
 
         if (!hasCreatePermission) {
@@ -437,10 +437,10 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasUpdatePermission = await hasPermission(
-          user,
-          'time_entry',
-          'update',
-          db
+          db,
+          user.user_id,
+          'time_entry:update',
+          tenantId!
         );
 
         if (!hasUpdatePermission) {
@@ -568,10 +568,10 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasApprovePermission = await hasPermission(
-          user,
-          'time_entry',
-          'approve',
-          db
+          db,
+          user.user_id,
+          'time_entry:approve',
+          tenantId!
         );
 
         if (!hasApprovePermission) {
@@ -646,10 +646,10 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasApprovePermission = await hasPermission(
-          user,
-          'time_entry',
-          'approve',
-          db
+          db,
+          user.user_id,
+          'time_entry:approve',
+          tenantId!
         );
 
         if (!hasApprovePermission) {
@@ -777,10 +777,10 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasCreatePermission = await hasPermission(
-          user,
-          'time_entry',
-          'create',
-          db
+          db,
+          user.user_id,
+          'time_entry:create',
+          tenantId!
         );
 
         if (!hasCreatePermission) {
@@ -855,10 +855,10 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasUpdatePermission = await hasPermission(
-          user,
-          'time_entry',
-          'update',
-          db
+          db,
+          user.user_id,
+          'time_entry:update',
+          tenantId!
         );
 
         if (!hasUpdatePermission) {
@@ -937,10 +937,10 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasDeletePermission = await hasPermission(
-          user,
-          'time_entry',
-          'delete',
-          db
+          db,
+          user.user_id,
+          'time_entry:delete',
+          tenantId!
         );
 
         if (!hasDeletePermission) {

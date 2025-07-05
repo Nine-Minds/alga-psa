@@ -217,14 +217,15 @@ describe('Time Entries API E2E Tests', () => {
 
         const updates = {
           notes: 'Updated description',
-          billable_duration: 150,
           is_billable: false
         };
 
         const response = await env.apiClient.put(`${API_BASE}/${entry.entry_id}`, updates);
         
         assertSuccess(response);
-        expect(response.data.data).toMatchObject(updates);
+        expect(response.data.data.notes).toBe(updates.notes);
+        expect(response.data.data.is_billable).toBe(updates.is_billable);
+        expect(response.data.data.billable_duration).toBe(0); // Should be 0 when is_billable is false
       });
 
       it('should return 404 when updating non-existent entry', async () => {
@@ -247,8 +248,7 @@ describe('Time Entries API E2E Tests', () => {
         work_item_type: 'ticket',
           service_id: service.service_id,
           user_id: env.userId,
-          approval_status: 'APPROVED',
-          approved_at: new Date()
+          approval_status: 'APPROVED'
         });
 
         const response = await env.apiClient.put(`${API_BASE}/${entry.entry_id}`, {
@@ -302,8 +302,7 @@ describe('Time Entries API E2E Tests', () => {
         work_item_type: 'ticket',
           service_id: service.service_id,
           user_id: env.userId,
-          approval_status: 'APPROVED',
-          approved_at: new Date()
+          approval_status: 'APPROVED'
         });
 
         const response = await env.apiClient.delete(`${API_BASE}/${entry.entry_id}`);
@@ -833,19 +832,22 @@ describe('Time Entries API E2E Tests', () => {
   describe('Permissions', () => {
     it('should enforce read permissions for listing', async () => {
       // Create API key without permissions
-      const apiKeyWithoutPerms = await env.db('api_keys')
+      const plaintextKey = `test_${uuidv4()}`;
+      const hashedKey = require('crypto').createHash('sha256').update(plaintextKey).digest('hex');
+      
+      await env.db('api_keys')
         .insert({
           api_key_id: uuidv4(),
-          api_key: `test_${uuidv4()}`,
+          api_key: hashedKey,
           user_id: env.userId,
           tenant: env.tenant,
-          created_at: new Date()
-        })
-        .returning('api_key');
+          created_at: new Date(),
+          active: true
+        });
 
       const restrictedClient = new ApiTestClient({
         baseUrl: env.apiClient['config'].baseUrl,
-        apiKey: apiKeyWithoutPerms[0].api_key,
+        apiKey: plaintextKey, // Use plaintext key for requests
         tenantId: env.tenant
       });
       const response = await restrictedClient.get(API_BASE);
@@ -855,19 +857,22 @@ describe('Time Entries API E2E Tests', () => {
 
     it('should enforce create permissions', async () => {
       // Create API key without permissions
-      const apiKeyWithoutPerms = await env.db('api_keys')
+      const plaintextKey = `test_${uuidv4()}`;
+      const hashedKey = require('crypto').createHash('sha256').update(plaintextKey).digest('hex');
+      
+      await env.db('api_keys')
         .insert({
           api_key_id: uuidv4(),
-          api_key: `test_${uuidv4()}`,
+          api_key: hashedKey,
           user_id: env.userId,
           tenant: env.tenant,
-          created_at: new Date()
-        })
-        .returning('api_key');
+          created_at: new Date(),
+          active: true
+        });
 
       const restrictedClient = new ApiTestClient({
         baseUrl: env.apiClient['config'].baseUrl,
-        apiKey: apiKeyWithoutPerms[0].api_key,
+        apiKey: plaintextKey, // Use plaintext key for requests
         tenantId: env.tenant
       });
       const response = await restrictedClient.post(API_BASE, {
@@ -893,19 +898,22 @@ describe('Time Entries API E2E Tests', () => {
       });
 
       // Create API key without permissions
-      const apiKeyWithoutPerms = await env.db('api_keys')
+      const plaintextKey = `test_${uuidv4()}`;
+      const hashedKey = require('crypto').createHash('sha256').update(plaintextKey).digest('hex');
+      
+      await env.db('api_keys')
         .insert({
           api_key_id: uuidv4(),
-          api_key: `test_${uuidv4()}`,
+          api_key: hashedKey,
           user_id: env.userId,
           tenant: env.tenant,
-          created_at: new Date()
-        })
-        .returning('api_key');
+          created_at: new Date(),
+          active: true
+        });
 
       const restrictedClient = new ApiTestClient({
         baseUrl: env.apiClient['config'].baseUrl,
-        apiKey: apiKeyWithoutPerms[0].api_key,
+        apiKey: plaintextKey, // Use plaintext key for requests
         tenantId: env.tenant
       });
       const response = await restrictedClient.put(`${API_BASE}/${entry.entry_id}`, {
@@ -931,19 +939,22 @@ describe('Time Entries API E2E Tests', () => {
       });
 
       // Create API key without permissions
-      const apiKeyWithoutPerms = await env.db('api_keys')
+      const plaintextKey = `test_${uuidv4()}`;
+      const hashedKey = require('crypto').createHash('sha256').update(plaintextKey).digest('hex');
+      
+      await env.db('api_keys')
         .insert({
           api_key_id: uuidv4(),
-          api_key: `test_${uuidv4()}`,
+          api_key: hashedKey,
           user_id: env.userId,
           tenant: env.tenant,
-          created_at: new Date()
-        })
-        .returning('api_key');
+          created_at: new Date(),
+          active: true
+        });
 
       const restrictedClient = new ApiTestClient({
         baseUrl: env.apiClient['config'].baseUrl,
-        apiKey: apiKeyWithoutPerms[0].api_key,
+        apiKey: plaintextKey, // Use plaintext key for requests
         tenantId: env.tenant
       });
       const response = await restrictedClient.delete(`${API_BASE}/${entry.entry_id}`);
@@ -979,7 +990,8 @@ describe('Time Entries API E2E Tests', () => {
 
       const otherService = await createTestService(env.db, otherTenant);
       await createTestTimeEntry(env.db, otherTenant, {
-        ticket_id: otherTicket.ticket_id,
+        work_item_id: otherTicket.ticket_id,
+        work_item_type: 'ticket',
         service_id: otherService.service_id,
         user_id: uuidv4()
       });

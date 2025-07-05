@@ -143,8 +143,15 @@ export abstract class ApiBaseControllerV2 {
   protected extractIdFromPath(req: ApiRequest): string {
     const url = new URL(req.url);
     const pathParts = url.pathname.split('/');
-    // Handle both 'resources' and 'companies' (special case)
-    const resourcePlural = this.options.resource === 'company' ? 'companies' : this.options.resource + 's';
+    // Handle special cases for plural forms
+    let resourcePlural: string;
+    if (this.options.resource === 'company') {
+      resourcePlural = 'companies';
+    } else if (this.options.resource === 'time_entry') {
+      resourcePlural = 'time-entries';
+    } else {
+      resourcePlural = this.options.resource + 's';
+    }
     const resourceIndex = pathParts.findIndex(part => part === resourcePlural);
     const id = pathParts[resourceIndex + 1] || '';
     

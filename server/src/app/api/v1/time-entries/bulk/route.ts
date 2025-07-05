@@ -10,6 +10,8 @@ import { ApiTimeEntryControllerV2 } from '@/lib/api/controllers/ApiTimeEntryCont
 const controller = new ApiTimeEntryControllerV2();
 
 export const POST = controller.bulkCreate();
+export const PUT = controller.bulkUpdate();
+export const DELETE = controller.bulkDelete();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
