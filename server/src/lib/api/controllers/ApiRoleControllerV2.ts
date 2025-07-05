@@ -5,14 +5,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseControllerV2 } from './ApiBaseControllerV2';
-import { RoleService } from '../services/RoleService';
+import { PermissionRoleService as RoleService } from '../services/PermissionRoleService';
 import { 
   createRoleSchema,
   updateRoleSchema,
   roleListQuerySchema,
-  assignPermissionsSchema,
+  assignPermissionsToRoleSchema,
   cloneRoleSchema
-} from '../schemas/role';
+} from '../schemas/permissionRoleSchemas';
 import { 
   ApiKeyServiceForApi 
 } from '../../services/apiKeyServiceForApi';
@@ -336,7 +336,7 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
         const body = await req.json();
         let permissionsData;
         try {
-          permissionsData = assignPermissionsSchema.parse(body);
+          permissionsData = assignPermissionsToRoleSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
             throw new ValidationError('Invalid permissions data', error.errors);

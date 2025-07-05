@@ -239,8 +239,16 @@ export const timeEntryExportQuerySchema = z.object({
   work_item_types: z.array(workItemTypeSchema).optional(),
   approval_statuses: z.array(approvalStatusSchema).optional(),
   user_ids: z.array(uuidSchema).optional(),
-  date_from: dateSchema.optional(),
-  date_to: dateSchema.optional(),
+  user_id: uuidSchema.optional(),
+  work_item_id: uuidSchema.optional(),
+  work_item_type: workItemTypeSchema.optional(),
+  service_id: uuidSchema.optional(),
+  approval_status: approvalStatusSchema.optional(),
+  is_billable: booleanTransform.optional(),
+  start_time_from: z.string().datetime().optional(),
+  start_time_to: z.string().datetime().optional(),
+  date_from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format. Expected YYYY-MM-DD').optional(),
+  date_to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format. Expected YYYY-MM-DD').optional(),
   fields: z.array(z.string()).optional()
 });
 

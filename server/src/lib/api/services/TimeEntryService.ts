@@ -21,6 +21,7 @@ import {
   RequestTimeEntryChangesData
 } from '../schemas/timeEntry';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { ValidationError } from '../middleware/apiMiddleware';
 
 export class TimeEntryService extends BaseService<any> {
   constructor() {
@@ -671,23 +672,38 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   // Approval operations
-  async approveTimeEntries(data: ApproveTimeEntriesData, context: ServiceContext): Promise<any[]> {
+  async approveTimeEntries(data: ApproveTimeEntriesData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
     const results = [];
     
     for (const entryId of data.entry_ids) {
       try {
+        // First check if the entry exists
+        const entry = await knex(this.tableName)
+          .where({ 
+            entry_id: entryId, 
+            tenant: context.tenant
+          })
+          .first();
+          
+        if (!entry) {
+          results.push({ success: false, error: 'Time entry not found', entry_id: entryId });
+          continue;
+        }
+        
+        // Check if it's in a valid status for approval
+        if (!['SUBMITTED', 'CHANGES_REQUESTED'].includes(entry.approval_status)) {
+          results.push({ success: false, error: `Time entry is in ${entry.approval_status} status and cannot be approved`, entry_id: entryId });
+          continue;
+        }
+        
         await knex(this.tableName)
           .where({ 
             entry_id: entryId, 
-            tenant: context.tenant,
-            approval_status: ['SUBMITTED', 'CHANGES_REQUESTED']
+            tenant: context.tenant
           })
           .update({
             approval_status: 'APPROVED',
-            approved_at: new Date(),
-            approved_by: context.userId,
-            approval_notes: data.approval_notes,
             updated_at: new Date()
           });
 
@@ -709,7 +725,14 @@ export class TimeEntryService extends BaseService<any> {
       }
     }
 
-    return results;
+    const approvedCount = results.filter(r => r.success).length;
+    
+    // If all operations failed, throw an error
+    if (approvedCount === 0 && results.length > 0) {
+      throw new ValidationError('No time entries could be approved', results);
+    }
+    
+    return { approved_count: approvedCount, results };
   }
 
   async requestChanges(data: RequestTimeEntryChangesData, context: ServiceContext): Promise<any[]> {
@@ -726,8 +749,6 @@ export class TimeEntryService extends BaseService<any> {
           })
           .update({
             approval_status: 'CHANGES_REQUESTED',
-            change_reason: data.change_reason,
-            detailed_feedback: data.detailed_feedback,
             updated_at: new Date()
           });
 

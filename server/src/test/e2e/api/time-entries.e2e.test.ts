@@ -650,14 +650,15 @@ describe('Time Entries API E2E Tests', () => {
 
       const service = await createTestService(env.db, env.tenant);
       
-      // Create multiple entries
+      // Create multiple entries with SUBMITTED status
       const entries = [];
       for (let i = 0; i < 2; i++) {
         const entry = await createTestTimeEntry(env.db, env.tenant, {
           work_item_id: ticket.ticket_id,
         work_item_type: 'ticket',
           service_id: service.service_id,
-          user_id: env.userId
+          user_id: env.userId,
+          approval_status: 'SUBMITTED'
         });
         entries.push(entry.entry_id);
       }
@@ -704,7 +705,7 @@ describe('Time Entries API E2E Tests', () => {
       });
       
       assertSuccess(response);
-      expect(response.headers['content-type']).toContain('text/csv');
+      expect(response.headers.get('content-type')).toContain('text/csv');
     });
 
     it('should export time entries to JSON', async () => {
@@ -908,7 +909,7 @@ describe('Time Entries API E2E Tests', () => {
 
     it('should handle invalid date format', async () => {
       const response = await env.apiClient.get(API_BASE, {
-        params: { start_date: 'invalid-date' }
+        params: { date_from: 'invalid-date' }
       });
       assertError(response, 400);
     });
