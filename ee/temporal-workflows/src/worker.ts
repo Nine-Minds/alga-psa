@@ -2,6 +2,7 @@ import { Worker, NativeConnection } from '@temporalio/worker';
 import { createLogger, format, transports } from 'winston';
 import * as activities from './activities/index.js';
 import * as dotenv from 'dotenv';
+import express from 'express';
 
 // Load environment variables
 dotenv.config();
@@ -125,7 +126,6 @@ function setupGracefulShutdown(worker: Worker): void {
  */
 function startHealthCheck(): void {
   if (process.env.ENABLE_HEALTH_CHECK === 'true') {
-    const express = require('express');
     const app = express();
     const port = process.env.HEALTH_CHECK_PORT || 8080;
 
