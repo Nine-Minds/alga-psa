@@ -83,7 +83,7 @@ export async function setupTenantDataInDB(
         `INSERT INTO tenant_email_settings (tenant_id, email_provider, fallback_enabled, tracking_enabled)
          VALUES ($1, 'resend', true, false)
          ON CONFLICT (tenant_id) DO UPDATE SET
-         email_provider = EXCLUDED.email_provider, updated_at = CURRENT_TIMESTAMP`,
+         email_provider = EXCLUDED.email_provider, updated_at = NOW()`,
         [input.tenantId]
       );
       setupSteps.push('email_settings');
@@ -94,7 +94,7 @@ export async function setupTenantDataInDB(
           `INSERT INTO tenant_companies (tenant, company_id, is_default)
            VALUES ($1, $2, true)
            ON CONFLICT (tenant, company_id) DO UPDATE SET
-           is_default = EXCLUDED.is_default, updated_at = CURRENT_TIMESTAMP`,
+           is_default = EXCLUDED.is_default, updated_at = NOW()`,
           [input.tenantId, input.companyId]
         );
         setupSteps.push('tenant_company_association');
@@ -130,11 +130,22 @@ export async function rollbackTenantInDB(tenantId: string): Promise<void> {
     const adminDb = getAdminDatabase();
 
     await executeTransaction(adminDb, async (client) => {
-      // Delete related companies first (they reference the tenant)
-      await client.query('DELETE FROM companies WHERE tenant = $1', [tenantId]);
+      // Delete in proper order to avoid foreign key violations
       
-      // Delete other tenant-related data if exists
+      // Delete user roles first (references users)
+      await client.query('DELETE FROM user_roles WHERE tenant = $1', [tenantId]);
+      
+      // Delete users (references tenant)
       await client.query('DELETE FROM users WHERE tenant = $1', [tenantId]);
+      
+      // Delete tenant_companies associations (references tenant and companies)
+      await client.query('DELETE FROM tenant_companies WHERE tenant = $1', [tenantId]);
+      
+      // Delete tenant_email_settings (references tenant indirectly)
+      await client.query('DELETE FROM tenant_email_settings WHERE tenant_id = $1', [tenantId]);
+      
+      // Delete companies (references tenant)
+      await client.query('DELETE FROM companies WHERE tenant = $1', [tenantId]);
       
       // Delete the tenant last
       await client.query('DELETE FROM tenants WHERE tenant = $1', [tenantId]);
