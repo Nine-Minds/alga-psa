@@ -68,8 +68,16 @@ export class ApiTestClient {
   /**
    * Make a GET request
    */
-  async get<T = any>(path: string, options?: RequestInit): Promise<ApiTestResponse<T>> {
-    return this.request<T>('GET', path, undefined, options);
+  async get<T = any>(path: string, options?: RequestInit & { params?: Record<string, any> }): Promise<ApiTestResponse<T>> {
+    let finalPath = path;
+    
+    // Handle query parameters if provided
+    if (options?.params) {
+      const queryString = buildQueryString(options.params);
+      finalPath = path + queryString;
+    }
+    
+    return this.request<T>('GET', finalPath, undefined, options);
   }
 
   /**
@@ -89,8 +97,8 @@ export class ApiTestClient {
   /**
    * Make a DELETE request
    */
-  async delete<T = any>(path: string, options?: RequestInit): Promise<ApiTestResponse<T>> {
-    return this.request<T>('DELETE', path, undefined, options);
+  async delete<T = any>(path: string, options?: RequestInit & { data?: any }): Promise<ApiTestResponse<T>> {
+    return this.request<T>('DELETE', path, options?.data, options);
   }
 
   /**
@@ -268,4 +276,32 @@ export function buildQueryString(params: Record<string, any>): string {
 
   const queryString = searchParams.toString();
   return queryString ? `?${queryString}` : '';
+}
+
+/**
+ * Assert paginated API response
+ * @param response API test response
+ */
+export function assertPaginated(response: ApiTestResponse<any>): void {
+  if (!response.data?.pagination) {
+    throw new Error('Response is not paginated - missing pagination metadata');
+  }
+  
+  const { pagination } = response.data;
+  
+  if (typeof pagination.page !== 'number') {
+    throw new Error('Pagination missing page number');
+  }
+  
+  if (typeof pagination.limit !== 'number') {
+    throw new Error('Pagination missing limit');
+  }
+  
+  if (typeof pagination.total !== 'number') {
+    throw new Error('Pagination missing total count');
+  }
+  
+  if (typeof pagination.totalPages !== 'number') {
+    throw new Error('Pagination missing totalPages');
+  }
 }

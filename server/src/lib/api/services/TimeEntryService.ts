@@ -34,78 +34,82 @@ export class TimeEntryService extends BaseService<any> {
     });
   }
 
+  private applyFilters(query: Knex.QueryBuilder, filters: TimeEntryFilterData | undefined, knex: Knex): void {
+    if (!filters) return;
+    
+    if (filters.user_id) {
+      query.where(`${this.tableName}.user_id`, filters.user_id);
+    }
+    if (filters.work_item_id) {
+      query.where(`${this.tableName}.work_item_id`, filters.work_item_id);
+    }
+    if (filters.work_item_type) {
+      query.where(`${this.tableName}.work_item_type`, filters.work_item_type);
+    }
+    if (filters.service_id) {
+      query.where(`${this.tableName}.service_id`, filters.service_id);
+    }
+    if (filters.approval_status) {
+      query.where(`${this.tableName}.approval_status`, filters.approval_status);
+    }
+    if (filters.is_billable !== undefined) {
+      query.where(`${this.tableName}.billable_duration`, filters.is_billable ? '>' : '=', 0);
+    }
+    if (filters.start_time_from) {
+      query.where(`${this.tableName}.start_time`, '>=', filters.start_time_from);
+    }
+    if (filters.start_time_to) {
+      query.where(`${this.tableName}.start_time`, '<=', filters.start_time_to);
+    }
+    if (filters.end_time_from) {
+      query.where(`${this.tableName}.end_time`, '>=', filters.end_time_from);
+    }
+    if (filters.end_time_to) {
+      query.where(`${this.tableName}.end_time`, '<=', filters.end_time_to);
+    }
+    if (filters.date_from) {
+      query.whereRaw(`${this.tableName}.start_time::date >= ?::date`, [filters.date_from]);
+    }
+    if (filters.date_to) {
+      query.whereRaw(`${this.tableName}.start_time::date <= ?::date`, [filters.date_to]);
+    }
+    if (filters.time_sheet_id) {
+      query.where(`${this.tableName}.time_sheet_id`, filters.time_sheet_id);
+    }
+    if (filters.billing_plan_id) {
+      query.where(`${this.tableName}.billing_plan_id`, filters.billing_plan_id);
+    }
+    if (filters.company_id) {
+      query.leftJoin('tickets', function() {
+        this.on(`time_entries.work_item_id`, 'tickets.ticket_id')
+          .andOn(`time_entries.work_item_type`, knex.raw('?', ['ticket']));
+      })
+      .leftJoin('project_tasks', function() {
+        this.on(`time_entries.work_item_id`, 'project_tasks.task_id')
+          .andOn(`time_entries.work_item_type`, knex.raw('?', ['project_task']));
+      })
+      .leftJoin('project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')
+      .leftJoin('projects', 'project_phases.project_id', 'projects.project_id')
+      .where(function() {
+        this.where('tickets.company_id', filters.company_id!)
+          .orWhere('projects.company_id', filters.company_id!);
+      });
+    }
+    if (filters.duration_min !== undefined) {
+      query.where(`${this.tableName}.billable_duration`, '>=', filters.duration_min);
+    }
+    if (filters.duration_max !== undefined) {
+      query.where(`${this.tableName}.billable_duration`, '<=', filters.duration_max);
+    }
+  }
+
   async list(options: ListOptions, context: ServiceContext, filters?: TimeEntryFilterData): Promise<ListResult<any>> {
     const { knex } = await this.getKnex();
     const query = knex(this.tableName)
       .where(`${this.tableName}.tenant`, context.tenant);
 
     // Apply filters
-    if (filters) {
-      if (filters.user_id) {
-        query.where(`${this.tableName}.user_id`, filters.user_id);
-      }
-      if (filters.work_item_id) {
-        query.where(`${this.tableName}.work_item_id`, filters.work_item_id);
-      }
-      if (filters.work_item_type) {
-        query.where(`${this.tableName}.work_item_type`, filters.work_item_type);
-      }
-      if (filters.service_id) {
-        query.where(`${this.tableName}.service_id`, filters.service_id);
-      }
-      if (filters.approval_status) {
-        query.where(`${this.tableName}.approval_status`, filters.approval_status);
-      }
-      if (filters.is_billable !== undefined) {
-        query.where(`${this.tableName}.billable_duration`, filters.is_billable ? '>' : '=', 0);
-      }
-      if (filters.start_time_from) {
-        query.where(`${this.tableName}.start_time`, '>=', filters.start_time_from);
-      }
-      if (filters.start_time_to) {
-        query.where(`${this.tableName}.start_time`, '<=', filters.start_time_to);
-      }
-      if (filters.end_time_from) {
-        query.where(`${this.tableName}.end_time`, '>=', filters.end_time_from);
-      }
-      if (filters.end_time_to) {
-        query.where(`${this.tableName}.end_time`, '<=', filters.end_time_to);
-      }
-      if (filters.date_from) {
-        query.where(knex.raw('DATE(start_time)'), '>=', filters.date_from);
-      }
-      if (filters.date_to) {
-        query.where(knex.raw('DATE(start_time)'), '<=', filters.date_to);
-      }
-      if (filters.time_sheet_id) {
-        query.where(`${this.tableName}.time_sheet_id`, filters.time_sheet_id);
-      }
-      if (filters.billing_plan_id) {
-        query.where(`${this.tableName}.billing_plan_id`, filters.billing_plan_id);
-      }
-      if (filters.company_id) {
-        query.leftJoin('tickets', function() {
-          this.on(`time_entries.work_item_id`, 'tickets.ticket_id')
-            .andOn(`time_entries.work_item_type`, knex.raw('?', ['ticket']));
-        })
-        .leftJoin('project_tasks', function() {
-          this.on(`time_entries.work_item_id`, 'project_tasks.task_id')
-            .andOn(`time_entries.work_item_type`, knex.raw('?', ['project_task']));
-        })
-        .leftJoin('project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')
-        .leftJoin('projects', 'project_phases.project_id', 'projects.project_id')
-        .where(function() {
-          this.where('tickets.company_id', filters.company_id!)
-            .orWhere('projects.company_id', filters.company_id!);
-        });
-      }
-      if (filters.duration_min !== undefined) {
-        query.where(`${this.tableName}.billable_duration`, '>=', filters.duration_min);
-      }
-      if (filters.duration_max !== undefined) {
-        query.where(`${this.tableName}.billable_duration`, '<=', filters.duration_max);
-      }
-    }
+    this.applyFilters(query, filters, knex);
 
     // Add joins for additional data
     query.leftJoin('users', `${this.tableName}.user_id`, 'users.user_id')
@@ -129,9 +133,12 @@ export class TimeEntryService extends BaseService<any> {
     query.orderBy(`${this.tableName}.${sortField}`, sortOrder);
     query.limit(limit).offset(offset);
 
-    // Get total count
+    // Get total count - need to apply same filters to count query
     const countQuery = knex(this.tableName)
       .where(`${this.tableName}.tenant`, context.tenant);
+    
+    // Apply same filters to count query
+    this.applyFilters(countQuery, filters, knex);
     
     const [data, [{ count }]] = await Promise.all([
       query,
@@ -431,29 +438,43 @@ export class TimeEntryService extends BaseService<any> {
   async startTimeTracking(data: StartTimeTrackingData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
     
-    // Check for existing active session
-    const existingSession = await knex('active_time_sessions')
-      .where({ user_id: context.userId, tenant: context.tenant })
+    // Check for existing active session (time entry with null end_time)
+    const existingSession = await knex(this.tableName)
+      .where({ 
+        user_id: context.userId, 
+        tenant: context.tenant 
+      })
+      .whereNull('end_time')
       .first();
 
     if (existingSession) {
       throw new Error('Active time tracking session already exists. Please stop the current session first.');
     }
 
-    const sessionData = {
-      ...data,
+    // Create a time entry with null end_time to represent an active session
+    const timeEntryData = {
+      work_item_id: data.work_item_id,
+      work_item_type: data.work_item_type,
+      service_id: data.service_id,
       user_id: context.userId,
       start_time: new Date(),
+      end_time: null, // Active session has no end time
+      notes: data.notes || '',
+      billable_duration: 0, // Will be calculated when stopped
+      approval_status: 'DRAFT',
       tenant: context.tenant,
-      created_at: new Date()
+      created_at: new Date(),
+      updated_at: new Date()
     };
 
-    const [session] = await knex('active_time_sessions')
-      .insert(sessionData)
+    const [session] = await knex(this.tableName)
+      .insert(timeEntryData)
       .returning('*');
 
     return {
+      session_id: session.entry_id, // Use entry_id as session_id
       ...session,
+      status: 'active',
       elapsed_minutes: 0,
       work_item_title: data.work_item_id ? await this.getWorkItemTitle(data.work_item_id, data.work_item_type, context) : null,
       service_name: data.service_id ? await this.getServiceName(data.service_id, context) : null
@@ -462,8 +483,15 @@ export class TimeEntryService extends BaseService<any> {
 
   async stopTimeTracking(sessionId: string, data: StopTimeTrackingData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
-    const session = await knex('active_time_sessions')
-      .where({ session_id: sessionId, user_id: context.userId, tenant: context.tenant })
+    
+    // Find the active session (time entry with null end_time)
+    const session = await knex(this.tableName)
+      .where({ 
+        entry_id: sessionId, 
+        user_id: context.userId, 
+        tenant: context.tenant 
+      })
+      .whereNull('end_time')
       .first();
 
     if (!session) {
@@ -471,32 +499,36 @@ export class TimeEntryService extends BaseService<any> {
     }
 
     const endTime = data.end_time ? new Date(data.end_time) : new Date();
+    const startTime = new Date(session.start_time);
+    const durationMs = endTime.getTime() - startTime.getTime();
+    const billableDuration = Math.round(durationMs / (1000 * 60)); // minutes
     
-    // Create time entry
-    const timeEntryData: CreateTimeEntryData = {
-      work_item_id: session.work_item_id,
-      work_item_type: session.work_item_type,
-      start_time: session.start_time,
-      end_time: endTime.toISOString(),
+    // Update the time entry to complete the session
+    const updateData = {
+      end_time: endTime,
       notes: data.notes || session.notes,
       service_id: data.service_id || session.service_id,
-      is_billable: true // Add required property
+      billable_duration: data.is_billable !== false ? billableDuration : 0,
+      updated_at: new Date()
     };
 
-    const timeEntry = await this.create(timeEntryData, context);
+    await knex(this.tableName)
+      .where({ entry_id: sessionId, tenant: context.tenant })
+      .update(updateData);
 
-    // Delete active session
-    await knex('active_time_sessions')
-      .where({ session_id: sessionId, tenant: context.tenant })
-      .del();
-
-    return timeEntry;
+    return this.getById(sessionId, context);
   }
 
-  async getActiveSession(context: ServiceContext): Promise<any | null> {
+  async getActiveSession(userId: string, context: ServiceContext): Promise<any | null> {
     const { knex } = await this.getKnex();
-    const session = await knex('active_time_sessions')
-      .where({ user_id: context.userId, tenant: context.tenant })
+    
+    // Find active session (time entry with null end_time)
+    const session = await knex(this.tableName)
+      .where({ 
+        user_id: userId, 
+        tenant: context.tenant 
+      })
+      .whereNull('end_time')
       .first();
 
     if (!session) return null;
@@ -506,7 +538,9 @@ export class TimeEntryService extends BaseService<any> {
     const elapsedMinutes = Math.round(elapsedMs / (1000 * 60));
 
     return {
+      session_id: session.entry_id,
       ...session,
+      status: 'active',
       elapsed_minutes: elapsedMinutes,
       work_item_title: session.work_item_id ? await this.getWorkItemTitle(session.work_item_id, session.work_item_type, context) : null,
       service_name: session.service_id ? await this.getServiceName(session.service_id, context) : null
@@ -536,6 +570,97 @@ export class TimeEntryService extends BaseService<any> {
     return knex('time_entry_templates')
       .where({ user_id: context.userId, tenant: context.tenant, is_active: true })
       .orderBy('template_name');
+  }
+  
+  async getTimeEntryTemplates(context: ServiceContext): Promise<any[]> {
+    return this.getTemplates(context);
+  }
+  
+  async exportTimeEntries(exportQuery: TimeEntryExportQuery, context: ServiceContext): Promise<any> {
+    const { knex } = await this.getKnex();
+    
+    // Build query with filters
+    let query = knex(this.tableName)
+      .where(`${this.tableName}.tenant`, context.tenant);
+    
+    // Apply filters from exportQuery
+    const filters: TimeEntryFilterData = {
+      user_id: exportQuery.user_id,
+      work_item_id: exportQuery.work_item_id,
+      work_item_type: exportQuery.work_item_type,
+      service_id: exportQuery.service_id,
+      approval_status: exportQuery.approval_status,
+      is_billable: exportQuery.is_billable,
+      date_from: exportQuery.date_from,
+      date_to: exportQuery.date_to,
+      start_time_from: exportQuery.start_time_from,
+      start_time_to: exportQuery.start_time_to
+    };
+    
+    this.applyFilters(query, filters, knex);
+    
+    // Add joins for complete data
+    query.leftJoin('users', `${this.tableName}.user_id`, 'users.user_id')
+      .leftJoin('service_catalog', `${this.tableName}.service_id`, 'service_catalog.service_id')
+      .leftJoin('tickets', function() {
+        this.on(`time_entries.work_item_id`, 'tickets.ticket_id')
+          .andOn(`time_entries.work_item_type`, knex.raw('?', ['ticket']));
+      })
+      .leftJoin('project_tasks', function() {
+        this.on(`time_entries.work_item_id`, 'project_tasks.task_id')
+          .andOn(`time_entries.work_item_type`, knex.raw('?', ['project_task']));
+      })
+      .select(
+        `${this.tableName}.*`,
+        knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
+        'service_catalog.service_name',
+        knex.raw(`CASE WHEN tickets.ticket_id IS NOT NULL THEN tickets.title ELSE project_tasks.task_name END as work_item_title`),
+        knex.raw(`ROUND(${this.tableName}.billable_duration / 60.0, 2) as duration_hours`),
+        knex.raw(`CASE WHEN ${this.tableName}.billable_duration > 0 THEN true ELSE false END as is_billable`)
+      )
+      .orderBy(`${this.tableName}.start_time`, 'desc');
+    
+    const data = await query;
+    
+    if (exportQuery.format === 'csv') {
+      // Convert to CSV format
+      const headers = [
+        'Date',
+        'User',
+        'Work Item',
+        'Service',
+        'Start Time',
+        'End Time',
+        'Duration (Hours)',
+        'Billable',
+        'Notes',
+        'Approval Status'
+      ];
+      
+      const rows = data.map(entry => [
+        new Date(entry.start_time).toLocaleDateString(),
+        entry.user_name,
+        entry.work_item_title || 'N/A',
+        entry.service_name || 'N/A',
+        new Date(entry.start_time).toLocaleTimeString(),
+        new Date(entry.end_time).toLocaleTimeString(),
+        entry.duration_hours,
+        entry.is_billable ? 'Yes' : 'No',
+        entry.notes || '',
+        entry.approval_status
+      ]);
+      
+      // Create CSV string
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      ].join('\n');
+      
+      return csvContent;
+    } else {
+      // Return JSON format
+      return data;
+    }
   }
 
   // Approval operations
@@ -622,6 +747,76 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   // Search and export
+  async searchTimeEntries(searchData: TimeEntrySearchData, context: ServiceContext): Promise<{ data: any[], total: number }> {
+    const { knex } = await this.getKnex();
+    const query = knex(this.tableName)
+      .where(`${this.tableName}.tenant`, context.tenant);
+
+    // Build search query
+    if (searchData.query) {
+      query.where(function() {
+        this.where(`${this.tableName}.notes`, 'ilike', `%${searchData.query}%`);
+      });
+    }
+
+    // Apply filters if provided
+    const filters: TimeEntryFilterData = {
+      user_id: searchData.user_id,
+      work_item_id: searchData.work_item_id,
+      work_item_type: searchData.work_item_type,
+      service_id: searchData.service_id,
+      approval_status: searchData.approval_status,
+      is_billable: searchData.is_billable,
+      date_from: searchData.date_from,
+      date_to: searchData.date_to,
+      start_time_from: searchData.start_time_from,
+      start_time_to: searchData.start_time_to
+    };
+    
+    this.applyFilters(query, filters, knex);
+
+    // Add joins
+    query.leftJoin('users', `${this.tableName}.user_id`, 'users.user_id')
+      .leftJoin('service_catalog', `${this.tableName}.service_id`, 'service_catalog.service_id')
+      .select(
+        `${this.tableName}.*`,
+        knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
+        'service_catalog.service_name',
+        knex.raw(`CASE WHEN ${this.tableName}.billable_duration > 0 THEN true ELSE false END as is_billable`)
+      );
+
+    // Apply sorting
+    const sortField = searchData.sort || this.defaultSort;
+    const sortOrder = searchData.order || this.defaultOrder;
+    query.orderBy(`${this.tableName}.${sortField}`, sortOrder);
+
+    // Apply pagination
+    const page = searchData.page || 1;
+    const limit = searchData.limit || 25;
+    const offset = (page - 1) * limit;
+    query.limit(limit).offset(offset);
+
+    // Get total count
+    const countQuery = knex(this.tableName)
+      .where(`${this.tableName}.tenant`, context.tenant);
+    
+    if (searchData.query) {
+      countQuery.where(`${this.tableName}.notes`, 'ilike', `%${searchData.query}%`);
+    }
+    
+    this.applyFilters(countQuery, filters, knex);
+    
+    const [data, [{ count }]] = await Promise.all([
+      query,
+      countQuery.count('* as count')
+    ]);
+
+    return {
+      data,
+      total: parseInt(count as string)
+    };
+  }
+  
   async search(searchData: TimeEntrySearchData, context: ServiceContext): Promise<any[]> {
     const { knex } = await this.getKnex();
     const query = knex(this.tableName)
@@ -682,6 +877,17 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   // Statistics
+  async getTimeEntryStatistics(filters: TimeEntryFilterData | undefined, context: ServiceContext): Promise<any> {
+    const stats = await this.getStatistics(context, filters);
+    return {
+      total_hours: stats.total_billable_hours + stats.total_non_billable_hours,
+      billable_hours: stats.total_billable_hours,
+      non_billable_hours: stats.total_non_billable_hours,
+      total_entries: stats.total_entries,
+      ...stats
+    };
+  }
+  
   async getStatistics(context: ServiceContext, filters?: TimeEntryFilterData): Promise<any> {
     const { knex } = await this.getKnex();
     let query = knex(this.tableName)

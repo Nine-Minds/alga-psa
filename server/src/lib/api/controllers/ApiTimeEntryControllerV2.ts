@@ -137,6 +137,7 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
         // Search within tenant context
         const results = await runWithTenant(tenantId!, async () => {
           return await this.timeEntryService.searchTimeEntries(searchParams, {
+            userId: user.user_id,
             user,
             tenant: tenantId!,
             permissions: user.roles || []
@@ -211,6 +212,7 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
         // Get statistics within tenant context
         const stats = await runWithTenant(tenantId!, async () => {
           return await this.timeEntryService.getTimeEntryStatistics(queryParams, {
+            userId: user.user_id,
             user,
             tenant: tenantId!,
             permissions: user.roles || []
@@ -291,6 +293,7 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
         // Export within tenant context
         const exportData = await runWithTenant(tenantId!, async () => {
           return await this.timeEntryService.exportTimeEntries(exportParams, {
+            userId: user.user_id,
             user,
             tenant: tenantId!,
             permissions: user.roles || []
@@ -378,7 +381,8 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
 
         // Start tracking within tenant context
         const session = await runWithTenant(tenantId!, async () => {
-          return await this.timeEntryService.startTracking(trackingData, {
+          return await this.timeEntryService.startTimeTracking(trackingData, {
+            userId: user.user_id,
             user,
             tenant: tenantId!,
             permissions: user.roles || []
@@ -461,14 +465,15 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
 
         // Stop tracking within tenant context
         const timeEntry = await runWithTenant(tenantId!, async () => {
-          return await this.timeEntryService.stopTracking(sessionId, stopData, {
+          return await this.timeEntryService.stopTimeTracking(sessionId, stopData, {
+            userId: user.user_id,
             user,
             tenant: tenantId!,
             permissions: user.roles || []
           });
         });
 
-        return createSuccessResponse(timeEntry);
+        return createSuccessResponse(timeEntry, 201);
       } catch (error) {
         return handleApiError(error);
       }
@@ -515,6 +520,7 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
         // Get active session within tenant context
         const session = await runWithTenant(tenantId!, async () => {
           return await this.timeEntryService.getActiveSession(user.user_id, {
+            userId: user.user_id,
             user,
             tenant: tenantId!,
             permissions: user.roles || []
@@ -593,6 +599,7 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
         // Approve entries within tenant context
         const result = await runWithTenant(tenantId!, async () => {
           return await this.timeEntryService.approveTimeEntries(approvalData, {
+            userId: user.user_id,
             user,
             tenant: tenantId!,
             permissions: user.roles || []
@@ -671,6 +678,7 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
         // Request changes within tenant context
         const result = await runWithTenant(tenantId!, async () => {
           return await this.timeEntryService.requestChanges(changeData, {
+            userId: user.user_id,
             user,
             tenant: tenantId!,
             permissions: user.roles || []
@@ -724,6 +732,7 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
         // Get templates within tenant context
         const templates = await runWithTenant(tenantId!, async () => {
           return await this.timeEntryService.getTimeEntryTemplates({
+            userId: user.user_id,
             user,
             tenant: tenantId!,
             permissions: user.roles || []
@@ -802,6 +811,7 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
         // Create entries within tenant context
         const result = await runWithTenant(tenantId!, async () => {
           return await this.timeEntryService.bulkCreateTimeEntries(bulkData, {
+            userId: user.user_id,
             user,
             tenant: tenantId!,
             permissions: user.roles || []
@@ -884,6 +894,7 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
             data: bulkData.updates
           }));
           return await this.timeEntryService.bulkUpdateTimeEntries({ entries: updates }, {
+            userId: user.user_id,
             user,
             tenant: tenantId!,
             permissions: user.roles || []
@@ -962,6 +973,7 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
         // Delete entries within tenant context
         const result = await runWithTenant(tenantId!, async () => {
           return await this.timeEntryService.bulkDeleteTimeEntries(bulkData, {
+            userId: user.user_id,
             user,
             tenant: tenantId!,
             permissions: user.roles || []

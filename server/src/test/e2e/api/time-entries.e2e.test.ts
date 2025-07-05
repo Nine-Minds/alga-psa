@@ -14,7 +14,6 @@ import {
   createTestService
 } from '../utils/timeEntryTestDataFactory';
 import { createTestTicket } from '../utils/ticketTestData';
-import { createUserTestData } from '../utils/userTestData';
 import { v4 as uuidv4 } from 'uuid';
 import { ApiTestClient } from '../utils/apiTestHelpers';
 
@@ -388,6 +387,20 @@ describe('Time Entries API E2E Tests', () => {
     });
 
     it('should filter by date range', async () => {
+      // Create time period for July 2024
+      await createTestTimePeriod(env.db, env.tenant, {
+        start_date: new Date('2024-07-01'),
+        end_date: new Date('2024-07-31'),
+        is_closed: false
+      });
+      
+      // Create time period for August 2024
+      await createTestTimePeriod(env.db, env.tenant, {
+        start_date: new Date('2024-08-01'),
+        end_date: new Date('2024-08-31'),
+        is_closed: false
+      });
+      
       const ticket = await createTestTicket(env.db, env.tenant, {
         company_id: env.companyId,
         entered_by: env.userId,
@@ -396,13 +409,13 @@ describe('Time Entries API E2E Tests', () => {
 
       const service = await createTestService(env.db, env.tenant);
       
-      // Create entries for different dates
+      // Use unique dates to avoid conflicts (month 6 = July)
       await createTestTimeEntry(env.db, env.tenant, {
         work_item_id: ticket.ticket_id,
         work_item_type: 'ticket',
         service_id: service.service_id,
         user_id: env.userId,
-        start_time: new Date('2024-01-01T09:00:00')
+        start_time: new Date('2024-07-05T09:00:00')
       });
 
       await createTestTimeEntry(env.db, env.tenant, {
@@ -410,7 +423,7 @@ describe('Time Entries API E2E Tests', () => {
         work_item_type: 'ticket',
         service_id: service.service_id,
         user_id: env.userId,
-        start_time: new Date('2024-01-15T09:00:00')
+        start_time: new Date('2024-07-15T09:00:00')
       });
 
       await createTestTimeEntry(env.db, env.tenant, {
@@ -418,18 +431,28 @@ describe('Time Entries API E2E Tests', () => {
         work_item_type: 'ticket',
         service_id: service.service_id,
         user_id: env.userId,
-        start_time: new Date('2024-02-01T09:00:00')
+        start_time: new Date('2024-08-01T09:00:00')
       });
 
       const response = await env.apiClient.get(API_BASE, {
         params: {
-          start_date: '2024-01-01',
-          end_date: '2024-01-31'
+          date_from: '2024-07-01',
+          date_to: '2024-07-31'
         }
       });
       
       assertSuccess(response);
-      expect(response.data.data.length).toBe(2);
+      
+      // Filter for entries that belong to our ticket (to exclude any from other tests)
+      const ourEntries = response.data.data.filter((e: any) => e.work_item_id === ticket.ticket_id);
+      expect(ourEntries.length).toBe(2);
+      
+      // Verify the entries are from July
+      ourEntries.forEach((entry: any) => {
+        const startDate = new Date(entry.start_time);
+        expect(startDate.getMonth()).toBe(6); // July is month 6
+        expect(startDate.getFullYear()).toBe(2024);
+      });
     });
 
     it('should filter by user', async () => {
@@ -440,13 +463,21 @@ describe('Time Entries API E2E Tests', () => {
       });
 
       const service = await createTestService(env.db, env.tenant);
-      // Create another user via API
-      const userData = createUserTestData();
-      const userResponse = await env.apiClient.post('/api/v1/users', userData);
-      if (userResponse.status !== 201) {
-        throw new Error('Failed to create test user');
-      }
-      const otherUser = userResponse.data.data;
+      
+      // Create another user directly in DB (simpler for testing)
+      const otherUserId = uuidv4();
+      await env.db('users').insert({
+        user_id: otherUserId,
+        tenant: env.tenant,
+        username: `testuser_${otherUserId.substring(0, 8)}`,
+        email: `test${otherUserId.substring(0, 8)}@example.com`,
+        first_name: 'Test',
+        last_name: 'User',
+        hashed_password: 'dummy',
+        created_at: new Date(),
+        user_type: 'internal'
+      });
+      const otherUser = { user_id: otherUserId };
       
       // Create entries for different users
       await createTestTimeEntry(env.db, env.tenant, {
@@ -468,6 +499,15 @@ describe('Time Entries API E2E Tests', () => {
       });
       
       assertSuccess(response);
+      
+      // Filter for entries that match our ticket to isolate test data
+      const ticketEntries = response.data.data.filter((e: any) => e.work_item_id === ticket.ticket_id);
+      
+      // Should have exactly one entry (only for env.userId)
+      expect(ticketEntries.length).toBe(1);
+      expect(ticketEntries[0].user_id).toBe(env.userId);
+      
+      // All returned entries should be for the requested user
       expect(response.data.data.every((e: any) => e.user_id === env.userId)).toBe(true);
     });
 
@@ -498,7 +538,7 @@ describe('Time Entries API E2E Tests', () => {
       });
 
       const response = await env.apiClient.get(API_BASE, {
-        params: { billable: true }
+        params: { is_billable: 'true' }
       });
       
       assertSuccess(response);
@@ -527,13 +567,13 @@ describe('Time Entries API E2E Tests', () => {
       }
 
       const response = await env.apiClient.get(API_BASE, {
-        params: { sort: 'work_date', order: 'asc' }
+        params: { sort: 'start_time', order: 'asc' }
       });
       
       assertSuccess(response);
-      const workDates = response.data.data.map((e: any) => e.work_date);
-      const sortedDates = [...workDates].sort();
-      expect(workDates).toEqual(sortedDates);
+      const startTimes = response.data.data.map((e: any) => e.start_time);
+      const sortedTimes = [...startTimes].sort();
+      expect(startTimes).toEqual(sortedTimes);
     });
   });
 
