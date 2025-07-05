@@ -107,10 +107,10 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasReadPermission = await hasPermission(
-          db,
-          user.user_id,
-          'team:read',
-          tenantId!
+          user,
+          'team',
+          'read',
+          db
         );
 
         if (!hasReadPermission) {
@@ -212,10 +212,10 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasReadPermission = await hasPermission(
-          db,
-          user.user_id,
-          'team:read',
-          tenantId!
+          user,
+          'team',
+          'read',
+          db
         );
 
         if (!hasReadPermission) {
@@ -278,10 +278,10 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasReadPermission = await hasPermission(
-          db,
-          user.user_id,
-          'team:read',
-          tenantId!
+          user,
+          'team',
+          'read',
+          db
         );
 
         if (!hasReadPermission) {
@@ -347,10 +347,10 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasReadPermission = await hasPermission(
-          db,
-          user.user_id,
-          'team:read',
-          tenantId!
+          user,
+          'team',
+          'read',
+          db
         );
 
         if (!hasReadPermission) {
@@ -416,10 +416,10 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasUpdatePermission = await hasPermission(
-          db,
-          user.user_id,
-          'team:update',
-          tenantId!
+          user,
+          'team',
+          'update',
+          db
         );
 
         if (!hasUpdatePermission) {
@@ -502,10 +502,10 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasUpdatePermission = await hasPermission(
-          db,
-          user.user_id,
-          'team:update',
-          tenantId!
+          user,
+          'team',
+          'update',
+          db
         );
 
         if (!hasUpdatePermission) {
@@ -571,10 +571,10 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasUpdatePermission = await hasPermission(
-          db,
-          user.user_id,
-          'team:update',
-          tenantId!
+          user,
+          'team',
+          'update',
+          db
         );
 
         if (!hasUpdatePermission) {
@@ -652,10 +652,10 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasUpdatePermission = await hasPermission(
-          db,
-          user.user_id,
-          'team:update',
-          tenantId!
+          user,
+          'team',
+          'update',
+          db
         );
 
         if (!hasUpdatePermission) {
@@ -733,10 +733,10 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasReadPermission = await hasPermission(
-          db,
-          user.user_id,
-          'team:read',
-          tenantId!
+          user,
+          'team',
+          'read',
+          db
         );
 
         if (!hasReadPermission) {
@@ -816,10 +816,10 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasReadPermission = await hasPermission(
-          db,
-          user.user_id,
-          'team:read',
-          tenantId!
+          user,
+          'team',
+          'read',
+          db
         );
 
         if (!hasReadPermission) {
