@@ -16,7 +16,7 @@ import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import { persistInvoiceItems, persistManualInvoiceItems } from 'server/src/lib/services/invoiceService'; // Import persistManualInvoiceItems
 import Invoice from 'server/src/lib/models/invoice'; // Needed for getFullInvoiceById
 import { v4 as uuidv4 } from 'uuid';
-import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core'; // Import runtime getter via package export
+import { getWorkflowRuntime } from '@shared/workflow/core'; // Import runtime getter via package export
 // import { getRedisStreamClient } from '@shared/workflow/streams/redisStreamClient.js'; // No longer directly used here
 import { getEventBus } from 'server/src/lib/eventBus'; // Import EventBus
 import { EventType as BusEventType } from '@shared/workflow/streams/eventBusSchema'; // For type safety
