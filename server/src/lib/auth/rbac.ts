@@ -73,8 +73,19 @@ export async function hasPermission(user: IUser, resource: string, action: strin
     rolesWithPermissions = await User.getUserRolesWithPermissions(knex, user.user_id);
   }
   
+  // Determine portal type based on user type
+  const isClientPortal = user.user_type === 'client';
+  
   for (const role of rolesWithPermissions) {
+    // Filter roles based on portal type
+    if (isClientPortal && !role.client) continue;
+    if (!isClientPortal && !role.msp) continue;
+    
     for (const permission of role.permissions) {
+      // Filter permissions based on portal type
+      if (isClientPortal && !permission.client) continue;
+      if (!isClientPortal && !permission.msp) continue;
+      
       if (permission.resource === resource && permission.action === action) {
         return true;
       }
@@ -113,10 +124,21 @@ export async function checkMultiplePermissions(
     rolesWithPermissions = await User.getUserRolesWithPermissions(knex, user.user_id);
   }
   
+  // Determine portal type based on user type
+  const isClientPortal = user.user_type === 'client';
+  
   const userPermissions = new Set<string>();
   
   for (const role of rolesWithPermissions) {
+    // Filter roles based on portal type
+    if (isClientPortal && !role.client) continue;
+    if (!isClientPortal && !role.msp) continue;
+    
     for (const permission of role.permissions) {
+      // Filter permissions based on portal type
+      if (isClientPortal && !permission.client) continue;
+      if (!isClientPortal && !permission.msp) continue;
+      
       userPermissions.add(`${permission.resource}:${permission.action}`);
     }
   }

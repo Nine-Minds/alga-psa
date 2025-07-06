@@ -247,7 +247,9 @@ const User = {
         'roles.role_id',
         'roles.role_name',
         'roles.description',
-        'roles.tenant'
+        'roles.tenant',
+        'roles.msp',
+        'roles.client'
       ]);
 
       const rolesWithPermissions = await Promise.all(roles.map(async (role): Promise<IRoleWithPermissions> => {
@@ -264,7 +266,9 @@ const User = {
           'permissions.permission_id',
           'permissions.resource',
           'permissions.action',
-          'permissions.tenant'
+          'permissions.tenant',
+          'permissions.msp',
+          'permissions.client'
         ]);
 
         return {

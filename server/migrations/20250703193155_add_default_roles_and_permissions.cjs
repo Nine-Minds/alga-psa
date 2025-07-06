@@ -298,69 +298,75 @@ exports.up = async function(knex) {
 
     // Define all permissions needed
     const permissions = [
-      // Asset permissions
+      // Asset permissions - MSP only
       { resource: 'asset', action: 'create', msp: true, client: false },
-      { resource: 'asset', action: 'read', msp: true, client: true },
+      { resource: 'asset', action: 'read', msp: true, client: false },
       { resource: 'asset', action: 'update', msp: true, client: false },
       { resource: 'asset', action: 'delete', msp: true, client: false },
       
-      // Billing permissions
+      // Billing permissions - MSP only
       { resource: 'billing', action: 'create', msp: true, client: false },
-      { resource: 'billing', action: 'read', msp: true, client: true },
+      { resource: 'billing', action: 'read', msp: true, client: false },
       { resource: 'billing', action: 'update', msp: true, client: false },
       { resource: 'billing', action: 'delete', msp: true, client: false },
       { resource: 'billing', action: 'reconcile', msp: true, client: false },
       
-      // Client permissions
+      // Client permissions - MSP only
       { resource: 'client', action: 'create', msp: true, client: false },
-      { resource: 'client', action: 'read', msp: true, client: true },
+      { resource: 'client', action: 'read', msp: true, client: false },
       { resource: 'client', action: 'update', msp: true, client: false },
       { resource: 'client', action: 'delete', msp: true, client: false },
       
-      // Contact permissions
-      { resource: 'contact', action: 'create', msp: true, client: true },
-      { resource: 'contact', action: 'read', msp: true, client: true },
-      { resource: 'contact', action: 'update', msp: true, client: true },
+      // Company permissions - Read and update for clients
+      { resource: 'company', action: 'create', msp: true, client: false },
+      { resource: 'company', action: 'read', msp: true, client: true },
+      { resource: 'company', action: 'update', msp: true, client: true },
+      { resource: 'company', action: 'delete', msp: true, client: false },
+      
+      // Contact permissions - MSP only
+      { resource: 'contact', action: 'create', msp: true, client: false },
+      { resource: 'contact', action: 'read', msp: true, client: false },
+      { resource: 'contact', action: 'update', msp: true, client: false },
       { resource: 'contact', action: 'delete', msp: true, client: false },
       
-      // Credit permissions
+      // Credit permissions - MSP only
       { resource: 'credit', action: 'create', msp: true, client: false },
-      { resource: 'credit', action: 'read', msp: true, client: true },
+      { resource: 'credit', action: 'read', msp: true, client: false },
       { resource: 'credit', action: 'update', msp: true, client: false },
       { resource: 'credit', action: 'delete', msp: true, client: false },
       { resource: 'credit', action: 'transfer', msp: true, client: false },
       { resource: 'credit', action: 'apply', msp: true, client: false },
       
-      // Document permissions
+      // Document permissions - Available to clients
       { resource: 'document', action: 'create', msp: true, client: true },
       { resource: 'document', action: 'read', msp: true, client: true },
       { resource: 'document', action: 'update', msp: true, client: true },
       { resource: 'document', action: 'delete', msp: true, client: false },
       
-      // Invoice permissions
+      // Invoice permissions - MSP only
       { resource: 'invoice', action: 'create', msp: true, client: false },
-      { resource: 'invoice', action: 'read', msp: true, client: true },
+      { resource: 'invoice', action: 'read', msp: true, client: false },
       { resource: 'invoice', action: 'update', msp: true, client: false },
       { resource: 'invoice', action: 'delete', msp: true, client: false },
       { resource: 'invoice', action: 'generate', msp: true, client: false },
       { resource: 'invoice', action: 'finalize', msp: true, client: false },
       { resource: 'invoice', action: 'send', msp: true, client: false },
       
-      // Profile permissions
+      // Profile permissions - MSP only
       { resource: 'profile', action: 'create', msp: true, client: false },
-      { resource: 'profile', action: 'read', msp: true, client: true },
-      { resource: 'profile', action: 'update', msp: true, client: true },
+      { resource: 'profile', action: 'read', msp: true, client: false },
+      { resource: 'profile', action: 'update', msp: true, client: false },
       { resource: 'profile', action: 'delete', msp: true, client: false },
       
-      // Project permissions
+      // Project permissions - Read-only for clients
       { resource: 'project', action: 'create', msp: true, client: false },
       { resource: 'project', action: 'read', msp: true, client: true },
       { resource: 'project', action: 'update', msp: true, client: false },
       { resource: 'project', action: 'delete', msp: true, client: false },
       
-      // Tag permissions
+      // Tag permissions - MSP only
       { resource: 'tag', action: 'create', msp: true, client: false },
-      { resource: 'tag', action: 'read', msp: true, client: true },
+      { resource: 'tag', action: 'read', msp: true, client: false },
       { resource: 'tag', action: 'update', msp: true, client: false },
       { resource: 'tag', action: 'delete', msp: true, client: false },
       
@@ -390,19 +396,13 @@ exports.up = async function(knex) {
       { resource: 'timesheet', action: 'submit', msp: true, client: false },
       { resource: 'timesheet', action: 'approve', msp: true, client: false },
       
-      // User permissions - MSP can manage all users
-      { resource: 'user', action: 'create', msp: true, client: false },
-      { resource: 'user', action: 'read', msp: true, client: false },
-      { resource: 'user', action: 'update', msp: true, client: false },
-      { resource: 'user', action: 'delete', msp: true, client: false },
-      
-      // User permissions for client portal - Client admins can manage their own users
-      { resource: 'user', action: 'create', msp: false, client: true },
-      { resource: 'user', action: 'read', msp: false, client: true },
-      { resource: 'user', action: 'update', msp: false, client: true },
-      { resource: 'user', action: 'delete', msp: false, client: true },
-      { resource: 'user', action: 'invite', msp: false, client: true },
-      { resource: 'user', action: 'reset_password', msp: false, client: true },
+      // User permissions - Available in both portals as each manages their own users
+      { resource: 'user', action: 'create', msp: true, client: true },
+      { resource: 'user', action: 'read', msp: true, client: true },
+      { resource: 'user', action: 'update', msp: true, client: true },
+      { resource: 'user', action: 'delete', msp: true, client: true },
+      { resource: 'user', action: 'invite', msp: true, client: true },
+      { resource: 'user', action: 'reset_password', msp: true, client: true },
       
       // User schedule permissions
       { resource: 'user_schedule', action: 'create', msp: true, client: false },
@@ -413,10 +413,8 @@ exports.up = async function(knex) {
       // Settings permissions
       { resource: 'ticket_settings', action: 'read', msp: true, client: false },
       { resource: 'ticket_settings', action: 'update', msp: true, client: false },
-      { resource: 'user_settings', action: 'read', msp: true, client: false },
-      { resource: 'user_settings', action: 'update', msp: true, client: false },
-      { resource: 'user_settings', action: 'read', msp: false, client: true },
-      { resource: 'user_settings', action: 'update', msp: false, client: true },
+      { resource: 'user_settings', action: 'read', msp: true, client: true },
+      { resource: 'user_settings', action: 'update', msp: true, client: true },
       { resource: 'system_settings', action: 'read', msp: true, client: false },
       { resource: 'system_settings', action: 'update', msp: true, client: false },
       { resource: 'security_settings', action: 'read', msp: true, client: false },
@@ -586,13 +584,79 @@ exports.up = async function(knex) {
       }
     }
   }
+  
+  // Clean up deprecated permissions
+  console.log('Removing deprecated permissions...');
+  
+  // Resources to completely remove
+  const deprecatedResources = ['category', 'comment', 'client_password', 'client_profile', 'company_setting'];
+  
+  for (const resource of deprecatedResources) {
+    // First remove any role_permissions assignments
+    await knex('role_permissions')
+      .whereIn('permission_id', function() {
+        this.select('permission_id')
+          .from('permissions')
+          .where('resource', resource);
+      })
+      .delete();
+    
+    // Then remove the permissions themselves
+    const deletedCount = await knex('permissions')
+      .where('resource', resource)
+      .delete();
+      
+    if (deletedCount > 0) {
+      console.log(`Removed ${deletedCount} deprecated ${resource} permissions`);
+    }
+  }
+  
+  // Update existing permissions to restrict client portal access
+  console.log('Updating client portal permissions to match security requirements...');
+  
+  // Resources that should NOT be available to client portal
+  const mspOnlyResources = [
+    'asset', 'billing', 'client', 'contact', 'credit', 'invoice', 
+    'profile', 'tag', 'priority', 'notification'
+  ];
+  
+  // Update these resources to be MSP-only
+  for (const resource of mspOnlyResources) {
+    const updated = await knex('permissions')
+      .where('resource', resource)
+      .where('client', true)
+      .update({ client: false });
+      
+    if (updated > 0) {
+      console.log(`Updated ${updated} ${resource} permissions to be MSP-only`);
+    }
+  }
+  
+  // Ensure the 5 allowed resources have correct permissions for client portal
+  // These are: user, ticket, project (read-only), company (read/update), document
+  const clientAllowedUpdates = [
+    { resource: 'project', actions: ['read'] },
+    { resource: 'company', actions: ['read', 'update'] }
+  ];
+  
+  for (const { resource, actions } of clientAllowedUpdates) {
+    const updated = await knex('permissions')
+      .where('resource', resource)
+      .whereIn('action', actions)
+      .where('client', false)
+      .update({ client: true });
+      
+    if (updated > 0) {
+      console.log(`Updated ${updated} ${resource} permissions to be available in client portal`);
+    }
+  }
 };
 
 /**
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.down = async function(knex) {
+exports.down = async function() {
   // This migration is designed to be idempotent and only updates existing data
   // Rolling back would require removing the msp/client columns which is handled by the schema migration
   // No specific rollback needed for the data updates

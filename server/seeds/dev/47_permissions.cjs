@@ -5,40 +5,40 @@ exports.seed = async function(knex) {
 
     // Define all comprehensive permissions needed based on security audit
     const allPermissions = [
-        // Asset permissions
+        // Asset permissions - MSP only
         { resource: 'asset', action: 'create', msp: true, client: false },
-        { resource: 'asset', action: 'read', msp: true, client: true },
+        { resource: 'asset', action: 'read', msp: true, client: false },
         { resource: 'asset', action: 'update', msp: true, client: false },
         { resource: 'asset', action: 'delete', msp: true, client: false },
         
-        // Billing permissions
+        // Billing permissions - MSP only
         { resource: 'billing', action: 'create', msp: true, client: false },
-        { resource: 'billing', action: 'read', msp: true, client: true },
+        { resource: 'billing', action: 'read', msp: true, client: false },
         { resource: 'billing', action: 'update', msp: true, client: false },
         { resource: 'billing', action: 'delete', msp: true, client: false },
         { resource: 'billing', action: 'reconcile', msp: true, client: false },
         
-        // Client permissions
+        // Client permissions - MSP only
         { resource: 'client', action: 'create', msp: true, client: false },
-        { resource: 'client', action: 'read', msp: true, client: true },
+        { resource: 'client', action: 'read', msp: true, client: false },
         { resource: 'client', action: 'update', msp: true, client: false },
         { resource: 'client', action: 'delete', msp: true, client: false },
         
-        // Company permissions
+        // Company permissions - Read and update for clients
         { resource: 'company', action: 'create', msp: true, client: false },
         { resource: 'company', action: 'read', msp: true, client: true },
-        { resource: 'company', action: 'update', msp: true, client: false },
+        { resource: 'company', action: 'update', msp: true, client: true },
         { resource: 'company', action: 'delete', msp: true, client: false },
         
-        // Contact permissions
-        { resource: 'contact', action: 'create', msp: true, client: true },
-        { resource: 'contact', action: 'read', msp: true, client: true },
-        { resource: 'contact', action: 'update', msp: true, client: true },
+        // Contact permissions - MSP only
+        { resource: 'contact', action: 'create', msp: true, client: false },
+        { resource: 'contact', action: 'read', msp: true, client: false },
+        { resource: 'contact', action: 'update', msp: true, client: false },
         { resource: 'contact', action: 'delete', msp: true, client: false },
         
-        // Credit permissions
+        // Credit permissions - MSP only
         { resource: 'credit', action: 'create', msp: true, client: false },
-        { resource: 'credit', action: 'read', msp: true, client: true },
+        { resource: 'credit', action: 'read', msp: true, client: false },
         { resource: 'credit', action: 'update', msp: true, client: false },
         { resource: 'credit', action: 'delete', msp: true, client: false },
         { resource: 'credit', action: 'transfer', msp: true, client: false },
@@ -51,9 +51,9 @@ exports.seed = async function(knex) {
         { resource: 'document', action: 'update', msp: true, client: true },
         { resource: 'document', action: 'delete', msp: true, client: false },
         
-        // Invoice permissions
+        // Invoice permissions - MSP only
         { resource: 'invoice', action: 'create', msp: true, client: false },
-        { resource: 'invoice', action: 'read', msp: true, client: true },
+        { resource: 'invoice', action: 'read', msp: true, client: false },
         { resource: 'invoice', action: 'update', msp: true, client: false },
         { resource: 'invoice', action: 'delete', msp: true, client: false },
         { resource: 'invoice', action: 'generate', msp: true, client: false },
@@ -61,21 +61,21 @@ exports.seed = async function(knex) {
         { resource: 'invoice', action: 'send', msp: true, client: false },
         { resource: 'invoice', action: 'void', msp: true, client: false },
         
-        // Profile permissions
+        // Profile permissions - MSP only
         { resource: 'profile', action: 'create', msp: true, client: false },
-        { resource: 'profile', action: 'read', msp: true, client: true },
-        { resource: 'profile', action: 'update', msp: true, client: true },
+        { resource: 'profile', action: 'read', msp: true, client: false },
+        { resource: 'profile', action: 'update', msp: true, client: false },
         { resource: 'profile', action: 'delete', msp: true, client: false },
         
-        // Project permissions
+        // Project permissions - Read-only for clients
         { resource: 'project', action: 'create', msp: true, client: false },
         { resource: 'project', action: 'read', msp: true, client: true },
         { resource: 'project', action: 'update', msp: true, client: false },
         { resource: 'project', action: 'delete', msp: true, client: false },
         
-        // Tag permissions
+        // Tag permissions - MSP only
         { resource: 'tag', action: 'create', msp: true, client: false },
-        { resource: 'tag', action: 'read', msp: true, client: true },
+        { resource: 'tag', action: 'read', msp: true, client: false },
         { resource: 'tag', action: 'update', msp: true, client: false },
         { resource: 'tag', action: 'delete', msp: true, client: false },
         
@@ -127,19 +127,13 @@ exports.seed = async function(knex) {
         { resource: 'timesheet', action: 'approve', msp: true, client: false },
         { resource: 'timesheet', action: 'reverse', msp: true, client: false },
         
-        // User permissions - MSP can manage all users
-        { resource: 'user', action: 'create', msp: true, client: false },
-        { resource: 'user', action: 'read', msp: true, client: false },
-        { resource: 'user', action: 'update', msp: true, client: false },
-        { resource: 'user', action: 'delete', msp: true, client: false },
-        
-        // User permissions for client portal - Client admins can manage their own users
-        { resource: 'user', action: 'create', msp: false, client: true },
-        { resource: 'user', action: 'read', msp: false, client: true },
-        { resource: 'user', action: 'update', msp: false, client: true },
-        { resource: 'user', action: 'delete', msp: false, client: true },
-        { resource: 'user', action: 'invite', msp: false, client: true },
-        { resource: 'user', action: 'reset_password', msp: false, client: true },
+        // User permissions - Available in both portals as each manages their own users
+        { resource: 'user', action: 'create', msp: true, client: true },
+        { resource: 'user', action: 'read', msp: true, client: true },
+        { resource: 'user', action: 'update', msp: true, client: true },
+        { resource: 'user', action: 'delete', msp: true, client: true },
+        { resource: 'user', action: 'invite', msp: true, client: true },
+        { resource: 'user', action: 'reset_password', msp: true, client: true },
         
         // User schedule permissions
         { resource: 'user_schedule', action: 'create', msp: true, client: false },
@@ -160,35 +154,23 @@ exports.seed = async function(knex) {
         { resource: 'service', action: 'update', msp: true, client: false },
         { resource: 'service', action: 'delete', msp: true, client: false },
         
-        // Comment permissions
-        { resource: 'comment', action: 'create', msp: true, client: true },
-        { resource: 'comment', action: 'read', msp: true, client: true },
-        { resource: 'comment', action: 'update', msp: true, client: true },
-        { resource: 'comment', action: 'delete', msp: true, client: false },
-        
         // Interaction permissions
         { resource: 'interaction', action: 'create', msp: true, client: false },
         { resource: 'interaction', action: 'read', msp: true, client: false },
         { resource: 'interaction', action: 'update', msp: true, client: false },
         { resource: 'interaction', action: 'delete', msp: true, client: false },
         
-        // Priority permissions
+        // Priority permissions - MSP only
         { resource: 'priority', action: 'create', msp: true, client: false },
-        { resource: 'priority', action: 'read', msp: true, client: true },
+        { resource: 'priority', action: 'read', msp: true, client: false },
         { resource: 'priority', action: 'update', msp: true, client: false },
         { resource: 'priority', action: 'delete', msp: true, client: false },
         
-        // Category permissions
-        { resource: 'category', action: 'create', msp: true, client: false },
-        { resource: 'category', action: 'read', msp: true, client: true },
-        { resource: 'category', action: 'update', msp: true, client: false },
-        { resource: 'category', action: 'delete', msp: true, client: false },
-        
-        // Notification permissions
+        // Notification permissions - MSP only
         { resource: 'notification', action: 'create', msp: true, client: false },
-        { resource: 'notification', action: 'read', msp: true, client: true },
-        { resource: 'notification', action: 'update', msp: true, client: true },
-        { resource: 'notification', action: 'delete', msp: true, client: true },
+        { resource: 'notification', action: 'read', msp: true, client: false },
+        { resource: 'notification', action: 'update', msp: true, client: false },
+        { resource: 'notification', action: 'delete', msp: true, client: false },
         
         // Template permissions
         { resource: 'template', action: 'create', msp: true, client: false },
@@ -205,10 +187,8 @@ exports.seed = async function(knex) {
         // Settings permissions
         { resource: 'ticket_settings', action: 'read', msp: true, client: false },
         { resource: 'ticket_settings', action: 'update', msp: true, client: false },
-        { resource: 'user_settings', action: 'read', msp: true, client: false },
-        { resource: 'user_settings', action: 'update', msp: true, client: false },
-        { resource: 'user_settings', action: 'read', msp: false, client: true },
-        { resource: 'user_settings', action: 'update', msp: false, client: true },
+        { resource: 'user_settings', action: 'read', msp: true, client: true },
+        { resource: 'user_settings', action: 'update', msp: true, client: true },
         { resource: 'system_settings', action: 'read', msp: true, client: false },
         { resource: 'system_settings', action: 'update', msp: true, client: false },
         { resource: 'security_settings', action: 'read', msp: true, client: false },
@@ -333,17 +313,12 @@ exports.seed = async function(knex) {
                 { resource: 'document', action: 'update' },
                 // Read access to assets
                 { resource: 'asset', action: 'read' },
-                // Category and priority management
-                { resource: 'category', action: 'read' },
+                // Priority management
                 { resource: 'priority', action: 'read' },
                 // Notification management
                 { resource: 'notification', action: 'create' },
                 { resource: 'notification', action: 'read' },
                 { resource: 'notification', action: 'update' },
-                // Comment management
-                { resource: 'comment', action: 'create' },
-                { resource: 'comment', action: 'read' },
-                { resource: 'comment', action: 'update' },
                 // Service read access
                 { resource: 'service', action: 'read' },
                 // Tag management

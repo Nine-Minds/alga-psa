@@ -46,7 +46,9 @@ export async function deleteRole(roleId: string): Promise<void> {
 export async function getRoles(): Promise<IRole[]> {
     const { knex: db, tenant } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        return await trx('roles').where({ tenant });
+        return await trx('roles')
+            .where({ tenant })
+            .select('role_id', 'role_name', 'description', 'tenant', 'msp', 'client');
     });
 }
 
@@ -241,7 +243,7 @@ export async function getRolePermissions(roleId: string): Promise<IPermission[]>
                     'role_permissions.tenant': tenant,
                     'permissions.tenant': tenant 
                 })
-                .select('permissions.*');
+                .select('permissions.permission_id', 'permissions.resource', 'permissions.action', 'permissions.tenant', 'permissions.msp', 'permissions.client');
         });
     } catch (error) {
         console.error('Error fetching role permissions:', error);
@@ -253,7 +255,9 @@ export async function getPermissions(): Promise<IPermission[]> {
     try {
         const { knex: db, tenant } = await createTenantKnex();
         return withTransaction(db, async (trx: Knex.Transaction) => {
-            const permissions = await trx('permissions').where({ tenant });
+            const permissions = await trx('permissions')
+                .where({ tenant })
+                .select('permission_id', 'resource', 'action', 'tenant', 'msp', 'client');
             console.log('Fetched permissions for tenant:', tenant, permissions);
             return permissions;
         });
