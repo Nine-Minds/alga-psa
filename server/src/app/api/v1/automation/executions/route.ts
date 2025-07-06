@@ -3,16 +3,13 @@
  * GET /api/v1/automation/executions - List automation executions
  */
 
-import { AutomationController } from 'server/src/lib/api/controllers/AutomationController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { NextRequest } from 'next/server';
+import { ApiAutomationControllerV2 } from 'server/src/lib/api/controllers/ApiAutomationControllerV2';
 
-export async function GET(request: Request) {
-  try {
-    const controller = new AutomationController();
-    return await controller.listAutomationExecutions()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
+const controller = new ApiAutomationControllerV2();
+
+export async function GET(request: NextRequest) {
+  return controller.listAutomationExecutions()(request);
 }
 
 export const runtime = 'nodejs';

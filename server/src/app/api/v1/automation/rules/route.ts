@@ -4,25 +4,17 @@
  * POST /api/v1/automation/rules - Create new automation rule
  */
 
-import { AutomationController } from 'server/src/lib/api/controllers/AutomationController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { NextRequest } from 'next/server';
+import { ApiAutomationControllerV2 } from 'server/src/lib/api/controllers/ApiAutomationControllerV2';
 
-export async function GET(request: Request) {
-  try {
-    const controller = new AutomationController();
-    return await controller.listAutomationRules()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
+const controller = new ApiAutomationControllerV2();
+
+export async function GET(request: NextRequest) {
+  return controller.listAutomationRules()(request);
 }
 
-export async function POST(request: Request) {
-  try {
-    const controller = new AutomationController();
-    return await controller.createAutomationRule()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
+export async function POST(request: NextRequest) {
+  return controller.createAutomationRule()(request);
 }
 
 export const runtime = 'nodejs';

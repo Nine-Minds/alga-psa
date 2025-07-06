@@ -3,16 +3,13 @@
  * GET /api/v1/automation/meta - Get automation rule types and categories
  */
 
-import { AutomationController } from 'server/src/lib/api/controllers/AutomationController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { NextRequest } from 'next/server';
+import { ApiAutomationControllerV2 } from 'server/src/lib/api/controllers/ApiAutomationControllerV2';
 
-export async function GET(request: Request) {
-  try {
-    const controller = new AutomationController();
-    return await controller.getAutomationMeta()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
+const controller = new ApiAutomationControllerV2();
+
+export async function GET(request: NextRequest) {
+  return controller.getAutomationMeta()(request);
 }
 
 export const runtime = 'nodejs';

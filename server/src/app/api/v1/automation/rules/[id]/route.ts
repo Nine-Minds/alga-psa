@@ -5,34 +5,21 @@
  * DELETE /api/v1/automation/rules/{id} - Delete automation rule
  */
 
-import { AutomationController } from 'server/src/lib/api/controllers/AutomationController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { NextRequest } from 'next/server';
+import { ApiAutomationControllerV2 } from 'server/src/lib/api/controllers/ApiAutomationControllerV2';
 
-export async function GET(request: Request) {
-  try {
-    const controller = new AutomationController();
-    return await controller.getAutomationRule()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
+const controller = new ApiAutomationControllerV2();
+
+export async function GET(request: NextRequest) {
+  return controller.getAutomationRule()(request);
 }
 
-export async function PUT(request: Request) {
-  try {
-    const controller = new AutomationController();
-    return await controller.updateAutomationRule()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
+export async function PUT(request: NextRequest) {
+  return controller.updateAutomationRule()(request);
 }
 
-export async function DELETE(request: Request) {
-  try {
-    const controller = new AutomationController();
-    return await controller.deleteAutomationRule()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
+export async function DELETE(request: NextRequest) {
+  return controller.deleteAutomationRule()(request);
 }
 
 export const runtime = 'nodejs';

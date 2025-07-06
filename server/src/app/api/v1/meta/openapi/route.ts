@@ -4,11 +4,8 @@
  */
 
 import { NextRequest } from 'next/server';
-import { MetadataController } from 'server/src/lib/api/controllers/MetadataController';
+import { ApiMetadataControllerV2 } from '@/lib/api/controllers/ApiMetadataControllerV2';
 
-const controller = new MetadataController();
+const controller = new ApiMetadataControllerV2();
 
-export async function GET(request: NextRequest) {
-  const { searchParams } = request.nextUrl;
-  return controller.getOpenApiSpec(request, searchParams);
-}
+export const GET = controller.getOpenApiSpec();
