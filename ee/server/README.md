@@ -189,7 +189,7 @@ If tests fail in the IDE but work from command line:
 | `DB_NAME` | Database name | `alga_test` |
 | `DB_USER` | Database user | `postgres` |
 | `DB_PASSWORD` | Database password | (empty) |
-| `EE_BASE_URL` | Application base URL | `http://localhost:3001` |
+| `EE_BASE_URL` | Application base URL | `http://localhost:3000` |
 | `DEBUG_BROWSER` | Show browser during tests | `false` |
 | `HEADLESS_BROWSER` | Run browser headless | `true` |
 
