@@ -3,10 +3,10 @@
  * GET /api/v1/billing-plans/[id]/usage-metrics - Get plan usage metrics
  */
 
-import { BillingPlanController } from 'server/src/lib/api/controllers/BillingPlanController';
+import { ApiBillingPlanControllerV2 } from 'server/src/lib/api/controllers/ApiBillingPlanControllerV2';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new BillingPlanController();
+const controller = new ApiBillingPlanControllerV2();
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {

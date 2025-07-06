@@ -4,25 +4,16 @@
  * POST /api/v1/categories/service - Create service category
  */
 
-import { CategoryController } from 'server/src/lib/api/controllers/CategoryController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiCategoryControllerV2 } from 'server/src/lib/api/controllers/ApiCategoryControllerV2';
 
-const controller = new CategoryController();
+const controller = new ApiCategoryControllerV2();
 
 export async function GET(request: Request) {
-  try {
-    return await controller.listServiceCategories()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
+  return controller.listServiceCategories()(request as any);
 }
 
 export async function POST(request: Request) {
-  try {
-    return await controller.createServiceCategory()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
+  return controller.createServiceCategory()(request as any);
 }
 
 export const runtime = 'nodejs';

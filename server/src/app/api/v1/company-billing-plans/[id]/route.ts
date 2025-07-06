@@ -3,12 +3,12 @@
  * DELETE /api/v1/company-billing-plans/[id] - Unassign plan from company
  */
 
-import { BillingPlanController } from 'server/src/lib/api/controllers/BillingPlanController';
+import { ApiBillingPlanControllerV2 } from 'server/src/lib/api/controllers/ApiBillingPlanControllerV2';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const billingPlanController = new BillingPlanController();
+    const billingPlanController = new ApiBillingPlanControllerV2();
     const req = request as any;
     req.params = params;
     return await billingPlanController.unassignPlanFromCompany()(req);

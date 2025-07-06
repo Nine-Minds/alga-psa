@@ -42,7 +42,7 @@ export abstract class ApiBaseControllerV2 {
   /**
    * Authenticate request and set context
    */
-  private async authenticate(req: NextRequest): Promise<ApiRequest> {
+  protected async authenticate(req: NextRequest): Promise<ApiRequest> {
     const apiKey = req.headers.get('x-api-key');
     
     if (!apiKey) {
@@ -89,7 +89,7 @@ export abstract class ApiBaseControllerV2 {
   /**
    * Check permissions
    */
-  private async checkPermission(req: ApiRequest, action: string): Promise<void> {
+  protected async checkPermission(req: ApiRequest, action: string): Promise<void> {
     if (!req.context?.user) {
       throw new UnauthorizedError('User context required');
     }

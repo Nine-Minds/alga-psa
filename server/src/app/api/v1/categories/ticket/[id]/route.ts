@@ -5,39 +5,26 @@
  * DELETE /api/v1/categories/ticket/[id] - Delete ticket category
  */
 
-import { CategoryController } from 'server/src/lib/api/controllers/CategoryController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiCategoryControllerV2 } from 'server/src/lib/api/controllers/ApiCategoryControllerV2';
 
-const controller = new CategoryController();
+const controller = new ApiCategoryControllerV2();
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const req = request as any;
-    req.params = params;
-    return await controller.getTicketCategory()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
+  const req = request as any;
+  req.params = params;
+  return controller.getTicketCategory()(req);
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const req = request as any;
-    req.params = params;
-    return await controller.updateTicketCategory()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
+  const req = request as any;
+  req.params = params;
+  return controller.updateTicketCategory()(req);
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const req = request as any;
-    req.params = params;
-    return await controller.deleteTicketCategory()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
+  const req = request as any;
+  req.params = params;
+  return controller.deleteTicketCategory()(req);
 }
 
 export const runtime = 'nodejs';

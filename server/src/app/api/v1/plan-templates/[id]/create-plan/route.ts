@@ -3,10 +3,10 @@
  * POST /api/v1/plan-templates/[id]/create-plan - Create plan from template
  */
 
-import { BillingPlanController } from 'server/src/lib/api/controllers/BillingPlanController';
+import { ApiBillingPlanControllerV2 } from 'server/src/lib/api/controllers/ApiBillingPlanControllerV2';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new BillingPlanController();
+const controller = new ApiBillingPlanControllerV2();
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {

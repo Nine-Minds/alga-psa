@@ -3,13 +3,13 @@
  * DELETE /api/v1/assets/documents/{associationId} - Remove document association
  */
 
-import { AssetController } from 'server/src/lib/api/controllers/AssetController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiAssetControllerV2 } from '@/lib/api/controllers/ApiAssetControllerV2';
+import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
 
 export async function DELETE(request: Request) {
   try {
-    const controller = new AssetController();
-    return await controller.removeDocumentAssociation()(request as any);
+    const controller = new ApiAssetControllerV2();
+    return await controller.removeDocumentAssociation(request as any, (request as any).params);
   } catch (error) {
     return handleApiError(error);
   }
