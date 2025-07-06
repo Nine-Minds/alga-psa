@@ -11,6 +11,15 @@ import { ClientContactStep } from './steps/ClientContactStep';
 import { BillingSetupStep } from './steps/BillingSetupStep';
 import { TicketingConfigStep } from './steps/TicketingConfigStep';
 import { WizardData, STEPS, REQUIRED_STEPS } from './types';
+import {
+  saveCompanyInfo,
+  addTeamMembers,
+  createClient,
+  addClientContact,
+  setupBilling,
+  configureTicketing,
+  completeOnboarding
+} from 'server/src/lib/actions/onboarding-actions/onboardingActions';
 
 interface OnboardingWizardProps {
   open: boolean;
@@ -30,6 +39,8 @@ export function OnboardingWizard({
   onComplete,
 }: OnboardingWizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<number, string>>({});
   const [wizardData, setWizardData] = useState<WizardData>({
     // Company Info
     firstName: '',
@@ -76,9 +87,99 @@ export function OnboardingWizard({
     setWizardData((prev) => ({ ...prev, ...data }));
   };
 
-  const handleNext = () => {
+  const saveStepData = async (stepIndex: number): Promise<boolean> => {
+    if (testMode) return true;
+    
+    setIsLoading(true);
+    setErrors(prev => ({ ...prev, [stepIndex]: '' }));
+    
+    try {
+      switch (stepIndex) {
+        case 0: // Company Info
+          const companyResult = await saveCompanyInfo({
+            firstName: wizardData.firstName,
+            lastName: wizardData.lastName,
+            companyName: wizardData.companyName,
+            email: wizardData.email
+          });
+          if (!companyResult.success) {
+            setErrors(prev => ({ ...prev, [stepIndex]: companyResult.error || 'Failed to save company info' }));
+            return false;
+          }
+          break;
+          
+        case 1: // Team Members
+          if (wizardData.teamMembers.some(m => m.firstName && m.lastName && m.email)) {
+            const teamResult = await addTeamMembers(wizardData.teamMembers.filter(m => m.firstName && m.lastName && m.email));
+            if (!teamResult.success) {
+              setErrors(prev => ({ ...prev, [stepIndex]: teamResult.error || 'Failed to add team members' }));
+              return false;
+            }
+          }
+          break;
+          
+        case 2: // Client
+          if (wizardData.clientName) {
+            const clientResult = await createClient({
+              clientName: wizardData.clientName,
+              clientEmail: wizardData.clientEmail,
+              clientPhone: wizardData.clientPhone,
+              clientUrl: wizardData.clientUrl
+            });
+            if (!clientResult.success) {
+              setErrors(prev => ({ ...prev, [stepIndex]: clientResult.error || 'Failed to create client' }));
+              return false;
+            }
+            // Store client ID for contact step
+            setWizardData(prev => ({ ...prev, clientId: clientResult.data?.clientId }));
+          }
+          break;
+          
+        case 3: // Client Contact
+          if (wizardData.contactName && wizardData.clientId) {
+            const contactResult = await addClientContact({
+              contactName: wizardData.contactName,
+              contactEmail: wizardData.contactEmail,
+              contactRole: wizardData.contactRole,
+              clientId: wizardData.clientId
+            });
+            if (!contactResult.success) {
+              setErrors(prev => ({ ...prev, [stepIndex]: contactResult.error || 'Failed to add contact' }));
+              return false;
+            }
+          }
+          break;
+          
+        case 4: // Billing
+          if (wizardData.serviceName) {
+            const billingResult = await setupBilling({
+              serviceName: wizardData.serviceName,
+              serviceDescription: wizardData.serviceDescription,
+              servicePrice: wizardData.servicePrice,
+              planName: wizardData.planName
+            });
+            if (!billingResult.success) {
+              setErrors(prev => ({ ...prev, [stepIndex]: billingResult.error || 'Failed to setup billing' }));
+              return false;
+            }
+          }
+          break;
+      }
+      return true;
+    } catch (error) {
+      setErrors(prev => ({ ...prev, [stepIndex]: error instanceof Error ? error.message : 'Unknown error' }));
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleNext = async () => {
     if (currentStep < STEPS.length - 1) {
-      setCurrentStep(currentStep + 1);
+      const saved = await saveStepData(currentStep);
+      if (saved) {
+        setCurrentStep(currentStep + 1);
+      }
     }
   };
 
@@ -107,28 +208,38 @@ export function OnboardingWizard({
       return;
     }
     
+    setIsLoading(true);
     try {
-      // In real mode, submit the data
-      await submitOnboardingData(wizardData);
+      // Save final step (ticketing)
+      if (wizardData.channelName) {
+        const ticketingResult = await configureTicketing({
+          channelName: wizardData.channelName,
+          supportEmail: wizardData.supportEmail,
+          categories: wizardData.categories,
+          priorities: wizardData.priorities
+        });
+        
+        if (!ticketingResult.success) {
+          setErrors(prev => ({ ...prev, [5]: ticketingResult.error || 'Failed to configure ticketing' }));
+          return;
+        }
+      }
+      
+      // Complete onboarding
+      const completionResult = await completeOnboarding();
+      if (!completionResult.success) {
+        setErrors(prev => ({ ...prev, [5]: completionResult.error || 'Failed to complete onboarding' }));
+        return;
+      }
+      
       onComplete?.(wizardData);
+      onOpenChange(false);
     } catch (error) {
-      console.error('Error submitting onboarding data:', error);
-      alert('Failed to complete onboarding. Please try again.');
+      console.error('Error completing onboarding:', error);
+      setErrors(prev => ({ ...prev, [5]: error instanceof Error ? error.message : 'Unknown error' }));
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-  const submitOnboardingData = async (data: WizardData) => {
-    // This will be implemented with actual server actions
-    if (testMode) return;
-    
-    // TODO: Implement actual data submission
-    // - Create company if needed
-    // - Invite team members
-    // - Create client and contacts
-    // - Set up billing
-    // - Configure ticketing
-    
-    console.log('Submitting onboarding data:', data);
   };
 
   const isFirstStepValid = () => {
@@ -217,6 +328,12 @@ export function OnboardingWizard({
             </div>
           )}
 
+          {errors[currentStep] && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-red-700 text-sm">{errors[currentStep]}</p>
+            </div>
+          )}
+
           <WizardNavigation
             currentStep={currentStep}
             totalSteps={STEPS.length}
@@ -224,8 +341,9 @@ export function OnboardingWizard({
             onNext={handleNext}
             onSkip={handleSkip}
             onFinish={handleFinish}
-            isNextDisabled={!isStepValid()}
+            isNextDisabled={!isStepValid() || isLoading}
             isSkipDisabled={REQUIRED_STEPS.includes(currentStep)}
+            isLoading={isLoading}
           />
         </div>
     </Dialog>
