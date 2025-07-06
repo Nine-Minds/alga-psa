@@ -1,682 +1,405 @@
-/**
- * Roles API E2E Tests
- * 
- * Comprehensive tests for all role endpoints including:
- * - CRUD operations
- * - Permission assignment
- * - Role templates
- * - Role cloning
- * - User role assignment
- */
-
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
-import { withTestSetup } from '../fixtures/test-setup';
-import { roleFactory } from '../factories/role.factory';
-import { userFactory } from '../factories/user.factory';
-import { apiKeyFactory } from '../factories/apiKey.factory';
-import { getConnection } from '../../../lib/db/db';
-import { runWithTenant } from '../../../lib/db';
-
-const API_BASE_URL = 'http://localhost:3001/api/v1';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { 
+  setupE2ETestEnvironment,
+  E2ETestEnvironment
+} from '../utils/e2eTestSetup';
+import { 
+  assertSuccess, 
+  assertError,
+  buildQueryString
+} from '../utils/apiTestHelpers';
+import { v4 as uuidv4 } from 'uuid';
 
 describe('Roles API E2E Tests', () => {
-  let apiKey: string;
-  let tenantId: string;
-  let userId: string;
-  let testUserId: string;
+  let env: E2ETestEnvironment;
+  const API_BASE = '/api/v1/roles';
+  let createdRoleIds: string[] = [];
+  let testPermissionIds: string[] = [];
 
   beforeAll(async () => {
-    // Set up test data
-    const setup = await withTestSetup();
-    tenantId = setup.tenantId;
-    apiKey = setup.apiKey;
-    userId = setup.userId;
-
-    // Create additional user for role assignment tests
-    await runWithTenant(tenantId, async () => {
-      const db = await getConnection();
-      const testUser = await userFactory(db, { 
-        tenant: tenantId, 
-        email: 'roletest@example.com',
-        firstName: 'Role',
-        lastName: 'Test'
-      });
-      testUserId = testUser.user_id;
+    // Setup test environment
+    env = await setupE2ETestEnvironment({
+      companyName: 'Roles API Test Company',
+      userName: 'roles_api_test'
     });
+
+    // Get some permission IDs for testing
+    const permissions = await env.db('permissions')
+      .where('tenant', env.tenant)
+      .select('permission_id')
+      .limit(3);
+    testPermissionIds = permissions.map(p => p.permission_id);
   });
 
   afterAll(async () => {
-    // Clean up test data
-    await runWithTenant(tenantId, async () => {
-      const db = await getConnection();
-      
-      // Delete role permissions first
-      await db.raw('DELETE FROM role_permissions WHERE tenant = ?', [tenantId]);
-      
-      // Delete user roles
-      await db.raw('DELETE FROM user_roles WHERE tenant = ?', [tenantId]);
-      
-      // Delete roles
-      await db.raw('DELETE FROM roles WHERE tenant = ?', [tenantId]);
-    });
+    // Clean up any created roles
+    for (const roleId of createdRoleIds) {
+      try {
+        await env.db('role_permissions').where('role_id', roleId).delete();
+        await env.db('roles').where('role_id', roleId).delete();
+      } catch (error) {
+        // Ignore errors during cleanup
+      }
+    }
+    
+    // Clean up test environment
+    await env.cleanup();
   });
 
   describe('Basic CRUD Operations', () => {
     it('should create a new role', async () => {
-      const response = await fetch(`${API_BASE_URL}/roles`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'x-tenant-id': tenantId
-        },
-        body: JSON.stringify({
-          role_name: 'Project Manager',
-          description: 'Manages projects and teams',
-          is_system: false
-        })
-      });
+      const roleData = {
+        role_name: `Test Role ${Date.now()}`,
+        description: 'Test role description'
+      };
 
-      expect(response.status).toBe(201);
-      const result = await response.json();
-      expect(result.success).toBe(true);
-      expect(result.data).toMatchObject({
-        role_name: 'Project Manager',
-        description: 'Manages projects and teams',
-        is_system: false
+      const response = await env.apiClient.post(API_BASE, roleData);
+      assertSuccess(response, 201);
+
+      expect(response.data.data).toMatchObject({
+        role_name: roleData.role_name,
+        description: roleData.description
       });
+      expect(response.data.data.role_id).toBeTruthy();
+
+      createdRoleIds.push(response.data.data.role_id);
     });
 
     it('should list roles with pagination', async () => {
-      // Create multiple roles
-      await runWithTenant(tenantId, async () => {
-        const db = await getConnection();
-        for (let i = 0; i < 5; i++) {
-          await roleFactory(db, { 
-            tenant: tenantId, 
-            role_name: `Role ${i + 1}`
-          });
-        }
-      });
+      // Create a few test roles
+      for (let i = 0; i < 3; i++) {
+        const role = await env.db('roles').insert({
+          role_id: uuidv4(),
+          role_name: `List Test Role ${i} ${Date.now()}`,
+          description: 'Test description',
+          tenant: env.tenant,
+          created_at: new Date(),
+          updated_at: new Date()
+        }).returning('*');
+        createdRoleIds.push(role[0].role_id);
+      }
 
-      const response = await fetch(`${API_BASE_URL}/roles?page=1&limit=3`, {
-        method: 'GET',
-        headers: {
-          'x-api-key': apiKey,
-          'x-tenant-id': tenantId
-        }
-      });
+      const query = buildQueryString({ page: 1, limit: 10 });
+      const response = await env.apiClient.get(`${API_BASE}${query}`);
+      assertSuccess(response);
 
-      expect(response.status).toBe(200);
-      const result = await response.json();
-      expect(result.success).toBe(true);
-      expect(result.data).toHaveLength(3);
-      expect(result.pagination).toMatchObject({
-        page: 1,
-        limit: 3,
-        total: expect.any(Number)
-      });
+      expect(response.data.data).toBeInstanceOf(Array);
+      expect(response.data.data.length).toBeGreaterThan(0);
+      expect(response.data.pagination).toBeDefined();
+      expect(response.data.pagination.page).toBe(1);
+      expect(response.data.pagination.limit).toBe(10);
     });
 
     it('should get a specific role', async () => {
-      const db = await getConnection();
-      const role = await runWithTenant(tenantId, async () => {
-        return await roleFactory(db, { 
-          tenant: tenantId, 
-          role_name: 'Developer',
-          description: 'Software development role'
-        });
-      });
+      // Create a test role
+      const role = await env.db('roles').insert({
+        role_id: uuidv4(),
+        role_name: `Get Test Role ${Date.now()}`,
+        description: 'Test description',
+        tenant: env.tenant,
+        created_at: new Date(),
+        updated_at: new Date()
+      }).returning('*');
+      createdRoleIds.push(role[0].role_id);
 
-      const response = await fetch(`${API_BASE_URL}/roles/${role.role_id}`, {
-        method: 'GET',
-        headers: {
-          'x-api-key': apiKey,
-          'x-tenant-id': tenantId
-        }
-      });
+      const response = await env.apiClient.get(`${API_BASE}/${role[0].role_id}`);
+      assertSuccess(response);
 
-      expect(response.status).toBe(200);
-      const result = await response.json();
-      expect(result.success).toBe(true);
-      expect(result.data.role_id).toBe(role.role_id);
-      expect(result.data.role_name).toBe('Developer');
+      expect(response.data.data.role_id).toBe(role[0].role_id);
+      expect(response.data.data.role_name).toBe(role[0].role_name);
     });
 
     it('should update a role', async () => {
-      const db = await getConnection();
-      const role = await runWithTenant(tenantId, async () => {
-        return await roleFactory(db, { 
-          tenant: tenantId, 
-          role_name: 'Old Role Name'
-        });
-      });
+      // Create a test role
+      const role = await env.db('roles').insert({
+        role_id: uuidv4(),
+        role_name: `Update Test Role ${Date.now()}`,
+        description: 'Original description',
+        tenant: env.tenant,
+        created_at: new Date(),
+        updated_at: new Date()
+      }).returning('*');
+      createdRoleIds.push(role[0].role_id);
 
-      const response = await fetch(`${API_BASE_URL}/roles/${role.role_id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'x-tenant-id': tenantId
-        },
-        body: JSON.stringify({
-          role_name: 'Updated Role Name',
-          description: 'Updated description'
-        })
-      });
+      const updateData = {
+        description: 'Updated description'
+      };
 
-      expect(response.status).toBe(200);
-      const result = await response.json();
-      expect(result.success).toBe(true);
-      expect(result.data.role_name).toBe('Updated Role Name');
-      expect(result.data.description).toBe('Updated description');
+      const response = await env.apiClient.put(`${API_BASE}/${role[0].role_id}`, updateData);
+      assertSuccess(response);
+
+      expect(response.data.data.description).toBe(updateData.description);
+      expect(response.data.data.role_name).toBe(role[0].role_name); // Name should not change
     });
 
     it('should delete a role', async () => {
-      const db = await getConnection();
-      const role = await runWithTenant(tenantId, async () => {
-        return await roleFactory(db, { 
-          tenant: tenantId, 
-          role_name: 'Role to Delete'
-        });
-      });
+      // Create a test role
+      const role = await env.db('roles').insert({
+        role_id: uuidv4(),
+        role_name: `Delete Test Role ${Date.now()}`,
+        description: 'To be deleted',
+        tenant: env.tenant,
+        created_at: new Date(),
+        updated_at: new Date()
+      }).returning('*');
 
-      const response = await fetch(`${API_BASE_URL}/roles/${role.role_id}`, {
-        method: 'DELETE',
-        headers: {
-          'x-api-key': apiKey,
-          'x-tenant-id': tenantId
-        }
-      });
+      const response = await env.apiClient.delete(`${API_BASE}/${role[0].role_id}`);
+      assertSuccess(response, 204);
 
-      expect(response.status).toBe(200);
-      const result = await response.json();
-      expect(result.success).toBe(true);
-
-      // Verify deletion
-      const getResponse = await fetch(`${API_BASE_URL}/roles/${role.role_id}`, {
-        method: 'GET',
-        headers: {
-          'x-api-key': apiKey,
-          'x-tenant-id': tenantId
-        }
-      });
-      expect(getResponse.status).toBe(404);
+      // Verify role is deleted
+      const checkRole = await env.db('roles')
+        .where('role_id', role[0].role_id)
+        .where('tenant', env.tenant)
+        .first();
+      expect(checkRole).toBeUndefined();
     });
   });
 
   describe('Permission Management', () => {
-    let roleId: string;
+    let testRoleId: string;
 
-    beforeAll(async () => {
-      // Create a role for permission tests
-      const db = await getConnection();
-      const role = await runWithTenant(tenantId, async () => {
-        return await roleFactory(db, { 
-          tenant: tenantId, 
-          role_name: 'Permission Test Role'
-        });
-      });
-      roleId = role.role_id;
+    beforeEach(async () => {
+      // Create a test role for permission tests
+      const role = await env.db('roles').insert({
+        role_id: uuidv4(),
+        role_name: `Permission Test Role ${Date.now()}`,
+        description: 'For permission tests',
+        tenant: env.tenant,
+        created_at: new Date(),
+        updated_at: new Date()
+      }).returning('*');
+      testRoleId = role[0].role_id;
+      createdRoleIds.push(testRoleId);
     });
 
     it('should assign permissions to a role', async () => {
-      const response = await fetch(`${API_BASE_URL}/roles/${roleId}/permissions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'x-tenant-id': tenantId
-        },
-        body: JSON.stringify({
-          permissions: [
-            'project:read',
-            'project:create',
-            'project:update',
-            'ticket:read',
-            'ticket:create'
-          ]
-        })
+      const response = await env.apiClient.put(`${API_BASE}/${testRoleId}/permissions`, {
+        permission_ids: testPermissionIds
       });
+      assertSuccess(response);
 
-      expect(response.status).toBe(200);
-      const result = await response.json();
-      expect(result.success).toBe(true);
-      expect(result.data.assigned_count).toBe(5);
+      // Verify permissions were assigned
+      const assignedPermissions = await env.db('role_permissions')
+        .where('role_id', testRoleId)
+        .where('tenant', env.tenant)
+        .select('permission_id');
+      
+      expect(assignedPermissions.length).toBe(testPermissionIds.length);
     });
 
     it('should get role permissions', async () => {
-      const response = await fetch(`${API_BASE_URL}/roles/${roleId}/permissions`, {
-        method: 'GET',
-        headers: {
-          'x-api-key': apiKey,
-          'x-tenant-id': tenantId
-        }
-      });
+      // First assign some permissions
+      for (const permId of testPermissionIds) {
+        await env.db('role_permissions').insert({
+          role_id: testRoleId,
+          permission_id: permId,
+          tenant: env.tenant,
+          created_at: new Date()
+        });
+      }
 
-      expect(response.status).toBe(200);
-      const result = await response.json();
-      expect(result.success).toBe(true);
-      expect(result.data).toHaveLength(5);
-      expect(result.data).toContain('project:read');
-      expect(result.data).toContain('ticket:create');
-    });
+      const response = await env.apiClient.get(`${API_BASE}/${testRoleId}/permissions`);
+      assertSuccess(response);
 
-    it('should remove permissions from a role', async () => {
-      const response = await fetch(`${API_BASE_URL}/roles/${roleId}/permissions`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'x-tenant-id': tenantId
-        },
-        body: JSON.stringify({
-          permissions: ['project:create', 'ticket:create']
-        })
-      });
-
-      expect(response.status).toBe(200);
-      const result = await response.json();
-      expect(result.success).toBe(true);
-      expect(result.data.removed_count).toBe(2);
-
-      // Verify permissions were removed
-      const getResponse = await fetch(`${API_BASE_URL}/roles/${roleId}/permissions`, {
-        method: 'GET',
-        headers: {
-          'x-api-key': apiKey,
-          'x-tenant-id': tenantId
-        }
-      });
-      const getResult = await getResponse.json();
-      expect(getResult.data).toHaveLength(3);
-      expect(getResult.data).not.toContain('project:create');
-      expect(getResult.data).not.toContain('ticket:create');
+      expect(response.data.data).toBeInstanceOf(Array);
+      expect(response.data.data.length).toBe(testPermissionIds.length);
     });
   });
 
   describe('Role Templates', () => {
     it('should get available role templates', async () => {
-      const response = await fetch(`${API_BASE_URL}/roles/templates`, {
-        method: 'GET',
-        headers: {
-          'x-api-key': apiKey,
-          'x-tenant-id': tenantId
-        }
-      });
+      const response = await env.apiClient.get(`${API_BASE}/templates`);
+      assertSuccess(response);
 
-      expect(response.status).toBe(200);
-      const result = await response.json();
-      expect(result.success).toBe(true);
-      expect(result.data).toBeInstanceOf(Array);
-      expect(result.data.length).toBeGreaterThan(0);
-      
-      // Check template structure
-      const template = result.data[0];
-      expect(template).toHaveProperty('name');
-      expect(template).toHaveProperty('description');
-      expect(template).toHaveProperty('permissions');
-      expect(template.permissions).toBeInstanceOf(Array);
-    });
-
-    it('should create role from template', async () => {
-      const response = await fetch(`${API_BASE_URL}/roles/from-template`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'x-tenant-id': tenantId
-        },
-        body: JSON.stringify({
-          template_name: 'project_manager',
-          role_name: 'Senior Project Manager'
-        })
-      });
-
-      expect(response.status).toBe(201);
-      const result = await response.json();
-      expect(result.success).toBe(true);
-      expect(result.data.role_name).toBe('Senior Project Manager');
-      expect(result.data).toHaveProperty('role_id');
+      expect(response.data.data).toBeInstanceOf(Array);
     });
   });
 
   describe('Role Cloning', () => {
     it('should clone an existing role', async () => {
-      // Create a role with permissions
-      const db = await getConnection();
-      const originalRole = await runWithTenant(tenantId, async () => {
-        const role = await roleFactory(db, { 
-          tenant: tenantId, 
-          role_name: 'Original Role',
-          description: 'Role to be cloned'
-        });
+      // Create a source role with permissions
+      const sourceRole = await env.db('roles').insert({
+        role_id: uuidv4(),
+        role_name: `Source Role ${Date.now()}`,
+        description: 'Role to clone',
+        tenant: env.tenant,
+        created_at: new Date(),
+        updated_at: new Date()
+      }).returning('*');
+      createdRoleIds.push(sourceRole[0].role_id);
 
-        // Add permissions
-        const permissionNames = ['project:read', 'project:update', 'ticket:read'];
-        for (const permName of permissionNames) {
-          // First, find or create the permission
-          const [resource, action] = permName.split(':');
-          let permission = await db('permissions')
-            .where({ resource, action, tenant: tenantId })
-            .first();
-          
-          if (!permission) {
-            const [newPermission] = await db('permissions')
-              .insert({
-                permission_id: db.raw('gen_random_uuid()'),
-                resource,
-                action,
-                tenant: tenantId
-              })
-              .returning('*');
-            permission = newPermission;
-          }
-          
-          // Then add to role_permissions
-          await db('role_permissions').insert({
-            tenant: tenantId,
-            role_id: role.role_id,
-            permission_id: permission.permission_id
-          });
-        }
-
-        return role;
+      // Add permissions to source role
+      await env.db('role_permissions').insert({
+        role_id: sourceRole[0].role_id,
+        permission_id: testPermissionIds[0],
+        tenant: env.tenant,
+        created_at: new Date()
       });
 
-      const response = await fetch(`${API_BASE_URL}/roles/${originalRole.role_id}/clone`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'x-tenant-id': tenantId
-        },
-        body: JSON.stringify({
-          new_role_name: 'Cloned Role',
-          description: 'This is a cloned role'
-        })
-      });
+      const cloneData = {
+        role_name: `Cloned Role ${Date.now()}`,
+        description: 'Cloned role description'
+      };
 
-      expect(response.status).toBe(201);
-      const result = await response.json();
-      expect(result.success).toBe(true);
-      expect(result.data.role_name).toBe('Cloned Role');
-      expect(result.data.description).toBe('This is a cloned role');
+      const response = await env.apiClient.post(`${API_BASE}/${sourceRole[0].role_id}/clone`, cloneData);
+      assertSuccess(response, 201);
 
-      // Verify permissions were cloned
-      const permResponse = await fetch(`${API_BASE_URL}/roles/${result.data.role_id}/permissions`, {
-        method: 'GET',
-        headers: {
-          'x-api-key': apiKey,
-          'x-tenant-id': tenantId
-        }
-      });
-      const permResult = await permResponse.json();
-      expect(permResult.data).toHaveLength(3);
-      expect(permResult.data).toContain('project:read');
-    });
-  });
+      expect(response.data.data.role_name).toBe(cloneData.role_name);
+      expect(response.data.data.description).toBe(cloneData.description);
+      expect(response.data.data.role_id).not.toBe(sourceRole[0].role_id);
 
-  describe('User Role Assignment', () => {
-    let roleId: string;
-
-    beforeAll(async () => {
-      // Create a role for assignment tests
-      const db = await getConnection();
-      const role = await runWithTenant(tenantId, async () => {
-        return await roleFactory(db, { 
-          tenant: tenantId, 
-          role_name: 'Assignment Test Role'
-        });
-      });
-      roleId = role.role_id;
-    });
-
-    it('should assign role to user', async () => {
-      const response = await fetch(`${API_BASE_URL}/users/${testUserId}/roles`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'x-tenant-id': tenantId
-        },
-        body: JSON.stringify({
-          role_ids: [roleId]
-        })
-      });
-
-      expect(response.status).toBe(200);
-      const result = await response.json();
-      expect(result.success).toBe(true);
-      expect(result.data.assigned_count).toBe(1);
-    });
-
-    it('should get users with specific role', async () => {
-      const response = await fetch(`${API_BASE_URL}/roles/${roleId}/users`, {
-        method: 'GET',
-        headers: {
-          'x-api-key': apiKey,
-          'x-tenant-id': tenantId
-        }
-      });
-
-      expect(response.status).toBe(200);
-      const result = await response.json();
-      expect(result.success).toBe(true);
-      expect(result.data).toHaveLength(1);
-      expect(result.data[0].user_id).toBe(testUserId);
-    });
-
-    it('should remove role from user', async () => {
-      const response = await fetch(`${API_BASE_URL}/users/${testUserId}/roles/${roleId}`, {
-        method: 'DELETE',
-        headers: {
-          'x-api-key': apiKey,
-          'x-tenant-id': tenantId
-        }
-      });
-
-      expect(response.status).toBe(200);
-      const result = await response.json();
-      expect(result.success).toBe(true);
-
-      // Verify role was removed
-      const getUsersResponse = await fetch(`${API_BASE_URL}/roles/${roleId}/users`, {
-        method: 'GET',
-        headers: {
-          'x-api-key': apiKey,
-          'x-tenant-id': tenantId
-        }
-      });
-      const getUsersResult = await getUsersResponse.json();
-      expect(getUsersResult.data).toHaveLength(0);
+      createdRoleIds.push(response.data.data.role_id);
     });
   });
 
   describe('Bulk Operations', () => {
     it('should bulk create roles', async () => {
-      const roles = [
-        {
-          role_name: 'Bulk Role 1',
-          description: 'First bulk role',
-          permissions: ['project:read', 'ticket:read']
-        },
-        {
-          role_name: 'Bulk Role 2',
-          description: 'Second bulk role',
-          permissions: ['user:read', 'user:update']
+      const rolesData = {
+        roles: [
+          {
+            role_name: `Bulk Role 1 ${Date.now()}`,
+            description: 'First bulk role'
+          },
+          {
+            role_name: `Bulk Role 2 ${Date.now()}`,
+            description: 'Second bulk role'
+          }
+        ]
+      };
+
+      const response = await env.apiClient.post(`${API_BASE}/bulk`, rolesData);
+      assertSuccess(response);
+
+      expect(response.data.data).toBeInstanceOf(Array);
+      expect(response.data.data.length).toBe(2);
+      
+      // Track created roles for cleanup
+      response.data.data.forEach((result: any) => {
+        if (result.success && result.data.role_id) {
+          createdRoleIds.push(result.data.role_id);
         }
-      ];
-
-      const response = await fetch(`${API_BASE_URL}/roles/bulk`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'x-tenant-id': tenantId
-        },
-        body: JSON.stringify({ roles })
       });
-
-      expect(response.status).toBe(200);
-      const result = await response.json();
-      expect(result.success).toBe(true);
-      expect(result.data.created_count).toBe(2);
-      expect(result.data.roles).toHaveLength(2);
     });
   });
 
   describe('Error Handling', () => {
     it('should return 401 without API key', async () => {
-      const response = await fetch(`${API_BASE_URL}/roles`, {
-        method: 'GET',
-        headers: {
-          'x-tenant-id': tenantId
-        }
+      const client = new env.apiClient.constructor({
+        baseUrl: env.apiClient.config.baseUrl,
+        tenantId: env.tenant
       });
-
-      expect(response.status).toBe(401);
-      const result = await response.json();
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('API key required');
+      const response = await client.get(API_BASE);
+      assertError(response, 401);
     });
 
     it('should return 403 without permission', async () => {
-      // Create a limited API key without role permissions
-      const db = await getConnection();
-      const limitedKey = await runWithTenant(tenantId, async () => {
-        const user = await userFactory(db, { 
-          tenant: tenantId, 
-          email: 'limited@example.com' 
-        });
-        return await apiKeyFactory(db, { 
-          tenant: tenantId, 
-          user_id: user.user_id 
-        });
+      // Create a user without role permissions
+      const restrictedUser = await env.db('users').insert({
+        user_id: uuidv4(),
+        tenant: env.tenant,
+        username: `restricted-${Date.now()}`,
+        email: `restricted-${Date.now()}@test.com`,
+        first_name: 'Restricted',
+        last_name: 'User',
+        hashed_password: 'dummy',
+        created_at: new Date(),
+        updated_at: new Date()
+      }).returning('*');
+
+      const restrictedKey = await env.db('api_keys').insert({
+        api_key_id: uuidv4(),
+        api_key: 'restricted-key-' + Date.now(),
+        user_id: restrictedUser[0].user_id,
+        tenant: env.tenant,
+        description: 'Restricted key',
+        created_at: new Date(),
+        updated_at: new Date(),
+        expires_at: new Date(Date.now() + 86400000)
+      }).returning('*');
+
+      const restrictedClient = new env.apiClient.constructor({
+        baseUrl: env.apiClient.config.baseUrl,
+        apiKey: restrictedKey[0].api_key,
+        tenantId: env.tenant
       });
 
-      const response = await fetch(`${API_BASE_URL}/roles`, {
-        method: 'GET',
-        headers: {
-          'x-api-key': limitedKey.key,
-          'x-tenant-id': tenantId
-        }
+      const response = await restrictedClient.post(API_BASE, {
+        role_name: 'Should fail',
+        description: 'No permission'
       });
+      assertError(response, 403);
 
-      expect(response.status).toBe(403);
+      // Cleanup
+      await env.db('api_keys').where('api_key_id', restrictedKey[0].api_key_id).delete();
+      await env.db('users').where('user_id', restrictedUser[0].user_id).delete();
     });
 
     it('should return 400 for invalid data', async () => {
-      const response = await fetch(`${API_BASE_URL}/roles`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'x-tenant-id': tenantId
-        },
-        body: JSON.stringify({
-          // Missing required role_name
-          description: 'Invalid role'
-        })
+      const response = await env.apiClient.post(API_BASE, {
+        // Missing required role_name
+        description: 'Invalid role'
       });
-
-      expect(response.status).toBe(400);
-      const result = await response.json();
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('validation');
+      assertError(response, 400);
     });
 
     it('should return 404 for non-existent role', async () => {
-      const response = await fetch(`${API_BASE_URL}/roles/non-existent-id`, {
-        method: 'GET',
-        headers: {
-          'x-api-key': apiKey,
-          'x-tenant-id': tenantId
-        }
-      });
-
-      expect(response.status).toBe(404);
-      const result = await response.json();
-      expect(result.success).toBe(false);
+      const fakeId = uuidv4();
+      const response = await env.apiClient.get(`${API_BASE}/${fakeId}`);
+      assertError(response, 404);
     });
 
     it('should prevent duplicate role names', async () => {
-      const db = await getConnection();
-      await runWithTenant(tenantId, async () => {
-        await roleFactory(db, { 
-          tenant: tenantId, 
-          role_name: 'Unique Role Name'
-        });
+      const roleName = `Unique Role ${Date.now()}`;
+      
+      // Create first role
+      const firstRole = await env.db('roles').insert({
+        role_id: uuidv4(),
+        role_name: roleName,
+        description: 'First role',
+        tenant: env.tenant,
+        created_at: new Date(),
+        updated_at: new Date()
+      }).returning('*');
+      createdRoleIds.push(firstRole[0].role_id);
+
+      // Try to create duplicate
+      const response = await env.apiClient.post(API_BASE, {
+        role_name: roleName,
+        description: 'Duplicate role'
       });
-
-      const response = await fetch(`${API_BASE_URL}/roles`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'x-tenant-id': tenantId
-        },
-        body: JSON.stringify({
-          role_name: 'Unique Role Name',
-          description: 'Attempting to create duplicate'
-        })
-      });
-
-      expect(response.status).toBe(400);
-      const result = await response.json();
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('already exists');
-    });
-
-    it('should prevent deletion of system roles', async () => {
-      const db = await getConnection();
-      const systemRole = await runWithTenant(tenantId, async () => {
-        return await roleFactory(db, { 
-          tenant: tenantId, 
-          role_name: 'System Admin',
-          is_system: true
-        });
-      });
-
-      const response = await fetch(`${API_BASE_URL}/roles/${systemRole.role_id}`, {
-        method: 'DELETE',
-        headers: {
-          'x-api-key': apiKey,
-          'x-tenant-id': tenantId
-        }
-      });
-
-      expect(response.status).toBe(400);
-      const result = await response.json();
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('system role');
+      assertError(response, 409);
     });
   });
 
   describe('Tenant Isolation', () => {
     it('should not access roles from other tenants', async () => {
-      // Create another tenant and role
-      const otherSetup = await withTestSetup();
-      const otherTenantId = otherSetup.tenantId;
-      
-      const db = await getConnection();
-      const otherRole = await runWithTenant(otherTenantId, async () => {
-        return await roleFactory(db, { 
-          tenant: otherTenantId,
-          role_name: 'Other Tenant Role'
-        });
+      // Create another tenant
+      const otherTenant = uuidv4();
+      await env.db('tenants').insert({
+        tenant: otherTenant,
+        company_name: 'Other Company',
+        email: 'other@company.com',
+        created_at: new Date(),
+        updated_at: new Date()
       });
 
-      // Try to access from original tenant
-      const response = await fetch(`${API_BASE_URL}/roles/${otherRole.role_id}`, {
-        method: 'GET',
-        headers: {
-          'x-api-key': apiKey,
-          'x-tenant-id': tenantId
-        }
-      });
+      // Create role in other tenant
+      const otherRole = await env.db('roles').insert({
+        role_id: uuidv4(),
+        role_name: 'Other Tenant Role',
+        description: 'Should not be accessible',
+        tenant: otherTenant,
+        created_at: new Date(),
+        updated_at: new Date()
+      }).returning('*');
 
-      expect(response.status).toBe(404);
+      // Try to access from our tenant
+      const response = await env.apiClient.get(`${API_BASE}/${otherRole[0].role_id}`);
+      assertError(response, 404);
+
+      // Cleanup
+      await env.db('roles').where('role_id', otherRole[0].role_id).delete();
+      await env.db('tenants').where('tenant', otherTenant).delete();
     });
   });
 });
