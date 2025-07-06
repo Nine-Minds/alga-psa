@@ -25,28 +25,18 @@ export async function permissionFactory(db: any, input: PermissionInput) {
     permissionName = `${category}:${action}`;
   }
 
+  // Note: The permissions table only has permission_id, resource, action, and tenant columns
+  const [resource, action] = permissionName.split(':');
+  
   const permission = {
     permission_id: faker.string.uuid(),
     tenant: input.tenant,
-    permission_name: permissionName,
-    description: input.description || `Permission for ${permissionName}`,
-    category: input.category || permissionName.split(':')[0],
-    is_system: input.is_system !== undefined ? input.is_system : false,
-    created_at: new Date(),
-    updated_at: new Date()
+    resource: resource,
+    action: action
   };
 
   const result = await db('permissions')
-    .insert({
-      permission_id: permission.permission_id,
-      tenant: permission.tenant,
-      permission_name: permission.permission_name,
-      description: permission.description,
-      category: permission.category,
-      is_system: permission.is_system,
-      created_at: permission.created_at,
-      updated_at: permission.updated_at
-    })
+    .insert(permission)
     .returning('*');
 
   return result[0];

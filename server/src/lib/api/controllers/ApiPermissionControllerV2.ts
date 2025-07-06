@@ -5,46 +5,30 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseControllerV2 } from './ApiBaseControllerV2';
-import { PermissionService } from '../services/PermissionService';
+import { PermissionRoleService } from '../services/PermissionRoleService';
 import { 
   createPermissionSchema,
   updatePermissionSchema,
   permissionListQuerySchema
-} from '../schemas/permission';
-import { 
-  ApiKeyServiceForApi 
-} from '../../services/apiKeyServiceForApi';
-import { 
-  findUserByIdForApi 
-} from '../../actions/user-actions/findUserByIdForApi';
+} from '../schemas/permissionRoleSchemas';
 import { 
   runWithTenant 
 } from '../../db';
-import { 
-  getConnection 
-} from '../../db/db';
-import { 
-  hasPermission 
-} from '../../auth/rbac';
 import {
-  ApiRequest,
-  UnauthorizedError,
-  ForbiddenError,
   NotFoundError,
-  ValidationError,
+  ConflictError,
   createSuccessResponse,
   createPaginatedResponse,
   handleApiError
 } from '../middleware/apiMiddleware';
-import { ZodError } from 'zod';
 
 export class ApiPermissionControllerV2 extends ApiBaseControllerV2 {
-  private permissionService: PermissionService;
+  private permissionRoleService: PermissionRoleService;
 
   constructor() {
-    const permissionService = new PermissionService();
+    const permissionRoleService = new PermissionRoleService();
     
-    super(permissionService, {
+    super(permissionRoleService, {
       resource: 'permission',
       createSchema: createPermissionSchema,
       updateSchema: updatePermissionSchema,
@@ -58,7 +42,180 @@ export class ApiPermissionControllerV2 extends ApiBaseControllerV2 {
       }
     });
     
-    this.permissionService = permissionService;
+    this.permissionRoleService = permissionRoleService;
+  }
+
+  /**
+   * Override list to use listPermissions instead of list
+   */
+  list() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'read');
+
+          // Parse query parameters
+          const url = new URL(apiRequest.url);
+          const page = parseInt(url.searchParams.get('page') || '1');
+          const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), 100);
+          const sort = url.searchParams.get('sort') || 'resource';
+          const order = (url.searchParams.get('order') || 'asc') as 'asc' | 'desc';
+          
+          // Get filters
+          const filters: any = {};
+          const resource = url.searchParams.get('resource');
+          const action = url.searchParams.get('action');
+          if (resource) filters.resource = resource;
+          if (action) filters.action = action;
+
+          const listOptions = { page, limit, filters, sort, order };
+          const result = await this.permissionRoleService.listPermissions(listOptions, apiRequest.context);
+          
+          return createPaginatedResponse(
+            result.data,
+            result.total,
+            page,
+            limit,
+            { sort, order, filters }
+          );
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Override create to use createPermission
+   */
+  create() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'create');
+
+          // Parse and validate request body
+          const body = await req.json();
+          const validatedData = createPermissionSchema.parse(body);
+
+          // Create permission
+          try {
+            const result = await this.permissionRoleService.createPermission(validatedData, apiRequest.context);
+            return createSuccessResponse(result, 201);
+          } catch (error: any) {
+            if (error.message && error.message.includes('already exists')) {
+              throw new ConflictError(error.message);
+            }
+            throw error;
+          }
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Override update to use updatePermission
+   */
+  update() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'update');
+
+          const id = this.extractIdFromPath(apiRequest);
+
+          // Parse and validate request body
+          const body = await req.json();
+          const validatedData = updatePermissionSchema.parse(body);
+
+          // Update permission
+          const result = await this.permissionRoleService.updatePermission(id, validatedData, apiRequest.context);
+          
+          if (!result) {
+            throw new NotFoundError('Permission not found');
+          }
+          
+          return createSuccessResponse(result);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Override delete to use deletePermission
+   */
+  delete() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'delete');
+
+          const id = this.extractIdFromPath(apiRequest);
+
+          // Delete permission
+          await this.permissionRoleService.deletePermission(id, apiRequest.context);
+          
+          return createSuccessResponse(null, 204);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Override getById to use getPermissionById
+   */
+  getById() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'read');
+
+          const id = this.extractIdFromPath(apiRequest);
+
+          // Get permission by ID
+          const result = await this.permissionRoleService.getPermissionById(id, apiRequest.context);
+          
+          if (!result) {
+            throw new NotFoundError('Permission not found');
+          }
+          
+          return createSuccessResponse(result);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
   }
 
   /**
@@ -68,59 +225,57 @@ export class ApiPermissionControllerV2 extends ApiBaseControllerV2 {
     return async (req: NextRequest): Promise<NextResponse> => {
       try {
         // Authenticate
-        const apiKey = req.headers.get('x-api-key');
+        const apiRequest = await this.authenticate(req);
         
-        if (!apiKey) {
-          throw new UnauthorizedError('API key required');
-        }
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'read');
 
-        // Extract tenant ID
-        let tenantId = req.headers.get('x-tenant-id');
-        let keyRecord;
-
-        if (tenantId) {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
-        } else {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-          if (keyRecord) {
-            tenantId = keyRecord.tenant;
-          }
-        }
-        
-        if (!keyRecord) {
-          throw new UnauthorizedError('Invalid API key');
-        }
-
-        // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
-
-        // Check permissions
-        const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          db,
-          user.user_id,
-          'permission:read',
-          tenantId!
-        );
-
-        if (!hasReadPermission) {
-          throw new ForbiddenError('Permission denied: Cannot read permission categories');
-        }
-
-        // Get categories within tenant context
-        const categories = await runWithTenant(tenantId!, async () => {
-          return await this.permissionService.getPermissionCategories({
-            user,
-            tenant: tenantId!,
-            permissions: user.roles || []
-          });
+          // Get permissions with categorize flag
+          const result = await this.permissionRoleService.listPermissions(
+            { categorize: true }, 
+            apiRequest.context
+          );
+          
+          return createSuccessResponse(result);
         });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+  
+  /**
+   * Get roles that have a specific permission
+   */
+  getRolesByPermission() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'read');
 
-        return createSuccessResponse(categories);
+          const id = this.extractIdFromPath(apiRequest);
+
+          // Get roles using this permission
+          const { knex } = await this.permissionRoleService.getKnex();
+          const roles = await knex('roles as r')
+            .join('role_permissions as rp', function() {
+              this.on('r.role_id', '=', 'rp.role_id')
+                  .andOn('r.tenant', '=', 'rp.tenant');
+            })
+            .where('rp.permission_id', id)
+            .where('r.tenant', apiRequest.context.tenant)
+            .select('r.*')
+            .orderBy('r.role_name');
+          
+          return createSuccessResponse(roles);
+        });
       } catch (error) {
         return handleApiError(error);
       }

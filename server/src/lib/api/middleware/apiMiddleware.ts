@@ -258,6 +258,11 @@ export function handleApiError(error: any): NextResponse {
  * Success response helper
  */
 export function createSuccessResponse(data: any, status: number = 200, metadata?: any): NextResponse {
+  // For 204 No Content, return empty response
+  if (status === 204) {
+    return new NextResponse(null, { status: 204 });
+  }
+  
   const response: any = { data };
   
   if (metadata) {

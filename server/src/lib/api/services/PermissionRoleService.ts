@@ -205,10 +205,12 @@ export class PermissionRoleService extends BaseService<IRole> {
         throw new Error(`Permission already exists for resource '${data.resource}' and action '${data.action}'`);
       }
 
-      const permissionData = this.addCreateAuditFields({
+      // Permissions table only has permission_id, resource, action, and tenant
+      const permissionData = {
         ...data,
-        permission_id: knex.raw('gen_random_uuid()')
-      }, context);
+        permission_id: knex.raw('gen_random_uuid()'),
+        tenant: context.tenant
+      };
 
       const [permission] = await trx('permissions').insert(permissionData).returning('*');
       
@@ -261,7 +263,10 @@ export class PermissionRoleService extends BaseService<IRole> {
         }
       }
 
-      const updateData = this.addUpdateAuditFields(data, context);
+      // Permissions table only has resource and action as updatable fields
+      const updateData = {};
+      if (data.resource) updateData.resource = data.resource;
+      if (data.action) updateData.action = data.action;
       
       const [permission] = await trx('permissions')
         .where('permission_id', permissionId)
