@@ -284,8 +284,9 @@ describe('Roles API E2E Tests', () => {
 
   describe('Error Handling', () => {
     it('should return 401 without API key', async () => {
-      const client = new env.apiClient.constructor({
-        baseUrl: env.apiClient.config.baseUrl,
+      const { ApiTestClient } = await import('../utils/apiTestHelpers');
+      const client = new ApiTestClient({
+        baseUrl: env.apiClient['config'].baseUrl,
         tenantId: env.tenant
       });
       const response = await client.get(API_BASE);
@@ -321,8 +322,9 @@ describe('Roles API E2E Tests', () => {
         expires_at: new Date(Date.now() + 86400000)
       }).returning('*');
 
-      const restrictedClient = new env.apiClient.constructor({
-        baseUrl: env.apiClient.config.baseUrl,
+      const { ApiTestClient } = await import('../utils/apiTestHelpers');
+      const restrictedClient = new ApiTestClient({
+        baseUrl: env.apiClient['config'].baseUrl,
         apiKey: plaintextKey,
         tenantId: env.tenant
       });

@@ -148,7 +148,7 @@ describe('Projects API E2E Tests', () => {
 
     it('should list projects with pagination', async () => {
       // Create multiple projects
-      const projects = [];
+      const projects: any[] = [];
       for (let i = 0; i < 5; i++) {
         const projectData = createProjectTestData({ company_id: env.companyId });
         const response = await env.apiClient.post('/api/v1/projects', projectData);
