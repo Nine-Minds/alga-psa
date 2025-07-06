@@ -90,6 +90,9 @@ describe('Ticket API E2E Tests', () => {
 
   afterAll(async () => {
     if (env) {
+      // Clean up any remaining test data - delete in order to respect foreign keys
+      await env.db('comments').where('tenant', env.tenant).delete();
+      await env.db('tickets').where('tenant', env.tenant).delete();
       await env.cleanup();
     }
   });
@@ -412,32 +415,88 @@ describe('Ticket API E2E Tests', () => {
   });
 
   describe('Search Tickets (GET /api/v1/tickets/search)', () => {
-    // Test data will be created as needed in individual tests
+    let searchableTickets: any[] = [];
+
+    beforeEach(async () => {
+      // Create test tickets with searchable content in title
+      searchableTickets = [];
+      
+      const ticket1 = await createTestTicket(env.db, env.tenant, {
+        title: 'Important ticket for search test',
+        company_id: env.companyId,
+        channel_id: channelId,
+        entered_by: env.userId,
+        status_id: statusIds.open,
+        priority_id: priorityIds.medium
+      });
+      searchableTickets.push(ticket1);
+      
+      const ticket2 = await createTestTicket(env.db, env.tenant, {
+        title: 'Another ticket to find',
+        company_id: env.companyId,
+        channel_id: channelId,
+        entered_by: env.userId,
+        status_id: statusIds.open,
+        priority_id: priorityIds.high
+      });
+      searchableTickets.push(ticket2);
+      
+      const ticket3 = await createTestTicket(env.db, env.tenant, {
+        title: 'Special ticket case',
+        company_id: env.companyId,
+        channel_id: channelId,
+        entered_by: env.userId,
+        status_id: statusIds.open,
+        priority_id: priorityIds.low
+      });
+      searchableTickets.push(ticket3);
+    });
+
+    afterEach(async () => {
+      // Clean up created tickets
+      for (const ticket of searchableTickets) {
+        await env.db('tickets').where('ticket_id', ticket.ticket_id).delete();
+      }
+    });
 
     it('should search tickets by query', async () => {
-      const query = buildQueryString({ query: 'ticket' });
+      // Search for the word "ticket" which appears in all our test titles
+      const query = buildQueryString({ 
+        query: 'ticket'
+      });
       const response = await env.apiClient.get(`${API_BASE}/search${query}`);
       assertSuccess(response);
 
-      expect(response.data.data.length).toBeGreaterThanOrEqual(2);
+      expect(response.data.data.length).toBeGreaterThanOrEqual(3);
       response.data.data.forEach((ticket: any) => {
         const hasTicket = 
           ticket.title.toLowerCase().includes('ticket') ||
-          ticket.description?.toLowerCase().includes('ticket') ||
-          (ticket.tags && ticket.tags.some((tag: string) => tag.toLowerCase().includes('ticket')));
+          ticket.ticket_number?.toLowerCase().includes('ticket');
         expect(hasTicket).toBe(true);
       });
     });
 
     it('should search in specified fields', async () => {
+      // Create a ticket with unique content in the title
+      const uniqueTicket = await createTestTicket(env.db, env.tenant, {
+        title: 'UniqueTitle123',
+        company_id: env.companyId,
+        channel_id: channelId,
+        entered_by: env.userId,
+        status_id: statusIds.open,
+        priority_id: priorityIds.medium
+      });
+      searchableTickets.push(uniqueTicket);
+      
       const query = buildQueryString({ 
-        query: 'ticket',
-        fields: JSON.stringify(['title', 'ticket_number'])
+        query: 'UniqueTitle123',
+        fields: JSON.stringify(['title'])
       });
       const response = await env.apiClient.get(`${API_BASE}/search${query}`);
       assertSuccess(response);
 
-      expect(response.data.data.length).toBeGreaterThanOrEqual(1);
+      expect(response.data.data.length).toBe(1);
+      expect(response.data.data[0].title).toBe('UniqueTitle123');
     });
 
     it('should limit search results', async () => {

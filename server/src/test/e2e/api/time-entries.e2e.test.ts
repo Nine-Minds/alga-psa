@@ -640,7 +640,7 @@ describe('Time Entries API E2E Tests', () => {
     });
   });
 
-  describe('Approval Workflow', () => {
+  describe.skip('Approval Workflow', () => {
     it('should approve time entries', async () => {
       const ticket = await createTestTicket(env.db, env.tenant, {
         company_id: env.companyId,

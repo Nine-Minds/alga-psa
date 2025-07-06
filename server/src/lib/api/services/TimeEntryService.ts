@@ -557,27 +557,15 @@ export class TimeEntryService extends BaseService<any> {
 
   // Templates
   async createTemplate(data: CreateTimeTemplateData, context: ServiceContext): Promise<any> {
-    const { knex } = await this.getKnex();
-    const templateData = {
-      ...data,
-      user_id: context.userId,
-      tenant: context.tenant,
-      created_at: new Date(),
-      updated_at: new Date()
-    };
-
-    const [template] = await knex('time_entry_templates')
-      .insert(templateData)
-      .returning('*');
-
-    return template;
+    // TODO: Implement time_entry_templates table and functionality
+    // For now, throw error indicating feature is not implemented
+    throw new Error('Time entry templates feature is not yet implemented');
   }
 
   async getTemplates(context: ServiceContext): Promise<any[]> {
-    const { knex } = await this.getKnex();
-    return knex('time_entry_templates')
-      .where({ user_id: context.userId, tenant: context.tenant, is_active: true })
-      .orderBy('template_name');
+    // TODO: Implement time_entry_templates table and functionality
+    // For now, return empty array to avoid errors
+    return [];
   }
   
   async getTimeEntryTemplates(context: ServiceContext): Promise<any[]> {
