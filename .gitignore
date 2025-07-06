@@ -5,6 +5,17 @@ node_modules/
 
 # testing
 /coverage
+test-results/
+playwright-test-results/
+playwright-report/
+screenshots/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.webm
+*.mp4
 
 # Next.js
 *.next/

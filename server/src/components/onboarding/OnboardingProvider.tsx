@@ -28,15 +28,13 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     try {
       const settings = await getTenantSettings();
       
-      // TODO: Only show onboarding for admin users
-      // Need to fetch user roles separately as they're not in the session
-      const isAdmin = false; // Temporarily disabled - onboarding feature not ready
-      
-      if (settings && !settings.onboarding_completed && !settings.onboarding_skipped && isAdmin) {
+      // If no settings exist, treat as onboarding not completed
+      // If settings exist, check completion status
+      if (!settings || (!settings.onboarding_completed && !settings.onboarding_skipped)) {
         setShowOnboarding(true);
         
         // Load any saved progress
-        if (settings.onboarding_data) {
+        if (settings?.onboarding_data) {
           setInitialData(settings.onboarding_data);
         }
       }

@@ -35,13 +35,8 @@ export async function verifyPassword(password: string, storedHash: string): Prom
       return false;
     }
 
-    console.log(`Using parameters: iterations=${iterations}, keyLength=${keyLength}, digest=${digest}`);
-    console.log('Generating hash from provided password');
-    console.log(`key: ${key}`);
     const hash = crypto.pbkdf2Sync(password, key + salt, iterations, keyLength, digest).toString('hex');
-
     const isMatch = hash === originalHash;
-    console.log(`Password verification result: ${isMatch ? 'matched' : 'did not match'}`);
 
     return isMatch;
   } catch (error) {
