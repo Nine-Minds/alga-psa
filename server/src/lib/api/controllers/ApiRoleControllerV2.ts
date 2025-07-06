@@ -197,8 +197,15 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
           throw new UnauthorizedError('User not found');
         }
 
-        // Extract role ID from path
-        const roleId = this.extractIdFromPath(req.url, 'roles');
+        // Extract role ID from path - create ApiRequest object
+        const apiRequest: ApiRequest = Object.assign(req, {
+          context: {
+            userId: user.user_id,
+            tenant: tenantId!,
+            user
+          }
+        });
+        const roleId = this.extractIdFromPath(apiRequest);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -284,8 +291,15 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
           throw new UnauthorizedError('User not found');
         }
 
-        // Extract role ID from path
-        const roleId = this.extractIdFromPath(req.url, 'roles');
+        // Extract role ID from path - create ApiRequest object
+        const apiRequest: ApiRequest = Object.assign(req, {
+          context: {
+            userId: user.user_id,
+            tenant: tenantId!,
+            user
+          }
+        });
+        const roleId = this.extractIdFromPath(apiRequest);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -353,8 +367,15 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
           throw new UnauthorizedError('User not found');
         }
 
-        // Extract role ID from path
-        const roleId = this.extractIdFromPath(req.url, 'roles');
+        // Extract role ID from path - create ApiRequest object
+        const apiRequest: ApiRequest = Object.assign(req, {
+          context: {
+            userId: user.user_id,
+            tenant: tenantId!,
+            user
+          }
+        });
+        const roleId = this.extractIdFromPath(apiRequest);
 
         // Check permissions
         const db = await getConnection(tenantId!);

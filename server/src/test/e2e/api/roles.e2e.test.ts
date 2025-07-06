@@ -237,15 +237,15 @@ describe('Roles API E2E Tests', () => {
       });
 
       const cloneData = {
-        role_name: `Cloned Role ${Date.now()}`,
-        description: 'Cloned role description'
+        new_role_name: `Cloned Role ${Date.now()}`,
+        new_description: 'Cloned role description'
       };
 
       const response = await env.apiClient.post(`${API_BASE}/${sourceRole[0].role_id}/clone`, cloneData);
       assertSuccess(response, 201);
 
-      expect(response.data.data.role_name).toBe(cloneData.role_name);
-      expect(response.data.data.description).toBe(cloneData.description);
+      expect(response.data.data.role_name).toBe(cloneData.new_role_name);
+      expect(response.data.data.description).toBe(cloneData.new_description);
       expect(response.data.data.role_id).not.toBe(sourceRole[0].role_id);
 
       createdRoleIds.push(response.data.data.role_id);
@@ -306,12 +306,16 @@ describe('Roles API E2E Tests', () => {
         updated_at: new Date()
       }).returning('*');
 
+      const plaintextKey = 'restricted-key-' + Date.now();
+      const hashedKey = require('crypto').createHash('sha256').update(plaintextKey).digest('hex');
+      
       const restrictedKey = await env.db('api_keys').insert({
         api_key_id: uuidv4(),
-        api_key: 'restricted-key-' + Date.now(),
+        api_key: hashedKey,
         user_id: restrictedUser[0].user_id,
         tenant: env.tenant,
         description: 'Restricted key',
+        active: true,
         created_at: new Date(),
         updated_at: new Date(),
         expires_at: new Date(Date.now() + 86400000)
@@ -319,7 +323,7 @@ describe('Roles API E2E Tests', () => {
 
       const restrictedClient = new env.apiClient.constructor({
         baseUrl: env.apiClient.config.baseUrl,
-        apiKey: restrictedKey[0].api_key,
+        apiKey: plaintextKey,
         tenantId: env.tenant
       });
 
