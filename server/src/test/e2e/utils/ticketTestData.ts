@@ -63,10 +63,15 @@ export async function createTestTicket(
   tenant: string,
   data: Partial<TicketTestData> = {}
 ): Promise<any> {
+  // Generate a unique ticket number using timestamp and random string
+  const timestamp = Date.now();
+  const randomStr = Math.random().toString(36).substring(2, 8);
+  const ticketNumber = `T-${timestamp}-${randomStr}`;
+
   const ticketData = {
     ticket_id: uuidv4(),
     tenant,
-    ticket_number: `T-${Date.now()}`,
+    ticket_number: ticketNumber,
     title: data.title || `Test Ticket ${Date.now()}`,
     url: data.url || null,
     status_id: data.status_id,

@@ -77,7 +77,7 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
           // Check permissions
           await this.checkPermission(apiRequest, 'delete');
 
-          const id = this.extractIdFromPath(apiRequest);
+          const id = await this.extractIdFromPath(apiRequest);
           const resource = await this.roleService.getById(id, apiRequest.context);
           
           if (!resource) {
@@ -205,7 +205,7 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
             user
           }
         });
-        const roleId = this.extractIdFromPath(apiRequest);
+        const roleId = await this.extractIdFromPath(apiRequest);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -299,7 +299,7 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
             user
           }
         });
-        const roleId = this.extractIdFromPath(apiRequest);
+        const roleId = await this.extractIdFromPath(apiRequest);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -375,7 +375,7 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
             user
           }
         });
-        const roleId = this.extractIdFromPath(apiRequest);
+        const roleId = await this.extractIdFromPath(apiRequest);
 
         // Check permissions
         const db = await getConnection(tenantId!);
