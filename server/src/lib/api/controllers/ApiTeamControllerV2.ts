@@ -843,6 +843,517 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
   }
 
   /**
+   * Grant team permission
+   */
+  grantPermission() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiKey = req.headers.get('x-api-key');
+        
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        // Extract tenant ID
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+        
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        // Get user
+        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+
+        if (!user) {
+          throw new UnauthorizedError('User not found');
+        }
+
+        // Extract team ID from path
+        const teamId = this.extractIdFromPath(req);
+
+        // Check permissions
+        const db = await getConnection(tenantId!);
+        const hasUpdatePermission = await hasPermission(
+          user,
+          'team',
+          'update',
+          db
+        );
+
+        if (!hasUpdatePermission) {
+          throw new ForbiddenError('Permission denied: Cannot grant team permissions');
+        }
+
+        // Parse and validate request body
+        const body = await req.json();
+
+        // Grant permission within tenant context
+        const result = await runWithTenant(tenantId!, async () => {
+          return await this.teamService.grantPermission(
+            teamId,
+            body.permission,
+            body.user_id,
+            body.granted_by || user.id,
+            {
+              user,
+              tenant: tenantId!,
+              permissions: user.roles || []
+            }
+          );
+        });
+
+        return createSuccessResponse(result, 201);
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * List team permissions
+   */
+  listPermissions() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiKey = req.headers.get('x-api-key');
+        
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        // Extract tenant ID
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+        
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        // Get user
+        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+
+        if (!user) {
+          throw new UnauthorizedError('User not found');
+        }
+
+        // Extract team ID from path
+        const teamId = this.extractIdFromPath(req);
+
+        // Check permissions
+        const db = await getConnection(tenantId!);
+        const hasReadPermission = await hasPermission(
+          user,
+          'team',
+          'read',
+          db
+        );
+
+        if (!hasReadPermission) {
+          throw new ForbiddenError('Permission denied: Cannot read team permissions');
+        }
+
+        // Get permissions within tenant context
+        const permissions = await runWithTenant(tenantId!, async () => {
+          return await this.teamService.getTeamPermissions(teamId, {
+            user,
+            tenant: tenantId!,
+            permissions: user.roles || []
+          });
+        });
+
+        return createSuccessResponse(permissions);
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Revoke team permission
+   */
+  revokePermission() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiKey = req.headers.get('x-api-key');
+        
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        // Extract tenant ID
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+        
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        // Get user
+        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+
+        if (!user) {
+          throw new UnauthorizedError('User not found');
+        }
+
+        // Extract permission ID from path
+        const url = new URL(req.url);
+        const pathParts = url.pathname.split('/');
+        const permissionsIndex = pathParts.findIndex(part => part === 'permissions');
+        
+        if (permissionsIndex === -1 || permissionsIndex >= pathParts.length - 1) {
+          throw new ValidationError('Invalid URL structure');
+        }
+        
+        const permissionId = pathParts[permissionsIndex + 1];
+
+        // Check permissions
+        const db = await getConnection(tenantId!);
+        const hasUpdatePermission = await hasPermission(
+          user,
+          'team',
+          'update',
+          db
+        );
+
+        if (!hasUpdatePermission) {
+          throw new ForbiddenError('Permission denied: Cannot revoke team permissions');
+        }
+
+        // Revoke permission within tenant context
+        await runWithTenant(tenantId!, async () => {
+          await this.teamService.revokePermission(permissionId, {
+            user,
+            tenant: tenantId!,
+            permissions: user.roles || []
+          });
+        });
+
+        return new NextResponse(null, { status: 204 });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Create team hierarchy
+   */
+  createHierarchy() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiKey = req.headers.get('x-api-key');
+        
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        // Extract tenant ID
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+        
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        // Get user
+        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+
+        if (!user) {
+          throw new UnauthorizedError('User not found');
+        }
+
+        // Extract team ID from path
+        const teamId = this.extractIdFromPath(req);
+
+        // Check permissions
+        const db = await getConnection(tenantId!);
+        const hasUpdatePermission = await hasPermission(
+          user,
+          'team',
+          'update',
+          db
+        );
+
+        if (!hasUpdatePermission) {
+          throw new ForbiddenError('Permission denied: Cannot update team hierarchy');
+        }
+
+        // Parse and validate request body
+        const body = await req.json();
+
+        // Create hierarchy within tenant context
+        const result = await runWithTenant(tenantId!, async () => {
+          return await this.teamService.createHierarchy(
+            teamId,
+            body.parent_team_id,
+            {
+              user,
+              tenant: tenantId!,
+              permissions: user.roles || []
+            }
+          );
+        });
+
+        return createSuccessResponse(result, 201);
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Remove team from hierarchy
+   */
+  removeFromHierarchy() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiKey = req.headers.get('x-api-key');
+        
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        // Extract tenant ID
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+        
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        // Get user
+        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+
+        if (!user) {
+          throw new UnauthorizedError('User not found');
+        }
+
+        // Extract team ID from path
+        const teamId = this.extractIdFromPath(req);
+
+        // Check permissions
+        const db = await getConnection(tenantId!);
+        const hasUpdatePermission = await hasPermission(
+          user,
+          'team',
+          'update',
+          db
+        );
+
+        if (!hasUpdatePermission) {
+          throw new ForbiddenError('Permission denied: Cannot update team hierarchy');
+        }
+
+        // Remove from hierarchy within tenant context
+        await runWithTenant(tenantId!, async () => {
+          await this.teamService.removeFromHierarchy(teamId, {
+            user,
+            tenant: tenantId!,
+            permissions: user.roles || []
+          });
+        });
+
+        return new NextResponse(null, { status: 204 });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Bulk update teams
+   */
+  bulkUpdate() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiKey = req.headers.get('x-api-key');
+        
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        // Extract tenant ID
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+        
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        // Get user
+        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+
+        if (!user) {
+          throw new UnauthorizedError('User not found');
+        }
+
+        // Check permissions
+        const db = await getConnection(tenantId!);
+        const hasUpdatePermission = await hasPermission(
+          user,
+          'team',
+          'update',
+          db
+        );
+
+        if (!hasUpdatePermission) {
+          throw new ForbiddenError('Permission denied: Cannot update teams');
+        }
+
+        // Parse and validate request body
+        const body = await req.json();
+
+        // Bulk update within tenant context
+        const result = await runWithTenant(tenantId!, async () => {
+          return await this.teamService.bulkUpdate(
+            body.team_ids,
+            body.updates,
+            {
+              user,
+              tenant: tenantId!,
+              permissions: user.roles || []
+            }
+          );
+        });
+
+        return createSuccessResponse(result);
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Bulk delete teams
+   */
+  bulkDelete() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiKey = req.headers.get('x-api-key');
+        
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        // Extract tenant ID
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+        
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        // Get user
+        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+
+        if (!user) {
+          throw new UnauthorizedError('User not found');
+        }
+
+        // Check permissions
+        const db = await getConnection(tenantId!);
+        const hasDeletePermission = await hasPermission(
+          user,
+          'team',
+          'delete',
+          db
+        );
+
+        if (!hasDeletePermission) {
+          throw new ForbiddenError('Permission denied: Cannot delete teams');
+        }
+
+        // Parse and validate request body
+        const body = await req.json();
+
+        // Bulk delete within tenant context
+        await runWithTenant(tenantId!, async () => {
+          await this.teamService.bulkDelete(body.team_ids, {
+            user,
+            tenant: tenantId!,
+            permissions: user.roles || []
+          });
+        });
+
+        return new NextResponse(null, { status: 204 });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
    * Override extractIdFromPath to handle team-specific routes
    */
   protected extractIdFromPath(req: ApiRequest): string {

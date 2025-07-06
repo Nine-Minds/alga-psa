@@ -4,29 +4,19 @@
  * POST /api/v1/teams/[id]/permissions - Grant team permission
  */
 
-import { TeamController } from 'server/src/lib/api/controllers/TeamController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiTeamControllerV2 } from 'server/src/lib/api/controllers/ApiTeamControllerV2';
+import { NextRequest } from 'next/server';
 
-const controller = new TeamController();
+const controller = new ApiTeamControllerV2();
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const req = request as any;
-    req.params = params;
-    return await controller.list()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  // List team permissions
+  return controller.listPermissions()(request);
 }
 
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const req = request as any;
-    req.params = params;
-    return await controller.create()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  // Grant team permission
+  return controller.grantPermission()(request);
 }
 
 export const runtime = 'nodejs';

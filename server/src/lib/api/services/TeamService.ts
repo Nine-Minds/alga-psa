@@ -1975,4 +1975,116 @@ export class TeamService extends BaseService<ITeam> {
       largest_team_size: parseInt(largestTeam?.size as string || '0')
     };
   }
+
+  /**
+   * Create team hierarchy relationship
+   */
+  async createHierarchy(
+    teamId: string,
+    parentTeamId: string,
+    context: ServiceContext
+  ): Promise<any> {
+    const { knex } = await this.getKnex();
+
+    return await knex.transaction(async (trx) => {
+      // Verify both teams exist and belong to the tenant
+      const [team, parentTeam] = await Promise.all([
+        trx('teams')
+          .where({ team_id: teamId, tenant: context.tenant })
+          .first(),
+        trx('teams')
+          .where({ team_id: parentTeamId, tenant: context.tenant })
+          .first()
+      ]);
+
+      if (!team) {
+        throw new NotFoundError('Team not found');
+      }
+
+      if (!parentTeam) {
+        throw new NotFoundError('Parent team not found');
+      }
+
+      // Check if hierarchy already exists
+      const existingHierarchy = await trx('team_hierarchy')
+        .where({
+          child_team_id: teamId,
+          parent_team_id: parentTeamId,
+          tenant: context.tenant
+        })
+        .first();
+
+      if (existingHierarchy) {
+        throw new ConflictError('Hierarchy relationship already exists');
+      }
+
+      // Check for circular reference
+      const wouldCreateCircle = await this.checkCircularHierarchy(
+        trx,
+        parentTeamId,
+        teamId,
+        context.tenant
+      );
+
+      if (wouldCreateCircle) {
+        throw new ValidationError('Cannot create circular hierarchy');
+      }
+
+      // Create hierarchy
+      const hierarchy = {
+        child_team_id: teamId,
+        parent_team_id: parentTeamId,
+        tenant: context.tenant,
+        created_at: new Date()
+      };
+
+      await trx('team_hierarchy').insert(hierarchy);
+
+      return {
+        child_team_id: teamId,
+        parent_team_id: parentTeamId,
+        child_team_name: team.team_name,
+        parent_team_name: parentTeam.team_name
+      };
+    });
+  }
+
+  /**
+   * Remove team from hierarchy
+   */
+  async removeFromHierarchy(teamId: string, context: ServiceContext): Promise<void> {
+    const { knex } = await this.getKnex();
+
+    const result = await knex('team_hierarchy')
+      .where({
+        child_team_id: teamId,
+        tenant: context.tenant
+      })
+      .delete();
+
+    if (result === 0) {
+      throw new NotFoundError('Team hierarchy relationship not found');
+    }
+  }
+
+  /**
+   * Check for circular hierarchy
+   */
+  private async checkCircularHierarchy(
+    trx: any,
+    parentId: string,
+    childId: string,
+    tenant: string
+  ): Promise<boolean> {
+    // Get all parent teams of the proposed parent
+    const parents = await trx('team_hierarchy')
+      .where({
+        child_team_id: parentId,
+        tenant
+      })
+      .pluck('parent_team_id');
+
+    // If the child is in the parent's hierarchy, it would create a circle
+    return parents.includes(childId);
+  }
 }
