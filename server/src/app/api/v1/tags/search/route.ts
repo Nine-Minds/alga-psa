@@ -1,20 +1,5 @@
-/**
- * Tags Search API Route
- * GET /api/v1/tags/search - Search tags
- */
+import { ApiTagControllerV2 } from '@/lib/api/controllers/ApiTagControllerV2';
 
-import { TagController } from 'server/src/lib/api/controllers/TagController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+const controller = new ApiTagControllerV2();
 
-const controller = new TagController();
-
-export async function GET(request: Request) {
-  try {
-    return await controller.searchTags()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
-
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+export const GET = controller.search();
