@@ -353,12 +353,32 @@ describe('Roles API E2E Tests', () => {
         });
 
         // Add permissions
-        const permissions = ['project:read', 'project:update', 'ticket:read'];
-        for (const permission of permissions) {
-          await db.raw(
-            'INSERT INTO role_permissions (tenant, role_id, permission) VALUES (?, ?, ?)',
-            [tenantId, role.role_id, permission]
-          );
+        const permissionNames = ['project:read', 'project:update', 'ticket:read'];
+        for (const permName of permissionNames) {
+          // First, find or create the permission
+          const [resource, action] = permName.split(':');
+          let permission = await db('permissions')
+            .where({ resource, action, tenant: tenantId })
+            .first();
+          
+          if (!permission) {
+            const [newPermission] = await db('permissions')
+              .insert({
+                permission_id: db.raw('gen_random_uuid()'),
+                resource,
+                action,
+                tenant: tenantId
+              })
+              .returning('*');
+            permission = newPermission;
+          }
+          
+          // Then add to role_permissions
+          await db('role_permissions').insert({
+            tenant: tenantId,
+            role_id: role.role_id,
+            permission_id: permission.permission_id
+          });
         }
 
         return role;

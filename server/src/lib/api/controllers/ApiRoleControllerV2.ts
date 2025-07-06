@@ -64,6 +64,37 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
   }
 
   /**
+   * Override delete to use the custom deleteRole method
+   */
+  delete() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'delete');
+
+          const id = this.extractIdFromPath(apiRequest);
+          const resource = await this.roleService.getById(id, apiRequest.context);
+          
+          if (!resource) {
+            throw new NotFoundError('Role not found');
+          }
+          
+          await this.roleService.deleteRole(id, apiRequest.context);
+          
+          return new NextResponse(null, { status: 204 });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
    * Get role templates
    */
   getTemplates() {
@@ -103,10 +134,10 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasReadPermission = await hasPermission(
-          db,
-          user.user_id,
-          'role:read',
-          tenantId!
+          user,
+          'role',
+          'read',
+          db
         );
 
         if (!hasReadPermission) {
@@ -172,10 +203,10 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasCreatePermission = await hasPermission(
-          db,
-          user.user_id,
-          'role:create',
-          tenantId!
+          user,
+          'role',
+          'create',
+          db
         );
 
         if (!hasCreatePermission) {
@@ -196,11 +227,17 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
 
         // Clone role within tenant context
         const clonedRole = await runWithTenant(tenantId!, async () => {
-          return await this.roleService.cloneRole(roleId, cloneData, {
-            user,
-            tenant: tenantId!,
-            permissions: user.roles || []
-          });
+          return await this.roleService.cloneRole(
+            roleId,
+            cloneData.new_role_name,
+            cloneData.new_description,
+            cloneData.copy_permissions,
+            {
+              user,
+              tenant: tenantId!,
+              permissions: user.roles || []
+            }
+          );
         });
 
         return createSuccessResponse(clonedRole, 201);
@@ -253,10 +290,10 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasReadPermission = await hasPermission(
-          db,
-          user.user_id,
-          'role:read',
-          tenantId!
+          user,
+          'role',
+          'read',
+          db
         );
 
         if (!hasReadPermission) {
@@ -322,10 +359,10 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasUpdatePermission = await hasPermission(
-          db,
-          user.user_id,
-          'role:update',
-          tenantId!
+          user,
+          'role',
+          'update',
+          db
         );
 
         if (!hasUpdatePermission) {
@@ -346,11 +383,21 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
 
         // Assign permissions within tenant context
         const updatedRole = await runWithTenant(tenantId!, async () => {
-          return await this.roleService.assignPermissions(roleId, permissionsData.permissions, {
+          await this.roleService.assignPermissionsToRole(
+            roleId, 
+            permissionsData.permission_ids, 
+            {
+              user,
+              tenant: tenantId!,
+              permissions: user.roles || []
+            }
+          );
+          // Return the updated role with permissions
+          return await this.roleService.getRoleById(roleId, {
             user,
             tenant: tenantId!,
             permissions: user.roles || []
-          });
+          }, true);
         });
 
         return createSuccessResponse(updatedRole);
@@ -400,10 +447,10 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasCreatePermission = await hasPermission(
-          db,
-          user.user_id,
-          'role:create',
-          tenantId!
+          user,
+          'role',
+          'create',
+          db
         );
 
         if (!hasCreatePermission) {

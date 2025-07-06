@@ -4,7 +4,7 @@
  * POST /api/v1/tickets - Create ticket
  */
 
-import { ApiTicketControllerV2 } from 'server/src/lib/api/controllers/ApiTicketControllerV2';
+import { ApiTicketControllerV2 } from '@/lib/api/controllers/ApiTicketControllerV2';
 
 const controller = new ApiTicketControllerV2();
 
