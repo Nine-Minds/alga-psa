@@ -7,9 +7,7 @@ import { ApiContactControllerV2 } from 'server/src/lib/api/controllers/ApiContac
 
 const controller = new ApiContactControllerV2();
 
-export async function GET(request: Request) {
-  return await controller.search()(request as any);
-}
+export const GET = controller.search();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

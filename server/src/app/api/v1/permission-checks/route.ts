@@ -3,6 +3,8 @@
  * POST /api/v1/permission-checks - Check permissions
  */
 
+// TODO: Implement checkUserPermissions in ApiPermissionControllerV2 or ApiUserControllerV2
+// For now, continue using PermissionRoleController
 import { PermissionRoleController } from 'server/src/lib/api/controllers/PermissionRoleController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 

@@ -140,7 +140,24 @@ export abstract class ApiBaseControllerV2 {
   /**
    * Extract ID from request path
    */
-  protected extractIdFromPath(req: ApiRequest): string {
+  protected async extractIdFromPath(req: ApiRequest): Promise<string> {
+    // Check if params were passed from Next.js dynamic route
+    if ('params' in req && req.params) {
+      const params = await req.params;
+      if (params && 'id' in params) {
+        const id = params.id;
+        
+        // Validate UUID format (including nil UUID)
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (id && !uuidRegex.test(id)) {
+          throw new ValidationError(`Invalid ${this.options.resource} ID format`);
+        }
+        
+        return id;
+      }
+    }
+    
+    // Fallback to extracting from URL path
     const url = new URL(req.url);
     const pathParts = url.pathname.split('/');
     // Handle special cases for plural forms
@@ -228,7 +245,7 @@ export abstract class ApiBaseControllerV2 {
           // Check permissions
           await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
 
-          const id = this.extractIdFromPath(apiRequest);
+          const id = await this.extractIdFromPath(apiRequest);
           const resource = await this.service.getById(id, apiRequest.context);
           
           if (!resource) {
@@ -295,7 +312,7 @@ export abstract class ApiBaseControllerV2 {
           // Check permissions
           await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
 
-          const id = this.extractIdFromPath(apiRequest);
+          const id = await this.extractIdFromPath(apiRequest);
 
           // Validate data if schema provided
           let data;
@@ -333,7 +350,7 @@ export abstract class ApiBaseControllerV2 {
           // Check permissions
           await this.checkPermission(apiRequest, this.options.permissions?.delete || 'delete');
 
-          const id = this.extractIdFromPath(apiRequest);
+          const id = await this.extractIdFromPath(apiRequest);
           const resource = await this.service.getById(id, apiRequest.context);
           
           if (!resource) {

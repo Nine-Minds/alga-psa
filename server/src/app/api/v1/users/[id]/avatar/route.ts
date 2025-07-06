@@ -4,12 +4,12 @@
  * DELETE /api/v1/users/[id]/avatar - Delete user avatar
  */
 
-import { UserController } from 'server/src/lib/api/controllers/UserController';
+import { ApiUserControllerV2 } from '@/lib/api/controllers/ApiUserControllerV2';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const controller = new UserController();
+    const controller = new ApiUserControllerV2();
     const req = request as any;
     req.params = params;
     return await controller.uploadAvatar()(req);
@@ -20,7 +20,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const controller = new UserController();
+    const controller = new ApiUserControllerV2();
     const req = request as any;
     req.params = params;
     return await controller.deleteAvatar()(req);

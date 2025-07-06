@@ -6,13 +6,20 @@
  * PUT /api/v1/user-roles - Replace user roles
  */
 
+// TODO: These user-role management methods need to be implemented in ApiUserControllerV2:
+// - getUsersWithRoles (for GET - currently using list() which is incorrect)
+// - assignRolesToUser (for POST)
+// - removeRolesFromUser (for DELETE) 
+// - replaceUserRoles (for PUT)
+// For now, continue using PermissionRoleController
 import { PermissionRoleController } from 'server/src/lib/api/controllers/PermissionRoleController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
 export async function GET(request: Request) {
   try {
     const controller = new PermissionRoleController();
-    return await controller.list()(request as any);
+    // Note: This should call getUsersWithRoles(), not list()
+    return await controller.getUsersWithRoles()(request as any);
   } catch (error) {
     return handleApiError(error);
   }

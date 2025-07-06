@@ -6,19 +6,39 @@
  */
 
 import { ApiContactControllerV2 } from 'server/src/lib/api/controllers/ApiContactControllerV2';
+import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new ApiContactControllerV2();
-
-export async function GET(request: Request) {
-  return await controller.getById()(request as any);
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const controller = new ApiContactControllerV2();
+    const req = request as any;
+    req.params = params;
+    return await controller.getById()(req);
+  } catch (error) {
+    return handleApiError(error);
+  }
 }
 
-export async function PUT(request: Request) {
-  return await controller.update()(request as any);
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const controller = new ApiContactControllerV2();
+    const req = request as any;
+    req.params = params;
+    return await controller.update()(req);
+  } catch (error) {
+    return handleApiError(error);
+  }
 }
 
-export async function DELETE(request: Request) {
-  return await controller.delete()(request as any);
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const controller = new ApiContactControllerV2();
+    const req = request as any;
+    req.params = params;
+    return await controller.delete()(req);
+  } catch (error) {
+    return handleApiError(error);
+  }
 }
 
 export const runtime = 'nodejs';

@@ -1,21 +1,11 @@
 /**
  * Project Phase Tasks API Routes
- * POST /api/v1/projects/[id]/phases/[phaseId]/tasks - Create project task
+ * GET /api/v1/projects/[id]/phases/[phaseId]/tasks - List phase tasks
  */
 
-import { NextRequest } from 'next/server';
-import { ProjectController } from '../../../../../../../../lib/api/controllers/ProjectController';
+import { ApiProjectControllerV2 } from '@/lib/api/controllers/ApiProjectControllerV2';
 
-const controller = new ProjectController();
+const controller = new ApiProjectControllerV2();
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string; phaseId: string }> }
-) {
-  const resolvedParams = await params;
-  // Add route params to the request for controller access
-  (request as any).routeParams = { id: resolvedParams.id, phaseId: resolvedParams.phaseId };
-  
-  return controller.createTask()(request);
-}
+export const GET = controller.listPhaseTasks();
 export const dynamic = 'force-dynamic';

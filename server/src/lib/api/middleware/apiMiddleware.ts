@@ -17,6 +17,7 @@ export interface ApiContext {
 
 export interface ApiRequest extends NextRequest {
   context?: ApiContext;
+  params?: any;
 }
 
 export interface ApiError extends Error {
