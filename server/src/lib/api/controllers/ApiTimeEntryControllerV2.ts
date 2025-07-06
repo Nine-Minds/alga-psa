@@ -140,15 +140,17 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
             userId: user.user_id,
             user,
             tenant: tenantId!,
-            permissions: user.roles || []
           });
         });
 
-        return createPaginatedResponse(results.data, {
-          page: searchParams.page || 1,
-          limit: searchParams.limit || 25,
-          total: results.total
-        });
+        const page = 1; // Search doesn't support pagination
+        const limit = searchParams.limit || 25;
+        return createPaginatedResponse(
+          results.data,
+          results.total,
+          page,
+          limit
+        );
       } catch (error) {
         return handleApiError(error);
       }
@@ -215,7 +217,6 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
             userId: user.user_id,
             user,
             tenant: tenantId!,
-            permissions: user.roles || []
           });
         });
 
@@ -296,7 +297,6 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
             userId: user.user_id,
             user,
             tenant: tenantId!,
-            permissions: user.roles || []
           });
         });
 
@@ -385,7 +385,6 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
             userId: user.user_id,
             user,
             tenant: tenantId!,
-            permissions: user.roles || []
           });
         });
 
@@ -469,7 +468,6 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
             userId: user.user_id,
             user,
             tenant: tenantId!,
-            permissions: user.roles || []
           });
         });
 
@@ -523,7 +521,6 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
             userId: user.user_id,
             user,
             tenant: tenantId!,
-            permissions: user.roles || []
           });
         });
 
@@ -602,7 +599,6 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
             userId: user.user_id,
             user,
             tenant: tenantId!,
-            permissions: user.roles || []
           });
         });
 
@@ -681,7 +677,6 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
             userId: user.user_id,
             user,
             tenant: tenantId!,
-            permissions: user.roles || []
           });
         });
 
@@ -735,7 +730,6 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
             userId: user.user_id,
             user,
             tenant: tenantId!,
-            permissions: user.roles || []
           });
         });
 
@@ -814,7 +808,6 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
             userId: user.user_id,
             user,
             tenant: tenantId!,
-            permissions: user.roles || []
           });
         });
 
@@ -893,7 +886,6 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
             userId: user.user_id,
             user,
             tenant: tenantId!,
-            permissions: user.roles || []
           });
         });
 
@@ -972,7 +964,6 @@ export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
             userId: user.user_id,
             user,
             tenant: tenantId!,
-            permissions: user.roles || []
           });
         });
 

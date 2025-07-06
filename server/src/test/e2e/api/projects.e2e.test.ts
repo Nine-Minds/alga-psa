@@ -33,8 +33,9 @@ describe('Projects API E2E Tests', () => {
 
   describe('Authentication', () => {
     it('should reject requests without API key', async () => {
-      const client = new env.apiClient.constructor({
-        baseUrl: env.apiClient.config.baseUrl,
+      const { ApiTestClient } = await import('../utils/apiTestHelpers');
+      const client = new ApiTestClient({
+        baseUrl: env.apiClient['config'].baseUrl,
         tenantId: env.tenant
       });
       const response = await client.get('/api/v1/projects');
@@ -44,8 +45,9 @@ describe('Projects API E2E Tests', () => {
     });
 
     it('should reject requests with invalid API key', async () => {
-      const client = new env.apiClient.constructor({
-        baseUrl: env.apiClient.config.baseUrl,
+      const { ApiTestClient } = await import('../utils/apiTestHelpers');
+      const client = new ApiTestClient({
+        baseUrl: env.apiClient['config'].baseUrl,
         apiKey: 'invalid-key',
         tenantId: env.tenant
       });
