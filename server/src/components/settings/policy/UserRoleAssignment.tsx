@@ -1,8 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Flex, Text } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from 'server/src/components/ui/Card';
+import ViewSwitcher, { ViewSwitcherOption } from 'server/src/components/ui/ViewSwitcher';
+import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { assignRoleToUser, removeRoleFromUser, getRoles, getUserRoles } from 'server/src/lib/actions/policyActions';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { IRole, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
@@ -11,12 +14,21 @@ import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
 
+type ViewMode = 'msp' | 'client';
+
+const viewOptions: ViewSwitcherOption<ViewMode>[] = [
+  { value: 'msp', label: 'MSP' },
+  { value: 'client', label: 'Client Portal' },
+];
+
 export default function UserRoleAssignment() {
   const [users, setUsers] = useState<IUserWithRoles[]>([]);
   const [roles, setRoles] = useState<IRole[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [userRoles, setUserRoles] = useState<{ [key: string]: IRole[] }>({});
+  const [viewMode, setViewMode] = useState<ViewMode>('msp');
+  const [showInactiveUsers, setShowInactiveUsers] = useState<boolean>(false);
 
   useEffect(() => {
     fetchUsers();
@@ -50,6 +62,9 @@ export default function UserRoleAssignment() {
     if (selectedUser && selectedRole) {
       await assignRoleToUser(selectedUser, selectedRole);
       fetchUserRoles(selectedUser);
+      // Reset selections
+      setSelectedUser('');
+      setSelectedRole('');
     }
   };
 
@@ -58,73 +73,167 @@ export default function UserRoleAssignment() {
     fetchUserRoles(userId);
   };
 
+  // Filter users based on view mode and inactive status
+  const filteredUsers = useMemo(() => {
+    let filtered = users;
+
+    // Filter by user roles based on view mode
+    // A user should appear in a view if they have at least one role for that portal
+    filtered = filtered.filter(user => {
+      const userRoleList = userRoles[user.user_id] || [];
+      if (viewMode === 'msp') {
+        // Show users who have at least one MSP role
+        return userRoleList.some(role => role.msp);
+      } else {
+        // Show users who have at least one client portal role
+        return userRoleList.some(role => role.client);
+      }
+    });
+
+    // Filter out inactive users unless showInactiveUsers is true
+    if (!showInactiveUsers) {
+      filtered = filtered.filter(user => !user.is_inactive);
+    }
+
+    return filtered;
+  }, [users, viewMode, showInactiveUsers, userRoles]);
+
+  // Filter roles based on view mode
+  const filteredRoles = useMemo(() => {
+    return roles.filter(role => viewMode === 'msp' ? role.msp : role.client);
+  }, [roles, viewMode]);
+
+  // Filter user roles to only show relevant roles for current view
+  const getFilteredUserRoles = (userId: string) => {
+    const roles = userRoles[userId] || [];
+    return roles.filter(role => viewMode === 'msp' ? role.msp : role.client);
+  };
+
   const columns: ColumnDefinition<IUserWithRoles>[] = [
     {
       title: 'User',
       dataIndex: 'username',
-      render: (_, record) => `${record.first_name || ''} ${record.last_name || ''}`.trim() || record.username || 'Unnamed User',
+      render: (_, record) => {
+        const displayName = `${record.first_name || ''} ${record.last_name || ''}`.trim() || record.username || 'Unnamed User';
+        return (
+          <div className="flex items-center gap-2">
+            <span>{displayName}</span>
+            {record.is_inactive && (
+              <span className="text-xs text-gray-500">(Inactive)</span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      title: 'Email',
+      dataIndex: 'email',
     },
     {
       title: 'Roles',
       dataIndex: 'user_id',
-      render: (_, record) => userRoles[record.user_id]?.map((role): string => role.role_name).join(', '),
+      render: (userId) => {
+        const roles = getFilteredUserRoles(userId);
+        return roles.map(role => role.role_name).join(', ') || 'No roles assigned';
+      },
     },
     {
       title: 'Actions',
       dataIndex: 'user_id',
-      width: '10%',
-      render: (userId) => (
-        <Flex gap="2">
-          {userRoles[userId]?.map((role): JSX.Element => (
-            <Button 
-              id={`remove-role-${userId}-${role.role_id}-btn`}
-              key={role.role_id} 
-              color="red" 
-              onClick={() => handleRemoveRole(userId, role.role_id)}
-            >
-              Remove {role.role_name}
-            </Button>
-          ))}
-        </Flex>
-      ),
+      width: '20%',
+      render: (userId) => {
+        const roles = getFilteredUserRoles(userId);
+        return (
+          <Flex gap="2" wrap="wrap">
+            {roles.map((role) => (
+              <Button 
+                id={`remove-role-${userId}-${role.role_id}-btn`}
+                key={role.role_id} 
+                variant="destructive"
+                size="sm"
+                onClick={() => handleRemoveRole(userId, role.role_id)}
+              >
+                Remove {role.role_name}
+              </Button>
+            ))}
+          </Flex>
+        );
+      },
     },
   ];
 
-  const roleOptions = roles.map((role): SelectOption => ({
+  const roleOptions = filteredRoles.map((role): SelectOption => ({
     value: role.role_id,
     label: role.role_name
   }));
 
   return (
-    <div>
-      <Flex direction="column" gap="4">
-        <Text size="5" weight="bold">Assign Roles to Users</Text>
-        <Flex gap="2" align="center">
-          <div className="relative z-20 inline-block">
-            <UserPicker
-              value={selectedUser}
-              onValueChange={setSelectedUser}
-              users={users}
-              label="Select User"
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Assign Roles to Users</CardTitle>
+            <CardDescription>
+              Manage user role assignments for {viewMode === 'msp' ? 'MSP' : 'Client Portal'} users
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-4">
+            <SwitchWithLabel
+              label="Show Inactive Users"
+              checked={showInactiveUsers}
+              onCheckedChange={setShowInactiveUsers}
+            />
+            <ViewSwitcher
+              currentView={viewMode}
+              onChange={setViewMode}
+              options={viewOptions}
             />
           </div>
-          <div className="relative z-10 inline-block">
-            <CustomSelect
-              value={selectedRole}
-              onValueChange={setSelectedRole}
-              options={roleOptions}
-              placeholder="Select Role"
-            />
-          </div>
-          <Button id="assign-role-btn" onClick={handleAssignRole}>Assign Role</Button>
-        </Flex>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Flex direction="column" gap="4">
+          <Flex gap="2" align="center" className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <div className="relative z-20 inline-block">
+              <UserPicker
+                value={selectedUser}
+                onValueChange={setSelectedUser}
+                users={filteredUsers}
+                label="Select User"
+              />
+            </div>
+            <div className="relative z-10 inline-block">
+              <CustomSelect
+                value={selectedRole}
+                onValueChange={setSelectedRole}
+                options={roleOptions}
+                placeholder="Select Role"
+              />
+            </div>
+            <Button 
+              id="assign-role-btn" 
+              onClick={handleAssignRole}
+              disabled={!selectedUser || !selectedRole}
+            >
+              Assign Role
+            </Button>
+          </Flex>
 
-        <DataTable
-          data={users}
-          columns={columns}
-          pagination={false}
-        />
-      </Flex>
-    </div>
+          {filteredUsers.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No {viewMode === 'msp' ? 'MSP' : 'Client Portal'} users found
+              {!showInactiveUsers && ' (inactive users hidden)'}
+            </div>
+          ) : (
+            <DataTable
+              data={filteredUsers}
+              columns={columns}
+              pagination={false}
+              pageSize={999} // Show all users
+            />
+          )}
+        </Flex>
+      </CardContent>
+    </Card>
   );
 }

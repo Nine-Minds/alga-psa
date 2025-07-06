@@ -7,11 +7,23 @@ import { createRole, updateRole, deleteRole, getRoles } from 'server/src/lib/act
 import { IRole } from 'server/src/interfaces/auth.interfaces';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import GenericDialog from 'server/src/components/ui/GenericDialog';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from 'server/src/components/ui/Card';
+import { Input } from 'server/src/components/ui/Input';
+import { Label } from 'server/src/components/ui/Label';
+import { TextArea } from 'server/src/components/ui/TextArea';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 
 export default function RoleManagement() {
   const [roles, setRoles] = useState<IRole[]>([]);
-  const [newRole, setNewRole] = useState({ role_name: '', description: '' });
+  const [newRole, setNewRole] = useState({ 
+    role_name: '', 
+    description: '',
+    msp: true,
+    client: false
+  });
   const [editingRole, setEditingRole] = useState<IRole | null>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchRoles();
@@ -23,8 +35,14 @@ export default function RoleManagement() {
   };
 
   const handleCreateRole = async () => {
-    await createRole(newRole.role_name, newRole.description);
-    setNewRole({ role_name: '', description: '' });
+    await createRole(newRole.role_name, newRole.description, newRole.msp, newRole.client);
+    setNewRole({ 
+      role_name: '', 
+      description: '',
+      msp: true,
+      client: false
+    });
+    setIsCreateDialogOpen(false);
     fetchRoles();
   };
 
@@ -43,57 +61,165 @@ export default function RoleManagement() {
 
   const columns: ColumnDefinition<IRole>[] = [
     {
-      title: 'Role Name',
+      title: 'Role Name *',
       dataIndex: 'role_name',
     },
     {
       title: 'Description',
       dataIndex: 'description',
     },
+    {
+      title: 'Portal',
+      dataIndex: 'role_id',
+      width: '150px',
+      render: (_, record) => {
+        const portals = [];
+        if (record.msp) portals.push('MSP');
+        if (record.client) portals.push('Client');
+        return (
+          <span className="text-sm">
+            {portals.join(', ') || 'None'}
+          </span>
+        );
+      }
+    },
+    {
+      title: 'Actions',
+      dataIndex: 'role_id',
+      width: '150px',
+      render: (roleId) => (
+        <Button
+          variant="destructive"
+          id="delete-role-button"
+          size="sm"
+          onClick={() => handleDeleteRole(roleId)}
+        >
+          Delete
+        </Button>
+      )
+    }
   ];
 
   return (
-    <div>
-      <Flex direction="column" gap="4">
-        <Text size="5" weight="bold">Manage Roles</Text>
-        <Flex gap="2">
-          <input
-            type="text"
-            placeholder="Role Name"
-            value={newRole.role_name}
-            onChange={(e) => setNewRole({ ...newRole, role_name: e.target.value })}
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Manage Roles</CardTitle>
+              <CardDescription>
+                Create and manage roles for MSP and Client Portal access
+              </CardDescription>
+            </div>
+            <Button 
+              id="create-role-btn" 
+              onClick={() => setIsCreateDialogOpen(true)}
+            >
+              Add Role
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <DataTable
+            data={roles}
+            columns={columns}
+            pagination={false}
+            pageSize={999}
           />
-          <input
-            type="text"
-            placeholder="Description"
-            value={newRole.description}
-            onChange={(e) => setNewRole({ ...newRole, description: e.target.value })}
-          />
-          <Button id="create-role-btn" onClick={handleCreateRole}>Create Role</Button>
-        </Flex>
+        </CardContent>
+      </Card>
 
-        <DataTable
-          data={roles}
-          columns={columns}
-          pagination={false}
-        />
-
-        {editingRole && (
-          <Flex direction="column" gap="2">
-            <Text size="4" weight="bold">Edit Role</Text>
-            <input
+      {/* Create Role Dialog */}
+      <GenericDialog
+        isOpen={isCreateDialogOpen}
+        onClose={() => {
+          setIsCreateDialogOpen(false);
+          setNewRole({ 
+            role_name: '', 
+            description: '',
+            msp: true,
+            client: false
+          });
+        }}
+        title="Create New Role"
+        id="create-role-dialog"
+      >
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="role-name">Role Name</Label>
+            <Input
+              id="role-name"
               type="text"
-              placeholder="Role Name"
-              value={editingRole.role_name}
-              onChange={(e) => setEditingRole({ ...editingRole, role_name: e.target.value })}
+              placeholder="Enter role name"
+              value={newRole.role_name}
+              onChange={(e) => setNewRole({ ...newRole, role_name: e.target.value })}
             />
-            <Flex gap="2">
-              <Button id="update-role-btn" onClick={handleUpdateRole}>Update Role</Button>
-              <Button id="cancel-edit-role-btn" variant="soft" onClick={() => setEditingRole(null)}>Cancel</Button>
-            </Flex>
-          </Flex>
-        )}
-      </Flex>
-    </div>
+          </div>
+          
+          <div>
+            <Label htmlFor="role-description">Description</Label>
+            <TextArea
+              id="role-description"
+              placeholder="Enter role description"
+              value={newRole.description}
+              onChange={(e) => setNewRole({ ...newRole, description: e.target.value })}
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Portal Access</Label>
+            <div className="space-y-2">
+              <label className="flex items-center space-x-2">
+                <Checkbox
+                  checked={newRole.msp}
+                  onChange={(e) => 
+                    setNewRole({ ...newRole, msp: e.target.checked })
+                  }
+                />
+                <span>MSP Portal</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <Checkbox
+                  checked={newRole.client}
+                  onChange={(e) => 
+                    setNewRole({ ...newRole, client: e.target.checked })
+                  }
+                />
+                <span>Client Portal</span>
+              </label>
+            </div>
+            <p className="text-sm text-gray-500">
+              A role must have access to at least one portal
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              id="cancel-create-role-btn"
+              variant="outline"
+              onClick={() => {
+                setIsCreateDialogOpen(false);
+                setNewRole({ 
+                  role_name: '', 
+                  description: '',
+                  msp: true,
+                  client: false
+                });
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              id="confirm-create-role-btn"
+              onClick={handleCreateRole}
+              disabled={!newRole.role_name || (!newRole.msp && !newRole.client)}
+            >
+              Create Role
+            </Button>
+          </div>
+        </div>
+      </GenericDialog>
+    </>
   );
 }

@@ -39,6 +39,8 @@ export interface IRole extends TenantEntity {
     role_id: string;
     role_name: string;
     description: string;
+    msp: boolean;
+    client: boolean;
 }
 
 export interface IRoleWithPermissions extends IRole {
@@ -49,6 +51,8 @@ export interface IPermission extends TenantEntity {
     permission_id: string;
     resource: string;
     action: string;
+    msp: boolean;
+    client: boolean;
 }
 
 export interface IResource extends TenantEntity {

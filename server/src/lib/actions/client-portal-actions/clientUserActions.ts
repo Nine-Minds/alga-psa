@@ -128,14 +128,27 @@ export async function createClientUser({
     }
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Get all roles for tenant and find client role (case-insensitive)
-      const roles = await trx('roles').where({ tenant });
-      const clientRole = roles.find(role => 
-        role.role_name && role.role_name.toLowerCase().includes('client')
-      );
+      // Get the client portal user role
+      // After migration, look for "User" role in client portal
+      let clientRole = await trx('roles')
+        .where({ 
+          tenant,
+          client: true,
+          msp: false
+        })
+        .whereRaw('LOWER(role_name) = ?', ['user'])
+        .first();
+
+      // Fallback: try to find any role with "client" in name for backwards compatibility
+      if (!clientRole) {
+        const roles = await trx('roles').where({ tenant });
+        clientRole = roles.find(role => 
+          role.role_name && role.role_name.toLowerCase().includes('client')
+        );
+      }
 
       if (!clientRole) {
-        throw new Error(`Client role not found among ${roles.length} tenant roles`);
+        throw new Error(`Client portal user role not found for tenant`);
       }
 
       // Hash the password

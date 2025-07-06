@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, Flex, Heading } from '@radix-ui/themes';
 import * as Tabs from '@radix-ui/react-tabs';
 import RoleManagement from 'server/src/components/settings/policy/RoleManagement';
-import PermissionManagement from 'server/src/components/settings/policy/PermissionManagement';
+import PermissionsMatrix from 'server/src/components/settings/policy/PermissionsMatrix';
 import UserRoleAssignment from 'server/src/components/settings/policy/UserRoleAssignment';
 import PolicyManagement from 'server/src/components/settings/policy/PolicyManagement';
 import AdminApiKeysSetup from 'server/src/components/settings/api/AdminApiKeysSetup';
@@ -30,7 +30,7 @@ export default function SecuritySettingsPage() {
           <RoleManagement />
         </Tabs.Content>
         <Tabs.Content value="permissions">
-          <PermissionManagement />
+          <PermissionsMatrix />
         </Tabs.Content>
         <Tabs.Content value="user-roles">
           <UserRoleAssignment />

@@ -32,24 +32,28 @@ describe.todo('Ticket Permissions Unit Tests', () => {
 
   beforeEach(() => {
     // Create permissions
-    viewTicketPermission = { permission_id: '1', resource: 'ticket', action: 'view' };
-    editTicketPermission = { permission_id: '2', resource: 'ticket', action: 'edit' };
-    createTicketPermission = { permission_id: '3', resource: 'ticket', action: 'create' };
-    deleteTicketPermission = { permission_id: '4', resource: 'ticket', action: 'delete' };
+    viewTicketPermission = { permission_id: '1', resource: 'ticket', action: 'view', msp: true, client: false };
+    editTicketPermission = { permission_id: '2', resource: 'ticket', action: 'edit', msp: true, client: false };
+    createTicketPermission = { permission_id: '3', resource: 'ticket', action: 'create', msp: true, client: false };
+    deleteTicketPermission = { permission_id: '4', resource: 'ticket', action: 'delete', msp: true, client: false };
 
     // Create roles
     userRole = {
       role_id: '1',
       role_name: 'User',
       description: 'Regular user role with view ticket permission',
-      permissions: [viewTicketPermission]
+      permissions: [viewTicketPermission],
+      msp: true,
+      client: false
     };
 
     adminRole = {
       role_id: '2',
       role_name: 'Admin',
       description: 'Administrator role with all ticket permissions',
-      permissions: [viewTicketPermission, editTicketPermission, createTicketPermission, deleteTicketPermission]
+      permissions: [viewTicketPermission, editTicketPermission, createTicketPermission, deleteTicketPermission],
+      msp: true,
+      client: false
     };
 
     // Create users
