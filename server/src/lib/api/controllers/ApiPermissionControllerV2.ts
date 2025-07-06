@@ -139,7 +139,7 @@ export class ApiPermissionControllerV2 extends ApiBaseControllerV2 {
           // Check permissions
           await this.checkPermission(apiRequest, 'update');
 
-          const id = this.extractIdFromPath(apiRequest);
+          const id = await this.extractIdFromPath(apiRequest);
 
           // Parse and validate request body
           const body = await req.json();
@@ -174,7 +174,7 @@ export class ApiPermissionControllerV2 extends ApiBaseControllerV2 {
           // Check permissions
           await this.checkPermission(apiRequest, 'delete');
 
-          const id = this.extractIdFromPath(apiRequest);
+          const id = await this.extractIdFromPath(apiRequest);
 
           // Delete permission
           await this.permissionRoleService.deletePermission(id, apiRequest.context);
@@ -201,7 +201,7 @@ export class ApiPermissionControllerV2 extends ApiBaseControllerV2 {
           // Check permissions
           await this.checkPermission(apiRequest, 'read');
 
-          const id = this.extractIdFromPath(apiRequest);
+          const id = await this.extractIdFromPath(apiRequest);
 
           // Get permission by ID
           const result = await this.permissionRoleService.getPermissionById(id, apiRequest.context);
@@ -260,7 +260,7 @@ export class ApiPermissionControllerV2 extends ApiBaseControllerV2 {
           // Check permissions
           await this.checkPermission(apiRequest, 'read');
 
-          const id = this.extractIdFromPath(apiRequest);
+          const id = await this.extractIdFromPath(apiRequest);
 
           // Get roles using this permission
           const { knex } = await this.permissionRoleService.getKnex();
