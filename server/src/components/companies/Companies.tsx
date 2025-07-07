@@ -606,9 +606,20 @@ const Companies: React.FC = () => {
 
   const handleExportToCSV = async () => {
     try {
-      // Export all companies with current filters
-      const allCompanies = await getAllCompanies(true);
-      const csvData = await exportCompaniesToCSV(allCompanies);
+      let companiesToExport: ICompany[];
+      
+      // If companies are selected, export only those
+      if (selectedCompanies.length > 0) {
+        const allCompanies = await getAllCompanies(true);
+        companiesToExport = allCompanies.filter(company => 
+          selectedCompanies.includes(company.company_id)
+        );
+      } else {
+        // Otherwise export all companies with current filters
+        companiesToExport = await getAllCompanies(true);
+      }
+      
+      const csvData = await exportCompaniesToCSV(companiesToExport);
       
       const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
       
@@ -622,8 +633,18 @@ const Companies: React.FC = () => {
         link.click();
         document.body.removeChild(link);
       }
+      
+      toast({
+        title: 'Export Successful',
+        description: `Exported ${companiesToExport.length} ${companiesToExport.length === 1 ? 'company' : 'companies'} to CSV`,
+      });
     } catch (error) {
       console.error('Error exporting companies to CSV:', error);
+      toast({
+        title: 'Export Failed',
+        description: 'Failed to export companies to CSV',
+        variant: 'destructive',
+      });
     }
   };
 

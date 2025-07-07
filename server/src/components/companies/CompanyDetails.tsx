@@ -577,6 +577,21 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                 onEdit={(isActive) => handleFieldChange('is_inactive', !isActive)}
                 automationId="company-status-field"
               />
+
+              {/* Client Type */}
+              <div className="space-y-2">
+                <Text as="label" size="2" className="text-gray-700 font-medium">Client Type</Text>
+                <CustomSelect
+                  id="client-type-select"
+                  value={editedCompany.client_type || 'company'}
+                  onValueChange={(value) => handleFieldChange('client_type', value)}
+                  options={[
+                    { value: 'company', label: 'Company' },
+                    { value: 'individual', label: 'Individual' }
+                  ]}
+                  placeholder="Select client type"
+                />
+              </div>
             </div>
             
             {/* Right Column - Company Locations Only */}

@@ -797,24 +797,130 @@ export async function exportCompaniesToCSV(companies: ICompany[]): Promise<strin
     throw new Error('Permission denied: Cannot export companies');
   }
 
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  const exportData = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    // Fetch location data for all companies
+    const companyIds = companies.map(c => c.company_id);
+    const locations = await trx('company_locations')
+      .whereIn('company_id', companyIds)
+      .andWhere('tenant', tenant)
+      .andWhere('is_default', true);
+
+    // Create a map of company_id to location
+    const locationMap = new Map();
+    locations.forEach(loc => {
+      locationMap.set(loc.company_id, loc);
+    });
+
+    // Prepare export data with location fields
+    return companies.map(company => {
+      const location = locationMap.get(company.company_id) || {};
+      const tags = (company as any).tags || [];
+      const tagNames = Array.isArray(tags) ? tags.map((t: any) => t.tag_text || t).join(', ') : '';
+      
+      return {
+        client_name: company.company_name,
+        email: location.email || '',
+        phone_number: location.phone || '',
+        website: company.url || '',
+        client_type: company.client_type || 'company',
+        is_inactive: company.is_inactive ? 'Yes' : 'No',
+        notes: company.notes || '',
+        tags: tagNames,
+        // Location fields
+        location_name: location.location_name || '',
+        address_line1: location.address_line1 || '',
+        address_line2: location.address_line2 || '',
+        city: location.city || '',
+        state_province: location.state_province || '',
+        postal_code: location.postal_code || '',
+        country: location.country_name || ''
+      };
+    });
+  });
+
   const fields = [
-    'company_name',
-    'url',
+    'client_name',
+    'email',
+    'phone_number',
+    'website',
     'client_type',
     'is_inactive',
-    'is_tax_exempt',
-    'tax_id_number',
-    'payment_terms',
-    'billing_cycle',
-    'credit_limit',
-    'preferred_payment_method',
-    'auto_invoice',
-    'invoice_delivery_method',
-    'region_code', // Changed from tax_region
-    'notes' 
+    'notes',
+    'tags',
+    'location_name',
+    'address_line1',
+    'address_line2',
+    'city',
+    'state_province',
+    'postal_code',
+    'country'
   ];
 
-  return unparseCSV(companies, fields);
+  return unparseCSV(exportData, fields);
+}
+
+export function generateCompanyCSVTemplate(): string {
+  const templateData = [
+    {
+      client_name: 'Acme Corporation',
+      email: 'contact@acme.com',
+      phone_number: '+1 (555) 123-4567',
+      website: 'https://www.acme.com',
+      client_type: 'company',
+      is_inactive: 'No',
+      notes: 'Important client, handle with care',
+      tags: 'enterprise, priority',
+      location_name: 'Main Office',
+      address_line1: '123 Business Street',
+      address_line2: 'Suite 100',
+      city: 'New York',
+      state_province: 'NY',
+      postal_code: '10001',
+      country: 'United States'
+    },
+    {
+      client_name: 'Tech Startup Inc',
+      email: 'hello@techstartup.io',
+      phone_number: '+1 (555) 987-6543',
+      website: 'https://techstartup.io',
+      client_type: 'company',
+      is_inactive: 'No',
+      notes: 'Fast-growing startup',
+      tags: 'startup, technology',
+      location_name: 'Headquarters',
+      address_line1: '456 Innovation Way',
+      address_line2: '',
+      city: 'San Francisco',
+      state_province: 'CA',
+      postal_code: '94105',
+      country: 'United States'
+    }
+  ];
+
+  const fields = [
+    'client_name',
+    'email',
+    'phone_number',
+    'website',
+    'client_type',
+    'is_inactive',
+    'notes',
+    'tags',
+    'location_name',
+    'address_line1',
+    'address_line2',
+    'city',
+    'state_province',
+    'postal_code',
+    'country'
+  ];
+
+  return unparseCSV(templateData, fields);
 }
 
 export async function checkExistingCompanies(
@@ -938,21 +1044,21 @@ export async function importCompaniesFromCSV(
           }
           
           const companyToCreate = {
-            company_name: companyData.company_name,
-            url: companyData.url || '',
-            is_inactive: companyData.is_inactive || false,
+            company_name: companyData.client_name || companyData.company_name,
+            url: companyData.website || companyData.url || '',
+            is_inactive: companyData.is_inactive === 'Yes' || companyData.is_inactive === true || false,
             is_tax_exempt: companyData.is_tax_exempt || false,
             client_type: companyData.client_type || 'company',
             tenant: tenant,
             properties: properties,
             account_manager_id: companyData.account_manager_id === '' ? null : companyData.account_manager_id,
             payment_terms: companyData.payment_terms || '',
-            billing_cycle: companyData.billing_cycle || '',
+            billing_cycle: companyData.billing_cycle || 'monthly',
             credit_limit: companyData.credit_limit || 0,
             preferred_payment_method: companyData.preferred_payment_method || '',
             auto_invoice: companyData.auto_invoice || false,
             invoice_delivery_method: companyData.invoice_delivery_method || '',
-            region_code: companyData.region_code || null, // Changed tax_region to region_code
+            region_code: companyData.region_code || null,
             tax_id_number: companyData.tax_id_number || '',
             tax_exemption_certificate: companyData.tax_exemption_certificate || '',
             notes: companyData.notes || '',
@@ -964,19 +1070,23 @@ export async function importCompaniesFromCSV(
             .insert(companyToCreate)
             .returning('*');
 
-          // Create default location if address/phone/email data exists in CSV
-          if (companyData.address || companyData.phone_no || companyData.email) {
+          // Create default location if any location data exists in CSV
+          if (companyData.email || companyData.phone_number || companyData.address_line1 || 
+              companyData.city || companyData.location_name) {
             try {
               await trx('company_locations').insert({
                 location_id: trx.raw('gen_random_uuid()'),
                 company_id: savedCompany.company_id,
                 tenant: tenant,
-                location_name: 'Main Office',
-                address_line1: companyData.address || '',
-                city: '',
+                location_name: companyData.location_name || 'Main Office',
+                address_line1: companyData.address_line1 || '',
+                address_line2: companyData.address_line2 || '',
+                city: companyData.city || '',
+                state_province: companyData.state_province || '',
+                postal_code: companyData.postal_code || '',
                 country_code: 'US',
-                country_name: 'United States',
-                phone: companyData.phone_no || '',
+                country_name: companyData.country || 'United States',
+                phone: companyData.phone_number || '',
                 email: companyData.email || '',
                 is_default: true,
                 is_billing_address: true,

@@ -12,7 +12,7 @@ import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog'
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { Upload, AlertTriangle, Check } from 'lucide-react';
 import { parseCSV } from 'server/src/lib/utils/csvParser';
-import { checkExistingCompanies, importCompaniesFromCSV } from 'server/src/lib/actions/company-actions/companyActions';
+import { checkExistingCompanies, importCompaniesFromCSV, generateCompanyCSVTemplate } from 'server/src/lib/actions/company-actions/companyActions';
 
 interface CompaniesImportDialogProps {
   isOpen: boolean;
@@ -21,22 +21,21 @@ interface CompaniesImportDialogProps {
 }
 
 type MappableCompanyField = 
-  | 'company_name'
-  | 'phone_no'
+  | 'client_name'
   | 'email'
-  | 'url'
-  | 'address'
+  | 'phone_number'
+  | 'website'
   | 'client_type'
   | 'is_inactive'
-  | 'is_tax_exempt'
-  | 'tax_id_number'
-  | 'payment_terms'
-  | 'billing_cycle'
-  | 'credit_limit'
-  | 'preferred_payment_method'
-  | 'auto_invoice'
-  | 'invoice_delivery_method'
-  | 'tax_region';
+  | 'notes'
+  | 'tags'
+  | 'location_name'
+  | 'address_line1'
+  | 'address_line2'
+  | 'city'
+  | 'state_province'
+  | 'postal_code'
+  | 'country';
 
 interface ICSVColumnMapping {
   csvHeader: string;
@@ -62,22 +61,21 @@ interface ImportOptions {
 }
 
 const COMPANY_FIELDS: Record<MappableCompanyField, string> = {
-  company_name: 'Company Name',
-  phone_no: 'Phone Number',
+  client_name: 'Client Name',
   email: 'Email',
-  url: 'URL',
-  address: 'Address',
+  phone_number: 'Phone Number',
+  website: 'Website',
   client_type: 'Client Type',
   is_inactive: 'Is Inactive',
-  is_tax_exempt: 'Is Tax Exempt',
-  tax_id_number: 'Tax ID',
-  payment_terms: 'Payment Terms',
-  billing_cycle: 'Billing Cycle',
-  credit_limit: 'Credit Limit',
-  preferred_payment_method: 'Payment Method',
-  auto_invoice: 'Auto Invoice',
-  invoice_delivery_method: 'Invoice Delivery Method',
-  tax_region: 'Tax Region'
+  notes: 'Notes',
+  tags: 'Tags',
+  location_name: 'Location Name',
+  address_line1: 'Address Line 1',
+  address_line2: 'Address Line 2',
+  city: 'City',
+  state_province: 'State/Province',
+  postal_code: 'Postal Code',
+  country: 'Country'
 } as const;
 
 const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
@@ -214,7 +212,7 @@ const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
 
   const validateMappings = useCallback(() => {
     const errors: string[] = [];
-    const requiredFields: MappableCompanyField[] = ['company_name'];
+    const requiredFields: MappableCompanyField[] = ['client_name'];
 
     for (const requiredField of requiredFields) {
       if (!columnMappings.some(mapping => mapping.companyField === requiredField)) {
@@ -334,17 +332,37 @@ const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
               <Upload className="mx-auto h-12 w-12 text-gray-400" />
               <p className="mt-2 text-sm text-gray-600">Upload a CSV file with company data</p>
               <p className="mt-1 text-xs text-gray-500">
-                Required fields: company_name<br />
-                Optional fields: phone_no, email, url, address, client_type, is_inactive, is_tax_exempt, etc.
+                Required fields: client_name<br />
+                Optional fields: email, phone_number, website, client_type, is_inactive, notes, tags, location fields
               </p>
-              <Input
-                id="company-csv-upload"
-                type="file"
-                accept=".csv"
-                onChange={handleFileUpload}
-                className="mt-4"
-                disabled={isProcessing}
-              />
+              <div className="mt-4 space-y-3">
+                <Input
+                  id="company-csv-upload"
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileUpload}
+                  disabled={isProcessing}
+                />
+                <Button
+                  id="download-template-btn"
+                  variant="outline"
+                  onClick={() => {
+                    const template = generateCompanyCSVTemplate();
+                    const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', 'company_import_template.csv');
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
+                  className="w-full"
+                >
+                  Download CSV Template
+                </Button>
+              </div>
             </div>
           )}
 
