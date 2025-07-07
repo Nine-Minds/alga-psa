@@ -1,22 +1,5 @@
-/**
- * Plan Bundle Plan by ID API Route
- * DELETE /api/v1/plan-bundles/[bundleId]/plans/[planId] - Remove plan from bundle
- */
-
-import { ApiBillingPlanControllerV2 } from 'server/src/lib/api/controllers/ApiBillingPlanControllerV2';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiBillingPlanControllerV2 } from '@/lib/api/controllers/ApiBillingPlanControllerV2';
 
 const controller = new ApiBillingPlanControllerV2();
 
-export async function DELETE(request: Request, { params }: { params: Promise<{ bundleId: string; planId: string }> }) {
-  try {
-    const resolvedParams = await params;
-    const req = request as any;
-    return await controller.removePlanFromBundle()(req, resolvedParams);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
-
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+export const DELETE = controller.removePlanFromBundle();

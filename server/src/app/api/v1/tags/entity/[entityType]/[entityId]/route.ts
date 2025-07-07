@@ -5,4 +5,3 @@ const controller = new ApiTagControllerV2();
 export const GET = controller.getEntityTags();
 export const POST = controller.tagEntity();
 export const DELETE = controller.untagEntity();
-export const PUT = controller.replaceEntityTags();

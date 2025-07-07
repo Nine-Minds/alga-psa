@@ -1,35 +1,41 @@
 /**
- * Asset Detail API Routes
- * GET /api/v1/assets/{id} - Get asset details
- * PUT /api/v1/assets/{id} - Update asset
- * DELETE /api/v1/assets/{id} - Delete asset
+ * [id] API Routes
+ * Path: /api/v1/assets/[id]
  */
 
 import { ApiAssetControllerV2 } from '@/lib/api/controllers/ApiAssetControllerV2';
 import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
 
-export async function GET(request: Request) {
+const controller = new ApiAssetControllerV2();
+
+export async function GET(request: Request, { params }: { params: Promise<any> }) {
   try {
-    const controller = new ApiAssetControllerV2();
-    return await controller.getById(request as any, (request as any).params);
+    const resolvedParams = await params;
+    const req = request as any;
+    req.params = resolvedParams;
+    return await controller.getById(req, resolvedParams);
   } catch (error) {
     return handleApiError(error);
   }
 }
 
-export async function PUT(request: Request) {
+export async function PUT(request: Request, { params }: { params: Promise<any> }) {
   try {
-    const controller = new ApiAssetControllerV2();
-    return await controller.update(request as any, (request as any).params);
+    const resolvedParams = await params;
+    const req = request as any;
+    req.params = resolvedParams;
+    return await controller.update(req, resolvedParams);
   } catch (error) {
     return handleApiError(error);
   }
 }
 
-export async function DELETE(request: Request) {
+export async function DELETE(request: Request, { params }: { params: Promise<any> }) {
   try {
-    const controller = new ApiAssetControllerV2();
-    return await controller.delete(request as any, (request as any).params);
+    const resolvedParams = await params;
+    const req = request as any;
+    req.params = resolvedParams;
+    return await controller.delete(req, resolvedParams);
   } catch (error) {
     return handleApiError(error);
   }

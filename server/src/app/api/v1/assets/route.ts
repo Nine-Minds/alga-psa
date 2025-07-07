@@ -1,24 +1,25 @@
 /**
- * Assets API Routes
- * GET /api/v1/assets - List assets
- * POST /api/v1/assets - Create new asset
+ * assets API Routes
+ * Path: /api/v1/assets
  */
 
 import { ApiAssetControllerV2 } from '@/lib/api/controllers/ApiAssetControllerV2';
 import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
 
-export async function GET(request: Request) {
+const controller = new ApiAssetControllerV2();
+
+export async function GET(request: Request, { params }: { params: Promise<any> }) {
   try {
-    const controller = new ApiAssetControllerV2();
+    const resolvedParams = await params;
     return await controller.list(request as any);
   } catch (error) {
     return handleApiError(error);
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: Request, { params }: { params: Promise<any> }) {
   try {
-    const controller = new ApiAssetControllerV2();
+    const resolvedParams = await params;
     return await controller.create(request as any);
   } catch (error) {
     return handleApiError(error);

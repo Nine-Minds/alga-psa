@@ -1,29 +1,6 @@
-/**
- * Billing Plans API Route
- * GET /api/v1/billing-plans - List billing plans
- * POST /api/v1/billing-plans - Create billing plan
- */
+import { ApiBillingPlanControllerV2 } from '@/lib/api/controllers/ApiBillingPlanControllerV2';
 
-import { ApiBillingPlanControllerV2 } from 'server/src/lib/api/controllers/ApiBillingPlanControllerV2';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+const controller = new ApiBillingPlanControllerV2();
 
-export async function GET(request: Request) {
-  try {
-    const controller = new ApiBillingPlanControllerV2();
-    return await controller.list()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
-
-export async function POST(request: Request) {
-  try {
-    const controller = new ApiBillingPlanControllerV2();
-    return await controller.create()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
-
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+export const GET = controller.list();
+export const POST = controller.create();

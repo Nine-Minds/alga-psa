@@ -1,25 +1,30 @@
 /**
- * Asset Documents API Routes
- * GET /api/v1/assets/{id}/documents - List asset documents
- * POST /api/v1/assets/{id}/documents - Associate document with asset
+ * documents API Routes
+ * Path: /api/v1/assets/[id]/documents
  */
 
 import { ApiAssetControllerV2 } from '@/lib/api/controllers/ApiAssetControllerV2';
 import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
 
-export async function GET(request: Request) {
+const controller = new ApiAssetControllerV2();
+
+export async function GET(request: Request, { params }: { params: Promise<any> }) {
   try {
-    const controller = new ApiAssetControllerV2();
-    return await controller.listDocuments(request as any, (request as any).params);
+    const resolvedParams = await params;
+    const req = request as any;
+    req.params = resolvedParams;
+    return await controller.listDocuments(req, resolvedParams);
   } catch (error) {
     return handleApiError(error);
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: Request, { params }: { params: Promise<any> }) {
   try {
-    const controller = new ApiAssetControllerV2();
-    return await controller.associateDocument(request as any, (request as any).params);
+    const resolvedParams = await params;
+    const req = request as any;
+    req.params = resolvedParams;
+    return await controller.associateDocument(req, resolvedParams);
   } catch (error) {
     return handleApiError(error);
   }

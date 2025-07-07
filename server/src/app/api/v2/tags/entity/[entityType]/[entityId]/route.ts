@@ -1,7 +1,0 @@
-import { ApiTagControllerV2 } from '@/lib/api/controllers/ApiTagControllerV2';
-
-const controller = new ApiTagControllerV2();
-
-export const GET = controller.getEntityTags();
-export const POST = controller.tagEntity();
-export const DELETE = controller.untagEntity();

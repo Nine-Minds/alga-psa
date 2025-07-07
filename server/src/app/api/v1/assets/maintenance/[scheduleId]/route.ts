@@ -1,25 +1,30 @@
 /**
- * Asset Maintenance Schedule Detail API Routes
- * PUT /api/v1/assets/maintenance/{scheduleId} - Update maintenance schedule
- * DELETE /api/v1/assets/maintenance/{scheduleId} - Delete maintenance schedule
+ * [scheduleId] API Routes
+ * Path: /api/v1/assets/maintenance/[scheduleId]
  */
 
 import { ApiAssetControllerV2 } from '@/lib/api/controllers/ApiAssetControllerV2';
 import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
 
-export async function PUT(request: Request) {
+const controller = new ApiAssetControllerV2();
+
+export async function PUT(request: Request, { params }: { params: Promise<any> }) {
   try {
-    const controller = new ApiAssetControllerV2();
-    return await controller.updateMaintenanceSchedule(request as any, (request as any).params);
+    const resolvedParams = await params;
+    const req = request as any;
+    req.params = resolvedParams;
+    return await controller.updateMaintenanceSchedule(req, resolvedParams);
   } catch (error) {
     return handleApiError(error);
   }
 }
 
-export async function DELETE(request: Request) {
+export async function DELETE(request: Request, { params }: { params: Promise<any> }) {
   try {
-    const controller = new ApiAssetControllerV2();
-    return await controller.deleteMaintenanceSchedule(request as any, (request as any).params);
+    const resolvedParams = await params;
+    const req = request as any;
+    req.params = resolvedParams;
+    return await controller.deleteMaintenanceSchedule(req, resolvedParams);
   } catch (error) {
     return handleApiError(error);
   }

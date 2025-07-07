@@ -1,15 +1,19 @@
 /**
- * Asset Maintenance Record API Route
- * POST /api/v1/assets/{id}/maintenance/record - Record maintenance performed
+ * record API Routes
+ * Path: /api/v1/assets/[id]/maintenance/record
  */
 
 import { ApiAssetControllerV2 } from '@/lib/api/controllers/ApiAssetControllerV2';
 import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
 
-export async function POST(request: Request) {
+const controller = new ApiAssetControllerV2();
+
+export async function POST(request: Request, { params }: { params: Promise<any> }) {
   try {
-    const controller = new ApiAssetControllerV2();
-    return await controller.recordMaintenance(request as any, (request as any).params);
+    const resolvedParams = await params;
+    const req = request as any;
+    req.params = resolvedParams;
+    return await controller.recordMaintenance(req, resolvedParams);
   } catch (error) {
     return handleApiError(error);
   }
