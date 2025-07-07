@@ -3,12 +3,10 @@
  * POST /api/v1/feature-access - Check feature access
  */
 
-// TODO: Implement checkFeatureAccess in ApiPermissionControllerV2 or create a dedicated feature access controller
-// For now, continue using PermissionRoleController
-import { PermissionRoleController } from 'server/src/lib/api/controllers/PermissionRoleController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiPermissionControllerV2 } from '@/lib/api/controllers/ApiPermissionControllerV2';
+import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
 
-const controller = new PermissionRoleController();
+const controller = new ApiPermissionControllerV2();
 
 export async function POST(request: Request) {
   try {

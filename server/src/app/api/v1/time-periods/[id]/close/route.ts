@@ -3,12 +3,12 @@
  * POST /api/v1/time-periods/[id]/close - Close time period
  */
 
-import { TimeSheetController } from 'server/src/lib/api/controllers/TimeSheetController';
+import { ApiTimeSheetControllerV2 } from 'server/src/lib/api/controllers/ApiTimeSheetControllerV2';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const controller = new TimeSheetController();
+    const controller = new ApiTimeSheetControllerV2();
     const req = request as any;
     req.params = params;
     return await controller.update()(req);

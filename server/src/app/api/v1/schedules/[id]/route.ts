@@ -5,16 +5,16 @@
  * DELETE /api/v1/schedules/[id] - Delete schedule entry
  */
 
-import { TimeSheetController } from 'server/src/lib/api/controllers/TimeSheetController';
+import { ApiTimeSheetControllerV2 } from 'server/src/lib/api/controllers/ApiTimeSheetControllerV2';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new TimeSheetController();
+const controller = new ApiTimeSheetControllerV2();
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const req = request as any;
     req.params = params;
-    return await controller.getById()(req);
+    return await controller.get()(req);
   } catch (error) {
     return handleApiError(error);
   }
@@ -24,7 +24,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   try {
     const req = request as any;
     req.params = params;
-    return await controller.update()(req);
+    return await controller.updateScheduleEntry()(req);
   } catch (error) {
     return handleApiError(error);
   }
@@ -34,7 +34,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   try {
     const req = request as any;
     req.params = params;
-    return await controller.delete()(req);
+    return await controller.deleteScheduleEntry()(req);
   } catch (error) {
     return handleApiError(error);
   }

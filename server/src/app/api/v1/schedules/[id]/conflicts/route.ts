@@ -3,10 +3,10 @@
  * GET /api/v1/schedules/[id]/conflicts - Get schedule entry conflicts
  */
 
-import { TimeSheetController } from 'server/src/lib/api/controllers/TimeSheetController';
+import { ApiTimeSheetControllerV2 } from 'server/src/lib/api/controllers/ApiTimeSheetControllerV2';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new TimeSheetController();
+const controller = new ApiTimeSheetControllerV2();
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {

@@ -514,4 +514,29 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
       }
     };
   }
+
+  /**
+   * Get comprehensive access control metrics
+   */
+  getAccessControlMetrics() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'read');
+
+          // Get metrics using the service
+          const metrics = await this.roleService.getAccessControlMetrics(apiRequest.context!);
+          
+          return createSuccessResponse(metrics);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
 }

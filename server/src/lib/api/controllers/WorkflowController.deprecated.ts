@@ -1,5 +1,16 @@
 /**
- * Workflow Controller
+ * Workflow Controller - DEPRECATED
+ * 
+ * @deprecated This controller has been replaced by ApiWorkflowControllerV2
+ * All workflow routes now use the new V2 controller which provides:
+ * - Proper API key authentication
+ * - Simplified architecture
+ * - Better error handling
+ * - Consistent with other V2 controllers
+ * 
+ * This file will be removed in a future version.
+ * Use ApiWorkflowControllerV2 instead.
+ * 
  * Comprehensive REST API controller for workflow management operations
  * Handles workflow registrations, executions, events, tasks, templates, triggers, and analytics
  */

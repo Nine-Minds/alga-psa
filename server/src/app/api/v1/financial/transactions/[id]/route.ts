@@ -4,29 +4,20 @@
  * PUT /api/v1/financial/transactions/[id] - Update transaction
  */
 
-import { FinancialController } from 'server/src/lib/api/controllers/FinancialController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiFinancialControllerV2 } from 'server/src/lib/api/controllers/ApiFinancialControllerV2';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const controller = new FinancialController();
-    const req = request as any;
-    req.params = params;
-    return await controller.getTransactionById()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
+  const controller = new ApiFinancialControllerV2();
+  const req = request as any;
+  req.params = params;
+  return await controller.getTransactionById()(req);
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const controller = new FinancialController();
-    const req = request as any;
-    req.params = params;
-    return await controller.update()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
+  const controller = new ApiFinancialControllerV2();
+  const req = request as any;
+  req.params = params;
+  return await controller.update()(req);
 }
 
 export const runtime = 'nodejs';

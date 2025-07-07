@@ -551,4 +551,216 @@ export class ApiUserControllerV2 extends ApiBaseControllerV2 {
       }
     };
   }
+
+  /**
+   * Assign roles to user
+   */
+  assignRoles() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'update');
+
+          // Extract user ID from path
+          const targetUserId = await this.extractIdFromPath(apiRequest);
+
+          // Parse and validate request body
+          const body = await req.json();
+          const { role_ids } = body;
+          
+          if (!Array.isArray(role_ids)) {
+            throw new ValidationError('role_ids must be an array');
+          }
+
+          // Assign roles
+          const result = await this.userService.assignRoles(
+            targetUserId,
+            role_ids,
+            apiRequest.context!
+          );
+          
+          return createSuccessResponse(result);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Remove roles from user
+   */
+  removeRoles() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'update');
+
+          // Extract user ID from path
+          const targetUserId = await this.extractIdFromPath(apiRequest);
+
+          // Parse and validate request body
+          const body = await req.json();
+          const { role_ids } = body;
+          
+          if (!Array.isArray(role_ids)) {
+            throw new ValidationError('role_ids must be an array');
+          }
+
+          // Remove roles
+          const result = await this.userService.removeRoles(
+            targetUserId,
+            role_ids,
+            apiRequest.context!
+          );
+          
+          return createSuccessResponse(result);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Replace user roles
+   */
+  replaceRoles() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'update');
+
+          // Extract user ID from path
+          const targetUserId = await this.extractIdFromPath(apiRequest);
+
+          // Parse and validate request body
+          const body = await req.json();
+          const { role_ids } = body;
+          
+          if (!Array.isArray(role_ids)) {
+            throw new ValidationError('role_ids must be an array');
+          }
+
+          // Replace roles - use removeRoles followed by assignRoles
+          const { knex } = await getConnection(apiRequest.context!.tenant);
+          await knex.transaction(async (trx) => {
+            // First remove all existing roles
+            await trx('user_roles')
+              .where('user_id', targetUserId)
+              .where('tenant', apiRequest.context!.tenant)
+              .delete();
+            
+            // Then assign new roles if any
+            if (role_ids.length > 0) {
+              const userRoles = role_ids.map(roleId => ({
+                tenant: apiRequest.context!.tenant,
+                user_id: targetUserId,
+                role_id: roleId
+              }));
+              await trx('user_roles').insert(userRoles);
+            }
+          });
+          
+          // Get updated roles
+          const updatedRoles = await this.userService.getUserRoles(
+            targetUserId,
+            apiRequest.context!
+          );
+          
+          return createSuccessResponse({
+            success: true,
+            message: `Successfully replaced user roles`,
+            roles: updatedRoles
+          });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * List users with their roles
+   */
+  listUsersWithRoles() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'read');
+
+          // Parse query parameters
+          const url = new URL(apiRequest.url);
+          const page = parseInt(url.searchParams.get('page') || '1');
+          const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), 100);
+          const search = url.searchParams.get('search') || undefined;
+          const is_inactive = url.searchParams.get('is_inactive') === 'true';
+          const sort = url.searchParams.get('sort') || 'username';
+          const order = (url.searchParams.get('order') || 'asc') as 'asc' | 'desc';
+
+          const listOptions = {
+            page,
+            limit,
+            filters: { search, is_inactive },
+            sort,
+            order
+          };
+
+          // Get users list with basic info
+          const result = await this.userService.list(listOptions, apiRequest.context!);
+          
+          // Enhance each user with their roles
+          const { knex } = await getConnection(apiRequest.context!.tenant);
+          const usersWithRoles = await Promise.all(
+            result.data.map(async (user: any) => {
+              const roles = await knex('user_roles as ur')
+                .join('roles as r', function() {
+                  this.on('ur.role_id', '=', 'r.role_id')
+                      .andOn('ur.tenant', '=', 'r.tenant');
+                })
+                .where('ur.user_id', user.user_id)
+                .where('ur.tenant', apiRequest.context!.tenant)
+                .select('r.role_id', 'r.role_name', 'r.description')
+                .orderBy('r.role_name');
+              
+              return {
+                ...user,
+                roles
+              };
+            })
+          );
+          
+          return createPaginatedResponse(
+            usersWithRoles,
+            result.total,
+            page,
+            limit,
+            { sort, order, filters: listOptions.filters }
+          );
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
 }

@@ -3,12 +3,12 @@
  * GET /api/v1/time-sheets/search - Search time sheets
  */
 
-import { TimeSheetController } from 'server/src/lib/api/controllers/TimeSheetController';
+import { ApiTimeSheetControllerV2 } from 'server/src/lib/api/controllers/ApiTimeSheetControllerV2';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
 export async function GET(request: Request) {
   try {
-    const controller = new TimeSheetController();
+    const controller = new ApiTimeSheetControllerV2();
     return await controller.list()(request as any);
   } catch (error) {
     return handleApiError(error);

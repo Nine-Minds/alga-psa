@@ -1,0 +1,6 @@
+import { ApiQuickBooksControllerV2 } from '@/lib/api/controllers/ApiQuickBooksControllerV2';
+
+const controller = new ApiQuickBooksControllerV2();
+
+export const GET = controller.getHealthConfig();
+export const PUT = controller.updateHealthConfig();

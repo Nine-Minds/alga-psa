@@ -1,4 +1,13 @@
 /**
+ * @deprecated This controller has been split into separate V2 controllers:
+ * - ApiPermissionControllerV2 - For permission management
+ * - ApiRoleControllerV2 - For role management  
+ * - ApiUserControllerV2 - For user-role assignments
+ * 
+ * This file is kept for reference only and should not be used in new code.
+ * All routes have been migrated to use the V2 controllers.
+ * 
+ * Original Description:
  * Permission & Role Controller
  * Comprehensive REST API controller for RBAC (Role-Based Access Control) operations
  * 

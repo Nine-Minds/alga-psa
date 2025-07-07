@@ -3,16 +3,12 @@
  * GET /api/v1/invoices/search - Advanced invoice search
  */
 
-import { InvoiceController } from 'server/src/lib/api/controllers/InvoiceController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiInvoiceControllerV2 } from 'server/src/lib/api/controllers/ApiInvoiceControllerV2';
+
+const controller = new ApiInvoiceControllerV2();
 
 export async function GET(request: Request) {
-  try {
-    const controller = new InvoiceController();
-    return await controller.list()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
+  return controller.search()(request as any);
 }
 
 export const runtime = 'nodejs';

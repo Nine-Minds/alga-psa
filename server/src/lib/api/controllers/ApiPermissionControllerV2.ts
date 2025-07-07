@@ -281,4 +281,86 @@ export class ApiPermissionControllerV2 extends ApiBaseControllerV2 {
       }
     };
   }
+
+  /**
+   * Check multiple permissions for a user
+   */
+  checkUserPermissions() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'read');
+
+          // Parse and validate request body
+          const body = await req.json();
+          const { user_id, permissions } = body;
+          
+          if (!Array.isArray(permissions)) {
+            throw new ValidationError('permissions must be an array');
+          }
+
+          const userId = user_id || apiRequest.context!.userId;
+          
+          // Check permissions using the service
+          const results = await this.permissionRoleService.checkUserPermissions(
+            userId,
+            permissions,
+            apiRequest.context!
+          );
+          
+          return createSuccessResponse({
+            user_id: userId,
+            results,
+            checked_at: new Date().toISOString()
+          });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Check feature access for a user
+   */
+  checkFeatureAccess() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'read');
+
+          // Parse and validate request body
+          const body = await req.json();
+          const { user_id, feature_name } = body;
+          
+          if (!feature_name) {
+            throw new ValidationError('feature_name is required');
+          }
+
+          const userId = user_id || apiRequest.context!.userId;
+          
+          // Check feature access using the service
+          const result = await this.permissionRoleService.checkFeatureAccess(
+            userId,
+            feature_name,
+            apiRequest.context!
+          );
+          
+          return createSuccessResponse(result);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
 }
