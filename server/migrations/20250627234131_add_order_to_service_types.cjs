@@ -3,35 +3,75 @@
  * @returns { Promise<void> }
  */
 exports.up = async function(knex) {
-  // Add display_order to standard_service_types table
-  await knex.schema.alterTable('standard_service_types', function(table) {
-    table.integer('display_order').notNullable().defaultTo(0);
-  });
-
-  // Add order_number to service_types table (tenant-specific)
-  await knex.schema.alterTable('service_types', function(table) {
-    table.integer('order_number').notNullable().defaultTo(0);
-  });
-
-  // Update existing standard_service_types with sequential order numbers BEFORE adding unique constraint
-  const standardTypes = await knex('standard_service_types').orderBy('name');
-  for (let i = 0; i < standardTypes.length; i++) {
-    await knex('standard_service_types')
-      .where('id', standardTypes[i].id)
-      .update({ display_order: i + 1 });
+  // Check if display_order column exists, if not add it
+  const hasDisplayOrderColumn = await knex.schema.hasColumn('standard_service_types', 'display_order');
+  if (!hasDisplayOrderColumn) {
+    // Add column as nullable first
+    await knex.schema.alterTable('standard_service_types', function(table) {
+      table.integer('display_order');
+    });
+    
+    // Set sequential values
+    const standardTypes = await knex('standard_service_types').orderBy('name');
+    for (let i = 0; i < standardTypes.length; i++) {
+      await knex('standard_service_types')
+        .where('id', standardTypes[i].id)
+        .update({ display_order: i + 1 });
+    }
+    
+    // Now make it NOT NULL
+    await knex.schema.alterTable('standard_service_types', function(table) {
+      table.integer('display_order').notNullable().alter();
+    });
+  } else {
+    // Column exists, ensure no duplicates
+    const standardTypes = await knex('standard_service_types').orderBy('name');
+    for (let i = 0; i < standardTypes.length; i++) {
+      await knex('standard_service_types')
+        .where('id', standardTypes[i].id)
+        .update({ display_order: i + 1 });
+    }
   }
 
-  // Update existing service_types with sequential order numbers per tenant BEFORE adding unique constraint
-  const tenants = await knex('service_types').distinct('tenant').pluck('tenant');
-  for (const tenantId of tenants) {
-    const tenantTypes = await knex('service_types')
-      .where('tenant', tenantId)
-      .orderBy('name');
+  // Check if order_number column exists, if not add it
+  const hasOrderNumberColumn = await knex.schema.hasColumn('service_types', 'order_number');
+  if (!hasOrderNumberColumn) {
+    // Add column as nullable first
+    await knex.schema.alterTable('service_types', function(table) {
+      table.integer('order_number');
+    });
     
-    for (let i = 0; i < tenantTypes.length; i++) {
-      await knex('service_types')
-        .where('id', tenantTypes[i].id)
-        .update({ order_number: i + 1 });
+    // Set sequential values per tenant
+    const tenants = await knex('service_types').distinct('tenant').pluck('tenant');
+    for (const tenantId of tenants) {
+      const tenantTypes = await knex('service_types')
+        .where('tenant', tenantId)
+        .orderBy('name');
+      
+      for (let i = 0; i < tenantTypes.length; i++) {
+        await knex('service_types')
+          .where('id', tenantTypes[i].id)
+          .update({ order_number: i + 1 });
+      }
+    }
+    
+    // Now make it NOT NULL
+    await knex.schema.alterTable('service_types', function(table) {
+      table.integer('order_number').notNullable().alter();
+    });
+  } else {
+    // Column exists, ensure no duplicates per tenant
+    const tenants = await knex('service_types').distinct('tenant').pluck('tenant');
+    for (const tenantId of tenants) {
+      const tenantTypes = await knex('service_types')
+        .where('tenant', tenantId)
+        .orderBy('name');
+      
+      for (let i = 0; i < tenantTypes.length; i++) {
+        await knex('service_types')
+          .where('id', tenantTypes[i].id)
+          .update({ order_number: i + 1 });
+      }
     }
   }
 
