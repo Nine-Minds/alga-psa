@@ -18,7 +18,7 @@ exports.up = async function(knex) {
     
     // Add display_order for sorting
     if (!hasDisplayOrder) {
-      table.integer('display_order').notNullable().defaultTo(0);
+      table.integer('display_order');
     }
     
     // Add color column to match system_interaction_types
@@ -46,7 +46,7 @@ exports.up = async function(knex) {
   const hasSystemDisplayOrder = await knex.schema.hasColumn('system_interaction_types', 'display_order');
   if (!hasSystemDisplayOrder) {
     await knex.schema.alterTable('system_interaction_types', function(table) {
-      table.integer('display_order').notNullable().defaultTo(0);
+      table.integer('display_order');
     });
   }
 
