@@ -1346,37 +1346,5 @@ export class ApiWorkflowControllerV2 extends ApiBaseControllerV2 {
   // HELPER METHODS
   // ============================================================================
 
-  /**
-   * Validate request data
-   */
-  private async validateData(req: ApiRequest, schema: any): Promise<any> {
-    try {
-      const body = await req.json().catch(() => ({}));
-      return schema.parse(body);
-    } catch (error: any) {
-      if (error.errors) {
-        throw new ValidationError('Validation failed', error.errors);
-      }
-      throw error;
-    }
-  }
 
-  /**
-   * Validate query parameters
-   */
-  private validateQuery(req: ApiRequest, schema: any): any {
-    try {
-      const url = new URL(req.url);
-      const query: Record<string, any> = {};
-      url.searchParams.forEach((value, key) => {
-        query[key] = value;
-      });
-      return schema.parse(query);
-    } catch (error: any) {
-      if (error.errors) {
-        throw new ValidationError('Query validation failed', error.errors);
-      }
-      throw error;
-    }
-  }
 }

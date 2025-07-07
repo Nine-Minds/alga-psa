@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ApiBaseControllerV2 } from './ApiBaseControllerV2';
+import { ApiBaseControllerV2, AuthenticatedApiRequest } from './ApiBaseControllerV2';
 import { TicketService } from '../services/TicketService';
 import { 
   createTicketSchema,
@@ -101,7 +101,7 @@ export class ApiTicketControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Create request with context
-        const apiRequest = req as ApiRequest;
+        const apiRequest = req as AuthenticatedApiRequest;
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
@@ -183,7 +183,7 @@ export class ApiTicketControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Create request with context
-        const apiRequest = req as ApiRequest;
+        const apiRequest = req as AuthenticatedApiRequest;
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
@@ -246,7 +246,7 @@ export class ApiTicketControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Create request with context
-        const apiRequest = req as ApiRequest;
+        const apiRequest = req as AuthenticatedApiRequest;
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
@@ -261,7 +261,7 @@ export class ApiTicketControllerV2 extends ApiBaseControllerV2 {
             throw new ForbiddenError('Permission denied: Cannot read ticket');
           }
 
-          const ticketId = this.extractIdFromPath(apiRequest);
+          const ticketId = await this.extractIdFromPath(apiRequest);
           const comments = await this.ticketService.getTicketComments(
             ticketId, 
             apiRequest.context!
@@ -313,7 +313,7 @@ export class ApiTicketControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Create request with context
-        const apiRequest = req as ApiRequest;
+        const apiRequest = req as AuthenticatedApiRequest;
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
@@ -340,7 +340,7 @@ export class ApiTicketControllerV2 extends ApiBaseControllerV2 {
             throw error;
           }
 
-          const ticketId = this.extractIdFromPath(apiRequest);
+          const ticketId = await this.extractIdFromPath(apiRequest);
           const comment = await this.ticketService.addComment(
             ticketId,
             validatedData,
@@ -393,7 +393,7 @@ export class ApiTicketControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Create request with context
-        const apiRequest = req as ApiRequest;
+        const apiRequest = req as AuthenticatedApiRequest;
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
@@ -420,7 +420,7 @@ export class ApiTicketControllerV2 extends ApiBaseControllerV2 {
             throw error;
           }
 
-          const ticketId = this.extractIdFromPath(apiRequest);
+          const ticketId = await this.extractIdFromPath(apiRequest);
           const updated = await this.ticketService.update(
             ticketId,
             validatedData,
@@ -477,7 +477,7 @@ export class ApiTicketControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Create request with context
-        const apiRequest = req as ApiRequest;
+        const apiRequest = req as AuthenticatedApiRequest;
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
@@ -504,7 +504,7 @@ export class ApiTicketControllerV2 extends ApiBaseControllerV2 {
             throw error;
           }
 
-          const ticketId = this.extractIdFromPath(apiRequest);
+          const ticketId = await this.extractIdFromPath(apiRequest);
           const updated = await this.ticketService.update(
             ticketId,
             validatedData,
@@ -561,7 +561,7 @@ export class ApiTicketControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Create request with context
-        const apiRequest = req as ApiRequest;
+        const apiRequest = req as AuthenticatedApiRequest;
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
@@ -604,7 +604,7 @@ export class ApiTicketControllerV2 extends ApiBaseControllerV2 {
   /**
    * Override extractIdFromPath to handle ticket-specific routes
    */
-  protected extractIdFromPath(req: ApiRequest): string {
+  protected async extractIdFromPath(req: AuthenticatedApiRequest): Promise<string> {
     const url = new URL(req.url);
     const pathParts = url.pathname.split('/');
     const ticketsIndex = pathParts.findIndex(part => part === 'tickets');

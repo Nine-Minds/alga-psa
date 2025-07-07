@@ -48,6 +48,10 @@ export async function withApiKeyAuth(
       }
 
       // Now we have a valid key and tenant, get the user within tenant context
+      if (!tenantId) {
+        throw new UnauthorizedError('Tenant ID not found');
+      }
+      
       let user;
       await runWithTenant(tenantId, async () => {
         user = await findUserById(keyRecord.user_id);

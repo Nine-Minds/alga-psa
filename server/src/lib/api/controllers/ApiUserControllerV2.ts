@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseControllerV2 } from './ApiBaseControllerV2';
-import { UserService } from '../services/UserService';
+import { UserService, UserActivityFilter } from '../services/UserService';
 import { 
   createUserSchema,
   updateUserSchema,
@@ -40,7 +40,7 @@ import {
   createPaginatedResponse,
   handleApiError
 } from '../middleware/apiMiddleware';
-import { ZodError } from 'zod';
+import { ZodError, z } from 'zod';
 
 export class ApiUserControllerV2 extends ApiBaseControllerV2 {
   private userService: UserService;
@@ -286,8 +286,15 @@ export class ApiUserControllerV2 extends ApiBaseControllerV2 {
           const page = parseInt(url.searchParams.get('page') || '1');
           const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), 100);
 
+          // Transform date strings to Date objects for the service
+          const filter: UserActivityFilter = {
+            ...validatedQuery,
+            from_date: validatedQuery.from_date ? new Date(validatedQuery.from_date) : undefined,
+            to_date: validatedQuery.to_date ? new Date(validatedQuery.to_date) : undefined
+          };
+
           const result = await this.userService.getUserActivity(
-            validatedQuery,
+            filter,
             apiRequest.context!,
             page,
             limit
@@ -781,8 +788,19 @@ export class ApiUserControllerV2 extends ApiBaseControllerV2 {
           // Extract user ID from path
           const targetUserId = await this.extractIdFromPath(apiRequest);
 
+          // Get data from request body
+          const data = await this.validateData(apiRequest, z.object({
+            secret: z.string(),
+            token: z.string()
+          }));
+
           // Enable 2FA
-          const result = await this.userService.enable2FA(targetUserId, apiRequest.context!);
+          const result = await this.userService.enable2FA(
+            targetUserId, 
+            data.secret,
+            data.token,
+            apiRequest.context!
+          );
           
           return createSuccessResponse(result);
         });
@@ -839,17 +857,23 @@ export class ApiUserControllerV2 extends ApiBaseControllerV2 {
 
           // Parse query parameters
           const url = new URL(apiRequest.url);
-          const filters = {
-            from_date: url.searchParams.get('from_date') || undefined,
-            to_date: url.searchParams.get('to_date') || undefined,
-            activity_type: url.searchParams.get('activity_type') || undefined
+          const activityType = url.searchParams.get('activity_type');
+          const filter: UserActivityFilter = {
+            user_id: targetUserId,
+            from_date: url.searchParams.get('from_date') ? new Date(url.searchParams.get('from_date')!) : undefined,
+            to_date: url.searchParams.get('to_date') ? new Date(url.searchParams.get('to_date')!) : undefined,
+            activity_type: activityType ? [activityType] : undefined
           };
 
-          // Get user activity
+          // Get user activity - get page and limit from query params
+          const page = parseInt(url.searchParams.get('page') || '1');
+          const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), 100);
+
           const result = await this.userService.getUserActivity(
-            targetUserId,
+            filter,
             apiRequest.context!,
-            filters
+            page,
+            limit
           );
           
           return createSuccessResponse(result);

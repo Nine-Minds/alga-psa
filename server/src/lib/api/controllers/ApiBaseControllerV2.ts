@@ -107,7 +107,7 @@ export abstract class ApiBaseControllerV2 {
   /**
    * Validate request data
    */
-  private async validateData(req: AuthenticatedApiRequest, schema: ZodSchema): Promise<any> {
+  protected async validateData(req: AuthenticatedApiRequest, schema: ZodSchema): Promise<any> {
     try {
       const body = await req.json().catch(() => ({}));
       return schema.parse(body);
@@ -122,7 +122,7 @@ export abstract class ApiBaseControllerV2 {
   /**
    * Validate query parameters
    */
-  private validateQuery(req: AuthenticatedApiRequest, schema: ZodSchema): any {
+  protected validateQuery(req: AuthenticatedApiRequest, schema: ZodSchema): any {
     try {
       const url = new URL(req.url);
       const query: Record<string, any> = {};
@@ -368,3 +368,6 @@ export abstract class ApiBaseControllerV2 {
     };
   }
 }
+
+// Export types for use in derived classes
+export type { AuthenticatedApiRequest };

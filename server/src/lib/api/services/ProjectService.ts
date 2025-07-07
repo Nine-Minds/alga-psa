@@ -1107,16 +1107,5 @@ export class ProjectService extends BaseService<IProject> {
     return task || null;
   }
 
-  /**
-   * Get task checklist items
-   */
-  async getTaskChecklistItems(taskId: string, context: ServiceContext): Promise<IProjectTaskChecklist[]> {
-    const { knex } = await this.getKnex();
-    
-    return knex('task_checklist_items')
-      .where({ task_id: taskId, tenant: context.tenant })
-      .orderBy('order_number', 'asc')
-      .select('*');
-  }
 
 }

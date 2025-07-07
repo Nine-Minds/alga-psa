@@ -374,8 +374,19 @@ export class PermissionRoleService extends BaseService<IRole> {
   /**
    * List method for base controller compatibility
    */
-  async list(options: ListOptions, context: ServiceContext): Promise<ListResult<RoleResponse>> {
-    return this.listRoles(options, context);
+  async list(options: ListOptions, context: ServiceContext): Promise<ListResult<IRole>> {
+    const result = await this.listRoles(options, context);
+    // Transform RoleResponse to IRole
+    const roles: IRole[] = result.data.map(role => ({
+      role_id: role.role_id,
+      role_name: role.role_name,
+      tenant: role.tenant,
+      permissions: new Set<IPermission>()
+    } as unknown as IRole));
+    return {
+      ...result,
+      data: roles
+    };
   }
 
   /**
@@ -496,8 +507,17 @@ export class PermissionRoleService extends BaseService<IRole> {
   async getById(
     id: string, 
     context: ServiceContext
-  ): Promise<RoleResponse | null> {
-    return this.getRoleById(id, context, false) as Promise<RoleResponse | null>;
+  ): Promise<IRole | null> {
+    const role = await this.getRoleById(id, context, false) as RoleResponse | null;
+    if (!role) return null;
+    
+    // Transform RoleResponse to IRole
+    return {
+      role_id: role.role_id,
+      role_name: role.role_name,
+      tenant: role.tenant,
+      permissions: new Set<IPermission>()
+    } as unknown as IRole;
   }
 
   /**
@@ -530,8 +550,15 @@ export class PermissionRoleService extends BaseService<IRole> {
   /**
    * Create method for base controller compatibility
    */
-  async create(data: CreateRoleData, context: ServiceContext): Promise<RoleResponse> {
-    return this.createRole(data, context);
+  async create(data: CreateRoleData, context: ServiceContext): Promise<IRole> {
+    const role = await this.createRole(data, context);
+    // Transform RoleResponse to IRole
+    return {
+      role_id: role.role_id,
+      role_name: role.role_name,
+      tenant: role.tenant,
+      permissions: new Set<IPermission>()
+    } as unknown as IRole;
   }
 
   /**
@@ -613,8 +640,15 @@ export class PermissionRoleService extends BaseService<IRole> {
   /**
    * Update method for base controller compatibility
    */
-  async update(id: string, data: UpdateRoleData, context: ServiceContext): Promise<RoleResponse> {
-    return this.updateRole(id, data, context);
+  async update(id: string, data: UpdateRoleData, context: ServiceContext): Promise<IRole> {
+    const role = await this.updateRole(id, data, context);
+    // Transform RoleResponse to IRole
+    return {
+      role_id: role.role_id,
+      role_name: role.role_name,
+      tenant: role.tenant,
+      permissions: new Set<IPermission>()
+    } as unknown as IRole;
   }
 
   /**
@@ -1824,15 +1858,10 @@ export class PermissionRoleService extends BaseService<IRole> {
     return roles.map(role => ({
       role_id: role.role_id,
       role_name: role.role_name,
+      tenant: role.tenant,
       description: role.description,
-      is_system: role.is_system,
-      is_active: role.is_active,
-      permissions: [],
-      user_count: 0,
-      created_at: role.created_at,
-      updated_at: role.updated_at,
-      created_by: role.created_by,
-      updated_by: role.updated_by
+      created_at: role.created_at?.toISOString(),
+      updated_at: role.updated_at?.toISOString()
     }));
   }
 }

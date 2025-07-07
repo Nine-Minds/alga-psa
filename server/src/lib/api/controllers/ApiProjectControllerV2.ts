@@ -415,7 +415,7 @@ export class ApiProjectControllerV2 extends ApiBaseControllerV2 {
           const data = await req.json();
           const { projectIds, updates } = data;
 
-          const results = await this.projectService.bulkUpdate(
+          const results = await this.projectService.bulkUpdateProjects(
             projectIds,
             updates,
             apiRequest.context!

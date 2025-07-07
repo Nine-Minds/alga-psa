@@ -196,8 +196,7 @@ export class ApiWebhookControllerV2 {
             }
           });
 
-          const listOptions = { page, limit, sort, order };
-          const result = await this.webhookService.listWebhooks(query, apiRequest.context!.tenant, listOptions);
+          const result = await this.webhookService.listWebhooks(query, apiRequest.context!.tenant, page, limit);
           
           return createPaginatedResponse(
             result.data,
@@ -507,8 +506,9 @@ export class ApiWebhookControllerV2 {
           
           const deliveries = await this.webhookService.getDeliveryHistory(
             id,
-            options as any,
-            apiRequest.context!.tenant
+            apiRequest.context!.tenant,
+            options.page,
+            options.limit
           );
           
           return createPaginatedResponse(
@@ -842,8 +842,10 @@ export class ApiWebhookControllerV2 {
           const bulkData = await this.validateData(apiRequest, bulkWebhookOperationSchema);
           
           const result = await this.webhookService.bulkWebhookOperation(
-            bulkData,
+            bulkData.operation,
+            bulkData.webhook_ids,
             apiRequest.context!.tenant,
+            bulkData.test_event_type,
             apiRequest.context!.userId
           );
           

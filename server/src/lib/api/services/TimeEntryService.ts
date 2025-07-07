@@ -35,8 +35,8 @@ export class TimeEntryService extends BaseService<any> {
     });
   }
 
-  private applyFilters(query: Knex.QueryBuilder, filters: TimeEntryFilterData | undefined, knex: Knex): void {
-    if (!filters) return;
+  protected applyFilters(query: Knex.QueryBuilder, filters: Record<string, any>): Knex.QueryBuilder {
+    if (!filters) return query;
     
     if (filters.user_id) {
       query.where(`${this.tableName}.user_id`, filters.user_id);
@@ -87,11 +87,11 @@ export class TimeEntryService extends BaseService<any> {
     if (filters.company_id) {
       query.leftJoin('tickets', function() {
         this.on(`time_entries.work_item_id`, 'tickets.ticket_id')
-          .andOn(`time_entries.work_item_type`, knex.raw('?', ['ticket']));
+          .andOn(`time_entries.work_item_type`, '=', 'ticket');
       })
       .leftJoin('project_tasks', function() {
         this.on(`time_entries.work_item_id`, 'project_tasks.task_id')
-          .andOn(`time_entries.work_item_type`, knex.raw('?', ['project_task']));
+          .andOn(`time_entries.work_item_type`, '=', 'project_task');
       })
       .leftJoin('project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')
       .leftJoin('projects', 'project_phases.project_id', 'projects.project_id')
@@ -106,6 +106,8 @@ export class TimeEntryService extends BaseService<any> {
     if (filters.duration_max !== undefined) {
       query.where(`${this.tableName}.billable_duration`, '<=', filters.duration_max);
     }
+    
+    return query;
   }
 
   async list(options: ListOptions, context: ServiceContext): Promise<ListResult<any>> {
@@ -117,7 +119,7 @@ export class TimeEntryService extends BaseService<any> {
     const filters = options.filters as TimeEntryFilterData;
     
     // Apply filters
-    this.applyFilters(query, filters, knex);
+    this.applyFilters(query, filters);
 
     // Add joins for additional data
     query.leftJoin('users', `${this.tableName}.user_id`, 'users.user_id')
@@ -146,7 +148,7 @@ export class TimeEntryService extends BaseService<any> {
       .where(`${this.tableName}.tenant`, context.tenant);
     
     // Apply same filters to count query
-    this.applyFilters(countQuery, filters, knex);
+    this.applyFilters(countQuery, filters);
     
     const [data, [{ count }]] = await Promise.all([
       query,
@@ -593,18 +595,18 @@ export class TimeEntryService extends BaseService<any> {
       start_time_to: exportQuery.start_time_to
     };
     
-    this.applyFilters(query, filters, knex);
+    this.applyFilters(query, filters);
     
     // Add joins for complete data
     query.leftJoin('users', `${this.tableName}.user_id`, 'users.user_id')
       .leftJoin('service_catalog', `${this.tableName}.service_id`, 'service_catalog.service_id')
       .leftJoin('tickets', function() {
         this.on(`time_entries.work_item_id`, 'tickets.ticket_id')
-          .andOn(`time_entries.work_item_type`, knex.raw('?', ['ticket']));
+          .andOn(`time_entries.work_item_type`, '=', 'ticket');
       })
       .leftJoin('project_tasks', function() {
         this.on(`time_entries.work_item_id`, 'project_tasks.task_id')
-          .andOn(`time_entries.work_item_type`, knex.raw('?', ['project_task']));
+          .andOn(`time_entries.work_item_type`, '=', 'project_task');
       })
       .select(
         `${this.tableName}.*`,
@@ -779,16 +781,15 @@ export class TimeEntryService extends BaseService<any> {
     // Apply filters if provided
     const filters: TimeEntryFilterData = {
       user_id: searchData.user_ids?.[0],
-      work_item_id: searchData.work_item_id,
       work_item_type: searchData.work_item_types?.[0],
       service_id: searchData.service_ids?.[0],
       approval_status: searchData.approval_statuses?.[0],
-      is_billable: searchData.is_billable,
+      is_billable: searchData.billable_only,
       date_from: searchData.date_from,
       date_to: searchData.date_to
     };
     
-    this.applyFilters(query, filters, knex);
+    this.applyFilters(query, filters);
 
     // Add joins
     query.leftJoin('users', `${this.tableName}.user_id`, 'users.user_id')
@@ -819,7 +820,7 @@ export class TimeEntryService extends BaseService<any> {
       countQuery.where(`${this.tableName}.notes`, 'ilike', `%${searchData.query}%`);
     }
     
-    this.applyFilters(countQuery, filters, knex);
+    this.applyFilters(countQuery, filters);
     
     const [data, [{ count }]] = await Promise.all([
       query,
