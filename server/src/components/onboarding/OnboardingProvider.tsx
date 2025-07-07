@@ -28,9 +28,13 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     try {
       const settings = await getTenantSettings();
       
-      // If no settings exist, treat as onboarding not completed
-      // If settings exist, check completion status
-      if (!settings || (!settings.onboarding_completed && !settings.onboarding_skipped)) {
+      // Only show onboarding if both settings exist and are explicitly set to false
+      // If settings don't exist or are incomplete, don't show onboarding wizard
+      if (settings && 
+          settings.hasOwnProperty('onboarding_completed') && 
+          settings.hasOwnProperty('onboarding_skipped') &&
+          !settings.onboarding_completed && 
+          !settings.onboarding_skipped) {
         setShowOnboarding(true);
         
         // Load any saved progress

@@ -287,13 +287,45 @@ export async function verifyTenantDataConsistency(
 }
 
 /**
+ * Verify tenant settings configuration
+ */
+export async function verifyTenantSettings(
+  db: Knex,
+  tenantId: string,
+  expectedSettings: {
+    onboarding_completed: boolean;
+    onboarding_skipped: boolean;
+    onboarding_data?: any;
+  }
+): Promise<void> {
+  const tenantSettings = await db('tenant_settings')
+    .where('tenant', tenantId)
+    .first();
+
+  expect(tenantSettings).toBeTruthy();
+  expect(tenantSettings.onboarding_completed).toBe(expectedSettings.onboarding_completed);
+  expect(tenantSettings.onboarding_skipped).toBe(expectedSettings.onboarding_skipped);
+  
+  if (expectedSettings.onboarding_data !== undefined) {
+    if (expectedSettings.onboarding_data === null) {
+      expect(tenantSettings.onboarding_data).toBeNull();
+    } else {
+      expect(tenantSettings.onboarding_data).toEqual(expectedSettings.onboarding_data);
+    }
+  }
+  
+  expect(tenantSettings.created_at).toBeTruthy();
+  expect(tenantSettings.updated_at).toBeTruthy();
+}
+
+/**
  * Cleanup verification - ensure tenant data is properly removed
  */
 export async function verifyTenantCleanup(
   db: Knex,
   tenantId: string
 ): Promise<void> {
-  const [tenants, users, companies, roles, userRoles, emailSettings, tenantCompanies] = await Promise.all([
+  const [tenants, users, companies, roles, userRoles, emailSettings, tenantCompanies, tenantSettings] = await Promise.all([
     db('tenants').where('tenant', tenantId),
     db('users').where('tenant', tenantId),
     db('companies').where('tenant', tenantId),
@@ -301,6 +333,7 @@ export async function verifyTenantCleanup(
     db('user_roles').where('tenant', tenantId),
     db('tenant_email_settings').where('tenant_id', tenantId),
     db('tenant_companies').where('tenant', tenantId),
+    db('tenant_settings').where('tenant', tenantId),
   ]);
 
   // All should be empty after cleanup
@@ -311,4 +344,5 @@ export async function verifyTenantCleanup(
   expect(userRoles.length).toBe(0);
   expect(emailSettings.length).toBe(0);
   expect(tenantCompanies.length).toBe(0);
+  expect(tenantSettings.length).toBe(0);
 }

@@ -26,12 +26,18 @@ export interface TenantTestData {
   };
 }
 
+export interface TenantTestOptions extends Partial<TenantCreationInput> {
+  initializeTenantSettings?: boolean;
+  onboardingCompleted?: boolean;
+  onboardingSkipped?: boolean;
+}
+
 /**
  * Create a complete test tenant with admin user for onboarding tests
  */
 export async function createTestTenant(
   db: Knex,
-  options: Partial<TenantCreationInput> = {}
+  options: TenantTestOptions = {}
 ): Promise<TenantTestData> {
   const testId = uuidv4().slice(0, 8);
   
@@ -47,6 +53,22 @@ export async function createTestTenant(
   };
 
   const result = await createTenantComplete(db, tenantInput);
+
+  // Initialize tenant settings if requested
+  if (options.initializeTenantSettings) {
+    await db('tenant_settings')
+      .insert({
+        tenant: result.tenantId,
+        onboarding_completed: options.onboardingCompleted ?? false,
+        onboarding_skipped: options.onboardingSkipped ?? false,
+        onboarding_data: null,
+        settings: null,
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      })
+      .onConflict('tenant')
+      .ignore();
+  }
 
   return {
     tenant: {
@@ -74,13 +96,13 @@ export async function createTestTenant(
 export async function createTestTenants(
   db: Knex,
   count: number,
-  baseOptions: Partial<TenantCreationInput> = {}
+  baseOptions: TenantTestOptions = {}
 ): Promise<TenantTestData[]> {
   const tenants: TenantTestData[] = [];
   
   for (let i = 0; i < count; i++) {
     const testId = uuidv4().slice(0, 8);
-    const options: Partial<TenantCreationInput> = {
+    const options: TenantTestOptions = {
       ...baseOptions,
       tenantName: baseOptions.tenantName || `Test Tenant ${i + 1} ${testId}`,
       adminUser: {
@@ -103,20 +125,18 @@ export async function createTestTenants(
  */
 export async function createTestTenantWithOnboardingState(
   db: Knex,
-  state: 'pending' | 'in_progress' | 'completed',
-  options: Partial<TenantCreationInput> = {}
+  state: 'pending' | 'in_progress' | 'completed' | 'skipped',
+  options: TenantTestOptions = {}
 ): Promise<TenantTestData> {
-  const tenant = await createTestTenant(db, options);
+  // Map states to tenant settings
+  const settingsOptions: TenantTestOptions = {
+    ...options,
+    initializeTenantSettings: true,
+    onboardingCompleted: state === 'completed',
+    onboardingSkipped: state === 'skipped',
+  };
   
-  // Set onboarding state in user record or separate onboarding table
-  // This would depend on how onboarding state is tracked in the actual application
-  await db('users')
-    .where('user_id', tenant.adminUser.userId)
-    .update({
-      onboarding_state: state,
-      onboarding_completed_at: state === 'completed' ? new Date() : null,
-      updated_at: new Date(),
-    });
+  const tenant = await createTestTenant(db, settingsOptions);
   
   return tenant;
 }

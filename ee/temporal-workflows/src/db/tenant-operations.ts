@@ -91,6 +91,19 @@ export async function setupTenantDataInDB(
         log.info('Tenant email settings already exist, skipping', { tenantId: input.tenantId });
       }
 
+      // Initialize tenant settings with onboarding flags set to false
+      try {
+        await client.query(
+          `INSERT INTO tenant_settings (tenant, onboarding_completed, onboarding_skipped, onboarding_data, settings, created_at, updated_at)
+           VALUES ($1, false, false, null, null, NOW(), NOW())`,
+          [input.tenantId]
+        );
+        setupSteps.push('tenant_settings');
+      } catch (error) {
+        // If it already exists, that's fine
+        log.info('Tenant settings already exist, skipping', { tenantId: input.tenantId });
+      }
+
       // Create tenant-company association if we have a company
       if (input.companyId) {
         try {
@@ -149,6 +162,9 @@ export async function rollbackTenantInDB(tenantId: string): Promise<void> {
       
       // Delete tenant_email_settings (references tenant indirectly)
       await client.query('DELETE FROM tenant_email_settings WHERE tenant_id = $1', [tenantId]);
+      
+      // Delete tenant_settings (references tenant)
+      await client.query('DELETE FROM tenant_settings WHERE tenant = $1', [tenantId]);
       
       // Delete companies (references tenant)
       await client.query('DELETE FROM companies WHERE tenant = $1', [tenantId]);

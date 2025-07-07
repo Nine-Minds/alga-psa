@@ -226,3 +226,27 @@ export async function updateTenantAnalyticsSettings(
     throw error;
   }
 }
+
+export async function initializeTenantSettings(tenantId: string): Promise<void> {
+  try {
+    const { knex } = await createTenantKnex();
+    
+    // Initialize tenant settings with both onboarding flags set to false
+    await knex('tenant_settings')
+      .insert({
+        tenant: tenantId,
+        onboarding_completed: false,
+        onboarding_skipped: false,
+        onboarding_data: null,
+        settings: null,
+        created_at: knex.fn.now(),
+        updated_at: knex.fn.now(),
+      })
+      .onConflict('tenant')
+      .ignore(); // Don't overwrite if already exists
+
+  } catch (error) {
+    console.error('Error initializing tenant settings:', error);
+    throw error;
+  }
+}
