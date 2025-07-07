@@ -2,6 +2,7 @@ import { TestContext, TestContextOptions } from '../../../../test-utils/testCont
 import { DockerServiceManager } from './docker-service-manager';
 import { MailHogClient } from './mailhog-client';
 import { EmailTestFactory } from './email-test-factory';
+import { MailHogPollingService } from '../../../services/email/MailHogPollingService';
 
 export interface E2ETestContextOptions extends TestContextOptions {
   /**
@@ -26,6 +27,12 @@ export interface E2ETestContextOptions extends TestContextOptions {
    * @default true
    */
   clearEmailsBeforeTest?: boolean;
+  
+  /**
+   * Whether to start MailHog polling service for automatic email processing
+   * @default true
+   */
+  autoStartEmailPolling?: boolean;
 }
 
 /**
@@ -35,6 +42,7 @@ export class E2ETestContext extends TestContext {
   public dockerServices!: DockerServiceManager;
   public mailhogClient!: MailHogClient;
   public emailTestFactory!: EmailTestFactory;
+  public mailhogPollingService!: MailHogPollingService;
   private e2eOptions: E2ETestContextOptions;
   private servicesStarted: boolean = false;
   private originalEnvVars: Record<string, string | undefined> = {};
@@ -45,6 +53,7 @@ export class E2ETestContext extends TestContext {
       autoStartServices: true,
       serviceStartupTimeout: 120000,
       clearEmailsBeforeTest: true,
+      autoStartEmailPolling: true,
       cleanupTables: [
         'tickets',
         'contacts', 
@@ -116,6 +125,10 @@ export class E2ETestContext extends TestContext {
       this.dockerServices = new DockerServiceManager();
       this.mailhogClient = new MailHogClient();
       this.emailTestFactory = new EmailTestFactory(this);
+      this.mailhogPollingService = new MailHogPollingService({
+        pollIntervalMs: 1000, // Poll every second in tests
+        mailhogApiUrl: 'http://localhost:8025/api/v1'
+      });
       
       // Start Docker services if configured to do so
       if (this.e2eOptions.autoStartServices && this.e2eOptions.testMode === 'e2e') {
@@ -166,6 +179,12 @@ export class E2ETestContext extends TestContext {
         await this.mailhogClient.clearMessages();
       }
       
+      // Start MailHog polling service if configured
+      if (this.e2eOptions.autoStartEmailPolling) {
+        console.log('📧 Starting MailHog email polling service...');
+        this.mailhogPollingService.startPolling();
+      }
+      
       this.servicesStarted = true;
       console.log('✅ E2E Docker services ready');
     } catch (error) {
@@ -185,6 +204,11 @@ export class E2ETestContext extends TestContext {
     console.log('🛑 Stopping E2E Docker services...');
     
     try {
+      // Stop MailHog polling service
+      if (this.mailhogPollingService) {
+        this.mailhogPollingService.stopPolling();
+      }
+      
       await this.dockerServices.stopE2EServices();
       this.servicesStarted = false;
       console.log('✅ E2E Docker services stopped');
