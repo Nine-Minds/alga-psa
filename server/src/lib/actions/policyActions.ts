@@ -243,7 +243,7 @@ export async function getRolePermissions(roleId: string): Promise<IPermission[]>
                     'role_permissions.tenant': tenant,
                     'permissions.tenant': tenant 
                 })
-                .select('permissions.permission_id', 'permissions.resource', 'permissions.action', 'permissions.tenant', 'permissions.msp', 'permissions.client');
+                .select('permissions.permission_id', 'permissions.resource', 'permissions.action', 'permissions.tenant', 'permissions.msp', 'permissions.client', 'permissions.description');
         });
     } catch (error) {
         console.error('Error fetching role permissions:', error);
@@ -257,7 +257,7 @@ export async function getPermissions(): Promise<IPermission[]> {
         return withTransaction(db, async (trx: Knex.Transaction) => {
             const permissions = await trx('permissions')
                 .where({ tenant })
-                .select('permission_id', 'resource', 'action', 'tenant', 'msp', 'client');
+                .select('permission_id', 'resource', 'action', 'tenant', 'msp', 'client', 'description');
             console.log('Fetched permissions for tenant:', tenant, permissions);
             return permissions;
         });

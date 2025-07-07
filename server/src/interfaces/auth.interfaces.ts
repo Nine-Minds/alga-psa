@@ -53,6 +53,7 @@ export interface IPermission extends TenantEntity {
     action: string;
     msp: boolean;
     client: boolean;
+    description?: string;
 }
 
 export interface IResource extends TenantEntity {

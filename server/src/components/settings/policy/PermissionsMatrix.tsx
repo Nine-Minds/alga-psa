@@ -6,6 +6,7 @@ import { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
 import ViewSwitcher, { ViewSwitcherOption } from 'server/src/components/ui/ViewSwitcher';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
@@ -192,6 +193,33 @@ export default function PermissionsMatrix() {
     return { total: totalPermissions, assigned: assignedPermissions };
   }, [filteredPermissions, rolePermissions]);
 
+  // Helper function to render permission checkbox with optional tooltip
+  const renderPermissionCheckbox = (permission: IPermission | undefined) => {
+    if (!permission) {
+      return <span className="text-gray-400">-</span>;
+    }
+
+    const checkbox = (
+      <Checkbox
+        checked={rolePermissions.includes(permission.permission_id)}
+        onChange={(e) => handlePermissionToggle(permission.permission_id, e.target.checked)}
+        disabled={isUpdating || !selectedRole}
+      />
+    );
+
+    if (permission.description) {
+      return (
+        <Tooltip content={permission.description}>
+          <div className="inline-block">
+            {checkbox}
+          </div>
+        </Tooltip>
+      );
+    }
+
+    return checkbox;
+  };
+
   // Define columns for DataTable
   const columns: ColumnDefinition<PermissionRow>[] = [
     {
@@ -210,17 +238,7 @@ export default function PermissionsMatrix() {
       width: '10%',
       render: (value: IPermission | undefined) => (
         <div>
-          {value ? (
-            <Checkbox
-              checked={rolePermissions.includes(value.permission_id)}
-              onChange={(e) => 
-                handlePermissionToggle(value.permission_id, e.target.checked)
-              }
-              disabled={isUpdating || !selectedRole}
-            />
-          ) : (
-            <span className="text-gray-400">-</span>
-          )}
+          {renderPermissionCheckbox(value)}
         </div>
       )
     },
@@ -230,17 +248,7 @@ export default function PermissionsMatrix() {
       width: '10%',
       render: (value: IPermission | undefined) => (
         <div>
-          {value ? (
-            <Checkbox
-              checked={rolePermissions.includes(value.permission_id)}
-              onChange={(e) => 
-                handlePermissionToggle(value.permission_id, e.target.checked)
-              }
-              disabled={isUpdating || !selectedRole}
-            />
-          ) : (
-            <span className="text-gray-400">-</span>
-          )}
+          {renderPermissionCheckbox(value)}
         </div>
       )
     },
@@ -250,17 +258,7 @@ export default function PermissionsMatrix() {
       width: '10%',
       render: (value: IPermission | undefined) => (
         <div>
-          {value ? (
-            <Checkbox
-              checked={rolePermissions.includes(value.permission_id)}
-              onChange={(e) => 
-                handlePermissionToggle(value.permission_id, e.target.checked)
-              }
-              disabled={isUpdating || !selectedRole}
-            />
-          ) : (
-            <span className="text-gray-400">-</span>
-          )}
+          {renderPermissionCheckbox(value)}
         </div>
       )
     },
@@ -270,17 +268,7 @@ export default function PermissionsMatrix() {
       width: '10%',
       render: (value: IPermission | undefined) => (
         <div>
-          {value ? (
-            <Checkbox
-              checked={rolePermissions.includes(value.permission_id)}
-              onChange={(e) => 
-                handlePermissionToggle(value.permission_id, e.target.checked)
-              }
-              disabled={isUpdating || !selectedRole}
-            />
-          ) : (
-            <span className="text-gray-400">-</span>
-          )}
+          {renderPermissionCheckbox(value)}
         </div>
       )
     },
@@ -311,13 +299,7 @@ export default function PermissionsMatrix() {
                     key={permission.permission_id}
                     className="flex items-center gap-2 text-sm"
                   >
-                    <Checkbox
-                      checked={rolePermissions.includes(permission.permission_id)}
-                      onChange={(e) => 
-                        handlePermissionToggle(permission.permission_id, e.target.checked)
-                      }
-                      disabled={isUpdating || !selectedRole}
-                    />
+                    {renderPermissionCheckbox(permission)}
                     <span className="capitalize">
                       {permission.action.replace(/_/g, ' ')}
                     </span>
@@ -374,6 +356,9 @@ export default function PermissionsMatrix() {
               options={resourceOptions}
               placeholder="Filter by resource"
               className="w-full"
+              customStyles={{
+                content: 'max-h-[256px]'
+              }}
             />
           </div>
         </div>

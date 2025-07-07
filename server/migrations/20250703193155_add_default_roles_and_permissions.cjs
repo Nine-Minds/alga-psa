@@ -3,8 +3,16 @@
  * @returns { Promise<void> }
  */
 exports.up = async function(knex) {
+  // First, add the description column to permissions table if it doesn't exist
+  const hasDescriptionColumn = await knex.schema.hasColumn('permissions', 'description');
+  if (!hasDescriptionColumn) {
+    await knex.schema.alterTable('permissions', (table) => {
+      table.text('description');
+    });
+  }
+
   // Helper function to create a permission if it doesn't exist
-  const ensurePermission = async (tenant, resource, action, msp = true, client = false) => {
+  const ensurePermission = async (tenant, resource, action, msp = true, client = false, description = null) => {
     const existing = await knex('permissions')
       .where({ tenant, resource, action })
       .first();
@@ -17,6 +25,7 @@ exports.up = async function(knex) {
           action,
           msp,
           client,
+          description,
           permission_id: knex.raw('gen_random_uuid()'),
           created_at: knex.fn.now()
         })
@@ -24,10 +33,10 @@ exports.up = async function(knex) {
       return permission;
     }
     
-    // Update existing permission with msp/client flags
+    // Update existing permission with msp/client flags and description
     await knex('permissions')
       .where({ tenant, resource, action })
-      .update({ msp, client });
+      .update({ msp, client, description });
     
     return existing;
   };
@@ -214,38 +223,44 @@ exports.up = async function(knex) {
     // Now convert existing Client and Client_Admin roles from MSP to Client portal
     // This preserves user assignments while moving roles to correct portal
     
-    // Convert 'Client' role to 'User' role in client portal
-    const existingClientRole = await knex('roles')
-      .where({ tenant, role_name: 'Client' })
-      .first();
+    // Convert 'Client' role (case-insensitive) to 'User' role in client portal
+    const existingClientRoles = await knex('roles')
+      .where({ tenant })
+      .where(knex.raw('LOWER(role_name) = LOWER(?)', ['Client']))
+      .select('*');
     
-    if (existingClientRole) {
-      console.log(`Converting Client role to User role for tenant ${tenant}`);
-      await knex('roles')
-        .where({ tenant, role_id: existingClientRole.role_id })
-        .update({ 
-          role_name: 'User',
-          description: 'Standard client portal user',
-          msp: false,
-          client: true
-        });
+    if (existingClientRoles.length > 0) {
+      console.log(`Converting ${existingClientRoles.length} Client role(s) to User role for tenant ${tenant}`);
+      for (const role of existingClientRoles) {
+        await knex('roles')
+          .where({ tenant, role_id: role.role_id })
+          .update({ 
+            role_name: 'User',
+            description: 'Standard client portal user',
+            msp: false,
+            client: true
+          });
+      }
     }
 
-    // Convert 'Client_Admin' role to 'Admin' role in client portal
-    const existingClientAdminRole = await knex('roles')
-      .where({ tenant, role_name: 'Client_Admin' })
-      .first();
+    // Convert 'Client_Admin' role (case-insensitive) to 'Admin' role in client portal
+    const existingClientAdminRoles = await knex('roles')
+      .where({ tenant })
+      .where(knex.raw('LOWER(role_name) = LOWER(?)', ['Client_Admin']))
+      .select('*');
     
-    if (existingClientAdminRole) {
-      console.log(`Converting Client_Admin role to Admin role in client portal for tenant ${tenant}`);
-      await knex('roles')
-        .where({ tenant, role_id: existingClientAdminRole.role_id })
-        .update({ 
-          role_name: 'Admin',
-          description: 'Client portal administrator',
-          msp: false,
-          client: true
-        });
+    if (existingClientAdminRoles.length > 0) {
+      console.log(`Converting ${existingClientAdminRoles.length} Client_Admin role(s) to Admin role in client portal for tenant ${tenant}`);
+      for (const role of existingClientAdminRoles) {
+        await knex('roles')
+          .where({ tenant, role_id: role.role_id })
+          .update({ 
+            role_name: 'Admin',
+            description: 'Client portal administrator',
+            msp: false,
+            client: true
+          });
+      }
     }
 
     // Also handle any other MSP roles that don't have flags set yet
@@ -258,6 +273,19 @@ exports.up = async function(knex) {
           msp: true,
           client: false
         });
+    }
+
+    // Clean up any remaining Client_Admin roles after conversion (case-insensitive)
+    // Note: We already converted Client_Admin to Admin in client portal above,
+    // so this is just a safety check to ensure no orphaned Client_Admin roles remain
+    const remainingClientAdminRoles = await knex('roles')
+      .where({ tenant })
+      .where(knex.raw('LOWER(role_name) = LOWER(?)', ['Client_Admin']))
+      .count('* as count');
+    
+    if (remainingClientAdminRoles[0].count > 0) {
+      console.log(`WARNING: Found ${remainingClientAdminRoles[0].count} remaining Client_Admin roles for tenant ${tenant} after conversion. This should not happen.`);
+      // Don't delete - log for investigation
     }
 
     // Create MSP Roles
@@ -299,138 +327,138 @@ exports.up = async function(knex) {
     // Define all permissions needed
     const permissions = [
       // Asset permissions - MSP only
-      { resource: 'asset', action: 'create', msp: true, client: false },
-      { resource: 'asset', action: 'read', msp: true, client: false },
-      { resource: 'asset', action: 'update', msp: true, client: false },
-      { resource: 'asset', action: 'delete', msp: true, client: false },
+      { resource: 'asset', action: 'create', msp: true, client: false, description: 'Create new assets and equipment records' },
+      { resource: 'asset', action: 'read', msp: true, client: false, description: 'View asset details and inventory' },
+      { resource: 'asset', action: 'update', msp: true, client: false, description: 'Modify asset information and status' },
+      { resource: 'asset', action: 'delete', msp: true, client: false, description: 'Remove assets from the system' },
       
       // Billing permissions - MSP only
-      { resource: 'billing', action: 'create', msp: true, client: false },
-      { resource: 'billing', action: 'read', msp: true, client: false },
-      { resource: 'billing', action: 'update', msp: true, client: false },
-      { resource: 'billing', action: 'delete', msp: true, client: false },
-      { resource: 'billing', action: 'reconcile', msp: true, client: false },
+      { resource: 'billing', action: 'create', msp: true, client: false, description: 'Create billing records and charges' },
+      { resource: 'billing', action: 'read', msp: true, client: false, description: 'View billing information and history' },
+      { resource: 'billing', action: 'update', msp: true, client: false, description: 'Modify billing records and rates' },
+      { resource: 'billing', action: 'delete', msp: true, client: false, description: 'Remove billing records' },
+      { resource: 'billing', action: 'reconcile', msp: true, client: false, description: 'Reconcile billing discrepancies and adjustments' },
       
       // Client permissions - MSP only
-      { resource: 'client', action: 'create', msp: true, client: false },
-      { resource: 'client', action: 'read', msp: true, client: false },
-      { resource: 'client', action: 'update', msp: true, client: false },
-      { resource: 'client', action: 'delete', msp: true, client: false },
+      { resource: 'client', action: 'create', msp: true, client: false, description: 'Add new client accounts' },
+      { resource: 'client', action: 'read', msp: true, client: false, description: 'View client information and details' },
+      { resource: 'client', action: 'update', msp: true, client: false, description: 'Modify client account information' },
+      { resource: 'client', action: 'delete', msp: true, client: false, description: 'Remove client accounts' },
       
       // Company permissions - Read and update for clients
-      { resource: 'company', action: 'create', msp: true, client: false },
-      { resource: 'company', action: 'read', msp: true, client: true },
-      { resource: 'company', action: 'update', msp: true, client: true },
-      { resource: 'company', action: 'delete', msp: true, client: false },
+      { resource: 'company', action: 'create', msp: true, client: false, description: 'Create new company profiles' },
+      { resource: 'company', action: 'read', msp: true, client: true, description: 'View company information and settings' },
+      { resource: 'company', action: 'update', msp: true, client: true, description: 'Edit company details and preferences' },
+      { resource: 'company', action: 'delete', msp: true, client: false, description: 'Remove company profiles' },
       
       // Contact permissions - MSP only
-      { resource: 'contact', action: 'create', msp: true, client: false },
-      { resource: 'contact', action: 'read', msp: true, client: false },
-      { resource: 'contact', action: 'update', msp: true, client: false },
-      { resource: 'contact', action: 'delete', msp: true, client: false },
+      { resource: 'contact', action: 'create', msp: true, client: false, description: 'Add new contacts to companies' },
+      { resource: 'contact', action: 'read', msp: true, client: false, description: 'View contact information' },
+      { resource: 'contact', action: 'update', msp: true, client: false, description: 'Edit contact details' },
+      { resource: 'contact', action: 'delete', msp: true, client: false, description: 'Remove contacts from the system' },
       
       // Credit permissions - MSP only
-      { resource: 'credit', action: 'create', msp: true, client: false },
-      { resource: 'credit', action: 'read', msp: true, client: false },
-      { resource: 'credit', action: 'update', msp: true, client: false },
-      { resource: 'credit', action: 'delete', msp: true, client: false },
-      { resource: 'credit', action: 'transfer', msp: true, client: false },
-      { resource: 'credit', action: 'apply', msp: true, client: false },
+      { resource: 'credit', action: 'create', msp: true, client: false, description: 'Issue credits to accounts' },
+      { resource: 'credit', action: 'read', msp: true, client: false, description: 'View credit balances and history' },
+      { resource: 'credit', action: 'update', msp: true, client: false, description: 'Modify credit amounts and details' },
+      { resource: 'credit', action: 'delete', msp: true, client: false, description: 'Remove credit records' },
+      { resource: 'credit', action: 'transfer', msp: true, client: false, description: 'Transfer credits between accounts' },
+      { resource: 'credit', action: 'apply', msp: true, client: false, description: 'Apply credits to invoices or charges' },
       
       // Document permissions - Available to clients
-      { resource: 'document', action: 'create', msp: true, client: true },
-      { resource: 'document', action: 'read', msp: true, client: true },
-      { resource: 'document', action: 'update', msp: true, client: true },
-      { resource: 'document', action: 'delete', msp: true, client: false },
+      { resource: 'document', action: 'create', msp: true, client: true, description: 'Upload and create documents' },
+      { resource: 'document', action: 'read', msp: true, client: true, description: 'View and download documents' },
+      { resource: 'document', action: 'update', msp: true, client: true, description: 'Edit document metadata and content' },
+      { resource: 'document', action: 'delete', msp: true, client: false, description: 'Delete documents from the system' },
       
       // Invoice permissions - MSP only
-      { resource: 'invoice', action: 'create', msp: true, client: false },
-      { resource: 'invoice', action: 'read', msp: true, client: false },
-      { resource: 'invoice', action: 'update', msp: true, client: false },
-      { resource: 'invoice', action: 'delete', msp: true, client: false },
-      { resource: 'invoice', action: 'generate', msp: true, client: false },
-      { resource: 'invoice', action: 'finalize', msp: true, client: false },
-      { resource: 'invoice', action: 'send', msp: true, client: false },
+      { resource: 'invoice', action: 'create', msp: true, client: false, description: 'Create new invoices' },
+      { resource: 'invoice', action: 'read', msp: true, client: false, description: 'View invoice details and history' },
+      { resource: 'invoice', action: 'update', msp: true, client: false, description: 'Modify invoice line items and details' },
+      { resource: 'invoice', action: 'delete', msp: true, client: false, description: 'Delete draft invoices' },
+      { resource: 'invoice', action: 'generate', msp: true, client: false, description: 'Generate invoices from billable items' },
+      { resource: 'invoice', action: 'finalize', msp: true, client: false, description: 'Finalize and lock invoices' },
+      { resource: 'invoice', action: 'send', msp: true, client: false, description: 'Send invoices to clients' },
       
       // Profile permissions - MSP only
-      { resource: 'profile', action: 'create', msp: true, client: false },
-      { resource: 'profile', action: 'read', msp: true, client: false },
-      { resource: 'profile', action: 'update', msp: true, client: false },
-      { resource: 'profile', action: 'delete', msp: true, client: false },
+      { resource: 'profile', action: 'create', msp: true, client: false, description: 'Create new user profiles' },
+      { resource: 'profile', action: 'read', msp: true, client: false, description: 'View user profile information' },
+      { resource: 'profile', action: 'update', msp: true, client: false, description: 'Edit user profile details' },
+      { resource: 'profile', action: 'delete', msp: true, client: false, description: 'Remove user profiles' },
       
       // Project permissions - Read-only for clients
-      { resource: 'project', action: 'create', msp: true, client: false },
-      { resource: 'project', action: 'read', msp: true, client: true },
-      { resource: 'project', action: 'update', msp: true, client: false },
-      { resource: 'project', action: 'delete', msp: true, client: false },
+      { resource: 'project', action: 'create', msp: true, client: false, description: 'Create new projects' },
+      { resource: 'project', action: 'read', msp: true, client: true, description: 'View project details and status' },
+      { resource: 'project', action: 'update', msp: true, client: false, description: 'Modify project information and timeline' },
+      { resource: 'project', action: 'delete', msp: true, client: false, description: 'Delete projects and associated data' },
       
       // Tag permissions - MSP only
-      { resource: 'tag', action: 'create', msp: true, client: false },
-      { resource: 'tag', action: 'read', msp: true, client: false },
-      { resource: 'tag', action: 'update', msp: true, client: false },
-      { resource: 'tag', action: 'delete', msp: true, client: false },
+      { resource: 'tag', action: 'create', msp: true, client: false, description: 'Create new tags for categorization' },
+      { resource: 'tag', action: 'read', msp: true, client: false, description: 'View available tags' },
+      { resource: 'tag', action: 'update', msp: true, client: false, description: 'Edit tags content and colors' },
+      { resource: 'tag', action: 'delete', msp: true, client: false, description: 'Remove tags from the system' },
       
       // Technician dispatch permissions
-      { resource: 'technician_dispatch', action: 'create', msp: true, client: false },
-      { resource: 'technician_dispatch', action: 'read', msp: true, client: false },
-      { resource: 'technician_dispatch', action: 'update', msp: true, client: false },
-      { resource: 'technician_dispatch', action: 'delete', msp: true, client: false },
+      { resource: 'technician_dispatch', action: 'create', msp: true, client: false, description: 'Create dispatch schedules for technicians' },
+      { resource: 'technician_dispatch', action: 'read', msp: true, client: false, description: 'View technician schedules and assignments' },
+      { resource: 'technician_dispatch', action: 'update', msp: true, client: false, description: 'Modify dispatch assignments and timing' },
+      { resource: 'technician_dispatch', action: 'delete', msp: true, client: false, description: 'Remove dispatch assignments' },
       
       // Ticket permissions
-      { resource: 'ticket', action: 'create', msp: true, client: true },
-      { resource: 'ticket', action: 'read', msp: true, client: true },
-      { resource: 'ticket', action: 'update', msp: true, client: true },
-      { resource: 'ticket', action: 'delete', msp: true, client: false },
+      { resource: 'ticket', action: 'create', msp: true, client: true, description: 'Create support tickets' },
+      { resource: 'ticket', action: 'read', msp: true, client: true, description: 'View ticket details and history' },
+      { resource: 'ticket', action: 'update', msp: true, client: true, description: 'Update ticket status and add comments' },
+      { resource: 'ticket', action: 'delete', msp: true, client: false, description: 'Delete tickets from the system' },
       
       // Time entry permissions
-      { resource: 'timeentry', action: 'create', msp: true, client: false },
-      { resource: 'timeentry', action: 'read', msp: true, client: false },
-      { resource: 'timeentry', action: 'update', msp: true, client: false },
-      { resource: 'timeentry', action: 'delete', msp: true, client: false },
+      { resource: 'timeentry', action: 'create', msp: true, client: false, description: 'Log time entries for work performed' },
+      { resource: 'timeentry', action: 'read', msp: true, client: false, description: 'View time entry records' },
+      { resource: 'timeentry', action: 'update', msp: true, client: false, description: 'Edit time entry details and duration' },
+      { resource: 'timeentry', action: 'delete', msp: true, client: false, description: 'Remove time entries' },
       
       // Timesheet permissions
-      { resource: 'timesheet', action: 'create', msp: true, client: false },
-      { resource: 'timesheet', action: 'read', msp: true, client: false },
-      { resource: 'timesheet', action: 'update', msp: true, client: false },
-      { resource: 'timesheet', action: 'delete', msp: true, client: false },
-      { resource: 'timesheet', action: 'submit', msp: true, client: false },
-      { resource: 'timesheet', action: 'approve', msp: true, client: false },
+      { resource: 'timesheet', action: 'create', msp: true, client: false, description: 'Create timesheets for time tracking' },
+      { resource: 'timesheet', action: 'read', msp: true, client: false, description: 'View timesheet summaries and details' },
+      { resource: 'timesheet', action: 'update', msp: true, client: false, description: 'Modify timesheet entries' },
+      { resource: 'timesheet', action: 'delete', msp: true, client: false, description: 'Delete timesheets' },
+      { resource: 'timesheet', action: 'submit', msp: true, client: false, description: 'Submit timesheets for approval' },
+      { resource: 'timesheet', action: 'approve', msp: true, client: false, description: 'Approve or reject submitted timesheets' },
       
       // User permissions - Available in both portals as each manages their own users
-      { resource: 'user', action: 'create', msp: true, client: true },
-      { resource: 'user', action: 'read', msp: true, client: true },
-      { resource: 'user', action: 'update', msp: true, client: true },
-      { resource: 'user', action: 'delete', msp: true, client: true },
-      { resource: 'user', action: 'invite', msp: true, client: true },
-      { resource: 'user', action: 'reset_password', msp: true, client: true },
+      { resource: 'user', action: 'create', msp: true, client: true, description: 'Create new user accounts' },
+      { resource: 'user', action: 'read', msp: true, client: true, description: 'View user information and status' },
+      { resource: 'user', action: 'update', msp: true, client: true, description: 'Edit user details and permissions' },
+      { resource: 'user', action: 'delete', msp: true, client: true, description: 'Remove user accounts' },
+      { resource: 'user', action: 'invite', msp: true, client: true, description: 'Send invitations to new users' },
+      { resource: 'user', action: 'reset_password', msp: true, client: true, description: 'Reset user passwords' },
       
       // User schedule permissions
-      { resource: 'user_schedule', action: 'create', msp: true, client: false },
-      { resource: 'user_schedule', action: 'read', msp: true, client: false },
-      { resource: 'user_schedule', action: 'update', msp: true, client: false },
-      { resource: 'user_schedule', action: 'delete', msp: true, client: false },
+      { resource: 'user_schedule', action: 'create', msp: true, client: false, description: 'Create user work schedules' },
+      { resource: 'user_schedule', action: 'read', msp: true, client: false, description: 'View user availability and schedules' },
+      { resource: 'user_schedule', action: 'update', msp: true, client: false, description: 'Modify user schedule assignments' },
+      { resource: 'user_schedule', action: 'delete', msp: true, client: false, description: 'Remove user schedules' },
       
       // Settings permissions
-      { resource: 'ticket_settings', action: 'read', msp: true, client: false },
-      { resource: 'ticket_settings', action: 'update', msp: true, client: false },
-      { resource: 'user_settings', action: 'read', msp: true, client: true },
-      { resource: 'user_settings', action: 'update', msp: true, client: true },
-      { resource: 'system_settings', action: 'read', msp: true, client: false },
-      { resource: 'system_settings', action: 'update', msp: true, client: false },
-      { resource: 'security_settings', action: 'read', msp: true, client: false },
-      { resource: 'security_settings', action: 'update', msp: true, client: false },
-      { resource: 'timeentry_settings', action: 'read', msp: true, client: false },
-      { resource: 'timeentry_settings', action: 'update', msp: true, client: false },
-      { resource: 'billing_settings', action: 'create', msp: true, client: false },
-      { resource: 'billing_settings', action: 'read', msp: true, client: false },
-      { resource: 'billing_settings', action: 'update', msp: true, client: false },
-      { resource: 'billing_settings', action: 'delete', msp: true, client: false },
+      { resource: 'ticket_settings', action: 'read', msp: true, client: false, description: 'View ticket system configuration' },
+      { resource: 'ticket_settings', action: 'update', msp: true, client: false, description: 'Configure ticket workflows and rules' },
+      { resource: 'user_settings', action: 'read', msp: true, client: true, description: 'View personal user preferences' },
+      { resource: 'user_settings', action: 'update', msp: true, client: true, description: 'Update personal preferences and notifications' },
+      { resource: 'system_settings', action: 'read', msp: true, client: false, description: 'View system-wide configuration' },
+      { resource: 'system_settings', action: 'update', msp: true, client: false, description: 'Modify system configuration and defaults' },
+      { resource: 'security_settings', action: 'read', msp: true, client: false, description: 'View security policies and settings' },
+      { resource: 'security_settings', action: 'update', msp: true, client: false, description: 'Configure security policies and access controls' },
+      { resource: 'timeentry_settings', action: 'read', msp: true, client: false, description: 'View time tracking configuration' },
+      { resource: 'timeentry_settings', action: 'update', msp: true, client: false, description: 'Configure time tracking rules and defaults' },
+      { resource: 'billing_settings', action: 'create', msp: true, client: false, description: 'Create billing configuration profiles' },
+      { resource: 'billing_settings', action: 'read', msp: true, client: false, description: 'View billing rates and rules' },
+      { resource: 'billing_settings', action: 'update', msp: true, client: false, description: 'Modify billing rates and configuration' },
+      { resource: 'billing_settings', action: 'delete', msp: true, client: false, description: 'Remove billing configuration profiles' },
     ];
 
     // Create all permissions
     const permissionMap = new Map();
     for (const perm of permissions) {
-      const permission = await ensurePermission(tenant, perm.resource, perm.action, perm.msp, perm.client);
+      const permission = await ensurePermission(tenant, perm.resource, perm.action, perm.msp, perm.client, perm.description);
       permissionMap.set(`${perm.resource}:${perm.action}`, permission.permission_id);
     }
 
