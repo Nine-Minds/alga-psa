@@ -101,25 +101,33 @@ describe('Project Permissions', () => {
       permission_id: '1', 
       resource: 'project', 
       action: 'read',
-      tenant: 'test-tenant' 
+      tenant: 'test-tenant',
+      msp: true,
+      client: false
     };
     editProjectPermission = { 
       permission_id: '2', 
       resource: 'project', 
       action: 'update',
-      tenant: 'test-tenant' 
+      tenant: 'test-tenant',
+      msp: true,
+      client: false
     };
     createProjectPermission = { 
       permission_id: '3', 
       resource: 'project', 
       action: 'create',
-      tenant: 'test-tenant' 
+      tenant: 'test-tenant',
+      msp: true,
+      client: false
     };
     deleteProjectPermission = { 
       permission_id: '4', 
       resource: 'project', 
       action: 'delete',
-      tenant: 'test-tenant' 
+      tenant: 'test-tenant',
+      msp: true,
+      client: false
     };
 
     // Create roles with project permissions
@@ -128,7 +136,9 @@ describe('Project Permissions', () => {
       role_name: 'User',
       description: 'Regular user role with view project permission',
       permissions: [viewProjectPermission],
-      tenant: 'test-tenant'
+      tenant: 'test-tenant',
+      msp: true,
+      client: false
     };
 
     adminRole = {
@@ -136,7 +146,9 @@ describe('Project Permissions', () => {
       role_name: 'Admin',
       description: 'Administrator role with all project permissions',
       permissions: [viewProjectPermission, editProjectPermission, createProjectPermission, deleteProjectPermission],
-      tenant: 'test-tenant'
+      tenant: 'test-tenant',
+      msp: true,
+      client: false
     };
 
     // Create users with specific roles
