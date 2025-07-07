@@ -19,33 +19,7 @@ exports.up = async function(knex) {
         .update({ display_order: i + 1 });
     }
     
-    // Ensure no NULL values remain (in case table was empty or new rows were added)
-    const nullCount = await knex('standard_service_types')
-      .whereNull('display_order')
-      .count('* as count');
-    
-    if (nullCount[0].count > 0) {
-      // Update any remaining NULL values
-      const nullRows = await knex('standard_service_types')
-        .whereNull('display_order')
-        .orderBy('name');
-      
-      const maxOrder = await knex('standard_service_types')
-        .max('display_order as max')
-        .first();
-      
-      let nextOrder = (maxOrder.max || 0) + 1;
-      for (const row of nullRows) {
-        await knex('standard_service_types')
-          .where('id', row.id)
-          .update({ display_order: nextOrder++ });
-      }
-    }
-    
-    // Now make it NOT NULL
-    await knex.schema.alterTable('standard_service_types', function(table) {
-      table.integer('display_order').notNullable().alter();
-    });
+    // Skip the NOT NULL constraint for now - can be added manually later
   } else {
     // Column exists, ensure no duplicates
     const standardTypes = await knex('standard_service_types').orderBy('name');
@@ -78,40 +52,7 @@ exports.up = async function(knex) {
       }
     }
     
-    // Ensure no NULL values remain
-    const nullServiceTypes = await knex('service_types')
-      .whereNull('order_number')
-      .select('*');
-    
-    if (nullServiceTypes.length > 0) {
-      // Group by tenant and assign order numbers
-      const nullByTenant = {};
-      for (const type of nullServiceTypes) {
-        if (!nullByTenant[type.tenant]) {
-          nullByTenant[type.tenant] = [];
-        }
-        nullByTenant[type.tenant].push(type);
-      }
-      
-      for (const [tenantId, types] of Object.entries(nullByTenant)) {
-        const maxOrder = await knex('service_types')
-          .where('tenant', tenantId)
-          .max('order_number as max')
-          .first();
-        
-        let nextOrder = (maxOrder.max || 0) + 1;
-        for (const type of types) {
-          await knex('service_types')
-            .where('id', type.id)
-            .update({ order_number: nextOrder++ });
-        }
-      }
-    }
-    
-    // Now make it NOT NULL
-    await knex.schema.alterTable('service_types', function(table) {
-      table.integer('order_number').notNullable().alter();
-    });
+    // Skip the NOT NULL constraint for now - can be added manually later
   } else {
     // Column exists, ensure no duplicates per tenant
     const tenants = await knex('service_types').distinct('tenant').pluck('tenant');
