@@ -1,15 +1,46 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Users, AlertCircle } from 'lucide-react';
 import { StepProps } from '../types';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { getLicenseChecker } from 'server/src/lib/licensing';
 
 export function TeamMembersStep({ data, updateData }: StepProps) {
+  const [licenseInfo, setLicenseInfo] = useState<{
+    limit: number;
+    current: number;
+    allowed: boolean;
+    message?: string;
+  } | null>(null);
+  const [isLoadingLicense, setIsLoadingLicense] = useState(true);
+
+  useEffect(() => {
+    checkLicenseStatus();
+  }, [data.teamMembers]);
+
+  const checkLicenseStatus = async () => {
+    try {
+      setIsLoadingLicense(true);
+      const licenseChecker = await getLicenseChecker();
+      const currentUserCount = 1; // Owner user
+      const totalUsers = currentUserCount + data.teamMembers.filter(m => m.firstName && m.lastName && m.email).length;
+      const status = await licenseChecker.checkUserLimit(totalUsers);
+      setLicenseInfo(status);
+    } catch (error) {
+      console.error('Error checking license status:', error);
+      setLicenseInfo({ limit: Infinity, current: 0, allowed: true });
+    } finally {
+      setIsLoadingLicense(false);
+    }
+  };
+
   const addTeamMember = () => {
+    if (licenseInfo && !licenseInfo.allowed) return;
+    
     updateData({
       teamMembers: [
         ...data.teamMembers,
@@ -29,6 +60,9 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
     updateData({ teamMembers: newMembers });
   };
 
+  const validTeamMembersCount = data.teamMembers.filter(m => m.firstName && m.lastName && m.email).length;
+  const totalUsersAfterInvites = 1 + validTeamMembersCount; // 1 for owner + team members
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -37,6 +71,40 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
           Add your team members to get them started. You can skip this step and add them later.
         </p>
       </div>
+
+      {/* License Status Display */}
+      {!isLoadingLicense && licenseInfo && (
+        <div className={`rounded-md border p-4 ${
+          licenseInfo.allowed 
+            ? 'bg-blue-50 border-blue-200' 
+            : 'bg-red-50 border-red-200'
+        }`}>
+          <div className="flex items-center gap-2">
+            {licenseInfo.allowed ? (
+              <Users className="w-5 h-5 text-blue-600" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-red-600" />
+            )}
+            <div className="flex-1">
+              <div className={`text-sm font-medium ${
+                licenseInfo.allowed ? 'text-blue-800' : 'text-red-800'
+              }`}>
+                {licenseInfo.limit === Infinity 
+                  ? `Users: ${totalUsersAfterInvites} (No limit)` 
+                  : `Users: ${totalUsersAfterInvites}/${licenseInfo.limit}`
+                }
+              </div>
+              {licenseInfo.message && (
+                <div className={`text-xs ${
+                  licenseInfo.allowed ? 'text-blue-600' : 'text-red-600'
+                }`}>
+                  {licenseInfo.message}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {data.teamMembers.map((member, index) => (
         <div key={index} className="p-4 border rounded-lg space-y-4">
@@ -108,11 +176,28 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
         type="button"
         variant="outline"
         onClick={addTeamMember}
+        disabled={licenseInfo ? !licenseInfo.allowed : false}
         className="w-full"
       >
         <Plus className="w-4 h-4 mr-2" />
         Add Another Team Member
       </Button>
+
+      {licenseInfo && !licenseInfo.allowed && (
+        <div className="rounded-md bg-red-50 border border-red-200 p-4">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 text-red-600" />
+            <div>
+              <p className="text-sm font-medium text-red-800">
+                User limit reached
+              </p>
+              <p className="text-xs text-red-600">
+                You've reached the maximum number of users for your current plan. Contact support to increase your limit.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="rounded-md bg-amber-50 p-4">
         <p className="text-sm text-amber-800">

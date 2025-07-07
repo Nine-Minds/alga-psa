@@ -15,6 +15,12 @@ COPY services/workflow-worker/package.json ./services/workflow-worker/
 COPY server/package.json ./server/
 COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/assemblyscript
 
+# Configure npm for better network resilience
+RUN npm config set registry https://registry.npmjs.org/ && \
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm config set fetch-retries 3
+
 # Install dependencies
 RUN npm install
 
@@ -25,23 +31,20 @@ COPY tsconfig.base.json ./
 COPY services/workflow-worker/ ./services/workflow-worker/
 COPY shared/ ./shared/
 
-WORKDIR /app/shared
-RUN npm run build 
-
-WORKDIR /app/services/workflow-worker
-
-# Install TypeScript and other necessary dependencies
+# Install TypeScript and other necessary dependencies globally
 RUN npm install -g typescript @types/node
 
-# Build the workflow worker
+# Build the workflow worker first
+WORKDIR /app/services/workflow-worker
 RUN npm run build
 
-WORKDIR /app/services/workflow-worker
+# Build shared last to ensure correct compiled files
+WORKDIR /app/shared
+RUN npm run build
 
 # Copy and make entrypoint executable
 COPY services/workflow-worker/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
-
 
 ENV NODE_ENV=production
 ENTRYPOINT ["/app/entrypoint.sh"]

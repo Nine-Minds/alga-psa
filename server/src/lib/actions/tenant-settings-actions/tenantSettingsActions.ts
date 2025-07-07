@@ -48,10 +48,10 @@ export async function updateTenantOnboardingStatus(
       throw new Error('No tenant found');
     }
 
-    // Check if user has admin permissions
+    // Ensure user is authenticated (no admin check during onboarding)
     const user = await getCurrentUser();
-    if (!user || !user.roles.some((role: any) => role.role_name === 'admin')) {
-      throw new Error('Only admin users can update onboarding status');
+    if (!user) {
+      throw new Error('User must be authenticated');
     }
 
     const { knex } = await createTenantKnex();
@@ -64,9 +64,9 @@ export async function updateTenantOnboardingStatus(
 
     if (completed) {
       updateData.onboarding_completed_at = knex.fn.now();
-    }
-
-    if (wizardData) {
+      // Clear onboarding data when completed
+      updateData.onboarding_data = null;
+    } else if (wizardData) {
       updateData.onboarding_data = JSON.stringify(wizardData);
     }
 
@@ -94,10 +94,10 @@ export async function saveTenantOnboardingProgress(
       throw new Error('No tenant found');
     }
 
-    // Check if user has admin permissions
+    // Ensure user is authenticated (no admin check during onboarding)
     const user = await getCurrentUser();
-    if (!user || !user.roles.some((role: any) => role.role_name === 'admin')) {
-      throw new Error('Only admin users can save onboarding progress');
+    if (!user) {
+      throw new Error('User must be authenticated');
     }
 
     // Get existing data to merge with
@@ -223,6 +223,30 @@ export async function updateTenantAnalyticsSettings(
 
   } catch (error) {
     console.error('Error updating tenant analytics settings:', error);
+    throw error;
+  }
+}
+
+export async function initializeTenantSettings(tenantId: string): Promise<void> {
+  try {
+    const { knex } = await createTenantKnex();
+    
+    // Initialize tenant settings with both onboarding flags set to false
+    await knex('tenant_settings')
+      .insert({
+        tenant: tenantId,
+        onboarding_completed: false,
+        onboarding_skipped: false,
+        onboarding_data: null,
+        settings: null,
+        created_at: knex.fn.now(),
+        updated_at: knex.fn.now(),
+      })
+      .onConflict('tenant')
+      .ignore(); // Don't overwrite if already exists
+
+  } catch (error) {
+    console.error('Error initializing tenant settings:', error);
     throw error;
   }
 }

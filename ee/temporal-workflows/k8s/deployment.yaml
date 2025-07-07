@@ -1,0 +1,216 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal-workflows-worker
+  namespace: temporal
+  labels:
+    app: temporal-workflows-worker
+    component: worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: temporal-workflows-worker
+      component: worker
+  template:
+    metadata:
+      labels:
+        app: temporal-workflows-worker
+        component: worker
+    spec:
+      imagePullSecrets:
+      - name: harbor-credentials
+      containers:
+      - name: worker
+        image: harbor.nineminds.com/nineminds/temporal-worker:e90ce14
+        imagePullPolicy: Always
+        command: ["npm", "run", "start"]
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: TEMPORAL_ADDRESS
+          value: "temporal-frontend.temporal.svc.cluster.local:7233"
+        - name: TEMPORAL_NAMESPACE
+          value: "default"
+        - name: TEMPORAL_TASK_QUEUE
+          value: "tenant-workflows"
+        # Alga PSA Database configuration (StackGres) - used by tenant/user activities
+        - name: ALGA_DB_HOST
+          value: "pgvector.stackgres-pgvector.svc.cluster.local"
+        - name: ALGA_DB_PORT
+          value: "5432"
+        - name: ALGA_DB_NAME
+          value: "server"
+        - name: ALGA_DB_USER
+          value: "app_user"
+        - name: ALGA_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: server-password
+        - name: ALGA_DB_ADMIN_USER
+          value: "postgres"
+        - name: ALGA_DB_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: admin-password
+        # Legacy environment variables for compatibility
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: database-url
+        - name: ADMIN_DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: admin-database-url
+        - name: PAYLOADCMS_DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: payloadcms-database-url
+        - name: ENABLE_HEALTH_CHECK
+          value: "true"
+        - name: HEALTH_CHECK_PORT
+          value: "8080"
+        - name: MAX_CONCURRENT_ACTIVITIES
+          value: "10"
+        - name: MAX_CONCURRENT_WORKFLOWS
+          value: "10"
+        ports:
+        - containerPort: 8080
+          name: health
+          protocol: TCP
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 1000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: temporal-workflows-worker
+  namespace: temporal
+  labels:
+    app: temporal-workflows-worker
+    component: worker
+spec:
+  selector:
+    app: temporal-workflows-worker
+    component: worker
+  ports:
+  - name: health
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: database-secrets
+  namespace: temporal
+type: Opaque
+data:
+  # Base64 encoded database URLs for Alga PSA database
+  database-url: cG9zdGdyZXNxbDovL2FwcF91c2VyOjEyMUVENzY5LTMzQjctNDI1Mi04RDdBLTIyMjNDMTQ5MDI5OEBwZ3ZlY3Rvci5zdGFja2dyZXMtcGd2ZWN0b3Iuc3ZjLmNsdXN0ZXIubG9jYWw6NTQzMi9zZXJ2ZXI=
+  admin-database-url: cG9zdGdyZXNxbDovL3Bvc3RncmVzOmQ1NjItMzRmYi00OTMwLWIwNUBwZ3ZlY3Rvci5zdGFja2dyZXMtcGd2ZWN0b3Iuc3ZjLmNsdXN0ZXIubG9jYWw6NTQzMi9zZXJ2ZXI=
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: temporal-workflows-config
+  namespace: temporal
+data:
+  temporal-address: "temporal-frontend.temporal.svc.cluster.local:7233"
+  temporal-namespace: "default"
+  task-queue: "tenant-workflows"
+  log-level: "info"
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: temporal-workflows-worker-pdb
+  namespace: temporal
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: temporal-workflows-worker
+      component: worker
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: temporal-workflows-worker-hpa
+  namespace: temporal
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: temporal-workflows-worker
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60

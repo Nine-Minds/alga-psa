@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "server/src/components/
 
 const UserEditPage: React.FC = () => {
   const params = useParams();
-  const id = params.id as string;
+  const id = params?.id as string;
 
   const handleUpdate = useCallback(() => {
     console.log('User updated successfully');

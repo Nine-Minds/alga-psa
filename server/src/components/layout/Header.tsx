@@ -13,7 +13,6 @@ import { menuItems, bottomMenuItems, MenuItem } from 'server/src/config/menuConf
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getUserAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { useRouter } from 'next/navigation';
-import { OnboardingWizard } from 'server/src/components/onboarding/OnboardingWizard';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -56,7 +55,6 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   const [userData, setUserData] = useState<IUserWithRoles | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const router = useRouter();
   const isDevelopment = process.env.NODE_ENV === 'development';
   console.log('Environment:', process.env.NODE_ENV, 'isDevelopment:', isDevelopment);
@@ -190,21 +188,6 @@ const Header: React.FC<HeaderProps> = ({
                 <PersonIcon className="mr-2 h-3.5 w-3.5" />
                 <span>Profile</span>
               </DropdownMenu.Item>
-              {/* {isDevelopment && (
-                <>
-                  <DropdownMenu.Separator className="h-[1px] bg-gray-200 m-[5px]" />
-                  <DropdownMenu.Item
-                    className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer"
-                    onSelect={() => {
-                      console.log('Test Onboarding clicked!');
-                      setShowOnboarding(true);
-                    }}
-                  >
-                    <RocketIcon className="mr-2 h-3.5 w-3.5" />
-                    <span>Test Onboarding</span>
-                  </DropdownMenu.Item>
-                </>
-              )} */}
               <DropdownMenu.Item
                 className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer"
                 onSelect={handleSignOut}
@@ -217,20 +200,6 @@ const Header: React.FC<HeaderProps> = ({
         </DropdownMenu.Root>
       </div>
 
-      {/* Onboarding Wizard */}
-      {showOnboarding && (
-        <OnboardingWizard
-          open={showOnboarding}
-          onOpenChange={setShowOnboarding}
-          testMode={true}
-          debugMode={true}
-          onComplete={(data) => {
-            console.log('Onboarding completed:', data);
-            alert('Onboarding completed! Check console for data.');
-            setShowOnboarding(false);
-          }}
-        />
-      )}
 
     </header>
   );

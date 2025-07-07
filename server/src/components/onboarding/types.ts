@@ -13,6 +13,7 @@ export interface WizardData {
   clientEmail: string;
   clientPhone: string;
   clientUrl: string;
+  clientId?: string; // Added for tracking created client
 
   // Client Contact
   contactName: string;
