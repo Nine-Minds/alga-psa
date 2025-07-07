@@ -28,7 +28,7 @@ import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import toast from 'react-hot-toast';
 import ClientCreatedDialog from './ClientCreatedDialog';
 
-type CreateCompanyData = Omit<ICompany, "company_id" | "created_at" | "updated_at" | "notes_document_id" | "status" | "tenant" | "deleted_at" | "address" | "phone_no" | "email">;
+type CreateCompanyData = Omit<ICompany, "company_id" | "created_at" | "updated_at" | "notes_document_id" | "status" | "tenant" | "deleted_at">;
 
 type CreateLocationData = Omit<ICompanyLocation, "location_id" | "tenant" | "created_at" | "updated_at">;
 
@@ -62,7 +62,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       website: '',
     },
     account_manager_id: null,
-    credit_balance: 0,
+    credit_balance: 0
   };
 
   const initialLocationData: CreateLocationData = {
@@ -178,10 +178,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       const dataToSend = {
         ...formData,
         properties: formData.properties,
-        account_manager_id: formData.account_manager_id === '' ? null : formData.account_manager_id,
-        // Deprecated fields - will be stored in location instead
-        phone_no: '',
-        email: ''
+        account_manager_id: formData.account_manager_id === '' ? null : formData.account_manager_id
       };
 
       const result = await createCompany(dataToSend);
@@ -194,8 +191,9 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
 
       const newCompany = result.data;
 
-      // Create location if address data is provided
-      if (locationData.address_line1.trim() || locationData.city.trim()) {
+      // Create location if any location data is provided (address, city, phone, or email)
+      if (locationData.address_line1.trim() || locationData.city.trim() || 
+          locationData.phone?.trim() || locationData.email?.trim()) {
         try {
           await createCompanyLocation(newCompany.company_id, locationData);
         } catch (locationError) {

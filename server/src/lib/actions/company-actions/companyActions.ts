@@ -147,7 +147,8 @@ export async function updateCompany(companyId: string, updateData: Partial<Omit<
       // Handle all other fields
       Object.entries(updateData).forEach(([key, value]) => {
         // Exclude properties, url, tax_region, account_manager_id, and logoUrl (computed field)
-        if (key !== 'properties' && key !== 'url' && key !== 'tax_region' && key !== 'account_manager_id' && key !== 'logoUrl') {
+        const excludedFields = ['properties', 'url', 'tax_region', 'account_manager_id', 'logoUrl'];
+        if (!excludedFields.includes(key)) {
           // Always include the field in the update, setting null for undefined/empty values
           updateObject[key] = (value === undefined || value === '') ? null : value;
         }
@@ -290,10 +291,8 @@ export async function createCompany(company: Omit<ICompany, 'company_id' | 'crea
     if (error.code === '23505') { // PostgreSQL unique constraint violation
       if (error.constraint && error.constraint.includes('companies_tenant_company_name_unique')) {
         return { success: false, error: `A company with the name "${company.company_name}" already exists. Please choose a different name.` };
-      } else if (error.constraint && error.constraint.includes('companies_tenant_email_unique')) {
-        return { success: false, error: `A company with the email "${company.email}" already exists. Please use a different email address.` };
       } else {
-        return { success: false, error: 'A company with these details already exists. Please check the company name and email address.' };
+        return { success: false, error: 'A company with these details already exists. Please check the company name.' };
       }
     }
     
@@ -855,7 +854,7 @@ export interface ImportCompanyResult {
 }
 
 export async function importCompaniesFromCSV(
-  companiesData: Array<Partial<Omit<ICompany, 'account_manager_full_name'>>>,
+  companiesData: Array<Record<string, any>>,
   updateExisting: boolean = false
 ): Promise<ImportCompanyResult[]> {
   const currentUser = await getCurrentUser();
@@ -940,10 +939,7 @@ export async function importCompaniesFromCSV(
           
           const companyToCreate = {
             company_name: companyData.company_name,
-            phone_no: companyData.phone_no || '',
-            email: companyData.email || '',
             url: companyData.url || '',
-            address: companyData.address || '',
             is_inactive: companyData.is_inactive || false,
             is_tax_exempt: companyData.is_tax_exempt || false,
             client_type: companyData.client_type || 'company',
@@ -967,6 +963,33 @@ export async function importCompaniesFromCSV(
           [savedCompany] = await trx('companies')
             .insert(companyToCreate)
             .returning('*');
+
+          // Create default location if address/phone/email data exists in CSV
+          if (companyData.address || companyData.phone_no || companyData.email) {
+            try {
+              await trx('company_locations').insert({
+                location_id: trx.raw('gen_random_uuid()'),
+                company_id: savedCompany.company_id,
+                tenant: tenant,
+                location_name: 'Main Office',
+                address_line1: companyData.address || '',
+                city: '',
+                country_code: 'US',
+                country_name: 'United States',
+                phone: companyData.phone_no || '',
+                email: companyData.email || '',
+                is_default: true,
+                is_billing_address: true,
+                is_shipping_address: true,
+                is_active: true,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              });
+            } catch (locationError) {
+              console.error('Failed to create location during CSV import:', locationError);
+              // Don't fail the company import if location creation fails
+            }
+          }
 
           results.push({
             success: true,
