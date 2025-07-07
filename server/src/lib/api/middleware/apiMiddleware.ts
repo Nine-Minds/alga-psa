@@ -20,6 +20,11 @@ export interface ApiRequest extends NextRequest {
   params?: any;
 }
 
+export interface AuthenticatedApiRequest extends NextRequest {
+  context: ApiContext;
+  params?: any;
+}
+
 export interface ApiError extends Error {
   statusCode: number;
   code?: string;

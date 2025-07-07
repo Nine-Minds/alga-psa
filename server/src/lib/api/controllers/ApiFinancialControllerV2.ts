@@ -105,6 +105,7 @@ import {
 } from '../middleware/apiMiddleware';
 
 import { runWithTenant } from '../../db';
+import { createErrorResponse } from '../utils/response';
 
 export class ApiFinancialControllerV2 extends ApiBaseControllerV2 {
   private financialService: FinancialService;
@@ -453,8 +454,8 @@ export class ApiFinancialControllerV2 extends ApiBaseControllerV2 {
 
           const result = await this.financialService.calculateBilling(
             validatedData.company_id,
-            validatedData.period_start,
-            validatedData.period_end,
+            validatedData.period_start!,
+            validatedData.period_end!,
             validatedData.billing_cycle_id,
             apiRequest.context!
           );
@@ -672,8 +673,8 @@ export class ApiFinancialControllerV2 extends ApiBaseControllerV2 {
           const body = await apiRequest.json();
           const validatedData = bulkTransactionOperationSchema.parse(body);
 
-          const result = await this.financialService.bulkTransactionOperation(validatedData, apiRequest.context!);
-          return createSuccessResponse(result);
+          // TODO: Implement bulkTransactionOperation in FinancialService
+          return createErrorResponse('Not implemented', 501);
         });
       } catch (error) {
         return handleApiError(error);
@@ -695,8 +696,8 @@ export class ApiFinancialControllerV2 extends ApiBaseControllerV2 {
           const body = await apiRequest.json();
           const validatedData = bulkCreditOperationSchema.parse(body);
 
-          const result = await this.financialService.bulkCreditOperation(validatedData, apiRequest.context!);
-          return createSuccessResponse(result);
+          // TODO: Implement bulkCreditOperation in FinancialService
+          return createErrorResponse('Not implemented', 501);
         });
       } catch (error) {
         return handleApiError(error);

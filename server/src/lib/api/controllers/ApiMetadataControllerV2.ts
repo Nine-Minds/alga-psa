@@ -60,7 +60,7 @@ export class ApiMetadataControllerV2 extends ApiBaseControllerV2 {
   /**
    * Validate query parameters
    */
-  private validateQuery(req: ApiRequest, schema: any): any {
+  private validateMetadataQuery(req: ApiRequest, schema: any): any {
     try {
       const url = new URL(req.url);
       const query: Record<string, any> = {};
@@ -97,7 +97,7 @@ export class ApiMetadataControllerV2 extends ApiBaseControllerV2 {
           // Check permissions
           await this.checkPermission(apiRequest, 'read');
 
-          const query = this.validateQuery(apiRequest, metadataQuerySchema);
+          const query = this.validateMetadataQuery(apiRequest, metadataQuerySchema);
 
           const result = await this.metadataService.getApiEndpoints(query, apiRequest.context!.tenant);
           const validatedResult = apiEndpointsResponseSchema.parse(result);
@@ -132,7 +132,7 @@ export class ApiMetadataControllerV2 extends ApiBaseControllerV2 {
           // Check permissions
           await this.checkPermission(apiRequest, 'read');
 
-          const query = this.validateQuery(apiRequest, metadataQuerySchema);
+          const query = this.validateMetadataQuery(apiRequest, metadataQuerySchema);
 
           const result = await this.metadataService.getApiSchemas(query, apiRequest.context!.tenant);
           const validatedResult = apiSchemasResponseSchema.parse(result);
@@ -199,7 +199,7 @@ export class ApiMetadataControllerV2 extends ApiBaseControllerV2 {
           // Check permissions
           await this.checkPermission(apiRequest, 'read');
 
-          const query = this.validateQuery(apiRequest, metadataQuerySchema);
+          const query = this.validateMetadataQuery(apiRequest, metadataQuerySchema);
 
           const result = await this.metadataService.generateOpenApiSpec(query, apiRequest.context!.tenant);
           const validatedResult = openApiResponseSchema.parse(result);
@@ -209,10 +209,8 @@ export class ApiMetadataControllerV2 extends ApiBaseControllerV2 {
             ? 'application/x-yaml' 
             : 'application/json';
 
-          return new Response(
-            query.format === 'yaml' 
-              ? this.convertToYaml(validatedResult.data)
-              : JSON.stringify(validatedResult.data, null, 2),
+          return NextResponse.json(
+            validatedResult.data,
             {
               status: 200,
               headers: {
@@ -316,7 +314,7 @@ export class ApiMetadataControllerV2 extends ApiBaseControllerV2 {
           const format = url.searchParams.get('format') || 'html';
 
           if (format === 'html') {
-            return new Response(this.generateSwaggerUI(), {
+            return new NextResponse(this.generateSwaggerUI(), {
               status: 200,
               headers: {
                 'Content-Type': 'text/html',
@@ -325,7 +323,7 @@ export class ApiMetadataControllerV2 extends ApiBaseControllerV2 {
             });
           } else {
             // Redirect to OpenAPI spec for other formats
-            return Response.redirect(new URL('/api/v1/meta/openapi', apiRequest.nextUrl.origin));
+            return NextResponse.redirect(new URL('/api/v1/meta/openapi', apiRequest.nextUrl.origin));
           }
         });
       } catch (error) {
@@ -373,22 +371,21 @@ export class ApiMetadataControllerV2 extends ApiBaseControllerV2 {
           } else if (language === 'javascript') {
             sdk = await SdkGeneratorService.generateJavaScriptSdk(config);
           } else {
-            return new Response(JSON.stringify({
+            return NextResponse.json({
               success: false,
               error: {
                 code: 'UNSUPPORTED_LANGUAGE',
                 message: `Language '${language}' is not yet supported. Available: typescript, javascript`
               }
-            }), {
-              status: 400,
-              headers: { 'Content-Type': 'application/json' }
+            }, {
+              status: 400
             });
           }
 
           if (format === 'zip') {
             // In a real implementation, you'd create a ZIP file
             // For now, return the file structure as JSON
-            return new Response(JSON.stringify({
+            return NextResponse.json({
               success: true,
               data: {
                 sdk_info: {
@@ -410,7 +407,7 @@ export class ApiMetadataControllerV2 extends ApiBaseControllerV2 {
                   ]
                 }
               }
-            }), {
+            }, {
               status: 200,
               headers: {
                 'Content-Type': 'application/json',
@@ -418,12 +415,11 @@ export class ApiMetadataControllerV2 extends ApiBaseControllerV2 {
               }
             });
           } else {
-            return new Response(JSON.stringify({
+            return NextResponse.json({
               success: true,
               data: sdk
-            }), {
-              status: 200,
-              headers: { 'Content-Type': 'application/json' }
+            }, {
+              status: 200
             });
           }
         });

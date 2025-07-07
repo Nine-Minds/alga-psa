@@ -1,18 +1,21 @@
 /**
- * Asset Search API Routes
+ * search API Routes
  * Path: /api/v2/assets/search
  */
 
-import { withMiddleware } from '@/lib/api/middleware/withMiddleware';
-import { authMiddleware } from '@/lib/api/middleware/authMiddleware';
-import { permissionMiddleware } from '@/lib/api/middleware/permissionMiddleware';
 import { ApiAssetControllerV2 } from '@/lib/api/controllers/ApiAssetControllerV2';
+import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
 
 const controller = new ApiAssetControllerV2();
 
-// GET /api/v2/assets/search - Search assets
-export const GET = withMiddleware(
-  controller.search.bind(controller),
-  authMiddleware,
-  permissionMiddleware('asset', 'read')
-);
+export async function GET(request: Request, { params }: { params: Promise<any> }) {
+  try {
+    const resolvedParams = await params;
+    return await controller.search(request as any);
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';

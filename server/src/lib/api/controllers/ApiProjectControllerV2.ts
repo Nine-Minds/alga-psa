@@ -30,6 +30,7 @@ import {
 } from '../../auth/rbac';
 import {
   ApiRequest,
+  AuthenticatedApiRequest,
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
@@ -70,52 +71,13 @@ export class ApiProjectControllerV2 extends ApiBaseControllerV2 {
     return async (req: NextRequest): Promise<NextResponse> => {
       try {
         // Authenticate
-        const apiKey = req.headers.get('x-api-key');
+        const apiRequest = await this.authenticate(req);
         
-        if (!apiKey) {
-          throw new UnauthorizedError('API key required');
-        }
-
-        // Extract tenant ID
-        let tenantId = req.headers.get('x-tenant-id');
-        let keyRecord;
-
-        if (tenantId) {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
-        } else {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-          if (keyRecord) {
-            tenantId = keyRecord.tenant;
-          }
-        }
-        
-        if (!keyRecord) {
-          throw new UnauthorizedError('Invalid API key');
-        }
-
-        // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
-
-        // Create request with context
-        const apiRequest = req as ApiRequest;
-        apiRequest.context = {
-          userId: keyRecord.user_id,
-          tenant: keyRecord.tenant,
-          user
-        };
+        // Check permissions
+        await this.checkPermission(apiRequest, 'read');
 
         // Run within tenant context
-        return await runWithTenant(tenantId!, async () => {
-          // Check permissions
-          const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'project', 'read', knex);
-          if (!hasAccess) {
-            throw new ForbiddenError('Permission denied: Cannot read project');
-          }
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
 
           // Validate query
           let validatedQuery;
@@ -153,54 +115,15 @@ export class ApiProjectControllerV2 extends ApiBaseControllerV2 {
     return async (req: NextRequest): Promise<NextResponse> => {
       try {
         // Authenticate
-        const apiKey = req.headers.get('x-api-key');
+        const apiRequest = await this.authenticate(req);
         
-        if (!apiKey) {
-          throw new UnauthorizedError('API key required');
-        }
-
-        // Extract tenant ID
-        let tenantId = req.headers.get('x-tenant-id');
-        let keyRecord;
-
-        if (tenantId) {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
-        } else {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-          if (keyRecord) {
-            tenantId = keyRecord.tenant;
-          }
-        }
-        
-        if (!keyRecord) {
-          throw new UnauthorizedError('Invalid API key');
-        }
-
-        // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
-
-        // Create request with context
-        const apiRequest = req as ApiRequest;
-        apiRequest.context = {
-          userId: keyRecord.user_id,
-          tenant: keyRecord.tenant,
-          user
-        };
+        // Check permissions
+        await this.checkPermission(apiRequest, 'read');
 
         // Run within tenant context
-        return await runWithTenant(tenantId!, async () => {
-          // Check permissions
-          const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'project', 'read', knex);
-          if (!hasAccess) {
-            throw new ForbiddenError('Permission denied: Cannot read project');
-          }
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
 
-          const stats = await this.projectService.getProjectStats(apiRequest.context!);
+          const stats = await this.projectService.getProjectStats(apiRequest.context);
           
           return createSuccessResponse(stats);
         });
@@ -217,52 +140,13 @@ export class ApiProjectControllerV2 extends ApiBaseControllerV2 {
     return async (req: NextRequest): Promise<NextResponse> => {
       try {
         // Authenticate
-        const apiKey = req.headers.get('x-api-key');
+        const apiRequest = await this.authenticate(req);
         
-        if (!apiKey) {
-          throw new UnauthorizedError('API key required');
-        }
-
-        // Extract tenant ID
-        let tenantId = req.headers.get('x-tenant-id');
-        let keyRecord;
-
-        if (tenantId) {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
-        } else {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-          if (keyRecord) {
-            tenantId = keyRecord.tenant;
-          }
-        }
-        
-        if (!keyRecord) {
-          throw new UnauthorizedError('Invalid API key');
-        }
-
-        // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
-
-        // Create request with context
-        const apiRequest = req as ApiRequest;
-        apiRequest.context = {
-          userId: keyRecord.user_id,
-          tenant: keyRecord.tenant,
-          user
-        };
+        // Check permissions
+        await this.checkPermission(apiRequest, 'read');
 
         // Run within tenant context
-        return await runWithTenant(tenantId!, async () => {
-          // Check permissions
-          const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'project', 'read', knex);
-          if (!hasAccess) {
-            throw new ForbiddenError('Permission denied: Cannot read project');
-          }
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
 
           // Validate query
           let validatedQuery;
@@ -289,7 +173,7 @@ export class ApiProjectControllerV2 extends ApiBaseControllerV2 {
           );
 
           if (format === 'csv') {
-            return new Response(data as string, {
+            return new NextResponse(data as string, {
               headers: {
                 'Content-Type': 'text/csv',
                 'Content-Disposition': 'attachment; filename="projects.csv"'
@@ -366,7 +250,7 @@ export class ApiProjectControllerV2 extends ApiBaseControllerV2 {
           }
 
           // Verify project exists
-          const project = await this.projectService.getById(projectId, apiRequest.context);
+          const project = await this.projectService.getById(projectId, apiRequest.context!);
           if (!project) {
             throw new NotFoundError('Project not found');
           }
@@ -445,7 +329,7 @@ export class ApiProjectControllerV2 extends ApiBaseControllerV2 {
           }
 
           // Verify project exists
-          const project = await this.projectService.getById(projectId, apiRequest.context);
+          const project = await this.projectService.getById(projectId, apiRequest.context!);
           if (!project) {
             throw new NotFoundError('Project not found');
           }
@@ -750,7 +634,7 @@ export class ApiProjectControllerV2 extends ApiBaseControllerV2 {
           }
 
           // Check project exists
-          const project = await this.projectService.getById(projectId, apiRequest.context);
+          const project = await this.projectService.getById(projectId, apiRequest.context!);
           if (!project) {
             throw new NotFoundError('Project not found');
           }
@@ -829,7 +713,7 @@ export class ApiProjectControllerV2 extends ApiBaseControllerV2 {
           }
 
           // Check project exists
-          const project = await this.projectService.getById(projectId, apiRequest.context);
+          const project = await this.projectService.getById(projectId, apiRequest.context!);
           if (!project) {
             throw new NotFoundError('Project not found');
           }
@@ -1364,7 +1248,7 @@ export class ApiProjectControllerV2 extends ApiBaseControllerV2 {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
 
-          const checklist = await this.projectService.getTaskChecklist(
+          const checklist = await this.projectService.getTaskChecklistItems(
             taskId,
             apiRequest.context!
           );

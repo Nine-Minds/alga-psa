@@ -23,6 +23,7 @@ import {
 } from '../../auth/rbac';
 import { 
   ApiRequest,
+  AuthenticatedApiRequest,
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
@@ -42,7 +43,7 @@ export abstract class ApiBaseControllerV2 {
   /**
    * Authenticate request and set context
    */
-  protected async authenticate(req: NextRequest): Promise<ApiRequest> {
+  protected async authenticate(req: NextRequest): Promise<AuthenticatedApiRequest> {
     const apiKey = req.headers.get('x-api-key');
     
     if (!apiKey) {
@@ -76,7 +77,7 @@ export abstract class ApiBaseControllerV2 {
     }
 
     // Create extended request with context
-    const apiRequest = req as ApiRequest;
+    const apiRequest = req as AuthenticatedApiRequest;
     apiRequest.context = {
       userId: keyRecord.user_id,
       tenant: keyRecord.tenant,
@@ -89,8 +90,8 @@ export abstract class ApiBaseControllerV2 {
   /**
    * Check permissions
    */
-  protected async checkPermission(req: ApiRequest, action: string): Promise<void> {
-    if (!req.context?.user) {
+  protected async checkPermission(req: AuthenticatedApiRequest, action: string): Promise<void> {
+    if (!req.context.user) {
       throw new UnauthorizedError('User context required');
     }
 
@@ -106,7 +107,7 @@ export abstract class ApiBaseControllerV2 {
   /**
    * Validate request data
    */
-  private async validateData(req: ApiRequest, schema: ZodSchema): Promise<any> {
+  private async validateData(req: AuthenticatedApiRequest, schema: ZodSchema): Promise<any> {
     try {
       const body = await req.json().catch(() => ({}));
       return schema.parse(body);
@@ -121,7 +122,7 @@ export abstract class ApiBaseControllerV2 {
   /**
    * Validate query parameters
    */
-  private validateQuery(req: ApiRequest, schema: ZodSchema): any {
+  private validateQuery(req: AuthenticatedApiRequest, schema: ZodSchema): any {
     try {
       const url = new URL(req.url);
       const query: Record<string, any> = {};
@@ -140,7 +141,7 @@ export abstract class ApiBaseControllerV2 {
   /**
    * Extract ID from request path
    */
-  protected async extractIdFromPath(req: ApiRequest): Promise<string> {
+  protected async extractIdFromPath(req: AuthenticatedApiRequest): Promise<string> {
     // Check if params were passed from Next.js dynamic route
     if ('params' in req && req.params) {
       const params = await req.params;
@@ -208,7 +209,7 @@ export abstract class ApiBaseControllerV2 {
           const sort = url.searchParams.get('sort') || 'created_at';
           const order = (url.searchParams.get('order') || 'desc') as 'asc' | 'desc';
 
-          const filters = { ...validatedQuery };
+          const filters: any = { ...validatedQuery };
           delete filters.page;
           delete filters.limit;
           delete filters.sort;

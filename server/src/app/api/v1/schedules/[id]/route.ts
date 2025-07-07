@@ -14,7 +14,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   try {
     const req = request as any;
     req.params = params;
-    return await controller.get()(req);
+    return await controller.getById()(req);
   } catch (error) {
     return handleApiError(error);
   }

@@ -42,6 +42,7 @@ import {
 } from '../../auth/rbac';
 import {
   ApiRequest,
+  AuthenticatedApiRequest,
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
@@ -85,7 +86,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'read');
 
@@ -147,7 +148,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'read');
 
@@ -188,7 +189,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'create');
 
@@ -219,7 +220,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'create');
 
@@ -247,7 +248,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'read');
 
@@ -275,7 +276,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'finalize');
 
@@ -305,7 +306,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'send');
 
@@ -335,7 +336,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'approve');
 
@@ -364,7 +365,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'reject');
 
@@ -394,7 +395,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'payment');
 
@@ -424,7 +425,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'credit');
 
@@ -454,7 +455,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'pdf');
 
@@ -480,7 +481,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'pdf');
 
@@ -510,7 +511,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'tax');
 
@@ -538,7 +539,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'bulk_update');
 
@@ -566,7 +567,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'bulk_send');
 
@@ -594,7 +595,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'bulk_delete');
 
@@ -622,7 +623,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'bulk_credit');
 
@@ -665,7 +666,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'read');
 
@@ -700,7 +701,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'analytics');
 
@@ -729,7 +730,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'read');
 
@@ -766,7 +767,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'recurring');
 
@@ -789,7 +790,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'recurring');
 
@@ -817,7 +818,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'recurring');
 
@@ -846,7 +847,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'recurring');
 
@@ -871,7 +872,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'read');
 
@@ -901,7 +902,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'read');
 
@@ -931,7 +932,7 @@ export class ApiInvoiceControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'create');
 

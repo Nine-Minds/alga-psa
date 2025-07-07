@@ -1269,7 +1269,7 @@ export class TeamService extends BaseService<ITeam> {
       utilization_percentage: Math.min(100, ((parseFloat(member.hours_logged) || 0) / workingHours) * 100)
     }));
 
-    const totalHours = parseFloat(timeStats?.total_hours) || 0;
+    const totalHours = parseFloat((timeStats as any)?.total_hours) || 0;
     const avgHoursPerMember = totalHours / parseInt(memberCount?.count as string || '0');
 
     return {
@@ -1391,7 +1391,9 @@ export class TeamService extends BaseService<ITeam> {
     // Enhance with members
     const enhancedTeams = await Promise.all(
       teams.map(async (team: any) => {
-        const memberIds = await TeamModel.getMembers(knex, team.team_id);
+        const memberIds = await knex('team_members')
+          .where({ team_id: team.team_id, tenant: context.tenant })
+          .pluck('user_id');
         // Get user details for members
       const members = memberIds.length > 0 
         ? await knex('users')
@@ -1515,11 +1517,11 @@ export class TeamService extends BaseService<ITeam> {
     ]);
 
     return {
-      total_teams: parseInt(totalStats.total_teams),
-      active_teams: parseInt(totalStats.total_teams), // All teams are considered active
-      teams_with_managers: parseInt(totalStats.teams_with_managers),
-      average_team_size: parseFloat(totalStats.average_team_size) || 0,
-      total_members: parseInt(totalStats.total_members) || 0,
+      total_teams: parseInt((totalStats as any).total_teams),
+      active_teams: parseInt((totalStats as any).total_teams), // All teams are considered active
+      teams_with_managers: parseInt((totalStats as any).teams_with_managers),
+      average_team_size: parseFloat((totalStats as any).average_team_size) || 0,
+      total_members: parseInt((totalStats as any).total_members) || 0,
       teams_by_department: departmentStats,
       teams_by_location: locationStats,
       performance_distribution: performanceStats
@@ -1970,9 +1972,17 @@ export class TeamService extends BaseService<ITeam> {
 
     return {
       total_teams: parseInt(totalTeams?.count as string || '0'),
-      teams_with_members: parseInt(teamsWithMembers?.count as string || '0'),
+      active_teams: parseInt(totalTeams?.count as string || '0'), // All teams are considered active
+      teams_with_managers: parseInt(teamsWithMembers?.count as string || '0'),
       average_team_size: Math.round(avgTeamSize * 10) / 10,
-      largest_team_size: parseInt(largestTeam?.size as string || '0')
+      total_members: teamSizes.reduce((sum, t) => sum + parseInt(t.size as string), 0),
+      teams_by_department: {},
+      teams_by_location: {},
+      performance_distribution: {
+        high_performing: 0,
+        average_performing: 0,
+        needs_improvement: 0
+      }
     };
   }
 
@@ -2086,5 +2096,119 @@ export class TeamService extends BaseService<ITeam> {
 
     // If the child is in the parent's hierarchy, it would create a circle
     return parents.includes(childId);
+  }
+
+  /**
+   * Search teams with advanced filters
+   */
+  async searchTeams(filters: any, context: ServiceContext, options?: ListOptions): Promise<ListResult<ITeam>> {
+    const { knex } = await this.getKnex();
+    
+    // Build base query
+    let query = knex('teams')
+      .where('teams.tenant', context.tenant);
+
+    // Apply search filters
+    if (filters.query) {
+      query = query.where(function() {
+        this.where('team_name', 'ilike', `%${filters.query}%`)
+            .orWhere('description', 'ilike', `%${filters.query}%`);
+      });
+    }
+
+    if (filters.team_name) {
+      query = query.where('team_name', 'ilike', `%${filters.team_name}%`);
+    }
+
+    if (filters.manager_name) {
+      query = query
+        .leftJoin('users as manager', 'teams.manager_id', 'manager.user_id')
+        .where(knex.raw(`CONCAT(manager.first_name, ' ', manager.last_name)`), 'ilike', `%${filters.manager_name}%`);
+    }
+
+    if (filters.department) {
+      query = query.where('department', filters.department);
+    }
+
+    if (filters.location) {
+      query = query.where('location', filters.location);
+    }
+
+    // Get total count
+    const countQuery = query.clone().clearSelect().count('* as count');
+    const [{ count }] = await countQuery;
+
+    // Apply pagination
+    const page = options?.page || 1;
+    const limit = options?.limit || 25;
+    const offset = (page - 1) * limit;
+
+    // Apply sorting
+    const sort = options?.sort || 'team_name';
+    const order = options?.order || 'asc';
+    query = query.orderBy(sort, order);
+
+    // Get results
+    const teams = await query
+      .limit(limit)
+      .offset(offset)
+      .select('teams.*');
+
+    return {
+      data: teams,
+      total: parseInt(count as string)
+    };
+  }
+
+  /**
+   * Get full team hierarchy
+   */
+  async getFullHierarchy(teamId: string, context: ServiceContext): Promise<any> {
+    const { knex } = await this.getKnex();
+    
+    // Get the team
+    const team = await this.getById(teamId, context);
+    if (!team) {
+      throw new NotFoundError('Team not found');
+    }
+
+    // Get all child teams recursively
+    const getChildTeams = async (parentId: string): Promise<any[]> => {
+      const children = await knex('team_hierarchy as th')
+        .join('teams as t', 'th.child_team_id', 't.team_id')
+        .where({
+          'th.parent_team_id': parentId,
+          'th.tenant': context.tenant
+        })
+        .select('t.*');
+
+      const childrenWithSubTeams = await Promise.all(
+        children.map(async (child) => ({
+          ...child,
+          children: await getChildTeams(child.team_id)
+        }))
+      );
+
+      return childrenWithSubTeams;
+    };
+
+    // Get parent team if exists
+    const parentRelation = await knex('team_hierarchy')
+      .where({
+        child_team_id: teamId,
+        tenant: context.tenant
+      })
+      .first();
+
+    let parent = null;
+    if (parentRelation) {
+      parent = await this.getById(parentRelation.parent_team_id, context);
+    }
+
+    return {
+      ...team,
+      parent,
+      children: await getChildTeams(teamId)
+    };
   }
 }

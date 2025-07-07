@@ -11,8 +11,8 @@ const controller = new ApiBillingPlanControllerV2();
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const req = request as any;
-    req.params = params;
-    return await controller.getPlanAnalytics()(req);
+    const resolvedParams = await params;
+    return await controller.getPlanAnalytics()(req, resolvedParams);
   } catch (error) {
     return handleApiError(error);
   }

@@ -30,6 +30,7 @@ import {
 } from '../../auth/rbac';
 import {
   ApiRequest,
+  AuthenticatedApiRequest,
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
@@ -73,7 +74,7 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'delete');
 
@@ -101,56 +102,14 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
     return async (req: NextRequest): Promise<NextResponse> => {
       try {
         // Authenticate
-        const apiKey = req.headers.get('x-api-key');
+        const apiRequest = await this.authenticate(req);
         
-        if (!apiKey) {
-          throw new UnauthorizedError('API key required');
-        }
-
-        // Extract tenant ID
-        let tenantId = req.headers.get('x-tenant-id');
-        let keyRecord;
-
-        if (tenantId) {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
-        } else {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-          if (keyRecord) {
-            tenantId = keyRecord.tenant;
-          }
-        }
-        
-        if (!keyRecord) {
-          throw new UnauthorizedError('Invalid API key');
-        }
-
-        // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
-
         // Check permissions
-        const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
-          'role',
-          'read',
-          db
-        );
-
-        if (!hasReadPermission) {
-          throw new ForbiddenError('Permission denied: Cannot read role templates');
-        }
+        await this.checkPermission(apiRequest, 'read');
 
         // Get templates within tenant context
-        const templates = await runWithTenant(tenantId!, async () => {
-          return await this.roleService.getRoleTemplates({
-            user,
-            tenant: tenantId!,
-            permissions: user.roles || []
-          });
+        const templates = await runWithTenant(apiRequest.context.tenant, async () => {
+          return await this.roleService.getRoleTemplates(apiRequest.context);
         });
 
         return createSuccessResponse(templates);
@@ -167,58 +126,13 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
     return async (req: NextRequest): Promise<NextResponse> => {
       try {
         // Authenticate
-        const apiKey = req.headers.get('x-api-key');
+        const apiRequest = await this.authenticate(req);
         
-        if (!apiKey) {
-          throw new UnauthorizedError('API key required');
-        }
-
-        // Extract tenant ID
-        let tenantId = req.headers.get('x-tenant-id');
-        let keyRecord;
-
-        if (tenantId) {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
-        } else {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-          if (keyRecord) {
-            tenantId = keyRecord.tenant;
-          }
-        }
-        
-        if (!keyRecord) {
-          throw new UnauthorizedError('Invalid API key');
-        }
-
-        // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
-
-        // Extract role ID from path - create ApiRequest object
-        const apiRequest: ApiRequest = Object.assign(req, {
-          context: {
-            userId: user.user_id,
-            tenant: tenantId!,
-            user
-          }
-        });
+        // Extract role ID from path
         const roleId = await this.extractIdFromPath(apiRequest);
 
         // Check permissions
-        const db = await getConnection(tenantId!);
-        const hasCreatePermission = await hasPermission(
-          user,
-          'role',
-          'create',
-          db
-        );
-
-        if (!hasCreatePermission) {
-          throw new ForbiddenError('Permission denied: Cannot create roles');
-        }
+        await this.checkPermission(apiRequest, 'create');
 
         // Parse and validate request body
         const body = await req.json();
@@ -233,17 +147,13 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Clone role within tenant context
-        const clonedRole = await runWithTenant(tenantId!, async () => {
+        const clonedRole = await runWithTenant(apiRequest.context.tenant, async () => {
           return await this.roleService.cloneRole(
             roleId,
             cloneData.new_role_name,
             cloneData.new_description,
             cloneData.copy_permissions,
-            {
-              user,
-              tenant: tenantId!,
-              permissions: user.roles || []
-            }
+            apiRequest.context
           );
         });
 
@@ -261,66 +171,17 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
     return async (req: NextRequest): Promise<NextResponse> => {
       try {
         // Authenticate
-        const apiKey = req.headers.get('x-api-key');
+        const apiRequest = await this.authenticate(req);
         
-        if (!apiKey) {
-          throw new UnauthorizedError('API key required');
-        }
-
-        // Extract tenant ID
-        let tenantId = req.headers.get('x-tenant-id');
-        let keyRecord;
-
-        if (tenantId) {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
-        } else {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-          if (keyRecord) {
-            tenantId = keyRecord.tenant;
-          }
-        }
-        
-        if (!keyRecord) {
-          throw new UnauthorizedError('Invalid API key');
-        }
-
-        // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
-
-        // Extract role ID from path - create ApiRequest object
-        const apiRequest: ApiRequest = Object.assign(req, {
-          context: {
-            userId: user.user_id,
-            tenant: tenantId!,
-            user
-          }
-        });
+        // Extract role ID from path
         const roleId = await this.extractIdFromPath(apiRequest);
 
         // Check permissions
-        const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
-          'role',
-          'read',
-          db
-        );
-
-        if (!hasReadPermission) {
-          throw new ForbiddenError('Permission denied: Cannot read role permissions');
-        }
+        await this.checkPermission(apiRequest, 'read');
 
         // Get permissions within tenant context
-        const permissions = await runWithTenant(tenantId!, async () => {
-          return await this.roleService.getRolePermissions(roleId, {
-            user,
-            tenant: tenantId!,
-            permissions: user.roles || []
-          });
+        const permissions = await runWithTenant(apiRequest.context.tenant, async () => {
+          return await this.roleService.getRolePermissions(roleId, apiRequest.context);
         });
 
         return createSuccessResponse(permissions);
@@ -337,58 +198,13 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
     return async (req: NextRequest): Promise<NextResponse> => {
       try {
         // Authenticate
-        const apiKey = req.headers.get('x-api-key');
+        const apiRequest = await this.authenticate(req);
         
-        if (!apiKey) {
-          throw new UnauthorizedError('API key required');
-        }
-
-        // Extract tenant ID
-        let tenantId = req.headers.get('x-tenant-id');
-        let keyRecord;
-
-        if (tenantId) {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
-        } else {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-          if (keyRecord) {
-            tenantId = keyRecord.tenant;
-          }
-        }
-        
-        if (!keyRecord) {
-          throw new UnauthorizedError('Invalid API key');
-        }
-
-        // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
-
-        // Extract role ID from path - create ApiRequest object
-        const apiRequest: ApiRequest = Object.assign(req, {
-          context: {
-            userId: user.user_id,
-            tenant: tenantId!,
-            user
-          }
-        });
+        // Extract role ID from path
         const roleId = await this.extractIdFromPath(apiRequest);
 
         // Check permissions
-        const db = await getConnection(tenantId!);
-        const hasUpdatePermission = await hasPermission(
-          user,
-          'role',
-          'update',
-          db
-        );
-
-        if (!hasUpdatePermission) {
-          throw new ForbiddenError('Permission denied: Cannot update role permissions');
-        }
+        await this.checkPermission(apiRequest, 'update');
 
         // Parse and validate request body
         const body = await req.json();
@@ -403,22 +219,14 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Assign permissions within tenant context
-        const updatedRole = await runWithTenant(tenantId!, async () => {
+        const updatedRole = await runWithTenant(apiRequest.context.tenant, async () => {
           await this.roleService.assignPermissionsToRole(
             roleId, 
             permissionsData.permission_ids, 
-            {
-              user,
-              tenant: tenantId!,
-              permissions: user.roles || []
-            }
+            apiRequest.context
           );
           // Return the updated role with permissions
-          return await this.roleService.getRoleById(roleId, {
-            user,
-            tenant: tenantId!,
-            permissions: user.roles || []
-          }, true);
+          return await this.roleService.getRoleById(roleId, apiRequest.context, true);
         });
 
         return createSuccessResponse(updatedRole);
@@ -435,48 +243,10 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
     return async (req: NextRequest): Promise<NextResponse> => {
       try {
         // Authenticate
-        const apiKey = req.headers.get('x-api-key');
+        const apiRequest = await this.authenticate(req);
         
-        if (!apiKey) {
-          throw new UnauthorizedError('API key required');
-        }
-
-        // Extract tenant ID
-        let tenantId = req.headers.get('x-tenant-id');
-        let keyRecord;
-
-        if (tenantId) {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
-        } else {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-          if (keyRecord) {
-            tenantId = keyRecord.tenant;
-          }
-        }
-        
-        if (!keyRecord) {
-          throw new UnauthorizedError('Invalid API key');
-        }
-
-        // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
-
         // Check permissions
-        const db = await getConnection(tenantId!);
-        const hasCreatePermission = await hasPermission(
-          user,
-          'role',
-          'create',
-          db
-        );
-
-        if (!hasCreatePermission) {
-          throw new ForbiddenError('Permission denied: Cannot create roles');
-        }
+        await this.checkPermission(apiRequest, 'create');
 
         // Parse request body
         const body = await req.json();
@@ -486,16 +256,12 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Create roles within tenant context
-        const createdRoles = await runWithTenant(tenantId!, async () => {
+        const createdRoles = await runWithTenant(apiRequest.context.tenant, async () => {
           const results = [];
           for (const roleData of body.roles) {
             try {
               const validatedData = createRoleSchema.parse(roleData);
-              const role = await this.roleService.create(validatedData, {
-                user,
-                tenant: tenantId!,
-                permissions: user.roles || []
-              });
+              const role = await this.roleService.create(validatedData, apiRequest.context);
               results.push({ success: true, data: role });
             } catch (error) {
               results.push({ 
@@ -525,12 +291,12 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
         const apiRequest = await this.authenticate(req);
         
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await runWithTenant(apiRequest.context.tenant, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'read');
 
           // Get metrics using the service
-          const metrics = await this.roleService.getAccessControlMetrics(apiRequest.context!);
+          const metrics = await this.roleService.getAccessControlMetrics(apiRequest.context);
           
           return createSuccessResponse(metrics);
         });

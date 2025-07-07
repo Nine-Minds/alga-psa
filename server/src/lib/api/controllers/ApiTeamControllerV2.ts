@@ -34,6 +34,7 @@ import {
 } from '../../auth/rbac';
 import {
   ApiRequest,
+  AuthenticatedApiRequest,
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
@@ -131,41 +132,38 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
           throw error;
         }
 
+        // Extract options and filters outside the callback
+        const options = {
+          page: filters.pagination?.page || 1,
+          limit: filters.pagination?.limit || 25,
+          sort: filters.sort?.field || 'team_name',
+          order: filters.sort?.direction as 'asc' | 'desc' || 'asc',
+          includeHierarchy: false,
+          includeMembers: false,
+          includeProjects: false
+        };
+
+        const searchFilters = {
+          ...filters.filters,
+          query: filters.query
+        };
+
         // Execute search within tenant context
         const results = await runWithTenant(tenantId!, async () => {
-          const options = {
-            page: filters.page || 1,
-            limit: filters.limit || 25,
-            sort: filters.sort || 'team_name',
-            order: filters.order as 'asc' | 'desc' || 'asc',
-            includeHierarchy: filters.includeHierarchy,
-            includeMembers: filters.includeMembers,
-            includeProjects: filters.includeProjects
-          };
-
-          const searchFilters = {
-            ...filters,
-            page: undefined,
-            limit: undefined,
-            sort: undefined,
-            order: undefined,
-            includeHierarchy: undefined,
-            includeMembers: undefined,
-            includeProjects: undefined
-          };
-
           return await this.teamService.searchTeams(searchFilters, {
+            userId: user.user_id,
             user,
-            tenant: tenantId!,
-            permissions: user.roles || []
+            tenant: tenantId!
           }, options);
         });
 
-        return createPaginatedResponse(results.data, {
-          page: results.page || 1,
-          limit: results.limit || 25,
-          total: results.total
-        });
+        return createPaginatedResponse(
+          results.data,
+          results.total,
+          options.page,
+          options.limit,
+          { sort: options.sort, order: options.order, filters: searchFilters }
+        );
       } catch (error) {
         return handleApiError(error);
       }
@@ -225,9 +223,9 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         // Get statistics within tenant context
         const stats = await runWithTenant(tenantId!, async () => {
           return await this.teamService.getTeamStatistics({
+            userId: user.user_id,
             user,
-            tenant: tenantId!,
-            permissions: user.roles || []
+            tenant: tenantId!
           });
         });
 
@@ -288,12 +286,20 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
           throw new ForbiddenError('Permission denied: Cannot read team hierarchy');
         }
 
+        // Get team ID from URL
+        const url = new URL(req.url);
+        const teamId = url.pathname.split('/').pop();
+        
+        if (!teamId) {
+          throw new ValidationError('Team ID is required');
+        }
+
         // Get hierarchy within tenant context
         const hierarchy = await runWithTenant(tenantId!, async () => {
-          return await this.teamService.getFullHierarchy({
+          return await this.teamService.getFullHierarchy(teamId, {
+            userId: user.user_id,
             user,
-            tenant: tenantId!,
-            permissions: user.roles || []
+            tenant: tenantId!
           });
         });
 
@@ -342,7 +348,7 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Extract team ID from path
-        const teamId = this.extractIdFromPath(req);
+        const teamId = await this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -360,9 +366,9 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         // Get members within tenant context
         const members = await runWithTenant(tenantId!, async () => {
           return await this.teamService.getTeamMembers(teamId, {
+            userId: user.user_id,
             user,
-            tenant: tenantId!,
-            permissions: user.roles || []
+            tenant: tenantId!
           });
         });
 
@@ -411,7 +417,7 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Extract team ID from path
-        const teamId = this.extractIdFromPath(req);
+        const teamId = await this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -441,9 +447,9 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         // Add member within tenant context
         const result = await runWithTenant(tenantId!, async () => {
           return await this.teamService.addTeamMember(teamId, memberData, {
+            userId: user.user_id,
             user,
-            tenant: tenantId!,
-            permissions: user.roles || []
+            tenant: tenantId!
           });
         });
 
@@ -515,9 +521,9 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         // Remove member within tenant context
         await runWithTenant(tenantId!, async () => {
           await this.teamService.removeTeamMember(teamId, userId, {
+            userId: user.user_id,
             user,
-            tenant: tenantId!,
-            permissions: user.roles || []
+            tenant: tenantId!
           });
         });
 
@@ -566,7 +572,7 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Extract team ID from path
-        const teamId = this.extractIdFromPath(req);
+        const teamId = await this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -596,9 +602,9 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         // Add members within tenant context
         const result = await runWithTenant(tenantId!, async () => {
           return await this.teamService.bulkAddTeamMembers(teamId, membersData, {
-            user,
+            userId: user.user_id,
             tenant: tenantId!,
-            permissions: user.roles || []
+            user
           });
         });
 
@@ -647,7 +653,7 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Extract team ID from path
-        const teamId = this.extractIdFromPath(req);
+        const teamId = await this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -676,10 +682,10 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
 
         // Assign manager within tenant context
         const result = await runWithTenant(tenantId!, async () => {
-          return await this.teamService.assignManager(teamId, managerData.user_id, {
+          return await this.teamService.assignManager(teamId, managerData.manager_id, {
+            userId: user.user_id,
             user,
-            tenant: tenantId!,
-            permissions: user.roles || []
+            tenant: tenantId!
           });
         });
 
@@ -728,7 +734,7 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Extract team ID from path
-        const teamId = this.extractIdFromPath(req);
+        const teamId = await this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -759,10 +765,10 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
 
         // Get analytics within tenant context
         const analytics = await runWithTenant(tenantId!, async () => {
-          return await this.teamService.getTeamAnalytics(teamId, filters, {
+          return await this.teamService.getTeamAnalytics(teamId, {
+            userId: user.user_id,
             user,
-            tenant: tenantId!,
-            permissions: user.roles || []
+            tenant: tenantId!
           });
         });
 
@@ -811,7 +817,7 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Extract team ID from path
-        const teamId = this.extractIdFromPath(req);
+        const teamId = await this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -829,9 +835,9 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         // Get projects within tenant context
         const projects = await runWithTenant(tenantId!, async () => {
           return await this.teamService.getTeamProjects(teamId, {
-            user,
+            userId: user.user_id,
             tenant: tenantId!,
-            permissions: user.roles || []
+            user
           });
         });
 
@@ -880,7 +886,7 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Extract team ID from path
-        const teamId = this.extractIdFromPath(req);
+        const teamId = await this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -902,14 +908,14 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         const result = await runWithTenant(tenantId!, async () => {
           return await this.teamService.grantPermission(
             teamId,
-            body.permission,
-            body.user_id,
-            body.granted_by || user.id,
+            body.resource || body.permission,
+            body.action || 'access',
             {
-              user,
+              userId: user.user_id,
               tenant: tenantId!,
-              permissions: user.roles || []
-            }
+              user
+            },
+            body.expires_at ? new Date(body.expires_at) : undefined
           );
         });
 
@@ -958,7 +964,7 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Extract team ID from path
-        const teamId = this.extractIdFromPath(req);
+        const teamId = await this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -976,9 +982,9 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         // Get permissions within tenant context
         const permissions = await runWithTenant(tenantId!, async () => {
           return await this.teamService.getTeamPermissions(teamId, {
-            user,
+            userId: user.user_id,
             tenant: tenantId!,
-            permissions: user.roles || []
+            user
           });
         });
 
@@ -1053,9 +1059,9 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         // Revoke permission within tenant context
         await runWithTenant(tenantId!, async () => {
           await this.teamService.revokePermission(permissionId, {
+            userId: user.user_id,
             user,
-            tenant: tenantId!,
-            permissions: user.roles || []
+            tenant: tenantId!
           });
         });
 
@@ -1104,7 +1110,7 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Extract team ID from path
-        const teamId = this.extractIdFromPath(req);
+        const teamId = await this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -1128,9 +1134,9 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
             teamId,
             body.parent_team_id,
             {
+              userId: user.user_id,
               user,
-              tenant: tenantId!,
-              permissions: user.roles || []
+              tenant: tenantId!
             }
           );
         });
@@ -1180,7 +1186,7 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         }
 
         // Extract team ID from path
-        const teamId = this.extractIdFromPath(req);
+        const teamId = await this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -1198,9 +1204,9 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         // Remove from hierarchy within tenant context
         await runWithTenant(tenantId!, async () => {
           await this.teamService.removeFromHierarchy(teamId, {
+            userId: user.user_id,
             user,
-            tenant: tenantId!,
-            permissions: user.roles || []
+            tenant: tenantId!
           });
         });
 
@@ -1266,13 +1272,17 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
 
         // Bulk update within tenant context
         const result = await runWithTenant(tenantId!, async () => {
+          const bulkUpdates = body.team_ids.map((id: string) => ({
+            id,
+            data: body.updates
+          }));
+          
           return await this.teamService.bulkUpdate(
-            body.team_ids,
-            body.updates,
+            bulkUpdates,
             {
+              userId: user.user_id,
               user,
-              tenant: tenantId!,
-              permissions: user.roles || []
+              tenant: tenantId!
             }
           );
         });
@@ -1340,9 +1350,9 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
         // Bulk delete within tenant context
         await runWithTenant(tenantId!, async () => {
           await this.teamService.bulkDelete(body.team_ids, {
+            userId: user.user_id,
             user,
-            tenant: tenantId!,
-            permissions: user.roles || []
+            tenant: tenantId!
           });
         });
 
@@ -1356,7 +1366,7 @@ export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
   /**
    * Override extractIdFromPath to handle team-specific routes
    */
-  protected extractIdFromPath(req: ApiRequest): string {
+  protected async extractIdFromPath(req: ApiRequest): Promise<string> {
     const url = new URL(req.url);
     const pathParts = url.pathname.split('/');
     const teamIndex = pathParts.findIndex(part => part === 'teams');

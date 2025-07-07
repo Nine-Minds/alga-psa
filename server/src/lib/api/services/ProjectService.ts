@@ -203,7 +203,7 @@ export class ProjectService extends BaseService<IProject> {
       }
       
       // Remove fields that don't belong in the database
-      const { create_default_phase, tags, budgeted_hours, project_type, budget, currency, priority, is_billable, billing_rate, estimated_hours, metadata, ...dataForInsert } = data;
+      const { create_default_phase, tags, budgeted_hours, ...dataForInsert } = data;
       
       const projectData: any = {
         ...dataForInsert,
@@ -1034,6 +1034,89 @@ export class ProjectService extends BaseService<IProject> {
     );
     
     return [csvHeaders, ...csvRows].join('\n');
+  }
+
+  /**
+   * Bulk update projects - custom implementation
+   */
+  async bulkUpdateProjects(projectIds: string[], updates: any, context: ServiceContext): Promise<IProject[]> {
+    const { knex } = await this.getKnex();
+    
+    return withTransaction(knex, async (trx) => {
+      const results = [];
+      
+      for (const projectId of projectIds) {
+        const project = await this.update(projectId, updates, context);
+        results.push(project);
+      }
+      
+      return results;
+    });
+  }
+
+  /**
+   * Bulk assign projects
+   */
+  async bulkAssign(projectIds: string[], assignToUserId: string, context: ServiceContext): Promise<IProject[]> {
+    return this.bulkUpdateProjects(projectIds, { assigned_to: assignToUserId }, context);
+  }
+
+  /**
+   * Bulk status update
+   */
+  async bulkStatusUpdate(projectIds: string[], status: string, context: ServiceContext): Promise<IProject[]> {
+    return this.bulkUpdateProjects(projectIds, { status }, context);
+  }
+
+  /**
+   * List project phases
+   */
+  async listPhases(projectId: string, context: ServiceContext): Promise<IProjectPhase[]> {
+    return this.getPhases(projectId, context);
+  }
+
+  /**
+   * List tasks for a phase
+   */
+  async listPhaseTasks(phaseId: string, context: ServiceContext): Promise<IProjectTask[]> {
+    const { knex } = await this.getKnex();
+    
+    const tasks = await knex('project_tasks')
+      .where({
+        phase_id: phaseId,
+        tenant: context.tenant
+      })
+      .orderBy('sort_order');
+
+    return tasks;
+  }
+
+  /**
+   * Get task by ID
+   */
+  async getTaskById(taskId: string, context: ServiceContext): Promise<IProjectTask | null> {
+    const { knex } = await this.getKnex();
+    
+    const task = await knex('project_tasks')
+      .where({
+        task_id: taskId,
+        tenant: context.tenant
+      })
+      .first();
+
+    return task || null;
+  }
+
+  /**
+   * Get task checklist items
+   */
+  async getTaskChecklistItems(taskId: string, context: ServiceContext): Promise<IProjectTaskChecklist[]> {
+    const { knex } = await this.getKnex();
+    
+    return knex('task_checklist_items')
+      .where({ task_id: taskId, tenant: context.tenant })
+      .orderBy('order_number', 'asc')
+      .select('*');
   }
 
 }

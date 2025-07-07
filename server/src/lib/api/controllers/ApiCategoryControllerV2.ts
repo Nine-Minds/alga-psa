@@ -498,7 +498,7 @@ export class ApiCategoryControllerV2 extends ApiBaseControllerV2 {
 
           const category = await this.categoryService.moveCategory(
             validatedData.category_id,
-            validatedData.new_parent_id,
+            validatedData.new_parent_id ?? null,
             apiRequest.context!
           );
           

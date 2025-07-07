@@ -218,7 +218,7 @@ export class ApiContactControllerV2 extends ApiBaseControllerV2 {
           );
 
           if (format === 'csv') {
-            return new Response(data as string, {
+            return new NextResponse(data as string, {
               headers: {
                 'Content-Type': 'text/csv',
                 'Content-Disposition': 'attachment; filename="contacts.csv"'

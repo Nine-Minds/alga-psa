@@ -87,7 +87,8 @@ export class ApiAutomationControllerV2 extends ApiBaseControllerV2 {
       undefined as any  // AuditLogService - would be injected
     );
     
-    super(automationService, {
+    // Pass null as service since AutomationService doesn't implement BaseService
+    super(null as any, {
       resource: 'automation',
       createSchema: createAutomationRuleSchema,
       updateSchema: updateAutomationRuleSchema,
@@ -107,7 +108,7 @@ export class ApiAutomationControllerV2 extends ApiBaseControllerV2 {
   /**
    * Validate query parameters
    */
-  private validateQuery(req: ApiRequest, schema: z.ZodSchema): any {
+  private validateQueryParams(req: ApiRequest, schema: z.ZodSchema): any {
     try {
       const url = new URL(req.url);
       const query: Record<string, any> = {};
@@ -126,7 +127,7 @@ export class ApiAutomationControllerV2 extends ApiBaseControllerV2 {
   /**
    * Validate request data
    */
-  private async validateData(req: ApiRequest, schema: z.ZodSchema): Promise<any> {
+  private async validateRequestData(req: ApiRequest, schema: z.ZodSchema): Promise<any> {
     try {
       const body = await req.json().catch(() => ({}));
       return schema.parse(body);
@@ -154,7 +155,7 @@ export class ApiAutomationControllerV2 extends ApiBaseControllerV2 {
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           await this.checkPermission(apiRequest, 'read');
 
-          const validatedQuery = this.validateQuery(apiRequest, automationRulesListSchema);
+          const validatedQuery = this.validateQueryParams(apiRequest, automationRulesListSchema);
 
           const url = new URL(apiRequest.url);
           const page = parseInt(url.searchParams.get('page') || '1');
@@ -196,7 +197,7 @@ export class ApiAutomationControllerV2 extends ApiBaseControllerV2 {
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           await this.checkPermission(apiRequest, 'create');
 
-          const validatedData = await this.validateData(apiRequest, createAutomationRuleSchema);
+          const validatedData = await this.validateRequestData(apiRequest, createAutomationRuleSchema);
 
           const result = await this.automationService.createAutomationRule(
             validatedData,
@@ -266,7 +267,7 @@ export class ApiAutomationControllerV2 extends ApiBaseControllerV2 {
           await this.checkPermission(apiRequest, 'update');
 
           const id = await this.extractIdFromPath(apiRequest);
-          const validatedData = await this.validateData(apiRequest, updateAutomationRuleSchema);
+          const validatedData = await this.validateRequestData(apiRequest, updateAutomationRuleSchema);
           
           const result = await this.automationService.updateAutomationRule(
             id,
@@ -332,7 +333,7 @@ export class ApiAutomationControllerV2 extends ApiBaseControllerV2 {
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           await this.checkPermission(apiRequest, 'read');
 
-          const validatedQuery = this.validateQuery(apiRequest, automationExecutionsListSchema);
+          const validatedQuery = this.validateQueryParams(apiRequest, automationExecutionsListSchema);
 
           const url = new URL(apiRequest.url);
           const page = parseInt(url.searchParams.get('page') || '1');
@@ -410,7 +411,7 @@ export class ApiAutomationControllerV2 extends ApiBaseControllerV2 {
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           await this.checkPermission(apiRequest, 'execute');
 
-          const validatedData = await this.validateData(apiRequest, manualExecutionSchema);
+          const validatedData = await this.validateRequestData(apiRequest, manualExecutionSchema);
           
           // Extract rule ID from path
           const url = new URL(apiRequest.url);
@@ -493,7 +494,7 @@ export class ApiAutomationControllerV2 extends ApiBaseControllerV2 {
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           await this.checkPermission(apiRequest, 'read');
 
-          const validatedQuery = this.validateQuery(apiRequest, templatesListSchema);
+          const validatedQuery = this.validateQueryParams(apiRequest, templatesListSchema);
 
           const url = new URL(apiRequest.url);
           const page = parseInt(url.searchParams.get('page') || '1');
@@ -570,7 +571,7 @@ export class ApiAutomationControllerV2 extends ApiBaseControllerV2 {
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           await this.checkPermission(apiRequest, 'create');
 
-          const validatedData = await this.validateData(apiRequest, createTemplateFromRuleSchema);
+          const validatedData = await this.validateRequestData(apiRequest, createTemplateFromRuleSchema);
 
           const result = await this.automationService.createAutomationTemplate(
             validatedData,
@@ -603,7 +604,7 @@ export class ApiAutomationControllerV2 extends ApiBaseControllerV2 {
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           await this.checkPermission(apiRequest, 'create');
 
-          const validatedData = await this.validateData(apiRequest, z.object({
+          const validatedData = await this.validateRequestData(apiRequest, z.object({
             variables: z.record(z.any()).optional().default({})
           }));
           
@@ -687,7 +688,7 @@ export class ApiAutomationControllerV2 extends ApiBaseControllerV2 {
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           await this.checkPermission(apiRequest, 'read');
 
-          const validatedQuery = this.validateQuery(apiRequest, performanceMetricsRequestSchema);
+          const validatedQuery = this.validateQueryParams(apiRequest, performanceMetricsRequestSchema);
 
           const result = await this.automationService.getPerformanceMetrics(
             validatedQuery,
@@ -726,7 +727,7 @@ export class ApiAutomationControllerV2 extends ApiBaseControllerV2 {
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           await this.checkPermission(apiRequest, 'update');
 
-          const validatedData = await this.validateData(apiRequest, bulkStatusUpdateSchema);
+          const validatedData = await this.validateRequestData(apiRequest, bulkStatusUpdateSchema);
 
           const result = await this.automationService.bulkUpdateStatus(
             validatedData,
@@ -761,7 +762,7 @@ export class ApiAutomationControllerV2 extends ApiBaseControllerV2 {
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           await this.checkPermission(apiRequest, 'execute');
 
-          const validatedData = await this.validateData(apiRequest, bulkExecutionSchema);
+          const validatedData = await this.validateRequestData(apiRequest, bulkExecutionSchema);
 
           const result = await this.automationService.bulkExecute(
             validatedData,

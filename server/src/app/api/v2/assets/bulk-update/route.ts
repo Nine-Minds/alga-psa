@@ -1,18 +1,23 @@
 /**
- * Asset Bulk Update API Routes
+ * bulk-update API Routes
  * Path: /api/v2/assets/bulk-update
  */
 
-import { withMiddleware } from '@/lib/api/middleware/withMiddleware';
-import { authMiddleware } from '@/lib/api/middleware/authMiddleware';
-import { permissionMiddleware } from '@/lib/api/middleware/permissionMiddleware';
 import { ApiAssetControllerV2 } from '@/lib/api/controllers/ApiAssetControllerV2';
+import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
 
 const controller = new ApiAssetControllerV2();
 
-// PUT /api/v2/assets/bulk-update - Bulk update assets
-export const PUT = withMiddleware(
-  controller.bulkUpdate.bind(controller),
-  authMiddleware,
-  permissionMiddleware('asset', 'update')
-);
+export async function PUT(request: Request, { params }: { params: Promise<any> }) {
+  try {
+    const resolvedParams = await params;
+    const req = request as any;
+    req.params = resolvedParams;
+    return await controller.bulkUpdate(req);
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';

@@ -12,8 +12,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ b
   try {
     const resolvedParams = await params;
     const req = request as any;
-    req.params = resolvedParams;
-    return await controller.removePlanFromBundle()(req);
+    return await controller.removePlanFromBundle()(req, resolvedParams);
   } catch (error) {
     return handleApiError(error);
   }

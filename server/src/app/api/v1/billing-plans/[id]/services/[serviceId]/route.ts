@@ -18,7 +18,7 @@ export async function GET(
   (request as any).routeParams = { id: resolvedParams.id, serviceId: resolvedParams.serviceId };
   
   // This endpoint gets a specific service from the plan's service list
-  return controller.getPlanServices()(request);
+  return controller.getPlanServices()(request, resolvedParams);
 }
 
 // PUT /api/v1/billing-plans/[id]/services/[serviceId] - Update billing plan service configuration
@@ -30,7 +30,7 @@ export async function PUT(
   // Add route params to the request for controller access
   (request as any).routeParams = { id: resolvedParams.id, serviceId: resolvedParams.serviceId };
   
-  return controller.updatePlanService()(request);
+  return controller.updatePlanService()(request, { planId: resolvedParams.id, serviceId: resolvedParams.serviceId });
 }
 
 // DELETE /api/v1/billing-plans/[id]/services/[serviceId] - Remove service from billing plan
@@ -42,6 +42,6 @@ export async function DELETE(
   // Add route params to the request for controller access
   (request as any).routeParams = { id: resolvedParams.id, serviceId: resolvedParams.serviceId };
   
-  return controller.removeServiceFromPlan()(request);
+  return controller.removeServiceFromPlan()(request, { planId: resolvedParams.id, serviceId: resolvedParams.serviceId });
 }
 export const dynamic = 'force-dynamic';

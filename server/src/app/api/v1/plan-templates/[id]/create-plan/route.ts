@@ -11,8 +11,8 @@ const controller = new ApiBillingPlanControllerV2();
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const req = request as any;
-    req.params = params;
-    return await controller.createFromTemplate()(req);
+    const resolvedParams = await params;
+    return await controller.createFromTemplate()(req, resolvedParams);
   } catch (error) {
     return handleApiError(error);
   }

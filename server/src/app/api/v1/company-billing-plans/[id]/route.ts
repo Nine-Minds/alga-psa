@@ -10,8 +10,8 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   try {
     const billingPlanController = new ApiBillingPlanControllerV2();
     const req = request as any;
-    req.params = params;
-    return await billingPlanController.unassignPlanFromCompany()(req);
+    const resolvedParams = await params;
+    return await billingPlanController.unassignPlanFromCompany()(req, resolvedParams);
   } catch (error) {
     return handleApiError(error);
   }

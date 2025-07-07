@@ -15,8 +15,11 @@ import {
   runWithTenant 
 } from '../../db';
 import {
+  ApiRequest,
+  AuthenticatedApiRequest,
   NotFoundError,
   ConflictError,
+  ValidationError,
   createSuccessResponse,
   createPaginatedResponse,
   handleApiError
@@ -76,13 +79,18 @@ export class ApiPermissionControllerV2 extends ApiBaseControllerV2 {
           const listOptions = { page, limit, filters, sort, order };
           const result = await this.permissionRoleService.listPermissions(listOptions, apiRequest.context);
           
-          return createPaginatedResponse(
-            result.data,
-            result.total,
-            page,
-            limit,
-            { sort, order, filters }
-          );
+          // Check if result is categorized or regular list
+          if ('categories' in result) {
+            return createSuccessResponse(result);
+          } else {
+            return createPaginatedResponse(
+              result.data,
+              result.total,
+              page,
+              limit,
+              { sort, order, filters }
+            );
+          }
         });
       } catch (error) {
         return handleApiError(error);
@@ -263,16 +271,7 @@ export class ApiPermissionControllerV2 extends ApiBaseControllerV2 {
           const id = await this.extractIdFromPath(apiRequest);
 
           // Get roles using this permission
-          const { knex } = await this.permissionRoleService.getKnex();
-          const roles = await knex('roles as r')
-            .join('role_permissions as rp', function() {
-              this.on('r.role_id', '=', 'rp.role_id')
-                  .andOn('r.tenant', '=', 'rp.tenant');
-            })
-            .where('rp.permission_id', id)
-            .where('r.tenant', apiRequest.context.tenant)
-            .select('r.*')
-            .orderBy('r.role_name');
+          const roles = await this.permissionRoleService.getRolesByPermission(id, apiRequest.context!);
           
           return createSuccessResponse(roles);
         });

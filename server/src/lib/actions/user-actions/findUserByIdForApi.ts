@@ -5,7 +5,7 @@
 
 import { Knex } from 'knex';
 import { getConnection } from '../../db/db';
-import { IUserWithRoles } from '../../interfaces/auth.interfaces';
+import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import User from '../../models/user';
 import { getUserAvatarUrl } from '../../utils/avatarUtils';
 

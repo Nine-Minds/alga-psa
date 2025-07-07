@@ -264,7 +264,7 @@ export class PermissionRoleService extends BaseService<IRole> {
       }
 
       // Permissions table only has resource and action as updatable fields
-      const updateData = {};
+      const updateData: any = {};
       if (data.resource) updateData.resource = data.resource;
       if (data.action) updateData.action = data.action;
       
@@ -1804,5 +1804,35 @@ export class PermissionRoleService extends BaseService<IRole> {
       logger.error('Error logging audit event:', error);
       // Don't throw - audit logging failure shouldn't break the operation
     }
+  }
+
+  /**
+   * Get roles that have a specific permission
+   */
+  async getRolesByPermission(permissionId: string, context: ServiceContext): Promise<RoleResponse[]> {
+    const { knex } = await this.getKnex();
+    
+    const roles = await knex('roles as r')
+      .join('role_permissions as rp', function() {
+        this.on('r.role_id', '=', 'rp.role_id')
+            .andOn('r.tenant', '=', 'rp.tenant');
+      })
+      .where('rp.permission_id', permissionId)
+      .where('r.tenant', context.tenant)
+      .select('r.*');
+
+    return roles.map(role => ({
+      role_id: role.role_id,
+      role_name: role.role_name,
+      description: role.description,
+      is_system: role.is_system,
+      is_active: role.is_active,
+      permissions: [],
+      user_count: 0,
+      created_at: role.created_at,
+      updated_at: role.updated_at,
+      created_by: role.created_by,
+      updated_by: role.updated_by
+    }));
   }
 }

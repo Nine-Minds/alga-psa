@@ -192,7 +192,7 @@ export class ApiCompanyControllerV2 extends ApiBaseControllerV2 {
           }
 
           // Verify company exists
-          const company = await this.companyService.getById(companyId, apiRequest.context);
+          const company = await this.companyService.getById(companyId, apiRequest.context!);
           if (!company) {
             throw new NotFoundError('Company not found');
           }
@@ -285,7 +285,7 @@ export class ApiCompanyControllerV2 extends ApiBaseControllerV2 {
           }
 
           // Verify company exists
-          const company = await this.companyService.getById(companyId, apiRequest.context);
+          const company = await this.companyService.getById(companyId, apiRequest.context!);
           if (!company) {
             throw new NotFoundError('Company not found');
           }
@@ -377,7 +377,7 @@ export class ApiCompanyControllerV2 extends ApiBaseControllerV2 {
           }
 
           // Verify company exists
-          const company = await this.companyService.getById(companyId, apiRequest.context);
+          const company = await this.companyService.getById(companyId, apiRequest.context!);
           if (!company) {
             throw new NotFoundError('Company not found');
           }

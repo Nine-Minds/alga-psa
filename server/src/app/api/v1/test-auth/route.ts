@@ -7,7 +7,7 @@ import { withApiKeyAuth } from 'server/src/lib/api/middleware/apiAuthMiddleware'
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
 export async function GET(request: NextRequest) {
-  const handler = withApiKeyAuth(async (req) => {
+  const handler = await withApiKeyAuth(async (req) => {
     console.log('Auth successful, context:', req.context);
     return NextResponse.json({ 
       message: 'Authentication successful',

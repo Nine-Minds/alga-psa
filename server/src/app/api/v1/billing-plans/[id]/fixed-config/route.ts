@@ -12,8 +12,8 @@ const controller = new ApiBillingPlanControllerV2();
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const req = request as any;
-    req.params = params;
-    return await controller.getFixedPlanConfig()(req);
+    const resolvedParams = await params;
+    return await controller.getFixedPlanConfig()(req, resolvedParams);
   } catch (error) {
     return handleApiError(error);
   }
@@ -22,8 +22,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const req = request as any;
-    req.params = params;
-    return await controller.upsertFixedPlanConfig()(req);
+    const resolvedParams = await params;
+    return await controller.upsertFixedPlanConfig()(req, resolvedParams);
   } catch (error) {
     return handleApiError(error);
   }

@@ -658,7 +658,7 @@ export class ApiUserControllerV2 extends ApiBaseControllerV2 {
           }
 
           // Replace roles - use removeRoles followed by assignRoles
-          const { knex } = await getConnection(apiRequest.context!.tenant);
+          const knex = await getConnection(apiRequest.context!.tenant);
           await knex.transaction(async (trx) => {
             // First remove all existing roles
             await trx('user_roles')
@@ -730,7 +730,7 @@ export class ApiUserControllerV2 extends ApiBaseControllerV2 {
           const result = await this.userService.list(listOptions, apiRequest.context!);
           
           // Enhance each user with their roles
-          const { knex } = await getConnection(apiRequest.context!.tenant);
+          const knex = await getConnection(apiRequest.context!.tenant);
           const usersWithRoles = await Promise.all(
             result.data.map(async (user: any) => {
               const roles = await knex('user_roles as ur')
@@ -757,6 +757,267 @@ export class ApiUserControllerV2 extends ApiBaseControllerV2 {
             limit,
             { sort, order, filters: listOptions.filters }
           );
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Enable 2FA for user
+   */
+  enable2FA() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'update');
+
+          // Extract user ID from path
+          const targetUserId = await this.extractIdFromPath(apiRequest);
+
+          // Enable 2FA
+          const result = await this.userService.enable2FA(targetUserId, apiRequest.context!);
+          
+          return createSuccessResponse(result);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Disable 2FA for user
+   */
+  disable2FA() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'update');
+
+          // Extract user ID from path
+          const targetUserId = await this.extractIdFromPath(apiRequest);
+
+          // Disable 2FA
+          const result = await this.userService.disable2FA(targetUserId, apiRequest.context!);
+          
+          return createSuccessResponse(result);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Get user activity
+   */
+  getUserActivity() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'read');
+
+          // Extract user ID from path
+          const targetUserId = await this.extractIdFromPath(apiRequest);
+
+          // Parse query parameters
+          const url = new URL(apiRequest.url);
+          const filters = {
+            from_date: url.searchParams.get('from_date') || undefined,
+            to_date: url.searchParams.get('to_date') || undefined,
+            activity_type: url.searchParams.get('activity_type') || undefined
+          };
+
+          // Get user activity
+          const result = await this.userService.getUserActivity(
+            targetUserId,
+            apiRequest.context!,
+            filters
+          );
+          
+          return createSuccessResponse(result);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Upload user avatar
+   */
+  uploadAvatar() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'update');
+
+          // Extract user ID from path
+          const targetUserId = await this.extractIdFromPath(apiRequest);
+
+          // Get form data
+          const formData = await req.formData();
+          const file = formData.get('avatar') as File;
+
+          if (!file) {
+            throw new ValidationError('Avatar file is required');
+          }
+
+          // Upload avatar
+          const result = await this.userService.uploadAvatar(
+            targetUserId,
+            file,
+            apiRequest.context!
+          );
+          
+          return createSuccessResponse(result);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Delete user avatar
+   */
+  deleteAvatar() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'update');
+
+          // Extract user ID from path
+          const targetUserId = await this.extractIdFromPath(apiRequest);
+
+          // Delete avatar
+          const result = await this.userService.deleteAvatar(targetUserId, apiRequest.context!);
+          
+          return createSuccessResponse(result);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Get user preferences
+   */
+  getUserPreferences() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'read');
+
+          // Extract user ID from path
+          const targetUserId = await this.extractIdFromPath(apiRequest);
+
+          // Get preferences
+          const result = await this.userService.getUserPreferences(
+            targetUserId,
+            apiRequest.context!
+          );
+          
+          return createSuccessResponse(result);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Update user preferences
+   */
+  updateUserPreferences() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'update');
+
+          // Extract user ID from path
+          const targetUserId = await this.extractIdFromPath(apiRequest);
+
+          // Parse and validate request body
+          const body = await req.json();
+
+          // Update preferences
+          const result = await this.userService.updateUserPreferences(
+            targetUserId,
+            body,
+            apiRequest.context!
+          );
+          
+          return createSuccessResponse(result);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Get user teams
+   */
+  getUserTeams() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'read');
+
+          // Extract user ID from path
+          const targetUserId = await this.extractIdFromPath(apiRequest);
+
+          // Get user teams
+          const result = await this.userService.getUserTeams(
+            targetUserId,
+            apiRequest.context!
+          );
+          
+          return createSuccessResponse(result);
         });
       } catch (error) {
         return handleApiError(error);

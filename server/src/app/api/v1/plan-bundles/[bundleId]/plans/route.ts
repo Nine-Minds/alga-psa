@@ -12,8 +12,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ bun
   try {
     const resolvedParams = await params;
     const req = request as any;
-    req.params = resolvedParams;
-    return await controller.addPlanToBundle()(req);
+    return await controller.addPlanToBundle()(req, resolvedParams);
   } catch (error) {
     return handleApiError(error);
   }

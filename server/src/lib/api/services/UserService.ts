@@ -1069,7 +1069,7 @@ export class UserService extends BaseService<IUser> {
       }, {}),
       users_with_2fa: parseInt(securityStats.users_with_2fa as string),
       users_without_avatar: parseInt(securityStats.users_without_avatar as string),
-      recent_logins: parseInt(activityStats?.recent_logins as string || '0'),
+      recent_logins: typeof activityStats?.recent_logins === 'number' ? activityStats.recent_logins : parseInt(activityStats?.recent_logins as string || '0'),
       never_logged_in: neverLoggedIn
     };
   }

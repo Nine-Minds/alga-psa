@@ -13,8 +13,8 @@ const controller = new ApiBillingPlanControllerV2();
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const req = request as any;
-    req.params = params;
-    return await controller.getById()(req);
+    const resolvedParams = await params;
+    return await controller.getById()(req, resolvedParams);
   } catch (error) {
     return handleApiError(error);
   }
@@ -23,8 +23,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const req = request as any;
-    req.params = params;
-    return await controller.update()(req);
+    const resolvedParams = await params;
+    return await controller.update()(req, resolvedParams);
   } catch (error) {
     return handleApiError(error);
   }
@@ -33,8 +33,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const req = request as any;
-    req.params = params;
-    return await controller.delete()(req);
+    const resolvedParams = await params;
+    return await controller.delete()(req, resolvedParams);
   } catch (error) {
     return handleApiError(error);
   }

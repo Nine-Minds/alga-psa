@@ -9,7 +9,7 @@ import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
 export async function PUT(request: Request) {
   try {
     const controller = new ApiAssetControllerV2();
-    return await controller.bulkUpdate(request as any, (request as any).params);
+    return await controller.bulkUpdate(request as any);
   } catch (error) {
     return handleApiError(error);
   }

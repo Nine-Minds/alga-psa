@@ -699,8 +699,8 @@ export class ApiTagControllerV2 extends ApiBaseControllerV2 {
           const result = await this.tagService.updateTagColors(
             tagText,
             entityType,
-            validatedData.background_color,
-            validatedData.text_color,
+            validatedData.background_color || null,
+            validatedData.text_color || null,
             apiRequest.context!
           );
           

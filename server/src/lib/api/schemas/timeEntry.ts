@@ -280,7 +280,8 @@ export const activeTimeSessionResponseSchema = z.object({
 export const stopTimeTrackingSchema = z.object({
   end_time: z.string().datetime().optional(), // If not provided, uses current time
   notes: z.string().optional(),
-  service_id: uuidSchema.optional()
+  service_id: uuidSchema.optional(),
+  is_billable: z.boolean().optional()
 });
 
 // Time entry approval operations

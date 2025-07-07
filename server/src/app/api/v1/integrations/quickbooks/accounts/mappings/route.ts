@@ -4,10 +4,10 @@
  * PUT /api/v1/integrations/quickbooks/accounts/mappings - Configure account mappings
  */
 
-import { QuickBooksController } from 'server/src/lib/api/controllers/QuickBooksController';
+import { ApiQuickBooksControllerV2 } from 'server/src/lib/api/controllers/ApiQuickBooksControllerV2';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new QuickBooksController();
+const controller = new ApiQuickBooksControllerV2();
 
 export async function GET(request: Request) {
   try {

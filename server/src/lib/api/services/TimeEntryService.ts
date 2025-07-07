@@ -244,7 +244,7 @@ export class TimeEntryService extends BaseService<any> {
     // Get or create time sheet for the period
     const timeSheetId = await this.getOrCreateTimeSheet(data.start_time, context.userId, context);
 
-    const { is_billable, user_id, ...dataWithoutBillable } = data;
+    const { is_billable, ...dataWithoutBillable } = data;
     const timeEntryData = {
       ...dataWithoutBillable,
       user_id: context.userId, // Always use authenticated user
@@ -769,24 +769,23 @@ export class TimeEntryService extends BaseService<any> {
       .where(`${this.tableName}.tenant`, context.tenant);
 
     // Build search query
+    const tableName = this.tableName;
     if (searchData.query) {
       query.where(function() {
-        this.where(`${this.tableName}.notes`, 'ilike', `%${searchData.query}%`);
+        this.where(`${tableName}.notes`, 'ilike', `%${searchData.query}%`);
       });
     }
 
     // Apply filters if provided
     const filters: TimeEntryFilterData = {
-      user_id: searchData.user_id,
+      user_id: searchData.user_ids?.[0],
       work_item_id: searchData.work_item_id,
-      work_item_type: searchData.work_item_type,
-      service_id: searchData.service_id,
-      approval_status: searchData.approval_status,
+      work_item_type: searchData.work_item_types?.[0],
+      service_id: searchData.service_ids?.[0],
+      approval_status: searchData.approval_statuses?.[0],
       is_billable: searchData.is_billable,
       date_from: searchData.date_from,
-      date_to: searchData.date_to,
-      start_time_from: searchData.start_time_from,
-      start_time_to: searchData.start_time_to
+      date_to: searchData.date_to
     };
     
     this.applyFilters(query, filters, knex);
@@ -802,12 +801,12 @@ export class TimeEntryService extends BaseService<any> {
       );
 
     // Apply sorting
-    const sortField = searchData.sort || this.defaultSort;
-    const sortOrder = searchData.order || this.defaultOrder;
+    const sortField = this.defaultSort;
+    const sortOrder = this.defaultOrder;
     query.orderBy(`${this.tableName}.${sortField}`, sortOrder);
 
     // Apply pagination
-    const page = searchData.page || 1;
+    const page = 1;
     const limit = searchData.limit || 25;
     const offset = (page - 1) * limit;
     query.limit(limit).offset(offset);

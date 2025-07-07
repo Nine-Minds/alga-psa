@@ -2,4 +2,4 @@ import { ApiTagControllerV2 } from '@/lib/api/controllers/ApiTagControllerV2';
 
 const controller = new ApiTagControllerV2();
 
-export const GET = controller.getTagAnalytics();
+export const GET = controller.analytics();

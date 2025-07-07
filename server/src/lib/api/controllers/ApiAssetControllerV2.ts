@@ -22,7 +22,7 @@ import {
 import { z } from 'zod';
 import { createApiResponse, createErrorResponse } from '../utils/response';
 import { getHateoasLinks } from '../utils/hateoas';
-import { getRequestContext } from '../utils/requestContext';
+import { requireRequestContext } from '../utils/requestContext';
 
 export class ApiAssetControllerV2 {
   private assetService: AssetService;
@@ -36,12 +36,12 @@ export class ApiAssetControllerV2 {
    */
   async list(req: NextRequest): Promise<NextResponse> {
     const query = Object.fromEntries(new URL(req.url).searchParams.entries());
-    const context = getRequestContext(req);
+    const context = requireRequestContext(req);
     
     // Validate query parameters
     const validation = assetListQuerySchema.safeParse(query);
     if (!validation.success) {
-      return createErrorResponse('Invalid query parameters', 400, validation.error.errors);
+      return createErrorResponse('Invalid query parameters', 400, 'VALIDATION_ERROR', validation.error.errors);
     }
 
     const { page, limit, sort, order, ...filters } = validation.data;
@@ -84,7 +84,7 @@ export class ApiAssetControllerV2 {
    * GET /api/v2/assets/{id} - Get asset details
    */
   async getById(req: NextRequest, params: { id: string }): Promise<NextResponse> {
-    const context = getRequestContext(req);
+    const context = requireRequestContext(req);
     
     const asset = await this.assetService.getWithDetails(params.id, context);
     
@@ -107,12 +107,12 @@ export class ApiAssetControllerV2 {
    */
   async create(req: NextRequest): Promise<NextResponse> {
     const data = await req.json();
-    const context = getRequestContext(req);
+    const context = requireRequestContext(req);
     
     // Validate request body
     const validation = createAssetWithExtensionSchema.safeParse(data);
     if (!validation.success) {
-      return createErrorResponse('Invalid request data', 400, validation.error.errors);
+      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
     }
 
     const asset = await this.assetService.create(validation.data, context);
@@ -132,12 +132,12 @@ export class ApiAssetControllerV2 {
    */
   async update(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const data = await req.json();
-    const context = getRequestContext(req);
+    const context = requireRequestContext(req);
     
     // Validate request body
     const validation = updateAssetSchema.safeParse(data);
     if (!validation.success) {
-      return createErrorResponse('Invalid request data', 400, validation.error.errors);
+      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
     }
 
     const asset = await this.assetService.update(params.id, validation.data, context);
@@ -156,7 +156,7 @@ export class ApiAssetControllerV2 {
    * DELETE /api/v2/assets/{id} - Delete asset
    */
   async delete(req: NextRequest, params: { id: string }): Promise<NextResponse> {
-    const context = getRequestContext(req);
+    const context = requireRequestContext(req);
     
     await this.assetService.delete(params.id, context);
     
@@ -167,7 +167,7 @@ export class ApiAssetControllerV2 {
    * GET /api/v2/assets/{id}/relationships - List asset relationships
    */
   async listRelationships(req: NextRequest, params: { id: string }): Promise<NextResponse> {
-    const context = getRequestContext(req);
+    const context = requireRequestContext(req);
     
     const relationships = await this.assetService.getAssetRelationships(params.id, context);
     
@@ -188,12 +188,12 @@ export class ApiAssetControllerV2 {
    */
   async createRelationship(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const data = await req.json();
-    const context = getRequestContext(req);
+    const context = requireRequestContext(req);
     
     // Validate request body
     const validation = createAssetRelationshipSchema.safeParse(data);
     if (!validation.success) {
-      return createErrorResponse('Invalid request data', 400, validation.error.errors);
+      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
     }
 
     const relationship = await this.assetService.createRelationship(params.id, validation.data, context);
@@ -206,7 +206,7 @@ export class ApiAssetControllerV2 {
    * DELETE /api/v2/assets/relationships/{relationshipId} - Delete asset relationship
    */
   async deleteRelationship(req: NextRequest, params: { relationshipId: string }): Promise<NextResponse> {
-    const context = getRequestContext(req);
+    const context = requireRequestContext(req);
     
     await this.assetService.deleteRelationship(params.relationshipId, context);
     
@@ -217,7 +217,7 @@ export class ApiAssetControllerV2 {
    * GET /api/v2/assets/{id}/documents - List asset documents
    */
   async listDocuments(req: NextRequest, params: { id: string }): Promise<NextResponse> {
-    const context = getRequestContext(req);
+    const context = requireRequestContext(req);
     
     const documents = await this.assetService.getAssetDocuments(params.id, context);
     
@@ -238,12 +238,12 @@ export class ApiAssetControllerV2 {
    */
   async associateDocument(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const data = await req.json();
-    const context = getRequestContext(req);
+    const context = requireRequestContext(req);
     
     // Validate request body
     const validation = createAssetDocumentSchema.safeParse(data);
     if (!validation.success) {
-      return createErrorResponse('Invalid request data', 400, validation.error.errors);
+      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
     }
 
     const association = await this.assetService.associateDocument(params.id, validation.data, context);
@@ -256,7 +256,7 @@ export class ApiAssetControllerV2 {
    * DELETE /api/v2/assets/documents/{associationId} - Remove document association
    */
   async removeDocumentAssociation(req: NextRequest, params: { associationId: string }): Promise<NextResponse> {
-    const context = getRequestContext(req);
+    const context = requireRequestContext(req);
     
     await this.assetService.removeDocumentAssociation(params.associationId, context);
     
@@ -267,7 +267,7 @@ export class ApiAssetControllerV2 {
    * GET /api/v2/assets/{id}/maintenance - List maintenance schedules
    */
   async listMaintenanceSchedules(req: NextRequest, params: { id: string }): Promise<NextResponse> {
-    const context = getRequestContext(req);
+    const context = requireRequestContext(req);
     
     const schedules = await this.assetService.getMaintenanceSchedules(params.id, context);
     
@@ -289,12 +289,12 @@ export class ApiAssetControllerV2 {
    */
   async createMaintenanceSchedule(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const data = await req.json();
-    const context = getRequestContext(req);
+    const context = requireRequestContext(req);
     
     // Validate request body
     const validation = createMaintenanceScheduleSchema.safeParse(data);
     if (!validation.success) {
-      return createErrorResponse('Invalid request data', 400, validation.error.errors);
+      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
     }
 
     const schedule = await this.assetService.createMaintenanceSchedule(params.id, validation.data, context);
@@ -308,12 +308,12 @@ export class ApiAssetControllerV2 {
    */
   async updateMaintenanceSchedule(req: NextRequest, params: { scheduleId: string }): Promise<NextResponse> {
     const data = await req.json();
-    const context = getRequestContext(req);
+    const context = requireRequestContext(req);
     
     // Validate request body
     const validation = updateMaintenanceScheduleSchema.safeParse(data);
     if (!validation.success) {
-      return createErrorResponse('Invalid request data', 400, validation.error.errors);
+      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
     }
 
     const schedule = await this.assetService.updateMaintenanceSchedule(params.scheduleId, validation.data, context);
@@ -326,7 +326,7 @@ export class ApiAssetControllerV2 {
    * DELETE /api/v2/assets/maintenance/{scheduleId} - Delete maintenance schedule
    */
   async deleteMaintenanceSchedule(req: NextRequest, params: { scheduleId: string }): Promise<NextResponse> {
-    const context = getRequestContext(req);
+    const context = requireRequestContext(req);
     
     await this.assetService.deleteMaintenanceSchedule(params.scheduleId, context);
     
@@ -338,12 +338,12 @@ export class ApiAssetControllerV2 {
    */
   async recordMaintenance(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const data = await req.json();
-    const context = getRequestContext(req);
+    const context = requireRequestContext(req);
     
     // Validate request body
     const validation = recordMaintenanceSchema.safeParse(data);
     if (!validation.success) {
-      return createErrorResponse('Invalid request data', 400, validation.error.errors);
+      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
     }
 
     const maintenance = await this.assetService.recordMaintenance(params.id, validation.data, context);
@@ -356,7 +356,7 @@ export class ApiAssetControllerV2 {
    * GET /api/v2/assets/{id}/history - Get maintenance history
    */
   async getMaintenanceHistory(req: NextRequest, params: { id: string }): Promise<NextResponse> {
-    const context = getRequestContext(req);
+    const context = requireRequestContext(req);
     
     const history = await this.assetService.getMaintenanceHistory(params.id, context);
     
@@ -377,12 +377,12 @@ export class ApiAssetControllerV2 {
    */
   async search(req: NextRequest): Promise<NextResponse> {
     const query = Object.fromEntries(new URL(req.url).searchParams.entries());
-    const context = getRequestContext(req);
+    const context = requireRequestContext(req);
     
     // Validate query parameters
     const validation = assetSearchSchema.safeParse(query);
     if (!validation.success) {
-      return createErrorResponse('Invalid query parameters', 400, validation.error.errors);
+      return createErrorResponse('Invalid query parameters', 400, 'VALIDATION_ERROR', validation.error.errors);
     }
 
     const assets = await this.assetService.search(validation.data, context);
@@ -407,12 +407,12 @@ export class ApiAssetControllerV2 {
    */
   async export(req: NextRequest): Promise<NextResponse> {
     const query = Object.fromEntries(new URL(req.url).searchParams.entries());
-    const context = getRequestContext(req);
+    const context = requireRequestContext(req);
     
     // Validate query parameters
     const validation = assetExportQuerySchema.safeParse(query);
     if (!validation.success) {
-      return createErrorResponse('Invalid query parameters', 400, validation.error.errors);
+      return createErrorResponse('Invalid query parameters', 400, 'VALIDATION_ERROR', validation.error.errors);
     }
 
     // For now, just return the assets as JSON
@@ -437,7 +437,7 @@ export class ApiAssetControllerV2 {
    * GET /api/v2/assets/stats - Get asset statistics
    */
   async getStatistics(req: NextRequest): Promise<NextResponse> {
-    const context = getRequestContext(req);
+    const context = requireRequestContext(req);
     
     const stats = await this.assetService.getStatistics(context);
     
@@ -457,12 +457,12 @@ export class ApiAssetControllerV2 {
    */
   async bulkUpdate(req: NextRequest): Promise<NextResponse> {
     const data = await req.json();
-    const context = getRequestContext(req);
+    const context = requireRequestContext(req);
     
     // Validate request body
     const validation = bulkUpdateAssetSchema.safeParse(data);
     if (!validation.success) {
-      return createErrorResponse('Invalid request data', 400, validation.error.errors);
+      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
     }
 
     const results = await Promise.all(
@@ -484,12 +484,12 @@ export class ApiAssetControllerV2 {
    */
   async bulkStatusUpdate(req: NextRequest): Promise<NextResponse> {
     const data = await req.json();
-    const context = getRequestContext(req);
+    const context = requireRequestContext(req);
     
     // Validate request body
     const validation = bulkAssetStatusSchema.safeParse(data);
     if (!validation.success) {
-      return createErrorResponse('Invalid request data', 400, validation.error.errors);
+      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
     }
 
     const results = await Promise.all(
