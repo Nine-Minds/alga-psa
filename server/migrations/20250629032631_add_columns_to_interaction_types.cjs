@@ -3,31 +3,52 @@
  * @returns { Promise<void> }
  */
 exports.up = async function(knex) {
-  // Add missing columns to interaction_types table
+  // Check and add columns individually to handle partial migration failures
+  const hasSystemTypeId = await knex.schema.hasColumn('interaction_types', 'system_type_id');
+  const hasDisplayOrder = await knex.schema.hasColumn('interaction_types', 'display_order');
+  const hasColor = await knex.schema.hasColumn('interaction_types', 'color');
+  const hasIsRequest = await knex.schema.hasColumn('interaction_types', 'is_request');
+  const hasCreatedBy = await knex.schema.hasColumn('interaction_types', 'created_by');
+  
   await knex.schema.alterTable('interaction_types', function(table) {
     // Add system_type_id to track which system type this was imported from
-    table.uuid('system_type_id').nullable();
+    if (!hasSystemTypeId) {
+      table.uuid('system_type_id').nullable();
+    }
     
     // Add display_order for sorting
-    table.integer('display_order').notNullable().defaultTo(0);
+    if (!hasDisplayOrder) {
+      table.integer('display_order').notNullable().defaultTo(0);
+    }
     
     // Add color column to match system_interaction_types
-    table.text('color').nullable();
+    if (!hasColor) {
+      table.text('color').nullable();
+    }
     
     // Add is_request flag
-    table.boolean('is_request').defaultTo(false);
+    if (!hasIsRequest) {
+      table.boolean('is_request').defaultTo(false);
+    }
     
     // Add created_by to track who created it
-    table.uuid('created_by').nullable();
+    if (!hasCreatedBy) {
+      table.uuid('created_by').nullable();
+    }
     
-    // Add foreign key for system_type_id
-    table.foreign('system_type_id').references('type_id').inTable('system_interaction_types').onDelete('SET NULL');
+    // Add foreign key for system_type_id (only if column was just added)
+    if (!hasSystemTypeId) {
+      table.foreign('system_type_id').references('type_id').inTable('system_interaction_types').onDelete('SET NULL');
+    }
   });
 
   // Add display_order to system_interaction_types table
-  await knex.schema.alterTable('system_interaction_types', function(table) {
-    table.integer('display_order').notNullable().defaultTo(0);
-  });
+  const hasSystemDisplayOrder = await knex.schema.hasColumn('system_interaction_types', 'display_order');
+  if (!hasSystemDisplayOrder) {
+    await knex.schema.alterTable('system_interaction_types', function(table) {
+      table.integer('display_order').notNullable().defaultTo(0);
+    });
+  }
 
   // Update existing interaction_types with sequential order numbers per tenant
   const tenants = await knex('interaction_types').distinct('tenant').pluck('tenant');
@@ -51,10 +72,19 @@ exports.up = async function(knex) {
       .update({ display_order: i + 1 });
   }
 
-  // Add unique constraint for tenant + display_order
-  await knex.schema.alterTable('interaction_types', function(table) {
-    table.unique(['tenant', 'display_order']);
-  });
+  // Check if unique constraint already exists before adding it
+  const constraintExists = await knex.raw(`
+    SELECT constraint_name 
+    FROM information_schema.table_constraints 
+    WHERE table_name = 'interaction_types' 
+    AND constraint_name = 'interaction_types_tenant_display_order_unique'
+  `);
+
+  if (constraintExists.rows.length === 0) {
+    await knex.schema.alterTable('interaction_types', function(table) {
+      table.unique(['tenant', 'display_order']);
+    });
+  }
 };
 
 /**
