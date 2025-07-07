@@ -61,12 +61,17 @@ export async function fetchAllInvoices(): Promise<InvoiceViewModel[]> {
     console.log('Fetching basic invoice info');
     const { knex, tenant } = await createTenantKnex();
 
-    // Get invoices with company info in a single query
+    // Get invoices with company info and location data in a single query
     const invoices = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('invoices')
         .join('companies', function () {
           this.on('invoices.company_id', '=', 'companies.company_id')
             .andOn('invoices.tenant', '=', 'companies.tenant');
+        })
+        .leftJoin('company_locations', function () {
+          this.on('companies.company_id', '=', 'company_locations.company_id')
+            .andOn('companies.tenant', '=', 'company_locations.tenant')
+            .andOn('company_locations.is_default', '=', trx.raw('true'));
         })
         .where('invoices.tenant', tenant)
         .select(
@@ -84,8 +89,14 @@ export async function fetchAllInvoices(): Promise<InvoiceViewModel[]> {
           trx.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),
           trx.raw('CAST(invoices.credit_applied AS BIGINT) as credit_applied'),
           'companies.company_name',
-          'companies.address',
-          'companies.properties'
+          'companies.properties',
+          // Location fields
+          'company_locations.address_line1',
+          'company_locations.address_line2',
+          'company_locations.city',
+          'company_locations.state_province',
+          'company_locations.postal_code',
+          'company_locations.country_name'
         );
     });
 
@@ -94,10 +105,21 @@ export async function fetchAllInvoices(): Promise<InvoiceViewModel[]> {
     // Map to view models without line items
     return Promise.all(invoices.map(invoice => {
       const companyProperties = invoice.properties as { logo?: string } || {};
+      
+      // Format location address
+      const addressParts = [];
+      if (invoice.address_line1) addressParts.push(invoice.address_line1);
+      if (invoice.address_line2) addressParts.push(invoice.address_line2);
+      if (invoice.city || invoice.state_province || invoice.postal_code) {
+        const cityStateZip = [invoice.city, invoice.state_province, invoice.postal_code].filter(Boolean).join(', ');
+        addressParts.push(cityStateZip);
+      }
+      if (invoice.country_name) addressParts.push(invoice.country_name);
+      
       return getBasicInvoiceViewModel(invoice, {
         company_name: invoice.company_name,
         logo: companyProperties.logo || '',
-        address: invoice.address || ''
+        address: addressParts.join(', ') || ''
       });
     }));
   } catch (error) {
@@ -116,12 +138,17 @@ export async function fetchInvoicesByCompany(companyId: string): Promise<Invoice
     console.log(`Fetching invoices for company: ${companyId}`);
     const { knex, tenant } = await createTenantKnex();
     
-    // Get invoices with company info in a single query, filtered by company_id
+    // Get invoices with company info and location data in a single query, filtered by company_id
     const invoices = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('invoices')
         .join('companies', function() {
           this.on('invoices.company_id', '=', 'companies.company_id')
               .andOn('invoices.tenant', '=', 'companies.tenant');
+        })
+        .leftJoin('company_locations', function () {
+          this.on('companies.company_id', '=', 'company_locations.company_id')
+            .andOn('companies.tenant', '=', 'company_locations.tenant')
+            .andOn('company_locations.is_default', '=', trx.raw('true'));
         })
         .where({
           'invoices.company_id': companyId,
@@ -142,8 +169,14 @@ export async function fetchInvoicesByCompany(companyId: string): Promise<Invoice
           trx.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),
           trx.raw('CAST(invoices.credit_applied AS BIGINT) as credit_applied'),
           'companies.company_name',
-          'companies.address',
-          'companies.properties'
+          'companies.properties',
+          // Location fields
+          'company_locations.address_line1',
+          'company_locations.address_line2',
+          'company_locations.city',
+          'company_locations.state_province',
+          'company_locations.postal_code',
+          'company_locations.country_name'
         );
     });
 
@@ -152,10 +185,21 @@ export async function fetchInvoicesByCompany(companyId: string): Promise<Invoice
     // Map to view models without line items
     return Promise.all(invoices.map(invoice => {
       const companyProperties = invoice.properties as { logo?: string } || {};
+      
+      // Format location address
+      const addressParts = [];
+      if (invoice.address_line1) addressParts.push(invoice.address_line1);
+      if (invoice.address_line2) addressParts.push(invoice.address_line2);
+      if (invoice.city || invoice.state_province || invoice.postal_code) {
+        const cityStateZip = [invoice.city, invoice.state_province, invoice.postal_code].filter(Boolean).join(', ');
+        addressParts.push(cityStateZip);
+      }
+      if (invoice.country_name) addressParts.push(invoice.country_name);
+      
       return getBasicInvoiceViewModel(invoice, {
         company_name: invoice.company_name,
         logo: companyProperties.logo || '',
-        address: invoice.address || ''
+        address: addressParts.join(', ') || ''
       });
     }));
   } catch (error) {

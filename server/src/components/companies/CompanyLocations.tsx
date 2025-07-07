@@ -15,6 +15,7 @@ import { ITaxRegion } from 'server/src/interfaces/tax.interfaces';
 import CountryPicker from 'server/src/components/ui/CountryPicker';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
+import { PhoneInput } from 'server/src/components/ui/PhoneInput';
 import { Label } from 'server/src/components/ui/Label';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
@@ -769,43 +770,46 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
               />
             </div>
             
-            <div {...(() => {
-              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
-                id: 'phone-field',
-                type: 'formField',
-                fieldType: 'textField',
-                label: 'Phone',
-                value: formData.phone,
-                helperText: 'Phone number for this location'
-              });
-              return automationIdProps;
-            })()}>
-              <Label htmlFor="phone-input">Phone</Label>
-              <Input
-                id="phone-input"
-                value={formData.phone}
-                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-              />
-            </div>
-            
-            <div {...(() => {
-              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
-                id: 'email-field',
-                type: 'formField',
-                fieldType: 'textField',
-                label: 'Email',
-                value: formData.email,
-                helperText: 'Email address for this location'
-              });
-              return automationIdProps;
-            })()}>
-              <Label htmlFor="email-input">Email</Label>
-              <Input
-                id="email-input"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div {...(() => {
+                const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                  id: 'phone-field',
+                  type: 'formField',
+                  fieldType: 'textField',
+                  label: 'Phone',
+                  value: formData.phone,
+                  helperText: 'Phone number for this location'
+                });
+                return automationIdProps;
+              })()}>
+                <PhoneInput
+                  label="Phone"
+                  value={formData.phone || ''}
+                  onChange={(value) => setFormData(prev => ({ ...prev, phone: value }))}
+                  countryCode={formData.country_code}
+                  data-automation-id="phone-input"
+                />
+              </div>
+              
+              <div {...(() => {
+                const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                  id: 'email-field',
+                  type: 'formField',
+                  fieldType: 'textField',
+                  label: 'Email',
+                  value: formData.email,
+                  helperText: 'Email address for this location'
+                });
+                return automationIdProps;
+              })()}>
+                <Label htmlFor="email-input">Email</Label>
+                <Input
+                  id="email-input"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                />
+              </div>
             </div>
             
             <div {...(() => {

@@ -373,11 +373,16 @@ export async function getAllCompaniesPaginated(params: CompanyPaginationParams =
 
     // Use a transaction to get paginated company data
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Build the base query
+      // Build the base query with company_locations join
       let baseQuery = trx('companies as c')
         .leftJoin('users as u', function() {
           this.on('c.account_manager_id', '=', 'u.user_id')
               .andOn('c.tenant', '=', 'u.tenant');
+        })
+        .leftJoin('company_locations as cl', function() {
+          this.on('c.company_id', '=', 'cl.company_id')
+              .andOn('c.tenant', '=', 'cl.tenant')
+              .andOn('cl.is_default', '=', trx.raw('true'));
         })
         .where({ 'c.tenant': tenant });
 
@@ -393,8 +398,10 @@ export async function getAllCompaniesPaginated(params: CompanyPaginationParams =
       if (searchTerm) {
         baseQuery = baseQuery.where(function() {
           this.where('c.company_name', 'ilike', `%${searchTerm}%`)
-              .orWhere('c.phone_no', 'ilike', `%${searchTerm}%`)
-              .orWhere('c.address', 'ilike', `%${searchTerm}%`);
+              .orWhere('cl.phone', 'ilike', `%${searchTerm}%`)
+              .orWhere('cl.address_line1', 'ilike', `%${searchTerm}%`)
+              .orWhere('cl.address_line2', 'ilike', `%${searchTerm}%`)
+              .orWhere('cl.city', 'ilike', `%${searchTerm}%`);
         });
       }
 
@@ -406,11 +413,19 @@ export async function getAllCompaniesPaginated(params: CompanyPaginationParams =
       const countResult = await baseQuery.clone().count('* as count').first();
       const totalCount = parseInt(countResult?.count as string || '0', 10);
 
-      // Get paginated companies
+      // Get paginated companies with location data
       const companies = await baseQuery
         .select(
           'c.*',
-          trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`)
+          trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`),
+          'cl.phone as location_phone',
+          'cl.email as location_email',
+          'cl.address_line1',
+          'cl.address_line2',
+          'cl.city',
+          'cl.state_province',
+          'cl.postal_code',
+          'cl.country_name'
         )
         .orderBy('c.company_name', 'asc')
         .limit(pageSize)
@@ -785,10 +800,7 @@ export async function exportCompaniesToCSV(companies: ICompany[]): Promise<strin
 
   const fields = [
     'company_name',
-    'phone_no',
-    'email',
     'url',
-    'address',
     'client_type',
     'is_inactive',
     'is_tax_exempt',

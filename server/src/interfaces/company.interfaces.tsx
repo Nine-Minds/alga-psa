@@ -5,10 +5,13 @@ import { ITaggable } from './tag.interfaces';
 export interface ICompany extends TenantEntity, ITaggable {
   company_id: string;
   company_name: string;
+  /** @deprecated Use company_locations.phone instead */
   phone_no: string;
   credit_balance: number;
+  /** @deprecated Use company_locations.email instead */
   email: string;
   url: string;
+  /** @deprecated Use company_locations address fields instead */
   address?: string;
   created_at: string;
   updated_at: string;
