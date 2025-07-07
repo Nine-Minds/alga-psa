@@ -258,7 +258,6 @@ export async function getPermissions(): Promise<IPermission[]> {
             const permissions = await trx('permissions')
                 .where({ tenant })
                 .select('permission_id', 'resource', 'action', 'tenant', 'msp', 'client', 'description');
-            console.log('Fetched permissions for tenant:', tenant, permissions);
             return permissions;
         });
     } catch (error) {
