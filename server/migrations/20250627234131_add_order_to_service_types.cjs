@@ -69,15 +69,33 @@ exports.up = async function(knex) {
     }
   }
 
-  // NOW add unique constraint for standard_service_types display_order
-  await knex.schema.alterTable('standard_service_types', function(table) {
-    table.unique(['display_order']);
-  });
+  // Check if unique constraint already exists for standard_service_types before adding it
+  const standardConstraintExists = await knex.raw(`
+    SELECT constraint_name 
+    FROM information_schema.table_constraints 
+    WHERE table_name = 'standard_service_types' 
+    AND constraint_name = 'standard_service_types_display_order_unique'
+  `);
 
-  // Add unique constraint for service_types order within a tenant
-  await knex.schema.alterTable('service_types', function(table) {
-    table.unique(['tenant', 'order_number']);
-  });
+  if (standardConstraintExists.rows.length === 0) {
+    await knex.schema.alterTable('standard_service_types', function(table) {
+      table.unique(['display_order']);
+    });
+  }
+
+  // Check if unique constraint already exists for service_types before adding it
+  const serviceTypesConstraintExists = await knex.raw(`
+    SELECT constraint_name 
+    FROM information_schema.table_constraints 
+    WHERE table_name = 'service_types' 
+    AND constraint_name = 'service_types_tenant_order_number_unique'
+  `);
+
+  if (serviceTypesConstraintExists.rows.length === 0) {
+    await knex.schema.alterTable('service_types', function(table) {
+      table.unique(['tenant', 'order_number']);
+    });
+  }
 };
 
 /**
