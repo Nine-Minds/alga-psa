@@ -103,17 +103,26 @@ export class EmailProcessor {
   }): Promise<void> {
     console.log(`📨 Emitting INBOUND_EMAIL_RECEIVED event for email ${eventData.emailId}`);
     
-    // TODO: Implement actual event emission to workflow system
-    // This would typically publish to the event bus or workflow system
-    // For now, just log the event
-    
-    const event = {
-      event_type: 'INBOUND_EMAIL_RECEIVED',
-      payload: eventData,
-      timestamp: new Date().toISOString(),
-    };
-
-    console.log('📨 Event emitted:', JSON.stringify(event, null, 2));
+    try {
+      // Import EventBus dynamically to avoid module resolution issues
+      const { getEventBus } = await import('../../lib/eventBus');
+      const eventBus = getEventBus();
+      
+      // Publish the event to the workflow system
+      await eventBus.publish({
+        eventType: 'INBOUND_EMAIL_RECEIVED',
+        payload: {
+          tenantId: eventData.tenant,
+          providerId: eventData.providerId,
+          emailData: eventData.emailData
+        }
+      });
+      
+      console.log(`✅ INBOUND_EMAIL_RECEIVED event published for email ${eventData.emailId}`);
+    } catch (error: any) {
+      console.error(`❌ Failed to emit INBOUND_EMAIL_RECEIVED event for email ${eventData.emailId}:`, error.message);
+      throw error;
+    }
   }
 
   /**
