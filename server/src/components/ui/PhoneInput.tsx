@@ -25,19 +25,22 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   className = '',
   'data-automation-id': dataAutomationId
 }) => {
+  // Clean phone code (remove + if present)
+  const cleanPhoneCode = phoneCode?.replace(/^\+/, '');
+  
   // Format phone display with country code if available
-  const displayValue = phoneCode && value && !value.startsWith('+') 
-    ? `+${phoneCode} ${value}` 
+  const displayValue = cleanPhoneCode && value && !value.startsWith('+') 
+    ? `+${cleanPhoneCode} ${value}` 
     : value;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let newValue = e.target.value;
     
     // If phoneCode exists and user is typing, remove the prefix for storage
-    if (phoneCode && newValue.startsWith(`+${phoneCode} `)) {
-      newValue = newValue.substring(`+${phoneCode} `.length);
-    } else if (phoneCode && newValue.startsWith(`+${phoneCode}`)) {
-      newValue = newValue.substring(`+${phoneCode}`.length);
+    if (cleanPhoneCode && newValue.startsWith(`+${cleanPhoneCode} `)) {
+      newValue = newValue.substring(`+${cleanPhoneCode} `.length);
+    } else if (cleanPhoneCode && newValue.startsWith(`+${cleanPhoneCode}`)) {
+      newValue = newValue.substring(`+${cleanPhoneCode}`.length);
     }
     
     onChange(newValue);
@@ -54,7 +57,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
         value={displayValue}
         onChange={handleChange}
         disabled={disabled}
-        placeholder={phoneCode ? `+${phoneCode} ` : ''}
+        placeholder={cleanPhoneCode ? `+${cleanPhoneCode} ` : ''}
         className={`w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${className}`}
         data-automation-id={dataAutomationId}
       />

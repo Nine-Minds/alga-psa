@@ -156,13 +156,23 @@ const CompaniesList = ({
             title: 'Phone',
             dataIndex: 'phone_no',
             width: '12%',
-            render: (text: string | null, record: ICompany) => record.phone_no || 'N/A',
+            render: (text: string | null, record: ICompany) => (record as any).location_phone || 'N/A',
         },
         {
             title: 'Address',
             dataIndex: 'address',
             width: '18%',
-            render: (text: string | null, record: ICompany) => <span className="truncate" title={record.address ?? ''}>{record.address || 'N/A'}</span>,
+            render: (text: string | null, record: ICompany) => {
+                const company = record as any;
+                const addressParts = [
+                    company.address_line1,
+                    company.address_line2,
+                    company.city,
+                    company.state_province
+                ].filter(Boolean);
+                const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : 'N/A';
+                return <span className="truncate" title={fullAddress}>{fullAddress}</span>;
+            },
         },
         {
             title: 'Account Manager',

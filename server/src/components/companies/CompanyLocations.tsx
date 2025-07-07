@@ -652,125 +652,98 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
               />
             </div>
             
-            <div {...(() => {
-              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
-                id: 'city-field',
-                type: 'formField',
-                fieldType: 'textField',
-                label: 'City',
-                value: formData.city,
-                helperText: 'City name (required)'
-              });
-              return automationIdProps;
-            })()}>
-              <Label htmlFor="city-input">City *</Label>
-              <Input
-                id="city-input"
-                value={formData.city}
-                onChange={(e) => {
-                  setFormData(prev => ({ ...prev, city: e.target.value }));
-                  clearErrorIfSubmitted();
-                }}
-                placeholder="Enter city *"
-                className={hasAttemptedSubmit && !formData.city.trim() ? 'border-red-500' : ''}
-                required
-              />
-            </div>
-            
-            <div {...(() => {
-              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
-                id: 'state-province-field',
-                type: 'formField',
-                fieldType: 'textField',
-                label: 'State/Province',
-                value: formData.state_province,
-                helperText: 'State or province name'
-              });
-              return automationIdProps;
-            })()}>
-              <Label htmlFor="state-province-input">State/Province</Label>
-              <Input
-                id="state-province-input"
-                value={formData.state_province}
-                onChange={(e) => setFormData(prev => ({ ...prev, state_province: e.target.value }))}
-              />
-            </div>
-            
-            <div {...(() => {
-              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
-                id: 'postal-code-field',
-                type: 'formField',
-                fieldType: 'textField',
-                label: 'Postal Code',
-                value: formData.postal_code,
-                helperText: 'ZIP or postal code'
-              });
-              return automationIdProps;
-            })()}>
-              <Label htmlFor="postal-code-input">Postal Code</Label>
-              <Input
-                id="postal-code-input"
-                value={formData.postal_code}
-                onChange={(e) => setFormData(prev => ({ ...prev, postal_code: e.target.value }))}
-              />
-            </div>
-            
-            <div {...(() => {
-              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
-                id: 'country-picker-field',
-                type: 'formField',
-                fieldType: 'select',
-                label: 'Country',
-                value: formData.country_code,
-                helperText: 'Select country (required)'
-              });
-              return automationIdProps;
-            })()}>
-              <Label htmlFor="country-picker">Country *</Label>
-              <div className={hasAttemptedSubmit && (!formData.country_code || !formData.country_name) ? 'ring-1 ring-red-500 rounded-lg' : ''}>
-                <CountryPicker
-                  data-automation-id="country-picker"
-                  value={formData.country_code}
-                  onValueChange={(code, name) => {
-                    handleCountryChange(code, name);
+            <div className="grid grid-cols-2 gap-4">
+              <div {...(() => {
+                const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                  id: 'city-field',
+                  type: 'formField',
+                  fieldType: 'textField',
+                  label: 'City',
+                  value: formData.city,
+                  helperText: 'City name (required)'
+                });
+                return automationIdProps;
+              })()}>
+                <Label htmlFor="city-input">City *</Label>
+                <Input
+                  id="city-input"
+                  value={formData.city}
+                  onChange={(e) => {
+                    setFormData(prev => ({ ...prev, city: e.target.value }));
                     clearErrorIfSubmitted();
                   }}
-                  countries={countries}
-                  disabled={isLoadingCountries || isLoading}
-                  placeholder={isLoadingCountries ? "Loading countries..." : "Select Country *"}
-                  buttonWidth="full"
+                  placeholder="Enter city *"
+                  className={hasAttemptedSubmit && !formData.city.trim() ? 'border-red-500' : ''}
+                  required
                 />
               </div>
-            </div>
-            
-            <div {...(() => {
-              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
-                id: 'tax-region-field',
-                type: 'formField',
-                fieldType: 'select',
-                label: 'Tax Region',
-                value: formData.region_code || 'none',
-                helperText: 'Select the applicable tax region'
-              });
-              return automationIdProps;
-            })()}>
-              <Label htmlFor="tax-region-select">Tax Region</Label>
-              <CustomSelect
-                id="tax-region-select"
-                value={formData.region_code || 'none'}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, region_code: value === 'none' ? null : value }))}
-                options={[
-                  { value: 'none', label: 'Select a tax region...' },
-                  ...taxRegions.map(region => ({
-                    value: region.region_code,
-                    label: region.region_name
-                  }))
-                ]}
-                placeholder="Select a tax region..."
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
+              
+              <div {...(() => {
+                const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                  id: 'state-province-field',
+                  type: 'formField',
+                  fieldType: 'textField',
+                  label: 'State/Province',
+                  value: formData.state_province,
+                  helperText: 'State or province name'
+                });
+                return automationIdProps;
+              })()}>
+                <Label htmlFor="state-province-input">State/Province</Label>
+                <Input
+                  id="state-province-input"
+                  value={formData.state_province}
+                  onChange={(e) => setFormData(prev => ({ ...prev, state_province: e.target.value }))}
+                />
+              </div>
+              
+              <div {...(() => {
+                const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                  id: 'postal-code-field',
+                  type: 'formField',
+                  fieldType: 'textField',
+                  label: 'Postal Code',
+                  value: formData.postal_code,
+                  helperText: 'ZIP or postal code'
+                });
+                return automationIdProps;
+              })()}>
+                <Label htmlFor="postal-code-input">Postal Code</Label>
+                <Input
+                  id="postal-code-input"
+                  value={formData.postal_code}
+                  onChange={(e) => setFormData(prev => ({ ...prev, postal_code: e.target.value }))}
+                />
+              </div>
+              
+              <div {...(() => {
+                const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                  id: 'country-picker-field',
+                  type: 'formField',
+                  fieldType: 'select',
+                  label: 'Country',
+                  value: formData.country_code,
+                  helperText: 'Select country (required)'
+                });
+                return automationIdProps;
+              })()}>
+                <Label htmlFor="country-picker">Country *</Label>
+                <div className={hasAttemptedSubmit && (!formData.country_code || !formData.country_name) ? 'ring-1 ring-red-500 rounded-lg' : ''}>
+                  <CountryPicker
+                    data-automation-id="country-picker"
+                    value={formData.country_code}
+                    onValueChange={(code, name) => {
+                      handleCountryChange(code, name);
+                      clearErrorIfSubmitted();
+                    }}
+                    countries={countries}
+                    disabled={isLoadingCountries || isLoading}
+                    placeholder={isLoadingCountries ? "Loading countries..." : "Select Country *"}
+                    buttonWidth="full"
+                  />
+                </div>
+              </div>
+              
               <div {...(() => {
                 const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
                   id: 'phone-field',
@@ -811,6 +784,33 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
                   onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                 />
               </div>
+            </div>
+            
+            <div {...(() => {
+              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                id: 'tax-region-field',
+                type: 'formField',
+                fieldType: 'select',
+                label: 'Tax Region',
+                value: formData.region_code || 'none',
+                helperText: 'Select the applicable tax region'
+              });
+              return automationIdProps;
+            })()}>
+              <Label htmlFor="tax-region-select">Tax Region</Label>
+              <CustomSelect
+                id="tax-region-select"
+                value={formData.region_code || 'none'}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, region_code: value === 'none' ? null : value }))}
+                options={[
+                  { value: 'none', label: 'Select a tax region...' },
+                  ...taxRegions.map(region => ({
+                    value: region.region_code,
+                    label: region.region_name
+                  }))
+                ]}
+                placeholder="Select a tax region..."
+              />
             </div>
             
             <div {...(() => {

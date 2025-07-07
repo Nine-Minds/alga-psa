@@ -468,29 +468,28 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
-              </div>
 
-              <div>
-                <Label htmlFor="country_picker" className="block text-sm font-medium text-gray-700 mb-1">
-                  Country
-                </Label>
-                <CountryPicker
-                  data-automation-id="country_picker"
-                  value={locationData.country_code}
-                  onValueChange={handleCountryChange}
-                  countries={countries}
-                  disabled={isLoadingCountries || isSubmitting}
-                  placeholder={isLoadingCountries ? "Loading countries..." : "Select Country"}
-                  buttonWidth="full"
-                />
-              </div>
+                <div>
+                  <Label htmlFor="country_picker" className="block text-sm font-medium text-gray-700 mb-1">
+                    Country
+                  </Label>
+                  <CountryPicker
+                    data-automation-id="country_picker"
+                    value={locationData.country_code}
+                    onValueChange={handleCountryChange}
+                    countries={countries}
+                    disabled={isLoadingCountries || isSubmitting}
+                    placeholder={isLoadingCountries ? "Loading countries..." : "Select Country"}
+                    buttonWidth="full"
+                  />
+                </div>
 
-              <div className="grid grid-cols-2 gap-4">
                 <PhoneInput
                   label="Phone"
                   value={locationData.phone || ''}
                   onChange={(value) => handleLocationChange('phone', value)}
                   countryCode={locationData.country_code}
+                  phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
                   disabled={isSubmitting}
                   data-automation-id="location_phone"
                 />
@@ -551,6 +550,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                   value={contactData.phone_number}
                   onChange={(value) => handleContactChange('phone_number', value)}
                   countryCode={locationData.country_code}
+                  phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
                   disabled={isSubmitting}
                   data-automation-id="contact_phone"
                 />
