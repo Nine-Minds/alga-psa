@@ -105,12 +105,11 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
               tenant: context.tenant,
               title: params.title,
               url: params.description, // tickets table has url field instead of description
-              company_id: params.company_id,
-              contact_name_id: params.contact_id, // Fixed from contact_id
-              source: params.source || 'email',
-              channel_id: params.channel_id,
-              status_id: params.status_id,
-              priority_id: params.priority_id,
+              company_id: params.company_id || null,
+              contact_name_id: params.contact_id || null, // Fixed from contact_id
+              channel_id: params.channel_id || null,
+              status_id: params.status_id || null,
+              priority_id: params.priority_id || null,
               ticket_number: ticketNumber,
               // email_metadata column doesn't exist in tickets table
               entered_at: new Date(), // Use entered_at instead of created_at

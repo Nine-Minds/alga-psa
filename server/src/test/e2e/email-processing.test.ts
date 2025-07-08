@@ -32,6 +32,7 @@ describe('Email Processing E2E Tests', () => {
     it('should process a simple email and create a ticket', async () => {
       // Arrange
       const { tenant, company, contact } = await context.emailTestFactory.createBasicEmailScenario();
+      console.log(`🔍 Test is using tenant: ${tenant.tenant}`);
       
       const testEmail = {
         from: contact.email,
@@ -51,13 +52,14 @@ describe('Email Processing E2E Tests', () => {
       expect(capturedEmail.Content.Headers.Subject[0]).toBe(testEmail.subject);
 
       // Verify ticket was created
-      const tickets = await context.db.raw(`
+      const ticketResult = await context.db.raw(`
         SELECT t.*, c.email as contact_email 
         FROM tickets t 
         JOIN contacts c ON t.contact_name_id = c.contact_name_id
         WHERE c.email = ?
       `, [contact.email]);
       
+      const tickets = ticketResult.rows || ticketResult;
       expect(tickets).toHaveLength(1);
       expect(tickets[0].title).toContain(testEmail.subject);
       expect(tickets[0].contact_email).toBe(contact.email);
@@ -87,14 +89,16 @@ describe('Email Processing E2E Tests', () => {
       expect(capturedEmail).toBeDefined();
       
       // Verify ticket was created with attachment
-      const tickets = await context.db.raw(`
-        SELECT t.*, a.file_name, a.file_size 
+      const ticketResult = await context.db.raw(`
+        SELECT t.*, d.document_name as file_name, d.file_size 
         FROM tickets t 
         JOIN contacts c ON t.contact_name_id = c.contact_name_id
-        LEFT JOIN attachments a ON t.ticket_id = a.ticket_id
+        LEFT JOIN document_associations da ON da.entity_id = t.ticket_id AND da.entity_type = 'ticket'
+        LEFT JOIN documents d ON d.document_id = da.document_id AND d.tenant = da.tenant
         WHERE c.email = ?
       `, [contact.email]);
       
+      const tickets = ticketResult.rows || ticketResult;
       expect(tickets).toHaveLength(1);
       expect(tickets[0].file_name).toBe('test-document.pdf');
       expect(tickets[0].file_size).toBeGreaterThan(0);
@@ -118,13 +122,14 @@ describe('Email Processing E2E Tests', () => {
       await context.waitForWorkflowProcessing(30000);
 
       // Get the initial ticket
-      const initialTickets = await context.db.raw(`
+      const initialTicketResult = await context.db.raw(`
         SELECT t.ticket_id, t.title
         FROM tickets t 
         JOIN contacts c ON t.contact_name_id = c.contact_name_id
         WHERE c.email = ?
       `, [contact.email]);
       
+      const initialTickets = initialTicketResult.rows || initialTicketResult;
       expect(initialTickets).toHaveLength(1);
       const ticketId = initialTickets[0].ticket_id;
 
@@ -143,24 +148,26 @@ describe('Email Processing E2E Tests', () => {
 
       // Assert
       // Should still have only one ticket (threaded)
-      const finalTickets = await context.db.raw(`
+      const finalTicketResult = await context.db.raw(`
         SELECT t.ticket_id, t.title
         FROM tickets t 
         JOIN contacts c ON t.contact_name_id = c.contact_name_id
         WHERE c.email = ?
       `, [contact.email]);
       
+      const finalTickets = finalTicketResult.rows || finalTicketResult;
       expect(finalTickets).toHaveLength(1);
       expect(finalTickets[0].ticket_id).toBe(ticketId);
 
       // Should have multiple comments for the same ticket
-      const comments = await context.db.raw(`
+      const commentResult = await context.db.raw(`
         SELECT c.* 
         FROM comments c
         WHERE c.ticket_id = ?
         ORDER BY c.created_at
       `, [ticketId]);
       
+      const comments = commentResult.rows || commentResult;
       expect(comments).toHaveLength(2);
       expect(comments[0].note).toContain(initialEmail.body);
       expect(comments[1].note).toContain(replyEmail.body);
@@ -184,7 +191,7 @@ describe('Email Processing E2E Tests', () => {
       await context.waitForWorkflowProcessing(30000);
 
       // Assert
-      const tickets = await context.db.raw(`
+      const ticketResult = await context.db.raw(`
         SELECT t.*, c.email as contact_email, comp.company_name
         FROM tickets t 
         JOIN contacts c ON t.contact_id = c.contact_name_id
@@ -192,6 +199,7 @@ describe('Email Processing E2E Tests', () => {
         WHERE c.email = ?
       `, [contact.email]);
       
+      const tickets = ticketResult.rows || ticketResult;
       expect(tickets).toHaveLength(1);
       expect(tickets[0].contact_email).toBe(contact.email);
       expect(tickets[0].company_name).toBe(company.company_name);
@@ -215,12 +223,13 @@ describe('Email Processing E2E Tests', () => {
       // Assert
       // For unknown emails, a task should be created for manual matching
       // The workflow will still create a ticket but may lack client association
-      const tickets = await context.db.raw(`
+      const ticketResult = await context.db.raw(`
         SELECT t.* 
         FROM tickets t 
         WHERE t.title LIKE ?
       `, [`%${unknownEmail.subject}%`]);
       
+      const tickets = ticketResult.rows || ticketResult;
       // Should create a ticket even for unknown client
       expect(tickets.length).toBeGreaterThanOrEqual(0);
       

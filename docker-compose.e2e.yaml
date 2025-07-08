@@ -277,6 +277,11 @@ services:
         source: ./shared
         target: /app/shared-dev
         read_only: false
+      # Mount compiled shared dist for workflow imports
+      - type: bind
+        source: ./shared/dist
+        target: /app/shared/dist
+        read_only: false
     secrets:
       - postgres_password
       - db_password_server

@@ -228,6 +228,7 @@ export class MailHogPollingService {
       
       const tenant = await knex('tenants').select('tenant').first();
       if (tenant) {
+        console.log(`✅ Found tenant in database: ${tenant.tenant}`);
         return tenant.tenant;
       }
       

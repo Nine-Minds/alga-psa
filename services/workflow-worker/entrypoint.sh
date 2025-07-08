@@ -28,7 +28,7 @@ get_secret() {
 wait_for_postgres() {
     log "Waiting for PostgreSQL to be ready..."
     local db_password_server=$(get_secret "db_password_server" "DB_PASSWORD_SERVER")
-    until pg_isready -h ${DB_HOST:-postgres} -p ${DB_PORT:-5432} -U ${DB_USER_SERVER:-postgres} 2>/dev/null; do
+    until pg_isready -h ${DB_HOST:-postgres} -p ${DB_PORT:-5432} -U ${DB_USER_ADMIN:-postgres} 2>/dev/null; do
         log "PostgreSQL is unavailable - sleeping"
         sleep 1
     done
