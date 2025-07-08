@@ -1473,6 +1473,7 @@ export class TeamService extends BaseService<ITeam> {
 
     const [
       totalStats,
+      largestTeamData,
       departmentStats,
       locationStats,
       performanceStats
@@ -1502,6 +1503,15 @@ export class TeamService extends BaseService<ITeam> {
         )
         .first(),
 
+      // Get largest team size
+      knex('team_members')
+        .where({ tenant: context.tenant })
+        .select('team_id')
+        .count('* as size')
+        .groupBy('team_id')
+        .orderBy('size', 'desc')
+        .first(),
+
       // Teams by department (mock data - would need department field)
       Promise.resolve({}),
 
@@ -1520,7 +1530,9 @@ export class TeamService extends BaseService<ITeam> {
       total_teams: parseInt((totalStats as any).total_teams),
       active_teams: parseInt((totalStats as any).total_teams), // All teams are considered active
       teams_with_managers: parseInt((totalStats as any).teams_with_managers),
+      teams_with_members: parseInt((totalStats as any).teams_with_managers), // Using same value as teams_with_managers
       average_team_size: parseFloat((totalStats as any).average_team_size) || 0,
+      largest_team_size: largestTeamData ? parseInt((largestTeamData as any).size) : 0,
       total_members: parseInt((totalStats as any).total_members) || 0,
       teams_by_department: departmentStats,
       teams_by_location: locationStats,
