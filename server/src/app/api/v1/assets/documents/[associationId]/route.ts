@@ -1,15 +1,19 @@
 /**
- * Asset Document Association Detail API Route
- * DELETE /api/v1/assets/documents/{associationId} - Remove document association
+ * [associationId] API Routes
+ * Path: /api/v1/assets/documents/[associationId]
  */
 
-import { AssetController } from 'server/src/lib/api/controllers/AssetController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiAssetController } from '@/lib/api/controllers/ApiAssetController';
+import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
 
-export async function DELETE(request: Request) {
+const controller = new ApiAssetController();
+
+export async function DELETE(request: Request, { params }: { params: Promise<any> }) {
   try {
-    const controller = new AssetController();
-    return await controller.removeDocumentAssociation()(request as any);
+    const resolvedParams = await params;
+    const req = request as any;
+    req.params = resolvedParams;
+    return await controller.removeDocumentAssociation(req, resolvedParams);
   } catch (error) {
     return handleApiError(error);
   }

@@ -9,3 +9,5 @@ export default async function TimeTrackingPage() {
 
   return <TimeTrackingClient initialUser={currentUser} initialIsManager={isManager} />;
 }
+
+export const dynamic = "force-dynamic";

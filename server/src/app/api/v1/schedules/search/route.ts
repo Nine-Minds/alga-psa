@@ -3,10 +3,10 @@
  * GET /api/v1/schedules/search - Search schedule entries
  */
 
-import { TimeSheetController } from 'server/src/lib/api/controllers/TimeSheetController';
+import { ApiTimeSheetController } from 'server/src/lib/api/controllers/ApiTimeSheetController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new TimeSheetController();
+const controller = new ApiTimeSheetController();
 
 export async function GET(request: Request) {
   try {

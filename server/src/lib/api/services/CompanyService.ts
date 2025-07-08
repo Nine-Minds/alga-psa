@@ -10,6 +10,7 @@ import { withTransaction } from '@shared/db';
 import { getCompanyLogoUrl } from 'server/src/lib/utils/avatarUtils';
 import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
 import { addCompanyEmailSetting } from 'server/src/lib/actions/company-settings/emailSettings';
+import { NotFoundError } from '../../api/middleware/apiMiddleware';
 import { 
   CreateCompanyData, 
   UpdateCompanyData, 
@@ -17,8 +18,9 @@ import {
   CreateCompanyLocationData,
   UpdateCompanyLocationData
 } from '../schemas/company';
-import { ListOptions } from '../controllers/BaseController';
+import { ListOptions } from '../controllers/types';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { runWithTenant } from 'server/src/lib/db';
 
 export class CompanyService extends BaseService<ICompany> {
   constructor() {
@@ -133,7 +135,7 @@ export class CompanyService extends BaseService<ICompany> {
   async create(data: Partial<ICompany>, context: ServiceContext): Promise<ICompany> {
         const { knex } = await this.getKnex();
     
-        return withTransaction(knex, async (trx) => {
+        const company = await withTransaction(knex, async (trx) => {
           // Prepare company data
           const companyData = {
             company_id: knex.raw('gen_random_uuid()'),
@@ -170,31 +172,52 @@ export class CompanyService extends BaseService<ICompany> {
           // Insert company
           const [company] = await trx('companies').insert(companyData).returning('*');
     
-          // Create default tax settings for the company (call with correct parameters)
-          await createDefaultTaxSettings(company.company_id);
-    
-          // Add default email settings (call with correct parameters)
-          await addCompanyEmailSetting(company.company_id, 'default');
-    
           // Handle tags if provided
           if ((data as any).tags && (data as any).tags.length > 0) {
-            await this.handleTags(company.company_id, (data as any).tags, context, trx);
-          }
-    
-          // Publish event
-          await publishEvent({
-            eventType: 'COMPANY_CREATED',
-            payload: {
-              tenantId: context.tenant,
-              companyId: company.company_id,
-              companyName: data.company_name,
-              userId: context.userId,
-              timestamp: new Date().toISOString()
+            try {
+              await this.handleTags(company.company_id, (data as any).tags, context, trx);
+            } catch (tagError) {
+              console.warn('Failed to handle tags:', tagError);
+              // Continue without tags - they can be added later
             }
-          });
+          }
     
           return company;
         });
+    
+        // Try to create default tax settings for the company with tenant context (after transaction)
+        try {
+          await runWithTenant(context.tenant, async () => {
+            await createDefaultTaxSettings(company.company_id);
+          });
+        } catch (taxError) {
+          console.warn('Failed to create default tax settings:', taxError);
+          // Continue without tax settings - they can be added later
+        }
+    
+        // Try to add default email settings with tenant context (after transaction)
+        try {
+          await runWithTenant(context.tenant, async () => {
+            await addCompanyEmailSetting(company.company_id, 'default');
+          });
+        } catch (emailError) {
+          console.warn('Failed to create default email settings:', emailError);
+          // Continue without email settings - they can be added later
+        }
+    
+        // Publish event
+        await publishEvent({
+          eventType: 'COMPANY_CREATED',
+          payload: {
+            tenantId: context.tenant,
+            companyId: company.company_id,
+            companyName: data.company_name,
+            userId: context.userId,
+            timestamp: new Date().toISOString()
+          }
+        });
+    
+        return company;
       }
   
       /**
@@ -234,12 +257,17 @@ export class CompanyService extends BaseService<ICompany> {
           .returning('*');
   
         if (!company) {
-          throw new Error('Company not found or permission denied');
+          throw new NotFoundError('Company not found');
         }
   
         // Handle tags if provided
         if (data.tags !== undefined) {
-          await this.handleTags(id, data.tags, context, trx);
+          try {
+            await this.handleTags(id, data.tags, context, trx);
+          } catch (tagError) {
+            console.warn('Failed to handle tags:', tagError);
+            // Continue without tags - they can be added later
+          }
         }
   
         // Publish event
@@ -294,7 +322,7 @@ export class CompanyService extends BaseService<ICompany> {
         .first();
 
       if (!company) {
-        throw new Error('Company not found');
+        throw new NotFoundError('Company not found');
       }
 
       const locationData = {
@@ -346,7 +374,7 @@ export class CompanyService extends BaseService<ICompany> {
           .returning('*');
   
         if (!location) {
-          throw new Error('Company location not found or permission denied');
+          throw new NotFoundError('Company location not found');
         }
   
         return location as ICompanyLocation;
@@ -374,7 +402,7 @@ export class CompanyService extends BaseService<ICompany> {
         .delete();
 
       if (result === 0) {
-        throw new Error('Location not found or permission denied');
+        throw new NotFoundError('Location not found');
       }
     });
   }
@@ -425,7 +453,9 @@ export class CompanyService extends BaseService<ICompany> {
     ]);
 
     return {
-      ...totalStats,
+      total_companies: parseInt(totalStats.total_companies),
+      active_companies: parseInt(totalStats.active_companies),
+      inactive_companies: parseInt(totalStats.inactive_companies),
       companies_by_billing_cycle: billingCycleStats.reduce((acc: any, row: any) => {
         acc[row.billing_cycle] = parseInt(row.count);
         return acc;
@@ -530,21 +560,61 @@ export class CompanyService extends BaseService<ICompany> {
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<void> {
-    // Remove existing tags
-    await trx('company_tags')
-      .where({ company_id: companyId, tenant: context.tenant })
-      .delete();
+    // Remove existing tag mappings for this company
+    const existingMappings = await trx('tag_mappings')
+      .where({ 
+        tagged_id: companyId, 
+        tagged_type: 'companies',
+        tenant: context.tenant 
+      })
+      .select('tag_id');
+    
+    if (existingMappings.length > 0) {
+      await trx('tag_mappings')
+        .where({ 
+          tagged_id: companyId, 
+          tagged_type: 'companies',
+          tenant: context.tenant 
+        })
+        .delete();
+    }
 
     // Add new tags
     if (tags.length > 0) {
-      const tagInserts = tags.map(tag => ({
-        company_id: companyId,
-        tag_name: tag,
-        tenant: context.tenant,
-        created_at: trx.raw('now()')
-      }));
-
-      await trx('company_tags').insert(tagInserts);
+      for (const tagText of tags) {
+        // First, ensure the tag definition exists
+        let tagDef = await trx('tag_definitions')
+          .where({
+            tenant: context.tenant,
+            tag_text: tagText,
+            tagged_type: 'companies'
+          })
+          .first();
+        
+        if (!tagDef) {
+          // Create the tag definition
+          const [newTagDef] = await trx('tag_definitions')
+            .insert({
+              tenant: context.tenant,
+              tag_text: tagText,
+              tagged_type: 'companies',
+              created_at: trx.raw('now()')
+            })
+            .returning('*');
+          tagDef = newTagDef;
+        }
+        
+        // Create the mapping
+        await trx('tag_mappings')
+          .insert({
+            tenant: context.tenant,
+            tag_id: tagDef.tag_id,
+            tagged_id: companyId,
+            tagged_type: 'companies',
+            created_by: context.userId,
+            created_at: trx.raw('now()')
+          });
+      }
     }
   }
 }

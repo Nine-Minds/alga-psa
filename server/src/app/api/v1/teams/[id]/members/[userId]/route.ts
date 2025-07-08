@@ -1,22 +1,12 @@
 /**
- * Team Member by ID API Route
- * DELETE /api/v1/teams/[id]/members/[userId] - Remove member from team
+ * Team Member API Route
+ * DELETE /api/v1/teams/{id}/members/{userId} - Remove team member
  */
 
-import { TeamController } from 'server/src/lib/api/controllers/TeamController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiTeamController } from '@/lib/api/controllers/ApiTeamController';
 
-const controller = new TeamController();
-
-export async function DELETE(request: Request, { params }: { params: Promise<{ id: string; userId: string }> }) {
-  try {
-    const req = request as any;
-    req.params = params;
-    return await controller.delete()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+const controller = new ApiTeamController();
+export const DELETE = controller.removeMember();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

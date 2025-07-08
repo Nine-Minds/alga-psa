@@ -141,7 +141,6 @@ export const roleHierarchySchema = z.object({
 
 // Assign permissions to role
 export const assignPermissionsToRoleSchema = z.object({
-  role_id: uuidSchema,
   permission_ids: z.array(uuidSchema).min(1, 'At least one permission is required').max(100)
 });
 
@@ -296,7 +295,6 @@ export const roleTemplateSchema = roleSchema.extend({
 
 // Clone role schema
 export const cloneRoleSchema = z.object({
-  source_role_id: uuidSchema,
   new_role_name: z.string().min(1, 'New role name is required').max(100),
   new_description: z.string().max(500).optional(),
   copy_permissions: z.boolean().default(true),

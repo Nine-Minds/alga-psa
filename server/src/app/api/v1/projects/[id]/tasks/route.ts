@@ -3,18 +3,11 @@
  * GET /api/v1/projects/{id}/tasks - List project tasks
  */
 
-import { ProjectController } from 'server/src/lib/api/controllers/ProjectController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiProjectController } from '@/lib/api/controllers/ApiProjectController';
 
-const controller = new ProjectController();
+const controller = new ApiProjectController();
 
-export async function GET(request: Request) {
-  try {
-    return await controller.listTasks()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+export const GET = controller.getTasks();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

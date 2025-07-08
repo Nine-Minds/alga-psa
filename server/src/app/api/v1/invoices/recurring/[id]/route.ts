@@ -4,29 +4,20 @@
  * DELETE /api/v1/invoices/recurring/[id] - Delete recurring invoice template
  */
 
-import { InvoiceController } from 'server/src/lib/api/controllers/InvoiceController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiInvoiceController } from 'server/src/lib/api/controllers/ApiInvoiceController';
 
-const controller = new InvoiceController();
+const controller = new ApiInvoiceController();
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const req = request as any;
-    req.params = params;
-    return await controller.updateRecurringTemplate()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
+  const req = request as any;
+  req.params = params;
+  return controller.updateRecurringTemplate()(req);
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const req = request as any;
-    req.params = params;
-    return await controller.deleteRecurringTemplate()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
+  const req = request as any;
+  req.params = params;
+  return controller.deleteRecurringTemplate()(req);
 }
 
 export const runtime = 'nodejs';

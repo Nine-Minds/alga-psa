@@ -3,18 +3,11 @@
  * PUT /api/v1/projects/bulk-status - Bulk update project status
  */
 
-import { ProjectController } from 'server/src/lib/api/controllers/ProjectController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiProjectController } from '@/lib/api/controllers/ApiProjectController';
 
-const controller = new ProjectController();
+const controller = new ApiProjectController();
 
-export async function PUT(request: Request) {
-  try {
-    return await controller.bulkStatusUpdate()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+export const PUT = controller.bulkStatusUpdate();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

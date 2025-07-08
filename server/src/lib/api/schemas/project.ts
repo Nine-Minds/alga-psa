@@ -13,8 +13,11 @@ import {
   dateSchema
 } from './common';
 
-// Project status schema
-export const projectStatusSchema = z.enum(['planning', 'active', 'on_hold', 'completed', 'cancelled']);
+// Project status schema - can be UUID or status name
+export const projectStatusSchema = z.union([
+  uuidSchema,
+  z.enum(['planning', 'active', 'on_hold', 'completed', 'cancelled', 'in_progress'])
+]);
 
 // Create project schema
 export const createProjectSchema = z.object({
@@ -25,7 +28,7 @@ export const createProjectSchema = z.object({
   end_date: dateSchema.optional(),
   wbs_code: z.string().optional(),
   is_inactive: z.boolean().optional().default(false),
-  status: projectStatusSchema.optional().default('planning'),
+  status: projectStatusSchema.optional(),
   assigned_to: uuidSchema.optional(),
   contact_name_id: uuidSchema.optional(),
   budgeted_hours: z.number().min(0).optional(),

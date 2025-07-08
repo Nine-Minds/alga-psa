@@ -47,3 +47,5 @@ export default async function ContactsPage() {
     </div>
   );
 }
+
+export const dynamic = "force-dynamic";

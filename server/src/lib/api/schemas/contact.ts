@@ -117,7 +117,10 @@ export const contactStatsResponseSchema = z.object({
 // Search schema for advanced contact search
 export const contactSearchSchema = z.object({
   query: z.string().min(1, 'Search query is required'),
-  fields: z.array(z.enum(['full_name', 'email', 'phone_number', 'role', 'notes'])).optional(),
+  fields: z.union([
+    z.array(z.enum(['full_name', 'email', 'phone_number', 'role', 'notes'])),
+    z.string().transform(val => val.split(',').map(f => f.trim()))
+  ]).optional(),
   company_id: uuidSchema.optional(),
   include_inactive: booleanTransform.optional().default("false"),
   limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25')

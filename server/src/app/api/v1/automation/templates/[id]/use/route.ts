@@ -3,16 +3,13 @@
  * POST /api/v1/automation/templates/{id}/use - Create automation rule from template
  */
 
-import { AutomationController } from 'server/src/lib/api/controllers/AutomationController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { NextRequest } from 'next/server';
+import { ApiAutomationController } from 'server/src/lib/api/controllers/ApiAutomationController';
 
-export async function POST(request: Request) {
-  try {
-    const controller = new AutomationController();
-    return await controller.useAutomationTemplate()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
+const controller = new ApiAutomationController();
+
+export async function POST(request: NextRequest) {
+  return controller.useAutomationTemplate()(request);
 }
 
 export const runtime = 'nodejs';

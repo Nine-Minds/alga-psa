@@ -4,11 +4,10 @@
  */
 
 import { NextRequest } from 'next/server';
-import { MetadataController } from '../../../../../lib/api/controllers/MetadataController';
+import { ApiMetadataController } from '@/lib/api/controllers/ApiMetadataController';
 
-const controller = new MetadataController();
+export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest) {
-  const { searchParams } = request.nextUrl;
-  return controller.generateSdk(request, searchParams);
-}
+const controller = new ApiMetadataController();
+
+export const GET = controller.generateSdk();

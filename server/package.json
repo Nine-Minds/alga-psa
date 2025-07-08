@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -10,6 +14,9 @@
     "build:enterprise-script": "../scripts/build-enterprise.sh",
     "start": "next start",
     "lint": "next lint",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:local": "vitest run",
     "workflow-worker": "ts-node --esm src/bin/workflow-worker.ts",
     "workflow-worker:dev": "nodemon --watch src --ext ts --exec \"ts-node --esm src/bin/workflow-worker.ts\"",
     "workflow-worker:build": "tsc --project tsconfig.json --outDir dist src/bin/workflow-worker.ts",
@@ -128,6 +135,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
+    "@faker-js/faker": "^9.9.0",
     "@testing-library/react": "^16.2.0",
     "@types/archiver": "^6.0.3",
     "@types/jsonwebtoken": "^9.0.8",

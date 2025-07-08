@@ -3,16 +3,13 @@
  * POST /api/v1/automation/executions/{id}/retry - Retry failed automation execution
  */
 
-import { AutomationController } from 'server/src/lib/api/controllers/AutomationController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { NextRequest } from 'next/server';
+import { ApiAutomationController } from 'server/src/lib/api/controllers/ApiAutomationController';
 
-export async function POST(request: Request) {
-  try {
-    const controller = new AutomationController();
-    return await controller.retryAutomationExecution()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
+const controller = new ApiAutomationController();
+
+export async function POST(request: NextRequest) {
+  return controller.retryAutomationExecution()(request);
 }
 
 export const runtime = 'nodejs';

@@ -36,3 +36,5 @@ export default async function AssetsPage() {
     return <div>An error occurred. Please try again later.</div>;
   }
 }
+
+export const dynamic = "force-dynamic";

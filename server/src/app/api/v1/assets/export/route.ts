@@ -1,15 +1,19 @@
 /**
- * Asset Export API Route
- * GET /api/v1/assets/export - Export assets
+ * export API Routes
+ * Path: /api/v1/assets/export
  */
 
-import { AssetController } from 'server/src/lib/api/controllers/AssetController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiAssetController } from '@/lib/api/controllers/ApiAssetController';
+import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
 
-export async function GET(request: Request) {
+const controller = new ApiAssetController();
+
+export async function GET(request: Request, { params }: { params: Promise<any> }) {
   try {
-    const controller = new AssetController();
-    return await controller.export()(request as any);
+    const resolvedParams = await params;
+    const req = request as any;
+    req.params = resolvedParams;
+    return await controller.export(req);
   } catch (error) {
     return handleApiError(error);
   }

@@ -3,17 +3,11 @@
  * GET /api/v1/tickets/search - Advanced ticket search
  */
 
-import { TicketController } from 'server/src/lib/api/controllers/TicketController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiTicketController } from 'server/src/lib/api/controllers/ApiTicketController';
 
-export async function GET(request: Request) {
-  try {
-    const controller = new TicketController();
-    return await controller.searchTickets()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+const controller = new ApiTicketController();
+
+export const GET = controller.search();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

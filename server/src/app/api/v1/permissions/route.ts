@@ -4,26 +4,12 @@
  * POST /api/v1/permissions - Create permission
  */
 
-import { PermissionRoleController } from 'server/src/lib/api/controllers/PermissionRoleController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiPermissionController } from '@/lib/api/controllers/ApiPermissionController';
 
-const controller = new PermissionRoleController();
+const controller = new ApiPermissionController();
 
-export async function GET(request: Request) {
-  try {
-    return await controller.listPermissions()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
-
-export async function POST(request: Request) {
-  try {
-    return await controller.createPermission()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+export const GET = controller.list();
+export const POST = controller.create();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

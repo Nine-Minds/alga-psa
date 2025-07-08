@@ -1,19 +1,7 @@
-/**
- * Delete Tags by Text API Route
- * DELETE /api/v1/tags/by-text - Delete all tags with specific text and type
- */
+import { ApiTagController } from '@/lib/api/controllers/ApiTagController';
 
-import { TagController } from 'server/src/lib/api/controllers/TagController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+export const dynamic = "force-dynamic";
 
-export async function DELETE(request: Request) {
-  try {
-    const controller = new TagController();
-    return await controller.deleteTagsByText()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+const controller = new ApiTagController();
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+export const DELETE = controller.deleteByText();
