@@ -15,8 +15,10 @@ import QuickAddContact from './QuickAddContact';
 import { useDrawer } from "server/src/context/DrawerContext";
 import ContactDetailsView from './ContactDetailsView';
 import ContactDetailsEdit from './ContactDetailsEdit';
+import ContactDetailsDrawer from './ContactDetailsDrawer';
 import ContactsImportDialog from './ContactsImportDialog';
 import CompanyDetails from '../companies/CompanyDetails';
+import CompanyDetailsDrawer from '../companies/CompanyDetailsDrawer';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { TagManager, TagFilter } from 'server/src/components/tags';
@@ -199,27 +201,10 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
         }
 
         openDrawer(
-          <ContactDetailsView
-            initialContact={contact}
+          <ContactDetailsDrawer
+            contact={contact}
             companies={companies}
-            documents={documents[contact.contact_name_id] || []}
-            userId={currentUser}
-            isInDrawer={true}
-            onDocumentCreated={async () => {
-              try {
-                const updatedResponse = await getDocumentsByEntity(contact.contact_name_id, 'contact');
-                
-                setDocuments(prev => {
-                  const newDocuments = { ...prev };
-                  newDocuments[contact.contact_name_id] = Array.isArray(updatedResponse)
-                    ? updatedResponse
-                    : updatedResponse.documents || [];
-                  return newDocuments;
-                });
-              } catch (err) {
-                console.error('Error refreshing documents:', err);
-              }
-            }}
+            onEdit={() => handleEditContact(contact)}
           />
         );
       } catch (error) {
@@ -397,22 +382,16 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
             role="button"
             tabIndex={0}
             onClick={() => openDrawer(
-              <CompanyDetails
+              <CompanyDetailsDrawer
                 company={company}
-                documents={[]}
-                contacts={[]}
-                isInDrawer={true}
               />
             )}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
                 openDrawer(
-                  <CompanyDetails
+                  <CompanyDetailsDrawer
                     company={company}
-                    documents={[]}
-                    contacts={[]}
-                    isInDrawer={true}
                   />
                 );
               }

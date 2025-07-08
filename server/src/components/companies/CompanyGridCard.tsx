@@ -7,6 +7,8 @@ import { ICompany } from "server/src/interfaces/company.interfaces";
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
 import { TagManager } from 'server/src/components/tags';
+import { useDrawer } from 'server/src/context/DrawerContext';
+import CompanyDetailsDrawer from './CompanyDetailsDrawer';
 
 interface CompanyGridCardProps {
     company: ICompany;
@@ -30,9 +32,15 @@ const CompanyGridCard = ({
     onTagsChange
 }: CompanyGridCardProps) => {
     const router = useRouter();
+    const { openDrawer } = useDrawer();
 
     const handleCardClick = () => {
-        router.push(`/msp/companies/${company.company_id}`);
+        openDrawer(
+            <CompanyDetailsDrawer 
+                company={company}
+                onEdit={() => handleEditCompany(company.company_id)}
+            />
+        );
     };
 
     const stopPropagation = (e: MouseEvent) => {
@@ -71,13 +79,15 @@ const CompanyGridCard = ({
                 {/* Company Info */}
                 <div className="flex-1 min-w-0">
                     <h2 className="text-md font-semibold text-gray-800 truncate" title={company.company_name}>
-                        <a
-                          href={`/msp/companies/${company.company_id}`}
-                          onClick={stopPropagation}
-                          className="text-blue-600 hover:underline"
+                        <button
+                          onClick={(e) => {
+                            stopPropagation(e);
+                            handleCardClick();
+                          }}
+                          className="text-blue-600 hover:underline text-left"
                         >
                             {company.company_name}
-                        </a>
+                        </button>
                     </h2>
                     <div className="text-sm text-gray-600 mt-1 space-y-0.5">
                         <p className="truncate">

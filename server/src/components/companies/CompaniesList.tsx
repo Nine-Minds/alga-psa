@@ -14,6 +14,8 @@ import { TagManager } from 'server/src/components/tags';
  import { useRegisterChild } from 'server/src/types/ui-reflection/useRegisterChild';
  import { FormFieldComponent, ButtonComponent } from 'server/src/types/ui-reflection/types';
  import { CommonActions } from 'server/src/types/ui-reflection/actionBuilders';
+import { useDrawer } from 'server/src/context/DrawerContext';
+import CompanyDetailsDrawer from './CompanyDetailsDrawer';
 
 
 interface CompaniesListProps {
@@ -78,15 +80,14 @@ const CompanyLink: React.FC<CompanyLinkProps> = ({ company, onClick }) => {
    });
 
   return (
-    <a
+    <button
       data-automation-id={linkId}
-      href={`/msp/companies/${company.company_id}`}
       onClick={onClick}
-      className="text-blue-600 hover:underline font-medium truncate"
+      className="text-blue-600 hover:underline font-medium truncate text-left"
       title={company.company_name}
     >
       {company.company_name}
-    </a>
+    </button>
   );
 };
 
@@ -106,9 +107,15 @@ const CompaniesList = ({
   onTagsChange
 }: CompaniesListProps) => {
   const router = useRouter(); // Get router instance
+  const { openDrawer } = useDrawer();
 
   const handleRowClick = (company: ICompany) => {
-    router.push(`/msp/companies/${company.company_id}`);
+    openDrawer(
+      <CompanyDetailsDrawer 
+        company={company}
+        onEdit={() => handleEditCompany(company.company_id)}
+      />
+    );
   };
 
     const columns: ColumnDefinition<ICompany>[] = [
