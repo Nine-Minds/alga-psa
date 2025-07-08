@@ -94,36 +94,29 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
         const knex = await getAdminConnection();
         
         const result = await withTransaction(knex, async (trx) => {
-          // Get next ticket number
-          const nextNumber = await trx('next_numbers')
-            .where({ tenant: context.tenant, entity_type: 'ticket' })
-            .first();
-          
-          const ticketNumber = `TKT-${String(nextNumber?.next_value || 1).padStart(6, '0')}`;
+          // Generate simple ticket number without next_numbers table
+          const timestamp = Date.now();
+          const randomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
+          const ticketNumber = `TKT-${timestamp}-${randomSuffix}`;
           
           // Create ticket
           const [ticket] = await trx('tickets')
             .insert({
               tenant: context.tenant,
               title: params.title,
-              description: params.description,
+              url: params.description, // tickets table has url field instead of description
               company_id: params.company_id,
-              contact_id: params.contact_id,
+              contact_name_id: params.contact_id, // Fixed from contact_id
               source: params.source || 'email',
               channel_id: params.channel_id,
               status_id: params.status_id,
               priority_id: params.priority_id,
               ticket_number: ticketNumber,
-              email_metadata: JSON.stringify(params.email_metadata),
-              created_at: new Date(),
+              // email_metadata column doesn't exist in tickets table
+              entered_at: new Date(), // Use entered_at instead of created_at
               updated_at: new Date()
             })
             .returning(['ticket_id', 'ticket_number']);
-
-          // Update next number
-          await trx('next_numbers')
-            .where({ tenant: context.tenant, entity_type: 'ticket' })
-            .increment('next_value', 1);
 
           return { ticket_id: ticket.ticket_id, ticket_number: ticket.ticket_number };
         });
@@ -156,7 +149,6 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
       { name: 'source', type: 'string', required: false },
       { name: 'author_type', type: 'string', required: false },
       { name: 'author_id', type: 'string', required: false },
-      { name: 'metadata', type: 'object', required: false }
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
@@ -175,8 +167,8 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
               note: params.content,
               is_internal: false,
               is_resolution: false,
-              author_type: params.author_type || 'system',
-              metadata: JSON.stringify(params.metadata),
+              author_type: params.author_type || 'internal',
+              markdown_content: params.content, // Add markdown content column
               created_at: new Date(),
               updated_at: new Date()
             })
@@ -477,7 +469,7 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
             await trx('email_client_associations')
               .where('id', existing.id)
               .update({
-                contact_id: params.contact_id,
+                contact_name_id: params.contact_id,
                 updated_at: now
               });
 
@@ -492,7 +484,7 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
               id: associationId,
               tenant: context.tenant,
               email: params.email,
-              contact_id: params.contact_id,
+              contact_name_id: params.contact_id,
               company_id: params.company_id,
               created_at: now,
               updated_at: now
@@ -769,10 +761,7 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
         logger.info(`[ACTION] create_channel_from_email: Created channel ${params.channel_name} with ID ${channelId}`);
         return {
           success: true,
-          channel: {
-            channel_id: channelId,
-            ...channelData
-          }
+          channel: channelData
         };
       } catch (error) {
         logger.error(`[ACTION] create_channel_from_email error for channel ${params.channel_name}:`, error);
