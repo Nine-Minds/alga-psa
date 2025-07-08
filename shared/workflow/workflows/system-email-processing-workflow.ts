@@ -142,15 +142,7 @@ export async function systemEmailProcessingWorkflow(context: WorkflowContext): P
       content: emailData.body.html || emailData.body.text,
       format: emailData.body.html ? 'html' : 'text',
       source: 'email',
-      author_type: 'system',
-      metadata: {
-        emailSource: true,
-        originalEmailId: emailData.id,
-        fromEmail: emailData.from.email,
-        fromName: emailData.from.name,
-        emailSubject: emailData.subject,
-        emailReceivedAt: emailData.receivedAt
-      }
+      author_type: 'internal'
     });
     
     setState('EMAIL_PROCESSED');
@@ -214,17 +206,7 @@ async function handleEmailReply(emailData: any, existingTicket: any, actions: an
     content: emailData.body.html || emailData.body.text,
     format: emailData.body.html ? 'html' : 'text',
     source: 'email',
-    author_type: 'contact', // This is a reply from the client
-    metadata: {
-      emailSource: true,
-      emailId: emailData.id,
-      fromEmail: emailData.from.email,
-      fromName: emailData.from.name,
-      emailSubject: emailData.subject,
-      emailReceivedAt: emailData.receivedAt,
-      isReply: true,
-      replyToMessageId: emailData.inReplyTo
-    }
+    author_type: 'client' // This is a reply from the client
   });
   
   // Handle attachments for reply
