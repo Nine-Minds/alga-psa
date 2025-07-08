@@ -153,8 +153,8 @@ export class MailHogPollingService {
    * Convert MailHog message format to our standard email data format
    */
   private convertMailHogToEmailData(mailhogMessage: any): any {
-    const rawMessage = mailhogMessage.Raw || {};
-    const headers = rawMessage.Headers || {};
+    // MailHog stores headers in Content.Headers, not Raw.Headers
+    const headers = mailhogMessage.Content?.Headers || {};
     
     // Extract email addresses
     const fromHeader = headers.From?.[0] || '';
