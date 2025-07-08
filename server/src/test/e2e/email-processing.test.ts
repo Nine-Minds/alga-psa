@@ -22,6 +22,9 @@ describe('Email Processing E2E Tests', () => {
 
   beforeEach(async () => {
     await testHelpers.beforeEach(context);
+    // Ensure database changes are committed and visible to all connections
+    await context.db.raw('SELECT 1');
+    await new Promise(resolve => setTimeout(resolve, 1000));
   });
 
   afterEach(async () => {
@@ -33,6 +36,16 @@ describe('Email Processing E2E Tests', () => {
       // Arrange
       const { tenant, company, contact } = await context.emailTestFactory.createBasicEmailScenario();
       console.log(`🔍 Test is using tenant: ${tenant.tenant}`);
+      
+      // Ensure the tenant exists in the database and is visible to all connections
+      const tenantCheck = await context.db('tenants').where('tenant', tenant.tenant).first();
+      if (!tenantCheck) {
+        throw new Error(`Tenant ${tenant.tenant} not found in database after creation`);
+      }
+      console.log(`✅ Verified tenant exists in database: ${tenantCheck.company_name}`);
+      
+      // Give time for all connections to see the committed data
+      await new Promise(resolve => setTimeout(resolve, 3000));
       
       const testEmail = {
         from: contact.email,

@@ -131,6 +131,7 @@ export class MailHogPollingService {
 
       // For MailHog test emails, emit the event directly instead of using EmailProcessor
       // which requires Microsoft Graph credentials
+      console.log(`🔑 About to emit event with tenant: ${tenantId}`);
       await this.emitEmailReceivedEvent({
         tenant: tenantId,
         providerId: 'mailhog-test-provider',
