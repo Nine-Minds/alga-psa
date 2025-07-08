@@ -28,7 +28,7 @@ interface CompaniesListProps {
     totalCount?: number;
     onPageChange?: (page: number) => void;
     companyTags?: Record<string, ITag[]>;
-    allUniqueTags?: string[];
+    allUniqueTags?: ITag[];
     onTagsChange?: (companyId: string, tags: ITag[]) => void;
 }
 
@@ -115,7 +115,7 @@ const CompaniesList = ({
         {
             title: '',
             dataIndex: 'checkbox',
-            width: '4%',
+            width: '5%',
             render: (value: string, record: ICompany) => (
                 <div onClick={(e) => e.stopPropagation()} className="flex justify-center">
                   <CompanyCheckbox

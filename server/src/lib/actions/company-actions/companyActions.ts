@@ -324,6 +324,7 @@ export interface CompanyPaginationParams {
   searchTerm?: string;
   clientTypeFilter?: 'all' | 'company' | 'individual';
   loadLogos?: boolean; // Option to load logos or not
+  selectedTags?: string[]; // Filter by tags
   /**
    * Optional status filter. Overrides includeInactive if provided.
    *  - 'active'   -> only active companies
@@ -359,7 +360,8 @@ export async function getAllCompaniesPaginated(params: CompanyPaginationParams =
     searchTerm,
     clientTypeFilter = 'all',
     loadLogos = true,
-    statusFilter
+    statusFilter,
+    selectedTags
   } = params;
 
   const {knex: db, tenant} = await createTenantKnex();
@@ -406,6 +408,21 @@ export async function getAllCompaniesPaginated(params: CompanyPaginationParams =
 
       if (clientTypeFilter !== 'all') {
         baseQuery = baseQuery.where('c.client_type', clientTypeFilter);
+      }
+
+      // Apply tag filter using new tag structure
+      if (selectedTags && selectedTags.length > 0) {
+        baseQuery = baseQuery.whereIn('c.company_id', function() {
+          this.select('tm.tagged_id')
+            .from('tag_mappings as tm')
+            .join('tag_definitions as td', function() {
+              this.on('tm.tenant', '=', 'td.tenant')
+                  .andOn('tm.tag_id', '=', 'td.tag_id');
+            })
+            .where('tm.tagged_type', 'company')
+            .where('tm.tenant', tenant)
+            .whereIn('td.tag_text', selectedTags);
+        });
       }
 
       // Get total count
@@ -921,6 +938,97 @@ export async function generateCompanyCSVTemplate(): Promise<string> {
   ];
 
   return unparseCSV(templateData, fields);
+}
+
+export async function getAllCompanyIds(params: {
+  statusFilter?: 'all' | 'active' | 'inactive';
+  searchTerm?: string;
+  clientTypeFilter?: 'all' | 'company' | 'individual';
+  selectedTags?: string[];
+} = {}): Promise<string[]> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Check permission for company reading
+  if (!await hasPermission(currentUser, 'company', 'read')) {
+    throw new Error('Permission denied: Cannot read companies');
+  }
+
+  const {knex: db, tenant} = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  const {
+    statusFilter = 'all',
+    searchTerm,
+    clientTypeFilter = 'all',
+    selectedTags
+  } = params;
+
+  try {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Build the base query - same filtering logic as getAllCompaniesPaginated
+      let baseQuery = trx('companies as c')
+        .where({ 'c.tenant': tenant });
+
+      // Join with locations for search if needed
+      if (searchTerm) {
+        baseQuery = baseQuery.leftJoin('company_locations as cl', function() {
+          this.on('c.company_id', '=', 'cl.company_id')
+              .andOn('c.tenant', '=', 'cl.tenant')
+              .andOn('cl.is_default', '=', trx.raw('true'));
+        });
+      }
+
+      // Apply status filter
+      if (statusFilter === 'active') {
+        baseQuery = baseQuery.andWhere('c.is_inactive', false);
+      } else if (statusFilter === 'inactive') {
+        baseQuery = baseQuery.andWhere('c.is_inactive', true);
+      }
+
+      // Apply search filter
+      if (searchTerm) {
+        baseQuery = baseQuery.where(function() {
+          this.where('c.company_name', 'ilike', `%${searchTerm}%`)
+              .orWhere('cl.phone', 'ilike', `%${searchTerm}%`)
+              .orWhere('cl.address_line1', 'ilike', `%${searchTerm}%`)
+              .orWhere('cl.address_line2', 'ilike', `%${searchTerm}%`)
+              .orWhere('cl.city', 'ilike', `%${searchTerm}%`);
+        });
+      }
+
+      // Apply client type filter
+      if (clientTypeFilter !== 'all') {
+        baseQuery = baseQuery.where('c.client_type', clientTypeFilter);
+      }
+
+      // Apply tag filter using new tag structure
+      if (selectedTags && selectedTags.length > 0) {
+        baseQuery = baseQuery.whereIn('c.company_id', function() {
+          this.select('tm.tagged_id')
+            .from('tag_mappings as tm')
+            .join('tag_definitions as td', function() {
+              this.on('tm.tenant', '=', 'td.tenant')
+                  .andOn('tm.tag_id', '=', 'td.tag_id');
+            })
+            .where('tm.tagged_type', 'company')
+            .where('tm.tenant', tenant)
+            .whereIn('td.tag_text', selectedTags);
+        });
+      }
+
+      // Get all company IDs
+      const companies = await baseQuery.select('c.company_id');
+      return companies.map(c => c.company_id);
+    });
+  } catch (error) {
+    console.error('Error fetching all company IDs:', error);
+    throw error;
+  }
 }
 
 export async function checkExistingCompanies(

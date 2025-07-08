@@ -16,7 +16,7 @@ interface CompaniesGridProps {
     onPageChange: (page: number) => void;
     onPageSizeChange: (size: number) => void;
     companyTags?: Record<string, ITag[]>;
-    allUniqueTags?: string[];
+    allUniqueTags?: ITag[];
     onTagsChange?: (companyId: string, tags: ITag[]) => void;
 }
 

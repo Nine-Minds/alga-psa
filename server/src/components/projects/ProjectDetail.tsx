@@ -11,6 +11,7 @@ import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTask
 import { findTagsByEntityId, findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
 import { TagManager, TagFilter } from 'server/src/components/tags';
 import { useTags } from 'server/src/context/TagContext';
+import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import TaskQuickAdd from './TaskQuickAdd';
 import TaskEdit from './TaskEdit';
@@ -56,6 +57,8 @@ export default function ProjectDetail({
   assignedUser,
   onTagsUpdate
 }: ProjectDetailProps) {
+  useTagPermissions(['project', 'project_task']);
+  
   const [selectedTask, setSelectedTask] = useState<IProjectTask | null>(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showPhaseQuickAdd, setShowPhaseQuickAdd] = useState(false);
@@ -145,7 +148,7 @@ export default function ProjectDetail({
   const [selectedPriorityFilter, setSelectedPriorityFilter] = useState<string>('all');
   const [selectedTaskTags, setSelectedTaskTags] = useState<string[]>([]);
   const [taskTags, setTaskTags] = useState<Record<string, ITag[]>>({});
-  const [allTaskTagTexts, setAllTaskTagTexts] = useState<string[]>([]);
+  const [allTaskTags, setAllTaskTags] = useState<ITag[]>([]);
 
   const filteredTasks = useMemo(() => {
     if (!selectedPhase) return [];
@@ -202,11 +205,11 @@ export default function ProjectDetail({
     }));
     
     // Update all unique tags
-    const allTags = new Set<string>();
-    Object.entries({ ...taskTags, [taskId]: tags }).forEach(([_, tags]) => {
-      tags.forEach(tag => allTags.add(tag.tag_text));
+    setAllTaskTags(current => {
+      const currentTagTexts = new Set(current.map(t => t.tag_text));
+      const newTags = tags.filter(tag => !currentTagTexts.has(tag.tag_text));
+      return [...current, ...newTags];
     });
-    setAllTaskTagTexts(Array.from(allTags));
   };
   
   // Fetch project completion metrics and project tree data
@@ -262,8 +265,17 @@ export default function ProjectDetail({
         });
         
         setTaskTags(tagsByTask);
-        const taskTagTexts = allTags.filter(tag => tag.tagged_type === 'project_task').map(tag => tag.tag_text);
-        setAllTaskTagTexts(taskTagTexts);
+        // Get unique task tags by tag_text to prevent duplicates
+        const taskTagsMap = new Map<string, ITag>();
+        allTags
+          .filter(tag => tag.tagged_type === 'project_task')
+          .forEach(tag => {
+            // Only keep the first occurrence of each tag text
+            if (!taskTagsMap.has(tag.tag_text)) {
+              taskTagsMap.set(tag.tag_text, tag);
+            }
+          });
+        setAllTaskTags(Array.from(taskTagsMap.values()));
       } catch (error) {
         console.error('Error fetching task tags:', error);
       }
@@ -984,7 +996,7 @@ export default function ProjectDetail({
             <div className="flex items-center gap-4">
               {/* Tag Filter */}
               <TagFilter
-                allTags={allTaskTagTexts}
+                allTags={allTaskTags}
                 selectedTags={selectedTaskTags}
                 onTagSelect={(tag) => {
                   setSelectedTaskTags(prev => 
@@ -1049,7 +1061,7 @@ export default function ProjectDetail({
               return acc;
             }, {} as { [taskId: string]: any[] })}
             taskTags={taskTags}
-            allTaskTagTexts={allTaskTagTexts}
+            allTaskTags={allTaskTags}
             projectTreeData={projectTreeData} // Pass project tree data
             animatingTasks={animatingTasks}
             onDrop={handleDrop}

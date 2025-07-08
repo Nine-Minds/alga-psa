@@ -55,7 +55,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
   const { openDrawer } = useDrawer();
   const router = useRouter();
   const contactTagsRef = useRef<Record<string, ITag[]>>({});
-  const [allUniqueTags, setAllUniqueTags] = useState<string[]>([]);
+  const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<IContact | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -146,7 +146,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
     const fetchAllTags = async () => {
       try {
         const allTags = await findAllTagsByType('contact');
-        setAllUniqueTags(allTags.map(tag => tag.tag_text));
+        setAllUniqueTags(allTags);
       } catch (error) {
         console.error('Error fetching all tags:', error);
       }
@@ -159,7 +159,12 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
       ...contactTagsRef.current,
       [contactId]: updatedTags,
     };
-    setAllUniqueTags(getUniqueTagTexts(Object.values(contactTagsRef.current).flat()));
+    // Update unique tags list if needed
+    setAllUniqueTags(current => {
+      const currentTagTexts = new Set(current.map(t => t.tag_text));
+      const newTags = updatedTags.filter(tag => !currentTagTexts.has(tag.tag_text));
+      return [...current, ...newTags];
+    });
   };
 
   const getCompanyName = (companyId: string) => {

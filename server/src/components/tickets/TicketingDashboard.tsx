@@ -108,17 +108,17 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   // Tag-related state
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const ticketTagsRef = useRef<Record<string, ITag[]>>({});
-  const [allUniqueTags, setAllUniqueTags] = useState<string[]>([]);
+  const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
   
   const handleTagsChange = (ticketId: string, tags: ITag[]) => {
     ticketTagsRef.current[ticketId] = tags;
     
-    // Update unique tags list
-    const allTags = new Set<string>();
-    Object.values(ticketTagsRef.current).forEach(entityTags => {
-      entityTags.forEach(tag => allTags.add(tag.tag_text));
+    // Update unique tags list if needed
+    setAllUniqueTags(current => {
+      const currentTagTexts = new Set(current.map(t => t.tag_text));
+      const newTags = tags.filter(tag => !currentTagTexts.has(tag.tag_text));
+      return [...current, ...newTags];
     });
-    setAllUniqueTags(Array.from(allTags));
   };
 
   useEffect(() => {
@@ -157,7 +157,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     const fetchAllTags = async () => {
       try {
         const allTags = await findAllTagsByType('ticket');
-        setAllUniqueTags(allTags.map(tag => tag.tag_text));
+        setAllUniqueTags(allTags);
       } catch (error) {
         console.error('Error fetching all tags:', error);
       }
