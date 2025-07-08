@@ -380,6 +380,9 @@ export class E2ETestContext extends TestContext {
         if (context.e2eOptions.clearEmailsBeforeTest && context.mailhogClient) {
           await context.mailhogClient.clearMessages();
         }
+        
+        // Clear Redis workflow event stream to prevent processing old events
+        await context.clearWorkflowEventStream();
       },
       
       afterEach: async (context: E2ETestContext) => {
@@ -396,5 +399,31 @@ export class E2ETestContext extends TestContext {
     await this.cleanupE2E();
     this.restoreEnvironmentVariables();
     await super.cleanup();
+  }
+  
+  /**
+   * Clear the workflow event stream in Redis
+   */
+  async clearWorkflowEventStream(): Promise<void> {
+    try {
+      const { createClient } = await import('redis');
+      const { getSecret } = await import('@shared/core/getSecret');
+      
+      const password = await getSecret('redis_password', 'REDIS_PASSWORD');
+      const client = createClient({
+        url: `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || '6379'}`,
+        password
+      });
+      
+      await client.connect();
+      
+      // Delete the global workflow event stream
+      await client.del('workflow:events:global');
+      console.log('🧹 Cleared workflow event stream');
+      
+      await client.quit();
+    } catch (error) {
+      console.warn('⚠️ Failed to clear workflow event stream:', error.message);
+    }
   }
 }

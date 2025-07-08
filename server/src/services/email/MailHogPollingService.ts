@@ -113,6 +113,7 @@ export class MailHogPollingService {
       
       // Get a default tenant - in E2E tests, use the first available tenant
       const tenantId = await this.getDefaultTenant();
+      console.log(`🆔 MailHogPollingService will use tenant: ${tenantId}`);
       
       // Create an email processing job
       const emailJob: EmailQueueJob = {
@@ -131,12 +132,13 @@ export class MailHogPollingService {
 
       // For MailHog test emails, emit the event directly instead of using EmailProcessor
       // which requires Microsoft Graph credentials
-      console.log(`🔑 About to emit event with tenant: ${tenantId}`);
-      await this.emitEmailReceivedEvent({
+      const eventData = {
         tenant: tenantId,
         providerId: 'mailhog-test-provider',
         emailData: emailData
-      });
+      };
+      console.log(`🔑 About to emit event with data:`, JSON.stringify(eventData, null, 2));
+      await this.emitEmailReceivedEvent(eventData);
       
       console.log(`✅ Successfully processed MailHog email: ${emailData.subject}`);
     } catch (error: any) {
@@ -224,7 +226,10 @@ export class MailHogPollingService {
   private async getDefaultTenant(): Promise<string> {
     try {
       // Get the actual tenant from the database
-      const { getAdminConnection } = await import('@shared/db/admin.js');
+      const { getAdminConnection, destroyAdminConnection } = await import('@shared/db/admin.js');
+      
+      // Force a fresh connection to ensure we see the latest data
+      await destroyAdminConnection();
       const knex = await getAdminConnection();
       
       const tenant = await knex('tenants').select('tenant').first();
