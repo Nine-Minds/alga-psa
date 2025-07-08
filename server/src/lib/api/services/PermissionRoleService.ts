@@ -17,7 +17,7 @@
 
 import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult } from './BaseService';
-import { ListOptions } from '../controllers/BaseController';
+import { ListOptions } from '../controllers/types';
 import { withTransaction } from '@shared/db';
 import { 
   IRole, 

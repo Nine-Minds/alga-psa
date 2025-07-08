@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodSchema, ZodError } from 'zod';
-import { BaseService, CrudOptions } from './BaseController';
+import { BaseService, CrudOptions } from './types';
 import { 
   ApiKeyServiceForApi 
 } from '../../services/apiKeyServiceForApi';

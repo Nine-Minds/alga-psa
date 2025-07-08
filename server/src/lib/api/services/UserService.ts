@@ -8,7 +8,7 @@ import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult } from './BaseService';
 import { withTransaction } from '@shared/db';
 import { IUser, IUserWithRoles, IRole, IRoleWithPermissions, ITeam } from 'server/src/interfaces/auth.interfaces';
-import { ListOptions } from '../controllers/BaseController';
+import { ListOptions } from '../controllers/types';
 import { 
   CreateUserData, 
   UpdateUserData, 

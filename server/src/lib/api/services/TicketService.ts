@@ -19,7 +19,7 @@ import {
   TicketSearchData,
   CreateTicketFromAssetData
 } from '../schemas/ticket';
-import { ListOptions } from '../controllers/BaseController';
+import { ListOptions } from '../controllers/types';
 import { analytics } from '../../analytics/posthog';
 import { AnalyticsEvents } from '../../analytics/events';
 // import { performanceTracker } from '../../analytics/performanceTracking';

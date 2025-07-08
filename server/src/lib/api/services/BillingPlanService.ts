@@ -52,7 +52,7 @@ import {
   UsageMetricsResponse
 } from '../schemas/billingPlanSchemas';
 
-import { ListOptions } from '../controllers/BaseController';
+import { ListOptions } from '../controllers/types';
 import { generateResourceLinks, addHateoasLinks } from '../utils/responseHelpers';
 
 export interface BillingPlanServiceOptions {

@@ -15,7 +15,7 @@ import {
   ContactFilterData,
   ContactSearchData
 } from '../schemas/contact';
-import { ListOptions } from '../controllers/BaseController';
+import { ListOptions } from '../controllers/types';
 
 export class ContactService extends BaseService<IContact> {
   constructor() {

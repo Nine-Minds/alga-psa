@@ -38,7 +38,7 @@ import {
   validateTeamAccess,
   validateTeamCapacity
 } from '../schemas/teamSchemas';
-import { ListOptions } from '../controllers/BaseController';
+import { ListOptions } from '../controllers/types';
 // Removed user actions import - will query users directly
 // TeamModel removed - functionality implemented directly in service
 import { publishEvent } from 'server/src/lib/eventBus/publishers';

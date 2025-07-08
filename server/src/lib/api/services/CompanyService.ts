@@ -18,7 +18,7 @@ import {
   CreateCompanyLocationData,
   UpdateCompanyLocationData
 } from '../schemas/company';
-import { ListOptions } from '../controllers/BaseController';
+import { ListOptions } from '../controllers/types';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { runWithTenant } from 'server/src/lib/db';
 
