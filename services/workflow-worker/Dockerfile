@@ -9,37 +9,32 @@ RUN apk add --no-cache \
 
 WORKDIR /app
 
-# Copy package files for dependency installation
-COPY package.json package-lock.json ./
-COPY services/workflow-worker/package.json ./services/workflow-worker/
-COPY server/package.json ./server/
-COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/assemblyscript
+# Install global TypeScript and build tools
+RUN npm install -g typescript @types/node tsc-alias
 
-# Configure npm for better network resilience
-RUN npm config set registry https://registry.npmjs.org/ && \
-    npm config set fetch-retry-mintimeout 20000 && \
-    npm config set fetch-retry-maxtimeout 120000 && \
-    npm config set fetch-retries 3
-
-# Install dependencies
-RUN npm install
-
-# Copy shared configuration files
+# Copy base configuration
 COPY tsconfig.base.json ./
 
-# Copy source code
-COPY services/workflow-worker/ ./services/workflow-worker/
-COPY shared/ ./shared/
+# First, handle shared package dependencies
+WORKDIR /app/shared
+COPY shared/package.json ./
+RUN npm install
 
-# Install TypeScript and other necessary dependencies globally
-RUN npm install -g typescript @types/node
+# Copy shared source code
+COPY shared/ ./
 
-# Build the workflow worker first
-WORKDIR /app/services/workflow-worker
+# Build shared
 RUN npm run build
 
-# Build shared last to ensure correct compiled files
-WORKDIR /app/shared
+# Now handle workflow worker dependencies
+WORKDIR /app/services/workflow-worker
+COPY services/workflow-worker/package.json ./
+RUN npm install
+
+# Copy workflow worker source code
+COPY services/workflow-worker/ ./
+
+# Build the workflow worker
 RUN npm run build
 
 # Copy and make entrypoint executable

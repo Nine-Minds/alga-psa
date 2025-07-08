@@ -13,7 +13,7 @@ export interface ServiceHealthCheck {
 
 export class DockerServiceManager {
   private readonly composeFile = 'docker-compose.e2e-with-worker.yaml';
-  private readonly projectRoot = '../../../..'; // Relative to src/test/e2e/utils/ -> go to alga-psa root
+  private readonly projectRoot = '/Users/robertisaacs/alga-psa'; // Absolute path to alga-psa root
   private readonly services = [
     'postgres',
     'redis-test', 

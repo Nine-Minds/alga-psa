@@ -142,17 +142,43 @@ export class E2ETestContext extends TestContext {
           try {
             await this.dockerServices.waitForHealthChecks();
             console.log('✅ Services are healthy, continuing with existing services');
+            
+            // Still need to start polling service and clear emails even if Docker services were already running
+            await this.startSupportingServices();
           } catch (healthError) {
             console.error('❌ Services are not healthy:', healthError.message);
             throw error; // Re-throw original error
           }
         }
+      } else if (this.e2eOptions.testMode === 'e2e') {
+        // Even if not auto-starting Docker services, we still need supporting services
+        await this.startSupportingServices();
       }
       
       console.log('✅ E2E Test Context initialized');
     } catch (error) {
       console.error('❌ Failed to initialize E2E Test Context:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Start supporting services (polling, email clearing) regardless of Docker status
+   */
+  async startSupportingServices(): Promise<void> {
+    console.log('🔧 Starting supporting services...');
+    
+    // Clear MailHog messages if configured
+    if (this.e2eOptions.clearEmailsBeforeTest) {
+      await this.mailhogClient.clearMessages();
+      console.log('🧹 MailHog messages cleared');
+    }
+    
+    // Start MailHog polling service if configured
+    if (this.e2eOptions.autoStartEmailPolling) {
+      console.log('📧 Starting MailHog email polling service...');
+      this.mailhogPollingService.startPolling();
+      console.log('✅ MailHog polling service started');
     }
   }
 
@@ -174,16 +200,8 @@ export class E2ETestContext extends TestContext {
       // Wait for services to be healthy
       await this.dockerServices.waitForHealthChecks();
       
-      // Clear MailHog messages if configured
-      if (this.e2eOptions.clearEmailsBeforeTest) {
-        await this.mailhogClient.clearMessages();
-      }
-      
-      // Start MailHog polling service if configured
-      if (this.e2eOptions.autoStartEmailPolling) {
-        console.log('📧 Starting MailHog email polling service...');
-        this.mailhogPollingService.startPolling();
-      }
+      // Start supporting services (polling, clearing)
+      await this.startSupportingServices();
       
       this.servicesStarted = true;
       console.log('✅ E2E Docker services ready');

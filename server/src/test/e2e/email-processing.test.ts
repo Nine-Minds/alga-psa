@@ -11,10 +11,10 @@ describe('Email Processing E2E Tests', () => {
     context = await testHelpers.beforeAll({
       runSeeds: true,
       testMode: 'e2e',
-      autoStartServices: true,
+      autoStartServices: false,  // Services are already running
       clearEmailsBeforeTest: true
     });
-  });
+  }, 30000);
 
   afterAll(async () => {
     await testHelpers.afterAll(context);

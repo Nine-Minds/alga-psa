@@ -89,6 +89,9 @@ export function registerWorkflowActions(): ActionRegistry {
   registeredActions = Object.keys(actionRegistry.getRegisteredActions());
   logger.info(`[WorkflowInit] Actions registered after task inbox actions: ${registeredActions.join(', ')}`);
   logger.info(`[WorkflowInit] Total actions registered: ${registeredActions.length}`);
+
+  // Email actions are registered separately in the workflow worker
+  // to avoid server dependencies in the shared library
   
   logger.info('[WorkflowInit] Workflow action registration complete.');
   return actionRegistry;
