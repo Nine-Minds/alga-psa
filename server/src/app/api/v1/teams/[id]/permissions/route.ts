@@ -4,7 +4,7 @@
  * POST /api/v1/teams/[id]/permissions - Grant team permission
  */
 
-import { ApiTeamControllerV2 } from 'server/src/lib/api/controllers/ApiTeamControllerV2';
+import { ApiTeamControllerV2 } from '@/lib/api/controllers/ApiTeamControllerV2';
 import { NextRequest } from 'next/server';
 
 const controller = new ApiTeamControllerV2();

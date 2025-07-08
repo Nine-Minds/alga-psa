@@ -4,7 +4,7 @@
  * DELETE /api/v1/teams/bulk - Bulk delete teams
  */
 
-import { ApiTeamControllerV2 } from 'server/src/lib/api/controllers/ApiTeamControllerV2';
+import { ApiTeamControllerV2 } from '@/lib/api/controllers/ApiTeamControllerV2';
 import { NextRequest } from 'next/server';
 
 const controller = new ApiTeamControllerV2();

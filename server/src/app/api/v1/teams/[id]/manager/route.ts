@@ -5,8 +5,8 @@
 
 import { ApiTeamControllerV2 } from '@/lib/api/controllers/ApiTeamControllerV2';
 
-const controller = new ApiTeamControllerV2();
 
+const controller = new ApiTeamControllerV2();
 export const PUT = controller.assignManager();
 
 export const runtime = 'nodejs';

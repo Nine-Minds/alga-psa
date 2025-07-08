@@ -41,3 +41,5 @@ export default async function TicketDetailsPage({ params }: TicketDetailsPagePro
     );
   }
 }
+
+export const dynamic = "force-dynamic";

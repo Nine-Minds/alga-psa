@@ -31,3 +31,5 @@ export default async function TicketsPage() {
     return <div id="tickets-error-message">An error occurred. Please try again later.</div>;
   }
 }
+
+export const dynamic = "force-dynamic";

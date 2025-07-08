@@ -4,6 +4,14 @@
 
 This document summarizes the comprehensive API migration work completed to fix authentication issues across all REST APIs in the Alga PSA system. The migration addressed critical circular dependency issues in the authentication flow and established a consistent pattern for API authentication.
 
+## Prerequisites
+
+- **Node.js 20.0.0 or higher** is required for this project due to:
+  - Modern JavaScript features used throughout the codebase
+  - Performance optimizations in the V8 engine
+  - Improved memory management for large-scale operations
+  - Better support for ES modules and TypeScript
+
 ## Issues Discovered and Fixed
 
 ### 1. Circular Dependency in Authentication

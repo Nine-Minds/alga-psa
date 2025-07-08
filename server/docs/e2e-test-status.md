@@ -2,6 +2,11 @@
 
 ## Date: 2025-07-04
 
+### Prerequisites
+- **Node.js 20.0.0 or higher** is required to run the E2E tests
+- PostgreSQL database with test data
+- Environment variables properly configured
+
 ### Overview
 This document tracks the current status of e2e tests for all REST APIs that have been migrated to V2.
 

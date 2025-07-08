@@ -4,9 +4,10 @@ This directory contains end-to-end tests for the REST API endpoints.
 
 ## Prerequisites
 
-1. **Database**: Ensure PostgreSQL is running and properly configured
-2. **Environment**: Set up your `.env` file with test database credentials
-3. **Dependencies**: Install all npm dependencies
+1. **Node.js**: Version 20.0.0 or higher is required
+2. **Database**: Ensure PostgreSQL is running and properly configured
+3. **Environment**: Set up your `.env` file with test database credentials
+4. **Dependencies**: Install all npm dependencies
 
 ## Running E2E Tests
 

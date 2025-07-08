@@ -6,7 +6,6 @@
 import { ApiTeamControllerV2 } from '@/lib/api/controllers/ApiTeamControllerV2';
 
 const controller = new ApiTeamControllerV2();
-
 export const DELETE = controller.removeMember();
 
 export const runtime = 'nodejs';
