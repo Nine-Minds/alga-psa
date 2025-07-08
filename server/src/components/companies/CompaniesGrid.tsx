@@ -47,6 +47,17 @@ const CompaniesGrid = ({
 
     return (
         <div className="flex flex-col gap-6">
+            <Pagination
+                id="companies-pagination-top"
+                totalItems={totalCount}
+                itemsPerPage={pageSize as ItemsPerPage}
+                currentPage={currentPage}
+                onPageChange={onPageChange}
+                onItemsPerPageChange={onPageSizeChange}
+                variant="companies"
+                itemLabel="companies"
+                itemsPerPageOptions={itemsPerPageOptions}
+            />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredCompanies.map((company): JSX.Element => (
                     <div key={company.company_id} className="relative">
