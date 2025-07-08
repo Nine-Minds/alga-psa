@@ -573,7 +573,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               </div>
               
               <SwitchDetailItem
-                value={!editedCompany.is_inactive || false}
+                value={!editedCompany.is_inactive}
                 onEdit={(isActive) => handleFieldChange('is_inactive', !isActive)}
                 automationId="company-status-field"
               />
