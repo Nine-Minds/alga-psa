@@ -91,9 +91,6 @@ export interface WorkerHealth {
 
 /**
  * Worker service that processes workflow events from Redis Streams
- * 
- * This is a simplified implementation that will be enhanced with proper database
- * integration in the future.
  */
 export class WorkflowWorker {
   private static createdConsumerGroups: Set<string> = new Set<string>();

@@ -30,8 +30,8 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
         const knex = await getAdminConnection();
         
         const contact = await knex('contacts')
-          .where('tenant', context.tenant)
-          .whereRaw('LOWER(email) = LOWER(?)', [params.email])
+          .where('contacts.tenant', context.tenant)
+          .whereRaw('LOWER(contacts.email) = LOWER(?)', [params.email])
           .leftJoin('companies', 'contacts.company_id', 'companies.company_id')
           .select(
             'contacts.contact_name_id as contact_id',

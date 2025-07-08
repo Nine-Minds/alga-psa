@@ -125,9 +125,23 @@ export class E2ETestContext extends TestContext {
       this.dockerServices = new DockerServiceManager();
       this.mailhogClient = new MailHogClient();
       this.emailTestFactory = new EmailTestFactory(this);
+      
+      // Get the test tenant ID from the database if available
+      let testTenantId: string | undefined;
+      try {
+        const tenant = await this.db('tenants').select('tenant').first();
+        if (tenant) {
+          testTenantId = tenant.tenant;
+          console.log(`🆔 E2ETestContext found test tenant: ${testTenantId}`);
+        }
+      } catch (error) {
+        console.warn('⚠️ Could not get test tenant ID:', error.message);
+      }
+      
       this.mailhogPollingService = new MailHogPollingService({
         pollIntervalMs: 1000, // Poll every second in tests
-        mailhogApiUrl: 'http://localhost:8025/api/v1'
+        mailhogApiUrl: 'http://localhost:8025/api/v1',
+        defaultTenantId: testTenantId
       });
       
       // Start Docker services if configured to do so
@@ -283,6 +297,15 @@ export class E2ETestContext extends TestContext {
       throw new Error('MailHog client not initialized');
     }
     
+    // Update MailHog polling service with current test tenant
+    if (this.mailhogPollingService) {
+      const tenant = await this.db('tenants').select('tenant').first();
+      if (tenant) {
+        console.log(`🔄 Updating MailHog polling service to use tenant: ${tenant.tenant}`);
+        this.mailhogPollingService.defaultTenantId = tenant.tenant;
+      }
+    }
+    
     const sentEmail = await this.mailhogClient.sendEmail(emailData);
     const capturedEmail = await this.mailhogClient.waitForEmailCapture(sentEmail.messageId);
     
@@ -381,6 +404,11 @@ export class E2ETestContext extends TestContext {
           await context.mailhogClient.clearMessages();
         }
         
+        // Clear MailHog polling service processed history
+        if (context.mailhogPollingService) {
+          context.mailhogPollingService.clearProcessedHistory();
+        }
+        
         // Clear Redis workflow event stream to prevent processing old events
         await context.clearWorkflowEventStream();
       },
@@ -417,9 +445,28 @@ export class E2ETestContext extends TestContext {
       
       await client.connect();
       
-      // Delete the global workflow event stream
-      await client.del('workflow:events:global');
-      console.log('🧹 Cleared workflow event stream');
+      // Delete and recreate the stream to ensure a clean slate
+      try {
+        await client.del('workflow:events:global');
+        console.log('🧹 Deleted workflow event stream');
+      } catch (delError: any) {
+        console.log('ℹ️ Could not delete workflow event stream:', delError.message);
+      }
+      
+      // Create a fresh consumer group
+      try {
+        await client.xGroupCreate('workflow:events:global', 'workflow-processors', '0', {
+          MKSTREAM: true
+        });
+        console.log('✅ Created fresh workflow consumer group');
+      } catch (err: any) {
+        if (err.message.includes('BUSYGROUP')) {
+          // This shouldn't happen since we just deleted the stream
+          console.log('⚠️ Consumer group already exists after stream deletion');
+        } else {
+          throw err;
+        }
+      }
       
       await client.quit();
     } catch (error) {

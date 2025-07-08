@@ -18,15 +18,18 @@ export class MailHogPollingService {
   private emailQueueService: EmailQueueService;
   private pollIntervalMs: number;
   private mailhogApiUrl: string;
+  public defaultTenantId?: string;
 
   constructor(options: {
     pollIntervalMs?: number;
     mailhogApiUrl?: string;
+    defaultTenantId?: string;
   } = {}) {
     this.pollIntervalMs = options.pollIntervalMs || 2000; // Poll every 2 seconds by default
     this.mailhogApiUrl = options.mailhogApiUrl || 'http://localhost:8025/api/v1';
     this.emailProcessor = new EmailProcessor();
     this.emailQueueService = new EmailQueueService();
+    this.defaultTenantId = options.defaultTenantId;
   }
 
   /**
@@ -133,7 +136,7 @@ export class MailHogPollingService {
       // For MailHog test emails, emit the event directly instead of using EmailProcessor
       // which requires Microsoft Graph credentials
       const eventData = {
-        tenant: tenantId,
+        tenantId: tenantId,  // Changed from 'tenant' to 'tenantId' to match schema
         providerId: 'mailhog-test-provider',
         emailData: emailData
       };
@@ -206,7 +209,7 @@ export class MailHogPollingService {
       await eventBus.publish({
         eventType: 'INBOUND_EMAIL_RECEIVED',
         payload: {
-          tenantId: eventData.tenant,
+          tenantId: eventData.tenantId,  // Changed from eventData.tenant to eventData.tenantId
           providerId: eventData.providerId,
           emailData: eventData.emailData
         }
@@ -224,6 +227,12 @@ export class MailHogPollingService {
    * In E2E tests, this gets the first available tenant
    */
   private async getDefaultTenant(): Promise<string> {
+    // If a default tenant ID was provided in the constructor, use it
+    if (this.defaultTenantId) {
+      console.log(`✅ Using provided tenant ID: ${this.defaultTenantId}`);
+      return this.defaultTenantId;
+    }
+    
     try {
       // Get the actual tenant from the database
       const { getAdminConnection, destroyAdminConnection } = await import('@shared/db/admin.js');
