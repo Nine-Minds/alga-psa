@@ -150,6 +150,7 @@ services:
     environment:
       <<: *test-environment
       DB_HOST: postgres-test
+      POSTGRES_HOST: postgres-test
       PGBOUNCER_HOST: pgbouncer-test
       PGBOUNCER_PORT: 6432
     secrets:
@@ -245,13 +246,20 @@ services:
       <<: *test-environment
       DB_HOST: pgbouncer-test
       DB_PORT: 6432
-      WORKER_COUNT: 2
-      POLL_INTERVAL_MS: 500
-      BATCH_SIZE: 5
+      WORKER_COUNT: 1
+      POLL_INTERVAL_MS: 1000
+      BATCH_SIZE: 3
       MAX_RETRIES: 3
-      CONCURRENCY_LIMIT: 3
+      CONCURRENCY_LIMIT: 1
       HEALTH_CHECK_INTERVAL_MS: 10000
       METRICS_REPORTING_INTERVAL_MS: 30000
+      # Database pool settings for E2E - increased for workflow processing
+      DB_POOL_MIN: 2
+      DB_POOL_MAX: 15
+      DB_POOL_ACQUIRE_TIMEOUT: 15000
+      DB_POOL_CREATE_TIMEOUT: 15000
+      # Enable development mode for live code reloading
+      DEV_MODE: true
     networks:
       - app-network
     volumes:
@@ -259,7 +267,18 @@ services:
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
         read_only: true
+      # Mount local workflow-worker code for live development
+      - type: bind
+        source: ./services/workflow-worker/src
+        target: /app/services/workflow-worker/src
+        read_only: false
+      # Mount shared code for live development
+      - type: bind
+        source: ./shared
+        target: /app/shared-dev
+        read_only: false
     secrets:
+      - postgres_password
       - db_password_server
       - redis_password
       - crypto_key
