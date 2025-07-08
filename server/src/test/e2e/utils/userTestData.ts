@@ -17,8 +17,8 @@ export function createUserTestData(overrides: Partial<any> = {}) {
     password: overrides.password || 'TestPassword123!',
     user_type: overrides.user_type || faker.helpers.arrayElement(['internal', 'client']),
     is_inactive: overrides.is_inactive ?? false,
-    phone: overrides.phone || faker.phone.number(),
-    timezone: overrides.timezone || faker.helpers.arrayElement(['America/New_York', 'America/Chicago', 'America/Los_Angeles', 'UTC']),
+    phone: overrides.phone || '+1-555-123-4567',
+    timezone: overrides.timezone || faker.helpers.arrayElement(['America/New_York', 'America/Chicago', 'America/Los_Angeles', 'Europe/London']),
   };
   
   // Only include valid schema fields for API calls

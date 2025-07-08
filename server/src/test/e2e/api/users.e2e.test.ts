@@ -128,6 +128,11 @@ describe('Users API E2E Tests', () => {
       const userData = createUserTestData();
       const createResponse = await env.apiClient.post('/api/v1/users', userData);
       
+      // Debug the response
+      if (createResponse.status !== 201) {
+        console.error('Create user failed:', createResponse.status, JSON.stringify(createResponse.data, null, 2));
+      }
+      
       // Handle different response structures
       let userId;
       if (createResponse.data && createResponse.data.data && createResponse.data.data.user_id) {
@@ -135,6 +140,7 @@ describe('Users API E2E Tests', () => {
       } else if (createResponse.data && createResponse.data.user_id) {
         userId = createResponse.data.user_id;
       } else {
+        console.error('Create response structure:', JSON.stringify(createResponse.data, null, 2));
         throw new Error('Could not extract user_id from create response');
       }
       
@@ -162,6 +168,11 @@ describe('Users API E2E Tests', () => {
       const userData = createUserTestData();
       const createResponse = await env.apiClient.post('/api/v1/users', userData);
       
+      // Debug the response
+      if (createResponse.status !== 201) {
+        console.error('Create user failed:', createResponse.status, JSON.stringify(createResponse.data, null, 2));
+      }
+      
       // Handle different response structures
       let userId;
       if (createResponse.data && createResponse.data.data && createResponse.data.data.user_id) {
@@ -169,6 +180,7 @@ describe('Users API E2E Tests', () => {
       } else if (createResponse.data && createResponse.data.user_id) {
         userId = createResponse.data.user_id;
       } else {
+        console.error('Create response structure:', JSON.stringify(createResponse.data, null, 2));
         throw new Error('Could not extract user_id from create response');
       }
       

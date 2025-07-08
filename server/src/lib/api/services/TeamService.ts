@@ -1974,7 +1974,9 @@ export class TeamService extends BaseService<ITeam> {
       total_teams: parseInt(totalTeams?.count as string || '0'),
       active_teams: parseInt(totalTeams?.count as string || '0'), // All teams are considered active
       teams_with_managers: parseInt(teamsWithMembers?.count as string || '0'),
+      teams_with_members: parseInt(teamsWithMembers?.count as string || '0'),
       average_team_size: Math.round(avgTeamSize * 10) / 10,
+      largest_team_size: largestTeam ? parseInt(largestTeam.size as string) : 0,
       total_members: teamSizes.reduce((sum, t) => sum + parseInt(t.size as string), 0),
       teams_by_department: {},
       teams_by_location: {},

@@ -35,6 +35,7 @@ import {
   ForbiddenError,
   NotFoundError,
   ValidationError,
+  ConflictError,
   createSuccessResponse,
   createPaginatedResponse,
   handleApiError
@@ -62,6 +63,171 @@ export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
     });
     
     this.roleService = roleService;
+  }
+
+  /**
+   * Override create to use createRole method that returns full role data
+   */
+  create() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'create');
+
+          // Parse and validate request body
+          const body = await req.json();
+          let createData;
+          try {
+            createData = createRoleSchema.parse(body);
+          } catch (error) {
+            if (error instanceof ZodError) {
+              throw new ValidationError('Invalid role data', error.errors);
+            }
+            throw error;
+          }
+
+          // Create role using the proper method
+          try {
+            const role = await this.roleService.createRole(createData, apiRequest.context);
+            return createSuccessResponse(role, 201);
+          } catch (error: any) {
+            if (error.message && error.message.includes('already exists')) {
+              throw new ConflictError(error.message);
+            }
+            throw error;
+          }
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Override update to use updateRole method that returns full role data
+   */
+  update() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Extract role ID from path
+        const roleId = await this.extractIdFromPath(apiRequest);
+
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'update');
+
+          // Parse and validate request body
+          const body = await req.json();
+          let updateData;
+          try {
+            updateData = updateRoleSchema.parse(body);
+          } catch (error) {
+            if (error instanceof ZodError) {
+              throw new ValidationError('Invalid update data', error.errors);
+            }
+            throw error;
+          }
+
+          // Update role using the proper method
+          const role = await this.roleService.updateRole(roleId, updateData, apiRequest.context);
+
+          return createSuccessResponse(role);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Override getById to use getRoleById method that returns full role data
+   */
+  getById() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Extract role ID from path
+        const roleId = await this.extractIdFromPath(apiRequest);
+
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'read');
+
+          // Get role using the proper method
+          const role = await this.roleService.getRoleById(roleId, apiRequest.context, false);
+          
+          if (!role) {
+            throw new NotFoundError('Role not found');
+          }
+
+          return createSuccessResponse(role);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Override list to use listRoles method that returns full role data
+   */
+  list() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+        
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'read');
+
+          // Parse query parameters
+          let validatedQuery = {};
+          if (this.options.querySchema) {
+            validatedQuery = this.validateQuery(apiRequest, this.options.querySchema);
+          }
+
+          // Parse pagination parameters
+          const url = new URL(apiRequest.url);
+          const page = parseInt(url.searchParams.get('page') || '1');
+          const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), 100);
+          const sort = url.searchParams.get('sort') || 'role_name';
+          const order = (url.searchParams.get('order') || 'asc') as 'asc' | 'desc';
+
+          const filters: any = { ...validatedQuery };
+          delete filters.page;
+          delete filters.limit;
+          delete filters.sort;
+          delete filters.order;
+
+          const listOptions = { page, limit, filters, sort, order };
+          const result = await this.roleService.listRoles(listOptions, apiRequest.context);
+          
+          return createPaginatedResponse(
+            result.data,
+            result.total,
+            page,
+            limit,
+            { sort, order, filters }
+          );
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
   }
 
   /**

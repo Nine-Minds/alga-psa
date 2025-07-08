@@ -602,11 +602,11 @@ export class TimeEntryService extends BaseService<any> {
       .leftJoin('service_catalog', `${this.tableName}.service_id`, 'service_catalog.service_id')
       .leftJoin('tickets', function() {
         this.on(`time_entries.work_item_id`, 'tickets.ticket_id')
-          .andOn(`time_entries.work_item_type`, '=', 'ticket');
+          .andOn(`time_entries.work_item_type`, '=', knex.raw('?', ['ticket']));
       })
       .leftJoin('project_tasks', function() {
         this.on(`time_entries.work_item_id`, 'project_tasks.task_id')
-          .andOn(`time_entries.work_item_type`, '=', 'project_task');
+          .andOn(`time_entries.work_item_type`, '=', knex.raw('?', ['project_task']));
       })
       .select(
         `${this.tableName}.*`,
