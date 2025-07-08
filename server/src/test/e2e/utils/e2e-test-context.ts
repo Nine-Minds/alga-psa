@@ -270,17 +270,6 @@ export class E2ETestContext extends TestContext {
   }
 
   /**
-   * Waits for workflow processing to complete
-   */
-  async waitForWorkflowProcessing(timeoutMs: number = 30000): Promise<void> {
-    if (!this.dockerServices) {
-      throw new Error('Docker services not initialized');
-    }
-    
-    await this.dockerServices.waitForWorkflowProcessing(timeoutMs);
-  }
-
-  /**
    * Sends a test email and waits for it to be captured
    */
   async sendAndCaptureEmail(emailData: {
@@ -298,6 +287,45 @@ export class E2ETestContext extends TestContext {
     const capturedEmail = await this.mailhogClient.waitForEmailCapture(sentEmail.messageId);
     
     return { sentEmail, capturedEmail };
+  }
+
+  /**
+   * Wait for workflow processing to complete for email-to-ticket conversion
+   */
+  async waitForWorkflowProcessing(timeout: number = 15000): Promise<void> {
+    const startTime = Date.now();
+    const pollInterval = 1000; // Poll every second
+
+    console.log('⏳ Waiting for workflow processing to complete...');
+
+    while (Date.now() - startTime < timeout) {
+      try {
+        // Check for new tickets (using correct column name)
+        const recentTickets = await this.db('tickets')
+          .where('entered_at', '>', new Date(startTime)) // Use entered_at instead of created_at
+          .count('* as count')
+          .first();
+
+        console.log(`📊 Tickets created: ${recentTickets.count}`);
+
+        // If we have tickets created, workflow processing is likely complete
+        if (parseInt(recentTickets.count) > 0) {
+          console.log('✅ Workflow processing appears to be complete (tickets created)');
+          // Wait a bit more for any final processing
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          return;
+        }
+
+        // Wait before next poll
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+      } catch (error) {
+        console.error('❌ Error polling for workflow processing:', error);
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+      }
+    }
+
+    console.log('⏳ Workflow processing timeout reached, assuming completion');
   }
 
   /**

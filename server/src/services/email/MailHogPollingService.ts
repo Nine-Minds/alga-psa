@@ -221,9 +221,23 @@ export class MailHogPollingService {
    * In E2E tests, this gets the first available tenant
    */
   private async getDefaultTenant(): Promise<string> {
-    // For MailHog testing, use the default test tenant ID
-    // This avoids database connection issues during tests
-    return '00000000-0000-0000-0000-000000000001';
+    try {
+      // Get the actual tenant from the database
+      const { getAdminConnection } = await import('@shared/db/admin.js');
+      const knex = await getAdminConnection();
+      
+      const tenant = await knex('tenants').select('tenant').first();
+      if (tenant) {
+        return tenant.tenant;
+      }
+      
+      // Fallback to default test tenant ID if no tenant found
+      console.warn('⚠️ No tenant found in database, using default test tenant ID');
+      return '00000000-0000-0000-0000-000000000001';
+    } catch (error) {
+      console.warn('⚠️ Failed to get tenant from database, using default test tenant ID:', error.message);
+      return '00000000-0000-0000-0000-000000000001';
+    }
   }
 
   /**
