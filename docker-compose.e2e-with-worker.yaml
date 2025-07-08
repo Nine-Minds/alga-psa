@@ -122,8 +122,11 @@ services:
       # App info
       APP_NAME: ${APP_NAME:-sebastian}
       APP_ENV: test
-      NODE_ENV: test
+      NODE_ENV: development
       VERSION: e2e-test
+      
+      # Development mode - use tsx watch for hot reload
+      DEV_MODE: "true"
       
       # Security
       CRYPTO_SALT_BYTES: 32
@@ -134,6 +137,29 @@ services:
     networks:
       - app-network
     volumes:
+      # Mount source code for live development
+      - type: bind
+        source: ./services/workflow-worker/src
+        target: /app/services/workflow-worker/src
+        read_only: false
+      # For development, we keep the built shared library but mount shared src for tsx to see changes
+      - type: bind
+        source: ./shared/core
+        target: /app/shared/core
+        read_only: false
+      - type: bind
+        source: ./shared/db
+        target: /app/shared/db
+        read_only: false
+      - type: bind
+        source: ./shared/workflow
+        target: /app/shared/workflow
+        read_only: false
+      - type: bind
+        source: ./shared/types
+        target: /app/shared/types
+        read_only: false
+      # Secrets
       - type: bind
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server

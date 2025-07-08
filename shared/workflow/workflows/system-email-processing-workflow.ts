@@ -14,13 +14,25 @@ import { WorkflowContext } from '../core/workflowContext';
 // to avoid module resolution issues during Docker builds
 
 export async function systemEmailProcessingWorkflow(context: WorkflowContext): Promise<void> {
-  const { actions, data, logger, setState } = context;
-  const triggerEvent = (context.input as any)?.triggerEvent;
+  const { actions, data, logger, setState, events } = context;
   
-  // Extract email data from the INBOUND_EMAIL_RECEIVED event payload
-  const emailData = triggerEvent.payload.emailData;
-  const providerId = triggerEvent.payload.providerId;
-  const tenant = triggerEvent.payload.tenant;
+  setState('PROCESSING_INBOUND_EMAIL');
+  logger.info('🚀 Starting email processing workflow');
+  
+  // Wait for the INBOUND_EMAIL_RECEIVED event that triggered this workflow
+  // This event should have been submitted immediately after starting the workflow
+  logger.info('⏳ Waiting for INBOUND_EMAIL_RECEIVED event...');
+  const eventPayload = await events.waitFor('INBOUND_EMAIL_RECEIVED', 10000); // 10 second timeout
+  
+  logger.info('✅ Received INBOUND_EMAIL_RECEIVED event', {
+    hasPayload: !!eventPayload,
+    payloadKeys: eventPayload ? Object.keys(eventPayload) : []
+  });
+  
+  // Extract email data from the event payload
+  const emailData = eventPayload.emailData;
+  const providerId = eventPayload.providerId;
+  const tenant = eventPayload.tenantId;
   
   setState('PROCESSING_INBOUND_EMAIL');
   logger.info(`Processing inbound email: ${emailData.subject} from ${emailData.from.email}`);

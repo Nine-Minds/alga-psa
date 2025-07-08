@@ -680,5 +680,219 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
     }
   );
 
+  // Find channel by name action
+  actionRegistry.registerSimpleAction(
+    'find_channel_by_name',
+    'Find a channel by its name',
+    [
+      { name: 'name', type: 'string', required: true }
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      try {
+        logger.info(`[ACTION] find_channel_by_name called for channel: ${params.name}, tenant: ${context.tenant}`);
+        
+        // Use shared database utilities directly
+        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const knex = await getAdminConnection();
+        
+        const channel = await knex('channels')
+          .where('tenant', context.tenant)
+          .where('channel_name', params.name)
+          .select(
+            'channel_id',
+            'channel_name',
+            'description',
+            'is_inactive',
+            'is_default',
+            'display_order'
+          )
+          .first();
+        
+        if (channel) {
+          logger.info(`[ACTION] find_channel_by_name: Found channel ${params.name}`);
+          return {
+            success: true,
+            channel,
+            exists: true
+          };
+        } else {
+          logger.info(`[ACTION] find_channel_by_name: Channel ${params.name} not found`);
+          return {
+            success: true,
+            channel: null,
+            exists: false
+          };
+        }
+      } catch (error) {
+        logger.error(`[ACTION] find_channel_by_name error for channel ${params.name}:`, error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+          channel: null,
+          exists: false
+        };
+      }
+    }
+  );
+
+  // Create channel from email action
+  actionRegistry.registerSimpleAction(
+    'create_channel_from_email',
+    'Create a new channel for email processing',
+    [
+      { name: 'channel_name', type: 'string', required: true },
+      { name: 'description', type: 'string', required: false },
+      { name: 'is_default', type: 'boolean', required: false }
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      try {
+        logger.info(`[ACTION] create_channel_from_email called for channel: ${params.channel_name}, tenant: ${context.tenant}`);
+        
+        // Use shared database utilities directly
+        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const knex = await getAdminConnection();
+        const { v4: uuidv4 } = await import('uuid');
+        
+        const channelId = uuidv4();
+        const channelData = {
+          channel_id: channelId,
+          tenant: context.tenant,
+          channel_name: params.channel_name,
+          description: params.description || 'Auto-created channel for email processing',
+          is_inactive: false,
+          is_default: params.is_default || false,
+          display_order: 999 // Put at end
+        };
+        
+        await knex('channels').insert(channelData);
+        
+        logger.info(`[ACTION] create_channel_from_email: Created channel ${params.channel_name} with ID ${channelId}`);
+        return {
+          success: true,
+          channel: {
+            channel_id: channelId,
+            ...channelData
+          }
+        };
+      } catch (error) {
+        logger.error(`[ACTION] create_channel_from_email error for channel ${params.channel_name}:`, error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+          channel: null
+        };
+      }
+    }
+  );
+
+  // Find status by name action
+  actionRegistry.registerSimpleAction(
+    'find_status_by_name',
+    'Find a ticket status by its name',
+    [
+      { name: 'name', type: 'string', required: true }
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      try {
+        logger.info(`[ACTION] find_status_by_name called for status: ${params.name}, tenant: ${context.tenant}`);
+        
+        // Use shared database utilities directly
+        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const knex = await getAdminConnection();
+        
+        const status = await knex('statuses')
+          .where('tenant', context.tenant)
+          .where('name', params.name)
+          .select(
+            'status_id',
+            'name',
+            'status_type',
+            'order_number',
+            'is_closed',
+            'is_default'
+          )
+          .first();
+        
+        if (status) {
+          logger.info(`[ACTION] find_status_by_name: Found status ${params.name}`);
+          return {
+            success: true,
+            status,
+            exists: true
+          };
+        } else {
+          logger.info(`[ACTION] find_status_by_name: Status ${params.name} not found`);
+          return {
+            success: true,
+            status: null,
+            exists: false
+          };
+        }
+      } catch (error) {
+        logger.error(`[ACTION] find_status_by_name error for status ${params.name}:`, error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+          status: null,
+          exists: false
+        };
+      }
+    }
+  );
+
+  // Find priority by name action
+  actionRegistry.registerSimpleAction(
+    'find_priority_by_name',
+    'Find a ticket priority by its name',
+    [
+      { name: 'name', type: 'string', required: true }
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      try {
+        logger.info(`[ACTION] find_priority_by_name called for priority: ${params.name}, tenant: ${context.tenant}`);
+        
+        // Use shared database utilities directly
+        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const knex = await getAdminConnection();
+        
+        const priority = await knex('priorities')
+          .where('tenant', context.tenant)
+          .where('priority_name', params.name)
+          .select(
+            'priority_id',
+            'priority_name',
+            'order_number',
+            'color',
+            'item_type'
+          )
+          .first();
+        
+        if (priority) {
+          logger.info(`[ACTION] find_priority_by_name: Found priority ${params.name}`);
+          return {
+            success: true,
+            priority,
+            exists: true
+          };
+        } else {
+          logger.info(`[ACTION] find_priority_by_name: Priority ${params.name} not found`);
+          return {
+            success: true,
+            priority: null,
+            exists: false
+          };
+        }
+      } catch (error) {
+        logger.error(`[ACTION] find_priority_by_name error for priority ${params.name}:`, error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+          priority: null,
+          exists: false
+        };
+      }
+    }
+  );
+
   logger.info('[EmailActions] Email workflow actions registration complete.');
 }

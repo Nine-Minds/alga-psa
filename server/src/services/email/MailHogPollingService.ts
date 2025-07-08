@@ -131,7 +131,11 @@ export class MailHogPollingService {
 
       // For MailHog test emails, emit the event directly instead of using EmailProcessor
       // which requires Microsoft Graph credentials
-      await this.emitEmailReceivedEvent(emailData);
+      await this.emitEmailReceivedEvent({
+        tenant: tenantId,
+        providerId: 'mailhog-test-provider',
+        emailData: emailData
+      });
       
       console.log(`✅ Successfully processed MailHog email: ${emailData.subject}`);
     } catch (error: any) {
@@ -155,30 +159,33 @@ export class MailHogPollingService {
     const fromEmail = fromMatch ? (fromMatch[2] || fromMatch[3] || fromMatch[1]).trim() : '';
     const fromName = fromMatch && fromMatch[2] ? fromMatch[1].trim().replace(/"/g, '') : '';
     
+    // Ensure we have a valid from email
+    const validFromEmail = fromEmail && fromEmail.includes('@') ? fromEmail : 'test@example.com';
+    
     // Parse to addresses
     const toEmails = toHeader.split(',').map((email: string) => {
       const toMatch = email.trim().match(/(.*?)\s*<(.+?)>|(.+)/);
       const emailAddr = toMatch ? (toMatch[2] || toMatch[3] || toMatch[1]).trim() : '';
       const name = toMatch && toMatch[2] ? toMatch[1].trim().replace(/"/g, '') : '';
-      return { email: emailAddr, name };
-    });
+      return { email: emailAddr || 'test@example.com', name: name || '' };
+    }).filter(e => e.email && e.email.includes('@')); // Filter out invalid emails
 
     return {
       id: mailhogMessage.ID,
       subject: headers.Subject?.[0] || '(No Subject)',
       from: {
-        email: fromEmail,
-        name: fromName || null
+        email: validFromEmail,
+        name: fromName || ''
       },
       to: toEmails,
       body: {
         text: mailhogMessage.Content?.Body || '',
-        html: null // MailHog doesn't separate HTML/text in our simple case
+        html: '' // MailHog doesn't separate HTML/text in our simple case
       },
       receivedAt: new Date().toISOString(),
       attachments: [], // MailHog attachments would need more complex parsing
-      threadId: headers['Message-ID']?.[0] || null,
-      inReplyTo: headers['In-Reply-To']?.[0] || null,
+      threadId: headers['Message-ID']?.[0] || '',
+      inReplyTo: headers['In-Reply-To']?.[0] || '',
       references: headers.References ? headers.References[0].split(/\s+/) : []
     };
   }
@@ -186,9 +193,9 @@ export class MailHogPollingService {
   /**
    * Emit email received event to EventBus for MailHog test emails
    */
-  private async emitEmailReceivedEvent(emailData: any): Promise<void> {
+  private async emitEmailReceivedEvent(eventData: any): Promise<void> {
     try {
-      console.log(`📤 Emitting INBOUND_EMAIL_RECEIVED event for: ${emailData.subject}`);
+      console.log(`📤 Emitting INBOUND_EMAIL_RECEIVED event for: ${eventData.emailData.subject}`);
       
       const { getEventBus } = await import('../../lib/eventBus');
       const eventBus = getEventBus();
@@ -196,9 +203,9 @@ export class MailHogPollingService {
       await eventBus.publish({
         eventType: 'INBOUND_EMAIL_RECEIVED',
         payload: {
-          tenantId: emailData.tenant,
-          providerId: emailData.providerId,
-          emailData: emailData.emailData
+          tenantId: eventData.tenant,
+          providerId: eventData.providerId,
+          emailData: eventData.emailData
         }
       });
       

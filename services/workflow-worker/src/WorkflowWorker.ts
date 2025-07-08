@@ -589,8 +589,10 @@ export class WorkflowWorker {
       logger.info(`[WorkflowWorker] Finding workflows attached to event type ${eventType} for tenant ${tenant}`);
       
       return await withAdminTransaction(async (trx) => {
-        // Step 1: Query workflow_event_attachments for the given eventType and tenant.
-        const attachments = await trx('workflow_event_attachments as wea')
+        const results: { workflow_id: string; isSystemManaged: boolean }[] = [];
+
+        // Step 1: Query tenant-specific workflow_event_attachments for the given eventType and tenant
+        const tenantAttachments = await trx('workflow_event_attachments as wea')
           .where({
             'wea.event_type': eventType,
             'wea.tenant': tenant,
@@ -598,32 +600,48 @@ export class WorkflowWorker {
           })
           .select('wea.workflow_id as workflow_id');
 
-        if (!attachments || attachments.length === 0) {
-          logger.info(`[WorkflowWorker] No attachments found in workflow_event_attachments for event type ${eventType} and tenant ${tenant}`);
-          return [];
+        logger.debug(`[WorkflowWorker] Found ${tenantAttachments.length} tenant workflow attachments for event type ${eventType}`);
+
+        // Add tenant workflows (they are not system managed)
+        for (const attachment of tenantAttachments) {
+          results.push({
+            workflow_id: attachment.workflow_id,
+            isSystemManaged: false
+          });
         }
 
-        const workflowIds = attachments.map(att => att.workflow_id);
+        // Step 2: Query system workflow attachments by looking up the event in system_event_catalog
+        // and then finding attachments via system_workflow_event_attachments
+        const systemEvent = await trx('system_event_catalog')
+          .where({ event_type: eventType })
+          .first();
 
-        // Step 2: Check which of these workflow_ids exist in system_workflow_registrations
-        // This helps determine if a workflow_id from a tenant's attachment
-        // actually points to a system-defined workflow.
-        const systemWorkflowRegistrations = await trx('system_workflow_registrations as swr')
-          .whereIn('swr.registration_id', workflowIds)
-          .select('swr.registration_id');
+        if (systemEvent) {
+          logger.debug(`[WorkflowWorker] Found system event ${systemEvent.event_id} for event type ${eventType}`);
+          
+          const systemAttachments = await trx('system_workflow_event_attachments as swea')
+            .where({
+              'swea.event_id': systemEvent.event_id,
+              'swea.is_active': true
+            })
+            .select('swea.workflow_id as workflow_id');
 
-        const systemWorkflowIds = new Set(systemWorkflowRegistrations.map(reg => reg.registration_id));
+          logger.debug(`[WorkflowWorker] Found ${systemAttachments.length} system workflow attachments for event type ${eventType}`);
 
-        // Step 3: Construct the results with the correct isSystemManaged flag
-        // If a workflow_id from workflow_event_attachments is found in system_workflow_registrations,
-        // then isSystemManaged is true. Otherwise, it's false.
-        const results = attachments.map(attachment => ({
-          workflow_id: attachment.workflow_id,
-          isSystemManaged: systemWorkflowIds.has(attachment.workflow_id)
-        }));
+          // Add system workflows (they are system managed)
+          for (const attachment of systemAttachments) {
+            results.push({
+              workflow_id: attachment.workflow_id,
+              isSystemManaged: true
+            });
+          }
+        } else {
+          logger.debug(`[WorkflowWorker] No system event found for event type ${eventType}`);
+        }
 
-        logger.info(`[WorkflowWorker] Found ${results.length} workflows attached to event type ${eventType}`, {
-          results,
+        logger.info(`[WorkflowWorker] Found ${results.length} total workflows attached to event type ${eventType}`, {
+          tenantWorkflows: tenantAttachments.length,
+          systemWorkflows: results.filter(r => r.isSystemManaged).length,
           eventType,
           tenant
         });
@@ -796,6 +814,7 @@ export class WorkflowWorker {
    * This method processes events that were persisted but not yet processed
    */
   private async processPendingEvents(): Promise<void> {
+    logger.info(`[WorkflowWorker] 🔥 HOT RELOAD TEST: File change detected at ${new Date().toISOString()}! 🔥`);
     try {
       await withAdminTransaction(async (trx) => {
         // Query for pending events
@@ -845,13 +864,13 @@ export class WorkflowWorker {
         }
       });
       
-      // Schedule the next batch of pending events
-      setTimeout(() => this.processPendingEvents(), this.config.pollIntervalMs);
+      // Only process pending events once at startup - new events come via Redis streams
+      logger.debug(`[WorkflowWorker] Startup pending events processing complete. New events will be processed via Redis streams.`);
     } catch (error) {
       logger.error(`[WorkflowWorker] Error processing pending events:`, error);
       
-      // Retry after a delay
-      setTimeout(() => this.processPendingEvents(), this.config.pollIntervalMs);
+      // Do not retry automatically - this is startup processing only
+      logger.error(`[WorkflowWorker] Failed to process startup pending events. Manual intervention may be required.`);
     }
   }
   

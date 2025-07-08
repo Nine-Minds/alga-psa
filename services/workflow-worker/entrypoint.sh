@@ -59,8 +59,14 @@ start_workflow_worker() {
     log "Starting workflow worker..."
     
     # Start the workflow worker process
-    log "Starting workflow worker process..."
-    cd /app/services/workflow-worker && npm run start
+    log "DEV_MODE is set to: '$DEV_MODE'"
+    if [ "$DEV_MODE" = "true" ]; then
+        log "Starting workflow worker in DEVELOPMENT mode with hot reload..."
+        cd /app/services/workflow-worker && npm run dev
+    else
+        log "Starting workflow worker in PRODUCTION mode..."
+        cd /app/services/workflow-worker && npm run start
+    fi
 }
 
 # Main startup process
