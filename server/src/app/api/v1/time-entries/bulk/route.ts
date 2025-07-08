@@ -5,9 +5,9 @@
  * DELETE /api/v1/time-entries/bulk - Bulk delete time entries
  */
 
-import { ApiTimeEntryControllerV2 } from '@/lib/api/controllers/ApiTimeEntryControllerV2';
+import { ApiTimeEntryController } from '@/lib/api/controllers/ApiTimeEntryController';
 
-const controller = new ApiTimeEntryControllerV2();
+const controller = new ApiTimeEntryController();
 
 export const POST = controller.bulkCreate();
 export const PUT = controller.bulkUpdate();

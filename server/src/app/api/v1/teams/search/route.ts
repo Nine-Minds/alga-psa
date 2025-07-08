@@ -3,9 +3,9 @@
  * GET /api/v1/teams/search - Search teams
  */
 
-import { ApiTeamControllerV2 } from '@/lib/api/controllers/ApiTeamControllerV2';
+import { ApiTeamController } from '@/lib/api/controllers/ApiTeamController';
 
-const controller = new ApiTeamControllerV2();
+const controller = new ApiTeamController();
 
 export const GET = controller.search();
 

@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ApiBaseControllerV2 } from './ApiBaseControllerV2';
+import { ApiBaseController } from './ApiBaseController';
 import { TagService } from '../services/TagService';
 import { 
   createTagSchema,
@@ -45,7 +45,7 @@ import {
 } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 
-export class ApiTagControllerV2 extends ApiBaseControllerV2 {
+export class ApiTagController extends ApiBaseController {
   private tagService: TagService;
 
   constructor() {

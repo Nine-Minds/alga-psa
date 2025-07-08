@@ -5,9 +5,9 @@
  * DELETE /api/v1/projects/tasks/{taskId} - Delete project task
  */
 
-import { ApiProjectControllerV2 } from '@/lib/api/controllers/ApiProjectControllerV2';
+import { ApiProjectController } from '@/lib/api/controllers/ApiProjectController';
 
-const controller = new ApiProjectControllerV2();
+const controller = new ApiProjectController();
 
 export const GET = controller.getTask();
 export const PUT = controller.updateTask();

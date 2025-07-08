@@ -5,9 +5,9 @@
  * DELETE /api/v1/users/[id] - Delete user
  */
 
-import { ApiUserControllerV2 } from '@/lib/api/controllers/ApiUserControllerV2';
+import { ApiUserController } from '@/lib/api/controllers/ApiUserController';
 
-const controller = new ApiUserControllerV2();
+const controller = new ApiUserController();
 
 export const GET = controller.getById();
 export const PUT = controller.update();

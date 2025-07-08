@@ -3,12 +3,12 @@
  * GET /api/v1/time-sheets/[id]/summary - Get time sheet summary
  */
 
-import { ApiTimeSheetControllerV2 } from 'server/src/lib/api/controllers/ApiTimeSheetControllerV2';
+import { ApiTimeSheetController } from 'server/src/lib/api/controllers/ApiTimeSheetController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const timeSheetController = new ApiTimeSheetControllerV2();
+    const timeSheetController = new ApiTimeSheetController();
     const req = request as any;
     req.params = params;
     return await timeSheetController.list()(req);

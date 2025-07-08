@@ -4,15 +4,15 @@
  * POST /api/v1/financial/payment-methods - Create payment method
  */
 
-import { ApiFinancialControllerV2 } from 'server/src/lib/api/controllers/ApiFinancialControllerV2';
+import { ApiFinancialController } from 'server/src/lib/api/controllers/ApiFinancialController';
 
 export async function GET(request: Request) {
-  const controller = new ApiFinancialControllerV2();
+  const controller = new ApiFinancialController();
   return await controller.list()(request as any);
 }
 
 export async function POST(request: Request) {
-  const controller = new ApiFinancialControllerV2();
+  const controller = new ApiFinancialController();
   return await controller.createPaymentMethod()(request as any);
 }
 

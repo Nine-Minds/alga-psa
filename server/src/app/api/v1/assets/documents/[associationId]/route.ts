@@ -3,10 +3,10 @@
  * Path: /api/v1/assets/documents/[associationId]
  */
 
-import { ApiAssetControllerV2 } from '@/lib/api/controllers/ApiAssetControllerV2';
+import { ApiAssetController } from '@/lib/api/controllers/ApiAssetController';
 import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
 
-const controller = new ApiAssetControllerV2();
+const controller = new ApiAssetController();
 
 export async function DELETE(request: Request, { params }: { params: Promise<any> }) {
   try {

@@ -4,10 +4,10 @@
  * PUT /api/v1/integrations/quickbooks/accounts/mappings - Configure account mappings
  */
 
-import { ApiQuickBooksControllerV2 } from 'server/src/lib/api/controllers/ApiQuickBooksControllerV2';
+import { ApiQuickBooksController } from 'server/src/lib/api/controllers/ApiQuickBooksController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new ApiQuickBooksControllerV2();
+const controller = new ApiQuickBooksController();
 
 export async function GET(request: Request) {
   try {

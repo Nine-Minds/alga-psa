@@ -14,7 +14,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ApiBaseControllerV2 } from './ApiBaseControllerV2';
+import { ApiBaseController } from './ApiBaseController';
 import { FinancialService } from '../services/FinancialService';
 import { z } from 'zod';
 import {
@@ -107,7 +107,7 @@ import {
 import { runWithTenant } from '../../db';
 import { createErrorResponse } from '../utils/response';
 
-export class ApiFinancialControllerV2 extends ApiBaseControllerV2 {
+export class ApiFinancialController extends ApiBaseController {
   private financialService: FinancialService;
 
   constructor() {

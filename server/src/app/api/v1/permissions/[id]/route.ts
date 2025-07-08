@@ -5,9 +5,9 @@
  * DELETE /api/v1/permissions/[id] - Delete permission
  */
 
-import { ApiPermissionControllerV2 } from '@/lib/api/controllers/ApiPermissionControllerV2';
+import { ApiPermissionController } from '@/lib/api/controllers/ApiPermissionController';
 
-const controller = new ApiPermissionControllerV2();
+const controller = new ApiPermissionController();
 
 export const GET = controller.getById();
 export const PUT = controller.update();

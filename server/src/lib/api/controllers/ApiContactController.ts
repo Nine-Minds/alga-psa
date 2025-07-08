@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ApiBaseControllerV2 } from './ApiBaseControllerV2';
+import { ApiBaseController } from './ApiBaseController';
 import { ContactService } from '../services/ContactService';
 import { 
   createContactSchema,
@@ -35,7 +35,7 @@ import {
 } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 
-export class ApiContactControllerV2 extends ApiBaseControllerV2 {
+export class ApiContactController extends ApiBaseController {
   private contactService: ContactService;
 
   constructor() {

@@ -53,7 +53,7 @@ import {
 } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 
-export class ApiWebhookControllerV2 {
+export class ApiWebhookController {
   private webhookService: WebhookService;
 
   constructor() {

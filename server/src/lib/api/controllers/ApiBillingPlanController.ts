@@ -83,7 +83,7 @@ import { createApiResponse, createErrorResponse } from '../utils/response';
 import { getHateoasLinks } from '../utils/hateoas';
 import { requireRequestContext } from '../utils/requestContext';
 
-export class ApiBillingPlanControllerV2 {
+export class ApiBillingPlanController {
   private billingPlanService: BillingPlanService;
 
   constructor() {

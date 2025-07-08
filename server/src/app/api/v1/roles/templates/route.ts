@@ -3,9 +3,9 @@
  * GET /api/v1/roles/templates - Get role templates
  */
 
-import { ApiRoleControllerV2 } from '@/lib/api/controllers/ApiRoleControllerV2';
+import { ApiRoleController } from '@/lib/api/controllers/ApiRoleController';
 
-const controller = new ApiRoleControllerV2();
+const controller = new ApiRoleController();
 
 export const GET = controller.getTemplates();
 

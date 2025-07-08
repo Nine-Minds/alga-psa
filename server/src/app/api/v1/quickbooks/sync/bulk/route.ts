@@ -1,7 +1,7 @@
-import { ApiQuickBooksControllerV2 } from '@/lib/api/controllers/ApiQuickBooksControllerV2';
+import { ApiQuickBooksController } from '@/lib/api/controllers/ApiQuickBooksController';
 
 export const dynamic = "force-dynamic";
 
-const controller = new ApiQuickBooksControllerV2();
+const controller = new ApiQuickBooksController();
 
 export const POST = controller.bulkSync();

@@ -3,9 +3,9 @@
  * GET /api/v1/contacts/stats - Get contact statistics
  */
 
-import { ApiContactControllerV2 } from 'server/src/lib/api/controllers/ApiContactControllerV2';
+import { ApiContactController } from 'server/src/lib/api/controllers/ApiContactController';
 
-const controller = new ApiContactControllerV2();
+const controller = new ApiContactController();
 
 export const GET = controller.stats();
 

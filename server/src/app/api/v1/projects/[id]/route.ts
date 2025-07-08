@@ -5,9 +5,9 @@
  * DELETE /api/v1/projects/{id} - Delete project
  */
 
-import { ApiProjectControllerV2 } from '@/lib/api/controllers/ApiProjectControllerV2';
+import { ApiProjectController } from '@/lib/api/controllers/ApiProjectController';
 
-const controller = new ApiProjectControllerV2();
+const controller = new ApiProjectController();
 
 export const GET = controller.getById();
 export const PUT = controller.update();

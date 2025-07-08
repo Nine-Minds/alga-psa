@@ -3,9 +3,9 @@
  * GET /api/v1/projects/stats - Get project statistics
  */
 
-import { ApiProjectControllerV2 } from '@/lib/api/controllers/ApiProjectControllerV2';
+import { ApiProjectController } from '@/lib/api/controllers/ApiProjectController';
 
-const controller = new ApiProjectControllerV2();
+const controller = new ApiProjectController();
 
 export const GET = controller.stats();
 

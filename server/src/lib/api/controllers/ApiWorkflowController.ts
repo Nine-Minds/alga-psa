@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ApiBaseControllerV2 } from './ApiBaseControllerV2';
+import { ApiBaseController } from './ApiBaseController';
 import { WorkflowService } from '../services/WorkflowService';
 import { 
   createWorkflowRegistrationSchema,
@@ -71,7 +71,7 @@ import {
 import { runWithTenant } from '../../db';
 import { generateResourceLinks } from '../utils/responseHelpers';
 
-export class ApiWorkflowControllerV2 extends ApiBaseControllerV2 {
+export class ApiWorkflowController extends ApiBaseController {
   private workflowService: WorkflowService;
 
   constructor() {

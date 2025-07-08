@@ -3,9 +3,9 @@
  * GET /api/v1/invoices/export - Export invoices
  */
 
-import { ApiInvoiceControllerV2 } from 'server/src/lib/api/controllers/ApiInvoiceControllerV2';
+import { ApiInvoiceController } from 'server/src/lib/api/controllers/ApiInvoiceController';
 
-const controller = new ApiInvoiceControllerV2();
+const controller = new ApiInvoiceController();
 
 export async function GET(request: Request) {
   return controller.export()(request as any);

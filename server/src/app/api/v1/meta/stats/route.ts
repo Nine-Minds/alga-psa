@@ -4,10 +4,10 @@
  */
 
 import { NextRequest } from 'next/server';
-import { ApiMetadataControllerV2 } from '@/lib/api/controllers/ApiMetadataControllerV2';
+import { ApiMetadataController } from '@/lib/api/controllers/ApiMetadataController';
 
 export const dynamic = 'force-dynamic';
 
-const controller = new ApiMetadataControllerV2();
+const controller = new ApiMetadataController();
 
 export const GET = controller.getStats();

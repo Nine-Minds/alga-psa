@@ -4,9 +4,9 @@
  * POST /api/v1/time-entries - Create new time entry
  */
 
-import { ApiTimeEntryControllerV2 } from '@/lib/api/controllers/ApiTimeEntryControllerV2';
+import { ApiTimeEntryController } from '@/lib/api/controllers/ApiTimeEntryController';
 
-const controller = new ApiTimeEntryControllerV2();
+const controller = new ApiTimeEntryController();
 
 export const GET = controller.list();
 export const POST = controller.create();

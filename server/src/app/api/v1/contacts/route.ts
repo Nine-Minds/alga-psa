@@ -4,9 +4,9 @@
  * POST /api/v1/contacts - Create contact
  */
 
-import { ApiContactControllerV2 } from 'server/src/lib/api/controllers/ApiContactControllerV2';
+import { ApiContactController } from 'server/src/lib/api/controllers/ApiContactController';
 
-const controller = new ApiContactControllerV2();
+const controller = new ApiContactController();
 
 export const GET = controller.list();
 export const POST = controller.create();

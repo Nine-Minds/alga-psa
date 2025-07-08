@@ -3,10 +3,10 @@
  * POST /api/v1/financial/bulk/transactions - Bulk transaction operations
  */
 
-import { ApiFinancialControllerV2 } from 'server/src/lib/api/controllers/ApiFinancialControllerV2';
+import { ApiFinancialController } from 'server/src/lib/api/controllers/ApiFinancialController';
 
 export async function POST(request: Request) {
-  const financialController = new ApiFinancialControllerV2();
+  const financialController = new ApiFinancialController();
   return await financialController.bulkTransactionOperations()(request as any);
 }
 

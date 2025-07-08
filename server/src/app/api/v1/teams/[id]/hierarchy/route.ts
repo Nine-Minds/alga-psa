@@ -4,10 +4,10 @@
  * DELETE /api/v1/teams/[id]/hierarchy - Remove from hierarchy
  */
 
-import { ApiTeamControllerV2 } from '@/lib/api/controllers/ApiTeamControllerV2';
+import { ApiTeamController } from '@/lib/api/controllers/ApiTeamController';
 import { NextRequest } from 'next/server';
 
-const controller = new ApiTeamControllerV2();
+const controller = new ApiTeamController();
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   // Create team hierarchy

@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ApiBaseControllerV2 } from './ApiBaseControllerV2';
+import { ApiBaseController } from './ApiBaseController';
 import { PermissionRoleService } from '../services/PermissionRoleService';
 import { 
   createPermissionSchema,
@@ -25,7 +25,7 @@ import {
   handleApiError
 } from '../middleware/apiMiddleware';
 
-export class ApiPermissionControllerV2 extends ApiBaseControllerV2 {
+export class ApiPermissionController extends ApiBaseController {
   private permissionRoleService: PermissionRoleService;
 
   constructor() {

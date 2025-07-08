@@ -5,16 +5,16 @@
  * DELETE /api/v1/integrations/quickbooks/mappings/[mapping_id] - Delete data mapping
  */
 
-import { ApiQuickBooksControllerV2 } from 'server/src/lib/api/controllers/ApiQuickBooksControllerV2';
+import { ApiQuickBooksController } from 'server/src/lib/api/controllers/ApiQuickBooksController';
 import { QuickBooksService } from 'server/src/lib/api/services/QuickBooksService';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-let controller: ApiQuickBooksControllerV2 | null = null;
+let controller: ApiQuickBooksController | null = null;
 
 function getController() {
   if (!controller) {
     const quickBooksService = new QuickBooksService(null as any, null as any, null as any);
-    controller = new ApiQuickBooksControllerV2();
+    controller = new ApiQuickBooksController();
   }
   return controller;
 }

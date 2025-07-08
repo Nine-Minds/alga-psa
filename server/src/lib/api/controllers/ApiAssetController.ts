@@ -24,7 +24,7 @@ import { createApiResponse, createErrorResponse } from '../utils/response';
 import { getHateoasLinks } from '../utils/hateoas';
 import { requireRequestContext } from '../utils/requestContext';
 
-export class ApiAssetControllerV2 {
+export class ApiAssetController {
   private assetService: AssetService;
 
   constructor() {

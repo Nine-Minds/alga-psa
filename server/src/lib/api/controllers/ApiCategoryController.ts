@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ApiBaseControllerV2 } from './ApiBaseControllerV2';
+import { ApiBaseController } from './ApiBaseController';
 import { CategoryService } from '../services/CategoryService';
 import {
   // Service Category Schemas
@@ -51,7 +51,7 @@ import {
 } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 
-export class ApiCategoryControllerV2 extends ApiBaseControllerV2 {
+export class ApiCategoryController extends ApiBaseController {
   private categoryService: CategoryService;
 
   constructor() {
@@ -659,4 +659,4 @@ export class ApiCategoryControllerV2 extends ApiBaseControllerV2 {
   }
 }
 
-export default ApiCategoryControllerV2;
+export default ApiCategoryController;

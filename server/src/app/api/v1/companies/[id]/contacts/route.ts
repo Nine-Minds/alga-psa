@@ -3,9 +3,9 @@
  * GET /api/v1/companies/{id}/contacts - List company contacts
  */
 
-import { ApiCompanyControllerV2 } from '@/lib/api/controllers/ApiCompanyControllerV2';
+import { ApiCompanyController } from '@/lib/api/controllers/ApiCompanyController';
 
-const controller = new ApiCompanyControllerV2();
+const controller = new ApiCompanyController();
 
 export const GET = controller.getContacts();
 

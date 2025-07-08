@@ -4,9 +4,9 @@
  * GET /api/v1/invoices/[id]/pdf - Download PDF for invoice
  */
 
-import { ApiInvoiceControllerV2 } from 'server/src/lib/api/controllers/ApiInvoiceControllerV2';
+import { ApiInvoiceController } from 'server/src/lib/api/controllers/ApiInvoiceController';
 
-const controller = new ApiInvoiceControllerV2();
+const controller = new ApiInvoiceController();
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const req = request as any;

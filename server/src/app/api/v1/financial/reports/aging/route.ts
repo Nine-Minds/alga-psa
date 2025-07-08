@@ -3,10 +3,10 @@
  * GET /api/v1/financial/reports/aging - Get aging report
  */
 
-import { ApiFinancialControllerV2 } from 'server/src/lib/api/controllers/ApiFinancialControllerV2';
+import { ApiFinancialController } from 'server/src/lib/api/controllers/ApiFinancialController';
 
 export async function GET(request: Request) {
-  const controller = new ApiFinancialControllerV2();
+  const controller = new ApiFinancialController();
   return await controller.getAgingReport()(request as any);
 }
 

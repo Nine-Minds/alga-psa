@@ -4,15 +4,15 @@
  * POST /api/v1/invoices - Create invoice
  */
 
-import { ApiInvoiceControllerV2 } from 'server/src/lib/api/controllers/ApiInvoiceControllerV2';
+import { ApiInvoiceController } from 'server/src/lib/api/controllers/ApiInvoiceController';
 
 export async function GET(request: Request) {
-  const controller = new ApiInvoiceControllerV2();
+  const controller = new ApiInvoiceController();
   return controller.list()(request as any);
 }
 
 export async function POST(request: Request) {
-  const controller = new ApiInvoiceControllerV2();
+  const controller = new ApiInvoiceController();
   return controller.create()(request as any);
 }
 

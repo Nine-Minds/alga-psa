@@ -3,10 +3,10 @@
  * POST /api/v1/financial/billing/calculate - Calculate billing for company
  */
 
-import { ApiFinancialControllerV2 } from 'server/src/lib/api/controllers/ApiFinancialControllerV2';
+import { ApiFinancialController } from 'server/src/lib/api/controllers/ApiFinancialController';
 
 export async function POST(request: Request) {
-  const controller = new ApiFinancialControllerV2();
+  const controller = new ApiFinancialController();
   return await controller.calculateBilling()(request as any);
 }
 

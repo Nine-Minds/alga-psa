@@ -5,12 +5,12 @@
  * DELETE /api/v1/contacts/{id} - Delete contact
  */
 
-import { ApiContactControllerV2 } from 'server/src/lib/api/controllers/ApiContactControllerV2';
+import { ApiContactController } from 'server/src/lib/api/controllers/ApiContactController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const controller = new ApiContactControllerV2();
+    const controller = new ApiContactController();
     const req = request as any;
     req.params = params;
     return await controller.getById()(req);
@@ -21,7 +21,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const controller = new ApiContactControllerV2();
+    const controller = new ApiContactController();
     const req = request as any;
     req.params = params;
     return await controller.update()(req);
@@ -32,7 +32,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const controller = new ApiContactControllerV2();
+    const controller = new ApiContactController();
     const req = request as any;
     req.params = params;
     return await controller.delete()(req);

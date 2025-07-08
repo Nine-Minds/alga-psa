@@ -3,9 +3,9 @@
  * POST /api/v1/roles/{id}/clone - Clone a role
  */
 
-import { ApiRoleControllerV2 } from '@/lib/api/controllers/ApiRoleControllerV2';
+import { ApiRoleController } from '@/lib/api/controllers/ApiRoleController';
 
-const controller = new ApiRoleControllerV2();
+const controller = new ApiRoleController();
 
 export const POST = controller.cloneRole();
 

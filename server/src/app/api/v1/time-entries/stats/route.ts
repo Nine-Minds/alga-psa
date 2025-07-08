@@ -3,9 +3,9 @@
  * GET /api/v1/time-entries/stats - Get time entry statistics
  */
 
-import { ApiTimeEntryControllerV2 } from '@/lib/api/controllers/ApiTimeEntryControllerV2';
+import { ApiTimeEntryController } from '@/lib/api/controllers/ApiTimeEntryController';
 
-const controller = new ApiTimeEntryControllerV2();
+const controller = new ApiTimeEntryController();
 
 export const GET = controller.stats();
 

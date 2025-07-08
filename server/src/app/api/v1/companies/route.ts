@@ -4,9 +4,9 @@
  * POST /api/v1/companies - Create company
  */
 
-import { ApiCompanyControllerV2 } from '@/lib/api/controllers/ApiCompanyControllerV2';
+import { ApiCompanyController } from '@/lib/api/controllers/ApiCompanyController';
 
-const controller = new ApiCompanyControllerV2();
+const controller = new ApiCompanyController();
 
 export const GET = controller.list();
 

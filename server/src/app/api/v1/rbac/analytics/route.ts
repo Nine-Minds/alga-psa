@@ -3,10 +3,10 @@
  * GET /api/v1/rbac/analytics - Get RBAC analytics
  */
 
-import { ApiRoleControllerV2 } from '@/lib/api/controllers/ApiRoleControllerV2';
+import { ApiRoleController } from '@/lib/api/controllers/ApiRoleController';
 import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
 
-const controller = new ApiRoleControllerV2();
+const controller = new ApiRoleController();
 
 export async function GET(request: Request) {
   try {

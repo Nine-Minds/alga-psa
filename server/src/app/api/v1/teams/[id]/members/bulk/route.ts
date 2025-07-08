@@ -3,9 +3,9 @@
  * POST /api/v1/teams/{id}/members/bulk - Bulk add team members
  */
 
-import { ApiTeamControllerV2 } from '@/lib/api/controllers/ApiTeamControllerV2';
+import { ApiTeamController } from '@/lib/api/controllers/ApiTeamController';
 
-const controller = new ApiTeamControllerV2();
+const controller = new ApiTeamController();
 
 export const POST = controller.bulkAddMembers();
 

@@ -91,7 +91,7 @@ import {
 } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 
-export class ApiQuickBooksControllerV2 {
+export class ApiQuickBooksController {
   private qbService: QuickBooksService;
 
   constructor() {
@@ -1635,4 +1635,4 @@ export class ApiQuickBooksControllerV2 {
 }
 
 // Export the controller class
-export default ApiQuickBooksControllerV2;
+export default ApiQuickBooksController;

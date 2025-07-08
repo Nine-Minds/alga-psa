@@ -4,12 +4,12 @@
  * PUT /api/v1/users/[id]/preferences - Update user preferences
  */
 
-import { ApiUserControllerV2 } from '@/lib/api/controllers/ApiUserControllerV2';
+import { ApiUserController } from '@/lib/api/controllers/ApiUserController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const controller = new ApiUserControllerV2();
+    const controller = new ApiUserController();
     const req = request as any;
     req.params = params;
     return await controller.getUserPreferences()(req);
@@ -20,7 +20,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const controller = new ApiUserControllerV2();
+    const controller = new ApiUserController();
     const req = request as any;
     req.params = params;
     return await controller.updateUserPreferences()(req);

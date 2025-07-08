@@ -3,10 +3,10 @@
  * POST /api/v1/financial/credits/validate - Validate credit balance
  */
 
-import { ApiFinancialControllerV2 } from 'server/src/lib/api/controllers/ApiFinancialControllerV2';
+import { ApiFinancialController } from 'server/src/lib/api/controllers/ApiFinancialController';
 
 export async function POST(request: Request) {
-  const controller = new ApiFinancialControllerV2();
+  const controller = new ApiFinancialController();
   return await controller.validateCreditBalance()(request as any);
 }
 

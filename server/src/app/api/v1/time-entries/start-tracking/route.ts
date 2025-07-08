@@ -3,9 +3,9 @@
  * POST /api/v1/time-entries/start-tracking - Start time tracking session
  */
 
-import { ApiTimeEntryControllerV2 } from '@/lib/api/controllers/ApiTimeEntryControllerV2';
+import { ApiTimeEntryController } from '@/lib/api/controllers/ApiTimeEntryController';
 
-const controller = new ApiTimeEntryControllerV2();
+const controller = new ApiTimeEntryController();
 
 export const POST = controller.startTracking();
 

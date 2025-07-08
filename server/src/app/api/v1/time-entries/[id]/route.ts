@@ -5,9 +5,9 @@
  * DELETE /api/v1/time-entries/{id} - Delete time entry
  */
 
-import { ApiTimeEntryControllerV2 } from '@/lib/api/controllers/ApiTimeEntryControllerV2';
+import { ApiTimeEntryController } from '@/lib/api/controllers/ApiTimeEntryController';
 
-const controller = new ApiTimeEntryControllerV2();
+const controller = new ApiTimeEntryController();
 
 export const GET = controller.getById();
 export const PUT = controller.update();

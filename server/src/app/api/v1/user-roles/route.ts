@@ -3,10 +3,10 @@
  * GET /api/v1/user-roles - List users with roles
  */
 
-import { ApiUserControllerV2 } from '@/lib/api/controllers/ApiUserControllerV2';
+import { ApiUserController } from '@/lib/api/controllers/ApiUserController';
 import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
 
-const controller = new ApiUserControllerV2();
+const controller = new ApiUserController();
 
 export async function GET(request: Request) {
   try {

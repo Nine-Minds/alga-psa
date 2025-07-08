@@ -3,9 +3,9 @@
  * POST /api/v1/categories/bulk/delete - Bulk delete categories
  */
 
-import { ApiCategoryControllerV2 } from 'server/src/lib/api/controllers/ApiCategoryControllerV2';
+import { ApiCategoryController } from 'server/src/lib/api/controllers/ApiCategoryController';
 
-const controller = new ApiCategoryControllerV2();
+const controller = new ApiCategoryController();
 
 export async function POST(request: Request) {
   return controller.bulkDeleteCategories()(request as any);

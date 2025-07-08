@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ApiBaseControllerV2 } from './ApiBaseControllerV2';
+import { ApiBaseController } from './ApiBaseController';
 import { TimeEntryService } from '../services/TimeEntryService';
 import { 
   createTimeEntrySchema,
@@ -47,7 +47,7 @@ import {
 } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 
-export class ApiTimeEntryControllerV2 extends ApiBaseControllerV2 {
+export class ApiTimeEntryController extends ApiBaseController {
   private timeEntryService: TimeEntryService;
 
   constructor() {

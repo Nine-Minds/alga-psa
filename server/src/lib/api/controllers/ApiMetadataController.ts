@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ApiBaseControllerV2 } from './ApiBaseControllerV2';
+import { ApiBaseController } from './ApiBaseController';
 import { MetadataService } from '../services/MetadataService';
 import { DatabaseService } from '../services/DatabaseService';
 import { EventBusService } from '../services/EventBusService';
@@ -34,7 +34,7 @@ import {
 } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 
-export class ApiMetadataControllerV2 extends ApiBaseControllerV2 {
+export class ApiMetadataController extends ApiBaseController {
   private metadataService: MetadataService;
 
   constructor() {

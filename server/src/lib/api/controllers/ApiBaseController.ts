@@ -1,5 +1,5 @@
 /**
- * API Base Controller V2
+ * API Base Controller
  * Simplified version that properly handles API key authentication
  */
 
@@ -34,7 +34,7 @@ import {
   handleApiError
 } from '../middleware/apiMiddleware';
 
-export abstract class ApiBaseControllerV2 {
+export abstract class ApiBaseController {
   constructor(
     protected service: BaseService,
     protected options: CrudOptions

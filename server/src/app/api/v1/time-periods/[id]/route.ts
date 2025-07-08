@@ -5,12 +5,12 @@
  * DELETE /api/v1/time-periods/[id] - Delete time period
  */
 
-import { ApiTimeSheetControllerV2 } from 'server/src/lib/api/controllers/ApiTimeSheetControllerV2';
+import { ApiTimeSheetController } from 'server/src/lib/api/controllers/ApiTimeSheetController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const controller = new ApiTimeSheetControllerV2();
+    const controller = new ApiTimeSheetController();
     const req = request as any;
     req.params = params;
     return await controller.getTimePeriod()(req);
@@ -21,7 +21,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const controller = new ApiTimeSheetControllerV2();
+    const controller = new ApiTimeSheetController();
     const req = request as any;
     req.params = params;
     return await controller.updateTimePeriod()(req);
@@ -32,7 +32,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const controller = new ApiTimeSheetControllerV2();
+    const controller = new ApiTimeSheetController();
     const req = request as any;
     req.params = params;
     return await controller.deleteTimePeriod()(req);

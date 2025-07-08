@@ -3,9 +3,9 @@
  * GET /api/v1/tickets/stats - Get ticket statistics
  */
 
-import { ApiTicketControllerV2 } from 'server/src/lib/api/controllers/ApiTicketControllerV2';
+import { ApiTicketController } from 'server/src/lib/api/controllers/ApiTicketController';
 
-const controller = new ApiTicketControllerV2();
+const controller = new ApiTicketController();
 
 export const GET = controller.stats();
 

@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ApiBaseControllerV2, AuthenticatedApiRequest } from './ApiBaseControllerV2';
+import { ApiBaseController, AuthenticatedApiRequest } from './ApiBaseController';
 import { TicketService } from '../services/TicketService';
 import { 
   createTicketSchema,
@@ -40,7 +40,7 @@ import {
 } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 
-export class ApiTicketControllerV2 extends ApiBaseControllerV2 {
+export class ApiTicketController extends ApiBaseController {
   private ticketService: TicketService;
 
   constructor() {

@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ApiBaseControllerV2 } from './ApiBaseControllerV2';
+import { ApiBaseController } from './ApiBaseController';
 import { AutomationService } from '../services/AutomationService';
 import { 
   // Automation rule schemas
@@ -77,7 +77,7 @@ import { generateResourceLinks } from '../utils/responseHelpers';
 import { z } from 'zod';
 import { ZodError } from 'zod';
 
-export class ApiAutomationControllerV2 extends ApiBaseControllerV2 {
+export class ApiAutomationController extends ApiBaseController {
   private automationService: AutomationService;
 
   constructor() {

@@ -3,10 +3,10 @@
  * PUT /api/v1/teams/{id}/manager - Assign team manager
  */
 
-import { ApiTeamControllerV2 } from '@/lib/api/controllers/ApiTeamControllerV2';
+import { ApiTeamController } from '@/lib/api/controllers/ApiTeamController';
 
 
-const controller = new ApiTeamControllerV2();
+const controller = new ApiTeamController();
 export const PUT = controller.assignManager();
 
 export const runtime = 'nodejs';

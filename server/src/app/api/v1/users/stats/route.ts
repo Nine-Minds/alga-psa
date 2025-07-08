@@ -3,9 +3,9 @@
  * GET /api/v1/users/stats - Get user statistics
  */
 
-import { ApiUserControllerV2 } from '@/lib/api/controllers/ApiUserControllerV2';
+import { ApiUserController } from '@/lib/api/controllers/ApiUserController';
 
-const controller = new ApiUserControllerV2();
+const controller = new ApiUserController();
 
 export const GET = controller.stats();
 

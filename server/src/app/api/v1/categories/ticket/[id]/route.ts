@@ -5,9 +5,9 @@
  * DELETE /api/v1/categories/ticket/[id] - Delete ticket category
  */
 
-import { ApiCategoryControllerV2 } from 'server/src/lib/api/controllers/ApiCategoryControllerV2';
+import { ApiCategoryController } from 'server/src/lib/api/controllers/ApiCategoryController';
 
-const controller = new ApiCategoryControllerV2();
+const controller = new ApiCategoryController();
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const req = request as any;

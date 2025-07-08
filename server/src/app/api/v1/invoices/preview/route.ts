@@ -3,9 +3,9 @@
  * POST /api/v1/invoices/preview - Preview invoice before generation
  */
 
-import { ApiInvoiceControllerV2 } from 'server/src/lib/api/controllers/ApiInvoiceControllerV2';
+import { ApiInvoiceController } from 'server/src/lib/api/controllers/ApiInvoiceController';
 
-const controller = new ApiInvoiceControllerV2();
+const controller = new ApiInvoiceController();
 
 export async function POST(request: Request) {
   return controller.previewInvoice()(request as any);

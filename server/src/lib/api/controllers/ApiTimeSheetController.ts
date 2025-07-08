@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ApiBaseControllerV2 } from './ApiBaseControllerV2';
+import { ApiBaseController } from './ApiBaseController';
 import { TimeSheetService } from '../services/TimeSheetService';
 import { 
   createTimeSheetSchema,
@@ -53,7 +53,7 @@ import {
 } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 
-export class ApiTimeSheetControllerV2 extends ApiBaseControllerV2 {
+export class ApiTimeSheetController extends ApiBaseController {
   private timeSheetService: TimeSheetService;
 
   constructor() {

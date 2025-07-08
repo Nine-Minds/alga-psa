@@ -4,9 +4,9 @@
  * POST /api/v1/permissions - Create permission
  */
 
-import { ApiPermissionControllerV2 } from '@/lib/api/controllers/ApiPermissionControllerV2';
+import { ApiPermissionController } from '@/lib/api/controllers/ApiPermissionController';
 
-const controller = new ApiPermissionControllerV2();
+const controller = new ApiPermissionController();
 
 export const GET = controller.list();
 export const POST = controller.create();

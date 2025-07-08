@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ApiBaseControllerV2 } from './ApiBaseControllerV2';
+import { ApiBaseController } from './ApiBaseController';
 import { UserService, UserActivityFilter } from '../services/UserService';
 import { 
   createUserSchema,
@@ -42,7 +42,7 @@ import {
 } from '../middleware/apiMiddleware';
 import { ZodError, z } from 'zod';
 
-export class ApiUserControllerV2 extends ApiBaseControllerV2 {
+export class ApiUserController extends ApiBaseController {
   private userService: UserService;
 
   constructor() {

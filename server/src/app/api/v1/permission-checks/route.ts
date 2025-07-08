@@ -3,10 +3,10 @@
  * POST /api/v1/permission-checks - Check permissions
  */
 
-import { ApiPermissionControllerV2 } from '@/lib/api/controllers/ApiPermissionControllerV2';
+import { ApiPermissionController } from '@/lib/api/controllers/ApiPermissionController';
 import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
 
-const controller = new ApiPermissionControllerV2();
+const controller = new ApiPermissionController();
 
 export async function POST(request: Request) {
   try {

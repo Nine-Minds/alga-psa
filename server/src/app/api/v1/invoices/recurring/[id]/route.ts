@@ -4,9 +4,9 @@
  * DELETE /api/v1/invoices/recurring/[id] - Delete recurring invoice template
  */
 
-import { ApiInvoiceControllerV2 } from 'server/src/lib/api/controllers/ApiInvoiceControllerV2';
+import { ApiInvoiceController } from 'server/src/lib/api/controllers/ApiInvoiceController';
 
-const controller = new ApiInvoiceControllerV2();
+const controller = new ApiInvoiceController();
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const req = request as any;

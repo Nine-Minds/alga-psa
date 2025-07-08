@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ApiBaseControllerV2 } from './ApiBaseControllerV2';
+import { ApiBaseController } from './ApiBaseController';
 import { TeamService } from '../services/TeamService';
 import { 
   createTeamSchema,
@@ -45,7 +45,7 @@ import {
 } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 
-export class ApiTeamControllerV2 extends ApiBaseControllerV2 {
+export class ApiTeamController extends ApiBaseController {
   private teamService: TeamService;
 
   constructor() {

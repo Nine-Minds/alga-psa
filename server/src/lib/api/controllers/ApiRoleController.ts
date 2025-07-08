@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ApiBaseControllerV2 } from './ApiBaseControllerV2';
+import { ApiBaseController } from './ApiBaseController';
 import { PermissionRoleService as RoleService } from '../services/PermissionRoleService';
 import { 
   createRoleSchema,
@@ -42,7 +42,7 @@ import {
 } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 
-export class ApiRoleControllerV2 extends ApiBaseControllerV2 {
+export class ApiRoleController extends ApiBaseController {
   private roleService: RoleService;
 
   constructor() {

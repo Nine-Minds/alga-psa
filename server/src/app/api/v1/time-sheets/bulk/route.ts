@@ -3,12 +3,12 @@
  * POST /api/v1/time-sheets/bulk - Bulk operations on time sheets
  */
 
-import { ApiTimeSheetControllerV2 } from 'server/src/lib/api/controllers/ApiTimeSheetControllerV2';
+import { ApiTimeSheetController } from 'server/src/lib/api/controllers/ApiTimeSheetController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
 export async function POST(request: Request) {
   try {
-    const controller = new ApiTimeSheetControllerV2();
+    const controller = new ApiTimeSheetController();
     return await controller.list()(request as any);
   } catch (error) {
     return handleApiError(error);

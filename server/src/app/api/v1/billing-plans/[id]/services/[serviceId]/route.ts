@@ -4,9 +4,9 @@
  */
 
 import { NextRequest } from 'next/server';
-import { ApiBillingPlanControllerV2 } from 'server/src/lib/api/controllers/ApiBillingPlanControllerV2';
+import { ApiBillingPlanController } from 'server/src/lib/api/controllers/ApiBillingPlanController';
 
-const controller = new ApiBillingPlanControllerV2();
+const controller = new ApiBillingPlanController();
 
 // GET /api/v1/billing-plans/[id]/services/[serviceId] - Get billing plan service details
 export async function GET(

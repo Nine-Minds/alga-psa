@@ -4,9 +4,9 @@
  */
 
 import { NextRequest } from 'next/server';
-import { ApiAutomationControllerV2 } from 'server/src/lib/api/controllers/ApiAutomationControllerV2';
+import { ApiAutomationController } from 'server/src/lib/api/controllers/ApiAutomationController';
 
-const controller = new ApiAutomationControllerV2();
+const controller = new ApiAutomationController();
 
 export async function GET(request: NextRequest) {
   return controller.getAutomationMeta()(request);

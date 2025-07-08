@@ -3,9 +3,9 @@
  * GET /api/v1/categories/search - Search categories
  */
 
-import { ApiCategoryControllerV2 } from 'server/src/lib/api/controllers/ApiCategoryControllerV2';
+import { ApiCategoryController } from 'server/src/lib/api/controllers/ApiCategoryController';
 
-const controller = new ApiCategoryControllerV2();
+const controller = new ApiCategoryController();
 
 export async function GET(request: Request) {
   return controller.searchCategories()(request as any);
