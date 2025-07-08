@@ -864,7 +864,7 @@ export async function exportCompaniesToCSV(companies: ICompany[]): Promise<strin
   return unparseCSV(exportData, fields);
 }
 
-export function generateCompanyCSVTemplate(): string {
+export async function generateCompanyCSVTemplate(): Promise<string> {
   const templateData = [
     {
       client_name: 'Acme Corporation',

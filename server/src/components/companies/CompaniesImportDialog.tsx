@@ -346,8 +346,8 @@ const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
                 <Button
                   id="download-template-btn"
                   variant="outline"
-                  onClick={() => {
-                    const template = generateCompanyCSVTemplate();
+                  onClick={async () => {
+                    const template = await generateCompanyCSVTemplate();
                     const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
                     const link = document.createElement('a');
                     const url = URL.createObjectURL(blob);
