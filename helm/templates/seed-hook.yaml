@@ -1,4 +1,4 @@
-{{- if or .Release.IsInstall .Values.devEnv.enabled }}
+{{- if and (or .Release.IsInstall .Values.devEnv.enabled) .Values.setup.runSeeds }}
 apiVersion: batch/v1
 kind: Job
 metadata:
