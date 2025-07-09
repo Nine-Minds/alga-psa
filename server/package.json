@@ -16,8 +16,6 @@
     "test:infrastructure": "vitest src/test/infrastructure",
     "test:e2e": "vitest src/test/e2e",
     "test:e2e:email": "vitest src/test/e2e/email-processing.test.ts",
-    "test:e2e:email:fast": "vitest src/test/e2e/email-processing-persistent.test.ts",
-    "test:e2e:email:simple": "vitest src/test/e2e/email-processing-simplified.test.ts",
     "test:e2e:workflow": "vitest src/test/e2e/workflow-integration.test.ts",
     "test:e2e:pipeline": "vitest src/test/e2e/full-pipeline.test.ts",
     "test:local": "vitest --config vitest.config.ts",
