@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
@@ -98,6 +98,26 @@ const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
   const [existingCompaniesCount, setExistingCompaniesCount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showOptionalFields, setShowOptionalFields] = useState(false);
+
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setStep('upload');
+      setFile(null);
+      setPreviewData(null);
+      setColumnMappings([]);
+      setValidationResults([]);
+      setErrors([]);
+      setImportOptions({
+        updateExisting: false,
+        skipInvalid: false
+      });
+      setShowUpdateConfirmation(false);
+      setExistingCompaniesCount(0);
+      setIsProcessing(false);
+      setShowOptionalFields(false);
+    }
+  }, [isOpen]);
 
   const getFieldOptions = useCallback((currentMappingValue: string | null) => {
     // Get all currently mapped fields except the current one

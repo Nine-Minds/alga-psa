@@ -57,7 +57,7 @@ const CompaniesGrid = ({
                             handleEditCompany={handleEditCompany}
                             handleDeleteCompany={handleDeleteCompany}
                             tags={companyTags[company.company_id] || []}
-                            allUniqueTags={allUniqueTags}
+                            allUniqueTags={allUniqueTags.map(tag => tag.tag_text)}
                             onTagsChange={onTagsChange}
                         />
                     </div>

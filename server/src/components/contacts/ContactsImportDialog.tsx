@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
@@ -26,7 +26,7 @@ const CONTACT_FIELDS = {
   full_name: 'Name *',
   email: 'Email *',
   phone_number: 'Phone Number',
-  company_name: 'Company',
+  company: 'Company',
   tags: 'Tags',
   role: 'Role',
   notes: 'Notes'
@@ -70,6 +70,30 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
     currentItem?: string;
   }>({ current: 0, total: 0 });
   const [failedRecords, setFailedRecords] = useState<ImportContactResult[]>([]);
+
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setStep('upload');
+      setFile(null);
+      setPreviewData(null);
+      setColumnMappings([]);
+      setValidationResults([]);
+      setImportProgress(0);
+      setErrors([]);
+      setImportOptions({
+        updateExisting: false,
+        skipInvalid: false,
+        dryRun: false
+      });
+      setImportResults([]);
+      setIsImporting(false);
+      setShowUpdateConfirmation(false);
+      setExistingContactsCount(0);
+      setProcessingDetails({ current: 0, total: 0 });
+      setFailedRecords([]);
+    }
+  }, [isOpen]);
 
   const getFieldOptions = useCallback((currentMappingValue: string | null) => {
     // Get all currently mapped fields except the current one
@@ -115,13 +139,16 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
         const headerLower = header.toLowerCase();
         let contactField: MappableField | null = null;
 
-        if (headerLower.includes('name')) contactField = 'full_name';
+        // Check more specific patterns first
+        if (headerLower === 'company' || headerLower === 'company_name' || headerLower === 'company name') contactField = 'company';
+        else if (headerLower === 'full_name' || headerLower === 'full name' || headerLower === 'name') contactField = 'full_name';
+        else if (headerLower.includes('company')) contactField = 'company';
         else if (headerLower.includes('email')) contactField = 'email';
         else if (headerLower.includes('phone')) contactField = 'phone_number';
-        else if (headerLower.includes('company')) contactField = 'company_name';
         else if (headerLower.includes('tag')) contactField = 'tags';
         else if (headerLower.includes('role')) contactField = 'role';
         else if (headerLower.includes('note')) contactField = 'notes';
+        else if (headerLower.includes('name')) contactField = 'full_name';
 
         return {
           csvHeader: header,
@@ -231,12 +258,12 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
     return existing.length;
   };
 
-  const transformDataForImport = (data: Array<Record<MappableField, string>>): Array<Partial<IContact>> => {
-    return data.map((record): Partial<IContact> => {
+  const transformDataForImport = (data: Array<Record<MappableField, string>>): Array<Partial<IContact> & { tags?: string }> => {
+    return data.map((record): Partial<IContact> & { tags?: string } => {
       // Find company ID from company name
-      const company = companies.find(c => c.company_name === record.company_name);
+      const company = companies.find(c => c.company_name === record.company);
       
-      return {
+      const contactData: Partial<IContact> & { tags?: string } = {
         full_name: record.full_name,
         email: record.email,
         phone_number: record.phone_number,
@@ -245,6 +272,13 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
         notes: record.notes,
         is_inactive: false
       };
+      
+      // Add tags as a separate property (not part of IContact)
+      if (record.tags) {
+        (contactData as any).tags = record.tags;
+      }
+      
+      return contactData;
     });
   };
 
@@ -293,7 +327,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
           full_name: result.data.full_name || '',
           email: result.data.email || '',
           phone_number: result.data.phone_number || '',
-          company_name: result.data.company_name || '',
+          company: result.data.company || '',
           tags: result.data.tags || '',
           role: result.data.role || '',
           notes: result.data.notes || ''
@@ -468,7 +502,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
                 <p className="mt-1 text-xs text-gray-500">
                   <strong>Required:</strong> full_name, email<br />
                   <strong>Contact fields:</strong> phone_number, role, notes, tags<br />
-                  <strong>Company field:</strong> company_name (matches existing companies by name)<br />
+                  <strong>Company field:</strong> company (matches existing companies by name)<br />
                   <strong>Note:</strong> Tags should be comma-separated values
                 </p>
                 <Input
@@ -539,16 +573,17 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
                           ]}
                           value={csvHeader}
                           onValueChange={(value) => {
-                            // Clear any existing mapping for this CSV column
-                            if (value !== 'unassigned') {
+                            if (value === 'unassigned') {
+                              // Clear the mapping for this field
+                              if (currentMapping) {
+                                handleMapColumn(currentMapping.csvHeader, 'unassigned');
+                              }
+                            } else {
+                              // Clear any existing mapping for this CSV column
                               setColumnMappings(prev => prev.map(m => 
                                 m.csvHeader === value ? { ...m, contactField: null } : m
                               ));
-                            }
-                            // Update the mapping for this field
-                            if (currentMapping) {
-                              handleMapColumn(currentMapping.csvHeader, value !== 'unassigned' ? fieldKey : 'unassigned');
-                            } else if (value !== 'unassigned') {
+                              
                               // Find the mapping for the selected CSV column and update it
                               const targetMapping = columnMappings.find(m => m.csvHeader === value);
                               if (targetMapping) {
@@ -736,7 +771,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
               full_name: result.data.full_name || '',
               email: result.data.email || '',
               phone_number: result.data.phone_number || '',
-              company_name: result.data.company_name || '',
+              company: result.data.company || '',
               tags: result.data.tags || '',
               role: result.data.role || '',
               notes: result.data.notes || ''
