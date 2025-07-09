@@ -109,11 +109,16 @@ export class ContactService extends BaseService<IContact> {
         this.on('c.company_id', '=', 'comp.company_id')
             .andOn('c.tenant', '=', 'comp.tenant');
       })
+      .leftJoin('company_locations as cl', function() {
+        this.on('comp.company_id', '=', 'cl.company_id')
+            .andOn('comp.tenant', '=', 'cl.tenant')
+            .andOn('cl.is_default', '=', knex.raw('true'));
+      })
       .select(
         'c.*',
         'comp.company_name',
-        'comp.email as company_email',
-        'comp.phone_no as company_phone',
+        'cl.email as company_email',
+        'cl.phone as company_phone',
         'comp.is_inactive as company_inactive'
       )
       .where({ 'c.contact_name_id': id, 'c.tenant': context.tenant })

@@ -8,6 +8,7 @@ import { generateInvoiceNumber } from 'server/src/lib/actions/invoiceGeneration'
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import { InvoiceViewModel, IInvoiceItem as ManualInvoiceItem, NetAmountItem, DiscountType } from 'server/src/interfaces/invoice.interfaces'; // Renamed for clarity
 import { IBillingCharge, IFixedPriceCharge, IService } from 'server/src/interfaces/billing.interfaces'; // Added import
+import { ICompanyWithLocation } from 'server/src/interfaces/company.interfaces';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import { ISO8601String } from 'server/src/types/types.d';
@@ -43,11 +44,20 @@ export async function validateSessionAndTenant(): Promise<InvoiceContext> {
   return { session, knex, tenant };
 }
 
-export async function getCompanyDetails(knex: Knex, tenant: string, companyId: string) {
-  const company = await knex('companies')
+export async function getCompanyDetails(knex: Knex, tenant: string, companyId: string): Promise<ICompanyWithLocation> {
+  const company = await knex('companies as c')
+    .leftJoin('company_locations as cl', function() {
+      this.on('c.company_id', '=', 'cl.company_id')
+          .andOn('c.tenant', '=', 'cl.tenant')
+          .andOn('cl.is_default', '=', knex.raw('true'));
+    })
+    .select(
+      'c.*',
+      'cl.address_line1 as location_address'
+    )
     .where({
-      company_id: companyId,
-      tenant
+      'c.company_id': companyId,
+      'c.tenant': tenant
     })
     .first();
   if (!company) {

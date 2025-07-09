@@ -465,7 +465,18 @@ export default class Invoice {
         unitPrice: item.unit_price
       }))
     });
-    const company = await knexOrTrx('companies').where({ company_id: invoice.company_id }).first();
+    const company = await knexOrTrx('companies as c')
+      .leftJoin('company_locations as cl', function() {
+        this.on('c.company_id', '=', 'cl.company_id')
+            .andOn('c.tenant', '=', 'cl.tenant')
+            .andOn('cl.is_default', '=', knexOrTrx.raw('true'));
+      })
+      .select(
+        'c.*',
+        'cl.address_line1 as location_address'
+      )
+      .where({ 'c.company_id': invoice.company_id })
+      .first();
 // Add check for company existence
     if (!company) {
       console.error(`!!! Critical Error: Company details not found for company_id ${invoice.company_id} associated with invoice ${invoiceId} !!!`);
@@ -501,7 +512,7 @@ export default class Invoice {
         company_id: invoice.company_id,
         company: { // Populate company details
           name: company.company_name || '',
-          address: company.address || '',
+          address: company.location_address || '',
           // Check tenant before calling getCompanyLogoUrl
           logo: tenant ? (await getCompanyLogoUrl(invoice.company_id, tenant)) || '' : '',
         },

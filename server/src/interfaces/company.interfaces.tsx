@@ -84,3 +84,10 @@ export interface ICompanyEmailSettings extends TenantEntity {
   created_at: ISO8601String;
   updated_at: ISO8601String;
 }
+
+// Type for company with default location data joined
+export interface ICompanyWithLocation extends ICompany {
+  location_email?: string;
+  location_phone?: string;
+  location_address?: string;
+}

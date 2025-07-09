@@ -123,7 +123,7 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
       company: {
         name: company.company_name,
         logo: company.logo || '',
-        address: company.address || ''
+        address: company.location_address || ''
       },
       contact: {
         name: '',
@@ -295,7 +295,7 @@ export async function updateManualInvoice(
     company: {
       name: company.company_name,
       logo: company.logo || '',
-      address: company.address || ''
+      address: company.location_address || ''
     },
     contact: {
       name: '',
