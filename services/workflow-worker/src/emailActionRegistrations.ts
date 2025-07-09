@@ -227,26 +227,34 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
         const result = await withTransaction(knex, async (trx) => {
           const documentId = uuidv4();
           const now = new Date();
+          
+          // Get the first available user for this tenant as document owner
+          const user = await trx('users')
+            .where('tenant', context.tenant)
+            .select('user_id')
+            .first();
+          
+          if (!user) {
+            throw new Error(`No users found for tenant ${context.tenant} - cannot create document without owner`);
+          }
+          
+          const userId = user.user_id;
 
           // Create document record for the attachment
           await trx('documents').insert({
             document_id: documentId,
             tenant: context.tenant,
-            name: params.attachmentData.name,
+            document_name: params.attachmentData.name,
+            mime_type: params.attachmentData.contentType,
             file_size: params.attachmentData.size,
-            content_type: params.attachmentData.contentType,
-            source: 'email_attachment',
-            metadata: {
-              emailId: params.emailId,
-              attachmentId: params.attachmentId,
-              providerId: params.providerId,
-              contentId: params.attachmentData.contentId
-            },
-            created_at: now,
+            user_id: userId, // Required field - use actual user
+            created_by: userId, // Required field - use actual user
+            order_number: 1, // Required field
+            entered_at: now,
             updated_at: now
           });
 
-          // Associate document with ticket
+          // Also create document association for many-to-many relationship tracking
           await trx('document_associations').insert({
             document_id: documentId,
             entity_type: 'ticket',

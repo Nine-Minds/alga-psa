@@ -191,11 +191,127 @@ export class MailHogPollingService {
         html: '' // MailHog doesn't separate HTML/text in our simple case
       },
       receivedAt: new Date().toISOString(),
-      attachments: [], // MailHog attachments would need more complex parsing
+      attachments: this.parseAttachments(mailhogMessage),
       threadId: headers['Message-ID']?.[0] || '',
       inReplyTo: headers['In-Reply-To']?.[0] || '',
       references: headers.References ? headers.References[0].split(/\s+/) : []
     };
+  }
+
+  /**
+   * Parse attachments from MailHog message MIME data
+   */
+  private parseAttachments(mailhogMessage: any): any[] {
+    try {
+      // Debug: Log the entire message structure to understand MailHog format
+      console.log(`🔍 [DEBUG] MailHog message structure for ${mailhogMessage.ID}:`, {
+        hasContent: !!mailhogMessage.Content,
+        hasMime: !!mailhogMessage.Content?.MIME,
+        hasContentMime: !!mailhogMessage.Content?.MIME,
+        hasRootMime: !!mailhogMessage.MIME,
+        contentKeys: mailhogMessage.Content ? Object.keys(mailhogMessage.Content) : [],
+        rootKeys: Object.keys(mailhogMessage)
+      });
+      
+      // MailHog might store MIME data in different locations
+      let mime = mailhogMessage.Content?.MIME || mailhogMessage.MIME;
+      const attachments: any[] = [];
+      
+      if (!mime) {
+        console.log(`🔍 [DEBUG] No MIME data found in message ${mailhogMessage.ID}`);
+        return attachments;
+      }
+      
+      console.log(`🔍 [DEBUG] MIME structure:`, {
+        hasParts: !!mime.Parts,
+        mimeKeys: Object.keys(mime),
+        partsLength: mime.Parts ? mime.Parts.length : 0
+      });
+      
+      if (!mime.Parts) {
+        return attachments;
+      }
+      
+      // Recursively parse MIME parts to find attachments
+      this.parseMimeParts(mime.Parts, attachments);
+      
+      console.log(`🔍 [DEBUG] Found ${attachments.length} attachments in message ${mailhogMessage.ID}`);
+      console.log(`🔍 [DEBUG] Final attachments array:`, attachments);
+      return attachments;
+    } catch (error: any) {
+      console.warn(`⚠️ Failed to parse attachments from MailHog message ${mailhogMessage.ID}:`, error.message);
+      return [];
+    }
+  }
+  
+  /**
+   * Recursively parse MIME parts to extract attachments
+   */
+  private parseMimeParts(parts: any[], attachments: any[]): void {
+    if (!Array.isArray(parts)) {
+      return;
+    }
+    
+    for (const part of parts) {
+      try {
+        const headers = part.Headers || {};
+        const contentDisposition = headers['Content-Disposition']?.[0] || '';
+        const contentType = headers['Content-Type']?.[0] || '';
+        
+        // Check if this part is an attachment
+        if (contentDisposition.includes('attachment') || contentDisposition.includes('inline')) {
+          // Extract filename from Content-Disposition header
+          const filenameMatch = contentDisposition.match(/filename[*]?=([^;\r\n]*)/i);
+          let filename = filenameMatch ? filenameMatch[1].replace(/['"]/g, '') : `attachment_${Date.now()}`;
+          
+          // If no filename in Content-Disposition, try Content-Type
+          if (filename.includes('attachment_') && contentType.includes('name=')) {
+            const nameMatch = contentType.match(/name[*]?=([^;\r\n]*)/i);
+            if (nameMatch) {
+              filename = nameMatch[1].replace(/['"]/g, '');
+            }
+          }
+          
+          // Extract content type
+          const mimeType = contentType.split(';')[0].trim() || 'application/octet-stream';
+          
+          // Get the body content (base64 encoded in MailHog)
+          const body = part.Body || '';
+          
+          // Convert base64 to buffer if needed
+          let content: Buffer;
+          try {
+            // MailHog typically stores attachment content as base64
+            content = Buffer.from(body, 'base64');
+          } catch {
+            // If not base64, treat as plain text
+            content = Buffer.from(body, 'utf-8');
+          }
+          
+          const attachment = {
+            id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name: filename,
+            contentType: mimeType,
+            size: content.length,
+            content: content.toString('base64'), // Store as base64 string for workflow processing
+            contentId: headers['Content-Id']?.[0] || null
+          };
+          
+          attachments.push(attachment);
+          console.log(`📎 Found attachment: ${filename} (${mimeType}, ${content.length} bytes)`);
+          console.log(`🔍 [DEBUG] Attachment object:`, attachment);
+          console.log(`🔍 [DEBUG] Attachments array length after push: ${attachments.length}`);
+        }
+        
+        // Recursively check nested parts
+        if (part.Parts && Array.isArray(part.Parts)) {
+          this.parseMimeParts(part.Parts, attachments);
+        }
+      } catch (error: any) {
+        console.warn(`⚠️ Failed to parse MIME part:`, error.message);
+        continue;
+      }
+    }
   }
 
   /**
