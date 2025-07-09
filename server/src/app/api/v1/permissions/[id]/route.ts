@@ -5,40 +5,13 @@
  * DELETE /api/v1/permissions/[id] - Delete permission
  */
 
-import { PermissionRoleController } from 'server/src/lib/api/controllers/PermissionRoleController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiPermissionController } from '@/lib/api/controllers/ApiPermissionController';
 
-const controller = new PermissionRoleController();
+const controller = new ApiPermissionController();
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const req = request as any;
-    req.params = params;
-    return await controller.getPermissionById()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
-
-export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const req = request as any;
-    req.params = params;
-    return await controller.update()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
-
-export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const req = request as any;
-    req.params = params;
-    return await controller.delete()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+export const GET = controller.getById();
+export const PUT = controller.update();
+export const DELETE = controller.delete();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

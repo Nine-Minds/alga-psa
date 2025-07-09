@@ -5,15 +5,15 @@
  * DELETE /api/v1/time-sheets/[id] - Delete time sheet
  */
 
-import { TimeSheetController } from 'server/src/lib/api/controllers/TimeSheetController';
+import { ApiTimeSheetController } from 'server/src/lib/api/controllers/ApiTimeSheetController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const timeSheetController = new TimeSheetController();
+    const timeSheetController = new ApiTimeSheetController();
     const req = request as any;
     req.params = params;
-    return await timeSheetController.getById()(req);
+    return await timeSheetController.getWithDetails()(req);
   } catch (error) {
     return handleApiError(error);
   }
@@ -21,7 +21,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const timeSheetController = new TimeSheetController();
+    const timeSheetController = new ApiTimeSheetController();
     const req = request as any;
     req.params = params;
     return await timeSheetController.update()(req);
@@ -32,7 +32,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const timeSheetController = new TimeSheetController();
+    const timeSheetController = new ApiTimeSheetController();
     const req = request as any;
     req.params = params;
     return await timeSheetController.delete()(req);

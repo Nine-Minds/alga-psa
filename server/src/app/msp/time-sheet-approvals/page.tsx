@@ -20,3 +20,5 @@ export default async function TimeSheetApprovalsPage() {
 
   return <ManagerApprovalDashboard currentUser={currentUser} />;
 }
+
+export const dynamic = "force-dynamic";

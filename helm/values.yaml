@@ -16,6 +16,7 @@ setup:
     tag: "latest"
   pullPolicy: Always
   runMigrations: true
+  runSeeds: true
 
 server:
   image: 

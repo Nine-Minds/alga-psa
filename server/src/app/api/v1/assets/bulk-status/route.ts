@@ -1,15 +1,19 @@
 /**
- * Asset Bulk Status Update API Route
- * PUT /api/v1/assets/bulk-status - Bulk update asset status
+ * bulk-status API Routes
+ * Path: /api/v1/assets/bulk-status
  */
 
-import { AssetController } from 'server/src/lib/api/controllers/AssetController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiAssetController } from '@/lib/api/controllers/ApiAssetController';
+import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
 
-export async function PUT(request: Request) {
+const controller = new ApiAssetController();
+
+export async function PUT(request: Request, { params }: { params: Promise<any> }) {
   try {
-    const controller = new AssetController();
-    return await controller.bulkStatusUpdate()(request as any);
+    const resolvedParams = await params;
+    const req = request as any;
+    req.params = resolvedParams;
+    return await controller.bulkStatusUpdate(req);
   } catch (error) {
     return handleApiError(error);
   }

@@ -11,10 +11,16 @@ import { Knex } from 'knex';
 const policyEngine = new PolicyEngine();
 
 // Role actions
-export async function createRole(roleName: string, description: string): Promise<IRole> {
+export async function createRole(roleName: string, description: string, msp: boolean = true, client: boolean = false): Promise<IRole> {
     const { knex: db, tenant } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        const [role] = await trx('roles').insert({ role_name: roleName, description, tenant }).returning('*');
+        const [role] = await trx('roles').insert({ 
+            role_name: roleName, 
+            description, 
+            tenant,
+            msp,
+            client
+        }).returning('*');
         return role;
     });
 }
@@ -40,7 +46,9 @@ export async function deleteRole(roleId: string): Promise<void> {
 export async function getRoles(): Promise<IRole[]> {
     const { knex: db, tenant } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        return await trx('roles').where({ tenant });
+        return await trx('roles')
+            .where({ tenant })
+            .select('role_id', 'role_name', 'description', 'tenant', 'msp', 'client');
     });
 }
 
@@ -235,7 +243,7 @@ export async function getRolePermissions(roleId: string): Promise<IPermission[]>
                     'role_permissions.tenant': tenant,
                     'permissions.tenant': tenant 
                 })
-                .select('permissions.*');
+                .select('permissions.permission_id', 'permissions.resource', 'permissions.action', 'permissions.tenant', 'permissions.msp', 'permissions.client', 'permissions.description');
         });
     } catch (error) {
         console.error('Error fetching role permissions:', error);
@@ -247,8 +255,9 @@ export async function getPermissions(): Promise<IPermission[]> {
     try {
         const { knex: db, tenant } = await createTenantKnex();
         return withTransaction(db, async (trx: Knex.Transaction) => {
-            const permissions = await trx('permissions').where({ tenant });
-            console.log('Fetched permissions for tenant:', tenant, permissions);
+            const permissions = await trx('permissions')
+                .where({ tenant })
+                .select('permission_id', 'resource', 'action', 'tenant', 'msp', 'client', 'description');
             return permissions;
         });
     } catch (error) {

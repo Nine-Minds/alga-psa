@@ -5,30 +5,37 @@
  * DELETE /api/v1/contacts/{id} - Delete contact
  */
 
-import { ContactController } from 'server/src/lib/api/controllers/ContactController';
+import { ApiContactController } from 'server/src/lib/api/controllers/ApiContactController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new ContactController();
-
-export async function GET(request: Request) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    return await controller.getById()(request as any);
+    const controller = new ApiContactController();
+    const req = request as any;
+    req.params = params;
+    return await controller.getById()(req);
   } catch (error) {
     return handleApiError(error);
   }
 }
 
-export async function PUT(request: Request) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    return await controller.update()(request as any);
+    const controller = new ApiContactController();
+    const req = request as any;
+    req.params = params;
+    return await controller.update()(req);
   } catch (error) {
     return handleApiError(error);
   }
 }
 
-export async function DELETE(request: Request) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    return await controller.delete()(request as any);
+    const controller = new ApiContactController();
+    const req = request as any;
+    req.params = params;
+    return await controller.delete()(req);
   } catch (error) {
     return handleApiError(error);
   }

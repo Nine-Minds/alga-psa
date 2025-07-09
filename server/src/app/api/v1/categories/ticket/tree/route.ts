@@ -3,17 +3,12 @@
  * GET /api/v1/categories/ticket/tree - Get ticket category tree
  */
 
-import { CategoryController } from 'server/src/lib/api/controllers/CategoryController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiCategoryController } from 'server/src/lib/api/controllers/ApiCategoryController';
 
-const controller = new CategoryController();
+const controller = new ApiCategoryController();
 
 export async function GET(request: Request) {
-  try {
-    return await controller.getCategoryTree()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
+  return controller.getCategoryTree()(request as any);
 }
 
 export const runtime = 'nodejs';

@@ -40,7 +40,9 @@ export async function verifyRegisterUser(token: string): Promise<VerifyResponse>
         role_id: 'superadmin',
         role_name: 'superadmin',
         description: 'Superadmin role',
-        permissions: []
+        permissions: [],
+        msp: true,
+        client: false
       };
       const newUser: Omit<IUserWithRoles, 'tenant'> = {
         user_id: uuidv4(),
@@ -191,7 +193,9 @@ export async function registerUser({ username, email, password, companyName }: I
         role_id: 'superadmin',
         role_name: 'superadmin',
         description: 'Superadmin role',
-        permissions: []
+        permissions: [],
+        msp: true,
+        client: false
       };
       const newUser: Omit<IUserWithRoles, 'tenant'> = {        
         user_id: uuidv4(),

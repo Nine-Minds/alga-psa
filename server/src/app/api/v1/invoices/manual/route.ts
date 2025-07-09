@@ -3,17 +3,12 @@
  * POST /api/v1/invoices/manual - Create manual invoice
  */
 
-import { InvoiceController } from 'server/src/lib/api/controllers/InvoiceController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiInvoiceController } from 'server/src/lib/api/controllers/ApiInvoiceController';
 
-const controller = new InvoiceController();
+const controller = new ApiInvoiceController();
 
 export async function POST(request: Request) {
-  try {
-    return await controller.createManualInvoice()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
+  return controller.createManualInvoice()(request as any);
 }
 
 export const runtime = 'nodejs';

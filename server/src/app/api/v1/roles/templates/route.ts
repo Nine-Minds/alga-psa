@@ -3,18 +3,11 @@
  * GET /api/v1/roles/templates - Get role templates
  */
 
-import { PermissionRoleController } from 'server/src/lib/api/controllers/PermissionRoleController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiRoleController } from '@/lib/api/controllers/ApiRoleController';
 
-const controller = new PermissionRoleController();
+const controller = new ApiRoleController();
 
-export async function GET(request: Request) {
-  try {
-    return await controller.getRoleTemplates()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+export const GET = controller.getTemplates();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

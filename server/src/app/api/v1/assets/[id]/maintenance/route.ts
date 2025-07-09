@@ -1,25 +1,30 @@
 /**
- * Asset Maintenance API Routes
- * GET /api/v1/assets/{id}/maintenance - List maintenance schedules
- * POST /api/v1/assets/{id}/maintenance - Create maintenance schedule
+ * maintenance API Routes
+ * Path: /api/v1/assets/[id]/maintenance
  */
 
-import { AssetController } from 'server/src/lib/api/controllers/AssetController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiAssetController } from '@/lib/api/controllers/ApiAssetController';
+import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
 
-export async function GET(request: Request) {
+const controller = new ApiAssetController();
+
+export async function GET(request: Request, { params }: { params: Promise<any> }) {
   try {
-    const controller = new AssetController();
-    return await controller.listMaintenanceSchedules()(request as any);
+    const resolvedParams = await params;
+    const req = request as any;
+    req.params = resolvedParams;
+    return await controller.listMaintenanceSchedules(req, resolvedParams);
   } catch (error) {
     return handleApiError(error);
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: Request, { params }: { params: Promise<any> }) {
   try {
-    const controller = new AssetController();
-    return await controller.createMaintenanceSchedule()(request as any);
+    const resolvedParams = await params;
+    const req = request as any;
+    req.params = resolvedParams;
+    return await controller.createMaintenanceSchedule(req, resolvedParams);
   } catch (error) {
     return handleApiError(error);
   }

@@ -8,13 +8,14 @@ import { BaseService, ServiceContext, ListResult } from './BaseService';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { withTransaction } from '@shared/db';
 import { getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { NotFoundError } from '../middleware/apiMiddleware';
 import { 
   CreateContactData, 
   UpdateContactData, 
   ContactFilterData,
   ContactSearchData
 } from '../schemas/contact';
-import { ListOptions } from '../controllers/BaseController';
+import { ListOptions } from '../controllers/types';
 
 export class ContactService extends BaseService<IContact> {
   constructor() {
@@ -223,7 +224,7 @@ export class ContactService extends BaseService<IContact> {
         .returning('*');
 
       if (!contact) {
-        throw new Error('Contact not found or permission denied');
+        throw new NotFoundError('Contact not found');
       }
 
       // Handle tags if provided
@@ -353,7 +354,11 @@ export class ContactService extends BaseService<IContact> {
     ]);
 
     return {
-      ...totalStats,
+      total_contacts: parseInt(totalStats.total_contacts as string),
+      active_contacts: parseInt(totalStats.active_contacts as string),
+      inactive_contacts: parseInt(totalStats.inactive_contacts as string),
+      contacts_with_company: parseInt(totalStats.contacts_with_company as string),
+      contacts_without_company: parseInt(totalStats.contacts_without_company as string),
       contacts_by_role: roleStats.reduce((acc: any, row: any) => {
         acc[row.role] = parseInt(row.count);
         return acc;
@@ -379,8 +384,12 @@ export class ContactService extends BaseService<IContact> {
       })
       .where('c.tenant', context.tenant);
 
-    // Apply filters
-    query = this.applyContactFilters(query, filters);
+    // Apply filters with default to exclude inactive contacts unless explicitly requested
+    const filtersWithDefaults = {
+      is_inactive: false, // Default to active contacts only
+      ...filters // Allow override if explicitly set
+    };
+    query = this.applyContactFilters(query, filtersWithDefaults);
 
     // Select export fields
     const contacts = await query.select(

@@ -1,22 +1,13 @@
 /**
  * Team Manager API Route
- * PUT /api/v1/teams/[id]/manager - Assign team manager
+ * PUT /api/v1/teams/{id}/manager - Assign team manager
  */
 
-import { TeamController } from 'server/src/lib/api/controllers/TeamController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiTeamController } from '@/lib/api/controllers/ApiTeamController';
 
-const controller = new TeamController();
 
-export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const req = request as any;
-    req.params = params;
-    return await controller.assignManager()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+const controller = new ApiTeamController();
+export const PUT = controller.assignManager();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
