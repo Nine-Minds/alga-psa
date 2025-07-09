@@ -1,8 +1,6 @@
-import React, { useCallback, useState } from 'react';
-import ReactFlow, {
-  Background,
-  Controls,
-  MiniMap,
+import React, { useCallback, useState, Suspense } from 'react';
+import dynamic from 'next/dynamic';
+import {
   NodeTypes,
   EdgeTypes,
   ReactFlowProvider,
@@ -11,7 +9,25 @@ import ReactFlow, {
   useReactFlow,
   Panel
 } from 'reactflow';
-import 'reactflow/dist/style.css';
+import WorkflowSkeleton from 'server/src/components/ui/skeletons/WorkflowSkeleton';
+
+// Dynamic imports for ReactFlow components
+const DynamicReactFlow = dynamic(() => import('./DynamicReactFlow'), {
+  loading: () => <WorkflowSkeleton height="100%" width="100%" showControls={false} showLegend={false} />,
+  ssr: false
+});
+
+const Background = dynamic(() => import('reactflow').then(mod => ({ default: mod.Background })), {
+  ssr: false
+});
+
+const Controls = dynamic(() => import('reactflow').then(mod => ({ default: mod.Controls })), {
+  ssr: false
+});
+
+const MiniMap = dynamic(() => import('reactflow').then(mod => ({ default: mod.MiniMap })), {
+  ssr: false
+});
 
 import { StateNode } from './nodes/StateNode';
 import { ActionNode } from './nodes/ActionNode';
@@ -197,55 +213,57 @@ function WorkflowVisualizerInner({
 
   return (
     <div className="workflow-visualizer relative" id="workflow-visualizer" style={{ height, width }}>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        onNodeClick={onNodeClick}
-        onPaneClick={onPaneClick}
-        fitView
-        attributionPosition="bottom-left"
-      >
-        <Background />
-        <Controls />
-        <MiniMap 
-          nodeStrokeWidth={3}
-          zoomable
-          pannable
-        />
-        
-        {showControls && (
-          <Panel position="top-right" className="flex flex-col gap-2">
-            <button
-              onClick={handleRefresh}
-              className="bg-white p-2 rounded-md shadow-sm border border-gray-200 text-gray-700 hover:bg-gray-100"
-              title="Refresh"
-              id="workflow-refresh"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+      <Suspense fallback={<WorkflowSkeleton height={height} width={width} showControls={showControls} showLegend={showLegend} />}>
+        <DynamicReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          onNodeClick={onNodeClick}
+          onPaneClick={onPaneClick}
+          fitView
+          attributionPosition="bottom-left"
+        >
+          <Background />
+          <Controls />
+          <MiniMap 
+            nodeStrokeWidth={3}
+            zoomable
+            pannable
+          />
+          
+          {showControls && (
+            <Panel position="top-right" className="flex flex-col gap-2">
+              <button
+                onClick={handleRefresh}
+                className="bg-white p-2 rounded-md shadow-sm border border-gray-200 text-gray-700 hover:bg-gray-100"
+                title="Refresh"
+                id="workflow-refresh"
               >
-                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
-              </svg>
-            </button>
-            <ZoomControls />
-            <FilterControls />
-          </Panel>
-        )}
-        
-        {showLegend && <LegendComponent />}
-      </ReactFlow>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+                </svg>
+              </button>
+              <ZoomControls />
+              <FilterControls />
+            </Panel>
+          )}
+          
+          {showLegend && <LegendComponent />}
+        </DynamicReactFlow>
+      </Suspense>
       
       {selectedNode && (
         <div className="node-details absolute bottom-4 left-4 bg-white p-3 rounded-md shadow-md border border-gray-200 max-w-xs">
