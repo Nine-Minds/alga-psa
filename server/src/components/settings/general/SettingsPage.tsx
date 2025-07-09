@@ -1,7 +1,8 @@
 // server/src/components/settings/SettingsPage.tsx
 'use client'
 
-import React from 'react';
+import React, { Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import ZeroDollarInvoiceSettings from '../billing/ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from '../billing/CreditExpirationSettings';
 import CustomTabs, { TabContent } from "server/src/components/ui/CustomTabs";
@@ -9,9 +10,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "serve
 import { Input } from "server/src/components/ui/Input";
 import { Button } from "server/src/components/ui/Button";
 import GeneralSettings from './GeneralSettings';
-import TicketingSettings from './TicketingSettings';
 import UserManagement from './UserManagement';
-import TeamManagement from './TeamManagement';
+import SettingsTabSkeleton from 'server/src/components/ui/skeletons/SettingsTabSkeleton';
+
+// Dynamic imports for heavy settings components
+const TicketingSettings = dynamic(() => import('./TicketingSettings'), {
+  loading: () => <SettingsTabSkeleton title="Ticketing Settings" description="Loading ticketing configuration..." />,
+  ssr: false
+});
+
+const TeamManagement = dynamic(() => import('./TeamManagement'), {
+  loading: () => <SettingsTabSkeleton title="Team Management" description="Loading team configuration..." showTabs={false} />,
+  ssr: false
+});
 import InteractionTypesSettings from './InteractionTypeSettings';
 import TimePeriodSettings from '../billing/TimePeriodSettings';
 import BillingSettings from '../billing/BillingSettings'; // Import the new component
@@ -96,14 +107,20 @@ const SettingsPage = (): JSX.Element =>  {
             <CardDescription>Manage teams and team members</CardDescription>
           </CardHeader>
           <CardContent>
-            <TeamManagement />
+            <Suspense fallback={<SettingsTabSkeleton title="Team Management" description="Loading team configuration..." showTabs={false} />}>
+              <TeamManagement />
+            </Suspense>
           </CardContent>
         </Card>
       ),
     },
     {
       label: "Ticketing",
-      content: <TicketingSettings />,
+      content: (
+        <Suspense fallback={<SettingsTabSkeleton title="Ticketing Settings" description="Loading ticketing configuration..." />}>
+          <TicketingSettings />
+        </Suspense>
+      ),
     },
     {
       label: "Interaction Types",
