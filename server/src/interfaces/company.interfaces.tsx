@@ -49,6 +49,9 @@ export interface ICompany extends TenantEntity, ITaggable {
   account_manager_full_name?: string;
   account_manager_id?: string | null;
   logoUrl?: string | null;
+  phone?: string;
+  email?: string;
+  address?: string;
 }
 
 export interface ICompanyLocation extends TenantEntity {

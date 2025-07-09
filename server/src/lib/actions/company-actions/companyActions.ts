@@ -904,24 +904,24 @@ export async function exportCompaniesToCSV(companies: ICompany[]): Promise<strin
 }
 
 export async function generateCompanyCSVTemplate(): Promise<string> {
-  // Create empty template with only headers
+  // Create template with Alice in Wonderland themed sample data
   const templateData = [
     {
-      client_name: '',
-      website: '',
-      client_type: '',
-      is_inactive: '',
-      notes: '',
-      tags: '',
-      location_name: '',
-      email: '',
-      phone_number: '',
-      address_line1: '',
-      address_line2: '',
-      city: '',
-      state_province: '',
-      postal_code: '',
-      country: ''
+      client_name: 'Mad Hatter Tea Company',
+      website: 'https://madhatterteacompany.com',
+      client_type: 'company',
+      is_inactive: 'false',
+      notes: 'Specializes in unbirthday party supplies and premium tea blends',
+      tags: 'Tea, Party Planning, Whimsical',
+      location_name: 'The Tea Party Table',
+      email: 'hatter@teaparty.wonderland',
+      phone_number: '+1-555-TEA-TIME',
+      address_line1: '6 Impossible Things Lane',
+      address_line2: 'Before Breakfast Suite',
+      city: 'Wonderland',
+      state_province: 'Fantasy',
+      postal_code: 'WL001',
+      country: 'Wonderland'
     }
   ];
 

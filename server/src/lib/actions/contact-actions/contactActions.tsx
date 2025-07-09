@@ -792,16 +792,25 @@ export async function exportContactsToCSV(
 }
 
 export async function generateContactCSVTemplate(): Promise<string> {
-  // Create empty template with only headers
+  // Create template with Alice in Wonderland themed sample data
   const templateData = [
     {
-      full_name: '',
-      email: '',
-      phone_number: '',
-      company: '',
-      role: '',
-      notes: '',
-      tags: ''
+      full_name: 'Alice Liddell',
+      email: 'alice@wonderland.com',
+      phone_number: '+1-555-CURIOUS',
+      company: 'Mad Hatter Tea Company',
+      role: 'Chief Explorer',
+      notes: 'Fell down a rabbit hole and discovered a whole new world',
+      tags: 'Curious, Adventurous, Brave'
+    },
+    {
+      full_name: 'Mad Hatter',
+      email: 'hatter@teaparty.wonderland',
+      phone_number: '+1-555-TEA-TIME',
+      company: 'Mad Hatter Tea Company',
+      role: 'Chief Tea Ceremony Expert',
+      notes: 'Knows why a raven is like a writing desk',
+      tags: 'Creative, Eccentric, Tea Expert'
     }
   ];
 
