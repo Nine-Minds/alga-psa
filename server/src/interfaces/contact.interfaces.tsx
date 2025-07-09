@@ -57,7 +57,7 @@ export type MappableField =
   | 'full_name'
   | 'phone_number'
   | 'email'
-  | 'company_name'
+  | 'company'
   | 'role'
   | 'notes'
   | 'tags';

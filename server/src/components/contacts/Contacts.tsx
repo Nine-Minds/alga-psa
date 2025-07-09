@@ -9,7 +9,7 @@ import { getAllContacts, getContactsByCompany, getAllCompanies, exportContactsTo
 import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
 import { Button } from 'server/src/components/ui/Button';
 import { SearchInput } from 'server/src/components/ui/SearchInput';
-import { Pen, Eye, CloudDownload, MoreVertical, Upload, Trash2, XCircle } from 'lucide-react';
+import { Pen, Eye, CloudDownload, MoreVertical, Upload, Trash2, XCircle, ExternalLink } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import QuickAddContact from './QuickAddContact';
 import { useDrawer } from "server/src/context/DrawerContext";
@@ -55,7 +55,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
   const { openDrawer } = useDrawer();
   const router = useRouter();
   const contactTagsRef = useRef<Record<string, ITag[]>>({});
-  const [allUniqueTags, setAllUniqueTags] = useState<string[]>([]);
+  const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<IContact | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -146,7 +146,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
     const fetchAllTags = async () => {
       try {
         const allTags = await findAllTagsByType('contact');
-        setAllUniqueTags(allTags.map(tag => tag.tag_text));
+        setAllUniqueTags(allTags);
       } catch (error) {
         console.error('Error fetching all tags:', error);
       }
@@ -159,7 +159,12 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
       ...contactTagsRef.current,
       [contactId]: updatedTags,
     };
-    setAllUniqueTags(getUniqueTagTexts(Object.values(contactTagsRef.current).flat()));
+    // Update unique tags list if needed
+    setAllUniqueTags(current => {
+      const currentTagTexts = new Set(current.map(t => t.tag_text));
+      const newTags = updatedTags.filter(tag => !currentTagTexts.has(tag.tag_text));
+      return [...current, ...newTags];
+    });
   };
 
   const getCompanyName = (companyId: string) => {
@@ -448,31 +453,36 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
       render: (value, record): React.ReactNode => (
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
-            <div
-              role="button"
-              tabIndex={0}
-              className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 w-9 p-0"
+            <Button
+              variant="ghost"
+              id="contacts-actions-menu"
+              size="sm"
+              className="h-8 w-8 p-0"
             >
-              <MoreVertical size={16} />
-            </div>
+              <span className="sr-only">Open menu</span>
+              <MoreVertical className="h-4 w-4" />
+            </Button>
           </DropdownMenu.Trigger>
-          <DropdownMenu.Content className="bg-white rounded-md shadow-lg p-1">
-            <DropdownMenu.Item
-              className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
+          <DropdownMenu.Content 
+            align="end" 
+            className="bg-white rounded-md shadow-lg p-1 border border-gray-200 min-w-[120px] z-50"
+          >
+            <DropdownMenu.Item 
+              className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center rounded"
               onSelect={() => handleViewDetails(record)}
             >
               <Eye size={14} className="mr-2" />
               View
             </DropdownMenu.Item>
-            <DropdownMenu.Item
-              className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
+            <DropdownMenu.Item 
+              className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center rounded"
               onSelect={() => handleEditContact(record)}
             >
-              <Pen size={14} className="mr-2" />
-              Edit
+              <ExternalLink size={14} className="mr-2" />
+              Quick Edit
             </DropdownMenu.Item>
-            <DropdownMenu.Item
-              className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center text-red-600"
+            <DropdownMenu.Item 
+              className="px-2 py-1 text-sm cursor-pointer hover:bg-red-100 text-red-600 flex items-center rounded"
               onSelect={() => handleDeleteContact(record)}
             >
               <Trash2 size={14} className="mr-2" />
@@ -517,12 +527,38 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
     <div className="p-6">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold">Contacts</h1>
-          <Button
-            id="new-contact-dialog-button"
-            onClick={() => setIsQuickAddOpen(true)}
-          >
-            Add Contact
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              id="new-contact-dialog-button"
+              onClick={() => setIsQuickAddOpen(true)}
+            >
+              + Add Contact
+            </Button>
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger asChild>
+                  <button className="border border-gray-300 rounded-md p-2 flex items-center gap-2">
+                    <MoreVertical size={16} />
+                    Actions
+                  </button>
+              </DropdownMenu.Trigger>
+                <DropdownMenu.Content className="bg-white rounded-md shadow-lg p-1">
+                  <DropdownMenu.Item 
+                    className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
+                    onSelect={() => setIsImportDialogOpen(true)}
+                  >
+                    <Upload size={14} className="mr-2" />
+                    Upload CSV
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item 
+                    className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
+                    onSelect={() => void handleExportToCSV()}
+                  >
+                    <CloudDownload size={14} className="mr-2" />
+                    Download CSV
+                  </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu.Root>
+          </div>
         </div>
         <div className="bg-white shadow rounded-lg p-4">
           <ReflectionContainer id='filters'>
@@ -583,30 +619,6 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
                   </Button>
                 )}
               </div>
-              <DropdownMenu.Root>
-                <DropdownMenu.Trigger>
-                  <div className="border border-gray-300 rounded-md p-2 flex items-center gap-2 hover:bg-gray-50 cursor-pointer">
-                    <MoreVertical size={16} />
-                    Actions
-                  </div>
-                </DropdownMenu.Trigger>
-                <DropdownMenu.Content className="bg-white rounded-md shadow-lg p-1">
-                  <DropdownMenu.Item
-                    className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
-                    onSelect={handleExportToCSV}
-                  >
-                    <CloudDownload size={14} className="mr-2" />
-                    Download CSV
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Item
-                    className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
-                    onSelect={() => setIsImportDialogOpen(true)}
-                  >
-                    <Upload size={14} className="mr-2" />
-                    Upload CSV
-                  </DropdownMenu.Item>
-                </DropdownMenu.Content>
-              </DropdownMenu.Root>
             </div>
           </ReflectionContainer>
           <DataTable

@@ -12,16 +12,18 @@ const CompanyPage = async ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = resolvedParams;
  
   try {
-    // Fetch all data in parallel
-    const [company, documents, contacts] = await Promise.all([
-      getCompanyById(id),
-      getDocumentByCompanyId(id),
-      getContactsByCompany(id, 'all')
-    ]);
-
+    // First check if company exists
+    const company = await getCompanyById(id);
+    
     if (!company) {
       return notFound();
     }
+
+    // Fetch additional data in parallel
+    const [documents, contacts] = await Promise.all([
+      getDocumentByCompanyId(id),
+      getContactsByCompany(id, 'all')
+    ]);
 
     return (
       <div className="mx-auto px-4">
@@ -30,7 +32,7 @@ const CompanyPage = async ({ params }: { params: Promise<{ id: string }> }) => {
     );
   } catch (error) {
     console.error(`Error fetching data for company with id ${id}:`, error);
-    return <div>Error loading company data</div>;
+    throw error; // Let Next.js error boundary handle it
   }
 }
 

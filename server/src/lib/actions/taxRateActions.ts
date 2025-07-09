@@ -121,8 +121,8 @@ export async function updateTaxRate(taxRateData: ITaxRate): Promise<ITaxRate> {
       );
     }
 
-    // Clean up the data before update
-    const updateData = { ...taxRateData };
+    // Clean up the data before update and exclude partition key (tenant)
+    const { tenant: _, ...updateData } = { ...taxRateData };
     if (updateData.end_date === '') {
       updateData.end_date = null;
     }

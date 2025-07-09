@@ -36,7 +36,7 @@ import CompanyLocations from './CompanyLocations';
 import TextEditor, { DEFAULT_BLOCK } from '../editor/TextEditor';
 import { ITicket, ITicketCategory } from 'server/src/interfaces';
 import { IChannel } from 'server/src/interfaces/channel.interface';
-import { SelectOption } from 'server/src/components/ui/CustomSelect';
+import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { Card } from 'server/src/components/ui/Card';
 import { Input } from 'server/src/components/ui/Input';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
@@ -560,6 +560,33 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                 automationId="annual-revenue-field"
               />
 
+              {/* Status and Client Type in 2 columns */}
+              <div className="grid grid-cols-5 gap-4">
+
+                {/* Client Type */}
+                <div className="space-y-2 col-span-2">
+                  <Text as="label" size="2" className="text-gray-700 font-medium">Client Type</Text>
+                  <CustomSelect
+                    id="client-type-select"
+                    value={editedCompany.client_type || 'company'}
+                    onValueChange={(value) => handleFieldChange('client_type', value)}
+                    options={[
+                      { value: 'company', label: 'Company' },
+                      { value: 'individual', label: 'Individual' }
+                    ]}
+                    placeholder="Select client type"
+                    className="!w-fit"
+                  />
+                </div>
+                <div className="col-span-3">
+                  <SwitchDetailItem
+                    value={!editedCompany.is_inactive || false}
+                    onEdit={(isActive) => handleFieldChange('is_inactive', !isActive)}
+                    automationId="company-status-field"
+                  />
+                </div>
+              </div>
+
               {/* Tags */}
               <div className="space-y-2">
                 <Text as="label" size="2" className="text-gray-700 font-medium">Tags</Text>
@@ -571,12 +598,6 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                   onTagsChange={handleTagsChange}
                 />
               </div>
-              
-              <SwitchDetailItem
-                value={!editedCompany.is_inactive}
-                onEdit={(isActive) => handleFieldChange('is_inactive', !isActive)}
-                automationId="company-status-field"
-              />
             </div>
             
             {/* Right Column - Company Locations Only */}

@@ -5,11 +5,8 @@ import { ITaggable } from './tag.interfaces';
 export interface ICompany extends TenantEntity, ITaggable {
   company_id: string;
   company_name: string;
-  phone_no: string;
   credit_balance: number;
-  email: string;
   url: string;
-  address?: string;
   created_at: string;
   updated_at: string;
   is_inactive: boolean;
@@ -52,6 +49,9 @@ export interface ICompany extends TenantEntity, ITaggable {
   account_manager_full_name?: string;
   account_manager_id?: string | null;
   logoUrl?: string | null;
+  phone?: string;
+  email?: string;
+  address?: string;
 }
 
 export interface ICompanyLocation extends TenantEntity {
@@ -86,4 +86,11 @@ export interface ICompanyEmailSettings extends TenantEntity {
   user_id: string;
   created_at: ISO8601String;
   updated_at: ISO8601String;
+}
+
+// Type for company with default location data joined
+export interface ICompanyWithLocation extends ICompany {
+  location_email?: string;
+  location_phone?: string;
+  location_address?: string;
 }

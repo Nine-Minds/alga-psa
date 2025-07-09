@@ -16,7 +16,7 @@ interface CompaniesGridProps {
     onPageChange: (page: number) => void;
     onPageSizeChange: (size: number) => void;
     companyTags?: Record<string, ITag[]>;
-    allUniqueTags?: string[];
+    allUniqueTags?: ITag[];
     onTagsChange?: (companyId: string, tags: ITag[]) => void;
 }
 
@@ -57,7 +57,7 @@ const CompaniesGrid = ({
                             handleEditCompany={handleEditCompany}
                             handleDeleteCompany={handleDeleteCompany}
                             tags={companyTags[company.company_id] || []}
-                            allUniqueTags={allUniqueTags}
+                            allUniqueTags={allUniqueTags.map(tag => tag.tag_text)}
                             onTagsChange={onTagsChange}
                         />
                     </div>
