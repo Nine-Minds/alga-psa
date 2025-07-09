@@ -11,7 +11,8 @@ import { IUser, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import WorkItemListPanel from './WorkItemListPanel';
 import ScheduleViewPanel from './ScheduleViewPanel';
 import WorkItemCard from './WorkItemCard';
-import { getAllUsers, getUserPreference, setUserPreference } from 'server/src/lib/actions/user-actions/userActions';
+import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { useUserPreference } from 'server/src/hooks/useUserPreference';
 import { searchDispatchWorkItems, getWorkItemById, DispatchSearchOptions } from 'server/src/lib/actions/workItemActions';
 import { addScheduleEntry, updateScheduleEntry, getScheduleEntries, deleteScheduleEntry, ScheduleActionResult } from 'server/src/lib/actions/scheduleActions';
 import { getWorkItemStatusOptions, StatusOption } from 'server/src/lib/actions/status-actions/statusActions';
@@ -57,7 +58,21 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   const [events, setEvents] = useState<Omit<IScheduleEntry, 'tenant'>[]>([]);
   const [workItems, setWorkItems] = useState<Omit<IExtendedWorkItem, "tenant">[]>([]);
   const [date, setDate] = useState(startOfDay(new Date()));
-  const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
+  
+  // Use the custom hook for dispatch view preference
+  const { 
+    value: viewMode, 
+    setValue: setViewMode,
+    isLoading: isViewModeLoading 
+  } = useUserPreference<'day' | 'week'>(
+    'defaultDispatchView',
+    {
+      defaultValue: 'day',
+      localStorageKey: 'defaultDispatchView',
+      debounceMs: 300
+    }
+  );
+  
   const [primaryTechnicianId, setPrimaryTechnicianId] = useState<string | null>(null);
   const [comparisonTechnicianIds, setComparisonTechnicianIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null); // General error state
@@ -205,17 +220,6 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
         const userIsAdmin = currentUser ? currentUser.roles.some(role => role.role_name.toLowerCase() === 'admin') : false;
         setIsAdmin(userIsAdmin);
 
-        // Load saved dispatch view preference
-        if (currentUser?.user_id) {
-          try {
-            const savedView = await getUserPreference(currentUser.user_id, 'defaultDispatchView');
-            if (savedView && (savedView === 'day' || savedView === 'week')) {
-              setViewMode(savedView as 'day' | 'week');
-            }
-          } catch (err) {
-            console.log('No saved dispatch view preference found, using default');
-          }
-        }
         
         // If admin, grant all permissions
         if (userIsAdmin) {
@@ -493,16 +497,8 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
     }
   }, []);
 
-  const handleViewChange = async (newViewMode: 'day' | 'week') => {
+  const handleViewChange = (newViewMode: 'day' | 'week') => {
     setViewMode(newViewMode);
-    // Save the view preference
-    if (currentUser?.id) {
-      try {
-        await setUserPreference(currentUser.id, 'defaultDispatchView', newViewMode);
-      } catch (err) {
-        console.error('Failed to save dispatch view preference:', err);
-      }
-    }
   };
 
   useEffect(() => {
@@ -816,7 +812,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   }, [openDrawer, closeDrawer, refreshAllData, getWorkItemById, updateScheduleEntry]);
 
 
-  if (isLoadingPermissions) {
+  if (isLoadingPermissions || isViewModeLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Spinner size="lg" />

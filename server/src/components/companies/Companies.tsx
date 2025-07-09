@@ -26,7 +26,7 @@ import ViewSwitcher, { ViewSwitcherOption } from '../ui/ViewSwitcher';
 import { TrashIcon, MoreVertical, CloudDownload, Upload, LayoutGrid, List, Search, XCircle } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import CustomSelect from '../ui/CustomSelect';
-import { getCurrentUser, getUserPreference, setUserPreference } from 'server/src/lib/actions/user-actions/userActions';
+import { useUserPreference } from 'server/src/hooks/useUserPreference';
 import CompaniesImportDialog from './CompaniesImportDialog';
 import { ConfirmationDialog } from '../ui/ConfirmationDialog';
 import { Dialog, DialogContent, DialogFooter } from '../ui/Dialog';
@@ -280,7 +280,22 @@ const Companies: React.FC = () => {
   const [companyToDelete, setCompanyToDelete] = useState<ICompany | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchInput, setSearchInput] = useState(''); // Local state for input field
-  const [viewMode, setViewMode] = useState<'grid' | 'list' | null>(null);
+  
+  // Use the custom hook for view mode preference
+  type CompanyViewMode = 'grid' | 'list';
+  const { 
+    value: viewMode, 
+    setValue: setViewModePreference,
+    isLoading: isViewModeLoading 
+  } = useUserPreference<CompanyViewMode>(
+    COMPANY_VIEW_MODE_SETTING,
+    {
+      defaultValue: 'grid',
+      localStorageKey: COMPANY_VIEW_MODE_SETTING,
+      debounceMs: 300
+    }
+  );
+  
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
   const [isSelectAllMode, setIsSelectAllMode] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
@@ -301,7 +316,7 @@ const Companies: React.FC = () => {
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10); // Default to 10 for list view
+  const [pageSize, setPageSize] = useState(viewMode === 'grid' ? 9 : 10);
   
   // For multi-delete functionality, we need to track companies
   const [companiesForDelete, setCompaniesForDelete] = useState<ICompany[]>([]);
@@ -329,58 +344,21 @@ const Companies: React.FC = () => {
 
   // Tags will be loaded by CompanyResults component
 
+  // Update page size when view mode changes
   useEffect(() => {
-    const initializeComponent = async () => {
-      try {
-        // Load user preferences
-        const currentUser = await getCurrentUser();
-
-        if (currentUser) {
-          const savedViewMode = await getUserPreference(currentUser.user_id, COMPANY_VIEW_MODE_SETTING);
-          const mode = savedViewMode === 'grid' || savedViewMode === 'list' ? savedViewMode : 'grid';
-          setViewMode(mode);
-          // Set appropriate page size based on view mode
-          setPageSize(mode === 'grid' ? 9 : 10);
-        } else {
-          setViewMode('grid'); // Default if no user or preference
-          setPageSize(9); // Default page size for grid view
-        }
-      } catch (error) {
-        console.error('Error initializing component:', error);
-        setViewMode('grid'); // Default on error
-      }
-    };
-
-    initializeComponent();
-  }, []);
-
-  // Define view mode type
-  type CompanyViewMode = 'grid' | 'list';
+    if (!isViewModeLoading) {
+      setPageSize(viewMode === 'grid' ? 9 : 10);
+    }
+  }, [viewMode, isViewModeLoading]);
 
   const viewOptions: ViewSwitcherOption<CompanyViewMode>[] = [
     { value: 'grid', label: 'Cards', icon: LayoutGrid },
     { value: 'list', label: 'Table', icon: List },
   ];
 
-  const handleViewModeChange = async (newMode: CompanyViewMode) => {
-    setViewMode(newMode);
-    
-    // Adjust page size based on view mode
-    if (newMode === 'grid') {
-      setPageSize(9); // Grid view uses 9 cards by default
-    } else {
-      setPageSize(10); // List view uses 10 rows by default
-    }
+  const handleViewModeChange = (newMode: CompanyViewMode) => {
+    setViewModePreference(newMode);
     setCurrentPage(1); // Reset to first page when changing view
-    
-    try {
-      const currentUser = await getCurrentUser();
-      if (currentUser) {
-        await setUserPreference(currentUser.user_id, COMPANY_VIEW_MODE_SETTING, newMode);
-      }
-    } catch (error) {
-      console.error('Error saving view mode preference:', error);
-    }
   };
 
 
