@@ -389,18 +389,12 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     
     setIsSaving(true);
     try {
-      // Prepare data for update, removing computed and deprecated fields
+      // Prepare data for update, removing computed fields
       const { 
-        account_manager_full_name, 
-        phone, 
-        email, 
-        address, 
-        location_email, 
-        location_phone, 
-        location_address,
+        account_manager_full_name,
         ...restOfEditedCompany 
       } = editedCompany;
-      const dataToUpdate: Partial<Omit<ICompany, 'account_manager_full_name' | 'phone' | 'email' | 'address' | 'location_email' | 'location_phone' | 'location_address'>> = {
+      const dataToUpdate: Partial<Omit<ICompany, 'account_manager_full_name'>> = {
         ...restOfEditedCompany,
         properties: restOfEditedCompany.properties ? { ...restOfEditedCompany.properties } : {},
         account_manager_id: editedCompany.account_manager_id === '' ? null : editedCompany.account_manager_id,

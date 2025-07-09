@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState, useTransition, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { Card } from 'server/src/components/ui/Card';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import { getCurrentUser, getUserRolesWithPermissions, getUserCompanyId } from 'server/src/lib/actions/user-actions/userActions';
@@ -149,25 +148,14 @@ export function CompanyDetailsSettings() {
     
     setIsLoading(true);
     try {
-      // Remove deprecated fields before updating
-      const { 
-        phone, 
-        email, 
-        address, 
-        location_email, 
-        location_phone, 
-        location_address,
-        ...cleanCompanyData 
-      } = companyDetails;
-      
       const updatedCompany = await updateCompany(companyDetails.company_id, {
-        company_name: cleanCompanyData.company_name,
-        url: cleanCompanyData.url,
+        company_name: companyDetails.company_name,
+        url: companyDetails.url,
         properties: {
-          ...cleanCompanyData.properties,
-          industry: cleanCompanyData.properties?.industry,
-          company_size: cleanCompanyData.properties?.company_size,
-          annual_revenue: cleanCompanyData.properties?.annual_revenue
+          ...companyDetails.properties,
+          industry: companyDetails.properties?.industry,
+          company_size: companyDetails.properties?.company_size,
+          annual_revenue: companyDetails.properties?.annual_revenue
         }
       });
       setCompanyDetails(updatedCompany);

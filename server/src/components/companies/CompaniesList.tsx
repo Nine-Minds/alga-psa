@@ -283,7 +283,7 @@ const CompaniesList = ({
                 pageSize={pageSize}
                 totalItems={totalCount}
                 onPageChange={onPageChange}
-                getRowClassName={(company: ICompany) => 
+                rowClassName={(company: ICompany) => 
                     editingId === company.company_id ? 'bg-purple-50 border-l-4 border-l-purple-500' : ''
                 }
             />
