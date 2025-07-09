@@ -124,8 +124,8 @@ export class MailHogPollingService {
         messageId: emailData.id,
         providerId: 'mailhog-test-provider', // Special provider ID for MailHog
         tenant: tenantId,
+        provider: 'microsoft', // Required by interface - using microsoft as default
         attempt: 1,
-        maxRetries: 3,
         createdAt: new Date().toISOString(),
         webhookData: {
           source: 'mailhog',
@@ -176,7 +176,7 @@ export class MailHogPollingService {
       const emailAddr = toMatch ? (toMatch[2] || toMatch[3] || toMatch[1]).trim() : '';
       const name = toMatch && toMatch[2] ? toMatch[1].trim().replace(/"/g, '') : '';
       return { email: emailAddr || 'test@example.com', name: name || '' };
-    }).filter(e => e.email && e.email.includes('@')); // Filter out invalid emails
+    }).filter((e: { email: string; name: string }) => e.email && e.email.includes('@')); // Filter out invalid emails
 
     return {
       id: mailhogMessage.ID,
@@ -370,7 +370,7 @@ export class MailHogPollingService {
       // Fallback to default test tenant ID if no tenant found
       console.warn('⚠️ No tenant found in database, using default test tenant ID');
       return '00000000-0000-0000-0000-000000000001';
-    } catch (error) {
+    } catch (error: any) {
       console.warn('⚠️ Failed to get tenant from database, using default test tenant ID:', error.message);
       return '00000000-0000-0000-0000-000000000001';
     }
