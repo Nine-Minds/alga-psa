@@ -126,17 +126,10 @@ export class E2ETestContext extends TestContext {
       this.mailhogClient = new MailHogClient();
       this.emailTestFactory = new EmailTestFactory(this);
       
-      // Get the test tenant ID from the database if available
-      let testTenantId: string | undefined;
-      try {
-        const tenant = await this.db('tenants').select('tenant').first();
-        if (tenant) {
-          testTenantId = tenant.tenant;
-          console.log(`🆔 E2ETestContext found test tenant: ${testTenantId}`);
-        }
-      } catch (error) {
-        console.warn('⚠️ Could not get test tenant ID:', error.message);
-      }
+      // We'll use whatever tenant is available (will be determined by EmailTestFactory)
+      // Using a fallback default that will be replaced when EmailTestFactory runs
+      const testTenantId = '27460c9d-9eb9-45d8-9b99-a69c52df2136';
+      console.log(`🆔 E2ETestContext initialized with default tenant ID: ${testTenantId}`);
       
       this.mailhogPollingService = new MailHogPollingService({
         pollIntervalMs: 1000, // Poll every second in tests
@@ -299,11 +292,10 @@ export class E2ETestContext extends TestContext {
     
     // Update MailHog polling service with current test tenant
     if (this.mailhogPollingService) {
-      const tenant = await this.db('tenants').select('tenant').first();
-      if (tenant) {
-        console.log(`🔄 Updating MailHog polling service to use tenant: ${tenant.tenant}`);
-        this.mailhogPollingService.defaultTenantId = tenant.tenant;
-      }
+      // Use the test context's tenant ID directly instead of querying
+      const testTenantId = this.tenantId;
+      console.log(`🔄 Updating MailHog polling service to use test tenant: ${testTenantId}`);
+      this.mailhogPollingService.defaultTenantId = testTenantId;
     }
     
     const sentEmail = await this.mailhogClient.sendEmail(emailData);

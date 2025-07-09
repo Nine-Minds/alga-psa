@@ -433,12 +433,17 @@ export class WorkflowWorker {
         payload: eventData.payload
       });
       
+      console.log(`[TENANT-DEBUG] WorkflowWorker received global event: tenant=${eventData.tenant}, eventType=${eventData.event_type}, eventId=${eventData.event_id}`);
+      
       // Extract tenant from the event
       const tenant = eventData.tenant;
       if (!tenant) {
         logger.error(`[WorkflowWorker] Event is missing tenant ID, cannot process`);
+        console.log(`[TENANT-DEBUG] WorkflowWorker ERROR: Event missing tenant ID: eventId=${eventData.event_id}, eventType=${eventData.event_type}`);
         return;
       }
+      
+      console.log(`[TENANT-DEBUG] WorkflowWorker extracted tenant from event: tenant=${tenant}, eventType=${eventData.event_type}`);
       
       // Check if this is a test event with a specific version_id in the payload
       // If so, we can directly start the workflow with that version_id
@@ -559,6 +564,11 @@ export class WorkflowWorker {
         // Event is treated as a trigger for new workflows.
         logger.info(`[WorkflowWorker] Global event ${eventData.event_id} (type: ${eventData.event_type}, execution_id: ${eventData.execution_id || 'N/A'}) treated as a trigger for new workflows.`);
         
+        // Special logging for INBOUND_EMAIL_RECEIVED events
+        if (eventData.event_type === 'INBOUND_EMAIL_RECEIVED') {
+          console.log(`[TENANT-DEBUG] WorkflowWorker processing INBOUND_EMAIL_RECEIVED event: tenant=${tenant}, eventId=${eventData.event_id}, payload=${JSON.stringify(eventData.payload)}`);
+        }
+        
         await withAdminTransaction(async (trx) => {
           const attachedWorkflows = await this.findAttachedWorkflows(eventData.event_type, tenant, trx);
         
@@ -590,6 +600,7 @@ export class WorkflowWorker {
   private async findAttachedWorkflows(eventType: string, tenant: string, trx?: Knex.Transaction): Promise<{ workflow_id: string; isSystemManaged: boolean }[]> { // Updated return type
     try {
       logger.info(`[WorkflowWorker] Finding workflows attached to event type ${eventType} for tenant ${tenant}`);
+      console.log(`[TENANT-DEBUG] WorkflowWorker finding attached workflows: tenant=${tenant}, eventType=${eventType}`);
       
       return await withAdminTransaction(async (txn) => {
         const transaction = trx || txn;
@@ -651,6 +662,8 @@ export class WorkflowWorker {
           eventType,
           tenant
         });
+        
+        console.log(`[TENANT-DEBUG] WorkflowWorker found attached workflows: tenant=${tenant}, eventType=${eventType}, totalWorkflows=${results.length}`);
 
         return results;
       }, trx);
@@ -682,6 +695,8 @@ export class WorkflowWorker {
         tenant: event.tenant
       });
       
+      console.log(`[TENANT-DEBUG] WorkflowWorker starting workflow from event: tenant=${event.tenant}, workflowId=${workflowId}, eventType=${event.event_type}`);
+      
       // Get the workflow registration, passing the system flag and transaction connection
       const workflow = await this.getWorkflowRegistration(workflowId, event.tenant, isSystemManaged, trx);
 
@@ -709,6 +724,8 @@ export class WorkflowWorker {
         });
         
         // Start the workflow using the version ID
+        console.log(`[TENANT-DEBUG] WorkflowWorker about to start workflow: tenant=${event.tenant}, workflowId=${workflowId}, versionId=${workflow.version_id}`);
+        
         const result = await this.workflowRuntime.startWorkflowByVersionId(transaction, {
           tenant: event.tenant,
           initialData: {
@@ -723,6 +740,8 @@ export class WorkflowWorker {
           isSystemManaged: isSystemManaged // Pass the isSystemManaged flag
         });
         
+        console.log(`[TENANT-DEBUG] WorkflowWorker started workflow: tenant=${event.tenant}, executionId=${result.executionId}, workflowId=${workflowId}`);
+        
         logger.info(`[WorkflowWorker] Started workflow ${workflow.name} with execution ID ${result.executionId}`, {
           workflowId,
           workflowName: workflow.name,
@@ -731,6 +750,8 @@ export class WorkflowWorker {
         });
         
         // Submit the original event to the workflow
+        console.log(`[TENANT-DEBUG] WorkflowWorker about to submit event to workflow: tenant=${event.tenant}, executionId=${result.executionId}, eventName=${event.event_name}`);
+        
         await this.workflowRuntime.submitEvent(transaction, {
           execution_id: result.executionId,
           event_name: event.event_name,
@@ -738,6 +759,8 @@ export class WorkflowWorker {
           user_id: event.user_id,
           tenant: event.tenant
         });
+        
+        console.log(`[TENANT-DEBUG] WorkflowWorker submitted event to workflow: tenant=${event.tenant}, executionId=${result.executionId}, eventName=${event.event_name}`);
         
         logger.info(`[WorkflowWorker] Submitted event ${event.event_name} to workflow execution ${result.executionId}`);
       }, trx);
@@ -802,17 +825,22 @@ export class WorkflowWorker {
           version_id: registration.version_id,
           isSystemManaged
         });
+        
+        console.log(`[TENANT-DEBUG] WorkflowWorker found workflow registration: tenant=${tenant}, workflowId=${workflowId}, name=${registration.name}, isSystemManaged=${isSystemManaged}`);
       } else {
          logger.warn(`[WorkflowWorker] ${isSystemManaged ? 'System' : 'Tenant'} workflow registration not found:`, {
           workflowId,
           tenant: isSystemManaged ? undefined : tenant,
           isSystemManaged
         });
+        
+        console.log(`[TENANT-DEBUG] WorkflowWorker workflow registration NOT FOUND: tenant=${tenant}, workflowId=${workflowId}, isSystemManaged=${isSystemManaged}`);
       }
 
       return registration; // Return the fetched registration or null
     } catch (error) {
       logger.error(`[WorkflowWorker] Error getting ${isSystemManaged ? 'system' : 'tenant'} workflow registration ${workflowId}:`, error);
+      console.log(`[TENANT-DEBUG] WorkflowWorker ERROR getting workflow registration: tenant=${tenant}, workflowId=${workflowId}, error=${error.message}`);
       return null;
     }
   }

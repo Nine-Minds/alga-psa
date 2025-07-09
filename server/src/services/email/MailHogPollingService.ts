@@ -116,7 +116,7 @@ export class MailHogPollingService {
       
       // Get a default tenant - in E2E tests, use the first available tenant
       const tenantId = await this.getDefaultTenant();
-      console.log(`🆔 MailHogPollingService will use tenant: ${tenantId}`);
+      console.log(`[TENANT-DEBUG] MailHogPollingService processing email: tenant=${tenantId}, messageId=${mailhogMessage.ID}, subject=${emailData.subject}`);
       
       // Create an email processing job
       const emailJob: EmailQueueJob = {
@@ -132,6 +132,8 @@ export class MailHogPollingService {
           originalMessageId: mailhogMessage.ID
         }
       };
+      
+      console.log(`[TENANT-DEBUG] MailHogPollingService created email job: tenant=${tenantId}, jobId=${emailJob.id}`);
 
       // For MailHog test emails, emit the event directly instead of using EmailProcessor
       // which requires Microsoft Graph credentials
@@ -140,7 +142,7 @@ export class MailHogPollingService {
         providerId: 'mailhog-test-provider',
         emailData: emailData
       };
-      console.log(`🔑 About to emit event with data:`, JSON.stringify(eventData, null, 2));
+      console.log(`[TENANT-DEBUG] MailHogPollingService about to emit INBOUND_EMAIL_RECEIVED event: tenant=${tenantId}, providerId=${eventData.providerId}, emailSubject=${emailData.subject}`);
       await this.emitEmailReceivedEvent(eventData);
       
       console.log(`✅ Successfully processed MailHog email: ${emailData.subject}`);
@@ -215,6 +217,8 @@ export class MailHogPollingService {
         }
       });
       
+      console.log(`[TENANT-DEBUG] MailHogPollingService emitted INBOUND_EMAIL_RECEIVED event: tenant=${eventData.tenantId}, subject=${eventData.emailData.subject}`);
+      
       console.log(`✅ Successfully emitted INBOUND_EMAIL_RECEIVED event`);
     } catch (error: any) {
       console.error(`❌ Failed to emit email received event:`, error.message);
@@ -243,7 +247,7 @@ export class MailHogPollingService {
       
       const tenant = await knex('tenants').select('tenant').first();
       if (tenant) {
-        console.log(`✅ Found tenant in database: ${tenant.tenant}`);
+        console.log(`[TENANT-DEBUG] MailHogPollingService found tenant in database: tenant=${tenant.tenant}`);
         return tenant.tenant;
       }
       

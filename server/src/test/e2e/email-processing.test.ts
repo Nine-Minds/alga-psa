@@ -11,7 +11,7 @@ describe('Email Processing E2E Tests', () => {
     context = await testHelpers.beforeAll({
       runSeeds: true,
       testMode: 'e2e',
-      autoStartServices: false,  // Services are already running
+      autoStartServices: false,  // Services are now running with workflow worker
       clearEmailsBeforeTest: true
     });
   }, 30000);
@@ -35,14 +35,23 @@ describe('Email Processing E2E Tests', () => {
     it('should process a simple email and create a ticket', async () => {
       // Arrange
       const { tenant, company, contact } = await context.emailTestFactory.createBasicEmailScenario();
-      console.log(`🔍 Test is using tenant: ${tenant.tenant}`);
+      console.log(`[TENANT-DEBUG] Test scenario created: tenant=${tenant.tenant}, company=${company.company_name}, contact=${contact.email}`);
       
       // Ensure the tenant exists in the database and is visible to all connections
       const tenantCheck = await context.db('tenants').where('tenant', tenant.tenant).first();
       if (!tenantCheck) {
         throw new Error(`Tenant ${tenant.tenant} not found in database after creation`);
       }
-      console.log(`✅ Verified tenant exists in database: ${tenantCheck.company_name}`);
+      console.log(`[TENANT-DEBUG] Verified tenant exists in database: tenant=${tenantCheck.tenant}, company_name=${tenantCheck.company_name}`);
+      
+      // Force commit any pending transactions to ensure data is visible to other connections
+      try {
+        await context.db.raw('COMMIT');
+        await context.db.raw('BEGIN');
+        console.log(`[TENANT-DEBUG] Forced transaction commit for tenant visibility`);
+      } catch (error) {
+        console.log(`[TENANT-DEBUG] Transaction commit/begin not needed (autocommit mode)`);
+      }
       
       // Give time for all connections to see the committed data
       await new Promise(resolve => setTimeout(resolve, 3000));
@@ -53,6 +62,8 @@ describe('Email Processing E2E Tests', () => {
         subject: 'Test Support Request',
         body: 'This is a test support request from E2E testing.'
       };
+
+      console.log(`[TENANT-DEBUG] Sending test email to MailHog: tenant=${tenant.tenant}, from=${testEmail.from}, to=${testEmail.to}, subject=${testEmail.subject}`);
 
       // Act
       const { sentEmail, capturedEmail } = await context.sendAndCaptureEmail(testEmail);
@@ -81,6 +92,7 @@ describe('Email Processing E2E Tests', () => {
     it('should handle emails with attachments', async () => {
       // Arrange
       const { tenant, company, contact } = await context.emailTestFactory.createBasicEmailScenario();
+      console.log(`[TENANT-DEBUG] Test scenario (attachments) created: tenant=${tenant.tenant}, company=${company.company_name}, contact=${contact.email}`);
       
       const testEmail = {
         from: contact.email,
@@ -122,6 +134,7 @@ describe('Email Processing E2E Tests', () => {
     it('should properly thread email replies', async () => {
       // Arrange
       const { tenant, company, contact } = await context.emailTestFactory.createBasicEmailScenario();
+      console.log(`[TENANT-DEBUG] Test scenario (threading) created: tenant=${tenant.tenant}, company=${company.company_name}, contact=${contact.email}`);
       
       const initialEmail = {
         from: contact.email,
@@ -191,6 +204,7 @@ describe('Email Processing E2E Tests', () => {
     it('should match emails to existing clients', async () => {
       // Arrange
       const { tenant, company, contact } = await context.emailTestFactory.createBasicEmailScenario();
+      console.log(`[TENANT-DEBUG] Test scenario (client matching) created: tenant=${tenant.tenant}, company=${company.company_name}, contact=${contact.email}`);
       
       const testEmail = {
         from: contact.email,
@@ -221,6 +235,7 @@ describe('Email Processing E2E Tests', () => {
     it('should handle unknown email addresses with manual fallback', async () => {
       // Arrange
       const { tenant } = await context.emailTestFactory.createBasicEmailScenario();
+      console.log(`[TENANT-DEBUG] Test scenario (unknown client) created: tenant=${tenant.tenant}`);
       
       const unknownEmail = {
         from: 'unknown@example.com',

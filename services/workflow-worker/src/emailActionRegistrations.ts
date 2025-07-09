@@ -24,6 +24,7 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
         logger.info(`[ACTION] find_contact_by_email called for email: ${params.email}, tenant: ${context.tenant}`);
+        console.log(`[TENANT-DEBUG] find_contact_by_email action: tenant=${context.tenant}, email=${params.email}`);
         
         // Use shared database utilities directly
         const { getAdminConnection } = await import('@shared/db/admin.js');
@@ -46,12 +47,14 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
         
         if (contact) {
           logger.info(`[ACTION] find_contact_by_email: Found contact for ${params.email}`);
+          console.log(`[TENANT-DEBUG] find_contact_by_email found contact: tenant=${context.tenant}, contactId=${contact.contact_id}, email=${params.email}`);
           return {
             success: true,
             contact: contact
           };
         } else {
           logger.info(`[ACTION] find_contact_by_email: No contact found for ${params.email}`);
+          console.log(`[TENANT-DEBUG] find_contact_by_email NO contact found: tenant=${context.tenant}, email=${params.email}`);
           return {
             success: true,
             contact: null
@@ -86,6 +89,7 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
         logger.info(`[ACTION] create_ticket_from_email called for title: ${params.title}, tenant: ${context.tenant}`);
+        console.log(`[TENANT-DEBUG] create_ticket_from_email action: tenant=${context.tenant}, title=${params.title}, companyId=${params.company_id}, contactId=${params.contact_id}`);
         
         // Use shared database utilities directly
         const { getAdminConnection } = await import('@shared/db/admin.js');
@@ -100,6 +104,8 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
           const ticketNumber = `TKT-${timestamp}-${randomSuffix}`;
           
           // Create ticket
+          console.log(`[TENANT-DEBUG] create_ticket_from_email about to insert ticket: tenant=${context.tenant}, ticketNumber=${ticketNumber}`);
+          
           const [ticket] = await trx('tickets')
             .insert({
               tenant: context.tenant,
@@ -116,11 +122,14 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
               updated_at: new Date()
             })
             .returning(['ticket_id', 'ticket_number']);
+            
+          console.log(`[TENANT-DEBUG] create_ticket_from_email created ticket: tenant=${context.tenant}, ticketId=${ticket.ticket_id}, ticketNumber=${ticket.ticket_number}`);
 
           return { ticket_id: ticket.ticket_id, ticket_number: ticket.ticket_number };
         });
         
         logger.info(`[ACTION] create_ticket_from_email: Created ticket with ID: ${result.ticket_id}`);
+        console.log(`[TENANT-DEBUG] create_ticket_from_email completed: tenant=${context.tenant}, ticketId=${result.ticket_id}, ticketNumber=${result.ticket_number}`);
         return {
           success: true,
           ticket_id: result.ticket_id,
@@ -128,6 +137,7 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
         };
       } catch (error: any) {
         logger.error(`[ACTION] create_ticket_from_email: Error creating ticket from email`, error);
+        console.log(`[TENANT-DEBUG] create_ticket_from_email ERROR: tenant=${context.tenant}, error=${error.message}`);
         return {
           success: false,
           message: error.message,
@@ -362,6 +372,7 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
         logger.info(`[ACTION] create_or_find_contact called for email: ${params.email}, tenant: ${context.tenant}`);
+        console.log(`[TENANT-DEBUG] create_or_find_contact action: tenant=${context.tenant}, email=${params.email}, name=${params.name}`);
         
         // Use shared database utilities directly
         const { getAdminConnection } = await import('@shared/db/admin.js');
@@ -377,6 +388,7 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
             .first();
           
           if (existing) {
+            console.log(`[TENANT-DEBUG] create_or_find_contact found existing contact: tenant=${context.tenant}, contactId=${existing.contact_name_id}, email=${params.email}`);
             return {
               id: existing.contact_name_id,
               name: existing.full_name,
@@ -393,6 +405,8 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
           const contactId = uuidv4();
           const now = new Date();
           
+          console.log(`[TENANT-DEBUG] create_or_find_contact creating new contact: tenant=${context.tenant}, contactId=${contactId}, email=${params.email}`);
+          
           await trx('contacts').insert({
             contact_name_id: contactId,
             tenant: context.tenant,
@@ -402,6 +416,8 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
             created_at: now,
             updated_at: now
           });
+          
+          console.log(`[TENANT-DEBUG] create_or_find_contact created new contact: tenant=${context.tenant}, contactId=${contactId}, email=${params.email}`);
           
           return {
             id: contactId,
@@ -416,6 +432,7 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
         });
         
         logger.info(`[ACTION] create_or_find_contact: Contact ID: ${contact.id}`);
+        console.log(`[TENANT-DEBUG] create_or_find_contact completed: tenant=${context.tenant}, contactId=${contact.id}, isNew=${contact.is_new}`);
         return {
           success: true,
           contact_id: contact.id,
@@ -424,6 +441,7 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
         };
       } catch (error: any) {
         logger.error(`[ACTION] create_or_find_contact: Error creating/finding contact for ${params.email}`, error);
+        console.log(`[TENANT-DEBUG] create_or_find_contact ERROR: tenant=${context.tenant}, email=${params.email}, error=${error.message}`);
         return {
           success: false,
           message: error.message,
