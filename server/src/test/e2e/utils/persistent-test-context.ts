@@ -133,11 +133,18 @@ export class PersistentE2ETestContext extends E2ETestContext {
       this.mailhogPollingService.clearProcessedHistory();
     }
 
-    // Clear workflow event stream
+    // Clear workflow event stream (if method exists)
     try {
       const { getEventBus } = await import('../../../lib/eventBus');
       const eventBus = getEventBus();
-      await eventBus.clearStream();
+      
+      // Check if clearStream method exists before calling it
+      if (typeof eventBus.clearStream === 'function') {
+        await eventBus.clearStream();
+        console.log('🧹 Cleared workflow event stream');
+      } else {
+        console.log('⚠️ EventBus clearStream method not available, skipping');
+      }
     } catch (error) {
       console.warn('⚠️ Could not clear workflow stream:', error.message);
     }

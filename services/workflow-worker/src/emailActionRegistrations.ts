@@ -117,7 +117,7 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
               status_id: params.status_id || null,
               priority_id: params.priority_id || null,
               ticket_number: ticketNumber,
-              // email_metadata column doesn't exist in tickets table
+              email_metadata: params.email_metadata || null, // Store email threading metadata
               entered_at: new Date(), // Use entered_at instead of created_at
               updated_at: new Date()
             })
