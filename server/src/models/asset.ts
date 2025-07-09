@@ -157,11 +157,7 @@ export class AssetModel extends BaseModel {
                 region_code: company.region_code, // Changed from tax_region
                 tax_exemption_certificate: company.tax_exemption_certificate,
                 credit_balance: 0,
-                tenant,
-                // Include location fields from the query
-                email: company.email ?? '',
-                phone_no: company.phone_no ?? '',
-                address: company.address ?? ''
+                tenant
             };
 
             return convertDatesToISOString({

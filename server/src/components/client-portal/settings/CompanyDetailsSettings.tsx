@@ -149,17 +149,25 @@ export function CompanyDetailsSettings() {
     
     setIsLoading(true);
     try {
+      // Remove deprecated fields before updating
+      const { 
+        phone, 
+        email, 
+        address, 
+        location_email, 
+        location_phone, 
+        location_address,
+        ...cleanCompanyData 
+      } = companyDetails;
+      
       const updatedCompany = await updateCompany(companyDetails.company_id, {
-        company_name: companyDetails.company_name,
-        phone: companyDetails.phone,
-        email: companyDetails.email,
-        url: companyDetails.url,
-        address: companyDetails.address,
+        company_name: cleanCompanyData.company_name,
+        url: cleanCompanyData.url,
         properties: {
-          ...companyDetails.properties,
-          industry: companyDetails.properties?.industry,
-          company_size: companyDetails.properties?.company_size,
-          annual_revenue: companyDetails.properties?.annual_revenue
+          ...cleanCompanyData.properties,
+          industry: cleanCompanyData.properties?.industry,
+          company_size: cleanCompanyData.properties?.company_size,
+          annual_revenue: cleanCompanyData.properties?.annual_revenue
         }
       });
       setCompanyDetails(updatedCompany);

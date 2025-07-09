@@ -10,6 +10,7 @@ interface CompaniesGridProps {
     handleCheckboxChange: (companyId: string) => void;
     handleEditCompany: (companyId: string) => void;
     handleDeleteCompany: (company: ICompany) => void;
+    onQuickView?: (company: ICompany) => void;
     currentPage: number;
     pageSize: number;
     totalCount: number;
@@ -18,6 +19,7 @@ interface CompaniesGridProps {
     companyTags?: Record<string, ITag[]>;
     allUniqueTags?: ITag[];
     onTagsChange?: (companyId: string, tags: ITag[]) => void;
+    editingId?: string | null;
 }
 
 type ItemsPerPage = 9 | 18 | 27 | 36;
@@ -28,6 +30,7 @@ const CompaniesGrid = ({
     handleCheckboxChange, 
     handleEditCompany, 
     handleDeleteCompany,
+    onQuickView,
     currentPage,
     pageSize,
     totalCount,
@@ -35,7 +38,8 @@ const CompaniesGrid = ({
     onPageSizeChange,
     companyTags = {},
     allUniqueTags = [],
-    onTagsChange
+    onTagsChange,
+    editingId
 }: CompaniesGridProps) => {
     
     const itemsPerPageOptions = [
@@ -56,9 +60,11 @@ const CompaniesGrid = ({
                             handleCheckboxChange={handleCheckboxChange}
                             handleEditCompany={handleEditCompany}
                             handleDeleteCompany={handleDeleteCompany}
+                            onQuickView={onQuickView}
                             tags={companyTags[company.company_id] || []}
                             allUniqueTags={allUniqueTags.map(tag => tag.tag_text)}
                             onTagsChange={onTagsChange}
+                            isEditing={editingId === company.company_id}
                         />
                     </div>
                 ))}
