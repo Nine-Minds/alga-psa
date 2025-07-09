@@ -192,8 +192,14 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       const newCompany = result.data;
 
       // Create location if any location data is provided (address, city, phone, or email)
+      // Check if phone has actual number, not just country code
+      const phoneCode = countries.find(c => c.code === locationData.country_code)?.phone_code || '';
+      const hasActualPhone = locationData.phone?.trim() && 
+                            locationData.phone.trim() !== phoneCode &&
+                            locationData.phone.replace(/\s+/g, '').length > phoneCode.length;
+      
       if (locationData.address_line1.trim() || locationData.city.trim() || 
-          locationData.phone?.trim() || locationData.email?.trim()) {
+          hasActualPhone || locationData.email?.trim()) {
         try {
           await createCompanyLocation(newCompany.company_id, locationData);
         } catch (locationError) {

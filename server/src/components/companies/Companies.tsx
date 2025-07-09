@@ -33,7 +33,7 @@ import { Dialog, DialogContent, DialogFooter } from '../ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
-import { useToast } from 'server/src/hooks/use-toast';
+import toast from 'react-hot-toast';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import LoadingIndicator from '../ui/LoadingIndicator';
 
@@ -232,8 +232,6 @@ const CompanyResults = memo(({
 CompanyResults.displayName = 'CompanyResults';
 
 const Companies: React.FC = () => {
-  const { toast } = useToast();
-  
   useTagPermissions(['company']);
   
 
@@ -268,6 +266,7 @@ const Companies: React.FC = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     if (searchParams) {
@@ -387,7 +386,8 @@ const Companies: React.FC = () => {
 
   const handleCompanyAdded = (newCompany: ICompany) => {
     // Refresh the list after a company is added
-    refreshCompanies();
+    setRefreshKey(prev => prev + 1);
+    toast.success(`${newCompany.company_name} has been created successfully.`);
   };
 
   const handleCheckboxChange = (companyId: string) => {
@@ -420,11 +420,7 @@ const Companies: React.FC = () => {
         setIsSelectAllMode(true);
       } catch (error) {
         console.error('Error selecting all companies:', error);
-        toast({
-          title: "Error",
-          description: "Failed to select all companies",
-          variant: "destructive"
-        });
+        toast.error("Failed to select all companies");
       }
     }
   };
@@ -477,7 +473,10 @@ const Companies: React.FC = () => {
         throw new Error(result.message || 'Failed to delete company');
       }
 
-      await refreshCompanies();
+      // Show success toast
+      toast.success(`${companyToDelete.company_name} has been deleted successfully.`);
+      
+      setRefreshKey(prev => prev + 1);
       resetDeleteState();
     } catch (error) {
       console.error('Error deleting company:', error);
@@ -492,11 +491,7 @@ const Companies: React.FC = () => {
       await updateCompany(companyToDelete.company_id, { is_inactive: true });
       await refreshCompanies();
       resetDeleteState();
-      toast({
-        title: "Company Status Updated",
-        description: `${companyToDelete.company_name} has been marked as inactive successfully.`,
-        variant: "default"
-      });
+      toast.success(`${companyToDelete.company_name} has been marked as inactive successfully.`);
     } catch (error) {
       console.error('Error marking company as inactive:', error);
       setDeleteError('An error occurred while marking the company as inactive. Please try again.');
@@ -510,7 +505,7 @@ const Companies: React.FC = () => {
 
   const refreshCompanies = async () => {
     // Force refresh by changing a key to trigger CompanyResults re-render
-    router.refresh();
+    setRefreshKey(prev => prev + 1);
   };
 
   // Memoized search input change handler to prevent re-creation on every render
@@ -573,6 +568,10 @@ const Companies: React.FC = () => {
       if (errors.length === 0) {
         setIsMultiDeleteDialogOpen(false);
         setMultiDeleteError(null);
+        toast.success(`${successfulDeletes.length} companies have been deleted successfully.`);
+      } else if (successfulDeletes.length > 0) {
+        // Show partial success toast
+        toast.success(`${successfulDeletes.length} companies deleted. ${errors.length} could not be deleted.`);
       }
       
     } catch (error) {
@@ -675,17 +674,10 @@ const Companies: React.FC = () => {
         document.body.removeChild(link);
       }
       
-      toast({
-        title: 'Export Successful',
-        description: `Exported ${companiesToExport.length} ${companiesToExport.length === 1 ? 'company' : 'companies'} to CSV`,
-      });
+      toast.success(`Exported ${companiesToExport.length} ${companiesToExport.length === 1 ? 'company' : 'companies'} to CSV`);
     } catch (error) {
       console.error('Error exporting companies to CSV:', error);
-      toast({
-        title: 'Export Failed',
-        description: 'Failed to export companies to CSV',
-        variant: 'destructive',
-      });
+      toast.error('Failed to export companies to CSV');
     }
   };
 
@@ -865,6 +857,7 @@ const Companies: React.FC = () => {
 
       {/* Companies */}
       <CompanyResults
+        key={refreshKey}
         searchTerm={searchTerm}
         filterStatus={filterStatus}
         clientTypeFilter={clientTypeFilter}
