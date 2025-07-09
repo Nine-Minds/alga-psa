@@ -1,10 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { IProjectPhase, IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { getProjectTaskStatuses } from 'server/src/lib/actions/project-actions/projectActions';
-import TaskForm from './TaskForm';
+import TaskFormSkeleton from 'server/src/components/ui/skeletons/TaskFormSkeleton';
+
+// Dynamic import for TaskForm
+const TaskForm = dynamic(() => import('./TaskForm'), {
+  loading: () => <TaskFormSkeleton title="Edit Task" isEdit={true} />,
+  ssr: false
+});
 
 interface TaskEditProps {
   task: IProjectTask;
@@ -67,20 +74,22 @@ export default function TaskEdit({
 
   return (
     <div className="h-full">
-      <TaskForm
-        task={task}
-        phase={phase}
-        phases={phases}
-        onClose={onClose}
-        onSubmit={onTaskUpdated}
-        projectStatuses={selectedPhaseStatuses}
-        defaultStatus={selectedPhaseStatuses.find(s => s.project_status_mapping_id === task.project_status_mapping_id)}
-        users={users}
-        mode="edit"
-        onPhaseChange={handlePhaseChange}
-        inDrawer={inDrawer}
-        projectTreeData={projectTreeData}
-      />
+      <Suspense fallback={<TaskFormSkeleton title="Edit Task" isEdit={true} />}>
+        <TaskForm
+          task={task}
+          phase={phase}
+          phases={phases}
+          onClose={onClose}
+          onSubmit={onTaskUpdated}
+          projectStatuses={selectedPhaseStatuses}
+          defaultStatus={selectedPhaseStatuses.find(s => s.project_status_mapping_id === task.project_status_mapping_id)}
+          users={users}
+          mode="edit"
+          onPhaseChange={handlePhaseChange}
+          inDrawer={inDrawer}
+          projectTreeData={projectTreeData}
+        />
+      </Suspense>
     </div>
   );
 }
