@@ -72,7 +72,7 @@ export class TextElement extends LayoutElement {
   }
   
   toJsonString(): string {
-    return `{"type": "text", "text": "${this.text}", "tag": "${this.tag || ""}", "id": "${this.id}"}`;
+    return `{"type": "Text", "content": "${this.text}", "variant": "${this.tag || ""}", "id": "${this.id}"}`;
   }
 }
 
@@ -87,7 +87,7 @@ export class ImageElement extends LayoutElement {
   }
   
   toJsonString(): string {
-    return `{"type": "image", "src": "${this.src}", "alt": "${this.alt}", "id": "${this.id}"}`;
+    return `{"type": "Image", "src": "${this.src}", "alt": "${this.alt}", "id": "${this.id}"}`;
   }
 }
 
@@ -107,7 +107,7 @@ export class ColumnElement extends LayoutElement {
       childrenJson += this.children[i].toJsonString();
     }
     childrenJson += "]";
-    return `{"type": "column", "span": ${this.span}, "children": ${childrenJson}, "id": "${this.id}"}`;
+    return `{"type": "Column", "span": ${this.span}, "children": ${childrenJson}, "id": "${this.id}"}`;
   }
 }
 
@@ -126,7 +126,7 @@ export class RowElement extends LayoutElement {
       childrenJson += this.children[i].toJsonString();
     }
     childrenJson += "]";
-    return `{"type": "row", "children": ${childrenJson}, "id": "${this.id}"}`;
+    return `{"type": "Row", "children": ${childrenJson}, "id": "${this.id}"}`;
   }
 }
 
@@ -145,7 +145,7 @@ export class SectionElement extends LayoutElement {
       childrenJson += this.children[i].toJsonString();
     }
     childrenJson += "]";
-    return `{"type": "section", "children": ${childrenJson}, "id": "${this.id}"}`;
+    return `{"type": "Section", "children": ${childrenJson}, "id": "${this.id}"}`;
   }
 }
 
@@ -164,6 +164,6 @@ export class DocumentElement extends LayoutElement {
       childrenJson += this.children[i].toJsonString();
     }
     childrenJson += "]";
-    return `{"type": "document", "children": ${childrenJson}, "id": "${this.id}"}`;
+    return `{"type": "Document", "children": ${childrenJson}, "id": "${this.id}"}`;
   }
 }
