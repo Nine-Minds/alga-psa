@@ -151,7 +151,7 @@ export function CompanyDetailsSettings() {
     try {
       const updatedCompany = await updateCompany(companyDetails.company_id, {
         company_name: companyDetails.company_name,
-        phone_no: companyDetails.phone_no,
+        phone: companyDetails.phone,
         email: companyDetails.email,
         url: companyDetails.url,
         address: companyDetails.address,

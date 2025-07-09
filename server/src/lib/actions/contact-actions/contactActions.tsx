@@ -8,6 +8,8 @@ import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { unparseCSV } from 'server/src/lib/utils/csvParser';
 import { getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { createTag } from 'server/src/lib/actions/tagActions';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
 export async function getContactByContactNameId(contactNameId: string): Promise<IContact | null> {
   // Revert to using createTenantKnex for now
@@ -768,7 +770,7 @@ export async function exportContactsToCSV(
   companies: ICompany[],
   contactTags: Record<string, ITag[]>
 ): Promise<string> {
-  const fields = ['full_name', 'email', 'phone_number', 'company_name', 'role', 'notes', 'tags'];
+  const fields = ['full_name', 'email', 'phone_number', 'company', 'role', 'notes', 'tags'];
 
   const data = contacts.map((contact): Record<string, string> => {
     const company = companies.find(c => c.company_id === contact.company_id);
@@ -779,7 +781,7 @@ export async function exportContactsToCSV(
       full_name: contact.full_name || '',
       email: contact.email || '',
       phone_number: contact.phone_number || '',
-      company_name: company?.company_name || '',
+      company: company?.company_name || '',
       role: contact.role || '',
       notes: contact.notes || '',
       tags: tagText
@@ -789,8 +791,38 @@ export async function exportContactsToCSV(
   return unparseCSV(data, fields);
 }
 
+export async function generateContactCSVTemplate(): Promise<string> {
+  // Create template with Alice in Wonderland themed sample data
+  const templateData = [
+    {
+      full_name: 'Alice Liddell',
+      email: 'alice@wonderland.com',
+      phone_number: '+1-555-CURIOUS',
+      company: 'Mad Hatter Tea Company',
+      role: 'Chief Explorer',
+      notes: 'Fell down a rabbit hole and discovered a whole new world',
+      tags: 'Curious, Adventurous, Brave'
+    },
+    {
+      full_name: 'Mad Hatter',
+      email: 'hatter@teaparty.wonderland',
+      phone_number: '+1-555-TEA-TIME',
+      company: 'Mad Hatter Tea Company',
+      role: 'Chief Tea Ceremony Expert',
+      notes: 'Knows why a raven is like a writing desk',
+      tags: 'Creative, Eccentric, Tea Expert'
+    }
+  ];
+
+  const fields = ['full_name', 'email', 'phone_number', 'company', 'role', 'notes', 'tags'];
+
+  return unparseCSV(templateData, fields);
+}
+
+type ContactImportData = Partial<IContact> & { tags?: string };
+
 export async function importContactsFromCSV(
-  contactsData: Array<Partial<IContact>>,
+  contactsData: Array<ContactImportData>,
   updateExisting: boolean = false
 ): Promise<ImportContactResult[]> {
   const { knex: db, tenant } = await createTenantKnex();
@@ -802,6 +834,12 @@ export async function importContactsFromCSV(
     // Validate input
     if (!contactsData || contactsData.length === 0) {
       throw new Error('VALIDATION_ERROR: No contact data provided');
+    }
+
+    // Get current user for tag creation
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('SYSTEM_ERROR: User authentication required');
     }
 
     const results: ImportContactResult[] = [];
@@ -872,6 +910,36 @@ export async function importContactsFromCSV(
               .update(updateData)
               .returning('*');
 
+            // Handle tags if provided (for updates, we'll replace existing tags)
+            if (contactData.tags !== undefined) {
+              try {
+                // First, delete existing tags
+                await trx('tags')
+                  .where({
+                    tagged_id: savedContact.contact_name_id,
+                    tagged_type: 'contact',
+                    tenant
+                  })
+                  .delete();
+
+                // Then create new tags if any
+                if (contactData.tags) {
+                  const tagTexts = contactData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
+                  for (const tagText of tagTexts) {
+                    await createTag({
+                      tag_text: tagText,
+                      tagged_id: savedContact.contact_name_id,
+                      tagged_type: 'contact',
+                      created_by: currentUser.user_id
+                    });
+                  }
+                }
+              } catch (tagError) {
+                console.error('Failed to update tags during CSV import:', tagError);
+                // Don't fail the contact import if tag update fails
+              }
+            }
+
             results.push({
               success: true,
               message: 'Contact updated successfully',
@@ -896,6 +964,24 @@ export async function importContactsFromCSV(
             [savedContact] = await trx('contacts')
               .insert(contactToCreate)
               .returning('*');
+
+            // Handle tags if provided
+            if (contactData.tags) {
+              try {
+                const tagTexts = contactData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
+                for (const tagText of tagTexts) {
+                  await createTag({
+                    tag_text: tagText,
+                    tagged_id: savedContact.contact_name_id,
+                    tagged_type: 'contact',
+                    created_by: currentUser.user_id
+                  });
+                }
+              } catch (tagError) {
+                console.error('Failed to create tags during CSV import:', tagError);
+                // Don't fail the contact import if tag creation fails
+              }
+            }
 
             results.push({
               success: true,

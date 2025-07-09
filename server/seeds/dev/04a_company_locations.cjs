@@ -8,7 +8,7 @@ exports.seed = async function(knex) {
 
     const companies = await knex('companies')
         .where('tenant', tenant.tenant)
-        .select('company_id', 'company_name', 'address');
+        .select('company_id', 'company_name');
 
     // Create locations for each company based on their existing address
     const companyLocations = [];

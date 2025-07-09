@@ -13,6 +13,7 @@ import {
   updateCompany, 
   importCompaniesFromCSV, 
   exportCompaniesToCSV,
+  getAllCompanyIds,
   type PaginatedCompaniesResponse 
 } from 'server/src/lib/actions/company-actions/companyActions';
 import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
@@ -22,7 +23,7 @@ import { useSearchParams } from 'next/navigation';
 import CompaniesGrid from './CompaniesGrid';
 import CompaniesList from './CompaniesList';
 import ViewSwitcher, { ViewSwitcherOption } from '../ui/ViewSwitcher';
-import { TrashIcon, MoreVertical, CloudDownload, Upload, LayoutGrid, List, Search } from 'lucide-react';
+import { TrashIcon, MoreVertical, CloudDownload, Upload, LayoutGrid, List, Search, XCircle } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import CustomSelect from '../ui/CustomSelect';
 import { getCurrentUser, getUserPreference, setUserPreference } from 'server/src/lib/actions/user-actions/userActions';
@@ -34,6 +35,7 @@ import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAu
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { useToast } from 'server/src/hooks/use-toast';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
+import LoadingIndicator from '../ui/LoadingIndicator';
 
 const COMPANY_VIEW_MODE_SETTING = 'company_list_view_mode';
 
@@ -74,10 +76,10 @@ interface CompanyResultsProps {
   pageSize: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
-  onCompanyTagsLoaded?: (companyTags: Record<string, ITag[]>, allUniqueTags: string[]) => void;
+  onCompanyTagsLoaded?: (companyTags: Record<string, ITag[]>, allUniqueTags: ITag[]) => void;
   // Add props to receive parent's tag state
   companyTags?: Record<string, ITag[]>;
-  allUniqueTagsFromParent?: string[];
+  allUniqueTagsFromParent?: ITag[];
 }
 
 const CompanyResults = memo(({
@@ -103,7 +105,7 @@ const CompanyResults = memo(({
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [localCompanyTags, setLocalCompanyTags] = useState<Record<string, ITag[]>>({});
-  const [allUniqueTags, setAllUniqueTags] = useState<string[]>([]);
+  const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
   
   // Use parent's tag state if available, otherwise use local state
   const effectiveCompanyTags = parentCompanyTags || localCompanyTags;
@@ -120,6 +122,7 @@ const CompanyResults = memo(({
           statusFilter: filterStatus,
           searchTerm: searchTerm || undefined,
           clientTypeFilter,
+          selectedTags,
           loadLogos: true
         });
 
@@ -133,7 +136,7 @@ const CompanyResults = memo(({
     };
 
     loadCompanies();
-  }, [currentPage, pageSize, filterStatus, searchTerm, clientTypeFilter]);
+  }, [currentPage, pageSize, filterStatus, searchTerm, clientTypeFilter, selectedTags]);
 
   // Fetch tags when companies change
   useEffect(() => {
@@ -159,12 +162,11 @@ const CompanyResults = memo(({
         });
 
         setLocalCompanyTags(newCompanyTags);
-        const uniqueTags = allTags.map(tag => tag.tag_text);
-        setAllUniqueTags(uniqueTags);
+        setAllUniqueTags(allTags);
         
         // Notify parent component about loaded tags
         if (onCompanyTagsLoaded) {
-          onCompanyTagsLoaded(newCompanyTags, uniqueTags);
+          onCompanyTagsLoaded(newCompanyTags, allTags);
         }
       } catch (error) {
         console.error('Error fetching tags:', error);
@@ -173,32 +175,17 @@ const CompanyResults = memo(({
     fetchTags();
   }, [companies]);
 
-  // Filter companies by selected tags (client-side)
-  const filteredCompanies = companies.filter(company => {
-    if (selectedTags.length === 0) return true;
-    
-    const entityCompanyTags = effectiveCompanyTags[company.company_id] || [];
-    const companyTagTexts = entityCompanyTags.map(tag => tag.tag_text);
-    
-    return selectedTags.some(selectedTag => companyTagTexts.includes(selectedTag));
-  });
+  // No need for client-side filtering anymore since it's done server-side
+  const filteredCompanies = companies;
 
   if (isLoading) {
     return (
-      <div className="flex-1">
-        {viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3, 4, 5, 6].map((n):JSX.Element => (
-              <div key={n} className="h-48 bg-gray-200 rounded animate-pulse" />
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {[1, 2, 3, 4, 5].map((n):JSX.Element => (
-              <div key={n} className="h-16 bg-gray-200 rounded animate-pulse" />
-            ))}
-          </div>
-        )}
+      <div className="flex-1 flex items-center justify-center min-h-[400px]">
+        <LoadingIndicator 
+          text="Loading companies..." 
+          spinnerProps={{ size: 'lg' }}
+          layout="stacked"
+        />
       </div>
     );
   }
@@ -296,6 +283,7 @@ const Companies: React.FC = () => {
   const [searchInput, setSearchInput] = useState(''); // Local state for input field
   const [viewMode, setViewMode] = useState<'grid' | 'list' | null>(null);
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
+  const [isSelectAllMode, setIsSelectAllMode] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isMultiDeleteDialogOpen, setIsMultiDeleteDialogOpen] = useState(false);
@@ -306,8 +294,11 @@ const Companies: React.FC = () => {
   
   // Tag-related state
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [allUniqueTags, setAllUniqueTags] = useState<string[]>([]);
+  const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
   const [companyTags, setCompanyTags] = useState<Record<string, ITag[]>>({});
+  
+  // Track if filters are applied
+  const [isFiltered, setIsFiltered] = useState(false);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -326,6 +317,16 @@ const Companies: React.FC = () => {
 
     return () => clearTimeout(timer);
   }, [searchInput]);
+
+  // Update isFiltered when any filter changes
+  useEffect(() => {
+    const hasFilters = 
+      searchTerm !== '' || 
+      filterStatus !== 'active' || 
+      clientTypeFilter !== 'all' || 
+      selectedTags.length > 0;
+    setIsFiltered(hasFilters);
+  }, [searchTerm, filterStatus, clientTypeFilter, selectedTags]);
 
   // Tags will be loaded by CompanyResults component
 
@@ -397,6 +398,35 @@ const Companies: React.FC = () => {
         return [...prevSelected, companyId];
       }
     });
+    // If user manually selects/deselects, exit select all mode
+    setIsSelectAllMode(false);
+  };
+
+  const handleSelectAll = async () => {
+    if (selectedCompanies.length > 0 || isSelectAllMode) {
+      // Clear all selections
+      setSelectedCompanies([]);
+      setIsSelectAllMode(false);
+    } else {
+      // Select all companies with current filters
+      try {
+        const allIds = await getAllCompanyIds({
+          statusFilter: filterStatus,
+          searchTerm: searchTerm || undefined,
+          clientTypeFilter,
+          selectedTags
+        });
+        setSelectedCompanies(allIds);
+        setIsSelectAllMode(true);
+      } catch (error) {
+        console.error('Error selecting all companies:', error);
+        toast({
+          title: "Error",
+          description: "Failed to select all companies",
+          variant: "destructive"
+        });
+      }
+    }
   };
 
   const handleTagsChange = useCallback((companyId: string, tags: ITag[]) => {
@@ -408,13 +438,13 @@ const Companies: React.FC = () => {
     
     // Update unique tags list if needed
     setAllUniqueTags(current => {
-      const allTagTexts = new Set(current);
-      tags.forEach(tag => allTagTexts.add(tag.tag_text));
-      return Array.from(allTagTexts);
+      const currentTagTexts = new Set(current.map(t => t.tag_text));
+      const newTags = tags.filter(tag => !currentTagTexts.has(tag.tag_text));
+      return [...current, ...newTags];
     });
   }, []);
   
-  const handleCompanyTagsLoaded = useCallback((loadedCompanyTags: Record<string, ITag[]>, uniqueTags: string[]) => {
+  const handleCompanyTagsLoaded = useCallback((loadedCompanyTags: Record<string, ITag[]>, uniqueTags: ITag[]) => {
     // Update the main component's tag state when CompanyResults loads tags
     setCompanyTags(loadedCompanyTags);
     setAllUniqueTags(uniqueTags);
@@ -486,6 +516,17 @@ const Companies: React.FC = () => {
   // Memoized search input change handler to prevent re-creation on every render
   const handleSearchInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchInput(e.target.value);
+  }, []);
+
+  // Handle reset filters
+  const handleResetFilters = useCallback(() => {
+    setSearchInput('');
+    setSearchTerm('');
+    setFilterStatus('active');
+    setClientTypeFilter('all');
+    setSelectedTags([]);
+    setCurrentPage(1);
+    setIsFiltered(false);
   }, []);
   
   const confirmMultiDelete = async () => {
@@ -606,9 +647,20 @@ const Companies: React.FC = () => {
 
   const handleExportToCSV = async () => {
     try {
-      // Export all companies with current filters
-      const allCompanies = await getAllCompanies(true);
-      const csvData = await exportCompaniesToCSV(allCompanies);
+      let companiesToExport: ICompany[];
+      
+      // If companies are selected, export only those
+      if (selectedCompanies.length > 0) {
+        const allCompanies = await getAllCompanies(true);
+        companiesToExport = allCompanies.filter(company => 
+          selectedCompanies.includes(company.company_id)
+        );
+      } else {
+        // Otherwise export all companies with current filters
+        companiesToExport = await getAllCompanies(true);
+      }
+      
+      const csvData = await exportCompaniesToCSV(companiesToExport);
       
       const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
       
@@ -622,8 +674,18 @@ const Companies: React.FC = () => {
         link.click();
         document.body.removeChild(link);
       }
+      
+      toast({
+        title: 'Export Successful',
+        description: `Exported ${companiesToExport.length} ${companiesToExport.length === 1 ? 'company' : 'companies'} to CSV`,
+      });
     } catch (error) {
       console.error('Error exporting companies to CSV:', error);
+      toast({
+        title: 'Export Failed',
+        description: 'Failed to export companies to CSV',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -716,6 +778,20 @@ const Companies: React.FC = () => {
                 setCurrentPage(1); // Reset to first page when changing filter
               }}
             />
+
+            {/* Reset Filters Button */}
+            {isFiltered && (
+              <Button
+                id="reset-filters-button"
+                variant="outline"
+                size="sm"
+                className="whitespace-nowrap flex items-center gap-2"
+                onClick={handleResetFilters}
+              >
+                <XCircle className="h-4 w-4" />
+                Reset Filters
+              </Button>
+            )}
           </div>
 
           {/* Right side - Actions and View Switcher */}
@@ -770,15 +846,11 @@ const Companies: React.FC = () => {
           type="checkbox"
           className="form-checkbox h-4 w-4 rounded"
           checked={selectedCompanies.length > 0}
-          onChange={() => {
-            // For now, we'll just clear selections when unchecked
-            // Select all functionality would require access to current page companies
-            setSelectedCompanies(selectedCompanies.length > 0 ? [] : []);
-          }}
+          onChange={() => void handleSelectAll()}
         />
         {selectedCompanies.length > 0 &&
           <span className="text-sm font-medium text-gray-500">
-            {selectedCompanies.length} Selected
+            {isSelectAllMode ? `All ${selectedCompanies.length} companies selected` : `${selectedCompanies.length} Selected`}
           </span>}
 
         <button

@@ -4,9 +4,10 @@ import { Input } from 'server/src/components/ui/Input';
 import * as Popover from '@radix-ui/react-popover';
 import { TagGrid } from './TagGrid';
 import { filterTagsByText } from 'server/src/utils/colorUtils';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
 
 interface TagFilterProps {
-  allTags: string[];
+  allTags: string[] | ITag[];
   selectedTags: string[];
   onTagSelect: (tag: string) => void;
   className?: string;
@@ -19,7 +20,15 @@ export const TagFilter: React.FC<TagFilterProps> = ({
   className = ''
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const filteredTags = filterTagsByText(allTags, searchTerm);
+  
+  // Handle both string[] and ITag[] formats
+  const tagTexts = allTags.map(tag => typeof tag === 'string' ? tag : tag.tag_text);
+  const filteredTagTexts = filterTagsByText(tagTexts, searchTerm);
+  
+  // If we have ITag objects, filter them based on the filtered texts
+  const filteredTags = typeof allTags[0] === 'string' 
+    ? filteredTagTexts 
+    : allTags.filter(tag => filteredTagTexts.includes((tag as ITag).tag_text)) as ITag[];
 
   return (
     <Popover.Root>

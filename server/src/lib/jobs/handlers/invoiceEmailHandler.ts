@@ -70,7 +70,7 @@ export class InvoiceEmailHandler {
           }
 
           // Determine recipient email with priority order first
-          let recipientEmail = company.email;
+          let recipientEmail = company.location_email || '';
           let recipientName = company.company_name;
 
           if (company.billing_contact_id) {
@@ -188,7 +188,7 @@ export class InvoiceEmailHandler {
           // Update invoice contact info
           invoice.contact = {
             name: recipientName,
-            address: company.address || ''
+            address: company.location_address || ''
           };
 
           // Get the PDF content and send email
@@ -206,7 +206,7 @@ export class InvoiceEmailHandler {
                 company: {
                   name: company.company_name,
                   logo: '',
-                  address: company.address || ''
+                  address: company.location_address || ''
                 }
               },
               tempPath

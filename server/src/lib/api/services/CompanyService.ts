@@ -48,15 +48,25 @@ export class CompanyService extends BaseService<ICompany> {
       order
     } = options;
 
-    // Build base query with account manager join
+    // Build base query with account manager and location joins
     let dataQuery = knex('companies as c')
       .leftJoin('users as u', function() {
         this.on('c.account_manager_id', '=', 'u.user_id')
             .andOn('c.tenant', '=', 'u.tenant');
       })
+      .leftJoin('company_locations as cl', function() {
+        this.on('c.company_id', '=', 'cl.company_id')
+            .andOn('c.tenant', '=', 'cl.tenant')
+            .andOn('cl.is_default', '=', knex.raw('true'));
+      })
       .where('c.tenant', context.tenant);
 
     let countQuery = knex('companies as c')
+      .leftJoin('company_locations as cl', function() {
+        this.on('c.company_id', '=', 'cl.company_id')
+            .andOn('c.tenant', '=', 'cl.tenant')
+            .andOn('cl.is_default', '=', knex.raw('true'));
+      })
       .where('c.tenant', context.tenant);
 
     // Apply filters
@@ -140,10 +150,7 @@ export class CompanyService extends BaseService<ICompany> {
           const companyData = {
             company_id: knex.raw('gen_random_uuid()'),
             company_name: data.company_name,
-            phone_no: data.phone_no || '',
-            email: data.email || '',
             url: data.url || '',
-            address: data.address,
             client_type: data.client_type,
             tax_id_number: data.tax_id_number,
             notes: data.notes,
@@ -481,7 +488,7 @@ export class CompanyService extends BaseService<ICompany> {
           query.whereILike('c.company_name', `%${value}%`);
           break;
         case 'email':
-          query.whereILike('c.email', `%${value}%`);
+          query.whereILike('cl.email', `%${value}%`);
           break;
         case 'client_type':
           query.where('c.client_type', value);
@@ -524,10 +531,42 @@ export class CompanyService extends BaseService<ICompany> {
           if (this.searchableFields.length > 0) {
             query.where(subQuery => {
               this.searchableFields.forEach((field, index) => {
-                if (index === 0) {
-                  subQuery.whereILike(`c.${field}`, `%${value}%`);
+                if (field === 'email') {
+                  if (index === 0) {
+                    subQuery.whereILike('cl.email', `%${value}%`);
+                  } else {
+                    subQuery.orWhereILike('cl.email', `%${value}%`);
+                  }
+                } else if (field === 'phone_no') {
+                  if (index === 0) {
+                    subQuery.whereILike('cl.phone', `%${value}%`);
+                  } else {
+                    subQuery.orWhereILike('cl.phone', `%${value}%`);
+                  }
+                } else if (field === 'address') {
+                  if (index === 0) {
+                    subQuery.where(addressSubQuery => {
+                      addressSubQuery.whereILike('cl.address_line1', `%${value}%`)
+                        .orWhereILike('cl.address_line2', `%${value}%`)
+                        .orWhereILike('cl.city', `%${value}%`)
+                        .orWhereILike('cl.state_province', `%${value}%`)
+                        .orWhereILike('cl.postal_code', `%${value}%`);
+                    });
+                  } else {
+                    subQuery.orWhere(addressSubQuery => {
+                      addressSubQuery.whereILike('cl.address_line1', `%${value}%`)
+                        .orWhereILike('cl.address_line2', `%${value}%`)
+                        .orWhereILike('cl.city', `%${value}%`)
+                        .orWhereILike('cl.state_province', `%${value}%`)
+                        .orWhereILike('cl.postal_code', `%${value}%`);
+                    });
+                  }
                 } else {
-                  subQuery.orWhereILike(`c.${field}`, `%${value}%`);
+                  if (index === 0) {
+                    subQuery.whereILike(`c.${field}`, `%${value}%`);
+                  } else {
+                    subQuery.orWhereILike(`c.${field}`, `%${value}%`);
+                  }
                 }
               });
             });

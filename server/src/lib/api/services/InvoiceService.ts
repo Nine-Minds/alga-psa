@@ -1065,9 +1065,18 @@ export class InvoiceService extends BaseService<IInvoice> {
         };
       }
 
-      // Get company details
-      const company = await trx('companies')
-        .where({ company_id: billingCycle.company_id, tenant: context.tenant })
+      // Get company details with location
+      const company = await trx('companies as c')
+        .leftJoin('company_locations as cl', function() {
+          this.on('c.company_id', '=', 'cl.company_id')
+              .andOn('c.tenant', '=', 'cl.tenant')
+              .andOn('cl.is_default', '=', trx.raw('true'));
+        })
+        .select(
+          'c.*',
+          'cl.address_line1 as location_address'
+        )
+        .where({ 'c.company_id': billingCycle.company_id, 'c.tenant': context.tenant })
         .first();
 
       if (!company) {
@@ -1077,9 +1086,18 @@ export class InvoiceService extends BaseService<IInvoice> {
         };
       }
 
-      // Get tenant company details
-      const tenantCompany = await trx('companies')
-        .where({ tenant: context.tenant, is_tenant_company: true })
+      // Get tenant company details with location
+      const tenantCompany = await trx('companies as c')
+        .leftJoin('company_locations as cl', function() {
+          this.on('c.company_id', '=', 'cl.company_id')
+              .andOn('c.tenant', '=', 'cl.tenant')
+              .andOn('cl.is_default', '=', trx.raw('true'));
+        })
+        .select(
+          'c.*',
+          'cl.address_line1 as location_address'
+        )
+        .where({ 'c.tenant': context.tenant, 'c.is_tenant_company': true })
         .first();
 
       // Generate preview data
@@ -1110,11 +1128,11 @@ export class InvoiceService extends BaseService<IInvoice> {
           dueDate,
           customer: {
             name: company.company_name,
-            address: company.address || ''
+            address: company.location_address || ''
           },
           tenantCompany: tenantCompany ? {
             name: tenantCompany.company_name,
-            address: tenantCompany.address || '',
+            address: tenantCompany.location_address || '',
             logoUrl: tenantCompany.logo_url || null
           } : null,
           items,
