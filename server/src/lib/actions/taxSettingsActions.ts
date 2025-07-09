@@ -1,12 +1,10 @@
 'use server'
 
 import { withTransaction } from '@shared/db';
-// Import ITaxRate and other necessary types
 import { ICompanyTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from 'server/src/interfaces/tax.interfaces';
 import { v4 as uuid4 } from 'uuid';
 import { TaxService } from 'server/src/lib/services/taxService';
-// Removed duplicate import of ITaxRegion
-import { ITaxRegion } from 'server/src/interfaces/tax.interfaces'; // Added import
+import { ITaxRegion } from 'server/src/interfaces/tax.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 export async function getCompanyTaxSettings(companyId: string): Promise<ICompanyTaxSettings | null> {
@@ -102,10 +100,11 @@ export async function getTaxRates(): Promise<ITaxRate[]> {
  */
 export async function getActiveTaxRegions(): Promise<Pick<ITaxRegion, 'region_code' | 'region_name'>[]> {
   try {
-    const { knex } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex();
     const activeRegions = await knex<ITaxRegion>('tax_regions')
       .select('region_code', 'region_name')
       .where('is_active', true)
+      .where('tenant', tenant)
       .orderBy('region_name', 'asc');
 
     return activeRegions;
