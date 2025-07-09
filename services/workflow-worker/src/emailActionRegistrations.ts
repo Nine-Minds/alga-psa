@@ -312,8 +312,8 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
         // Search for ticket by various email thread identifiers
         let ticket = null;
         
-        // Strategy 1: Search by thread ID if available
-        if (params.threadId) {
+        // Strategy 1: Search by In-Reply-To header matching original ticket's threadId or messageId
+        if (params.inReplyTo) {
           ticket = await knex('tickets as t')
             .leftJoin('statuses as s', 't.status_id', 's.status_id')
             .select(
@@ -324,12 +324,16 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
               't.email_metadata'
             )
             .where('t.tenant', context.tenant)
-            .whereRaw("t.email_metadata->>'threadId' = ?", [params.threadId])
+            .where(function() {
+              // Reply's inReplyTo should match original ticket's threadId OR messageId
+              this.whereRaw("t.email_metadata->>'threadId' = ?", [params.inReplyTo])
+                  .orWhereRaw("t.email_metadata->>'messageId' = ?", [params.inReplyTo]);
+            })
             .first();
         }
         
-        // Strategy 2: Search by In-Reply-To header if no ticket found yet
-        if (!ticket && params.inReplyTo) {
+        // Strategy 2: Search by thread ID if no ticket found yet
+        if (!ticket && params.threadId) {
           ticket = await knex('tickets as t')
             .leftJoin('statuses as s', 't.status_id', 's.status_id')
             .select(
@@ -340,7 +344,7 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
               't.email_metadata'
             )
             .where('t.tenant', context.tenant)
-            .whereRaw("t.email_metadata->>'originalMessageId' = ?", [params.inReplyTo])
+            .whereRaw("t.email_metadata->>'threadId' = ?", [params.threadId])
             .first();
         }
         
