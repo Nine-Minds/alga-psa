@@ -1,13 +1,20 @@
 // server/src/components/interactions/QuickAddInteraction.tsx
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Input } from 'server/src/components/ui/Input';
-import TextEditor from '../editor/TextEditor';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import RichTextEditorSkeleton from 'server/src/components/ui/skeletons/RichTextEditorSkeleton';
+
+// Dynamic import for TextEditor
+const TextEditor = dynamic(() => import('../editor/TextEditor'), {
+  loading: () => <RichTextEditorSkeleton height="150px" title="Interaction Notes" />,
+  ssr: false
+});
 import { DateTimePicker } from 'server/src/components/ui/DateTimePicker';
 import { PartialBlock } from '@blocknote/core';
 import InteractionIcon from 'server/src/components/ui/InteractionIcon';
@@ -498,12 +505,14 @@ export function QuickAddInteraction({
                 <div>
                   {/* Only render TextEditor when content is ready */}
                   {isNotesContentReady ? (
-                    <TextEditor
-                      key={isEditMode ? `edit-${editingInteraction?.interaction_id}` : 'add'}
-                      {...notesEditorProps}
-                      initialContent={notesContent}
-                      onContentChange={setNotesContent}
-                    />
+                    <Suspense fallback={<RichTextEditorSkeleton height="150px" title="Interaction Notes" />}>
+                      <TextEditor
+                        key={isEditMode ? `edit-${editingInteraction?.interaction_id}` : 'add'}
+                        {...notesEditorProps}
+                        initialContent={notesContent}
+                        onContentChange={setNotesContent}
+                      />
+                    </Suspense>
                   ) : (
                     <div className="w-full h-[100px] bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center">
                       <span className="text-gray-500">Loading editor...</span>
