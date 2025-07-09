@@ -7,13 +7,33 @@ import Body from "./Body";
 import RightSidebar from "./RightSidebar";
 import Drawer from 'server/src/components/ui/Drawer';
 import { DrawerProvider } from "server/src/context/DrawerContext";
+import { useUserPreference } from 'server/src/hooks/useUserPreference';
 
 
 export default function DefaultLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerContent] = useState<React.ReactNode>(null);
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Use the custom hook for sidebar preference
+  const { value: sidebarCollapsed, setValue: setSidebarCollapsed } = useUserPreference<boolean>(
+    'sidebar_collapsed',
+    {
+      defaultValue: false,
+      localStorageKey: 'sidebar_collapsed',
+      debounceMs: 300 // Faster feedback for UI preferences
+    }
+  );
+
+  // Convert collapsed state to open state for component compatibility
+  const sidebarOpen = !sidebarCollapsed;
+  const setSidebarOpen = (open: boolean | ((prev: boolean) => boolean)) => {
+    if (typeof open === 'function') {
+      setSidebarCollapsed(prev => !open(!prev));
+    } else {
+      setSidebarCollapsed(!open);
+    }
+  };
+
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
 
   // Add state for Chat component props
@@ -24,6 +44,7 @@ export default function DefaultLayout({ children }: Readonly<{ children: React.R
   const [selectedAccount, setSelectedAccount] = useState('');
   const [auth_token, setAuthToken] = useState('');
   const [isTitleLocked] = useState(false);
+
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

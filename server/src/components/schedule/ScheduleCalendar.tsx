@@ -20,7 +20,8 @@ import { produce } from 'immer';
 import { Dialog } from 'server/src/components/ui/Dialog';
 import { WorkItemType, IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { useUsers } from 'server/src/hooks/useUsers';
-import { getCurrentUser, getCurrentUserPermissions, getUserPreference, setUserPreference } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser, getCurrentUserPermissions } from 'server/src/lib/actions/user-actions/userActions';
+import { useUserPreference } from 'server/src/hooks/useUserPreference';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { WorkItemDrawer } from 'server/src/components/time-management/time-entry/time-sheet/WorkItemDrawer';
 import { useDrawer } from "server/src/context/DrawerContext";
@@ -34,7 +35,20 @@ const localizer = momentLocalizer(moment);
 const DnDCalendar = withDragAndDrop(Calendar);
 
 const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
-  const [view, setView] = useState<View>("week");
+  // Use the custom hook for schedule view preference
+  const { 
+    value: view, 
+    setValue: setView,
+    isLoading: isViewPreferenceLoading 
+  } = useUserPreference<View>(
+    'defaultScheduleView',
+    {
+      defaultValue: 'week',
+      localStorageKey: 'defaultScheduleView',
+      debounceMs: 300
+    }
+  );
+  
   const [events, setEvents] = useState<IScheduleEntry[]>([]);
   const [showEntryPopup, setShowEntryPopup] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<IScheduleEntry | null>(null);
@@ -175,17 +189,7 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
           // Initialize with empty comparison list
           setComparisonTechnicianIds([]);
 
-          // Load saved view preference
-          try {
-            const savedView = await getUserPreference(user.user_id, 'defaultScheduleView');
-            if (savedView && ['month', 'week', 'day'].includes(savedView)) {
-              setView(savedView as View);
-            }
-          } catch (err) {
-            console.log('No saved view preference found, using default');
-          } finally {
-            setIsLoadingPreferences(false);
-          }
+          setIsLoadingPreferences(false);
         } catch (err: any) {
            console.error("Failed to fetch user permissions:", err);
            setError(err.message || "Failed to load permissions.");
@@ -601,16 +605,8 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
       onNavigate(action);
     };
 
-    const handleViewChange = async (newView: string) => {
+    const handleViewChange = (newView: string) => {
       onView(newView as View);
-      // Save the view preference
-      if (currentUserId) {
-        try {
-          await setUserPreference(currentUserId, 'defaultScheduleView', newView);
-        } catch (err) {
-          console.error('Failed to save view preference:', err);
-        }
-      }
     }
 
     return (
@@ -868,16 +864,8 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
                 view={view}
                 date={date}
                 scrollToTime={scrollToTime}
-                onView={async (newView) => {
+                onView={(newView) => {
                   setView(newView);
-                  // Save the view preference when changed via calendar navigation
-                  if (currentUserId) {
-                    try {
-                      await setUserPreference(currentUserId, 'defaultScheduleView', newView);
-                    } catch (err) {
-                      console.error('Failed to save view preference:', err);
-                    }
-                  }
                 }}
                 onNavigate={handleNavigate}
                 selectable
