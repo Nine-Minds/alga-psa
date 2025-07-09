@@ -155,8 +155,8 @@ export async function updateCompany(companyId: string, updateData: Partial<Omit<
       
       // Handle all other fields
       Object.entries(updateData).forEach(([key, value]) => {
-        // Exclude properties, url, tax_region, account_manager_id, and logoUrl (computed field)
-        const excludedFields = ['properties', 'url', 'tax_region', 'account_manager_id', 'logoUrl'];
+        // Exclude properties, url, tax_region, account_manager_id, logoUrl (computed field), and location fields
+        const excludedFields = ['properties', 'url', 'tax_region', 'account_manager_id', 'logoUrl', 'phone', 'email', 'address', 'location_email', 'location_phone', 'location_address'];
         if (!excludedFields.includes(key)) {
           // Always include the field in the update, setting null for undefined/empty values
           updateObject[key] = (value === undefined || value === '') ? null : value;

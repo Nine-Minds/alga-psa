@@ -4,7 +4,7 @@ import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { useRouter } from 'next/navigation';
-import { MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { MoreVertical, Pencil, Trash2, ExternalLink } from "lucide-react";
 import { ReflectedDropdownMenu } from 'server/src/components/ui/ReflectedDropdownMenu';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Button } from 'server/src/components/ui/Button';
@@ -23,6 +23,7 @@ interface CompaniesListProps {
     handleCheckboxChange: (companyId: string) => void;
     handleEditCompany: (companyId: string) => void;
     handleDeleteCompany: (company: ICompany) => void;
+    onQuickView?: (company: ICompany) => void;
     currentPage?: number;
     pageSize?: number;
     totalCount?: number;
@@ -30,6 +31,7 @@ interface CompaniesListProps {
     companyTags?: Record<string, ITag[]>;
     allUniqueTags?: ITag[];
     onTagsChange?: (companyId: string, tags: ITag[]) => void;
+    editingId?: string | null;
 }
 
 // Component for company selection checkbox
@@ -97,13 +99,15 @@ const CompaniesList = ({
   handleCheckboxChange, 
   handleEditCompany, 
   handleDeleteCompany,
+  onQuickView,
   currentPage,
   pageSize,
   totalCount,
   onPageChange,
   companyTags = {},
   allUniqueTags = [],
-  onTagsChange
+  onTagsChange,
+  editingId
 }: CompaniesListProps) => {
   const router = useRouter(); // Get router instance
 
@@ -237,6 +241,15 @@ const CompaniesList = ({
                             align="end" 
                             className="bg-white rounded-md shadow-lg p-1 border border-gray-200 min-w-[120px] z-50"
                         >
+                            {onQuickView && (
+                                <DropdownMenu.Item 
+                                    className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center rounded"
+                                    onSelect={() => onQuickView(record)}
+                                >
+                                    <ExternalLink size={14} className="mr-2" />
+                                    Quick View
+                                </DropdownMenu.Item>
+                            )}
                             <DropdownMenu.Item 
                                 className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center rounded"
                                 onSelect={() => handleEditCompany(record.company_id)}
@@ -270,6 +283,9 @@ const CompaniesList = ({
                 pageSize={pageSize}
                 totalItems={totalCount}
                 onPageChange={onPageChange}
+                getRowClassName={(company: ICompany) => 
+                    editingId === company.company_id ? 'bg-purple-50 border-l-4 border-l-purple-500' : ''
+                }
             />
         </div>
     );
