@@ -508,25 +508,30 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
     return addressParts.join(', ');
   };
 
-  // Read-only mode - show default location card or "No locations"
+  // Read-only mode - show all locations
   if (!isEditing) {
-    const defaultLocation = locations.find(loc => loc.is_default);
-    if (defaultLocation) {
+    if (locations.length === 0) {
       return (
-        <LocationCard
-          location={defaultLocation}
-          onEdit={() => {}} // No-op in read-only mode
-          onDelete={() => {}} // No-op in read-only mode
-          onSetDefault={() => {}} // No-op in read-only mode
-          formatAddress={formatAddress}
-          showActions={false}
-        />
+        <div className="text-center py-4 text-gray-500">
+          <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+          <p className="text-sm">No locations added yet</p>
+        </div>
       );
     }
+    
     return (
-      <div className="text-center py-4 text-gray-500">
-        <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-        <p className="text-sm">No locations added yet</p>
+      <div className="space-y-3">
+        {locations.map((location) => (
+          <LocationCard
+            key={location.location_id}
+            location={location}
+            onEdit={() => {}} // No-op in read-only mode
+            onDelete={() => {}} // No-op in read-only mode
+            onSetDefault={() => {}} // No-op in read-only mode
+            formatAddress={formatAddress}
+            showActions={false}
+          />
+        ))}
       </div>
     );
   }

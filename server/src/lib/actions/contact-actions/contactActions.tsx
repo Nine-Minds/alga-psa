@@ -789,6 +789,25 @@ export async function exportContactsToCSV(
   return unparseCSV(data, fields);
 }
 
+export async function generateContactCSVTemplate(): Promise<string> {
+  // Create empty template with only headers
+  const templateData = [
+    {
+      full_name: '',
+      email: '',
+      phone_number: '',
+      company_name: '',
+      role: '',
+      notes: '',
+      tags: ''
+    }
+  ];
+
+  const fields = ['full_name', 'email', 'phone_number', 'company_name', 'role', 'notes', 'tags'];
+
+  return unparseCSV(templateData, fields);
+}
+
 export async function importContactsFromCSV(
   contactsData: Array<Partial<IContact>>,
   updateExisting: boolean = false

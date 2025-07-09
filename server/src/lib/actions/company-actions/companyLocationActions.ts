@@ -168,40 +168,68 @@ export async function deleteCompanyLocation(locationId: string): Promise<void> {
       throw new Error('Location not found');
     }
 
-    // Soft delete by setting is_active to false
-    await knex('company_locations')
-      .where({ 
-        location_id: locationId,
-        tenant: tenant 
-      })
-      .update({
-        is_active: false,
-        updated_at: knex.fn.now()
-      });
-
-    // If this was the default location, assign default to another active location
-    if (location.is_default) {
-      const nextDefault = await knex('company_locations')
-        .where({ 
-          company_id: location.company_id,
-          tenant: tenant,
-          is_active: true 
-        })
-        .whereNot('location_id', locationId)
-        .first();
-
-      if (nextDefault) {
-        await knex('company_locations')
-          .where({ 
-            location_id: nextDefault.location_id,
-            tenant: tenant 
-          })
-          .update({
-            is_default: true,
-            updated_at: knex.fn.now()
-          });
-      }
+    // Check for dependencies before deletion
+    const dependencies: string[] = [];
+    
+    // Check for tickets referencing this location
+    const ticketCount = await knex('tickets')
+      .where({ location_id: locationId, tenant })
+      .count('ticket_id as count')
+      .first();
+    
+    if (ticketCount && Number(ticketCount.count) > 0) {
+      dependencies.push(`${ticketCount.count} ticket(s)`);
     }
+
+    // Check for company tax rates referencing this location
+    const taxRateCount = await knex('company_tax_rates')
+      .where({ location_id: locationId, tenant })
+      .count('tax_rate_id as count')
+      .first();
+    
+    if (taxRateCount && Number(taxRateCount.count) > 0) {
+      dependencies.push(`${taxRateCount.count} tax rate(s)`);
+    }
+
+    // If there are dependencies, throw an error
+    if (dependencies.length > 0) {
+      throw new Error(`Cannot delete location: it has associated ${dependencies.join(' and ')}`);
+    }
+
+    // If no dependencies, perform hard delete
+    await knex.transaction(async (trx) => {
+      // If this was the default location, assign default to another active location first
+      if (location.is_default) {
+        const nextDefault = await trx('company_locations')
+          .where({ 
+            company_id: location.company_id,
+            tenant: tenant,
+            is_active: true 
+          })
+          .whereNot('location_id', locationId)
+          .first();
+
+        if (nextDefault) {
+          await trx('company_locations')
+            .where({ 
+              location_id: nextDefault.location_id,
+              tenant: tenant 
+            })
+            .update({
+              is_default: true,
+              updated_at: knex.fn.now()
+            });
+        }
+      }
+
+      // Hard delete the location
+      await trx('company_locations')
+        .where({ 
+          location_id: locationId,
+          tenant: tenant 
+        })
+        .delete();
+    });
   } finally {
     // await knex.destroy();
   }

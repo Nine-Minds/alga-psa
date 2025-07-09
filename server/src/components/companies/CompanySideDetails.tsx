@@ -46,7 +46,7 @@ const CompanySideDetails = ({ company }: CompanySideDetailsProps) => {
                 <div className="space-y-4 text-sm">
                     <div>
                         <p className="font-semibold text-gray-700">Phone:</p>
-                        <p>{company.location_phone || company.phone_no || 'N/A'}</p>
+                        <p>{company.location_phone || 'N/A'}</p>
                     </div>
                     <div>
                         <p className="font-semibold text-gray-700">URL:</p>
@@ -61,7 +61,7 @@ const CompanySideDetails = ({ company }: CompanySideDetailsProps) => {
                     <div>
                         <p className="font-semibold text-gray-700">Address:</p>
                         <p className="whitespace-pre-line">
-                            {company.address_line1 ? formatAddress() : (company.address || 'N/A')}
+                            {company.address_line1 ? formatAddress() : 'N/A'}
                         </p>
                     </div>
                     {company.location_email && (

@@ -561,15 +561,10 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               />
 
               {/* Status and Client Type in 2 columns */}
-              <div className="grid grid-cols-2 gap-4">
-                <SwitchDetailItem
-                  value={!editedCompany.is_inactive || false}
-                  onEdit={(isActive) => handleFieldChange('is_inactive', !isActive)}
-                  automationId="company-status-field"
-                />
+              <div className="grid grid-cols-5 gap-4">
 
                 {/* Client Type */}
-                <div className="space-y-2">
+                <div className="space-y-2 col-span-2">
                   <Text as="label" size="2" className="text-gray-700 font-medium">Client Type</Text>
                   <CustomSelect
                     id="client-type-select"
@@ -580,6 +575,14 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                       { value: 'individual', label: 'Individual' }
                     ]}
                     placeholder="Select client type"
+                    className="!w-fit"
+                  />
+                </div>
+                <div className="col-span-3">
+                  <SwitchDetailItem
+                    value={!editedCompany.is_inactive || false}
+                    onEdit={(isActive) => handleFieldChange('is_inactive', !isActive)}
+                    automationId="company-status-field"
                   />
                 </div>
               </div>

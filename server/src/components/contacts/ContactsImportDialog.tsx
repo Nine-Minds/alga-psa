@@ -9,8 +9,9 @@ import { DataTable } from 'server/src/components/ui/DataTable';
 import { Switch } from 'server/src/components/ui/Switch';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { ICSVColumnMapping, ICSVPreviewData, ICSVValidationResult, IContact, MappableField, ICSVImportOptions, ImportContactResult } from 'server/src/interfaces/contact.interfaces';
-import { importContactsFromCSV, checkExistingEmails } from 'server/src/lib/actions/contact-actions/contactActions';
+import { importContactsFromCSV, checkExistingEmails, generateContactCSVTemplate } from 'server/src/lib/actions/contact-actions/contactActions';
 import { X, Upload, AlertTriangle, Check, Download } from 'lucide-react';
 import { parseCSV, unparseCSV, validateCSVHeaders } from 'server/src/lib/utils/csvParser';
 
@@ -22,8 +23,8 @@ interface ContactsImportDialogProps {
 }
 
 const CONTACT_FIELDS = {
-  full_name: 'Name',
-  email: 'Email',
+  full_name: 'Name *',
+  email: 'Email *',
   phone_number: 'Phone Number',
   company_name: 'Company',
   tags: 'Tags',
@@ -70,15 +71,22 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
   }>({ current: 0, total: 0 });
   const [failedRecords, setFailedRecords] = useState<ImportContactResult[]>([]);
 
-  const getFieldOptions = () => {
+  const getFieldOptions = useCallback((currentMappingValue: string | null) => {
+    // Get all currently mapped fields except the current one
+    const mappedFields = columnMappings
+      .filter(m => m.contactField && m.contactField !== currentMappingValue)
+      .map(m => m.contactField);
+    
     return [
       { value: 'unassigned', label: 'Select field' },
-      ...Object.entries(CONTACT_FIELDS).map(([value, label]: [string, string]): FieldOption => ({
-        value,
-        label,
-      })),
+      ...Object.entries(CONTACT_FIELDS)
+        .filter(([value]) => !mappedFields.includes(value as MappableField))
+        .map(([value, label]: [string, string]): FieldOption => ({
+          value,
+          label,
+        })),
     ];
-  };
+  }, [columnMappings]);
 
   const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = event.target.files?.[0];
@@ -185,8 +193,30 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
         };
       });
 
-      setValidationResults(results);
-      setStep('preview');
+      // Check for existing emails
+      const emails = results
+        .map(r => r.data.email)
+        .filter((email): email is string => !!email);
+      
+      const existingEmails = await checkExistingEmails(emails);
+      const existingEmailSet = new Set(existingEmails.map(e => e.toLowerCase()));
+      
+      // Add isExisting property to results
+      const resultsWithExisting = results.map(result => ({
+        ...result,
+        isExisting: result.data.email ? existingEmailSet.has(result.data.email.toLowerCase()) : false
+      }));
+      
+      setValidationResults(resultsWithExisting);
+      
+      // Count existing contacts
+      const existingCount = resultsWithExisting.filter(r => r.isExisting).length;
+      if (existingCount > 0 && !importOptions.updateExisting) {
+        setExistingContactsCount(existingCount);
+        setShowUpdateConfirmation(true);
+      } else {
+        setStep('preview');
+      }
     }
   };
 
@@ -366,9 +396,17 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
             title: 'Status',
             dataIndex: 'success',
             render: (value: boolean) => value ? (
-              <Check className="h-5 w-5 text-green-500" />
+              <div className="flex justify-center">
+                <Tooltip content="Import successful">
+                  <Check className="h-5 w-5 text-green-500 cursor-help" />
+                </Tooltip>
+              </div>
             ) : (
-              <AlertTriangle className="h-5 w-5 text-red-500" />
+              <div className="flex justify-center">
+                <Tooltip content="Import failed">
+                  <AlertTriangle className="h-5 w-5 text-red-500 cursor-help" />
+                </Tooltip>
+              </div>
             ),
           },
           {
@@ -384,6 +422,12 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
           {
             title: 'Message',
             dataIndex: 'message',
+            width: '40%',
+            render: (value: string) => (
+              <div className="whitespace-normal break-words text-sm min-w-0">
+                {value}
+              </div>
+            ),
           },
         ] as ColumnDefinition<ImportContactResult>[]}
         pagination={true}
@@ -400,6 +444,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
         isOpen={isOpen}
         onClose={onClose}
         title="Import Contacts"
+        className="max-w-5xl"
       >
         <DialogContent>
           {errors.length > 0 && (
@@ -416,38 +461,117 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
           )}
 
           {step === 'upload' && (
-            <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg">
-              <Upload className="mx-auto h-12 w-12 text-gray-400" />
-              <p className="mt-2 text-sm text-gray-600">Upload a CSV file with contact data</p>
-              <Input
-                type="file"
-                accept=".csv"
-                onChange={handleFileUpload}
-                className="mt-4"
-              />
+            <div>
+              <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg">
+                <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                <p className="mt-2 text-sm text-gray-600">Upload a CSV file with contact data</p>
+                <p className="mt-1 text-xs text-gray-500">
+                  <strong>Required:</strong> full_name, email<br />
+                  <strong>Contact fields:</strong> phone_number, role, notes, tags<br />
+                  <strong>Company field:</strong> company_name (matches existing companies by name)<br />
+                  <strong>Note:</strong> Tags should be comma-separated values
+                </p>
+                <Input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileUpload}
+                  className="mt-4"
+                />
+              </div>
+              <div className="mt-4">
+                <Button
+                  id="download-template-btn"
+                  variant="outline"
+                  onClick={async () => {
+                    const template = await generateContactCSVTemplate();
+                    const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', 'contact_import_template.csv');
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
+                  className="w-full"
+                >
+                  Download CSV Template
+                </Button>
+              </div>
             </div>
           )}
 
           {step === 'mapping' && previewData && (
             <div>
-              <h3 className="text-lg font-medium mb-4">Map CSV Columns</h3>
-              <div className="space-y-4">
-                {columnMappings.map((mapping: ICSVColumnMapping, index: number): JSX.Element => (
-                  <div key={index} className="flex items-center gap-4">
-                    <span className="w-1/3">{mapping.csvHeader}</span>
-                    <CustomSelect
-                      options={getFieldOptions()}
-                      value={mapping.contactField || 'unassigned'}
-                      onValueChange={(value) => handleMapColumn(mapping.csvHeader, value)}
-                      className="w-2/3"
-                    />
-                  </div>
-                ))}
+              <h3 className="text-lg font-medium mb-4">Map Contact Fields to CSV Columns</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Select which CSV column contains the data for each contact field. Fields marked with * are required.
+              </p>
+              <div className="max-h-[60vh] overflow-y-auto pr-2">
+                <div className="mb-2 flex items-center gap-4 text-sm font-semibold text-gray-700">
+                  <span className="w-1/3">Contact Field</span>
+                  <span className="w-2/3">Select CSV Column</span>
+                </div>
+                <div className="border-t pt-4 space-y-3">
+                  {Object.entries(CONTACT_FIELDS).map(([fieldKey, fieldLabel]: [string, string]): JSX.Element => {
+                    const currentMapping = columnMappings.find(m => m.contactField === fieldKey);
+                    const csvHeader = currentMapping?.csvHeader || 'unassigned';
+                    
+                    // Get already mapped CSV headers (excluding current field's mapping)
+                    const mappedHeaders = columnMappings
+                      .filter(m => m.contactField && m.contactField !== fieldKey)
+                      .map(m => m.csvHeader);
+                    
+                    return (
+                      <div key={fieldKey} className="flex items-center gap-4">
+                        <span className="w-1/3 text-sm font-medium">{fieldLabel}</span>
+                        <span className="text-gray-400">←</span>
+                        <CustomSelect
+                          options={[
+                            { value: 'unassigned', label: 'Not mapped' },
+                            ...previewData.headers
+                              .filter(header => !mappedHeaders.includes(header))
+                              .map(header => ({
+                                value: header,
+                                label: header
+                              }))
+                          ]}
+                          value={csvHeader}
+                          onValueChange={(value) => {
+                            // Clear any existing mapping for this CSV column
+                            if (value !== 'unassigned') {
+                              setColumnMappings(prev => prev.map(m => 
+                                m.csvHeader === value ? { ...m, contactField: null } : m
+                              ));
+                            }
+                            // Update the mapping for this field
+                            if (currentMapping) {
+                              handleMapColumn(currentMapping.csvHeader, value !== 'unassigned' ? fieldKey : 'unassigned');
+                            } else if (value !== 'unassigned') {
+                              // Find the mapping for the selected CSV column and update it
+                              const targetMapping = columnMappings.find(m => m.csvHeader === value);
+                              if (targetMapping) {
+                                handleMapColumn(value, fieldKey);
+                              }
+                            }
+                          }}
+                          className="w-2/3"
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <DialogFooter>
-                <Button id='back-to-upload' variant="outline" onClick={() => setStep('upload')}>Back</Button>
-                <Button id='preview-import' onClick={handlePreview}>Preview</Button>
-              </DialogFooter>
+              <div className="mt-6 text-xs text-gray-500">
+                <p>* Required fields must be mapped for import to proceed</p>
+              </div>
+              <div className="mt-4">
+                <DialogFooter>
+                  <Button id='back-to-upload' variant="outline" onClick={() => setStep('upload')}>Back</Button>
+                  <Button id='preview-import' onClick={handlePreview}>Preview</Button>
+                </DialogFooter>
+              </div>
             </div>
           )}
 
@@ -458,25 +582,28 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
                 importOptions={importOptions}
                 onOptionsChange={setImportOptions}
               />
-              <div className="max-h-96 overflow-y-auto">
+              <div className="max-h-96 overflow-x-auto overflow-y-auto">
                 <DataTable
-                  data={validationResults.map((result: ICSVValidationResult, index: number): Record<MappableField | 'status' | 'issues', string | boolean> => {
-                    const acc: Record<MappableField, string> = (previewData?.rows[index] || []).reduce((
-                      acc: Record<MappableField, string>,
+                  data={validationResults.map((result: ICSVValidationResult, index: number): Record<string, any> => {
+                    const rowData = (previewData?.rows[index] || []).reduce((
+                      acc: Record<string, string>,
                       cell: string,
                       idx: number
-                    ): Record<MappableField, string> => {
+                    ): Record<string, string> => {
                       const mapping = columnMappings[idx];
                       if (mapping.contactField) {
                         acc[mapping.contactField] = cell;
                       }
                       return acc;
-                    }, {} as Record<MappableField, string>);
+                    }, {});
 
                     return {
                       status: result.isValid,
-                      ...acc,
-                      issues: result.errors.concat(result.warnings).join(', ')
+                      full_name: rowData.full_name || '',
+                      email: rowData.email || '',
+                      exists: (result as any).isExisting ? 'Yes' : 'No',
+                      errors: result.errors,
+                      warnings: result.warnings
                     };
                   })}
                   columns={[
@@ -484,24 +611,64 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
                       title: 'Status',
                       dataIndex: 'status',
                       render: (value: boolean) => value ? (
-                        <Check className="h-5 w-5 text-green-500" />
+                        <div className="flex justify-center">
+                          <Tooltip content="Valid - Ready to import">
+                            <Check className="h-5 w-5 text-green-500 cursor-help" />
+                          </Tooltip>
+                        </div>
                       ) : (
-                        <AlertTriangle className="h-5 w-5 text-red-500" />
+                        <div className="flex justify-center">
+                          <Tooltip content="Invalid - Has errors">
+                            <AlertTriangle className="h-5 w-5 text-red-500 cursor-help" />
+                          </Tooltip>
+                        </div>
                       ),
                     },
-                    ...columnMappings
-                      .filter((mapping): mapping is ICSVColumnMapping & { contactField: NonNullable<ICSVColumnMapping['contactField']> } =>
-                        mapping.contactField !== null
-                      )
-                      .map((mapping): ColumnDefinition<any> => ({
-                        title: CONTACT_FIELDS[mapping.contactField],
-                        dataIndex: mapping.contactField,
-                      })),
+                    {
+                      title: 'Name',
+                      dataIndex: 'full_name',
+                    },
+                    {
+                      title: 'Email',
+                      dataIndex: 'email',
+                    },
+                    {
+                      title: 'Exists',
+                      dataIndex: 'exists',
+                    },
                     {
                       title: 'Issues',
                       dataIndex: 'issues',
+                      width: '40%',
+                      render: (value: any, record: any) => {
+                        const errors = record.errors || [];
+                        const warnings = record.warnings || [];
+                        
+                        if (errors.length === 0 && warnings.length === 0) {
+                          return <span className="text-gray-400">-</span>;
+                        }
+                        
+                        return (
+                          <div className="whitespace-normal break-words text-sm space-y-1 min-w-0">
+                            {errors.length > 0 && (
+                              <div className="text-red-600">
+                                {errors.map((error: string, i: number) => (
+                                  <div key={`error-${i}`} className="break-words">• {error}</div>
+                                ))}
+                              </div>
+                            )}
+                            {warnings.length > 0 && (
+                              <div className="text-yellow-600">
+                                {warnings.map((warning: string, i: number) => (
+                                  <div key={`warning-${i}`} className="break-words">• {warning}</div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      },
                     }
-                  ]}
+                  ] as ColumnDefinition<any>[]}
                   pagination={true}
                 />
               </div>

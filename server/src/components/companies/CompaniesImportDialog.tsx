@@ -13,6 +13,7 @@ import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { Upload, AlertTriangle, Check } from 'lucide-react';
 import { parseCSV } from 'server/src/lib/utils/csvParser';
 import { checkExistingCompanies, importCompaniesFromCSV, generateCompanyCSVTemplate } from 'server/src/lib/actions/company-actions/companyActions';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
 
 interface CompaniesImportDialogProps {
   isOpen: boolean;
@@ -61,7 +62,7 @@ interface ImportOptions {
 }
 
 const COMPANY_FIELDS: Record<MappableCompanyField, string> = {
-  client_name: 'Client Name',
+  client_name: 'Client Name *',
   email: 'Email',
   phone_number: 'Phone Number',
   website: 'Website',
@@ -98,22 +99,29 @@ const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [showOptionalFields, setShowOptionalFields] = useState(false);
 
-  const getFieldOptions = useCallback(() => {
+  const getFieldOptions = useCallback((currentMappingValue: string | null) => {
+    // Get all currently mapped fields except the current one
+    const mappedFields = columnMappings
+      .filter(m => m.companyField && m.companyField !== currentMappingValue)
+      .map(m => m.companyField);
+    
     return [
       { value: 'unassigned', label: 'Select field' },
-      ...Object.entries(COMPANY_FIELDS).map(([value, label]): { value: string; label: string } => ({
-        value,
-        label,
-      })),
+      ...Object.entries(COMPANY_FIELDS)
+        .filter(([value]) => !mappedFields.includes(value as MappableCompanyField))
+        .map(([value, label]): { value: string; label: string } => ({
+          value,
+          label,
+        })),
     ];
-  }, []);
+  }, [columnMappings]);
 
   const validateCompanyData = useCallback((mappedData: Record<string, any>): ICSVValidationResult => {
     const errors: string[] = [];
     const warnings: string[] = [];
 
-    if (!mappedData.company_name) {
-      errors.push('Company name is required');
+    if (!mappedData.client_name) {
+      errors.push('Client name is required');
     }
 
     if (mappedData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mappedData.email)) {
@@ -128,7 +136,7 @@ const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
       warnings.push('Auto invoice should be true/false');
     }
 
-    if (mappedData.is_inactive && typeof mappedData.is_inactive !== 'boolean') {
+    if (mappedData.is_inactive && mappedData.is_inactive.toLowerCase() !== 'true' && mappedData.is_inactive.toLowerCase() !== 'false') {
       warnings.push('Is inactive should be true/false');
     }
 
@@ -142,10 +150,11 @@ const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
       warnings,
       data: {
         ...mappedData,
+        company_name: mappedData.client_name,
         tenant: 'default',
-        is_inactive: mappedData.is_inactive === 'true',
-        is_tax_exempt: mappedData.is_tax_exempt === 'true',
-        auto_invoice: mappedData.auto_invoice === 'true',
+        is_inactive: mappedData.is_inactive ? mappedData.is_inactive.toLowerCase() === 'true' : false,
+        is_tax_exempt: mappedData.is_tax_exempt ? mappedData.is_tax_exempt.toLowerCase() === 'true' : false,
+        auto_invoice: mappedData.auto_invoice ? mappedData.auto_invoice.toLowerCase() === 'true' : false,
         credit_limit: mappedData.credit_limit ? Number(mappedData.credit_limit) : undefined
       }
     };
@@ -244,7 +253,7 @@ const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
 
       // Check for existing companies
       const companyNames = results
-        .filter(result => result.isValid)
+        .filter(result => result.isValid && result.data.company_name)
         .map((result): string => result.data.company_name);
 
       const existingCompanies = await checkExistingCompanies(companyNames);
@@ -253,7 +262,7 @@ const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
       // Mark existing companies in validation results
       const updatedResults = results.map((result): ICSVValidationResult => ({
         ...result,
-        isExisting: existingCompanyNames.has(result.data.company_name.toLowerCase())
+        isExisting: result.data.company_name ? existingCompanyNames.has(result.data.company_name.toLowerCase()) : false
       }));
 
       const existingCount = updatedResults.filter(result => result.isExisting).length;
@@ -312,6 +321,7 @@ const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
         isOpen={isOpen} 
         onClose={handleClose} 
         title="Import Companies"
+        className="max-w-5xl"
       >
         <DialogContent>
           {errors.length > 0 && (
@@ -332,8 +342,10 @@ const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
               <Upload className="mx-auto h-12 w-12 text-gray-400" />
               <p className="mt-2 text-sm text-gray-600">Upload a CSV file with company data</p>
               <p className="mt-1 text-xs text-gray-500">
-                Required fields: client_name<br />
-                Optional fields: email, phone_number, website, client_type, is_inactive, notes, tags, location fields
+                <strong>Required:</strong> client_name<br />
+                <strong>Company fields:</strong> website, client_type, is_inactive, notes, tags<br />
+                <strong>Location fields:</strong> location_name, email, phone_number, address_line1, address_line2, city, state_province, postal_code, country<br />
+                <strong>Note:</strong> is_inactive should be 'true' or 'false' (case-insensitive)
               </p>
               <div className="mt-4 space-y-3">
                 <Input
@@ -368,41 +380,68 @@ const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
 
           {step === 'mapping' && previewData && (
             <div>
-              <h3 className="text-lg font-medium mb-4">Map CSV Columns</h3>
+              <h3 className="text-lg font-medium mb-4">Map Company Fields to CSV Columns</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Select which CSV column contains the data for each company field. Fields marked with * are required.
+              </p>
               <div className="max-h-[60vh] overflow-y-auto pr-2">
-                <div className="mb-6">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Required Fields</h4>
-                  {columnMappings
-                    .filter(mapping => mapping.csvHeader.toLowerCase().includes('name'))
-                    .map((mapping, index): JSX.Element => (
-                      <div key={index} className="flex items-center gap-4 mb-4">
-                        <span className="w-1/3">{mapping.csvHeader}</span>
+                <div className="mb-2 flex items-center gap-4 text-sm font-semibold text-gray-700">
+                  <span className="w-1/3">Company Field</span>
+                  <span className="w-2/3">Select CSV Column</span>
+                </div>
+                <div className="border-t pt-4 space-y-3">
+                  {Object.entries(COMPANY_FIELDS).map(([fieldKey, fieldLabel]: [string, string]): JSX.Element => {
+                    const currentMapping = columnMappings.find(m => m.companyField === fieldKey);
+                    const csvHeader = currentMapping?.csvHeader || 'unassigned';
+                    
+                    // Get already mapped CSV headers (excluding current field's mapping)
+                    const mappedHeaders = columnMappings
+                      .filter(m => m.companyField && m.companyField !== fieldKey)
+                      .map(m => m.csvHeader);
+                    
+                    return (
+                      <div key={fieldKey} className="flex items-center gap-4">
+                        <span className="w-1/3 text-sm font-medium">{fieldLabel}</span>
+                        <span className="text-gray-400">←</span>
                         <CustomSelect
-                          options={getFieldOptions()}
-                          value={mapping.companyField || 'unassigned'}
-                          onValueChange={(value) => handleMapColumn(mapping.csvHeader, value)}
+                          options={[
+                            { value: 'unassigned', label: 'Not mapped' },
+                            ...previewData.headers
+                              .filter(header => !mappedHeaders.includes(header))
+                              .map(header => ({
+                                value: header,
+                                label: header
+                              }))
+                          ]}
+                          value={csvHeader}
+                          onValueChange={(value) => {
+                            // Clear any existing mapping for this CSV column
+                            if (value !== 'unassigned') {
+                              setColumnMappings(prev => prev.map(m => 
+                                m.csvHeader === value ? { ...m, companyField: null } : m
+                              ));
+                            }
+                            // Update the mapping for this field
+                            if (currentMapping) {
+                              handleMapColumn(currentMapping.csvHeader, value !== 'unassigned' ? fieldKey as MappableCompanyField : 'unassigned');
+                            } else if (value !== 'unassigned') {
+                              // Find the mapping for the selected CSV column and update it
+                              const targetMapping = columnMappings.find(m => m.csvHeader === value);
+                              if (targetMapping) {
+                                handleMapColumn(value, fieldKey as MappableCompanyField);
+                              }
+                            }
+                          }}
                           className="w-2/3"
                         />
                       </div>
-                    ))}
+                    );
+                  })}
                 </div>
-
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Optional Fields</h4>
-                  {columnMappings
-                    .filter(mapping => !mapping.csvHeader.toLowerCase().includes('name'))
-                    .map((mapping, index): JSX.Element => (
-                      <div key={index} className="flex items-center gap-4 mb-4">
-                        <span className="w-1/3">{mapping.csvHeader}</span>
-                        <CustomSelect
-                          options={getFieldOptions()}
-                          value={mapping.companyField || 'unassigned'}
-                          onValueChange={(value) => handleMapColumn(mapping.csvHeader, value)}
-                          className="w-2/3"
-                        />
-                      </div>
-                    ))}
-                </div>
+              </div>
+              <div className="mt-6 text-xs text-gray-500">
+                <p>* Required fields must be mapped for import to proceed</p>
+                <p className="mt-1">Note: is_inactive should be 'true' or 'false' (case-insensitive)</p>
               </div>
               <div className="mt-4">
                 <DialogFooter>
@@ -455,24 +494,32 @@ const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
                   </div>
                 </div>
               </div>
-              <div className="max-h-96 overflow-y-auto">
+              <div className="max-h-96 overflow-x-auto overflow-y-auto">
                 <DataTable
                   data={validationResults.map((result, index): Record<string, any> => ({
                     status: result.isValid,
                     company_name: result.data.company_name,
                     email: result.data.email,
-                    phone_no: result.data.phone_no,
                     exists: result.isExisting ? 'Yes' : 'No',
-                    issues: [...result.errors, ...result.warnings].join(', ')
+                    errors: result.errors,
+                    warnings: result.warnings
                   }))}
                   columns={[
                     {
                       title: 'Status',
                       dataIndex: 'status',
                       render: (value: boolean) => value ? (
-                        <Check className="h-5 w-5 text-green-500" />
+                        <div className="flex justify-center">
+                          <Tooltip content="Valid - Ready to import">
+                            <Check className="h-5 w-5 text-green-500 cursor-help" />
+                          </Tooltip>
+                        </div>
                       ) : (
-                        <AlertTriangle className="h-5 w-5 text-red-500" />
+                        <div className="flex justify-center">
+                          <Tooltip content="Invalid - Has errors">
+                            <AlertTriangle className="h-5 w-5 text-red-500 cursor-help" />
+                          </Tooltip>
+                        </div>
                       ),
                     },
                     {
@@ -484,16 +531,40 @@ const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
                       dataIndex: 'email',
                     },
                     {
-                      title: 'Phone',
-                      dataIndex: 'phone_no',
-                    },
-                    {
                       title: 'Exists',
                       dataIndex: 'exists',
                     },
                     {
                       title: 'Issues',
                       dataIndex: 'issues',
+                      width: '40%',
+                      render: (value: any, record: any) => {
+                        const errors = record.errors || [];
+                        const warnings = record.warnings || [];
+                        
+                        if (errors.length === 0 && warnings.length === 0) {
+                          return <span className="text-gray-400">-</span>;
+                        }
+                        
+                        return (
+                          <div className="whitespace-normal break-words text-sm space-y-1 min-w-0">
+                            {errors.length > 0 && (
+                              <div className="text-red-600">
+                                {errors.map((error: string, i: number) => (
+                                  <div key={`error-${i}`} className="break-words">• {error}</div>
+                                ))}
+                              </div>
+                            )}
+                            {warnings.length > 0 && (
+                              <div className="text-yellow-600">
+                                {warnings.map((warning: string, i: number) => (
+                                  <div key={`warning-${i}`} className="break-words">• {warning}</div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      },
                     }
                   ] as ColumnDefinition<any>[]}
                   pagination={true}

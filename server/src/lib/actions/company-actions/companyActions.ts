@@ -1,6 +1,6 @@
 'use server'
 
-import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { ICompany, ICompanyWithLocation } from 'server/src/interfaces/company.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
 import { unparseCSV } from 'server/src/lib/utils/csvParser';
 import { createDefaultTaxSettings } from '../taxSettingsActions';
@@ -13,6 +13,7 @@ import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { addCompanyEmailSetting } from '../company-settings/emailSettings';
 import { deleteEntityTags } from '../../utils/tagCleanup';
+import { createTag } from '../tagActions';
 
 // Helper function to extract domain from URL
 function extractDomainFromUrl(url: string): string | null {
@@ -35,7 +36,7 @@ function extractDomainFromUrl(url: string): string | null {
   }
 }
 
-export async function getCompanyById(companyId: string): Promise<ICompany | null> {
+export async function getCompanyById(companyId: string): Promise<ICompanyWithLocation | null> {
   const currentUser = await getCurrentUser();
   if (!currentUser) {
     throw new Error('No authenticated user found');
@@ -51,15 +52,23 @@ export async function getCompanyById(companyId: string): Promise<ICompany | null
     throw new Error('Tenant not found');
   }
   
-  // Fetch company data with account manager info
+  // Fetch company data with account manager info and location data
   const companyData = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('companies as c')
       .leftJoin('users as u', function() {
         this.on('c.account_manager_id', '=', 'u.user_id')
             .andOn('c.tenant', '=', 'u.tenant');
       })
+      .leftJoin('company_locations as cl', function() {
+        this.on('c.company_id', '=', 'cl.company_id')
+            .andOn('c.tenant', '=', 'cl.tenant')
+            .andOn('cl.is_default', '=', trx.raw('true'));
+      })
       .select(
         'c.*',
+        'cl.email as location_email',
+        'cl.phone as location_phone',
+        'cl.address_line1 as location_address',
         trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`)
       )
       .where({ 'c.company_id': companyId, 'c.tenant': tenant })
@@ -76,7 +85,7 @@ export async function getCompanyById(companyId: string): Promise<ICompany | null
   return {
     ...companyData,
     logoUrl,
-  } as ICompany;
+  } as ICompanyWithLocation;
 }
 
 export async function updateCompany(companyId: string, updateData: Partial<Omit<ICompany, 'account_manager_full_name'>>): Promise<ICompany> { // Omit joined field from update type
@@ -833,23 +842,36 @@ export async function exportCompaniesToCSV(companies: ICompany[]): Promise<strin
       locationMap.set(loc.company_id, loc);
     });
 
+    // Fetch tags for all companies
+    const { findTagsByEntityIds } = await import('../tagActions');
+    const tags = await findTagsByEntityIds(companyIds, 'company');
+    
+    // Create a map of company_id to tags
+    const tagMap = new Map<string, string[]>();
+    tags.forEach(tag => {
+      if (!tagMap.has(tag.tagged_id)) {
+        tagMap.set(tag.tagged_id, []);
+      }
+      tagMap.get(tag.tagged_id)!.push(tag.tag_text);
+    });
+
     // Prepare export data with location fields
     return companies.map(company => {
       const location = locationMap.get(company.company_id) || {};
-      const tags = (company as any).tags || [];
-      const tagNames = Array.isArray(tags) ? tags.map((t: any) => t.tag_text || t).join(', ') : '';
+      const companyTags = tagMap.get(company.company_id) || [];
+      const tagNames = companyTags.join(', ');
       
       return {
         client_name: company.company_name,
-        email: location.email || '',
-        phone_number: location.phone || '',
         website: company.url || '',
         client_type: company.client_type || 'company',
-        is_inactive: company.is_inactive ? 'Yes' : 'No',
+        is_inactive: company.is_inactive ? 'true' : 'false',
         notes: company.notes || '',
         tags: tagNames,
         // Location fields
         location_name: location.location_name || '',
+        email: location.email || '',
+        phone_number: location.phone || '',
         address_line1: location.address_line1 || '',
         address_line2: location.address_line2 || '',
         city: location.city || '',
@@ -862,14 +884,14 @@ export async function exportCompaniesToCSV(companies: ICompany[]): Promise<strin
 
   const fields = [
     'client_name',
-    'email',
-    'phone_number',
     'website',
     'client_type',
     'is_inactive',
     'notes',
     'tags',
     'location_name',
+    'email',
+    'phone_number',
     'address_line1',
     'address_line2',
     'city',
@@ -882,53 +904,37 @@ export async function exportCompaniesToCSV(companies: ICompany[]): Promise<strin
 }
 
 export async function generateCompanyCSVTemplate(): Promise<string> {
+  // Create empty template with only headers
   const templateData = [
     {
-      client_name: 'Acme Corporation',
-      email: 'contact@acme.com',
-      phone_number: '+1 (555) 123-4567',
-      website: 'https://www.acme.com',
-      client_type: 'company',
-      is_inactive: 'No',
-      notes: 'Important client, handle with care',
-      tags: 'enterprise, priority',
-      location_name: 'Main Office',
-      address_line1: '123 Business Street',
-      address_line2: 'Suite 100',
-      city: 'New York',
-      state_province: 'NY',
-      postal_code: '10001',
-      country: 'United States'
-    },
-    {
-      client_name: 'Tech Startup Inc',
-      email: 'hello@techstartup.io',
-      phone_number: '+1 (555) 987-6543',
-      website: 'https://techstartup.io',
-      client_type: 'company',
-      is_inactive: 'No',
-      notes: 'Fast-growing startup',
-      tags: 'startup, technology',
-      location_name: 'Headquarters',
-      address_line1: '456 Innovation Way',
+      client_name: '',
+      website: '',
+      client_type: '',
+      is_inactive: '',
+      notes: '',
+      tags: '',
+      location_name: '',
+      email: '',
+      phone_number: '',
+      address_line1: '',
       address_line2: '',
-      city: 'San Francisco',
-      state_province: 'CA',
-      postal_code: '94105',
-      country: 'United States'
+      city: '',
+      state_province: '',
+      postal_code: '',
+      country: ''
     }
   ];
 
   const fields = [
     'client_name',
-    'email',
-    'phone_number',
     'website',
     'client_type',
     'is_inactive',
     'notes',
     'tags',
     'location_name',
+    'email',
+    'phone_number',
     'address_line1',
     'address_line2',
     'city',
@@ -1206,6 +1212,24 @@ export async function importCompaniesFromCSV(
             } catch (locationError) {
               console.error('Failed to create location during CSV import:', locationError);
               // Don't fail the company import if location creation fails
+            }
+          }
+
+          // Handle tags if provided
+          if (companyData.tags) {
+            try {
+              const tagTexts = companyData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
+              for (const tagText of tagTexts) {
+                await createTag({
+                  tag_text: tagText,
+                  tagged_id: savedCompany.company_id,
+                  tagged_type: 'company',
+                  created_by: currentUser.user_id
+                });
+              }
+            } catch (tagError) {
+              console.error('Failed to create tags during CSV import:', tagError);
+              // Don't fail the company import if tag creation fails
             }
           }
 
