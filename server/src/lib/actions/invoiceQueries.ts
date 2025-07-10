@@ -71,7 +71,10 @@ export async function fetchAllInvoices(): Promise<InvoiceViewModel[]> {
         .leftJoin('company_locations', function () {
           this.on('companies.company_id', '=', 'company_locations.company_id')
             .andOn('companies.tenant', '=', 'company_locations.tenant')
-            .andOn('company_locations.is_default', '=', trx.raw('true'));
+            .andOn(function() {
+              this.on('company_locations.is_billing_address', '=', trx.raw('true'))
+                  .orOn('company_locations.is_default', '=', trx.raw('true'));
+            });
         })
         .where('invoices.tenant', tenant)
         .select(
@@ -96,8 +99,14 @@ export async function fetchAllInvoices(): Promise<InvoiceViewModel[]> {
           'company_locations.city',
           'company_locations.state_province',
           'company_locations.postal_code',
-          'company_locations.country_name'
-        );
+          'company_locations.country_name',
+          'company_locations.is_billing_address'
+        )
+        .orderBy([
+          { column: 'invoices.invoice_id' },
+          { column: 'company_locations.is_billing_address', order: 'desc', nulls: 'last' },
+          { column: 'company_locations.is_default', order: 'desc', nulls: 'last' }
+        ]);
     });
 
     console.log(`Got ${invoices.length} invoices`);
@@ -148,7 +157,10 @@ export async function fetchInvoicesByCompany(companyId: string): Promise<Invoice
         .leftJoin('company_locations', function () {
           this.on('companies.company_id', '=', 'company_locations.company_id')
             .andOn('companies.tenant', '=', 'company_locations.tenant')
-            .andOn('company_locations.is_default', '=', trx.raw('true'));
+            .andOn(function() {
+              this.on('company_locations.is_billing_address', '=', trx.raw('true'))
+                  .orOn('company_locations.is_default', '=', trx.raw('true'));
+            });
         })
         .where({
           'invoices.company_id': companyId,
@@ -176,8 +188,14 @@ export async function fetchInvoicesByCompany(companyId: string): Promise<Invoice
           'company_locations.city',
           'company_locations.state_province',
           'company_locations.postal_code',
-          'company_locations.country_name'
-        );
+          'company_locations.country_name',
+          'company_locations.is_billing_address'
+        )
+        .orderBy([
+          { column: 'invoices.invoice_id' },
+          { column: 'company_locations.is_billing_address', order: 'desc', nulls: 'last' },
+          { column: 'company_locations.is_default', order: 'desc', nulls: 'last' }
+        ]);
     });
 
     console.log(`Got ${invoices.length} invoices for company ${companyId}`);

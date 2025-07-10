@@ -125,9 +125,26 @@ export class PDFGenerationService {
       .first();
 
     if (tenantCompanyLink) {
-      const tenantCompanyDetails = await knex('companies')
-        .where({ company_id: tenantCompanyLink.company_id })
-        .select('company_name', 'address')
+      const tenantCompanyDetails = await knex('companies as c')
+        .leftJoin('company_locations as cl', function() {
+          this.on('c.company_id', '=', 'cl.company_id')
+              .andOn('c.tenant', '=', 'cl.tenant')
+              .andOn('cl.is_default', '=', knex.raw('true'));
+        })
+        .where({ 'c.company_id': tenantCompanyLink.company_id })
+        .select(
+          'c.company_name',
+          knex.raw(`COALESCE(
+            CONCAT_WS(', ', 
+              cl.address_line1, 
+              cl.address_line2, 
+              cl.city, 
+              cl.state_province, 
+              cl.postal_code, 
+              cl.country_name
+            ), ''
+          ) as address`)
+        )
         .first();
 
       if (tenantCompanyDetails) {
