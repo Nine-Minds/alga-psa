@@ -187,12 +187,10 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   const refreshCompanyData = useCallback(async () => {
     if (!company?.company_id) return; // Ensure company_id is available
 
-    console.log(`Refreshing company data for ID: ${company.company_id}`);
     try {
       const latestCompanyData = await getCompanyById(company.company_id);
       if (latestCompanyData) {
         setEditedCompany(latestCompanyData);
-        console.log('Company data refreshed successfully');
       }
     } catch (error) {
       console.error('Error refreshing company data:', error);
@@ -218,7 +216,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   
   useEffect(() => {
     if (editedCompany?.logoUrl !== company?.logoUrl) {
-      console.log("Logo URL updated in state:", editedCompany?.logoUrl);
+      // Logo URL has changed
     }
   }, [editedCompany?.logoUrl, company?.logoUrl]);
 
@@ -315,7 +313,6 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
 
 
   const handleFieldChange = (field: string, value: string | boolean) => {
-    console.log(`handleFieldChange called - field: ${field}, value: ${value}`);
     setEditedCompany(prevCompany => {
       // Create a deep copy of the previous company
       const updatedCompany = JSON.parse(JSON.stringify(prevCompany)) as ICompany;
@@ -399,8 +396,6 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
         properties: restOfEditedCompany.properties ? { ...restOfEditedCompany.properties } : {},
         account_manager_id: editedCompany.account_manager_id === '' ? null : editedCompany.account_manager_id,
       };
-      console.log('Saving company with client_type:', dataToUpdate.client_type);
-      console.log('Full dataToUpdate:', dataToUpdate);
       const updatedCompanyResult = await updateCompany(company.company_id, dataToUpdate);
       // Assuming updateCompany returns the full updated company object matching ICompany
       const updatedCompany = updatedCompanyResult as ICompany; // Cast if necessary, or adjust based on actual return type
@@ -911,7 +906,6 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               
               // If logo was deleted (newLogoUrl is null), refresh company data to ensure consistency
               if (newLogoUrl === null) {
-                console.log("Logo deleted, refreshing company data...");
                 await refreshCompanyData();
               }
             }}
