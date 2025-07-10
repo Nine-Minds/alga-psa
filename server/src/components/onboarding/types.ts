@@ -20,6 +20,7 @@ export interface WizardData {
   contactName: string;
   contactEmail: string;
   contactRole: string;
+  contactId?: string; // Track created contact
 
   // Billing
   serviceName: string;

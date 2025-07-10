@@ -136,37 +136,44 @@ export function OnboardingWizard({
           
         case 2: // Client
           if (wizardData.clientName) {
-            // Check if we already have a clientId (company was already created)
-            if (!wizardData.clientId) {
-              const clientResult = await createClient({
-                clientName: wizardData.clientName,
-                clientEmail: wizardData.clientEmail,
-                clientPhone: wizardData.clientPhone,
-                clientUrl: wizardData.clientUrl
-              });
-              if (!clientResult.success) {
-                setErrors(prev => ({ ...prev, [stepIndex]: clientResult.error || 'Failed to create client' }));
-                return false;
-              }
-              // Store client ID for contact step
-              setWizardData(prev => ({ ...prev, clientId: clientResult.data?.clientId }));
+            const clientResult = await createClient({
+              clientName: wizardData.clientName,
+              clientEmail: wizardData.clientEmail,
+              clientPhone: wizardData.clientPhone,
+              clientUrl: wizardData.clientUrl,
+              clientId: wizardData.clientId // Pass existing ID if available for updates
+            });
+            if (!clientResult.success) {
+              setErrors(prev => ({ ...prev, [stepIndex]: clientResult.error || 'Failed to save client' }));
+              return false;
             }
-            // If clientId exists, we've already created this client, just proceed
+            // Store client ID for contact step (if it's a new client)
+            if (clientResult.data?.clientId && !wizardData.clientId) {
+              setWizardData(prev => ({ ...prev, clientId: clientResult.data.clientId }));
+            }
           }
           break;
           
         case 3: // Client Contact
           if (wizardData.contactName && wizardData.clientId) {
-            const contactResult = await addClientContact({
-              contactName: wizardData.contactName,
-              contactEmail: wizardData.contactEmail,
-              contactRole: wizardData.contactRole,
-              clientId: wizardData.clientId
-            });
-            if (!contactResult.success) {
-              setErrors(prev => ({ ...prev, [stepIndex]: contactResult.error || 'Failed to add contact' }));
-              return false;
+            // Check if we already have a contactId (contact was already created)
+            if (!wizardData.contactId) {
+              const contactResult = await addClientContact({
+                contactName: wizardData.contactName,
+                contactEmail: wizardData.contactEmail,
+                contactRole: wizardData.contactRole,
+                clientId: wizardData.clientId
+              });
+              if (!contactResult.success) {
+                setErrors(prev => ({ ...prev, [stepIndex]: contactResult.error || 'Failed to add contact' }));
+                return false;
+              }
+              // Store contact ID
+              if (contactResult.data?.contactId) {
+                setWizardData(prev => ({ ...prev, contactId: contactResult.data.contactId }));
+              }
             }
+            // If contactId exists, we've already created this contact, just proceed
           }
           break;
           

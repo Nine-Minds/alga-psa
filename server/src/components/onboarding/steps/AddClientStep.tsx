@@ -24,7 +24,7 @@ export function AddClientStep({ data, updateData }: StepProps) {
           <div>
             <p className="text-sm font-medium text-green-800">Client created successfully!</p>
             <p className="text-sm text-green-600 mt-1">
-              You can update the details below if needed. Changes will be saved when you proceed.
+              <span className="font-semibold">{data.clientName}</span> has been added to your client list.
             </p>
           </div>
         </div>

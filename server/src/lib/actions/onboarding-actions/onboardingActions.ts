@@ -37,6 +37,7 @@ export interface ClientData {
   clientEmail: string;
   clientPhone: string;
   clientUrl: string;
+  clientId?: string; // Optional, for updates
 }
 
 export interface ClientContactData {
@@ -249,8 +250,52 @@ export async function createClient(data: ClientData): Promise<OnboardingActionRe
 
     const { knex } = await createTenantKnex();
 
-    let companyId: string | undefined;
+    let companyId: string | undefined = data.clientId;
 
+    // If we have an existing clientId, update instead of create
+    if (companyId) {
+      await withTransaction(knex, async (trx: Knex.Transaction) => {
+        // Update the company
+        await trx('companies')
+          .where({ company_id: companyId, tenant })
+          .update({
+            company_name: data.clientName,
+            url: data.clientUrl,
+            updated_at: new Date()
+          });
+
+        // Update the default location if email or phone changed
+        const defaultLocation = await trx('company_locations')
+          .where({ company_id: companyId, tenant, is_default: true })
+          .first();
+
+        if (defaultLocation && (data.clientEmail || data.clientPhone)) {
+          await trx('company_locations')
+            .where({ location_id: defaultLocation.location_id, tenant })
+            .update({
+              email: data.clientEmail || defaultLocation.email || '',
+              phone: data.clientPhone || defaultLocation.phone || '',
+              updated_at: new Date()
+            });
+        }
+      });
+
+      await saveTenantOnboardingProgress({
+        clientName: data.clientName,
+        clientEmail: data.clientEmail,
+        clientPhone: data.clientPhone,
+        clientUrl: data.clientUrl,
+        clientId: companyId
+      });
+
+      revalidatePath('/msp/onboarding');
+      return { 
+        success: true, 
+        data: { clientId: companyId, updated: true }
+      };
+    }
+
+    // Create new client
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Create the company without email/phone (those go in locations)
       const companyData = {
@@ -326,6 +371,63 @@ export async function addClientContact(data: ClientContactData): Promise<Onboard
       return { success: false, error: 'No authenticated user found' };
     }
 
+    const tenant = await getTenantForCurrentRequest();
+    if (!tenant) {
+      return { success: false, error: 'No tenant found' };
+    }
+
+    const { knex } = await createTenantKnex();
+
+    // First, check if a contact with this email already exists for this company
+    const existingContact = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('contacts')
+        .where({ 
+          email: data.contactEmail.toLowerCase(),
+          company_id: data.clientId,
+          tenant 
+        })
+        .first();
+    });
+
+    if (existingContact) {
+      // Contact already exists, update it if details have changed
+      const needsUpdate = 
+        existingContact.full_name !== data.contactName ||
+        existingContact.job_title !== data.contactRole;
+
+      if (needsUpdate) {
+        await withTransaction(knex, async (trx: Knex.Transaction) => {
+          await trx('contacts')
+            .where({ 
+              contact_name_id: existingContact.contact_name_id,
+              tenant 
+            })
+            .update({
+              full_name: data.contactName,
+              job_title: data.contactRole,
+              updated_at: new Date()
+            });
+        });
+      }
+
+      await saveTenantOnboardingProgress({
+        contactName: data.contactName,
+        contactEmail: data.contactEmail,
+        contactRole: data.contactRole
+      });
+
+      revalidatePath('/msp/onboarding');
+      return { 
+        success: true, 
+        data: { 
+          contactId: existingContact.contact_name_id,
+          alreadyExisted: true,
+          updated: needsUpdate
+        }
+      };
+    }
+
+    // Contact doesn't exist, create it
     const result = await createCompanyContact({
       companyId: data.clientId,
       fullName: data.contactName,
