@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPathPattern": "/api/email/webhooks/google.*"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": "{\"success\": true, \"processed\": true}",
+    "transformers": ["response-template"]
+  }
+}

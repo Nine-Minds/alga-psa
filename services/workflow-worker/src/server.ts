@@ -5,7 +5,7 @@ import logger from '@shared/core/logger.js';
 
 export class WorkerServer {
   private app = express();
-  private port = process.env.PORT || 3001;
+  private port = process.env.PORT || 4000;
   private worker: WorkflowWorker;
 
   constructor(worker: WorkflowWorker) {

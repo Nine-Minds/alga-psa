@@ -9,10 +9,10 @@
     "moduleResolution": "nodenext",
     "baseUrl": ".",
     "paths": {
-      "@shared/*": ["../../shared/*"],
-      "@shared": ["../../shared"],
-      "@alga-psa/shared/*": ["../../shared/*"],
-      "@alga-psa/shared": ["../../shared"]
+      "@shared/*": ["../../shared-dev/*"],
+      "@shared": ["../../shared-dev"],
+      "@alga-psa/shared/*": ["../../shared-dev/*"],
+      "@alga-psa/shared": ["../../shared-dev"]
     },
     "rootDir": "../.."
   },
