@@ -852,7 +852,7 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
             const scrollToTime = new Date();
             scrollToTime.setHours(8, 0, 0, 0);
             return (
-              <Suspense fallback={<CalendarSkeleton height="100%" view={view} showSidebar={false} />}>
+              <Suspense fallback={<CalendarSkeleton height="100%" view={view === 'agenda' ? 'week' : view as 'month' | 'week' | 'day'} showSidebar={false} />}>
                 <DynamicBigCalendar
                   localizer={localizer}
                   events={events}

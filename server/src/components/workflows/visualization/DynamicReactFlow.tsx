@@ -11,8 +11,8 @@ import ReactFlow, {
   Edge,
   OnNodesChange,
   OnEdgesChange,
-  OnNodeClick,
-  OnPaneClick
+  NodeMouseHandler,
+  type ReactFlowInstance
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -23,8 +23,8 @@ interface DynamicReactFlowProps {
   onEdgesChange: OnEdgesChange;
   nodeTypes: NodeTypes;
   edgeTypes: EdgeTypes;
-  onNodeClick: OnNodeClick;
-  onPaneClick: OnPaneClick;
+  onNodeClick: NodeMouseHandler;
+  onPaneClick: (event: React.MouseEvent) => void;
   fitView?: boolean;
   attributionPosition?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
   children?: React.ReactNode;

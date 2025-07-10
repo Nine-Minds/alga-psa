@@ -18,34 +18,19 @@ import {
 } from 'server/src/lib/actions/report-actions'; // Import actions and types
 import ChartSkeleton from 'server/src/components/ui/skeletons/ChartSkeleton';
 
-// Dynamic imports for recharts components
-const BarChart = dynamic(() => import('recharts').then(mod => ({ default: mod.BarChart })), {
+// Dynamic imports for recharts components with type assertions
+const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer as any), {
   ssr: false
-});
-const Bar = dynamic(() => import('recharts').then(mod => ({ default: mod.Bar })), {
+}) as any;
+const RadialBarChart = dynamic(() => import('recharts').then(mod => mod.RadialBarChart as any), {
   ssr: false
-});
-const XAxis = dynamic(() => import('recharts').then(mod => ({ default: mod.XAxis })), {
+}) as any;
+const RadialBar = dynamic(() => import('recharts').then(mod => mod.RadialBar as any), {
   ssr: false
-});
-const YAxis = dynamic(() => import('recharts').then(mod => ({ default: mod.YAxis })), {
+}) as any;
+const PolarAngleAxis = dynamic(() => import('recharts').then(mod => mod.PolarAngleAxis as any), {
   ssr: false
-});
-const Tooltip = dynamic(() => import('recharts').then(mod => ({ default: mod.Tooltip })), {
-  ssr: false
-});
-const ResponsiveContainer = dynamic(() => import('recharts').then(mod => ({ default: mod.ResponsiveContainer })), {
-  ssr: false
-});
-const RadialBarChart = dynamic(() => import('recharts').then(mod => ({ default: mod.RadialBarChart })), {
-  ssr: false
-});
-const RadialBar = dynamic(() => import('recharts').then(mod => ({ default: mod.RadialBar })), {
-  ssr: false
-});
-const PolarAngleAxis = dynamic(() => import('recharts').then(mod => ({ default: mod.PolarAngleAxis })), {
-  ssr: false
-});
+}) as any;
 // Removed Progress import
 
 interface ClientBillingDashboardProps {
