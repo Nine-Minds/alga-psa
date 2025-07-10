@@ -300,7 +300,8 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
     
     setSelectedSlot({
       ...adjustedSlotInfo,
-      defaultAssigneeId: focusedTechnicianId
+      defaultAssigneeId: focusedTechnicianId,
+      assigned_user_ids: focusedTechnicianId ? [focusedTechnicianId] : [currentUserId]
     });
     setShowEntryPopup(true);
   };
