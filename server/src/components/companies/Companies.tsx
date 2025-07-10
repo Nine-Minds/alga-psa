@@ -457,11 +457,7 @@ const Companies: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching company for edit:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load company details",
-        variant: "destructive"
-      });
+      toast.error("Failed to load company details");
     }
   };
 
@@ -1002,6 +998,8 @@ const Companies: React.FC = () => {
         onClose={() => {
           setIsQuickViewOpen(false);
           setQuickViewCompany(null);
+          // Refresh companies to show any updates
+          refreshCompanies();
         }}
       >
         {quickViewCompany && (
