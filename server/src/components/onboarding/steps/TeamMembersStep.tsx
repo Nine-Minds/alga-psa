@@ -8,6 +8,7 @@ import { Plus, Trash2, Users, AlertCircle } from 'lucide-react';
 import { StepProps } from '../types';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { getLicenseChecker } from 'server/src/lib/licensing';
+import { getAvailableRoles } from '@/lib/actions/onboarding-actions/onboardingActions';
 
 export function TeamMembersStep({ data, updateData }: StepProps) {
   const [licenseInfo, setLicenseInfo] = useState<{
@@ -17,10 +18,46 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
     message?: string;
   } | null>(null);
   const [isLoadingLicense, setIsLoadingLicense] = useState(true);
+  const [roleOptions, setRoleOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [isLoadingRoles, setIsLoadingRoles] = useState(true);
 
   useEffect(() => {
     checkLicenseStatus();
   }, [data.teamMembers]);
+
+  useEffect(() => {
+    fetchRoles();
+  }, []);
+
+  const fetchRoles = async () => {
+    try {
+      setIsLoadingRoles(true);
+      const result = await getAvailableRoles();
+      
+      if (result.success && result.data) {
+        setRoleOptions(result.data);
+      } else {
+        // Fallback to default roles if fetch fails
+        setRoleOptions([
+          { value: 'admin', label: 'Admin' },
+          { value: 'technician', label: 'Technician' },
+          { value: 'manager', label: 'Manager' },
+          { value: 'user', label: 'User' }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error fetching roles:', error);
+      // Fallback to default roles
+      setRoleOptions([
+        { value: 'admin', label: 'Admin' },
+        { value: 'technician', label: 'Technician' },
+        { value: 'manager', label: 'Manager' },
+        { value: 'user', label: 'User' }
+      ]);
+    } finally {
+      setIsLoadingRoles(false);
+    }
+  };
 
   const checkLicenseStatus = async () => {
     try {
@@ -41,10 +78,13 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
   const addTeamMember = () => {
     if (licenseInfo && !licenseInfo.allowed) return;
     
+    // Use the first available role as default, or 'technician' if no roles loaded
+    const defaultRole = roleOptions.length > 0 ? roleOptions[0].value : 'technician';
+    
     updateData({
       teamMembers: [
         ...data.teamMembers,
-        { firstName: '', lastName: '', email: '', role: 'Technician' }
+        { firstName: '', lastName: '', email: '', role: defaultRole }
       ]
     });
   };
@@ -159,12 +199,8 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
               <CustomSelect
                 value={member.role}
                 onValueChange={(value) => updateTeamMember(index, 'role', value)}
-                options={[
-                  { value: 'Admin', label: 'Admin' },
-                  { value: 'Technician', label: 'Technician' },
-                  { value: 'Manager', label: 'Manager' },
-                  { value: 'Support', label: 'Support' }
-                ]}
+                options={roleOptions}
+                disabled={isLoadingRoles}
               />
             </div>
           </div>

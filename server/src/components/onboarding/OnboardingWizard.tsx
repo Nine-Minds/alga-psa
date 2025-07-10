@@ -22,21 +22,23 @@ import {
 } from 'server/src/lib/actions/onboarding-actions/onboardingActions';
 
 interface OnboardingWizardProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   testMode?: boolean;
   debugMode?: boolean;
   initialData?: Partial<WizardData>;
   onComplete?: (data: WizardData) => void;
+  fullPage?: boolean;
 }
 
 export function OnboardingWizard({
-  open,
+  open = true,
   onOpenChange,
   testMode = false,
   debugMode = false,
   initialData = {},
   onComplete,
+  fullPage = false,
 }: OnboardingWizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -49,7 +51,7 @@ export function OnboardingWizard({
     email: '',
 
     // Team Members
-    teamMembers: [{ firstName: '', lastName: '', email: '', role: 'Technician' }],
+    teamMembers: [{ firstName: '', lastName: '', email: '', role: 'technician' }],
 
     // Client Info
     clientName: '',
@@ -233,7 +235,9 @@ export function OnboardingWizard({
       }
       
       onComplete?.(wizardData);
-      onOpenChange(false);
+      if (!fullPage && onOpenChange) {
+        onOpenChange(false);
+      }
     } catch (error) {
       console.error('Error completing onboarding:', error);
       setErrors(prev => ({ ...prev, [5]: error instanceof Error ? error.message : 'Unknown error' }));
@@ -299,53 +303,75 @@ export function OnboardingWizard({
     }
   };
 
-  return (
-    <Dialog isOpen={open} onClose={() => onOpenChange(false)} title="Setup Your System" className="max-w-4xl">
-        <div className="max-h-[90vh] overflow-y-auto">
-          <WizardProgress
-            steps={STEPS}
-            currentStep={currentStep}
-            onStepClick={handleStepClick}
-            canNavigateToStep={(stepIndex) => stepIndex === 0 || isFirstStepValid()}
-          />
+  const wizardContent = (
+    <>
+      <WizardProgress
+        steps={STEPS}
+        currentStep={currentStep}
+        onStepClick={handleStepClick}
+        canNavigateToStep={(stepIndex) => stepIndex === 0 || isFirstStepValid()}
+      />
 
-          <div className="mt-8 mb-4">
-            {renderStep()}
-          </div>
+      <div className="mt-8 mb-4">
+        {renderStep()}
+      </div>
 
-          {debugMode && (
-            <div className="mt-4 p-4 bg-gray-100 rounded text-xs">
-              <p className="font-bold mb-2">Debug Info:</p>
-              <p>Current Step: {currentStep} ({STEPS[currentStep]})</p>
-              <p>Is Valid: {isStepValid() ? 'Yes' : 'No'}</p>
-              <p>Is Required: {REQUIRED_STEPS.includes(currentStep) ? 'Yes' : 'No'}</p>
-              <details className="mt-2">
-                <summary className="cursor-pointer">View Data</summary>
-                <pre className="mt-2 text-xs overflow-auto">
-                  {JSON.stringify(wizardData, null, 2)}
-                </pre>
-              </details>
-            </div>
-          )}
-
-          {errors[currentStep] && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-red-700 text-sm">{errors[currentStep]}</p>
-            </div>
-          )}
-
-          <WizardNavigation
-            currentStep={currentStep}
-            totalSteps={STEPS.length}
-            onBack={handleBack}
-            onNext={handleNext}
-            onSkip={handleSkip}
-            onFinish={handleFinish}
-            isNextDisabled={!isStepValid() || isLoading}
-            isSkipDisabled={REQUIRED_STEPS.includes(currentStep)}
-            isLoading={isLoading}
-          />
+      {debugMode && (
+        <div className="mt-4 p-4 bg-gray-100 rounded text-xs">
+          <p className="font-bold mb-2">Debug Info:</p>
+          <p>Current Step: {currentStep} ({STEPS[currentStep]})</p>
+          <p>Is Valid: {isStepValid() ? 'Yes' : 'No'}</p>
+          <p>Is Required: {REQUIRED_STEPS.includes(currentStep) ? 'Yes' : 'No'}</p>
+          <details className="mt-2">
+            <summary className="cursor-pointer">View Data</summary>
+            <pre className="mt-2 text-xs overflow-auto">
+              {JSON.stringify(wizardData, null, 2)}
+            </pre>
+          </details>
         </div>
+      )}
+
+      {errors[currentStep] && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+          <p className="text-red-700 text-sm">{errors[currentStep]}</p>
+        </div>
+      )}
+
+      <WizardNavigation
+        currentStep={currentStep}
+        totalSteps={STEPS.length}
+        onBack={handleBack}
+        onNext={handleNext}
+        onSkip={handleSkip}
+        onFinish={handleFinish}
+        isNextDisabled={!isStepValid() || isLoading}
+        isSkipDisabled={REQUIRED_STEPS.includes(currentStep)}
+        isLoading={isLoading}
+      />
+    </>
+  );
+
+  if (fullPage) {
+    return (
+      <div className="min-h-screen bg-white">
+        <div className="mx-auto max-w-4xl px-4 py-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900">Setup Your System</h1>
+            <p className="mt-2 text-lg text-gray-600">Let's get your workspace configured and ready to use.</p>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            {wizardContent}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Dialog isOpen={open} onClose={() => onOpenChange?.(false)} title="Setup Your System" className="max-w-4xl">
+      <div className="max-h-[90vh] overflow-y-auto">
+        {wizardContent}
+      </div>
     </Dialog>
   );
 }

@@ -166,19 +166,12 @@ export async function addTeamMembers(members: TeamMember[]): Promise<OnboardingA
             updated_at: new Date()
           });
 
-          // Assign default role based on member.role
-          const roleMapping: Record<string, string> = {
-            'Admin': 'admin',
-            'Manager': 'manager', 
-            'Technician': 'technician',
-            'User': 'user'
-          };
-
-          const roleId = roleMapping[member.role] || 'user';
-          
-          // Get role from roles table
+          // Get role from roles table by role_name
           const role = await trx('roles')
-            .where({ role_id: roleId, tenant })
+            .where({ 
+              role_name: member.role.toLowerCase(), // Convert to lowercase to match DB convention
+              tenant 
+            })
             .first();
 
           if (role) {
@@ -451,6 +444,48 @@ export async function completeOnboarding(): Promise<OnboardingActionResult> {
   } catch (error) {
     console.error('Error completing onboarding:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+export async function getAvailableRoles(): Promise<{
+  success: boolean;
+  data?: Array<{ value: string; label: string }>;
+  error?: string;
+}> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return { success: false, error: 'No authenticated user found' };
+    }
+
+    const { knex } = await createTenantKnex();
+    
+    const roles = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('roles')
+        .where({ 
+          tenant: currentUser.tenant,
+          msp: true  // Only fetch MSP roles
+        })
+        .select('role_id', 'role_name')
+        .orderBy('role_name');
+    });
+
+    // Transform roles to the format expected by the select component
+    const roleOptions = roles.map(role => ({
+      value: role.role_name,
+      label: role.role_name.charAt(0).toUpperCase() + role.role_name.slice(1) // Capitalize first letter
+    }));
+
+    return {
+      success: true,
+      data: roleOptions
+    };
+  } catch (error) {
+    console.error('Error fetching available roles:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
   }
 }
 
