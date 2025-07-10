@@ -1,12 +1,17 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
 import type { MouseEvent } from 'react';
-import { Calendar, momentLocalizer, NavigateAction, View, ToolbarProps } from 'react-big-calendar';
-import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
-import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
+import dynamic from 'next/dynamic';
+import { momentLocalizer, NavigateAction, View, ToolbarProps } from 'react-big-calendar';
 import moment from 'moment';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
+import CalendarSkeleton from 'server/src/components/ui/skeletons/CalendarSkeleton';
+
+// Dynamic import for react-big-calendar
+const DynamicBigCalendar = dynamic(() => import('./DynamicBigCalendar'), {
+  loading: () => <CalendarSkeleton height="100%" view="week" showSidebar={false} />,
+  ssr: false
+});
 import { Button } from '../ui/Button';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import Spinner from 'server/src/components/ui/Spinner';
@@ -30,8 +35,6 @@ import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog'
 import { Label } from 'server/src/components/ui/Label';
 
 const localizer = momentLocalizer(moment);
-
-const DnDCalendar = withDragAndDrop(Calendar);
 
 const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
   const [view, setView] = useState<View>("week");
@@ -849,63 +852,65 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
             const scrollToTime = new Date();
             scrollToTime.setHours(8, 0, 0, 0);
             return (
-              <DnDCalendar
-                localizer={localizer}
-                events={events}
-                startAccessor={(event: object) => new Date((event as IScheduleEntry).scheduled_start)}
-                endAccessor={(event: object) => new Date((event as IScheduleEntry).scheduled_end)}
-                eventPropGetter={(event: object) => ({
-                  style: {
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    borderRadius: '0px',
-                    padding: '0px',
-                    boxShadow: 'none',
-                    color: 'inherit',
-                  }
-                })}
-                style={{ height: '100%' }}
-                view={view}
-                date={date}
-                scrollToTime={scrollToTime}
-                onView={async (newView) => {
-                  setView(newView);
-                  // Save the view preference when changed via calendar navigation
-                  if (currentUserId) {
-                    try {
-                      await setUserPreference(currentUserId, 'defaultScheduleView', newView);
-                    } catch (err) {
-                      console.error('Failed to save view preference:', err);
+              <Suspense fallback={<CalendarSkeleton height="100%" view={view === 'agenda' ? 'week' : view as 'month' | 'week' | 'day'} showSidebar={false} />}>
+                <DynamicBigCalendar
+                  localizer={localizer}
+                  events={events}
+                  startAccessor={(event: object) => new Date((event as IScheduleEntry).scheduled_start)}
+                  endAccessor={(event: object) => new Date((event as IScheduleEntry).scheduled_end)}
+                  eventPropGetter={(event: object) => ({
+                    style: {
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      borderRadius: '0px',
+                      padding: '0px',
+                      boxShadow: 'none',
+                      color: 'inherit',
                     }
-                  }
-                }}
-                onNavigate={handleNavigate}
-                selectable
-                onSelectSlot={handleSelectSlot}
-                onSelectEvent={handleSelectEvent}
-                resizableAccessor={(event: object) => {
-                  const scheduleEvent = event as IScheduleEntry;
-                  return focusedTechnicianId !== null &&
-                        scheduleEvent?.assigned_user_ids &&
-                        scheduleEvent.assigned_user_ids.includes(focusedTechnicianId);
-                }}
-                draggableAccessor={(event: object) => {
-                  const scheduleEvent = event as IScheduleEntry;
-                  return focusedTechnicianId !== null &&
-                        scheduleEvent?.assigned_user_ids &&
-                        scheduleEvent.assigned_user_ids.includes(focusedTechnicianId);
-                }}
-                onEventResize={handleEventResize}
-                onEventDrop={handleEventDrop}
-                step={15}
-                timeslots={4}
-                components={{
-                  toolbar: CustomToolbar,
-                  event: EventComponent
-                }}
-                defaultView="week"
-                views={['month', 'week', 'day']}
-              />
+                  })}
+                  style={{ height: '100%' }}
+                  view={view}
+                  date={date}
+                  scrollToTime={scrollToTime}
+                  onView={async (newView) => {
+                    setView(newView);
+                    // Save the view preference when changed via calendar navigation
+                    if (currentUserId) {
+                      try {
+                        await setUserPreference(currentUserId, 'defaultScheduleView', newView);
+                      } catch (err) {
+                        console.error('Failed to save view preference:', err);
+                      }
+                    }
+                  }}
+                  onNavigate={handleNavigate}
+                  selectable
+                  onSelectSlot={handleSelectSlot}
+                  onSelectEvent={handleSelectEvent}
+                  resizableAccessor={(event: object) => {
+                    const scheduleEvent = event as IScheduleEntry;
+                    return focusedTechnicianId !== null &&
+                          scheduleEvent?.assigned_user_ids &&
+                          scheduleEvent.assigned_user_ids.includes(focusedTechnicianId);
+                  }}
+                  draggableAccessor={(event: object) => {
+                    const scheduleEvent = event as IScheduleEntry;
+                    return focusedTechnicianId !== null &&
+                          scheduleEvent?.assigned_user_ids &&
+                          scheduleEvent.assigned_user_ids.includes(focusedTechnicianId);
+                  }}
+                  onEventResize={handleEventResize}
+                  onEventDrop={handleEventDrop}
+                  step={15}
+                  timeslots={4}
+                  components={{
+                    toolbar: CustomToolbar,
+                    event: EventComponent
+                  }}
+                  defaultView="week"
+                  views={['month', 'week', 'day']}
+                />
+              </Suspense>
             );
           })()}
         </div>

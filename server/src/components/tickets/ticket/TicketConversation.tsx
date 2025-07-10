@@ -1,13 +1,35 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Label } from 'server/src/components/ui/Label';
 import { ArrowUpDown } from 'lucide-react';
 import { IComment, ITicket } from 'server/src/interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
-import TextEditor, { DEFAULT_BLOCK } from 'server/src/components/editor/TextEditor';
 import { PartialBlock } from '@blocknote/core';
+import RichTextEditorSkeleton from 'server/src/components/ui/skeletons/RichTextEditorSkeleton';
+
+// Dynamic import for TextEditor
+const TextEditor = dynamic(() => import('server/src/components/editor/TextEditor'), {
+  loading: () => <RichTextEditorSkeleton height="200px" title="Comment Editor" />,
+  ssr: false
+});
+
+// Import DEFAULT_BLOCK statically since it's just a constant
+export const DEFAULT_BLOCK: PartialBlock[] = [{
+  type: "paragraph",
+  props: {
+    textAlignment: "left",
+    backgroundColor: "default",
+    textColor: "default"
+  },
+  content: [{
+    type: "text",
+    text: "",
+    styles: {}
+  }]
+}];
 import CommentItem from './CommentItem';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 import styles from './TicketDetails.module.css';
@@ -308,13 +330,15 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                     </Label>
                   </div>
                 </div>
-                <TextEditor
-                  {...withDataAutomationId({ id: `${id}-editor` })}
-                  key={editorKey}
-                  roomName={`ticket-${ticket.ticket_id}`}
-                  initialContent={DEFAULT_BLOCK}
-                  onContentChange={onNewCommentContentChange}
-                />
+                <Suspense fallback={<RichTextEditorSkeleton height="200px" title="Comment Editor" />}>
+                  <TextEditor
+                    {...withDataAutomationId({ id: `${id}-editor` })}
+                    key={editorKey}
+                    roomName={`ticket-${ticket.ticket_id}`}
+                    initialContent={DEFAULT_BLOCK}
+                    onContentChange={onNewCommentContentChange}
+                  />
+                </Suspense>
                 <div className="flex justify-end space-x-2 mt-1">
                   <Button
                     id={`${id}-add-comment-btn`}
