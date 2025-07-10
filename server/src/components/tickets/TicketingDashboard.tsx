@@ -247,6 +247,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     {
       title: 'Ticket Number',
       dataIndex: 'ticket_number',
+      width: '10%',
       render: (value: string, record: ITicketListItem) => (
         <Link
           href={`/msp/tickets/${record.ticket_id}`}
@@ -259,14 +260,17 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     {
       title: 'Title',
       dataIndex: 'title',
+      width: '22%',
     },
     {
       title: 'Status',
       dataIndex: 'status_name',
+      width: '10%',
     },
     {
       title: 'Priority',
       dataIndex: 'priority_name',
+      width: '10%',
       render: (value: string, record: ITicketListItem) => (
         <div className="flex items-center gap-2">
           <div 
@@ -280,10 +284,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     {
       title: 'Channel',
       dataIndex: 'channel_name',
+      width: '10%',
     },
     {
       title: 'Category',
       dataIndex: 'category_id',
+      width: '10%',
       render: (value: string, record: ITicketListItem) => {
         if (!value && !record.subcategory_id) return 'No Category';
 
@@ -305,6 +311,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     {
       title: 'Created By',
       dataIndex: 'entered_by_name',
+      width: '10%',
     },
     {
       title: 'Tags',
@@ -328,7 +335,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     {
       title: 'Actions',
       dataIndex: 'actions',
-      width: '5%',
+      width: '3%',
       render: (value: string, record: ITicketListItem) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
