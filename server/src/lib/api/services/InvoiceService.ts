@@ -170,8 +170,38 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       // Add joins based on include options
       if ((options as any).include_company) {
-        query = query.leftJoin('companies', 'invoices.company_id', 'companies.company_id')
-          .select('companies.company_name', 'companies.billing_address');
+        // Use a subquery to get the billing address to avoid aggregate issues with Citus
+        const billingAddressSubquery = trx('company_locations as cl')
+          .select(
+            'cl.company_id',
+            'cl.tenant',
+            trx.raw(`CONCAT_WS(', ', 
+              cl.address_line1, 
+              cl.address_line2, 
+              cl.city, 
+              cl.state_province, 
+              cl.postal_code, 
+              cl.country_name
+            ) as formatted_address`)
+          )
+          .where(function() {
+            this.where('cl.is_billing_address', true)
+                .orWhere('cl.is_default', true);
+          })
+          .orderByRaw('cl.is_billing_address DESC, cl.is_default DESC')
+          .limit(1)
+          .as('billing_loc');
+
+        query = query
+          .leftJoin('companies', 'invoices.company_id', 'companies.company_id')
+          .leftJoin(billingAddressSubquery, function() {
+            this.on('companies.company_id', '=', 'billing_loc.company_id')
+                .andOn('companies.tenant', '=', 'billing_loc.tenant');
+          })
+          .select(
+            'companies.company_name',
+            trx.raw('COALESCE(billing_loc.formatted_address, \'\') as billing_address')
+          );
       }
 
       if ((options as any).include_billing_cycle) {
