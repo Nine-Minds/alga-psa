@@ -28,6 +28,7 @@ import {
   Code,
   Bell,
   Monitor,
+  Home,
   Settings,
   UserCircle,
   Shield,
@@ -44,13 +45,13 @@ export interface MenuItem {
 
 export const menuItems: MenuItem[] = [
   {
-    name: 'Dashboard',
-    icon: BarChart3,
+    name: 'Home',
+    icon: Home,
     href: '/msp/dashboard'  // Updated to point to our new dashboard page
   },
   {
     name: 'User Activities',
-    icon: Activity,
+    icon: BarChart3,
     href: '/msp/user-activities'
   },
   {

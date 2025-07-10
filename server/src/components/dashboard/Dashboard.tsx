@@ -116,7 +116,7 @@ const WelcomeDashboard = () => {
       {/* Welcome Banner */}
       <div className="rounded-lg mb-6 p-6" 
            style={{ background: 'linear-gradient(to right, rgb(var(--color-primary-500)), rgb(var(--color-secondary-500)))' }}>
-        <div className="max-w-3xl">
+        <div className="max-w-6xl">
           <h1 className="text-3xl font-bold mb-2 text-white">Welcome to Your MSP Command Center</h1>
           <p className="text-lg text-white opacity-90">
             Your all-in-one platform for managing IT services, tracking assets, 
