@@ -155,9 +155,8 @@ export async function updateCompany(companyId: string, updateData: Partial<Omit<
       
       // Handle all other fields
       Object.entries(updateData).forEach(([key, value]) => {
-        // Exclude properties, url, tax_region, account_manager_id, and logoUrl (computed field)
-        const excludedFields = ['properties', 'url', 'tax_region', 'account_manager_id', 'logoUrl'];
-        if (!excludedFields.includes(key)) {
+        // Exclude properties, url, tax_region, account_manager_id, logoUrl (computed field), and partition keys (tenant, company_id)
+        if (key !== 'properties' && key !== 'url' && key !== 'tax_region' && key !== 'account_manager_id' && key !== 'logoUrl' && key !== 'tenant' && key !== 'company_id') {
           // Always include the field in the update, setting null for undefined/empty values
           updateObject[key] = (value === undefined || value === '') ? null : value;
         }
@@ -174,6 +173,9 @@ export async function updateCompany(companyId: string, updateData: Partial<Omit<
       if (updateData.hasOwnProperty('account_manager_id')) {
           updateObject.account_manager_id = updateData.account_manager_id === '' ? null : updateData.account_manager_id;
       }
+
+      console.log('Final updateObject being sent to database:', JSON.stringify(updateObject, null, 2));
+      console.log('Update contains is_inactive:', 'is_inactive' in updateObject, 'value:', updateObject.is_inactive);
 
       await trx('companies')
         .where({ company_id: companyId, tenant })
