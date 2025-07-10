@@ -440,7 +440,7 @@ export default class Invoice {
         // Step 4: Update ViewModel Population
         tenantCompanyInfo = {
           name: tenantCompanyDetails.company_name,
-          address: tenantCompanyDetails.address,
+          address: tenantCompanyDetails.address || '',
           logoUrl: logoUrl, // Use the fetched logoUrl
         };
         console.log('Found tenant default company:', tenantCompanyInfo);

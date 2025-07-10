@@ -2,15 +2,11 @@
 import React from 'react';
 import ContactModel from 'server/src/lib/models/contact';
 import UserModel from 'server/src/lib/models/user';
-import { User } from 'next-auth';
 import { IContact, IUserWithRoles } from 'server/src/interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
-import Contacts from 'server/src/components/contacts/Contacts';
-import OverallInteractionsFeed from 'server/src/components/interactions/OverallInteractionsFeed';
+import ContactsLayout from 'server/src/components/contacts/ContactsLayout';
 import { getConnection } from 'server/src/lib/db/db';
-
-type IdName = { id: string; name: string };
 
 export default async function ContactsPage() {
   const knex = await getConnection();
@@ -33,18 +29,11 @@ export default async function ContactsPage() {
 
 
   return (
-    <div className="flex flex-col md:flex-row md:space-x-6">
-      <div className="w-full md:w-2/3 mb-6 md:mb-0">
-        <Contacts initialContacts={uniqueContacts} />
-      </div>
-      <div className="w-full md:w-1/3">
-        <OverallInteractionsFeed 
-          users={usersWithRoles}
-          contacts={uniqueContacts}
-          companies={companies}
-        />
-      </div>
-    </div>
+    <ContactsLayout
+      uniqueContacts={uniqueContacts}
+      usersWithRoles={usersWithRoles}
+      companies={companies}
+    />
   );
 }
 

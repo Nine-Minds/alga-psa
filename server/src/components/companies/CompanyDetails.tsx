@@ -140,6 +140,7 @@ interface CompanyDetailsProps {
   documents?: IDocument[];
   contacts?: IContact[];
   isInDrawer?: boolean;
+  quickView?: boolean;
 }
 
 const CompanyDetails: React.FC<CompanyDetailsProps> = ({
@@ -147,7 +148,8 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   company,
   documents = [],
   contacts = [],
-  isInDrawer = false
+  isInDrawer = false,
+  quickView = false
 }) => {
   const [editedCompany, setEditedCompany] = useState<ICompany>(company);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -185,12 +187,10 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   const refreshCompanyData = useCallback(async () => {
     if (!company?.company_id) return; // Ensure company_id is available
 
-    console.log(`Refreshing company data for ID: ${company.company_id}`);
     try {
       const latestCompanyData = await getCompanyById(company.company_id);
       if (latestCompanyData) {
         setEditedCompany(latestCompanyData);
-        console.log('Company data refreshed successfully');
       }
     } catch (error) {
       console.error('Error refreshing company data:', error);
@@ -205,14 +205,18 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   // 2. Implement Initial Load Logic
   useEffect(() => {
     // Set initial state when the company prop changes
-    setEditedCompany(company);
+    setEditedCompany({
+      ...company,
+      // Ensure client_type has a value
+      client_type: company.client_type || 'company'
+    });
     // Reset unsaved changes flag when company prop changes
     setHasUnsavedChanges(false);
   }, [company]); // Dependency on the company prop
   
   useEffect(() => {
     if (editedCompany?.logoUrl !== company?.logoUrl) {
-      console.log("Logo URL updated in state:", editedCompany?.logoUrl);
+      // Logo URL has changed
     }
   }, [editedCompany?.logoUrl, company?.logoUrl]);
 
@@ -382,8 +386,11 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     
     setIsSaving(true);
     try {
-      // Prepare data for update, handling top-level account_manager_id
-      const { account_manager_full_name, ...restOfEditedCompany } = editedCompany;
+      // Prepare data for update, removing computed fields
+      const { 
+        account_manager_full_name,
+        ...restOfEditedCompany 
+      } = editedCompany;
       const dataToUpdate: Partial<Omit<ICompany, 'account_manager_full_name'>> = {
         ...restOfEditedCompany,
         properties: restOfEditedCompany.properties ? { ...restOfEditedCompany.properties } : {},
@@ -873,9 +880,11 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   return (
     <ReflectionContainer id={id} label="Company Details">
       <div className="flex items-center space-x-5 mb-4 pt-2">
-        <BackNav href={!isInDrawer ? "/msp/companies" : undefined}>
-          {isInDrawer ? 'Back' : 'Back to Clients'}
-        </BackNav>
+        {!quickView && (
+          <BackNav href={!isInDrawer ? "/msp/companies" : undefined}>
+            {isInDrawer ? 'Back' : 'Back to Clients'}
+          </BackNav>
+        )}
         
         {/* Logo Display and Edit Container */}
         <div className="flex items-center space-x-3">
@@ -897,7 +906,6 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               
               // If logo was deleted (newLogoUrl is null), refresh company data to ensure consistency
               if (newLogoUrl === null) {
-                console.log("Logo deleted, refreshing company data...");
                 await refreshCompanyData();
               }
             }}
@@ -905,13 +913,15 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           />
         </div>
 
-        <Heading size="6">{editedCompany.company_name}</Heading>
+        <Heading size="6" tabIndex={quickView ? 0 : undefined} autoFocus={quickView}>
+          {editedCompany.company_name}
+        </Heading>
       </div>
 
       {/* Content Area */}
       <div>
         <CustomTabs
-          tabs={tabContent}
+          tabs={quickView ? [tabContent[0]] : tabContent}
           defaultTab={findTabLabel(searchParams?.get('tab'))}
           onTabChange={handleTabChange}
         />

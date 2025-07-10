@@ -26,11 +26,13 @@ import ViewSwitcher, { ViewSwitcherOption } from '../ui/ViewSwitcher';
 import { TrashIcon, MoreVertical, CloudDownload, Upload, LayoutGrid, List, Search, XCircle } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import CustomSelect from '../ui/CustomSelect';
-import { getCurrentUser, getUserPreference, setUserPreference } from 'server/src/lib/actions/user-actions/userActions';
+import { useUserPreference } from 'server/src/hooks/useUserPreference';
 import CompaniesImportDialog from './CompaniesImportDialog';
 import { ConfirmationDialog } from '../ui/ConfirmationDialog';
 import { Dialog, DialogContent, DialogFooter } from '../ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';
+import Drawer from 'server/src/components/ui/Drawer';
+import CompanyDetails from './CompanyDetails';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import toast from 'react-hot-toast';
@@ -71,6 +73,7 @@ interface CompanyResultsProps {
   onCheckboxChange: (companyId: string) => void;
   onEditCompany: (companyId: string) => void;
   onDeleteCompany: (company: ICompany) => void;
+  onQuickView?: (company: ICompany) => void;
   onTagsChange: (companyId: string, tags: ITag[]) => void;
   currentPage: number;
   pageSize: number;
@@ -80,6 +83,7 @@ interface CompanyResultsProps {
   // Add props to receive parent's tag state
   companyTags?: Record<string, ITag[]>;
   allUniqueTagsFromParent?: ITag[];
+  editingId?: string | null;
 }
 
 const CompanyResults = memo(({
@@ -92,6 +96,7 @@ const CompanyResults = memo(({
   onCheckboxChange,
   onEditCompany,
   onDeleteCompany,
+  onQuickView,
   onTagsChange,
   currentPage,
   pageSize,
@@ -99,7 +104,8 @@ const CompanyResults = memo(({
   onPageSizeChange,
   onCompanyTagsLoaded,
   companyTags: parentCompanyTags,
-  allUniqueTagsFromParent
+  allUniqueTagsFromParent,
+  editingId
 }: CompanyResultsProps) => {
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -199,6 +205,7 @@ const CompanyResults = memo(({
           handleCheckboxChange={onCheckboxChange}
           handleEditCompany={onEditCompany}
           handleDeleteCompany={onDeleteCompany}
+          onQuickView={onQuickView}
           currentPage={currentPage}
           pageSize={pageSize}
           totalCount={totalCount}
@@ -207,6 +214,7 @@ const CompanyResults = memo(({
           companyTags={effectiveCompanyTags}
           allUniqueTags={effectiveAllUniqueTags}
           onTagsChange={onTagsChange}
+          editingId={editingId}
         />
       ) : (
         <CompaniesList
@@ -216,6 +224,7 @@ const CompanyResults = memo(({
           handleCheckboxChange={onCheckboxChange}
           handleEditCompany={onEditCompany}
           handleDeleteCompany={onDeleteCompany}
+          onQuickView={onQuickView}
           currentPage={currentPage}
           pageSize={pageSize}
           totalCount={totalCount}
@@ -223,6 +232,7 @@ const CompanyResults = memo(({
           companyTags={effectiveCompanyTags}
           allUniqueTags={effectiveAllUniqueTags}
           onTagsChange={onTagsChange}
+          editingId={editingId}
         />
       )}
     </div>
@@ -280,7 +290,22 @@ const Companies: React.FC = () => {
   const [companyToDelete, setCompanyToDelete] = useState<ICompany | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchInput, setSearchInput] = useState(''); // Local state for input field
-  const [viewMode, setViewMode] = useState<'grid' | 'list' | null>(null);
+  
+  // Use the custom hook for view mode preference
+  type CompanyViewMode = 'grid' | 'list';
+  const { 
+    value: viewMode, 
+    setValue: setViewModePreference,
+    isLoading: isViewModeLoading 
+  } = useUserPreference<CompanyViewMode>(
+    COMPANY_VIEW_MODE_SETTING,
+    {
+      defaultValue: 'grid',
+      localStorageKey: COMPANY_VIEW_MODE_SETTING,
+      debounceMs: 300
+    }
+  );
+  
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
   const [isSelectAllMode, setIsSelectAllMode] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
@@ -290,6 +315,15 @@ const Companies: React.FC = () => {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [multiDeleteError, setMultiDeleteError] = useState<string | null>(null);
   const [showDeactivateOption, setShowDeactivateOption] = useState(false);
+  
+  // Quick View state
+  const [quickViewCompany, setQuickViewCompany] = useState<ICompany | null>(null);
+  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
+  
+  // Edit state
+  const [editingCompany, setEditingCompany] = useState<ICompany | null>(null);
+  const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   
   // Tag-related state
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -301,7 +335,7 @@ const Companies: React.FC = () => {
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10); // Default to 10 for list view
+  const [pageSize, setPageSize] = useState(viewMode === 'grid' ? 9 : 10);
   
   // For multi-delete functionality, we need to track companies
   const [companiesForDelete, setCompaniesForDelete] = useState<ICompany[]>([]);
@@ -329,58 +363,21 @@ const Companies: React.FC = () => {
 
   // Tags will be loaded by CompanyResults component
 
+  // Update page size when view mode changes
   useEffect(() => {
-    const initializeComponent = async () => {
-      try {
-        // Load user preferences
-        const currentUser = await getCurrentUser();
-
-        if (currentUser) {
-          const savedViewMode = await getUserPreference(currentUser.user_id, COMPANY_VIEW_MODE_SETTING);
-          const mode = savedViewMode === 'grid' || savedViewMode === 'list' ? savedViewMode : 'grid';
-          setViewMode(mode);
-          // Set appropriate page size based on view mode
-          setPageSize(mode === 'grid' ? 9 : 10);
-        } else {
-          setViewMode('grid'); // Default if no user or preference
-          setPageSize(9); // Default page size for grid view
-        }
-      } catch (error) {
-        console.error('Error initializing component:', error);
-        setViewMode('grid'); // Default on error
-      }
-    };
-
-    initializeComponent();
-  }, []);
-
-  // Define view mode type
-  type CompanyViewMode = 'grid' | 'list';
+    if (!isViewModeLoading) {
+      setPageSize(viewMode === 'grid' ? 9 : 10);
+    }
+  }, [viewMode, isViewModeLoading]);
 
   const viewOptions: ViewSwitcherOption<CompanyViewMode>[] = [
     { value: 'grid', label: 'Cards', icon: LayoutGrid },
     { value: 'list', label: 'Table', icon: List },
   ];
 
-  const handleViewModeChange = async (newMode: CompanyViewMode) => {
-    setViewMode(newMode);
-    
-    // Adjust page size based on view mode
-    if (newMode === 'grid') {
-      setPageSize(9); // Grid view uses 9 cards by default
-    } else {
-      setPageSize(10); // List view uses 10 rows by default
-    }
+  const handleViewModeChange = (newMode: CompanyViewMode) => {
+    setViewModePreference(newMode);
     setCurrentPage(1); // Reset to first page when changing view
-    
-    try {
-      const currentUser = await getCurrentUser();
-      if (currentUser) {
-        await setUserPreference(currentUser.user_id, COMPANY_VIEW_MODE_SETTING, newMode);
-      }
-    } catch (error) {
-      console.error('Error saving view mode preference:', error);
-    }
   };
 
 
@@ -447,8 +444,34 @@ const Companies: React.FC = () => {
   }, []);
   
 
-  const handleEditCompany = (companyId: string) => {
-    router.push(`/msp/companies/${companyId}`);
+  const handleEditCompany = async (companyId: string) => {
+    try {
+      // First, fetch the company data
+      const companies = await getAllCompanies(true);
+      const company = companies.find(c => c.company_id === companyId);
+      
+      if (company) {
+        setEditingCompany(company);
+        setEditingId(companyId);
+        setIsEditDrawerOpen(true);
+      }
+    } catch (error) {
+      console.error('Error fetching company for edit:', error);
+      toast.error("Failed to load company details");
+    }
+  };
+
+  const handleQuickView = (company: ICompany) => {
+    setQuickViewCompany(company);
+    setIsQuickViewOpen(true);
+  };
+
+  const handleEditDrawerClose = () => {
+    setIsEditDrawerOpen(false);
+    setEditingCompany(null);
+    setEditingId(null);
+    // Refresh companies to show any updates
+    refreshCompanies();
   };
 
   const handleDeleteCompany = async (company: ICompany) => {
@@ -867,6 +890,7 @@ const Companies: React.FC = () => {
         onCheckboxChange={handleCheckboxChange}
         onEditCompany={handleEditCompany}
         onDeleteCompany={handleDeleteCompany}
+        onQuickView={handleQuickView}
         onTagsChange={handleTagsChange}
         currentPage={currentPage}
         pageSize={pageSize}
@@ -878,6 +902,7 @@ const Companies: React.FC = () => {
         onCompanyTagsLoaded={handleCompanyTagsLoaded}
         companyTags={companyTags}
         allUniqueTagsFromParent={allUniqueTags}
+        editingId={editingId}
       />
 
       {/* Multi-delete confirmation dialog */}
@@ -965,6 +990,41 @@ const Companies: React.FC = () => {
         onClose={() => setIsImportDialogOpen(false)}
         onImportComplete={(companies, updateExisting) => void handleImportComplete(companies, updateExisting)}
       />
+      
+      {/* Quick View Drawer */}
+      <Drawer
+        id="company-quick-view-drawer"
+        isOpen={isQuickViewOpen}
+        onClose={() => {
+          setIsQuickViewOpen(false);
+          setQuickViewCompany(null);
+          // Refresh companies to show any updates
+          refreshCompanies();
+        }}
+      >
+        {quickViewCompany && (
+          <CompanyDetails
+            company={quickViewCompany}
+            isInDrawer={true}
+            quickView={true}
+          />
+        )}
+      </Drawer>
+
+      {/* Edit Drawer */}
+      <Drawer
+        id="company-edit-drawer"
+        isOpen={isEditDrawerOpen}
+        onClose={handleEditDrawerClose}
+      >
+        {editingCompany && (
+          <CompanyDetails
+            company={editingCompany}
+            isInDrawer={true}
+            quickView={false}
+          />
+        )}
+      </Drawer>
     </div>
   );
 };

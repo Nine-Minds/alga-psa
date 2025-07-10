@@ -5,7 +5,7 @@ import * as Popover from '@radix-ui/react-popover';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { IChannel } from 'server/src/interfaces';
-import { ChevronDownIcon } from '@radix-ui/react-icons';
+import { ChevronDown } from 'lucide-react';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ContainerComponent, AutomationProps, FormFieldComponent } from 'server/src/types/ui-reflection/types';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
@@ -172,7 +172,7 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
             data-automation-type={dataAutomationType}
           >
             <span className={`flex-1 text-left ${!selectedChannel ? 'text-gray-400' : ''}`}>{selectedChannel?.channel_name || placeholder}</span>
-            <ChevronDownIcon className="h-4 w-4 text-gray-500" />
+            <ChevronDown className="h-4 w-4 text-gray-500" />
           </Button>
         </Popover.Trigger>
         <Popover.Portal>

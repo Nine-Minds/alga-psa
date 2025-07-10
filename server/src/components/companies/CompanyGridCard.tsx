@@ -1,7 +1,7 @@
 import { useRouter } from 'next/navigation';
 import { Button } from 'server/src/components/ui/Button';
 import { ReflectedDropdownMenu } from "server/src/components/ui/ReflectedDropdownMenu";
-import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { MoreVertical, Pencil, Trash2, ExternalLink } from 'lucide-react';
 import { MouseEvent } from 'react';
 import { ICompany } from "server/src/interfaces/company.interfaces";
 import { ITag } from 'server/src/interfaces/tag.interfaces';
@@ -14,9 +14,11 @@ interface CompanyGridCardProps {
     handleCheckboxChange: (companyId: string) => void;
     handleEditCompany: (companyId: string) => void;
     handleDeleteCompany: (company: ICompany) => void;
+    onQuickView?: (company: ICompany) => void;
     tags?: ITag[];
     allUniqueTags?: string[];
     onTagsChange?: (companyId: string, tags: ITag[]) => void;
+    isEditing?: boolean;
 }
 
 const CompanyGridCard = ({
@@ -25,9 +27,11 @@ const CompanyGridCard = ({
     handleCheckboxChange,
     handleEditCompany,
     handleDeleteCompany,
+    onQuickView,
     tags = [],
     allUniqueTags = [],
-    onTagsChange
+    onTagsChange,
+    isEditing = false
 }: CompanyGridCardProps) => {
     const router = useRouter();
 
@@ -41,7 +45,9 @@ const CompanyGridCard = ({
 
     return (
         <div
-            className="bg-white rounded-md border border-gray-200 shadow-md p-3 cursor-pointer hover:shadow-lg transition-shadow duration-200 flex flex-col relative"
+            className={`bg-white rounded-md border shadow-md p-3 cursor-pointer hover:shadow-lg transition-shadow duration-200 flex flex-col relative ${
+                isEditing ? 'border-purple-500 border-2 bg-purple-50' : 'border-gray-200'
+            }`}
             onClick={handleCardClick}
             data-testid={`company-card-${company.company_id}`}
         >
@@ -70,7 +76,7 @@ const CompanyGridCard = ({
 
                 {/* Company Info */}
                 <div className="flex-1 min-w-0">
-                    <h2 className="text-md font-semibold text-gray-800 truncate" title={company.company_name}>
+                    <h2 className="text-md font-semibold text-gray-800 truncate flex items-center gap-2" title={company.company_name}>
                         <a
                           href={`/msp/companies/${company.company_id}`}
                           onClick={stopPropagation}
@@ -78,6 +84,9 @@ const CompanyGridCard = ({
                         >
                             {company.company_name}
                         </a>
+                        {isEditing && (
+                            <Pencil className="h-4 w-4 text-purple-600 flex-shrink-0" />
+                        )}
                     </h2>
                     <div className="text-sm text-gray-600 mt-1 space-y-0.5">
                         <p className="truncate">
@@ -146,6 +155,13 @@ const CompanyGridCard = ({
                             </Button>
                         }
                         items={[
+                            ...(onQuickView ? [{
+                                id: 'quick-view',
+                                text: 'Quick View',
+                                icon: <ExternalLink size={14} />,
+                                variant: 'default' as const,
+                                onSelect: () => onQuickView(company)
+                            }] : []),
                             {
                                 id: 'edit',
                                 text: 'Edit',

@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState, useTransition, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { Card } from 'server/src/components/ui/Card';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import { getCurrentUser, getUserRolesWithPermissions, getUserCompanyId } from 'server/src/lib/actions/user-actions/userActions';
@@ -151,10 +150,7 @@ export function CompanyDetailsSettings() {
     try {
       const updatedCompany = await updateCompany(companyDetails.company_id, {
         company_name: companyDetails.company_name,
-        phone: companyDetails.phone,
-        email: companyDetails.email,
         url: companyDetails.url,
-        address: companyDetails.address,
         properties: {
           ...companyDetails.properties,
           industry: companyDetails.properties?.industry,
