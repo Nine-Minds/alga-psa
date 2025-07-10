@@ -69,7 +69,7 @@ export function OnboardingWizard({
     serviceName: '',
     serviceDescription: '',
     servicePrice: '',
-    planName: 'monthly',
+    planName: 'hourly',
 
     // Ticketing
     channelName: '',
@@ -179,16 +179,25 @@ export function OnboardingWizard({
           
         case 4: // Billing
           if (wizardData.serviceName) {
-            const billingResult = await setupBilling({
-              serviceName: wizardData.serviceName,
-              serviceDescription: wizardData.serviceDescription,
-              servicePrice: wizardData.servicePrice,
-              planName: wizardData.planName
-            });
-            if (!billingResult.success) {
-              setErrors(prev => ({ ...prev, [stepIndex]: billingResult.error || 'Failed to setup billing' }));
-              return false;
+            // Check if we already have a serviceId (service was already created)
+            if (!wizardData.serviceId) {
+              const billingResult = await setupBilling({
+                serviceName: wizardData.serviceName,
+                serviceDescription: wizardData.serviceDescription,
+                servicePrice: wizardData.servicePrice,
+                planName: wizardData.planName,
+                serviceTypeId: wizardData.serviceTypeId
+              });
+              if (!billingResult.success) {
+                setErrors(prev => ({ ...prev, [stepIndex]: billingResult.error || 'Failed to setup billing' }));
+                return false;
+              }
+              // Store service ID
+              if (billingResult.data?.serviceId) {
+                setWizardData(prev => ({ ...prev, serviceId: billingResult.data.serviceId }));
+              }
             }
+            // If serviceId exists, we've already created this service, just proceed
           }
           break;
       }
@@ -311,8 +320,7 @@ export function OnboardingWizard({
         }
         return !!(wizardData.contactName || wizardData.contactEmail || wizardData.contactRole);
       case 4: // Billing
-        return !!(wizardData.serviceName || wizardData.serviceDescription || 
-                 wizardData.servicePrice || wizardData.planName);
+        return !!(wizardData.serviceTypeId && wizardData.serviceName);
       default:
         return true;
     }

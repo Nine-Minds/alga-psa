@@ -52,6 +52,7 @@ export interface BillingData {
   serviceDescription: string;
   servicePrice: string;
   planName: string;
+  serviceTypeId?: string;
 }
 
 export interface TicketingData {
@@ -466,30 +467,38 @@ export async function setupBilling(data: BillingData): Promise<OnboardingActionR
 
     const { knex } = await createTenantKnex();
 
-    let billingId: string | undefined;
+    let serviceId: string | undefined;
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Create service type
-      const serviceTypeId = require('crypto').randomUUID();
-      await trx('service_types').insert({
-        service_type_id: serviceTypeId,
-        tenant,
-        type_name: data.serviceName,
-        description: data.serviceDescription,
-        hourly_rate: parseFloat(data.servicePrice) || 0,
-        created_at: new Date(),
-        updated_at: new Date()
-      });
+      // Use the selected service type
+      if (!data.serviceTypeId) {
+        throw new Error('Service type is required');
+      }
 
-      // Create billing plan
-      billingId = require('crypto').randomUUID();
-      await trx('billing_plans').insert({
-        billing_plan_id: billingId,
+      // Verify the service type exists
+      const serviceType = await trx('service_types')
+        .where({ 
+          id: data.serviceTypeId,
+          tenant: tenant,
+          is_active: true
+        })
+        .first();
+
+      if (!serviceType) {
+        throw new Error('Invalid service type selected');
+      }
+
+      // Create service catalog entry
+      serviceId = require('crypto').randomUUID();
+      await trx('service_catalog').insert({
+        service_id: serviceId,
         tenant,
-        plan_name: data.planName,
-        plan_type: 'hourly',
-        created_at: new Date(),
-        updated_at: new Date()
+        service_name: data.serviceName,
+        description: data.serviceDescription,
+        billing_method: serviceType.billing_method || 'per_unit',
+        custom_service_type_id: serviceType.id,
+        default_rate: parseFloat(data.servicePrice) || 0,
+        unit_of_measure: 'hour'
       });
 
       // Save progress
@@ -502,7 +511,7 @@ export async function setupBilling(data: BillingData): Promise<OnboardingActionR
     });
 
     revalidatePath('/msp/onboarding');
-    return { success: true, data: { billingId } };
+    return { success: true, data: { serviceId } };
   } catch (error) {
     console.error('Error setting up billing:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };

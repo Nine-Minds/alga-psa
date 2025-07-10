@@ -449,8 +449,32 @@ export async function importReferenceData(
     } catch (insertError: any) {
       console.error('Error inserting item:', insertError);
       
-      // Check if it's a duplicate order error
-      if (insertError.code === '23505' && insertError.constraint === 'unique_tenant_type_order') {
+      // Check if it's a duplicate order error for service types
+      if (dataType === 'service_types' && insertError.constraint === 'service_types_tenant_order_number_unique') {
+        // Get the next available order number
+        const maxOrderResult = await db('service_types')
+          .where({ tenant: currentUser.tenant })
+          .max('order_number as max')
+          .first();
+        
+        const nextOrder = (maxOrderResult?.max || 0) + 1;
+        mappedData.order_number = nextOrder;
+        
+        try {
+          // Retry with new order number
+          const [savedItem] = await db(config.targetTable)
+            .insert(mappedData)
+            .returning('*');
+          importedItems.push(savedItem);
+          console.log(`Imported ${item.name} with order number ${nextOrder} (original was ${item.display_order || 0})`);
+        } catch (retryError: any) {
+          // If it still fails, skip it
+          skippedItems.push({
+            name: item.name || item.priority_name || item.type_name || item.service_type,
+            reason: retryError.message || 'Failed after retry'
+          });
+        }
+      } else if (insertError.code === '23505' && insertError.constraint === 'unique_tenant_type_order') {
         skippedItems.push({
           name: item.name || item.priority_name || item.type_name || item.service_type,
           reason: `Order number ${mappedData.order_number} is already in use`
