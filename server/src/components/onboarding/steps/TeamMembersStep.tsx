@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, Trash2, Users, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Users, AlertCircle, CheckCircle } from 'lucide-react';
 import { StepProps } from '../types';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { getLicenseChecker } from 'server/src/lib/licensing';
@@ -112,6 +112,21 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
         </p>
       </div>
 
+      {/* Success Message for Created Team Members */}
+      {data.createdTeamMemberEmails && data.createdTeamMemberEmails.length > 0 && (
+        <div className="rounded-md bg-green-50 border border-green-200 p-4 flex items-center gap-3">
+          <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-green-800">
+              {data.createdTeamMemberEmails.length} team member{data.createdTeamMemberEmails.length > 1 ? 's' : ''} created successfully!
+            </p>
+            <p className="text-sm text-green-600 mt-1">
+              Created users: {data.createdTeamMemberEmails.join(', ')}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* License Status Display */}
       {!isLoadingLicense && licenseInfo && (
         <div className={`rounded-md border p-4 ${
@@ -146,10 +161,22 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
         </div>
       )}
 
-      {data.teamMembers.map((member, index) => (
-        <div key={index} className="p-4 border rounded-lg space-y-4">
+      {data.teamMembers.map((member, index) => {
+        const isAlreadyCreated = data.createdTeamMemberEmails?.includes(member.email);
+        
+        return (
+        <div key={index} className={`p-4 border rounded-lg space-y-4 ${
+          isAlreadyCreated ? 'bg-gray-50 border-gray-300' : ''
+        }`}>
           <div className="flex justify-between items-center">
-            <h3 className="font-medium">Team Member {index + 1}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-medium">Team Member {index + 1}</h3>
+              {isAlreadyCreated && (
+                <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">
+                  Created
+                </span>
+              )}
+            </div>
             {data.teamMembers.length > 1 && (
               <Button
                 id={`remove-member-${index}`}
@@ -170,6 +197,7 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
                 value={member.firstName}
                 onChange={(e) => updateTeamMember(index, 'firstName', e.target.value)}
                 placeholder="Jane"
+                disabled={isAlreadyCreated}
               />
             </div>
 
@@ -179,6 +207,7 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
                 value={member.lastName}
                 onChange={(e) => updateTeamMember(index, 'lastName', e.target.value)}
                 placeholder="Smith"
+                disabled={isAlreadyCreated}
               />
             </div>
           </div>
@@ -191,6 +220,7 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
                 value={member.email}
                 onChange={(e) => updateTeamMember(index, 'email', e.target.value)}
                 placeholder="jane@company.com"
+                disabled={isAlreadyCreated}
               />
             </div>
 
@@ -200,12 +230,13 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
                 value={member.role}
                 onValueChange={(value) => updateTeamMember(index, 'role', value)}
                 options={roleOptions}
-                disabled={isLoadingRoles}
+                disabled={isLoadingRoles || isAlreadyCreated}
               />
             </div>
           </div>
         </div>
-      ))}
+        );
+      })}
 
       <Button
         id="add-team-member"

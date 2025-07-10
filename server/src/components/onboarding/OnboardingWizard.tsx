@@ -43,6 +43,7 @@ export function OnboardingWizard({
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<number, string>>({});
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [wizardData, setWizardData] = useState<WizardData>({
     // Company Info
     firstName: '',
@@ -111,29 +112,46 @@ export function OnboardingWizard({
           break;
           
         case 1: // Team Members
-          if (wizardData.teamMembers.some(m => m.firstName && m.lastName && m.email)) {
-            const teamResult = await addTeamMembers(wizardData.teamMembers.filter(m => m.firstName && m.lastName && m.email));
+          const validMembers = wizardData.teamMembers.filter(m => m.firstName && m.lastName && m.email);
+          
+          // Filter out already created team members
+          const existingEmails = wizardData.createdTeamMemberEmails || [];
+          const newMembers = validMembers.filter(m => !existingEmails.includes(m.email));
+          
+          
+          if (newMembers.length > 0) {
+            const teamResult = await addTeamMembers(newMembers);
             if (!teamResult.success) {
               setErrors(prev => ({ ...prev, [stepIndex]: teamResult.error || 'Failed to add team members' }));
               return false;
+            }
+            
+            // Track created team member emails
+            if (teamResult.data?.created && teamResult.data.created.length > 0) {
+              const allCreated = [...new Set([...existingEmails, ...teamResult.data.created])];
+              setWizardData(prev => ({ ...prev, createdTeamMemberEmails: allCreated }));
             }
           }
           break;
           
         case 2: // Client
           if (wizardData.clientName) {
-            const clientResult = await createClient({
-              clientName: wizardData.clientName,
-              clientEmail: wizardData.clientEmail,
-              clientPhone: wizardData.clientPhone,
-              clientUrl: wizardData.clientUrl
-            });
-            if (!clientResult.success) {
-              setErrors(prev => ({ ...prev, [stepIndex]: clientResult.error || 'Failed to create client' }));
-              return false;
+            // Check if we already have a clientId (company was already created)
+            if (!wizardData.clientId) {
+              const clientResult = await createClient({
+                clientName: wizardData.clientName,
+                clientEmail: wizardData.clientEmail,
+                clientPhone: wizardData.clientPhone,
+                clientUrl: wizardData.clientUrl
+              });
+              if (!clientResult.success) {
+                setErrors(prev => ({ ...prev, [stepIndex]: clientResult.error || 'Failed to create client' }));
+                return false;
+              }
+              // Store client ID for contact step
+              setWizardData(prev => ({ ...prev, clientId: clientResult.data?.clientId }));
             }
-            // Store client ID for contact step
-            setWizardData(prev => ({ ...prev, clientId: clientResult.data?.clientId }));
+            // If clientId exists, we've already created this client, just proceed
           }
           break;
           
@@ -180,6 +198,7 @@ export function OnboardingWizard({
     if (currentStep < STEPS.length - 1) {
       const saved = await saveStepData(currentStep);
       if (saved) {
+        setCompletedSteps(prev => new Set([...prev, currentStep]));
         setCurrentStep(currentStep + 1);
       }
     }
@@ -193,12 +212,18 @@ export function OnboardingWizard({
 
   const handleSkip = () => {
     if (currentStep < STEPS.length - 1 && !REQUIRED_STEPS.includes(currentStep)) {
+      // Don't mark as completed when skipping
       setCurrentStep(currentStep + 1);
     }
   };
 
   const handleStepClick = (stepIndex: number) => {
-    if (stepIndex === 0 || isFirstStepValid()) {
+    // Allow navigation to:
+    // 1. First step (always)
+    // 2. Any completed step
+    // 3. The step immediately after the last completed step
+    if (stepIndex === 0 || completedSteps.has(stepIndex) || 
+        (stepIndex > 0 && completedSteps.has(stepIndex - 1))) {
       setCurrentStep(stepIndex);
     }
   };
@@ -266,9 +291,17 @@ export function OnboardingWizard({
         return !!(wizardData.clientName || wizardData.clientEmail || 
                  wizardData.clientPhone || wizardData.clientUrl);
       case 3: // Contact
+        // If we have a clientId (from saved data or previous step), validate normally
+        if (wizardData.clientId) {
+          return !!(wizardData.contactName || wizardData.contactEmail || wizardData.contactRole);
+        }
+        // If no clientId, check if client info was provided in the previous step
         const hasClientInfo = !!(wizardData.clientName || wizardData.clientEmail || 
                                wizardData.clientPhone || wizardData.clientUrl);
-        if (!hasClientInfo) return false;
+        if (!hasClientInfo) {
+          // If client step was skipped, allow skipping this step too
+          return true;
+        }
         return !!(wizardData.contactName || wizardData.contactEmail || wizardData.contactRole);
       case 4: // Billing
         return !!(wizardData.serviceName || wizardData.serviceDescription || 
@@ -281,6 +314,15 @@ export function OnboardingWizard({
   const isStepValid = () => {
     if (currentStep === 0) return isFirstStepValid();
     if (currentStep === 5) return isTicketingStepValid();
+    
+    // For optional steps with dependencies, check if the dependency was skipped
+    if (currentStep === 3) { // Contact step
+      // If client step was skipped (no client data), this step is valid to proceed
+      const hasClientInfo = !!(wizardData.clientName || wizardData.clientEmail || 
+                             wizardData.clientPhone || wizardData.clientUrl || wizardData.clientId);
+      if (!hasClientInfo) return true;
+    }
+    
     return hasAtLeastOneFieldFilled();
   };
 
@@ -308,8 +350,14 @@ export function OnboardingWizard({
       <WizardProgress
         steps={STEPS}
         currentStep={currentStep}
+        completedSteps={completedSteps}
         onStepClick={handleStepClick}
-        canNavigateToStep={(stepIndex) => stepIndex === 0 || isFirstStepValid()}
+        canNavigateToStep={(stepIndex) => 
+          stepIndex === 0 || 
+          stepIndex === currentStep ||  // Current step is always navigable
+          completedSteps.has(stepIndex) || 
+          (stepIndex > 0 && completedSteps.has(stepIndex - 1))
+        }
       />
 
       <div className="mt-8 mb-4">

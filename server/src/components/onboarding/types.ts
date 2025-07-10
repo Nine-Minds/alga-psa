@@ -7,6 +7,7 @@ export interface WizardData {
 
   // Team Members
   teamMembers: TeamMember[];
+  createdTeamMemberEmails?: string[]; // Track which team members have been created
 
   // Client Info
   clientName: string;

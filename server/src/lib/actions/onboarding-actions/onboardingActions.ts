@@ -135,6 +135,7 @@ export async function addTeamMembers(members: TeamMember[]): Promise<OnboardingA
     }
 
     const created: string[] = [];
+    const alreadyExists: string[] = [];
     const failed: Array<{ member: TeamMember; error: string }> = [];
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -146,7 +147,7 @@ export async function addTeamMembers(members: TeamMember[]): Promise<OnboardingA
             .first();
 
           if (existingUser) {
-            failed.push({ member, error: 'User with this email already exists' });
+            alreadyExists.push(member.email);
             continue;
           }
 
@@ -157,11 +158,13 @@ export async function addTeamMembers(members: TeamMember[]): Promise<OnboardingA
           await trx('users').insert({
             user_id: userId,
             tenant,
+            username: member.email.toLowerCase(),  // Use email as username
             first_name: member.firstName,
             last_name: member.lastName,
             email: member.email.toLowerCase(),
-            password_hash: tempPassword,
-            is_active: true,
+            hashed_password: tempPassword,  // Changed from password_hash
+            is_inactive: false,
+            user_type: 'internal',  // Added to ensure internal user type
             created_at: new Date(),
             updated_at: new Date()
           });
@@ -178,9 +181,23 @@ export async function addTeamMembers(members: TeamMember[]): Promise<OnboardingA
             await trx('user_roles').insert({
               user_id: userId,
               role_id: role.role_id,
-              tenant,
-              assigned_at: new Date()
+              tenant
             });
+          } else {
+            console.warn(`Role not found: ${member.role.toLowerCase()} for tenant ${tenant}`);
+            // Try to assign a default role
+            const defaultRole = await trx('roles')
+              .where({ tenant, msp: true })
+              .orderBy('role_name')
+              .first();
+            
+            if (defaultRole) {
+              await trx('user_roles').insert({
+                user_id: userId,
+                role_id: defaultRole.role_id,
+                tenant
+              });
+            }
           }
 
           created.push(member.email);
@@ -201,11 +218,13 @@ export async function addTeamMembers(members: TeamMember[]): Promise<OnboardingA
       });
     });
 
+
     revalidatePath('/msp/onboarding');
     return { 
       success: true, 
       data: { 
         created, 
+        alreadyExists,
         failed, 
         licenseStatus: { current: licenseStatus.current, limit: licenseStatus.limit }
       }
@@ -223,36 +242,77 @@ export async function createClient(data: ClientData): Promise<OnboardingActionRe
       return { success: false, error: 'No authenticated user found' };
     }
 
-    const companyData = {
-      company_name: data.clientName,
-      email: data.clientEmail,
-      phone_no: data.clientPhone,
-      url: data.clientUrl,
-      credit_balance: 0,
-      is_inactive: false,
-      is_tax_exempt: false,
-      billing_cycle: 'monthly' as const
-    };
+    const tenant = await getTenantForCurrentRequest();
+    if (!tenant) {
+      return { success: false, error: 'No tenant found' };
+    }
 
-    const result = await createCompany(companyData);
-    
-    if (result.success) {
+    const { knex } = await createTenantKnex();
+
+    let companyId: string | undefined;
+
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Create the company without email/phone (those go in locations)
+      const companyData = {
+        company_name: data.clientName,
+        url: data.clientUrl,
+        credit_balance: 0,
+        is_inactive: false,
+        is_tax_exempt: false,
+        billing_cycle: 'monthly' as const,
+        client_type: 'company',
+        tenant
+      };
+
+      // Use createCompany for consistency and to get all the default setup
+      const result = await createCompany(companyData);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create company');
+      }
+
+      companyId = result.data.company_id;
+
+      // Create default location with email and phone if provided
+      if (data.clientEmail || data.clientPhone) {
+        await trx('company_locations').insert({
+          location_id: require('crypto').randomUUID(),
+          company_id: companyId,
+          tenant,
+          location_name: 'Main Office',
+          email: data.clientEmail || '',
+          phone: data.clientPhone || '',
+          address_line1: '',
+          city: '',
+          country_code: 'US',
+          country_name: 'United States',
+          is_default: true,
+          is_billing_address: true,
+          is_shipping_address: true,
+          is_active: true,
+          created_at: new Date(),
+          updated_at: new Date()
+        });
+      }
+    });
+
+    if (companyId) {
       await saveTenantOnboardingProgress({
         clientName: data.clientName,
         clientEmail: data.clientEmail,
         clientPhone: data.clientPhone,
         clientUrl: data.clientUrl,
-        clientId: result.data.company_id
+        clientId: companyId
       });
 
       revalidatePath('/msp/onboarding');
       return { 
         success: true, 
-        data: { clientId: result.data.company_id }
+        data: { clientId: companyId }
       };
     }
 
-    return { success: false, error: 'error' in result ? result.error : 'Failed to create client' };
+    return { success: false, error: 'Failed to create client' };
   } catch (error) {
     console.error('Error creating client:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
