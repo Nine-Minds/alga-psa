@@ -58,8 +58,23 @@ export interface BillingData {
 export interface TicketingData {
   channelName: string;
   supportEmail: string;
-  categories: string[];
-  priorities: string[];
+  categories: (string | {
+    category_id: string;
+    category_name: string;
+    display_order?: number;
+    parent_category?: string | null;
+  })[];
+  priorities: (string | {
+    priority_id: string;
+    priority_name: string;
+    color?: string;
+    order_number?: number;
+  })[];
+  ticketPrefix?: string;
+  ticketPaddingLength?: number;
+  ticketStartNumber?: number;
+  channelId?: string;
+  statuses?: any[];
 }
 
 export async function saveCompanyInfo(data: CompanyInfoData): Promise<OnboardingActionResult> {
@@ -539,54 +554,190 @@ export async function configureTicketing(data: TicketingData): Promise<Onboardin
     };
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Create channel
-      const channelId = require('crypto').randomUUID();
-      await trx('channels').insert({
-        channel_id: channelId,
-        tenant,
-        channel_name: data.channelName,
-        email: data.supportEmail,
-        is_active: true,
-        created_at: new Date(),
-        updated_at: new Date()
-      });
+      // Configure ticket numbering if provided
+      if (data.ticketPrefix || data.ticketStartNumber || data.ticketPaddingLength) {
+        const existingNumbering = await trx('next_number')
+          .where({ tenant, entity_type: 'TICKET' })
+          .first();
+
+        if (existingNumbering) {
+          await trx('next_number')
+            .where({ tenant, entity_type: 'TICKET' })
+            .update({
+              prefix: data.ticketPrefix || 'TIC',
+              padding_length: data.ticketPaddingLength || 6,
+              ...(data.ticketStartNumber && { 
+                last_number: 0,
+                initial_value: data.ticketStartNumber 
+              })
+            });
+        } else {
+          await trx('next_number').insert({
+            tenant,
+            entity_type: 'TICKET',
+            prefix: data.ticketPrefix || 'TIC',
+            padding_length: data.ticketPaddingLength || 6,
+            last_number: 0,
+            initial_value: data.ticketStartNumber || 1000
+          });
+        }
+      }
+
+      // Create channel - use existing channelId if provided (from import)
+      const channelId = data.channelId || require('crypto').randomUUID();
+      
+      // Only create channel if we don't have an existing one
+      if (!data.channelId) {
+        await trx('channels').insert({
+          channel_id: channelId,
+          tenant,
+          channel_name: data.channelName,
+          email: data.supportEmail,
+          is_active: true,
+          created_at: new Date(),
+          updated_at: new Date()
+        });
+      }
       createdIds.channelId.push(channelId);
 
       // Create categories
-      for (const categoryName of data.categories) {
+      for (const category of data.categories) {
+        // Skip if already has a real ID (imported category)
+        if (typeof category === 'object' && category.category_id && !category.category_id.startsWith('manual-')) {
+          continue;
+        }
+        
+        const categoryName = typeof category === 'string' ? category : category.category_name;
         const categoryId = require('crypto').randomUUID();
-        await trx('ticket_categories').insert({
-          category_id: categoryId,
-          tenant,
-          category_name: categoryName,
-          channel_id: channelId,
-          created_at: new Date(),
-          updated_at: new Date()
-        });
-        createdIds.categoryIds.push(categoryId);
+        
+        // Check if category already exists
+        const existingCategory = await trx('categories')
+          .where({ 
+            tenant, 
+            category_name: categoryName,
+            channel_id: channelId
+          })
+          .first();
+          
+        if (!existingCategory) {
+          // Calculate display order to avoid duplicates
+          let displayOrder = typeof category === 'object' && category.display_order ? category.display_order : null;
+          
+          if (displayOrder !== null) {
+            // Check if this display order already exists for this channel
+            const existingWithOrder = await trx('categories')
+              .where({ 
+                tenant, 
+                channel_id: channelId,
+                display_order: displayOrder
+              })
+              .first();
+              
+            if (existingWithOrder) {
+              // Find the max display order and add 1
+              const maxOrder = await trx('categories')
+                .where({ tenant, channel_id: channelId })
+                .max('display_order as max')
+                .first();
+              displayOrder = (maxOrder?.max || 0) + 1;
+            }
+          }
+          
+          await trx('categories').insert({
+            category_id: categoryId,
+            tenant,
+            category_name: categoryName,
+            channel_id: channelId,
+            display_order: displayOrder,
+            parent_category: typeof category === 'object' ? category.parent_category : null,
+            created_by: currentUser.user_id,
+            created_at: new Date(),
+            updated_at: new Date()
+          });
+          createdIds.categoryIds.push(categoryId);
+        }
       }
 
-      // Create priorities
+      // Create statuses - only ones that don't exist
+      if (data.statuses && data.statuses.length > 0) {
+        for (const status of data.statuses) {
+          // Skip if already has a real ID (not manual-)
+          if (status.status_id && !status.status_id.startsWith('manual-')) {
+            continue;
+          }
+          
+          // Check if status already exists
+          const existingStatus = await trx('statuses')
+            .where({ 
+              tenant, 
+              name: status.name,
+              status_type: 'ticket'
+            })
+            .first();
+
+          if (!existingStatus) {
+            const statusId = require('crypto').randomUUID();
+            await trx('statuses').insert({
+              status_id: statusId,
+              tenant,
+              name: status.name,
+              is_closed: status.is_closed || false,
+              is_default: status.is_default || false,
+              order_number: status.order_number || 0,
+              item_type: 'ticket',
+              status_type: 'ticket',
+              created_at: new Date(),
+              updated_at: new Date()
+            });
+          }
+        }
+      }
+
+      // Create priorities - only manual ones, imported ones are already in DB
       for (let i = 0; i < data.priorities.length; i++) {
-        const priorityId = require('crypto').randomUUID();
-        await trx('priorities').insert({
-          priority_id: priorityId,
-          tenant,
-          priority_name: data.priorities[i],
-          color_code: ['#ff0000', '#ff8800', '#ffff00', '#00ff00'][i] || '#888888',
-          sort_order: i + 1,
-          created_at: new Date(),
-          updated_at: new Date()
-        });
-        createdIds.priorityIds.push(priorityId);
+        const priority = data.priorities[i];
+        
+        // Skip if already has a real ID (imported priority)
+        if (typeof priority === 'object' && priority.priority_id && !priority.priority_id.startsWith('manual-')) {
+          continue;
+        }
+        
+        const priorityName = typeof priority === 'string' ? priority : priority.priority_name;
+        
+        // Check if priority already exists (might have been imported)
+        const existingPriority = await trx('priorities')
+          .where({ 
+            tenant, 
+            priority_name: priorityName,
+            item_type: 'ticket'
+          })
+          .first();
+
+        if (!existingPriority) {
+          const priorityId = require('crypto').randomUUID();
+          await trx('priorities').insert({
+            priority_id: priorityId,
+            tenant,
+            priority_name: priorityName,
+            color: typeof priority === 'object' && priority.color ? priority.color : ['#ff0000', '#ff8800', '#ffff00', '#00ff00'][i] || '#888888',
+            order_number: typeof priority === 'object' && priority.order_number ? priority.order_number : (i + 1) * 10,
+            item_type: 'ticket',
+            created_by: currentUser.user_id,
+            created_at: new Date(),
+            updated_at: new Date()
+          });
+          createdIds.priorityIds.push(priorityId);
+        }
       }
 
-      // Save progress
+      // Save progress - convert categories and priorities to strings
       await saveTenantOnboardingProgress({
         channelName: data.channelName,
         supportEmail: data.supportEmail,
-        categories: data.categories,
-        priorities: data.priorities
+        categories: data.categories.map(cat => typeof cat === 'string' ? cat : cat.category_name),
+        priorities: data.priorities.map(pri => typeof pri === 'string' ? pri : pri.priority_name),
+        ticketPrefix: data.ticketPrefix,
+        ticketStartNumber: data.ticketStartNumber
       });
     });
 
@@ -695,6 +846,73 @@ export async function getOnboardingInitialData(): Promise<{
     };
   } catch (error) {
     console.error('Error getting onboarding initial data:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
+
+export async function getTenantTicketingData(): Promise<{
+  success: boolean;
+  data?: {
+    channels: any[];
+    categories: any[];
+    statuses: any[];
+    priorities: any[];
+  };
+  error?: string;
+}> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return { success: false, error: 'No authenticated user found' };
+    }
+
+    const tenant = await getTenantForCurrentRequest();
+    if (!tenant) {
+      return { success: false, error: 'No tenant found' };
+    }
+
+    const { knex } = await createTenantKnex();
+
+    const [channels, categories, statuses, priorities] = await Promise.all([
+      // Get channels
+      knex('channels')
+        .where({ tenant })
+        .orderBy('display_order', 'asc')
+        .orderBy('channel_name', 'asc'),
+
+      // Get categories
+      knex('categories')
+        .where({ tenant })
+        .orderBy('display_order', 'asc')
+        .orderBy('category_name', 'asc'),
+
+      // Get statuses
+      knex('statuses')
+        .where({ tenant, status_type: 'ticket' })
+        .orderBy('order_number', 'asc')
+        .orderBy('name', 'asc'),
+
+      // Get priorities
+      knex('priorities')
+        .where({ tenant, item_type: 'ticket' })
+        .orderBy('order_number', 'asc')
+        .orderBy('priority_name', 'asc')
+    ]);
+
+    return {
+      success: true,
+      data: {
+        channels,
+        categories,
+        statuses,
+        priorities
+      }
+    };
+  } catch (error) {
+    console.error('Error getting tenant ticketing data:', error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Unknown error' 

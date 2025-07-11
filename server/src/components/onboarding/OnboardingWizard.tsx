@@ -74,8 +74,8 @@ export function OnboardingWizard({
     // Ticketing
     channelName: '',
     supportEmail: '',
-    categories: ['Technical Support', 'Network Issue', 'Software Issue'],
-    priorities: ['Low', 'Medium', 'High', 'Critical'],
+    categories: [],
+    priorities: [],
     
     ...initialData,
   });
@@ -254,12 +254,17 @@ export function OnboardingWizard({
     setIsLoading(true);
     try {
       // Save final step (ticketing)
-      if (wizardData.channelName) {
+      if (wizardData.channelName || wizardData.channelId) {
         const ticketingResult = await configureTicketing({
           channelName: wizardData.channelName,
           supportEmail: wizardData.supportEmail,
           categories: wizardData.categories,
-          priorities: wizardData.priorities
+          priorities: wizardData.priorities,
+          ticketPrefix: wizardData.ticketPrefix,
+          ticketPaddingLength: wizardData.ticketPaddingLength,
+          ticketStartNumber: wizardData.ticketStartNumber,
+          channelId: wizardData.channelId,
+          statuses: wizardData.statuses
         });
         
         if (!ticketingResult.success) {
@@ -417,7 +422,7 @@ export function OnboardingWizard({
   if (fullPage) {
     return (
       <div className="min-h-screen bg-white">
-        <div className="mx-auto max-w-4xl px-4 py-8">
+        <div className="mx-auto max-w-5xl px-4 py-8">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Setup Your System</h1>
             <p className="mt-2 text-lg text-gray-600">Let's get your workspace configured and ready to use.</p>

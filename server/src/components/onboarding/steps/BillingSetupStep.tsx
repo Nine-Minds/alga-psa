@@ -262,8 +262,8 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="serviceDescription">Service Description</Label>
+        <div>
+          <Label htmlFor="serviceDescription" className="block mb-2">Service Description</Label>
           <TextArea
             id="serviceDescription"
             value={data.serviceDescription}
@@ -271,6 +271,7 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
             placeholder="Comprehensive IT support and management services..."
             rows={3}
             disabled={!data.serviceTypeId}
+            className="!max-w-none"
           />
         </div>
       </div>

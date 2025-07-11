@@ -33,8 +33,19 @@ export interface WizardData {
   // Ticketing
   channelName: string;
   supportEmail: string;
-  categories: string[];
-  priorities: string[];
+  categories: any[];
+  priorities: (string | {
+    priority_id: string;
+    priority_name: string;
+    color?: string;
+    order_number?: number;
+  })[];
+  ticketPrefix?: string;
+  ticketPaddingLength?: number;
+  ticketStartNumber?: number;
+  channelId?: string;
+  statusesImported?: boolean;
+  statuses?: any[];
 }
 
 export interface TeamMember {
