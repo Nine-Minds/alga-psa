@@ -610,7 +610,7 @@ export async function createClientTicket(data: FormData): Promise<ITicket> {
         company_id: contact.company_id,
         contact_name_id: user.contact_id,
         entered_by: session.user.id,
-        entered_at: new Date().toISOString(),
+        entered_at: trx.fn.now(),
         attributes: {
           description: validatedData.description
         },
