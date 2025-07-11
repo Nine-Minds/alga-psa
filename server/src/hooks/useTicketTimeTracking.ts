@@ -4,6 +4,7 @@ import { IntervalTrackingService } from '../services/IntervalTrackingService';
 /**
  * Custom hook to track time spent viewing a ticket
  * Records intervals in IndexedDB when a ticket is opened and closed
+ * Maintains continuous tracking during the entire session, even when switching tabs or windows
  */
 export function useTicketTimeTracking(
   ticketId: string,
@@ -106,11 +107,12 @@ export function useTicketTimeTracking(
     
     startTracking();
     
-    // End tracking when component unmounts
+    // Handle component unmount
     return () => {
       mounted = false;
       // We no longer close intervals on component unmount to avoid timing issues
       // Interval closing is now handled by navigation controls before route changes
+      // This ensures continuous tracking across the entire ticket session
     };
   }, [ticketId, ticketNumber, ticketTitle, userId, intervalService]);
   // Note: We don't need to include isStartingTrackingRef in the dependency array
@@ -120,21 +122,19 @@ export function useTicketTimeTracking(
   useEffect(() => {
     // Handle when user leaves the page or switches tabs
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden' && currentIntervalId && isTracking) {
-        // User has switched tabs or minimized the window
-        intervalService.endInterval(currentIntervalId).catch(error => {
-          console.error('Error ending interval on visibility change:', error);
-        });
-        setIsTracking(false);
-      } else if (document.visibilityState === 'visible' && !isTracking && ticketId) {
-        // User has returned to the tab
+      // We no longer end the interval when switching tabs or windows
+      // This ensures continuous time tracking for the entire session
+      
+      // If we're not tracking and the user returns to the tab, we should start tracking
+      if (document.visibilityState === 'visible' && !isTracking && ticketId) {
+        // User has returned to the tab and we need to start tracking
         intervalService.startInterval(ticketId, ticketNumber, ticketTitle, userId)
           .then(intervalId => {
             setCurrentIntervalId(intervalId);
             setIsTracking(true);
           })
           .catch(error => {
-            console.error('Error restarting interval on visibility change:', error);
+            console.error('Error starting interval on visibility change:', error);
           });
       }
     };
@@ -180,7 +180,9 @@ export function useTicketTimeTracking(
     };
     
     // Add event listeners
+    // visibilitychange - only used to start tracking if needed, no longer ends intervals when switching tabs
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    // beforeunload - handles saving the interval when the page is closed
     window.addEventListener('beforeunload', handleBeforeUnload);
     
     // Clean up event listeners
