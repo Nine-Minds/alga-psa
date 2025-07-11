@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { OnboardingWizard } from './OnboardingWizard';
 import { getTenantSettings, updateTenantOnboardingStatus, saveTenantOnboardingProgress } from '@/lib/actions/tenant-settings-actions/tenantSettingsActions';
+import { getOnboardingInitialData } from '@/lib/actions/onboarding-actions/onboardingActions';
 import { WizardData } from './types';
 
 interface OnboardingProviderProps {
@@ -15,6 +16,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [initialData, setInitialData] = useState<Partial<WizardData>>({});
   const [loading, setLoading] = useState(true);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
@@ -38,9 +40,28 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
         setShowOnboarding(true);
         
         // Load any saved progress
+        let data: Partial<WizardData> = {};
+        
         if (settings?.onboarding_data) {
-          setInitialData(settings.onboarding_data);
+          data = settings.onboarding_data;
         }
+        
+        // Fetch current user and company info to prefill
+        const initialDataResult = await getOnboardingInitialData();
+        
+        if (initialDataResult.success && initialDataResult.data) {
+          // Merge with any existing saved data (saved data takes precedence)
+          data = {
+            ...initialDataResult.data,
+            ...data
+          };
+        }
+        
+        setInitialData(data);
+        setDataLoaded(true);
+      } else {
+        // Even if we're not showing onboarding, mark data as loaded
+        setDataLoaded(true);
       }
     } catch (error) {
       console.error('Error checking onboarding status:', error);
@@ -84,7 +105,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
   return (
     <>
       {children}
-      {showOnboarding && (
+      {showOnboarding && dataLoaded && (
         <OnboardingWizard
           open={showOnboarding}
           onOpenChange={(open) => {

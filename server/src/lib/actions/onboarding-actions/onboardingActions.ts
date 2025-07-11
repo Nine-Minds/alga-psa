@@ -453,3 +453,45 @@ export async function completeOnboarding(): Promise<OnboardingActionResult> {
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
+
+export async function getOnboardingInitialData(): Promise<{
+  success: boolean;
+  data?: Partial<CompanyInfoData>;
+  error?: string;
+}> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return { success: false, error: 'No authenticated user found' };
+    }
+
+    const tenant = await getTenantForCurrentRequest();
+    if (!tenant) {
+      return { success: false, error: 'No tenant found' };
+    }
+
+    const { knex } = await createTenantKnex();
+
+    // Get the tenant's company information
+    const company = await knex('companies')
+      .where({ tenant, is_inactive: false })
+      .orderBy('created_at', 'asc')
+      .first();
+
+    return {
+      success: true,
+      data: {
+        firstName: currentUser.first_name || '',
+        lastName: currentUser.last_name || '',
+        email: currentUser.email || '',
+        companyName: company?.company_name || tenant // Use tenant name as fallback
+      }
+    };
+  } catch (error) {
+    console.error('Error getting onboarding initial data:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}

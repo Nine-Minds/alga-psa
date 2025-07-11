@@ -20,7 +20,9 @@
     "workflow-worker": "ts-node --esm src/bin/workflow-worker.ts",
     "workflow-worker:dev": "nodemon --watch src --ext ts --exec \"ts-node --esm src/bin/workflow-worker.ts\"",
     "workflow-worker:build": "tsc --project tsconfig.json --outDir dist src/bin/workflow-worker.ts",
-    "workflow-worker:start": "node dist/bin/workflow-worker.js"
+    "workflow-worker:start": "node dist/bin/workflow-worker.js",
+    "create-tenant": "tsx scripts/create-tenant.ts",
+    "rollback-tenant": "tsx scripts/rollback-tenant.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.3",
@@ -155,6 +157,8 @@
     "eslint-plugin-react": "^7.37.3",
     "globals": "^15.14.0",
     "null-loader": "^4.0.1",
+    "ts-command-line-args": "^2.5.1",
+    "tsx": "^4.7.0",
     "typescript-eslint": "^8.19.1",
     "vitest": "^3.0.7"
   }
