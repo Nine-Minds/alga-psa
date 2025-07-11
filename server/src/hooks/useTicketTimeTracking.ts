@@ -4,6 +4,8 @@ import { IntervalTrackingService } from '../services/IntervalTrackingService';
 /**
  * Custom hook to track time spent viewing a ticket
  * Records intervals in IndexedDB when a ticket is opened and closed
+ * Maintains continuous tracking during the entire session, even when switching tabs or windows
+ * Stops tracking when navigating away from the ticket entirely
  */
 export function useTicketTimeTracking(
   ticketId: string,
@@ -17,6 +19,9 @@ export function useTicketTimeTracking(
   
   // Ref to track if a startTracking operation is in progress to prevent race conditions
   const isStartingTrackingRef = useRef(false);
+  
+  // Ref to track if component is mounted to prevent state updates after unmount
+  const isMountedRef = useRef(true);
   
   // Start tracking when component mounts
   useEffect(() => {
@@ -106,11 +111,18 @@ export function useTicketTimeTracking(
     
     startTracking();
     
-    // End tracking when component unmounts
+    // Handle component unmount - now properly closes intervals when leaving the ticket
     return () => {
       mounted = false;
-      // We no longer close intervals on component unmount to avoid timing issues
-      // Interval closing is now handled by navigation controls before route changes
+      isMountedRef.current = false;
+      
+      // Close the current interval when the component unmounts (user navigates away from ticket)
+      if (intervalIdRef) {
+        console.debug('Closing interval on component unmount:', intervalIdRef);
+        intervalService.endInterval(intervalIdRef).catch(error => {
+          console.error('Error closing interval on unmount:', error);
+        });
+      }
     };
   }, [ticketId, ticketNumber, ticketTitle, userId, intervalService]);
   // Note: We don't need to include isStartingTrackingRef in the dependency array
@@ -118,23 +130,37 @@ export function useTicketTimeTracking(
 
   // Add event listeners for page visibility changes and beforeunload
   useEffect(() => {
-    // Handle when user leaves the page or switches tabs
+    // Handle when user switches tabs or minimizes window - but keep tracking continuously
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden' && currentIntervalId && isTracking) {
-        // User has switched tabs or minimized the window
-        intervalService.endInterval(currentIntervalId).catch(error => {
-          console.error('Error ending interval on visibility change:', error);
-        });
-        setIsTracking(false);
-      } else if (document.visibilityState === 'visible' && !isTracking && ticketId) {
-        // User has returned to the tab
-        intervalService.startInterval(ticketId, ticketNumber, ticketTitle, userId)
+      // We no longer end intervals when switching tabs or windows
+      // This ensures continuous time tracking for the entire session
+      // The interval will only be closed when the user navigates away from the ticket entirely
+      
+      if (document.visibilityState === 'visible' && !isTracking && ticketId && isMountedRef.current) {
+        // User has returned to the tab and we need to resume tracking if not already tracking
+        console.debug('Tab became visible, checking if we need to resume tracking');
+        
+        // Check if there's an existing open interval for this ticket
+        intervalService.getOpenInterval(ticketId, userId)
+          .then(existingInterval => {
+            if (existingInterval && isMountedRef.current) {
+              console.debug('Found existing interval when tab became visible, resuming tracking');
+              setCurrentIntervalId(existingInterval.id);
+              setIsTracking(true);
+            } else if (isMountedRef.current) {
+              // No existing interval, start a new one
+              console.debug('No existing interval found, starting new one on tab visibility');
+              return intervalService.startInterval(ticketId, ticketNumber, ticketTitle, userId);
+            }
+          })
           .then(intervalId => {
-            setCurrentIntervalId(intervalId);
-            setIsTracking(true);
+            if (intervalId && isMountedRef.current) {
+              setCurrentIntervalId(intervalId);
+              setIsTracking(true);
+            }
           })
           .catch(error => {
-            console.error('Error restarting interval on visibility change:', error);
+            console.error('Error handling visibility change:', error);
           });
       }
     };
@@ -190,8 +216,26 @@ export function useTicketTimeTracking(
     };
   }, [currentIntervalId, isTracking, ticketId, ticketNumber, ticketTitle, userId, intervalService]);
   
+  // Function to get current elapsed time for an open interval
+  const getCurrentElapsedTime = async (): Promise<number> => {
+    if (!currentIntervalId || !ticketId || !userId) return 0;
+    
+    try {
+      const openInterval = await intervalService.getOpenInterval(ticketId, userId);
+      if (openInterval && openInterval.startTime) {
+        const start = new Date(openInterval.startTime);
+        return Math.floor((Date.now() - start.getTime()) / 1000);
+      }
+    } catch (error) {
+      console.error('Error getting current elapsed time:', error);
+    }
+    
+    return 0;
+  };
+
   return {
     isTracking,
     currentIntervalId,
+    getCurrentElapsedTime,
   };
 }

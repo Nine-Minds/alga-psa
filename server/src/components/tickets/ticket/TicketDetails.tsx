@@ -219,33 +219,53 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     
     
     // Add automatic interval tracking using the custom hook
-    const { currentIntervalId } = useTicketTimeTracking(
+    const { currentIntervalId, isTracking: intervalIsTracking, getCurrentElapsedTime } = useTicketTimeTracking(
         initialTicket.ticket_id || '',
         initialTicket.ticket_number || '',
         initialTicket.title || '',
         userId || ''
     );
 
-    // Restore timer if an open interval exists (e.g., when opening in a new tab)
+    // Initialize and restore timer if an open interval exists
     useEffect(() => {
         if (!initialTicket.ticket_id || !userId) return;
 
-        const restoreTimer = async () => {
+        const initializeTimer = async () => {
             try {
-                const openInterval = await intervalService.getOpenInterval(initialTicket.ticket_id!, userId);
-                if (openInterval && openInterval.startTime) {
-                    const start = new Date(openInterval.startTime);
-                    const elapsed = Math.floor((Date.now() - start.getTime()) / 1000);
+                // Get the current elapsed time from the interval tracking service
+                const elapsed = await getCurrentElapsedTime();
+                if (elapsed > 0) {
                     setElapsedTime(elapsed);
                     setIsRunning(true);
+                } else {
+                    // If no active interval, reset timer
+                    setElapsedTime(0);
+                    setIsRunning(false);
                 }
             } catch (error) {
-                console.error('Error restoring timer from open interval:', error);
+                console.error('Error initializing timer:', error);
+                // Fallback to checking for open interval directly
+                try {
+                    const openInterval = await intervalService.getOpenInterval(initialTicket.ticket_id!, userId);
+                    if (openInterval && openInterval.startTime) {
+                        const start = new Date(openInterval.startTime);
+                        const elapsed = Math.floor((Date.now() - start.getTime()) / 1000);
+                        setElapsedTime(elapsed);
+                        setIsRunning(true);
+                    }
+                } catch (fallbackError) {
+                    console.error('Error in fallback timer initialization:', fallbackError);
+                }
             }
         };
 
-        restoreTimer();
-    }, [initialTicket.ticket_id, userId, intervalService]);
+        initializeTimer();
+    }, [initialTicket.ticket_id, userId, getCurrentElapsedTime, intervalService]);
+
+    // Sync local timer state with interval tracking state
+    useEffect(() => {
+        setIsRunning(intervalIsTracking);
+    }, [intervalIsTracking]);
     
     // Function to close the current interval before navigation
     // Enhanced function to close the interval - will find and close any open interval for this ticket
