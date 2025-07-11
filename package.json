@@ -21,7 +21,9 @@
     "build:shared": "cd shared && npm run build",
     "build:workflow-worker": "cd services/workflow-worker && npm run build",
     "start:workflow-worker": "cd services/workflow-worker && npm run start",
-    "dev:workflow-worker": "cd services/workflow-worker && npm run dev"
+    "dev:workflow-worker": "cd services/workflow-worker && npm run dev",
+    "create-tenant": "cd server && npm run create-tenant",
+    "rollback-tenant": "cd server && npm run rollback-tenant"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.1",
