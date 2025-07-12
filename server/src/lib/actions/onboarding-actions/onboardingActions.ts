@@ -593,9 +593,7 @@ export async function configureTicketing(data: TicketingData): Promise<Onboardin
           tenant,
           channel_name: data.channelName,
           email: data.supportEmail,
-          is_active: true,
-          created_at: new Date(),
-          updated_at: new Date()
+          is_active: true
         });
       }
       createdIds.channelId.push(channelId);
@@ -651,8 +649,7 @@ export async function configureTicketing(data: TicketingData): Promise<Onboardin
             display_order: displayOrder,
             parent_category: typeof category === 'object' ? category.parent_category : null,
             created_by: currentUser.user_id,
-            created_at: new Date(),
-            updated_at: new Date()
+            created_at: new Date()
           });
           createdIds.categoryIds.push(categoryId);
         }
@@ -686,8 +683,7 @@ export async function configureTicketing(data: TicketingData): Promise<Onboardin
               order_number: status.order_number || 0,
               item_type: 'ticket',
               status_type: 'ticket',
-              created_at: new Date(),
-              updated_at: new Date()
+              created_at: new Date()
             });
           }
         }
