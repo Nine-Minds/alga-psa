@@ -17,6 +17,7 @@ import { Alert, AlertDescription } from './ui/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
 import { ExternalLink, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
+import { createEmailProvider, updateEmailProvider } from '../lib/actions/email-actions/emailProviderActions';
 
 const microsoftProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),
@@ -96,23 +97,10 @@ export function MicrosoftProviderForm({
         }
       };
 
-      const url = isEditing ? `/api/email/providers/${provider.id}` : '/api/email/providers';
-      const method = isEditing ? 'PUT' : 'POST';
+      const result = isEditing 
+        ? await updateEmailProvider(provider.id, payload)
+        : await createEmailProvider(payload);
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to save provider');
-      }
-
-      const result = await response.json();
       onSuccess(result.provider);
 
     } catch (err: any) {

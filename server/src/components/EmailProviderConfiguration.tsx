@@ -14,6 +14,11 @@ import { Plus, Settings, Trash2, CheckCircle, Clock } from 'lucide-react';
 import { MicrosoftProviderForm } from './MicrosoftProviderForm';
 import { GmailProviderForm } from './GmailProviderForm';
 import { EmailProviderList } from './EmailProviderList';
+import { 
+  getEmailProviders, 
+  deleteEmailProvider, 
+  testEmailProviderConnection 
+} from '../lib/actions/email-actions/emailProviderActions';
 
 export interface EmailProvider {
   id: string;
@@ -59,12 +64,7 @@ export function EmailProviderConfiguration({
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`/api/email/providers?tenant=${tenant}`);
-      if (!response.ok) {
-        throw new Error('Failed to load email providers');
-      }
-      
-      const data = await response.json();
+      const data = await getEmailProviders();
       setProviders(data.providers || []);
     } catch (err: any) {
       setError(err.message);
@@ -87,13 +87,7 @@ export function EmailProviderConfiguration({
 
   const handleProviderDeleted = async (providerId: string) => {
     try {
-      const response = await fetch(`/api/email/providers/${providerId}`, {
-        method: 'DELETE'
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to delete provider');
-      }
+      await deleteEmailProvider(providerId);
       
       setProviders(prev => prev.filter(p => p.id !== providerId));
       onProviderDeleted?.(providerId);
@@ -106,15 +100,7 @@ export function EmailProviderConfiguration({
     try {
       setError(null);
       
-      const response = await fetch(`/api/email/providers/${provider.id}/test`, {
-        method: 'POST'
-      });
-      
-      if (!response.ok) {
-        throw new Error('Connection test failed');
-      }
-      
-      const result = await response.json();
+      const result = await testEmailProviderConnection(provider.id);
       
       if (result.success) {
         // Update provider status

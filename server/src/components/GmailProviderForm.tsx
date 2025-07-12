@@ -17,6 +17,7 @@ import { Alert, AlertDescription } from './ui/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
 import { ExternalLink, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
+import { createEmailProvider, updateEmailProvider, setupPubSub } from '../lib/actions/email-actions/emailProviderActions';
 
 const gmailProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),
@@ -114,23 +115,10 @@ export function GmailProviderForm({
         }
       };
 
-      const url = isEditing ? `/api/email/providers/${provider.id}` : '/api/email/providers';
-      const method = isEditing ? 'PUT' : 'POST';
+      const result = isEditing 
+        ? await updateEmailProvider(provider.id, payload)
+        : await createEmailProvider(payload);
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to save provider');
-      }
-
-      const result = await response.json();
       onSuccess(result.provider);
 
     } catch (err: any) {
@@ -205,23 +193,12 @@ export function GmailProviderForm({
 
       const formData = form.getValues();
       
-      const response = await fetch('/api/email/providers/setup-pubsub', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          projectId: formData.projectId,
-          topicName: formData.pubsubTopicName,
-          subscriptionName: formData.pubsubSubscriptionName,
-          webhookUrl: `${window.location.origin}/api/email/webhooks/google`
-        })
+      await setupPubSub({
+        projectId: formData.projectId,
+        topicName: formData.pubsubTopicName,
+        subscriptionName: formData.pubsubSubscriptionName,
+        webhookUrl: `${window.location.origin}/api/email/webhooks/google`
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to setup Pub/Sub');
-      }
 
       setPubsubStatus('success');
 
