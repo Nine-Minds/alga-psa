@@ -4,10 +4,11 @@ import React, { useState, useEffect } from 'react';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, Trash2, Users, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Users, AlertCircle, CheckCircle } from 'lucide-react';
 import { StepProps } from '../types';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { getLicenseChecker } from 'server/src/lib/licensing';
+import { getAvailableRoles } from '@/lib/actions/onboarding-actions/onboardingActions';
 
 export function TeamMembersStep({ data, updateData }: StepProps) {
   const [licenseInfo, setLicenseInfo] = useState<{
@@ -17,10 +18,46 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
     message?: string;
   } | null>(null);
   const [isLoadingLicense, setIsLoadingLicense] = useState(true);
+  const [roleOptions, setRoleOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [isLoadingRoles, setIsLoadingRoles] = useState(true);
 
   useEffect(() => {
     checkLicenseStatus();
   }, [data.teamMembers]);
+
+  useEffect(() => {
+    fetchRoles();
+  }, []);
+
+  const fetchRoles = async () => {
+    try {
+      setIsLoadingRoles(true);
+      const result = await getAvailableRoles();
+      
+      if (result.success && result.data) {
+        setRoleOptions(result.data);
+      } else {
+        // Fallback to default roles if fetch fails
+        setRoleOptions([
+          { value: 'admin', label: 'Admin' },
+          { value: 'technician', label: 'Technician' },
+          { value: 'manager', label: 'Manager' },
+          { value: 'user', label: 'User' }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error fetching roles:', error);
+      // Fallback to default roles
+      setRoleOptions([
+        { value: 'admin', label: 'Admin' },
+        { value: 'technician', label: 'Technician' },
+        { value: 'manager', label: 'Manager' },
+        { value: 'user', label: 'User' }
+      ]);
+    } finally {
+      setIsLoadingRoles(false);
+    }
+  };
 
   const checkLicenseStatus = async () => {
     try {
@@ -41,10 +78,13 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
   const addTeamMember = () => {
     if (licenseInfo && !licenseInfo.allowed) return;
     
+    // Use the first available role as default, or 'technician' if no roles loaded
+    const defaultRole = roleOptions.length > 0 ? roleOptions[0].value : 'technician';
+    
     updateData({
       teamMembers: [
         ...data.teamMembers,
-        { firstName: '', lastName: '', email: '', role: 'Technician' }
+        { firstName: '', lastName: '', email: '', role: defaultRole }
       ]
     });
   };
@@ -71,6 +111,21 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
           Add your team members to get them started. You can skip this step and add them later.
         </p>
       </div>
+
+      {/* Success Message for Created Team Members */}
+      {data.createdTeamMemberEmails && data.createdTeamMemberEmails.length > 0 && (
+        <div className="rounded-md bg-green-50 border border-green-200 p-4 flex items-center gap-3">
+          <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-green-800">
+              {data.createdTeamMemberEmails.length} team member{data.createdTeamMemberEmails.length > 1 ? 's' : ''} created successfully!
+            </p>
+            <p className="text-sm text-green-600 mt-1">
+              Created users: {data.createdTeamMemberEmails.join(', ')}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* License Status Display */}
       {!isLoadingLicense && licenseInfo && (
@@ -106,10 +161,22 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
         </div>
       )}
 
-      {data.teamMembers.map((member, index) => (
-        <div key={index} className="p-4 border rounded-lg space-y-4">
+      {data.teamMembers.map((member, index) => {
+        const isAlreadyCreated = data.createdTeamMemberEmails?.includes(member.email);
+        
+        return (
+        <div key={index} className={`p-4 border rounded-lg space-y-4 ${
+          isAlreadyCreated ? 'bg-gray-50 border-gray-300' : ''
+        }`}>
           <div className="flex justify-between items-center">
-            <h3 className="font-medium">Team Member {index + 1}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-medium">Team Member {index + 1}</h3>
+              {isAlreadyCreated && (
+                <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">
+                  Created
+                </span>
+              )}
+            </div>
             {data.teamMembers.length > 1 && (
               <Button
                 id={`remove-member-${index}`}
@@ -130,6 +197,7 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
                 value={member.firstName}
                 onChange={(e) => updateTeamMember(index, 'firstName', e.target.value)}
                 placeholder="Jane"
+                disabled={isAlreadyCreated}
               />
             </div>
 
@@ -139,6 +207,7 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
                 value={member.lastName}
                 onChange={(e) => updateTeamMember(index, 'lastName', e.target.value)}
                 placeholder="Smith"
+                disabled={isAlreadyCreated}
               />
             </div>
           </div>
@@ -151,6 +220,7 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
                 value={member.email}
                 onChange={(e) => updateTeamMember(index, 'email', e.target.value)}
                 placeholder="jane@company.com"
+                disabled={isAlreadyCreated}
               />
             </div>
 
@@ -159,17 +229,14 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
               <CustomSelect
                 value={member.role}
                 onValueChange={(value) => updateTeamMember(index, 'role', value)}
-                options={[
-                  { value: 'Admin', label: 'Admin' },
-                  { value: 'Technician', label: 'Technician' },
-                  { value: 'Manager', label: 'Manager' },
-                  { value: 'Support', label: 'Support' }
-                ]}
+                options={roleOptions}
+                disabled={isLoadingRoles || isAlreadyCreated}
               />
             </div>
           </div>
         </div>
-      ))}
+        );
+      })}
 
       <Button
         id="add-team-member"
