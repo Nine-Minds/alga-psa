@@ -18,6 +18,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { ExternalLink, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
 import { createEmailProvider, updateEmailProvider } from '../lib/actions/email-actions/emailProviderActions';
+import { getInboundTicketDefaults } from '../lib/actions/email-actions/inboundTicketDefaultsActions';
+import CustomSelect from './ui/CustomSelect';
+import type { InboundTicketDefaults } from '../types/email.types';
 
 const microsoftProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),
@@ -29,7 +32,8 @@ const microsoftProviderSchema = z.object({
   isActive: z.boolean(),
   autoProcessEmails: z.boolean(),
   folderFilters: z.string().optional(),
-  maxEmailsPerSync: z.number().min(1).max(1000)
+  maxEmailsPerSync: z.number().min(1).max(1000),
+  inboundTicketDefaultsId: z.string().optional()
 });
 
 type MicrosoftProviderFormData = z.infer<typeof microsoftProviderSchema>;
@@ -52,8 +56,27 @@ export function MicrosoftProviderForm({
   const [showClientSecret, setShowClientSecret] = useState(false);
   const [oauthStatus, setOauthStatus] = useState<'idle' | 'authorizing' | 'success' | 'error'>('idle');
   const [oauthData, setOauthData] = useState<any>(null);
+  const [ticketDefaults, setTicketDefaults] = useState<InboundTicketDefaults[]>([]);
+  const [loadingDefaults, setLoadingDefaults] = useState(true);
 
   const isEditing = !!provider;
+
+  // Load ticket defaults on mount
+  React.useEffect(() => {
+    loadTicketDefaults();
+  }, []);
+
+  const loadTicketDefaults = async () => {
+    try {
+      setLoadingDefaults(true);
+      const data = await getInboundTicketDefaults();
+      setTicketDefaults(data.defaults || []);
+    } catch (err: any) {
+      console.error('Failed to load ticket defaults:', err);
+    } finally {
+      setLoadingDefaults(false);
+    }
+  };
 
   const form = useForm<MicrosoftProviderFormData>({
     resolver: zodResolver(microsoftProviderSchema) as any,
@@ -67,12 +90,14 @@ export function MicrosoftProviderForm({
       isActive: provider.isActive,
       autoProcessEmails: provider.vendorConfig.autoProcessEmails ?? true,
       folderFilters: provider.vendorConfig.folderFilters?.join(', '),
-      maxEmailsPerSync: provider.vendorConfig.maxEmailsPerSync ?? 50
+      maxEmailsPerSync: provider.vendorConfig.maxEmailsPerSync ?? 50,
+      inboundTicketDefaultsId: provider.inboundTicketDefaultsId
     } : {
       redirectUri: `${window.location.origin}/api/auth/microsoft/callback`,
       isActive: true,
       autoProcessEmails: true,
-      maxEmailsPerSync: 50
+      maxEmailsPerSync: 50,
+      inboundTicketDefaultsId: ''
     }
   });
 
@@ -95,7 +120,8 @@ export function MicrosoftProviderForm({
           autoProcessEmails: data.autoProcessEmails,
           folderFilters: data.folderFilters ? data.folderFilters.split(',').map(f => f.trim()) : ['Inbox'],
           maxEmailsPerSync: data.maxEmailsPerSync
-        }
+        },
+        inboundTicketDefaultsId: data.inboundTicketDefaultsId || undefined
       };
 
       const result = isEditing 
@@ -386,6 +412,30 @@ export function MicrosoftProviderForm({
                 max="1000"
               />
             </div>
+          </div>
+
+          {/* Ticket Defaults Selection */}
+          <div className="space-y-2">
+            <Label htmlFor="inboundTicketDefaultsId">Ticket Defaults</Label>
+            <CustomSelect
+              id="inboundTicketDefaultsId"
+              value={form.watch('inboundTicketDefaultsId') || ''}
+              onValueChange={(value) => form.setValue('inboundTicketDefaultsId', value || undefined)}
+              options={[
+                { value: '', label: 'No defaults configured' },
+                ...ticketDefaults
+                  .filter(d => d.is_active)
+                  .map(d => ({ 
+                    value: d.id, 
+                    label: `${d.display_name} (${d.short_name})` 
+                  }))
+              ]}
+              placeholder="Select ticket defaults"
+              disabled={loadingDefaults}
+            />
+            <p className="text-xs text-muted-foreground">
+              Default values applied to tickets created from emails
+            </p>
           </div>
         </CardContent>
       </Card>
