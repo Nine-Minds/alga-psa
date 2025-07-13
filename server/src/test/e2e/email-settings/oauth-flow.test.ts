@@ -73,23 +73,39 @@ describe('Email Settings OAuth Flow Tests', () => {
     });
 
     it('should handle OAuth error scenarios', async () => {
+      console.log('\n🚫 Testing OAuth Error Handling...');
+      
+      console.log('  1️⃣ Setting up test scenario...');
       await context.emailTestFactory.createBasicEmailScenario();
+      console.log('     ✓ Test scenario created');
       
       // Test invalid authorization code
+      console.log('  2️⃣ Testing invalid authorization code scenario...');
+      console.log('     📤 Simulating OAuth callback with invalid code');
       const response = await context.simulateOAuthCallback(
         'microsoft',
         'invalid-code',
         'test-state'
       );
+      console.log(`     📥 Received response with status: ${response.status}`);
       
-      // OAuth errors typically redirect with error parameters
-      expect(response.status).toBeGreaterThanOrEqual(300);
-      expect(response.status).toBeLessThan(400);
+      // OAuth errors return 400 Bad Request for invalid authorization codes
+      console.log('  3️⃣ Verifying error response handling...');
+      expect(response.status).toBe(400);
+      console.log(`     ✓ Error response status is 400 Bad Request (${response.status})`);
+      console.log('     ✓ OAuth invalid authorization code error handled correctly');
+      
+      console.log('\n  ✅ OAuth error scenarios handled successfully!\n');
     });
 
     it('should handle Microsoft webhook validation token', async () => {
-      const validationToken = 'test-validation-token-123';
+      console.log('\n🔗 Testing Microsoft Webhook Validation...');
       
+      const validationToken = 'test-validation-token-123';
+      console.log(`  1️⃣ Preparing webhook validation request...`);
+      console.log(`     🎫 Validation token: ${validationToken}`);
+      
+      console.log('  2️⃣ Sending validation request to webhook endpoint...');
       const response = await fetch(
         `http://localhost:3000/api/email/webhooks/microsoft?validationToken=${validationToken}`,
         {
@@ -97,41 +113,72 @@ describe('Email Settings OAuth Flow Tests', () => {
           headers: { 'Content-Type': 'text/plain' }
         }
       );
+      console.log(`     📥 Received response with status: ${response.status}`);
       
       // If the endpoint exists, it should return the validation token
       // If not, we'll get a 404 which is expected for now
+      console.log('  3️⃣ Verifying webhook validation response...');
       if (response.status === 200) {
         const body = await response.text();
         expect(body).toBe(validationToken);
+        console.log(`     ✓ Webhook validation successful - returned token: ${body}`);
+        console.log('     ✓ Microsoft webhook endpoint is implemented and working');
       } else {
         expect(response.status).toBe(404); // Expected until endpoint is implemented
+        console.log(`     ⚠️ Webhook endpoint not found (status ${response.status}) - implementation pending`);
+        console.log('     ✓ 404 response handled correctly');
       }
+      
+      console.log('\n  ✅ Microsoft webhook validation test completed!\n');
     });
   });
 
   describe('Google OAuth Flow', () => {
     it('should complete OAuth flow with Pub/Sub setup', async () => {
+      console.log('\n📧 Testing Google OAuth Flow with Pub/Sub Setup...');
+      
       // 1. Create test scenario
+      console.log('  1️⃣ Creating test tenant and company...');
       const { tenant, company } = await context.emailTestFactory.createBasicEmailScenario();
+      console.log(`     ✓ Created tenant: ${tenant.tenant}`);
+      console.log(`     ✓ Created company: ${company.company_name}`);
       
       // 2. Create a Google provider
+      console.log('  2️⃣ Setting up Google OAuth provider...');
       const provider = await context.createEmailProvider({
         provider: 'google',
         mailbox: 'support@example.com',
         tenant_id: tenant.tenant,
         company_id: company.company_id
       });
+      console.log(`     ✓ Created Google provider for mailbox: ${provider.mailbox}`);
       
       // 3. Verify provider created
+      console.log('  3️⃣ Verifying Google OAuth configuration...');
+      
       expect(provider).toBeDefined();
-      expect(provider.vendor_config.accessToken).toBeTruthy();
-      expect(provider.vendor_config.refreshToken).toBeTruthy();
+      console.log('     ✓ Provider record created successfully');
+      
+      expect(provider.provider_config.accessToken).toBeTruthy();
+      console.log(`     ✓ Access token stored: ${provider.provider_config.accessToken.substring(0, 20)}...`);
+      
+      expect(provider.provider_config.refreshToken).toBeTruthy();
+      console.log(`     ✓ Refresh token stored: ${provider.provider_config.refreshToken.substring(0, 20)}...`);
+      
       expect(provider.connection_status).toBe('connected');
+      console.log(`     ✓ Connection status: ${provider.connection_status}`);
+      
       expect(provider.provider_type).toBe('google');
+      console.log(`     ✓ Provider type: ${provider.provider_type}`);
       
       // 4. In a real implementation, verify Pub/Sub topic/subscription created
-      // For now, we just verify the webhook_id exists
-      expect(provider.webhook_id).toBeTruthy();
+      // For now, we just verify the webhook notification URL exists
+      console.log('  4️⃣ Verifying Pub/Sub webhook configuration...');
+      expect(provider.webhook_notification_url).toBeTruthy();
+      console.log(`     ✓ Webhook notification URL configured: ${provider.webhook_notification_url}`);
+      console.log('     ⚠️ Note: Actual Pub/Sub topic/subscription creation will be implemented later');
+      
+      console.log('\n  ✅ Google OAuth flow with Pub/Sub setup completed successfully!\n');
     });
 
     it('should handle expired refresh token', async () => {
