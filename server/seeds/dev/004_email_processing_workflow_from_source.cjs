@@ -9,8 +9,8 @@ const EMAIL_PROCESSING_REGISTRATION_ID = '550e8400-e29b-41d4-a716-446655440001';
  * Reads the TypeScript workflow file and converts it to database-compatible code
  */
 function loadWorkflowCodeFromSource() {
-  // Use the shared workflow actions approach now that we've fixed the ticket creation
-  // to use the proper TicketModel with stored procedure number generation
+  // Enhanced workflow using shared actions with TicketModel, events, and analytics
+  // This now uses the consolidated business logic from Phase 1-3 of the consolidation plan
   const dbWorkflowCode = `async function execute(context) {
   const { actions, data, setState } = context;
   
@@ -68,7 +68,7 @@ function loadWorkflowCodeFromSource() {
       inReplyTo: emailData.inReplyTo,
       references: emailData.references,
       originalMessageId: emailData.inReplyTo
-    });
+    }, tenant);
     
     if (existingTicket && existingTicket.success && existingTicket.ticket) {
       // This is a reply to an existing ticket - add as comment
@@ -91,7 +91,7 @@ function loadWorkflowCodeFromSource() {
           isReply: true,
           replyToMessageId: emailData.inReplyTo
         }
-      });
+      }, tenant);
       
       setState('EMAIL_PROCESSED');
       console.log('Email reply processed successfully');
@@ -114,7 +114,7 @@ function loadWorkflowCodeFromSource() {
         references: emailData.references,
         providerId: providerId
       }
-    });
+    }, tenant);
     
     console.log('Ticket created with ID: ' + ticketResult.ticket_id);
     data.set('ticketId', ticketResult.ticket_id);
@@ -135,7 +135,7 @@ function loadWorkflowCodeFromSource() {
         emailSubject: emailData.subject,
         emailReceivedAt: emailData.receivedAt
       }
-    });
+    }, tenant);
     
     setState('EMAIL_PROCESSED');
     console.log('Email processing completed successfully');
