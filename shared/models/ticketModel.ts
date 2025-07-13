@@ -198,6 +198,125 @@ export interface CreateCommentOutput {
 }
 
 // =============================================================================
+// DEPENDENCY INJECTION INTERFACES
+// =============================================================================
+
+/**
+ * Interface for event publishing using dependency injection pattern
+ * This allows different contexts (server actions, workflows) to provide their own event publishers
+ */
+export interface IEventPublisher {
+  publishTicketCreated(data: {
+    tenantId: string;
+    ticketId: string;
+    userId?: string;
+    metadata?: Record<string, any>;
+  }): Promise<void>;
+
+  publishTicketUpdated(data: {
+    tenantId: string;
+    ticketId: string;
+    userId?: string;
+    changes: Record<string, any>;
+    metadata?: Record<string, any>;
+  }): Promise<void>;
+
+  publishTicketClosed(data: {
+    tenantId: string;
+    ticketId: string;
+    userId?: string;
+    metadata?: Record<string, any>;
+  }): Promise<void>;
+
+  publishCommentCreated(data: {
+    tenantId: string;
+    ticketId: string;
+    commentId: string;
+    userId?: string;
+    metadata?: Record<string, any>;
+  }): Promise<void>;
+}
+
+/**
+ * Interface for analytics tracking using dependency injection pattern
+ * This allows different contexts to provide their own analytics implementations
+ */
+export interface IAnalyticsTracker {
+  trackTicketCreated(data: {
+    ticket_type: string;
+    priority_id?: string;
+    has_description: boolean;
+    has_category: boolean;
+    has_subcategory: boolean;
+    is_assigned: boolean;
+    channel_id?: string;
+    created_via: string;
+    has_asset?: boolean;
+    metadata?: Record<string, any>;
+  }, userId?: string): Promise<void>;
+
+  trackTicketUpdated(data: {
+    ticket_id: string;
+    changes: string[];
+    updated_via: string;
+    metadata?: Record<string, any>;
+  }, userId?: string): Promise<void>;
+
+  trackCommentCreated(data: {
+    ticket_id: string;
+    is_internal: boolean;
+    is_resolution: boolean;
+    author_type: string;
+    created_via: string;
+    metadata?: Record<string, any>;
+  }, userId?: string): Promise<void>;
+
+  trackFeatureUsage(feature: string, userId?: string, metadata?: Record<string, any>): Promise<void>;
+}
+
+// =============================================================================
+// RETRY LOGIC FOR DEADLOCK HANDLING
+// =============================================================================
+
+/**
+ * Retry function for handling database deadlocks
+ * This matches the pattern used in server actions
+ */
+export async function withRetry<T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 3,
+  delayMs: number = 100
+): Promise<T> {
+  let lastError: Error | undefined;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error as Error;
+      
+      // Check if it's a deadlock error
+      const isDeadlock = lastError.message.includes('deadlock') || 
+                        lastError.message.includes('Deadlock') ||
+                        (lastError as any).code === 'ER_LOCK_DEADLOCK' ||
+                        (lastError as any).code === '40P01'; // PostgreSQL deadlock code
+      
+      if (!isDeadlock || attempt === maxRetries - 1) {
+        throw lastError;
+      }
+      
+      // Wait before retrying with exponential backoff
+      const delay = delayMs * Math.pow(2, attempt);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      
+      console.warn(`Retrying operation due to deadlock, attempt ${attempt + 1}/${maxRetries}`);
+    }
+  }
+  
+  throw lastError || new Error('Retry operation failed');
+}
+
+// =============================================================================
 // VALIDATION HELPER FUNCTIONS
 // =============================================================================
 
@@ -423,13 +542,35 @@ export class TicketModel {
   }
 
   /**
+   * Create a new ticket with retry logic for deadlock handling
+   */
+  static async createTicketWithRetry(
+    input: CreateTicketInput,
+    tenant: string,
+    trx: Knex.Transaction,
+    validationOptions: ValidationOptions = {},
+    eventPublisher?: IEventPublisher,
+    analyticsTracker?: IAnalyticsTracker,
+    userId?: string,
+    maxRetries: number = 3
+  ): Promise<CreateTicketOutput> {
+    return withRetry(
+      () => this.createTicket(input, tenant, trx, validationOptions, eventPublisher, analyticsTracker, userId),
+      maxRetries
+    );
+  }
+
+  /**
    * Create a new ticket with complete validation and business rule checking
    */
   static async createTicket(
     input: CreateTicketInput,
     tenant: string,
     trx: Knex.Transaction,
-    validationOptions: ValidationOptions = {}
+    validationOptions: ValidationOptions = {},
+    eventPublisher?: IEventPublisher,
+    analyticsTracker?: IAnalyticsTracker,
+    userId?: string
   ): Promise<CreateTicketOutput> {
     // Validate required tenant
     if (!tenant) {
@@ -505,6 +646,52 @@ export class TicketModel {
     // Insert the ticket
     await trx('tickets').insert(completeValidation);
 
+    // Publish event if publisher provided
+    if (eventPublisher) {
+      try {
+        await eventPublisher.publishTicketCreated({
+          tenantId: tenant,
+          ticketId: ticketId,
+          userId: userId,
+          metadata: {
+            source: cleanedInput.source,
+            channel_id: cleanedInput.channel_id,
+            priority_id: cleanedInput.priority_id,
+            company_id: cleanedInput.company_id
+          }
+        });
+      } catch (error) {
+        console.error('Failed to publish ticket created event:', error);
+        // Don't throw - event publishing failure shouldn't break ticket creation
+      }
+    }
+
+    // Track analytics if tracker provided
+    if (analyticsTracker) {
+      try {
+        await analyticsTracker.trackTicketCreated({
+          ticket_type: cleanedInput.source === 'email' ? 'from_email' : 'manual',
+          priority_id: cleanedInput.priority_id,
+          has_description: !!cleanedInput.description,
+          has_category: !!cleanedInput.category_id,
+          has_subcategory: !!cleanedInput.subcategory_id,
+          is_assigned: !!cleanedInput.assigned_to,
+          channel_id: cleanedInput.channel_id,
+          created_via: cleanedInput.source || 'unknown',
+          has_asset: false
+        }, userId);
+
+        await analyticsTracker.trackFeatureUsage('ticket_creation', userId, {
+          ticket_source: cleanedInput.source || 'manual',
+          used_template: false,
+          automation_triggered: !!cleanedInput.email_metadata
+        });
+      } catch (error) {
+        console.error('Failed to track ticket creation analytics:', error);
+        // Don't throw - analytics failure shouldn't break ticket creation
+      }
+    }
+
     return {
       ticket_id: ticketId,
       ticket_number: ticketNumber,
@@ -526,7 +713,9 @@ export class TicketModel {
     input: CreateTicketFromAssetInput,
     enteredBy: string,
     tenant: string,
-    trx: Knex.Transaction
+    trx: Knex.Transaction,
+    eventPublisher?: IEventPublisher,
+    analyticsTracker?: IAnalyticsTracker
   ): Promise<CreateTicketOutput> {
     // Validate input data
     const validation = this.validateCreateTicketFromAssetData(input);
@@ -555,7 +744,25 @@ export class TicketModel {
       }
     };
 
-    return this.createTicket(createTicketInput, tenant, trx);
+    // Track asset-specific analytics if tracker provided
+    if (analyticsTracker) {
+      try {
+        await analyticsTracker.trackTicketCreated({
+          ticket_type: 'from_asset',
+          priority_id: validatedData.priority_id,
+          has_description: !!validatedData.description,
+          has_category: false,
+          has_subcategory: false,
+          is_assigned: false,
+          created_via: 'asset_page',
+          has_asset: true
+        }, enteredBy);
+      } catch (error) {
+        console.error('Failed to track asset ticket analytics:', error);
+      }
+    }
+
+    return this.createTicket(createTicketInput, tenant, trx, {}, eventPublisher, analyticsTracker, enteredBy);
   }
 
   /**
@@ -566,7 +773,10 @@ export class TicketModel {
     input: UpdateTicketInput,
     tenant: string,
     trx: Knex.Transaction,
-    validationOptions: ValidationOptions = {}
+    validationOptions: ValidationOptions = {},
+    eventPublisher?: IEventPublisher,
+    analyticsTracker?: IAnalyticsTracker,
+    userId?: string
   ): Promise<any> {
     // Validate required parameters
     if (!ticketId) {
@@ -639,6 +849,41 @@ export class TicketModel {
 
     if (!updatedTicket) {
       throw new Error('Ticket not found or update failed');
+    }
+
+    // Publish update event if publisher provided
+    if (eventPublisher) {
+      try {
+        await eventPublisher.publishTicketUpdated({
+          tenantId: tenant,
+          ticketId: ticketId,
+          userId: userId,
+          changes: updateData,
+          metadata: {
+            updated_fields: Object.keys(updateData)
+          }
+        });
+      } catch (error) {
+        console.error('Failed to publish ticket updated event:', error);
+      }
+    }
+
+    // Track analytics if tracker provided
+    if (analyticsTracker) {
+      try {
+        await analyticsTracker.trackTicketUpdated({
+          ticket_id: ticketId,
+          changes: Object.keys(updateData),
+          updated_via: 'manual',
+          metadata: {
+            is_assignment_change: 'assigned_to' in updateData,
+            is_status_change: 'status_id' in updateData,
+            is_priority_change: 'priority_id' in updateData
+          }
+        }, userId);
+      } catch (error) {
+        console.error('Failed to track ticket update analytics:', error);
+      }
     }
 
     return updatedTicket;
@@ -755,7 +1000,10 @@ export class TicketModel {
   static async createComment(
     input: CreateCommentInput,
     tenant: string,
-    trx: Knex.Transaction
+    trx: Knex.Transaction,
+    eventPublisher?: IEventPublisher,
+    analyticsTracker?: IAnalyticsTracker,
+    userId?: string
   ): Promise<CreateCommentOutput> {
     // Validate required tenant
     if (!tenant) {
@@ -800,6 +1048,40 @@ export class TicketModel {
     };
 
     await trx('comments').insert(commentData);
+
+    // Publish comment event if publisher provided
+    if (eventPublisher) {
+      try {
+        await eventPublisher.publishCommentCreated({
+          tenantId: tenant,
+          ticketId: validatedData.ticket_id,
+          commentId: commentId,
+          userId: userId,
+          metadata: {
+            author_type: validatedData.author_type || 'system',
+            is_internal: validatedData.is_internal,
+            is_resolution: validatedData.is_resolution
+          }
+        });
+      } catch (error) {
+        console.error('Failed to publish comment created event:', error);
+      }
+    }
+
+    // Track analytics if tracker provided
+    if (analyticsTracker) {
+      try {
+        await analyticsTracker.trackCommentCreated({
+          ticket_id: validatedData.ticket_id,
+          is_internal: validatedData.is_internal || false,
+          is_resolution: validatedData.is_resolution || false,
+          author_type: validatedData.author_type || 'system',
+          created_via: 'manual'
+        }, userId);
+      } catch (error) {
+        console.error('Failed to track comment creation analytics:', error);
+      }
+    }
 
     return {
       comment_id: commentId,

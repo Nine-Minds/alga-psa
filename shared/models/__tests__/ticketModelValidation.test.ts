@@ -57,7 +57,7 @@ describe('TicketModel Validation Logic', () => {
         company_id: '123e4567-e89b-12d3-a456-426614174001',
       };
 
-      expect(() => validateData(ticketFormSchema, invalidData)).toThrow('Title is required');
+      expect(() => validateData(ticketFormSchema, invalidData)).toThrow('title: Required');
     });
   });
 
@@ -237,7 +237,7 @@ describe('TicketModel Validation Logic', () => {
       const result = TicketModel.validateUpdateTicketData(data);
       
       expect(result.valid).toBe(false);
-      expect(result.errors?.[0]).toContain('Priority ID must be a valid UUID');
+      expect(result.errors?.[0]).toContain('priority_id: Invalid uuid');
     });
   });
 
