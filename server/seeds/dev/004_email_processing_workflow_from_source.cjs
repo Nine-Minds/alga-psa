@@ -102,10 +102,23 @@ function loadWorkflowCodeFromSource() {
     setState('CREATING_TICKET');
     console.log('Creating new ticket from email');
     
+    // Resolve ticket defaults from email provider configuration
+    const ticketDefaults = await actions.resolve_email_provider_defaults(providerId, tenant);
+    console.log('Retrieved ticket defaults:', JSON.stringify(ticketDefaults));
+    
     const ticketResult = await actions.create_ticket_from_email({
       title: emailData.subject || 'Email ticket',
       description: emailData.body.text || 'Email content',
       source: 'email',
+      // Apply defaults from provider configuration
+      channel_id: ticketDefaults?.channel_id,
+      status_id: ticketDefaults?.status_id,
+      priority_id: ticketDefaults?.priority_id,
+      company_id: ticketDefaults?.company_id,
+      category_id: ticketDefaults?.category_id,
+      subcategory_id: ticketDefaults?.subcategory_id,
+      location_id: ticketDefaults?.location_id,
+      entered_by: ticketDefaults?.entered_by,
       email_metadata: {
         messageId: emailData.id,
         threadId: emailData.threadId,
