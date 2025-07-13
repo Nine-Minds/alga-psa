@@ -1,0 +1,319 @@
+
+# Test-specific environment variables
+x-test-environment: &test-environment
+  # ---- APP -------
+  VERSION: ${VERSION}
+  APP_NAME: ${APP_NAME:-sebastian}
+  APP_ENV: test
+  NODE_ENV: test
+  HOST: ${HOST}
+  VERIFY_EMAIL_ENABLED: ${VERIFY_EMAIL_ENABLED:-false}
+  EDITION: ${EDITION:-community}
+
+  # ---- REDIS ----
+  REDIS_HOST: redis-test
+  REDIS_PORT: 6379
+
+  # ---- DATABASE ----
+  DB_TYPE: ${DB_TYPE:-postgres}
+  DB_HOST: postgres-test
+  DB_PORT: 5432
+  DB_NAME: server_test
+  DB_NAME_HOCUSPOCUS: ${DB_NAME_HOCUSPOCUS:-server_test}
+  DB_USER_HOCUSPOCUS: ${DB_USER_HOCUSPOCUS:-app_user}
+  DB_NAME_SERVER: server_test
+  DB_USER_SERVER: app_user
+  DB_USER_ADMIN: ${DB_USER_ADMIN:-postgres}
+  POSTGRES_USER: postgres
+
+  # ---- LOGGING ----
+  LOG_LEVEL: debug
+  LOG_IS_FORMAT_JSON: false
+  LOG_IS_FULL_DETAILS: true
+  LOG_ENABLED_FILE_LOGGING: ""
+  LOG_DIR_PATH: ""
+  LOG_ENABLED_EXTERNAL_LOGGING: ""
+  LOG_EXTERNAL_HTTP_HOST: ""
+  LOG_EXTERNAL_HTTP_PORT: ""
+  LOG_EXTERNAL_HTTP_PATH: ""
+  LOG_EXTERNAL_HTTP_LEVEL: ""
+  LOG_EXTERNAL_HTTP_TOKEN: ""
+
+  # ---- HOCUSPOCUS ----
+  HOCUSPOCUS_PORT: ""
+  HOCUSPOCUS_URL: ""
+  REQUIRE_HOCUSPOCUS: false
+
+  # ---- EMAIL ----
+  EMAIL_ENABLE: true
+  EMAIL_FROM: test@example.com
+  EMAIL_HOST: mailhog
+  EMAIL_PORT: 1025
+  EMAIL_USERNAME: test@example.com
+
+  # ---- CRYPTO ----
+  CRYPTO_SALT_BYTES: ${SALT_BYTES}
+  CRYPTO_ITERATION: ${ITERATION}
+  CRYPTO_KEY_LENGTH: ${KEY_LENGTH}
+  CRYPTO_ALGORITHM: ${ALGORITHM}
+
+  # ---- TOKEN ----
+  TOKEN_EXPIRES: ${TOKEN_EXPIRES}
+
+  # ---- AUTH ----
+  NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+  NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
+
+  # ---- DEPLOY INFO  ----
+  PROJECT_NAME: ${PROJECT_NAME:-alga-psa-e2e}
+  EXPOSE_DB_PORT: 5433
+  EXPOSE_HOCUSPOCUS_PORT: 1234
+  EXPOSE_REDIS_PORT: 6380
+  EXPOSE_SERVER_PORT: 3001
+
+
+  # ---- TEST-SPECIFIC ----
+  WEBHOOK_BASE_URL: http://webhook-mock:8080
+
+# Use same secrets as main compose
+secrets:
+  db_password_server:
+    file: ./secrets/db_password_server
+  db_password_hocuspocus:
+    file: ./secrets/db_password_hocuspocus
+  postgres_password:
+    file: ./secrets/postgres_password
+  redis_password:
+    file: ./secrets/redis_password
+  email_password:
+    file: ./secrets/email_password
+  crypto_key:
+    file: ./secrets/crypto_key
+  token_secret_key:
+    file: ./secrets/token_secret_key
+  nextauth_secret:
+    file: ./secrets/nextauth_secret
+  google_oauth_client_id:
+    file: ./secrets/google_oauth_client_id
+  google_oauth_client_secret:
+    file: ./secrets/google_oauth_client_secret
+  alga_auth_key:
+    file: ./secrets/alga_auth_key
+
+services:
+  # Test-specific PostgreSQL instance
+  postgres-test:
+    image: ankane/pgvector:latest
+    container_name: ${APP_NAME:-sebastian}_postgres_test
+    networks:
+      - app-network
+    environment:
+      <<: *test-environment
+      POSTGRES_DB: server_test
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d server_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Test-specific Redis instance
+  redis-test:
+    build:
+      context: .
+      dockerfile: redis/Dockerfile
+    container_name: ${APP_NAME:-sebastian}_redis_test
+    networks:
+      - app-network
+    environment:
+      <<: *test-environment
+    secrets:
+      - redis_password
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Test-specific pgbouncer
+  pgbouncer-test:
+    extends:
+      file: ./pgbouncer/docker-compose.yaml
+      service: pgbouncer
+    container_name: ${APP_NAME:-sebastian}_pgbouncer_test
+    environment:
+      <<: *test-environment
+      DB_HOST: postgres-test
+      PGBOUNCER_HOST: pgbouncer-test
+      PGBOUNCER_PORT: 6432
+    secrets:
+      - postgres_password
+      - db_password_server
+    networks:
+      - app-network
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    ports:
+      - "6433:6432"
+
+  # Test setup service
+  setup-test:
+    build:
+      context: .
+      dockerfile: setup/Dockerfile
+    container_name: ${APP_NAME:-sebastian}_setup_test
+    networks:
+      - app-network
+    environment:
+      <<: *test-environment
+      DB_HOST: postgres-test
+      DB_PORT: 5432
+      NODE_OPTIONS: --experimental-vm-modules
+    volumes:
+      - type: bind
+        source: ./secrets/postgres_password
+        target: /run/secrets/postgres_password
+        read_only: true
+      - type: bind
+        source: ./secrets/db_password_server
+        target: /run/secrets/db_password_server
+        read_only: true
+    secrets:
+      - postgres_password
+      - db_password_server
+    entrypoint: ["/app/setup/entrypoint.sh"]
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+
+  # Main server for testing
+  server-test:
+    extends:
+      file: ./server/docker-compose.yaml
+      service: server
+    container_name: ${APP_NAME:-sebastian}_server_test
+    networks:
+      - app-network
+    environment:
+      <<: *test-environment
+      DB_HOST: pgbouncer-test
+      DB_PORT: 6432
+    volumes:
+      - type: bind
+        source: ./secrets/db_password_server
+        target: /run/secrets/db_password_server
+        read_only: true
+    entrypoint: ["/bin/sh", "-c", "export DATABASE_URL=postgresql://app_user:$$(cat /run/secrets/db_password_server)@pgbouncer-test:6432/server_test && /app/entrypoint.sh"]
+    secrets:
+      - postgres_password
+      - db_password_server
+      - db_password_hocuspocus
+      - redis_password
+      - email_password
+      - crypto_key
+      - token_secret_key
+      - nextauth_secret
+      - google_oauth_client_id
+      - google_oauth_client_secret
+      - alga_auth_key
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      pgbouncer-test:
+        condition: service_started
+      redis-test:
+        condition: service_healthy
+      setup-test:
+        condition: service_completed_successfully
+    ports:
+      - "3001:3000"
+
+  # Workflow Worker Service
+  workflow-worker:
+    build:
+      context: .
+      dockerfile: services/workflow-worker/Dockerfile
+    container_name: ${APP_NAME:-sebastian}_workflow_worker_test
+    environment:
+      <<: *test-environment
+      DB_HOST: pgbouncer-test
+      DB_PORT: 6432
+      WORKER_COUNT: 2
+      POLL_INTERVAL_MS: 500
+      BATCH_SIZE: 5
+      MAX_RETRIES: 3
+      CONCURRENCY_LIMIT: 3
+      HEALTH_CHECK_INTERVAL_MS: 10000
+      METRICS_REPORTING_INTERVAL_MS: 30000
+    networks:
+      - app-network
+    volumes:
+      - type: bind
+        source: ./secrets/db_password_server
+        target: /run/secrets/db_password_server
+        read_only: true
+    secrets:
+      - db_password_server
+      - redis_password
+      - crypto_key
+      - token_secret_key
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+      pgbouncer-test:
+        condition: service_started
+      setup-test:
+        condition: service_completed_successfully
+    ports:
+      - "4001:4000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/api/health/worker"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MailHog for email testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: ${APP_NAME:-sebastian}_mailhog_test
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8025"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # WireMock for webhook mocking
+  webhook-mock:
+    image: wiremock/wiremock:latest
+    container_name: ${APP_NAME:-sebastian}_webhook_mock_test
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./test-config/wiremock:/home/wiremock
+    networks:
+      - app-network
+    command: ["--global-response-templating", "--verbose"]
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/__admin/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  app-network:
+    name: ${APP_NAME:-sebastian}_app-network-test
+    driver: bridge

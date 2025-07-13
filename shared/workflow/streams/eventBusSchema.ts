@@ -22,6 +22,7 @@ export const EventTypeEnum = z.enum([
   'INVOICE_UPDATED', // QBO Invoice Updated
   'COMPANY_CREATED', // QBO Company Created
   'COMPANY_UPDATED', // QBO Company Updated
+  'INBOUND_EMAIL_RECEIVED', // Inbound email processing
 ]);
 
 export type EventType = z.infer<typeof EventTypeEnum>;
@@ -110,6 +111,37 @@ export const CustomEventPayloadSchema = BasePayloadSchema.extend({
   eventName: z.string().optional(),
 }).catchall(z.unknown()); // Allow any additional properties
 
+// Inbound email event payload schema
+export const InboundEmailEventPayloadSchema = BasePayloadSchema.extend({
+  providerId: z.string(),
+  emailData: z.object({
+    id: z.string(),
+    subject: z.string(),
+    from: z.object({
+      email: z.string().email(),
+      name: z.string().optional(),
+    }),
+    to: z.array(z.object({
+      email: z.string().email(),
+      name: z.string().optional(),
+    })),
+    body: z.object({
+      text: z.string(),
+      html: z.string().optional(),
+    }),
+    receivedAt: z.string().datetime(),
+    attachments: z.array(z.object({
+      id: z.string(),
+      name: z.string(),
+      contentType: z.string(),
+      size: z.number(),
+    })).optional(),
+    threadId: z.string().optional(),
+    inReplyTo: z.string().optional(),
+    references: z.array(z.string()).optional(),
+  }),
+});
+
 // Map event types to their payload schemas
 export const EventPayloadSchemas = {
   TICKET_CREATED: TicketEventPayloadSchema,
@@ -132,6 +164,7 @@ export const EventPayloadSchemas = {
   INVOICE_UPDATED: InvoiceEventPayloadSchema, // Use Invoice schema for QBO invoice events
   COMPANY_CREATED: CompanyEventPayloadSchema, // Use new Company schema
   COMPANY_UPDATED: CompanyEventPayloadSchema, // Use new Company schema
+  INBOUND_EMAIL_RECEIVED: InboundEmailEventPayloadSchema, // Inbound email processing
 } as const;
 
 // Create specific event schemas by extending base schema with payload
@@ -164,6 +197,7 @@ export type TicketCommentAddedEvent = z.infer<typeof EventSchemas.TICKET_COMMENT
 export type ProjectAssignedEvent = z.infer<typeof EventSchemas.PROJECT_ASSIGNED>;
 export type ProjectTaskAssignedEvent = z.infer<typeof EventSchemas.PROJECT_TASK_ASSIGNED>;
 export type CustomEvent = z.infer<typeof EventSchemas.CUSTOM_EVENT>;
+export type InboundEmailReceivedEvent = z.infer<typeof EventSchemas.INBOUND_EMAIL_RECEIVED>;
 
 export type Event =
   | TicketCreatedEvent
@@ -182,6 +216,7 @@ export type Event =
   | InvoiceFinalizedEvent
   | TicketDeletedEvent
   | CustomEvent
+  | InboundEmailReceivedEvent
   | z.infer<typeof EventSchemas.INVOICE_CREATED> // QBO Invoice Created
   | z.infer<typeof EventSchemas.INVOICE_UPDATED> // QBO Invoice Updated
   | z.infer<typeof EventSchemas.COMPANY_CREATED> // QBO Company Created
