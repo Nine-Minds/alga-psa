@@ -51,6 +51,7 @@ export function MicrosoftProviderForm({
   const [error, setError] = useState<string | null>(null);
   const [showClientSecret, setShowClientSecret] = useState(false);
   const [oauthStatus, setOauthStatus] = useState<'idle' | 'authorizing' | 'success' | 'error'>('idle');
+  const [oauthData, setOauthData] = useState<any>(null);
 
   const isEditing = !!provider;
 
@@ -116,44 +117,69 @@ export function MicrosoftProviderForm({
       setError(null);
 
       const formData = form.getValues();
-      
-      // Construct OAuth URL
-      const authUrl = new URL('https://login.microsoftonline.com/common/oauth2/v2.0/authorize');
-      authUrl.searchParams.set('client_id', formData.clientId);
-      authUrl.searchParams.set('response_type', 'code');
-      authUrl.searchParams.set('redirect_uri', formData.redirectUri);
-      authUrl.searchParams.set('scope', 'https://graph.microsoft.com/Mail.Read offline_access');
-      authUrl.searchParams.set('state', btoa(JSON.stringify({ tenant, mailbox: formData.mailbox })));
 
-      // Open OAuth window
+      // Get OAuth URL from API
+      const response = await fetch('/api/email/oauth/initiate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          provider: 'microsoft',
+          redirectUri: formData.redirectUri,
+          providerId: provider?.id
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to initiate OAuth');
+      }
+
+      const { authUrl } = await response.json();
+
+      // Open OAuth popup
       const popup = window.open(
-        authUrl.toString(),
+        authUrl,
         'microsoft-oauth',
         'width=600,height=700,scrollbars=yes,resizable=yes'
       );
 
-      // Listen for OAuth completion
+      if (!popup) {
+        throw new Error('Failed to open OAuth popup. Please allow popups for this site.');
+      }
+
+      // Monitor popup for completion
       const checkClosed = setInterval(() => {
-        if (popup?.closed) {
+        if (popup.closed) {
           clearInterval(checkClosed);
-          setOauthStatus('idle');
+          if (oauthStatus === 'authorizing') {
+            setOauthStatus('idle');
+          }
         }
       }, 1000);
 
-      // Listen for success message from popup
+      // Listen for OAuth callback
       const messageHandler = (event: MessageEvent) => {
-        if (event.origin !== window.location.origin) return;
-        
-        if (event.data.type === 'MICROSOFT_OAUTH_SUCCESS') {
+        // Validate message is from our callback
+        if (event.data.type === 'oauth-callback' && event.data.provider === 'microsoft') {
           clearInterval(checkClosed);
           popup?.close();
-          setOauthStatus('success');
-          window.removeEventListener('message', messageHandler);
-        } else if (event.data.type === 'MICROSOFT_OAUTH_ERROR') {
-          clearInterval(checkClosed);
-          popup?.close();
-          setOauthStatus('error');
-          setError(event.data.error);
+          
+          if (event.data.success) {
+            // Store the authorization code and tokens
+            form.setValue('authorizationCode', event.data.data.code);
+            form.setValue('oauthState', event.data.data.state);
+            
+            // Store tokens for the submit
+            setOauthData(event.data.data);
+            
+            setOauthStatus('success');
+          } else {
+            setOauthStatus('error');
+            setError(event.data.errorDescription || event.data.error || 'Authorization failed');
+          }
+          
           window.removeEventListener('message', messageHandler);
         }
       };

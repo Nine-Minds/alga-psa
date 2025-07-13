@@ -7,6 +7,8 @@ import { EmailProviderService } from './EmailProviderService';
 import { EmailProviderConfig } from '../../interfaces/email.interfaces';
 import { MicrosoftGraphAdapter } from './providers/MicrosoftGraphAdapter';
 import { GmailAdapter } from './providers/GmailAdapter';
+import { getSecretProviderInstance } from '@shared/core';
+import axios from 'axios';
 
 export interface AutoWiringResult {
   success: boolean;
@@ -266,15 +268,44 @@ export class EmailProviderAutoWiring {
     refreshToken: string;
     expiresAt: Date;
   }> {
-    // TODO: Implement actual Microsoft token exchange
-    console.log(`[MOCK] Exchanging Microsoft auth code for tokens`);
-    
-    // Mock token exchange
-    return {
-      accessToken: `mock_microsoft_access_token_${Date.now()}`,
-      refreshToken: `mock_microsoft_refresh_token_${Date.now()}`,
-      expiresAt: new Date(Date.now() + 3600 * 1000) // 1 hour from now
-    };
+    try {
+      // Get OAuth client credentials
+      const secretProvider = getSecretProviderInstance();
+      const clientId = process.env.MICROSOFT_CLIENT_ID || await secretProvider.getSecret('microsoft_client_id');
+      const clientSecret = process.env.MICROSOFT_CLIENT_SECRET || await secretProvider.getSecret('microsoft_client_secret');
+      
+      if (!clientId || !clientSecret) {
+        throw new Error('Microsoft OAuth credentials not configured');
+      }
+
+      // Exchange authorization code for tokens
+      const tokenUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
+      const params = new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code: config.authorizationCode,
+        grant_type: 'authorization_code',
+        redirect_uri: config.redirectUri,
+        scope: 'https://graph.microsoft.com/.default offline_access'
+      });
+
+      const response = await axios.post(tokenUrl, params.toString(), {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      });
+
+      const { access_token, refresh_token, expires_in } = response.data;
+
+      return {
+        accessToken: access_token,
+        refreshToken: refresh_token,
+        expiresAt: new Date(Date.now() + expires_in * 1000)
+      };
+    } catch (error: any) {
+      console.error('Failed to exchange Microsoft authorization code:', error.response?.data || error.message);
+      throw new Error(`Microsoft token exchange failed: ${error.response?.data?.error_description || error.message}`);
+    }
   }
 
   /**
@@ -285,15 +316,45 @@ export class EmailProviderAutoWiring {
     refreshToken: string;
     expiresAt: Date;
   }> {
-    // TODO: Implement actual Google token exchange
-    console.log(`[MOCK] Exchanging Google auth code for tokens`);
-    
-    // Mock token exchange
-    return {
-      accessToken: `mock_google_access_token_${Date.now()}`,
-      refreshToken: `mock_google_refresh_token_${Date.now()}`,
-      expiresAt: new Date(Date.now() + 3600 * 1000) // 1 hour from now
-    };
+    try {
+      // Get OAuth client credentials
+      const secretProvider = getSecretProviderInstance();
+      const clientId = process.env.GOOGLE_CLIENT_ID || await secretProvider.getSecret('google_client_id');
+      const clientSecret = process.env.GOOGLE_CLIENT_SECRET || await secretProvider.getSecret('google_client_secret');
+      
+      if (!clientId || !clientSecret) {
+        throw new Error('Google OAuth credentials not configured');
+      }
+
+      // Exchange authorization code for tokens
+      const tokenUrl = 'https://oauth2.googleapis.com/token';
+      const params = new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code: config.authorizationCode,
+        grant_type: 'authorization_code',
+        redirect_uri: config.redirectUri
+      });
+
+      const response = await axios.post(tokenUrl, params.toString(), {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      });
+
+      const { access_token, refresh_token, expires_in } = response.data;
+
+      // Note: Google may not return a refresh token on subsequent authorizations
+      // unless you force re-approval or it's the first authorization
+      return {
+        accessToken: access_token,
+        refreshToken: refresh_token || '',
+        expiresAt: new Date(Date.now() + expires_in * 1000)
+      };
+    } catch (error: any) {
+      console.error('Failed to exchange Google authorization code:', error.response?.data || error.message);
+      throw new Error(`Google token exchange failed: ${error.response?.data?.error_description || error.message}`);
+    }
   }
 
   /**
