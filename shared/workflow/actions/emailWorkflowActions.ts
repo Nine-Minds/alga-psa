@@ -484,7 +484,7 @@ export async function saveEmailClientAssociation(
 // =============================================================================
 
 /**
- * Create ticket from email data
+ * Create ticket from email data - Enhanced with events and analytics
  */
 export async function createTicketFromEmail(
   ticketData: {
@@ -498,16 +498,24 @@ export async function createTicketFromEmail(
     priority_id?: string;
     email_metadata?: any;
   },
-  tenant: string
+  tenant: string,
+  userId?: string
 ): Promise<{ ticket_id: string; ticket_number: string }> {
   const { getAdminConnection } = await import('@shared/db/admin.js');
   const { withTransaction } = await import('@shared/db/index.js');
   const { TicketModel } = await import('@shared/models/ticketModel.js');
+  const { WorkflowEventPublisher } = await import('../adapters/workflowEventPublisher.js');
+  const { WorkflowAnalyticsTracker } = await import('../adapters/workflowAnalyticsTracker.js');
   const knex = await getAdminConnection();
   
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const result = await TicketModel.createTicket({
+      // Create adapters for workflow context
+      const eventPublisher = new WorkflowEventPublisher();
+      const analyticsTracker = new WorkflowAnalyticsTracker();
+
+      // Use enhanced TicketModel with events and analytics
+      const result = await TicketModel.createTicketWithRetry({
         title: ticketData.title,
         description: ticketData.description,
         company_id: ticketData.company_id,
@@ -517,7 +525,7 @@ export async function createTicketFromEmail(
         status_id: ticketData.status_id,
         priority_id: ticketData.priority_id,
         email_metadata: ticketData.email_metadata
-      }, tenant, trx);
+      }, tenant, trx, {}, eventPublisher, analyticsTracker, userId, 3);
 
       return {
         ticket_id: result.ticket_id,
@@ -530,7 +538,7 @@ export async function createTicketFromEmail(
 }
 
 /**
- * Create comment from email data
+ * Create comment from email data - Enhanced with events and analytics
  */
 export async function createCommentFromEmail(
   commentData: {
@@ -542,15 +550,23 @@ export async function createCommentFromEmail(
     author_id?: string;
     metadata?: any;
   },
-  tenant: string
+  tenant: string,
+  userId?: string
 ): Promise<string> {
   const { getAdminConnection } = await import('@shared/db/admin.js');
   const { withTransaction } = await import('@shared/db/index.js');
   const { TicketModel } = await import('@shared/models/ticketModel.js');
+  const { WorkflowEventPublisher } = await import('../adapters/workflowEventPublisher.js');
+  const { WorkflowAnalyticsTracker } = await import('../adapters/workflowAnalyticsTracker.js');
   const knex = await getAdminConnection();
   
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Create adapters for workflow context
+      const eventPublisher = new WorkflowEventPublisher();
+      const analyticsTracker = new WorkflowAnalyticsTracker();
+
+      // Use enhanced TicketModel with events and analytics
       const result = await TicketModel.createComment({
         ticket_id: commentData.ticket_id,
         content: commentData.content,
@@ -559,7 +575,7 @@ export async function createCommentFromEmail(
         author_type: commentData.author_type as any || 'system',
         author_id: commentData.author_id,
         metadata: commentData.metadata
-      }, tenant, trx);
+      }, tenant, trx, eventPublisher, analyticsTracker, userId);
 
       return result.comment_id;
     });
