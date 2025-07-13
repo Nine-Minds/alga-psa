@@ -50,7 +50,7 @@ wait_for_redis() {
 start_workflow_worker() {
     # Set up application database connection using app_user
     local db_password_server=$(get_secret "db_password_server" "DB_PASSWORD_SERVER")
-    export DATABASE_URL="postgresql://$DB_USER_SERVER:$db_password_server@postgres:5432/server"
+    export DATABASE_URL="postgresql://$DB_USER_SERVER:$db_password_server@${DB_HOST:-postgres}:${DB_PORT:-5432}/${DB_NAME_SERVER:-server}"
     
     # Set NEXTAUTH_SECRET from Docker secret if not already set
     log "Setting NEXTAUTH_SECRET from secret file..."

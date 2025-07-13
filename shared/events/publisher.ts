@@ -33,16 +33,9 @@ export async function publishEvent(event: EventPayload): Promise<string> {
       execution_id: event.correlationId || uuidv4(),
       event_name: event.eventType,
       event_type: 'system', // System-generated events
-      timestamp: Date.now(),
+      timestamp: new Date().toISOString(),
       tenant: event.tenant,
-      payload: event.payload,
-      retry_count: 0,
-      created_at: new Date().toISOString(),
-      processing_started_at: null,
-      processing_completed_at: null,
-      error_message: null,
-      error_count: 0,
-      last_error_at: null
+      payload: event.payload
     };
 
     const messageId = await client.publishEvent(workflowEvent);

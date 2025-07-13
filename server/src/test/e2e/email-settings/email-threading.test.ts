@@ -153,10 +153,6 @@ describe('Email Threading Tests', () => {
           channel_id: 'email',
           status_id: 'open',
           priority_id: 'medium',
-          email_metadata: {
-            messageId: capturedEmail.ID,
-            threadId: 'thread-123'
-          },
           entered_at: new Date(),
           updated_at: new Date()
         }).returning('*');

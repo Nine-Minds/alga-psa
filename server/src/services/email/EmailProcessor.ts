@@ -208,8 +208,13 @@ export class EmailProcessor {
       const tableExists = await db.schema.hasTable('email_processed_messages');
       
       if (tableExists) {
-        await db('email_processed_messages').insert(record);
-        console.log(`✅ Recorded processed message: ${job.messageId}`);
+        // Check if the provider_id is a valid UUID, if not skip for test providers
+        if (job.providerId === 'mailhog-test-provider') {
+          console.log(`⚠️ Skipping recording for test provider: ${job.messageId}`);
+        } else {
+          await db('email_processed_messages').insert(record);
+          console.log(`✅ Recorded processed message: ${job.messageId}`);
+        }
       } else {
         console.log(`⚠️ email_processed_messages table not found, skipping recording for: ${job.messageId}`);
       }

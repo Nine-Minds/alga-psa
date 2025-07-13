@@ -502,45 +502,26 @@ export async function createTicketFromEmail(
 ): Promise<{ ticket_id: string; ticket_number: string }> {
   const { getAdminConnection } = await import('@shared/db/admin.js');
   const { withTransaction } = await import('@shared/db/index.js');
+  const { TicketModel } = await import('@shared/models/ticketModel.js');
   const knex = await getAdminConnection();
   
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Get next ticket number
-      const nextNumber = await trx('next_numbers')
-        .where({ tenant, entity_type: 'ticket' })
-        .first();
-      
-      const ticketNumber = `TKT-${String(nextNumber?.next_value || 1).padStart(6, '0')}`;
-      const ticketId = uuidv4();
-      
-      // Create ticket
-      await trx('tickets')
-        .insert({
-          ticket_id: ticketId,
-          tenant,
-          title: ticketData.title,
-          description: ticketData.description,
-          company_id: ticketData.company_id,
-          contact_id: ticketData.contact_id,
-          source: ticketData.source || 'email',
-          channel_id: ticketData.channel_id,
-          status_id: ticketData.status_id,
-          priority_id: ticketData.priority_id,
-          ticket_number: ticketNumber,
-          email_metadata: ticketData.email_metadata,
-          created_at: new Date(),
-          updated_at: new Date()
-        });
-
-      // Update next number
-      await trx('next_numbers')
-        .where({ tenant, entity_type: 'ticket' })
-        .increment('next_value', 1);
+      const result = await TicketModel.createTicket({
+        title: ticketData.title,
+        description: ticketData.description,
+        company_id: ticketData.company_id,
+        contact_id: ticketData.contact_id,
+        source: ticketData.source || 'email',
+        channel_id: ticketData.channel_id,
+        status_id: ticketData.status_id,
+        priority_id: ticketData.priority_id,
+        email_metadata: ticketData.email_metadata
+      }, tenant, trx);
 
       return {
-        ticket_id: ticketId,
-        ticket_number: ticketNumber
+        ticket_id: result.ticket_id,
+        ticket_number: result.ticket_number
       };
     });
   } finally {
@@ -565,27 +546,22 @@ export async function createCommentFromEmail(
 ): Promise<string> {
   const { getAdminConnection } = await import('@shared/db/admin.js');
   const { withTransaction } = await import('@shared/db/index.js');
+  const { TicketModel } = await import('@shared/models/ticketModel.js');
   const knex = await getAdminConnection();
   
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const commentId = uuidv4();
-      
-      await trx('comments')
-        .insert({
-          comment_id: commentId,
-          tenant,
-          ticket_id: commentData.ticket_id,
-          note: commentData.content,
-          is_internal: false,
-          is_resolution: false,
-          author_type: commentData.author_type || 'system',
-          metadata: commentData.metadata,
-          created_at: new Date(),
-          updated_at: new Date()
-        });
+      const result = await TicketModel.createComment({
+        ticket_id: commentData.ticket_id,
+        content: commentData.content,
+        is_internal: false,
+        is_resolution: false,
+        author_type: commentData.author_type as any || 'system',
+        author_id: commentData.author_id,
+        metadata: commentData.metadata
+      }, tenant, trx);
 
-      return commentId;
+      return result.comment_id;
     });
   } finally {
     await knex.destroy();

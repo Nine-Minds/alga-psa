@@ -58,12 +58,12 @@ export interface WorkflowWorkerConfig {
  * Default configuration for workflow worker
  */
 const DEFAULT_CONFIG: WorkflowWorkerConfig = {
-  pollIntervalMs: 1000,
+  pollIntervalMs: 300000, // Poll every 5 minutes (300 seconds)
   idleTimeoutMs: 60000,
   batchSize: 10,
   maxRetries: 3,
-  healthCheckIntervalMs: 30000,
-  metricsReportingIntervalMs: 60000,
+  healthCheckIntervalMs: 300000, // Health check every 5 minutes
+  metricsReportingIntervalMs: 300000, // Metrics every 5 minutes
   concurrencyLimit: 5,
   shutdownTimeoutMs: 30000
 };
@@ -99,7 +99,9 @@ export class WorkflowWorker {
   private static createdConsumerGroups: Set<string> = new Set<string>();
   private running: boolean = false;
   private workerId: string;
-  private redisStreamClient = getRedisStreamClient();
+  private redisStreamClient = getRedisStreamClient({
+    consumerGroup: 'workflow-workers'
+  });
   private workflowRuntime: TypeScriptWorkflowRuntime;
   private config: WorkflowWorkerConfig;
   private startTime: number = Date.now();
@@ -342,8 +344,9 @@ export class WorkflowWorker {
       // Subscribe to the global event stream for new events
       await this.subscribeToGlobalEventStream();
       
-      // Process any pending events from the database
-      await this.processPendingEvents();
+      // Schedule periodic check for pending events (as a safety net)
+      // This runs less frequently since Redis streams are the primary mechanism
+      setInterval(() => this.processPendingEvents(), this.config.pollIntervalMs);
       
       logger.info(`[WorkflowWorker] Event processing started successfully`);
       logger.info(`[WorkflowWorker] Listening to global event stream: workflow:events:global`);
@@ -416,6 +419,12 @@ export class WorkflowWorker {
    */
   private async processGlobalEvent(event: WorkflowEventBase): Promise<void> {
     try {
+      logger.info(`[WorkflowWorker] Processing global event from Redis:`, {
+        eventId: event.event_id,
+        eventType: event.event_type,
+        tenant: event.tenant
+      });
+      
       // The event is already parsed by the RedisStreamClient
       const eventData = event;
       
@@ -598,12 +607,31 @@ export class WorkflowWorker {
           })
           .select('wea.workflow_id as workflow_id');
 
-        if (!attachments || attachments.length === 0) {
-          logger.info(`[WorkflowWorker] No attachments found in workflow_event_attachments for event type ${eventType} and tenant ${tenant}`);
-          return [];
+        // Step 1b: Also query system_workflow_event_attachments for system workflows
+        // First, find the event_id from system_event_catalog
+        const systemEvent = await trx('system_event_catalog')
+          .where('event_type', eventType)
+          .first();
+          
+        let systemAttachments = [];
+        if (systemEvent) {
+          systemAttachments = await trx('system_workflow_event_attachments as swea')
+            .where({
+              'swea.event_id': systemEvent.event_id,
+              'swea.is_active': true
+            })
+            .select('swea.workflow_id as workflow_id');
         }
 
-        const workflowIds = attachments.map(att => att.workflow_id);
+        if (attachments.length === 0 && systemAttachments.length === 0) {
+          logger.info(`[WorkflowWorker] No attachments found in workflow_event_attachments or system_workflow_event_attachments for event type ${eventType}`);
+          return [];
+        }
+        
+        // Combine both tenant and system attachments
+        const allAttachments = [...attachments, ...systemAttachments];
+
+        const workflowIds = allAttachments.map(att => att.workflow_id);
 
         // Step 2: Check which of these workflow_ids exist in system_workflow_registrations
         // This helps determine if a workflow_id from a tenant's attachment
@@ -617,7 +645,7 @@ export class WorkflowWorker {
         // Step 3: Construct the results with the correct isSystemManaged flag
         // If a workflow_id from workflow_event_attachments is found in system_workflow_registrations,
         // then isSystemManaged is true. Otherwise, it's false.
-        const results = attachments.map(attachment => ({
+        const results = allAttachments.map(attachment => ({
           workflow_id: attachment.workflow_id,
           isSystemManaged: systemWorkflowIds.has(attachment.workflow_id)
         }));
@@ -844,14 +872,8 @@ export class WorkflowWorker {
           }
         }
       });
-      
-      // Schedule the next batch of pending events
-      setTimeout(() => this.processPendingEvents(), this.config.pollIntervalMs);
     } catch (error) {
       logger.error(`[WorkflowWorker] Error processing pending events:`, error);
-      
-      // Retry after a delay
-      setTimeout(() => this.processPendingEvents(), this.config.pollIntervalMs);
     }
   }
   

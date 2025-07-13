@@ -17,6 +17,13 @@ export async function getAdminConnection() {
         }
     };
     console.log('Creating admin database connection');
+    console.log('Admin connection config:', {
+        host: config.connection.host,
+        port: config.connection.port,
+        database: config.connection.database,
+        user: config.connection.user,
+        environment
+    });
 
     return Knex(config);
 }

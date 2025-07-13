@@ -25,19 +25,21 @@ export class EmailSettingsTestFixture {
   /**
    * Initialize the test fixture once - expensive operations done here
    */
-  async initialize(): Promise<void> {
+  async initialize(options?: any): Promise<void> {
     if (this.context) {
       return; // Already initialized
     }
 
     console.log('🏗️ Initializing Email Settings Test Fixture (one-time setup)...');
 
-    // Create and initialize the test context
+    // Create and initialize the test context with provided options
     this.context = new EmailSettingsTestContext({
       testMode: 'e2e',
       autoStartServices: true,
       clearEmailsBeforeTest: false, // We'll handle this manually
-      runSeeds: true
+      runSeeds: true,
+      // Override with any provided options
+      ...options
     });
 
     console.log('  📊 Setting up database and services...');
@@ -156,8 +158,8 @@ export class EmailSettingsTestFixture {
     const fixture = EmailSettingsTestFixture.getInstance();
 
     return {
-      beforeAll: async () => {
-        await fixture.initialize();
+      beforeAll: async (options?: any) => {
+        await fixture.initialize(options);
         return await fixture.getContext();
       },
 
