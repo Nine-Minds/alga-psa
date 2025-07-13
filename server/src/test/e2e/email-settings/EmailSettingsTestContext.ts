@@ -51,6 +51,9 @@ export class EmailSettingsTestContext extends E2ETestContext {
     process.env.GOOGLE_PUBSUB_API_URL = `${this.oauthMockUrl}`;
     
     console.log('🔧 Configured OAuth providers to use mock service');
+    console.log(`   📍 Mock OAuth server: ${this.oauthMockUrl}`);
+    console.log(`   🔐 Microsoft endpoints: ${this.oauthMockUrl}/common/oauth2/v2.0/*`);
+    console.log(`   🔐 Google endpoints: ${this.oauthMockUrl}/o/oauth2/*`);
   }
 
   /**
@@ -62,14 +65,17 @@ export class EmailSettingsTestContext extends E2ETestContext {
     tenant_id: string;
     company_id?: string;
   }) {
+    console.log(`     📋 Generating OAuth tokens for ${config.provider} provider...`);
+    
     const providerData = {
-      tenant_id: config.tenant_id,
-      company_id: config.company_id || null,
+      id: crypto.randomUUID(),
+      tenant: config.tenant_id,
+      name: `${config.provider} - ${config.mailbox}`,
       provider_type: config.provider,
       mailbox: config.mailbox,
-      is_active: true,
+      active: true,
       connection_status: 'connected',
-      vendor_config: {
+      provider_config: {
         clientId: 'test-client-id',
         clientSecret: 'test-client-secret',
         redirectUri: 'http://localhost:3000/api/auth/callback',
@@ -78,15 +84,18 @@ export class EmailSettingsTestContext extends E2ETestContext {
         tokenExpiry: new Date(Date.now() + 3600000).toISOString(),
         clientState: crypto.randomBytes(16).toString('hex')
       },
-      webhook_id: `webhook-${crypto.randomUUID()}`,
+      webhook_notification_url: `http://localhost:3000/api/webhooks/${config.provider}`,
+      webhook_verification_token: crypto.randomBytes(32).toString('hex'),
       created_at: new Date(),
       updated_at: new Date()
     };
 
+    console.log(`     💾 Storing provider configuration in database...`);
     const [provider] = await this.db('email_provider_configs')
       .insert(providerData)
       .returning('*');
 
+    console.log(`     🔗 Provider linked to tenant: ${config.tenant_id.substring(0, 8)}...`);
     return provider;
   }
 

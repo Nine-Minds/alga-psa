@@ -45,8 +45,6 @@ export class DockerServiceManager {
   ];
 
   async startE2EServices(): Promise<void> {
-    console.log('🚀 Starting E2E Docker services...');
-    
     try {
       // Change to project root and start services
       const { stdout, stderr } = await execAsync(
@@ -60,7 +58,6 @@ export class DockerServiceManager {
       
       console.log('✅ E2E Docker services started');
     } catch (error) {
-      console.error('❌ Failed to start E2E services:', error);
       throw new Error(`Failed to start E2E services: ${error.message}`);
     }
   }
@@ -231,7 +228,36 @@ export class DockerServiceManager {
     
     if (stoppedServices.length > 0) {
       console.log(`🚀 Starting stopped services: ${stoppedServices.map(s => s.name).join(', ')}`);
-      await this.startE2EServices();
+      console.log('🚀 Starting E2E Docker services...');
+      
+      try {
+        await this.startE2EServices();
+      } catch (error) {
+        // Check if this is a "file not found" error for docker-compose
+        if (error.message && error.message.includes('no such file or directory')) {
+          console.log('⚠️ Service startup failed, but services may already be running:', error.message);
+          // Re-check if services are actually running
+          const recheckServices = await Promise.all(
+            this.services.map(async service => ({
+              name: service,
+              running: await this.isServiceRunning(service)
+            }))
+          );
+          
+          const stillStoppedServices = recheckServices.filter(s => !s.running);
+          if (stillStoppedServices.length === 0) {
+            console.log('✅ Services are healthy, continuing with existing services');
+            return;
+          } else {
+            // Services are not running and we can't start them
+            throw error;
+          }
+        } else {
+          // Other errors should be thrown
+          throw error;
+        }
+      }
+      
       await this.waitForHealthChecks();
     } else {
       console.log('✅ All E2E services are already running');

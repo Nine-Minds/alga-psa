@@ -28,31 +28,52 @@ describe('Email Settings OAuth Flow Tests', () => {
 
   describe('Microsoft OAuth Flow', () => {
     it('should complete OAuth flow and store tokens', async () => {
+      console.log('\n📧 Testing Microsoft OAuth Flow...');
+      
       // 1. Create test scenario
+      console.log('  1️⃣ Creating test tenant and company...');
       const { tenant, company } = await context.emailTestFactory.createBasicEmailScenario();
+      console.log(`     ✓ Created tenant: ${tenant.tenant}`);
+      console.log(`     ✓ Created company: ${company.company_name}`);
       
       // 2. Initiate OAuth flow
       // Note: In a real implementation, you would call your API endpoint here
       // For now, we'll simulate the callback directly
+      console.log('  2️⃣ Simulating OAuth callback (in real app, user would authorize via Microsoft)...');
       
       // 3. Create a provider record to simulate OAuth completion
+      console.log('  3️⃣ Creating email provider with OAuth tokens...');
       const provider = await context.createEmailProvider({
         provider: 'microsoft',
         mailbox: 'support@example.com',
-        tenant_id: tenant.id,
-        company_id: company.id
+        tenant_id: tenant.tenant,
+        company_id: company.company_id
       });
+      console.log(`     ✓ Created provider for mailbox: ${provider.mailbox}`);
       
       // 4. Verify provider created and tokens stored
+      console.log('  4️⃣ Verifying OAuth tokens and provider configuration...');
+      
       expect(provider).toBeDefined();
-      expect(provider.vendor_config.accessToken).toBeTruthy();
-      expect(provider.vendor_config.refreshToken).toBeTruthy();
+      console.log('     ✓ Provider record created successfully');
+      
+      expect(provider.provider_config.accessToken).toBeTruthy();
+      console.log(`     ✓ Access token stored: ${provider.provider_config.accessToken.substring(0, 20)}...`);
+      
+      expect(provider.provider_config.refreshToken).toBeTruthy();
+      console.log(`     ✓ Refresh token stored: ${provider.provider_config.refreshToken.substring(0, 20)}...`);
+      
       expect(provider.connection_status).toBe('connected');
+      console.log(`     ✓ Connection status: ${provider.connection_status}`);
+      
       expect(provider.provider_type).toBe('microsoft');
+      console.log(`     ✓ Provider type: ${provider.provider_type}`);
+      
+      console.log('\n  ✅ Microsoft OAuth flow completed successfully!\n');
     });
 
     it('should handle OAuth error scenarios', async () => {
-      const { tenant } = await context.emailTestFactory.createBasicEmailScenario();
+      await context.emailTestFactory.createBasicEmailScenario();
       
       // Test invalid authorization code
       const response = await context.simulateOAuthCallback(
@@ -97,8 +118,8 @@ describe('Email Settings OAuth Flow Tests', () => {
       const provider = await context.createEmailProvider({
         provider: 'google',
         mailbox: 'support@example.com',
-        tenant_id: tenant.id,
-        company_id: company.id
+        tenant_id: tenant.tenant,
+        company_id: company.company_id
       });
       
       // 3. Verify provider created
@@ -114,7 +135,7 @@ describe('Email Settings OAuth Flow Tests', () => {
     });
 
     it('should handle expired refresh token', async () => {
-      const { tenant } = await context.emailTestFactory.createBasicEmailScenario();
+      await context.emailTestFactory.createBasicEmailScenario();
       
       // Test expired refresh token
       const response = await context.simulateOAuthCallback(
@@ -137,8 +158,8 @@ describe('Email Settings OAuth Flow Tests', () => {
       const provider = await context.createEmailProvider({
         provider: 'microsoft',
         mailbox: 'secure@example.com',
-        tenant_id: tenant.id,
-        company_id: company.id
+        tenant_id: tenant.tenant,
+        company_id: company.company_id
       });
       
       // Query database directly
@@ -159,7 +180,7 @@ describe('Email Settings OAuth Flow Tests', () => {
 
   describe('State Parameter Validation', () => {
     it('should validate state parameter in OAuth callback', async () => {
-      const { tenant } = await context.emailTestFactory.createBasicEmailScenario();
+      await context.emailTestFactory.createBasicEmailScenario();
       
       // Test with mismatched state
       const response = await context.simulateOAuthCallback(

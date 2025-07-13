@@ -79,7 +79,7 @@ export class E2ETestContext extends TestContext {
     const e2eEnvVars = {
       'DB_HOST': 'localhost',
       'DB_PORT': '5433',
-      'DB_NAME_SERVER': 'server',
+      'DB_NAME_SERVER': 'server_test',
       'DB_USER_ADMIN': 'postgres',
       'REDIS_HOST': 'localhost',
       'REDIS_PORT': '6380',
@@ -188,7 +188,7 @@ export class E2ETestContext extends TestContext {
       this.servicesStarted = true;
       console.log('✅ E2E Docker services ready');
     } catch (error) {
-      console.error('❌ Failed to start E2E services:', error);
+      // Don't log the error here as docker-service-manager already handles it
       throw error;
     }
   }
