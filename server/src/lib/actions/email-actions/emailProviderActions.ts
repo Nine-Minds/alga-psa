@@ -203,25 +203,5 @@ export async function testEmailProviderConnection(providerId: string): Promise<{
   }
 }
 
-export async function setupPubSub(data: {
-  projectId: string;
-  topicName: string;
-  subscriptionName: string;
-  webhookUrl: string;
-}): Promise<void> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  // TODO: Implement actual Pub/Sub setup logic
-  // This would involve calling Google Cloud APIs to create topic and subscription
-  
-  // For now, we'll just validate the input
-  if (!data.projectId || !data.topicName || !data.subscriptionName || !data.webhookUrl) {
-    throw new Error('Missing required fields for Pub/Sub setup');
-  }
-
-  // Simulate successful setup
-  return;
-}
+// Re-export setupPubSub from the actual implementation
+export { setupPubSub } from './setupPubSub';

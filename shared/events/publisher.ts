@@ -1,0 +1,66 @@
+import { RedisStreamClient } from '../workflow/streams/redisStreamClient';
+import { WorkflowEventBase } from '../workflow/streams/workflowEventSchema';
+import { v4 as uuidv4 } from 'uuid';
+import logger from '../core/logger';
+
+// Initialize Redis stream client
+let redisClient: RedisStreamClient | null = null;
+
+async function getRedisClient(): Promise<RedisStreamClient> {
+  if (!redisClient) {
+    redisClient = new RedisStreamClient();
+    await redisClient.initialize();
+  }
+  return redisClient;
+}
+
+export interface EventPayload {
+  eventType: string;
+  tenant: string;
+  payload: any;
+  correlationId?: string;
+}
+
+/**
+ * Publish an event to the workflow engine
+ */
+export async function publishEvent(event: EventPayload): Promise<string> {
+  try {
+    const client = await getRedisClient();
+    
+    const workflowEvent: WorkflowEventBase = {
+      event_id: uuidv4(),
+      execution_id: event.correlationId || uuidv4(),
+      event_name: event.eventType,
+      event_type: 'system', // System-generated events
+      timestamp: Date.now(),
+      tenant: event.tenant,
+      payload: event.payload,
+      retry_count: 0,
+      created_at: new Date().toISOString(),
+      processing_started_at: null,
+      processing_completed_at: null,
+      error_message: null,
+      error_count: 0,
+      last_error_at: null
+    };
+
+    const messageId = await client.publishEvent(workflowEvent);
+    
+    logger.info('[EventPublisher] Published event', {
+      eventType: event.eventType,
+      tenant: event.tenant,
+      messageId,
+      correlationId: workflowEvent.execution_id
+    });
+
+    return messageId;
+  } catch (error) {
+    logger.error('[EventPublisher] Failed to publish event', {
+      eventType: event.eventType,
+      tenant: event.tenant,
+      error
+    });
+    throw error;
+  }
+}

@@ -85,6 +85,8 @@
     "file-type": "^20.4.1",
     "formdata-node": "^6.0.3",
     "fractional-indexing": "^3.2.0",
+    "google-auth-library": "^10.1.0",
+    "googleapis": "^152.0.0",
     "handlebars": "^4.7.8",
     "jsondiffpatch": "^0.6.0",
     "jsonwebtoken": "^9.0.2",
