@@ -14,6 +14,7 @@ import { Plus, Settings, Trash2, CheckCircle, Clock } from 'lucide-react';
 import { MicrosoftProviderForm } from './MicrosoftProviderForm';
 import { GmailProviderForm } from './GmailProviderForm';
 import { EmailProviderList } from './EmailProviderList';
+import { InboundTicketDefaultsManager } from './admin/InboundTicketDefaultsManager';
 import { 
   getEmailProviders, 
   deleteEmailProvider, 
@@ -31,6 +32,7 @@ export interface EmailProvider {
   lastSyncAt?: string;
   errorMessage?: string;
   vendorConfig: any;
+  inboundTicketDefaultsId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -54,6 +56,7 @@ export function EmailProviderConfiguration({
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<EmailProvider | null>(null);
   const [selectedProviderType, setSelectedProviderType] = useState<'microsoft' | 'gmail'>('microsoft');
+  const [showDefaultsManager, setShowDefaultsManager] = useState(false);
 
   // Load existing providers on component mount
   useEffect(() => {
@@ -153,6 +156,35 @@ export function EmailProviderConfiguration({
         </Alert>
       )}
 
+      {/* Ticket Defaults Management */}
+      {showDefaultsManager && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Manage Ticket Defaults</CardTitle>
+            <CardDescription>
+              Configure default values for tickets created from email processing
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <InboundTicketDefaultsManager 
+              onDefaultsChange={() => {
+                // Optionally refresh providers to show updated defaults
+                loadProviders();
+              }}
+            />
+            <div className="flex justify-end mt-6">
+              <Button 
+                id="close-defaults-btn"
+                variant="outline" 
+                onClick={() => setShowDefaultsManager(false)}
+              >
+                Close
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Add Provider Form */}
       {showAddForm && (
         <Card>
@@ -226,6 +258,30 @@ export function EmailProviderConfiguration({
           </CardContent>
         </Card>
       )}
+
+      {/* Management Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Management</CardTitle>
+          <CardDescription>
+            Additional configuration options for email processing
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button 
+            id="manage-defaults-btn"
+            variant="outline"
+            onClick={() => setShowDefaultsManager(true)}
+            disabled={showDefaultsManager}
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Manage Ticket Defaults
+          </Button>
+          <p className="text-sm text-muted-foreground mt-2">
+            Configure default values that will be applied to tickets created from email processing
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Help Information */}
       <Card>
