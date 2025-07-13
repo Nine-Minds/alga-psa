@@ -1763,6 +1763,468 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       }
     }
   );
+
+  // === Email Processing Workflow Actions ===
+  
+  // Register all email workflow actions that bridge to server actions
+  registerEmailWorkflowActions(actionRegistry);
+}
+
+/**
+ * Register email workflow actions that bridge to server actions
+ * @param actionRegistry The action registry to register with
+ */
+function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
+  logger.info('[WorkflowInit] Starting registration of email workflow actions...');
+
+  // Email Contact Actions
+  actionRegistry.registerSimpleAction(
+    'find_contact_by_email',
+    'Find a contact by email address',
+    [{ name: 'email', type: 'string', required: true }],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      try {
+        // Import from shared workflow actions module
+        const { findContactByEmail } = await import('@shared/workflow/actions/emailWorkflowActions.js');
+        const contact = await findContactByEmail(params.email, context.tenant);
+        
+        return {
+          success: !!contact,
+          contact: contact
+        };
+      } catch (error: any) {
+        logger.error(`[ACTION] find_contact_by_email: Error finding contact for email ${params.email}`, error);
+        return {
+          success: false,
+          contact: null,
+          message: error.message
+        };
+      }
+    }
+  );
+
+  actionRegistry.registerSimpleAction(
+    'create_or_find_contact',
+    'Create or find contact by email and company',
+    [
+      { name: 'email', type: 'string', required: true },
+      { name: 'name', type: 'string', required: false },
+      { name: 'company_id', type: 'string', required: true },
+      { name: 'phone', type: 'string', required: false },
+      { name: 'title', type: 'string', required: false }
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      try {
+        const { createOrFindContact } = await import('@shared/workflow/actions/emailWorkflowActions.js');
+        const result = await createOrFindContact({
+          email: params.email,
+          name: params.name,
+          company_id: params.company_id,
+          phone: params.phone,
+          title: params.title
+        }, context.tenant);
+        
+        return {
+          success: true,
+          contact: result
+        };
+      } catch (error: any) {
+        logger.error(`[ACTION] create_or_find_contact: Error creating/finding contact for email ${params.email}`, error);
+        return {
+          success: false,
+          contact: null,
+          message: error.message
+        };
+      }
+    }
+  );
+
+  // Email Threading Actions
+  actionRegistry.registerSimpleAction(
+    'find_ticket_by_email_thread',
+    'Find existing ticket by email thread information',
+    [
+      { name: 'threadId', type: 'string', required: false },
+      { name: 'inReplyTo', type: 'string', required: false },
+      { name: 'references', type: 'object', required: false },
+      { name: 'originalMessageId', type: 'string', required: false }
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      try {
+        const { findTicketByEmailThread } = await import('@shared/workflow/actions/emailWorkflowActions.js');
+        const ticket = await findTicketByEmailThread(params, context.tenant);
+        
+        return {
+          success: !!ticket,
+          ticket: ticket
+        };
+      } catch (error: any) {
+        logger.error(`[ACTION] find_ticket_by_email_thread: Error finding ticket thread`, error);
+        return {
+          success: false,
+          ticket: null,
+          message: error.message
+        };
+      }
+    }
+  );
+
+  // Email Ticket Actions
+  actionRegistry.registerSimpleAction(
+    'create_ticket_from_email',
+    'Create a ticket from email data',
+    [
+      { name: 'title', type: 'string', required: true },
+      { name: 'description', type: 'string', required: true },
+      { name: 'company_id', type: 'string', required: false },
+      { name: 'contact_id', type: 'string', required: false },
+      { name: 'source', type: 'string', required: false },
+      { name: 'channel_id', type: 'string', required: false },
+      { name: 'status_id', type: 'string', required: false },
+      { name: 'priority_id', type: 'string', required: false },
+      { name: 'email_metadata', type: 'object', required: false }
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      try {
+        const { createTicketFromEmail } = await import('@shared/workflow/actions/emailWorkflowActions.js');
+        const result = await createTicketFromEmail({
+          title: params.title,
+          description: params.description,
+          company_id: params.company_id,
+          contact_id: params.contact_id,
+          source: params.source,
+          channel_id: params.channel_id,
+          status_id: params.status_id,
+          priority_id: params.priority_id,
+          email_metadata: params.email_metadata
+        }, context.tenant);
+        
+        return {
+          success: true,
+          ticket_id: result.ticket_id,
+          ticket_number: result.ticket_number
+        };
+      } catch (error: any) {
+        logger.error(`[ACTION] create_ticket_from_email: Error creating ticket from email`, error);
+        return {
+          success: false,
+          ticket_id: null,
+          message: error.message
+        };
+      }
+    }
+  );
+
+  actionRegistry.registerSimpleAction(
+    'create_comment_from_email',
+    'Create a comment from email data',
+    [
+      { name: 'ticket_id', type: 'string', required: true },
+      { name: 'content', type: 'string', required: true },
+      { name: 'format', type: 'string', required: false },
+      { name: 'source', type: 'string', required: false },
+      { name: 'author_type', type: 'string', required: false },
+      { name: 'author_id', type: 'string', required: false },
+      { name: 'metadata', type: 'object', required: false }
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      try {
+        const { createCommentFromEmail } = await import('@shared/workflow/actions/emailWorkflowActions.js');
+        const commentId = await createCommentFromEmail({
+          ticket_id: params.ticket_id,
+          content: params.content,
+          format: params.format,
+          source: params.source,
+          author_type: params.author_type,
+          author_id: params.author_id,
+          metadata: params.metadata
+        }, context.tenant);
+        
+        return {
+          success: true,
+          comment_id: commentId
+        };
+      } catch (error: any) {
+        logger.error(`[ACTION] create_comment_from_email: Error creating comment from email`, error);
+        return {
+          success: false,
+          comment_id: null,
+          message: error.message
+        };
+      }
+    }
+  );
+
+  // Email Attachment Actions
+  actionRegistry.registerSimpleAction(
+    'process_email_attachment',
+    'Process email attachment and associate with ticket',
+    [
+      { name: 'emailId', type: 'string', required: true },
+      { name: 'attachmentId', type: 'string', required: true },
+      { name: 'ticketId', type: 'string', required: true },
+      { name: 'tenant', type: 'string', required: true },
+      { name: 'providerId', type: 'string', required: true },
+      { name: 'attachmentData', type: 'object', required: true }
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      try {
+        const { processEmailAttachment } = await import('@shared/workflow/actions/emailWorkflowActions.js');
+        // Note: tenant is already in params for this action
+        const result = await processEmailAttachment({
+          emailId: params.emailId,
+          attachmentId: params.attachmentId,
+          ticketId: params.ticketId,
+          tenant: params.tenant,
+          providerId: params.providerId,
+          attachmentData: params.attachmentData
+        }, context.tenant);
+        
+        return {
+          success: result.success,
+          documentId: result.documentId,
+          fileName: result.fileName,
+          fileSize: result.fileSize,
+          contentType: result.contentType
+        };
+      } catch (error: any) {
+        logger.error(`[ACTION] process_email_attachment: Error processing attachment ${params.attachmentId}`, error);
+        return {
+          success: false,
+          documentId: null,
+          message: error.message
+        };
+      }
+    }
+  );
+
+  // Email Company Actions
+  actionRegistry.registerSimpleAction(
+    'create_company_from_email',
+    'Create a company from email data',
+    [
+      { name: 'company_name', type: 'string', required: true },
+      { name: 'email', type: 'string', required: false },
+      { name: 'source', type: 'string', required: false }
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      try {
+        const { createCompanyFromEmail } = await import('@shared/workflow/actions/emailWorkflowActions.js');
+        const result = await createCompanyFromEmail({
+          company_name: params.company_name,
+          email: params.email,
+          source: params.source
+        }, context.tenant);
+        
+        return {
+          success: true,
+          company: result
+        };
+      } catch (error: any) {
+        logger.error(`[ACTION] create_company_from_email: Error creating company ${params.company_name}`, error);
+        return {
+          success: false,
+          company: null,
+          message: error.message
+        };
+      }
+    }
+  );
+
+  actionRegistry.registerSimpleAction(
+    'get_company_by_id_for_email',
+    'Get company by ID for email workflows',
+    [{ name: 'companyId', type: 'string', required: true }],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      try {
+        const { getCompanyByIdForEmail } = await import('@shared/workflow/actions/emailWorkflowActions.js');
+        const company = await getCompanyByIdForEmail(params.companyId, context.tenant);
+        
+        return {
+          success: !!company,
+          company: company
+        };
+      } catch (error: any) {
+        logger.error(`[ACTION] get_company_by_id_for_email: Error getting company ${params.companyId}`, error);
+        return {
+          success: false,
+          company: null,
+          message: error.message
+        };
+      }
+    }
+  );
+
+  // Email Channel Actions
+  actionRegistry.registerSimpleAction(
+    'find_channel_by_name',
+    'Find a channel by name',
+    [{ name: 'name', type: 'string', required: true }],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      try {
+        // Import the database connection
+        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const knex = await getAdminConnection();
+        
+        const channel = await knex('channels')
+          .select('channel_id as id', 'channel_name as name', 'description', 'is_default')
+          .where({ tenant: context.tenant, channel_name: params.name, is_active: true })
+          .first();
+        
+        return {
+          success: !!channel,
+          channel: channel
+        };
+      } catch (error: any) {
+        logger.error(`[ACTION] find_channel_by_name: Error finding channel ${params.name}`, error);
+        return {
+          success: false,
+          channel: null,
+          message: error.message
+        };
+      }
+    }
+  );
+
+  actionRegistry.registerSimpleAction(
+    'create_channel_from_email',
+    'Create a channel from email data',
+    [
+      { name: 'channel_name', type: 'string', required: true },
+      { name: 'description', type: 'string', required: false },
+      { name: 'is_default', type: 'boolean', required: false }
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      try {
+        const { createChannelFromEmail } = await import('@shared/workflow/actions/emailWorkflowActions.js');
+        const result = await createChannelFromEmail({
+          channel_name: params.channel_name,
+          description: params.description,
+          is_default: params.is_default
+        }, context.tenant);
+        
+        return {
+          success: true,
+          channel: result
+        };
+      } catch (error: any) {
+        logger.error(`[ACTION] create_channel_from_email: Error creating channel ${params.channel_name}`, error);
+        return {
+          success: false,
+          channel: null,
+          message: error.message
+        };
+      }
+    }
+  );
+
+  // Email Status and Priority Actions
+  actionRegistry.registerSimpleAction(
+    'find_status_by_name',
+    'Find a status by name',
+    [
+      { name: 'name', type: 'string', required: true },
+      { name: 'item_type', type: 'string', required: false }
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      try {
+        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const knex = await getAdminConnection();
+        
+        const query = knex('statuses')
+          .select('status_id as id', 'name', 'item_type', 'color')
+          .where({ tenant: context.tenant, name: params.name, is_active: true });
+        
+        if (params.item_type) {
+          query.where('item_type', params.item_type);
+        }
+        
+        const status = await query.first();
+        
+        return {
+          success: !!status,
+          status: status
+        };
+      } catch (error: any) {
+        logger.error(`[ACTION] find_status_by_name: Error finding status ${params.name}`, error);
+        return {
+          success: false,
+          status: null,
+          message: error.message
+        };
+      }
+    }
+  );
+
+  actionRegistry.registerSimpleAction(
+    'find_priority_by_name',
+    'Find a priority by name',
+    [{ name: 'name', type: 'string', required: true }],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      try {
+        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const knex = await getAdminConnection();
+        
+        const priority = await knex('ticket_priorities')
+          .select('priority_id as id', 'priority_name as name', 'priority_level', 'color')
+          .where({ tenant: context.tenant, priority_name: params.name })
+          .first();
+        
+        return {
+          success: !!priority,
+          priority: priority
+        };
+      } catch (error: any) {
+        logger.error(`[ACTION] find_priority_by_name: Error finding priority ${params.name}`, error);
+        return {
+          success: false,
+          priority: null,
+          message: error.message
+        };
+      }
+    }
+  );
+
+  // Email Client Association Actions
+  actionRegistry.registerSimpleAction(
+    'save_email_client_association',
+    'Save email-to-client association',
+    [
+      { name: 'email', type: 'string', required: true },
+      { name: 'company_id', type: 'string', required: true },
+      { name: 'contact_id', type: 'string', required: false },
+      { name: 'confidence_score', type: 'number', required: false },
+      { name: 'notes', type: 'string', required: false }
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      try {
+        const { saveEmailClientAssociation } = await import('@shared/workflow/actions/emailWorkflowActions.js');
+        const result = await saveEmailClientAssociation({
+          email: params.email,
+          company_id: params.company_id,
+          contact_id: params.contact_id,
+          confidence_score: params.confidence_score,
+          notes: params.notes
+        }, context.tenant);
+        
+        return {
+          success: result.success,
+          associationId: result.associationId,
+          email: result.email,
+          company_id: result.company_id
+        };
+      } catch (error: any) {
+        logger.error(`[ACTION] save_email_client_association: Error saving association for ${params.email}`, error);
+        return {
+          success: false,
+          associationId: null,
+          message: error.message
+        };
+      }
+    }
+  );
+
+  logger.info('[WorkflowInit] Email workflow actions registered successfully');
 }
 
 /**
