@@ -189,6 +189,23 @@ services:
       timeout: 10s
       retries: 3
 
+  # WireMock for OAuth mocking
+  oauth-mock:
+    image: wiremock/wiremock:3.9.2
+    container_name: ${APP_NAME:-sebastian}_oauth_mock_test
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./test-config/wiremock-oauth:/home/wiremock
+    networks:
+      - app-network
+    command: ["--global-response-templating", "--verbose"]
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/__admin/health"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+
 secrets:
   postgres_password:
     file: ./secrets/postgres_password

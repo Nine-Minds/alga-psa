@@ -1,0 +1,85 @@
+{
+  "mappings": [
+    {
+      "id": "oauth-invalid-code",
+      "name": "Invalid Authorization Code",
+      "priority": 2,
+      "request": {
+        "method": "POST",
+        "urlPathPattern": ".*/token",
+        "bodyPatterns": [{
+          "contains": "code=invalid-code"
+        }]
+      },
+      "response": {
+        "status": 400,
+        "jsonBody": {
+          "error": "invalid_grant",
+          "error_description": "The authorization code is invalid or has expired."
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    {
+      "id": "oauth-expired-refresh-token",
+      "name": "Expired Refresh Token",
+      "priority": 2,
+      "request": {
+        "method": "POST",
+        "urlPathPattern": ".*/token",
+        "bodyPatterns": [{
+          "contains": "refresh_token=expired-token"
+        }]
+      },
+      "response": {
+        "status": 400,
+        "jsonBody": {
+          "error": "invalid_grant",
+          "error_description": "The refresh token has expired."
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    {
+      "id": "oauth-invalid-client",
+      "name": "Invalid Client Credentials",
+      "priority": 2,
+      "request": {
+        "method": "POST",
+        "urlPathPattern": ".*/token",
+        "bodyPatterns": [{
+          "contains": "client_id=invalid-client"
+        }]
+      },
+      "response": {
+        "status": 401,
+        "jsonBody": {
+          "error": "invalid_client",
+          "error_description": "Client authentication failed."
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    {
+      "id": "oauth-network-error",
+      "name": "Network Error Simulation",
+      "priority": 3,
+      "request": {
+        "method": "POST",
+        "urlPathPattern": ".*/token",
+        "bodyPatterns": [{
+          "contains": "simulate_network_error=true"
+        }]
+      },
+      "response": {
+        "fault": "CONNECTION_RESET_BY_PEER"
+      }
+    }
+  ]
+}

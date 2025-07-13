@@ -1,0 +1,129 @@
+{
+  "mappings": [
+    {
+      "id": "microsoft-authorize",
+      "name": "Microsoft OAuth Authorization",
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/common/oauth2/v2.0/authorize.*"
+      },
+      "response": {
+        "status": 302,
+        "headers": {
+          "Location": "{{request.query.redirect_uri.[0]}}?code=mock-auth-code-{{randomValue type='UUID'}}&state={{request.query.state.[0]}}"
+        }
+      }
+    },
+    {
+      "id": "microsoft-token-exchange",
+      "name": "Microsoft OAuth Token Exchange",
+      "request": {
+        "method": "POST",
+        "urlPath": "/common/oauth2/v2.0/token",
+        "bodyPatterns": [{
+          "contains": "grant_type=authorization_code"
+        }]
+      },
+      "response": {
+        "status": 200,
+        "jsonBody": {
+          "access_token": "mock-access-{{randomValue type='UUID'}}",
+          "refresh_token": "mock-refresh-{{randomValue type='UUID'}}",
+          "expires_in": 3600,
+          "token_type": "Bearer",
+          "scope": "https://graph.microsoft.com/Mail.Read https://graph.microsoft.com/Mail.Send https://graph.microsoft.com/Mail.ReadWrite offline_access"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    {
+      "id": "microsoft-token-refresh",
+      "name": "Microsoft OAuth Token Refresh",
+      "request": {
+        "method": "POST",
+        "urlPath": "/common/oauth2/v2.0/token",
+        "bodyPatterns": [{
+          "contains": "grant_type=refresh_token"
+        }]
+      },
+      "response": {
+        "status": 200,
+        "jsonBody": {
+          "access_token": "mock-refreshed-access-{{randomValue type='UUID'}}",
+          "refresh_token": "mock-refreshed-refresh-{{randomValue type='UUID'}}",
+          "expires_in": 3600,
+          "token_type": "Bearer",
+          "scope": "https://graph.microsoft.com/Mail.Read https://graph.microsoft.com/Mail.Send https://graph.microsoft.com/Mail.ReadWrite offline_access"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    {
+      "id": "microsoft-user-profile",
+      "name": "Microsoft Graph User Profile",
+      "request": {
+        "method": "GET",
+        "urlPath": "/v1.0/me"
+      },
+      "response": {
+        "status": 200,
+        "jsonBody": {
+          "id": "test-user-{{randomValue type='UUID'}}",
+          "displayName": "Test User",
+          "mail": "test@example.com",
+          "userPrincipalName": "test@example.com"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    {
+      "id": "microsoft-create-subscription",
+      "name": "Microsoft Graph Create Subscription",
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1.0/subscriptions"
+      },
+      "response": {
+        "status": 201,
+        "jsonBody": {
+          "id": "mock-subscription-{{randomValue type='UUID'}}",
+          "resource": "me/mailFolders('Inbox')/messages",
+          "changeType": "created",
+          "notificationUrl": "{{jsonPath request.body '$.notificationUrl'}}",
+          "expirationDateTime": "{{now offset='7 days' format='yyyy-MM-dd\\'T\\'HH:mm:ss.SSS\\'Z\\''}}",
+          "clientState": "{{jsonPath request.body '$.clientState'}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    {
+      "id": "microsoft-validation-token",
+      "name": "Microsoft Webhook Validation",
+      "priority": 1,
+      "request": {
+        "method": "POST",
+        "urlPathPattern": "/.*",
+        "queryParameters": {
+          "validationToken": {
+            "matches": ".*"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": "{{request.query.validationToken.[0]}}",
+        "headers": {
+          "Content-Type": "text/plain"
+        }
+      }
+    }
+  ]
+}

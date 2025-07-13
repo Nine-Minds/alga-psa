@@ -1,0 +1,148 @@
+{
+  "mappings": [
+    {
+      "id": "google-authorize",
+      "name": "Google OAuth Authorization",
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/o/oauth2/v2/auth.*"
+      },
+      "response": {
+        "status": 302,
+        "headers": {
+          "Location": "{{request.query.redirect_uri.[0]}}?code=mock-google-code-{{randomValue type='UUID'}}&state={{request.query.state.[0]}}&scope={{urlEncode request.query.scope.[0]}}"
+        }
+      }
+    },
+    {
+      "id": "google-token-exchange",
+      "name": "Google OAuth Token Exchange",
+      "request": {
+        "method": "POST",
+        "urlPath": "/token",
+        "bodyPatterns": [{
+          "contains": "grant_type=authorization_code"
+        }]
+      },
+      "response": {
+        "status": 200,
+        "jsonBody": {
+          "access_token": "mock-google-access-{{randomValue type='UUID'}}",
+          "refresh_token": "mock-google-refresh-{{randomValue type='UUID'}}",
+          "expires_in": 3600,
+          "token_type": "Bearer",
+          "scope": "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.modify"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    {
+      "id": "google-token-refresh",
+      "name": "Google OAuth Token Refresh",
+      "request": {
+        "method": "POST",
+        "urlPath": "/token",
+        "bodyPatterns": [{
+          "contains": "grant_type=refresh_token"
+        }]
+      },
+      "response": {
+        "status": 200,
+        "jsonBody": {
+          "access_token": "mock-google-refreshed-access-{{randomValue type='UUID'}}",
+          "expires_in": 3600,
+          "token_type": "Bearer",
+          "scope": "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.modify"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    {
+      "id": "google-user-profile",
+      "name": "Google User Profile",
+      "request": {
+        "method": "GET",
+        "urlPath": "/oauth2/v1/userinfo"
+      },
+      "response": {
+        "status": 200,
+        "jsonBody": {
+          "id": "test-google-user-{{randomValue type='NUMERIC' length='20'}}",
+          "email": "test@example.com",
+          "verified_email": true,
+          "name": "Test User",
+          "given_name": "Test",
+          "family_name": "User",
+          "picture": "https://lh3.googleusercontent.com/a/default-user",
+          "locale": "en"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    {
+      "id": "google-gmail-watch",
+      "name": "Gmail Watch",
+      "request": {
+        "method": "POST",
+        "urlPathPattern": "/gmail/v1/users/.*/watch"
+      },
+      "response": {
+        "status": 200,
+        "jsonBody": {
+          "historyId": "{{randomValue type='NUMERIC' length='10'}}",
+          "expiration": "{{now offset='7 days' format='epoch'}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    {
+      "id": "google-pubsub-topic-create",
+      "name": "Google Pub/Sub Topic Creation",
+      "request": {
+        "method": "PUT",
+        "urlPathPattern": "/v1/projects/.*/topics/.*"
+      },
+      "response": {
+        "status": 200,
+        "jsonBody": {
+          "name": "{{request.path}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    {
+      "id": "google-pubsub-subscription-create",
+      "name": "Google Pub/Sub Subscription Creation",
+      "request": {
+        "method": "PUT",
+        "urlPathPattern": "/v1/projects/.*/subscriptions/.*"
+      },
+      "response": {
+        "status": 200,
+        "jsonBody": {
+          "name": "{{request.path}}",
+          "topic": "{{jsonPath request.body '$.topic'}}",
+          "pushConfig": {
+            "pushEndpoint": "{{jsonPath request.body '$.pushConfig.pushEndpoint'}}",
+            "attributes": {}
+          },
+          "ackDeadlineSeconds": 10,
+          "messageRetentionDuration": "604800s"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    }
+  ]
+}
