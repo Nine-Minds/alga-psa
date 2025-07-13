@@ -484,6 +484,51 @@ export async function saveEmailClientAssociation(
 // =============================================================================
 
 /**
+ * Resolve email provider's inbound ticket defaults
+ */
+export async function resolveEmailProviderDefaults(
+  providerId: string,
+  tenant: string
+): Promise<any> {
+  const { getAdminConnection } = await import('@shared/db/admin.js');
+  const knex = await getAdminConnection();
+  
+  try {
+    // Get email provider with its defaults reference
+    const provider = await knex('email_providers')
+      .where({ id: providerId, tenant })
+      .select('inbound_ticket_defaults_id')
+      .first();
+
+    if (!provider || !provider.inbound_ticket_defaults_id) {
+      console.warn(`No inbound ticket defaults configured for provider ${providerId}`);
+      return null;
+    }
+
+    // Get the defaults configuration
+    const defaults = await knex('inbound_ticket_defaults')
+      .where({ id: provider.inbound_ticket_defaults_id, tenant })
+      .select('defaults')
+      .first();
+
+    if (!defaults) {
+      console.warn(`Inbound ticket defaults not found for ID ${provider.inbound_ticket_defaults_id}`);
+      return null;
+    }
+
+    // Parse and return the defaults JSON
+    return typeof defaults.defaults === 'string' 
+      ? JSON.parse(defaults.defaults) 
+      : defaults.defaults;
+  } catch (error) {
+    console.error('Error resolving email provider defaults:', error);
+    return null;
+  } finally {
+    await knex.destroy();
+  }
+}
+
+/**
  * Create ticket from email data - Enhanced with events and analytics
  */
 export async function createTicketFromEmail(
@@ -496,6 +541,10 @@ export async function createTicketFromEmail(
     channel_id?: string;
     status_id?: string;
     priority_id?: string;
+    category_id?: string;
+    subcategory_id?: string;
+    location_id?: string;
+    entered_by?: string | null;
     email_metadata?: any;
   },
   tenant: string,
@@ -524,6 +573,10 @@ export async function createTicketFromEmail(
         channel_id: ticketData.channel_id,
         status_id: ticketData.status_id,
         priority_id: ticketData.priority_id,
+        category_id: ticketData.category_id,
+        subcategory_id: ticketData.subcategory_id,
+        location_id: ticketData.location_id,
+        entered_by: ticketData.entered_by,
         email_metadata: ticketData.email_metadata
       }, tenant, trx, {}, eventPublisher, analyticsTracker, userId, 3);
 

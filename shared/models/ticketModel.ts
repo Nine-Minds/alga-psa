@@ -50,7 +50,7 @@ export const ticketSchema = z.object({
   status_id: z.string().uuid(),
   category_id: z.string().uuid().nullable(),
   subcategory_id: z.string().uuid().nullable(),
-  entered_by: z.string().uuid(),
+  entered_by: z.string().uuid().nullable(),
   updated_by: z.string().uuid().nullable(),
   closed_by: z.string().uuid().nullable(),
   assigned_to: z.string().uuid().nullable(),

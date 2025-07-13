@@ -1882,6 +1882,10 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
       { name: 'channel_id', type: 'string', required: false },
       { name: 'status_id', type: 'string', required: false },
       { name: 'priority_id', type: 'string', required: false },
+      { name: 'category_id', type: 'string', required: false },
+      { name: 'subcategory_id', type: 'string', required: false },
+      { name: 'location_id', type: 'string', required: false },
+      { name: 'entered_by', type: 'string', required: false },
       { name: 'email_metadata', type: 'object', required: false }
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
@@ -1896,6 +1900,10 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
           channel_id: params.channel_id,
           status_id: params.status_id,
           priority_id: params.priority_id,
+          category_id: params.category_id,
+          subcategory_id: params.subcategory_id,
+          location_id: params.location_id,
+          entered_by: params.entered_by,
           email_metadata: params.email_metadata
         }, context.tenant);
         
@@ -1911,6 +1919,26 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
           ticket_id: null,
           message: error.message
         };
+      }
+    }
+  );
+
+  actionRegistry.registerSimpleAction(
+    'resolve_email_provider_defaults',
+    'Resolve inbound ticket defaults for an email provider',
+    [
+      { name: 'providerId', type: 'string', required: true },
+      { name: 'tenant', type: 'string', required: true }
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      try {
+        const { resolveEmailProviderDefaults } = await import('@shared/workflow/actions/emailWorkflowActions.js');
+        const defaults = await resolveEmailProviderDefaults(params.providerId, params.tenant);
+        
+        return defaults;
+      } catch (error: any) {
+        logger.error(`[ACTION] resolve_email_provider_defaults: Error resolving defaults for provider ${params.providerId}`, error);
+        return null;
       }
     }
   );
