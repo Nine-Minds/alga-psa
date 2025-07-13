@@ -27,6 +27,7 @@ export async function getEmailProviders(): Promise<{ providers: EmailProvider[] 
         'last_sync_at as lastSyncAt',
         'error_message as errorMessage',
         'vendor_config as vendorConfig',
+        'inbound_ticket_defaults_id as inboundTicketDefaultsId',
         'created_at as createdAt',
         'updated_at as updatedAt'
       );
@@ -46,6 +47,7 @@ export async function createEmailProvider(data: {
   mailbox: string;
   isActive: boolean;
   vendorConfig: any;
+  inboundTicketDefaultsId?: string;
 }): Promise<{ provider: EmailProvider }> {
   const user = await getCurrentUser();
   if (!user) {
@@ -55,6 +57,17 @@ export async function createEmailProvider(data: {
   const { knex, tenant } = await createTenantKnex();
   
   try {
+    // Validate inbound ticket defaults if provided
+    if (data.inboundTicketDefaultsId) {
+      const defaultsExists = await knex('inbound_ticket_defaults')
+        .where({ id: data.inboundTicketDefaultsId, tenant })
+        .first();
+      
+      if (!defaultsExists) {
+        throw new Error('Invalid inbound ticket defaults ID');
+      }
+    }
+
     const [provider] = await knex('email_providers')
       .insert({
         id: knex.raw('gen_random_uuid()'),
@@ -64,6 +77,7 @@ export async function createEmailProvider(data: {
         mailbox: data.mailbox,
         is_active: data.isActive,
         vendor_config: data.vendorConfig,
+        inbound_ticket_defaults_id: data.inboundTicketDefaultsId,
         status: 'configuring',
         created_at: knex.fn.now(),
         updated_at: knex.fn.now()
@@ -79,6 +93,7 @@ export async function createEmailProvider(data: {
         'last_sync_at as lastSyncAt',
         'error_message as errorMessage',
         'vendor_config as vendorConfig',
+        'inbound_ticket_defaults_id as inboundTicketDefaultsId',
         'created_at as createdAt',
         'updated_at as updatedAt'
       ]);
@@ -99,6 +114,7 @@ export async function updateEmailProvider(
     mailbox: string;
     isActive: boolean;
     vendorConfig: any;
+    inboundTicketDefaultsId?: string;
   }
 ): Promise<{ provider: EmailProvider }> {
   const user = await getCurrentUser();
@@ -109,6 +125,17 @@ export async function updateEmailProvider(
   const { knex, tenant } = await createTenantKnex();
   
   try {
+    // Validate inbound ticket defaults if provided
+    if (data.inboundTicketDefaultsId) {
+      const defaultsExists = await knex('inbound_ticket_defaults')
+        .where({ id: data.inboundTicketDefaultsId, tenant })
+        .first();
+      
+      if (!defaultsExists) {
+        throw new Error('Invalid inbound ticket defaults ID');
+      }
+    }
+
     const [provider] = await knex('email_providers')
       .where({ id: providerId, tenant })
       .update({
@@ -117,6 +144,7 @@ export async function updateEmailProvider(
         mailbox: data.mailbox,
         is_active: data.isActive,
         vendor_config: data.vendorConfig,
+        inbound_ticket_defaults_id: data.inboundTicketDefaultsId,
         updated_at: knex.fn.now()
       })
       .returning([
@@ -130,6 +158,7 @@ export async function updateEmailProvider(
         'last_sync_at as lastSyncAt',
         'error_message as errorMessage',
         'vendor_config as vendorConfig',
+        'inbound_ticket_defaults_id as inboundTicketDefaultsId',
         'created_at as createdAt',
         'updated_at as updatedAt'
       ]);
