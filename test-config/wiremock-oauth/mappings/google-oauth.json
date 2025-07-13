@@ -1,7 +1,6 @@
 {
   "mappings": [
     {
-      "id": "google-authorize",
       "name": "Google OAuth Authorization",
       "request": {
         "method": "GET",
@@ -15,7 +14,6 @@
       }
     },
     {
-      "id": "google-token-exchange",
       "name": "Google OAuth Token Exchange",
       "request": {
         "method": "POST",
@@ -39,7 +37,6 @@
       }
     },
     {
-      "id": "google-token-refresh",
       "name": "Google OAuth Token Refresh",
       "request": {
         "method": "POST",
@@ -62,7 +59,6 @@
       }
     },
     {
-      "id": "google-user-profile",
       "name": "Google User Profile",
       "request": {
         "method": "GET",
@@ -86,7 +82,6 @@
       }
     },
     {
-      "id": "google-gmail-watch",
       "name": "Gmail Watch",
       "request": {
         "method": "POST",
@@ -104,7 +99,6 @@
       }
     },
     {
-      "id": "google-pubsub-topic-create",
       "name": "Google Pub/Sub Topic Creation",
       "request": {
         "method": "PUT",
@@ -121,7 +115,6 @@
       }
     },
     {
-      "id": "google-pubsub-subscription-create",
       "name": "Google Pub/Sub Subscription Creation",
       "request": {
         "method": "PUT",

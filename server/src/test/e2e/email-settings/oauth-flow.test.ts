@@ -1,40 +1,42 @@
 import { describe, it, beforeAll, afterAll, beforeEach, afterEach, expect } from 'vitest';
 import { EmailSettingsTestContext } from './EmailSettingsTestContext';
+import { EmailSettingsTestFixture } from './EmailSettingsTestFixture';
 
 describe('Email Settings OAuth Flow Tests', () => {
   let context: EmailSettingsTestContext;
-  let testHelpers: ReturnType<typeof EmailSettingsTestContext.createEmailSettingsHelpers>;
+  let testHelpers: ReturnType<typeof EmailSettingsTestFixture.createOptimizedHelpers>;
 
   beforeAll(async () => {
-    testHelpers = EmailSettingsTestContext.createEmailSettingsHelpers();
+    testHelpers = EmailSettingsTestFixture.createOptimizedHelpers();
     context = await testHelpers.beforeAll({
       testMode: 'e2e',
       autoStartServices: true,
-      clearEmailsBeforeTest: true
+      clearEmailsBeforeTest: false, // Handled by fixture
+      runSeeds: true
     });
   });
 
   afterAll(async () => {
-    await testHelpers.afterAll(context);
+    await testHelpers.afterAll();
   });
 
   beforeEach(async () => {
-    await testHelpers.beforeEach(context);
+    context = await testHelpers.beforeEach();
   });
 
   afterEach(async () => {
-    await testHelpers.afterEach(context);
+    await testHelpers.afterEach();
   });
 
   describe('Microsoft OAuth Flow', () => {
     it('should complete OAuth flow and store tokens', async () => {
       console.log('\n📧 Testing Microsoft OAuth Flow...');
       
-      // 1. Create test scenario
-      console.log('  1️⃣ Creating test tenant and company...');
-      const { tenant, company } = await context.emailTestFactory.createBasicEmailScenario();
-      console.log(`     ✓ Created tenant: ${tenant.tenant}`);
-      console.log(`     ✓ Created company: ${company.company_name}`);
+      // 1. Use base test data from fixture
+      console.log('  1️⃣ Using optimized base test data...');
+      const { tenant, company } = testHelpers.getBaseTestData();
+      console.log(`     ✓ Using tenant: ${tenant.tenant}`);
+      console.log(`     ✓ Using company: ${company.company_name}`);
       
       // 2. Initiate OAuth flow
       // Note: In a real implementation, you would call your API endpoint here
@@ -43,11 +45,9 @@ describe('Email Settings OAuth Flow Tests', () => {
       
       // 3. Create a provider record to simulate OAuth completion
       console.log('  3️⃣ Creating email provider with OAuth tokens...');
-      const provider = await context.createEmailProvider({
+      const provider = await testHelpers.createTestEmailProvider({
         provider: 'microsoft',
-        mailbox: 'support@example.com',
-        tenant_id: tenant.tenant,
-        company_id: company.company_id
+        mailbox: 'support@example.com'
       });
       console.log(`     ✓ Created provider for mailbox: ${provider.mailbox}`);
       
@@ -75,9 +75,9 @@ describe('Email Settings OAuth Flow Tests', () => {
     it('should handle OAuth error scenarios', async () => {
       console.log('\n🚫 Testing OAuth Error Handling...');
       
-      console.log('  1️⃣ Setting up test scenario...');
-      await context.emailTestFactory.createBasicEmailScenario();
-      console.log('     ✓ Test scenario created');
+      console.log('  1️⃣ Using optimized base test data...');
+      const { tenant } = testHelpers.getBaseTestData();
+      console.log(`     ✓ Using tenant: ${tenant.tenant}`);
       
       // Test invalid authorization code
       console.log('  2️⃣ Testing invalid authorization code scenario...');
@@ -137,19 +137,17 @@ describe('Email Settings OAuth Flow Tests', () => {
     it('should complete OAuth flow with Pub/Sub setup', async () => {
       console.log('\n📧 Testing Google OAuth Flow with Pub/Sub Setup...');
       
-      // 1. Create test scenario
-      console.log('  1️⃣ Creating test tenant and company...');
-      const { tenant, company } = await context.emailTestFactory.createBasicEmailScenario();
-      console.log(`     ✓ Created tenant: ${tenant.tenant}`);
-      console.log(`     ✓ Created company: ${company.company_name}`);
+      // 1. Use base test data from fixture
+      console.log('  1️⃣ Using optimized base test data...');
+      const { tenant, company } = testHelpers.getBaseTestData();
+      console.log(`     ✓ Using tenant: ${tenant.tenant}`);
+      console.log(`     ✓ Using company: ${company.company_name}`);
       
       // 2. Create a Google provider
       console.log('  2️⃣ Setting up Google OAuth provider...');
-      const provider = await context.createEmailProvider({
+      const provider = await testHelpers.createTestEmailProvider({
         provider: 'google',
-        mailbox: 'support@example.com',
-        tenant_id: tenant.tenant,
-        company_id: company.company_id
+        mailbox: 'support@example.com'
       });
       console.log(`     ✓ Created Google provider for mailbox: ${provider.mailbox}`);
       
@@ -184,9 +182,9 @@ describe('Email Settings OAuth Flow Tests', () => {
     it('should handle expired refresh token', async () => {
       console.log('\n⏰ Testing Expired Refresh Token Handling...');
       
-      console.log('  1️⃣ Setting up test scenario...');
-      await context.emailTestFactory.createBasicEmailScenario();
-      console.log('     ✓ Test scenario created');
+      console.log('  1️⃣ Using optimized base test data...');
+      const { tenant } = testHelpers.getBaseTestData();
+      console.log(`     ✓ Using tenant: ${tenant.tenant}`);
       
       // Test expired refresh token scenario
       console.log('  2️⃣ Testing refresh token expiration scenario...');
@@ -213,18 +211,16 @@ describe('Email Settings OAuth Flow Tests', () => {
     it('should store tokens securely in database', async () => {
       console.log('\n🔐 Testing Token Storage and Security...');
       
-      console.log('  1️⃣ Creating test scenario...');
-      const { tenant, company } = await context.emailTestFactory.createBasicEmailScenario();
-      console.log(`     ✓ Created tenant: ${tenant.tenant}`);
-      console.log(`     ✓ Created company: ${company.company_name}`);
+      console.log('  1️⃣ Using optimized base test data...');
+      const { tenant, company } = testHelpers.getBaseTestData();
+      console.log(`     ✓ Using tenant: ${tenant.tenant}`);
+      console.log(`     ✓ Using company: ${company.company_name}`);
       
       // Create provider
       console.log('  2️⃣ Creating email provider with OAuth tokens...');
-      const provider = await context.createEmailProvider({
+      const provider = await testHelpers.createTestEmailProvider({
         provider: 'microsoft',
-        mailbox: 'secure@example.com',
-        tenant_id: tenant.tenant,
-        company_id: company.company_id
+        mailbox: 'secure@example.com'
       });
       console.log(`     ✓ Provider created with ID: ${provider.id}`);
       
@@ -262,9 +258,9 @@ describe('Email Settings OAuth Flow Tests', () => {
     it('should validate state parameter in OAuth callback', async () => {
       console.log('\n🛡️ Testing State Parameter Validation...');
       
-      console.log('  1️⃣ Setting up test scenario...');
-      await context.emailTestFactory.createBasicEmailScenario();
-      console.log('     ✓ Test scenario created');
+      console.log('  1️⃣ Using optimized base test data...');
+      const { tenant } = testHelpers.getBaseTestData();
+      console.log(`     ✓ Using tenant: ${tenant.tenant}`);
       
       // Test with mismatched state
       console.log('  2️⃣ Testing OAuth state parameter validation...');

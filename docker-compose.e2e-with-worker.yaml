@@ -58,6 +58,7 @@ services:
       DB_PORT: 5432
       DB_NAME_SERVER: server_test
       DB_USER_ADMIN: postgres
+      DB_USER_SERVER: app_user
       POSTGRES_USER: postgres
       
       # Logging

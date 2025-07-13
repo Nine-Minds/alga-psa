@@ -426,4 +426,11 @@ export class EmailTestFactory {
 
     return { message_id: messageId };
   }
+
+  /**
+   * Get access to created resources for cleanup tracking
+   */
+  getCreatedResources() {
+    return this.createdResources;
+  }
 }

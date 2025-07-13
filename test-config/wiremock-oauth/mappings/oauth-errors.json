@@ -1,7 +1,6 @@
 {
   "mappings": [
     {
-      "id": "oauth-invalid-code",
       "name": "Invalid Authorization Code",
       "priority": 2,
       "request": {
@@ -23,7 +22,6 @@
       }
     },
     {
-      "id": "oauth-expired-refresh-token",
       "name": "Expired Refresh Token",
       "priority": 2,
       "request": {
@@ -45,7 +43,6 @@
       }
     },
     {
-      "id": "oauth-invalid-client",
       "name": "Invalid Client Credentials",
       "priority": 2,
       "request": {
@@ -67,7 +64,6 @@
       }
     },
     {
-      "id": "oauth-network-error",
       "name": "Network Error Simulation",
       "priority": 3,
       "request": {

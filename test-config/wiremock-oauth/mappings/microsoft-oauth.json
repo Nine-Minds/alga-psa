@@ -1,7 +1,6 @@
 {
   "mappings": [
     {
-      "id": "microsoft-authorize",
       "name": "Microsoft OAuth Authorization",
       "request": {
         "method": "GET",
@@ -15,7 +14,6 @@
       }
     },
     {
-      "id": "microsoft-token-exchange",
       "name": "Microsoft OAuth Token Exchange",
       "request": {
         "method": "POST",
@@ -39,7 +37,6 @@
       }
     },
     {
-      "id": "microsoft-token-refresh",
       "name": "Microsoft OAuth Token Refresh",
       "request": {
         "method": "POST",
@@ -63,7 +60,6 @@
       }
     },
     {
-      "id": "microsoft-user-profile",
       "name": "Microsoft Graph User Profile",
       "request": {
         "method": "GET",
@@ -83,7 +79,6 @@
       }
     },
     {
-      "id": "microsoft-create-subscription",
       "name": "Microsoft Graph Create Subscription",
       "request": {
         "method": "POST",
@@ -105,7 +100,6 @@
       }
     },
     {
-      "id": "microsoft-validation-token",
       "name": "Microsoft Webhook Validation",
       "priority": 1,
       "request": {
