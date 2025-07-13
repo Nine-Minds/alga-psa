@@ -110,5 +110,8 @@ export interface EmailQueueJob {
   providerId: string;
   webhookData: any;
   attempt: number;
+  maxRetries: number;
   createdAt: string;
+  // Optional email data for cases where we already have the email content (e.g., MailHog)
+  emailData?: EmailMessage;
 }

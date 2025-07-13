@@ -183,6 +183,7 @@ export class E2ETestContext extends TestContext {
       if (this.e2eOptions.autoStartEmailPolling) {
         console.log('📧 Starting MailHog email polling service...');
         this.mailhogPollingService.startPolling();
+        console.log('✅ MailHog polling service started successfully');
       }
       
       this.servicesStarted = true;

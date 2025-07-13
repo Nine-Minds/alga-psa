@@ -38,8 +38,13 @@ export class MailHogPollingService {
       return;
     }
 
-    console.log(`📧 Starting MailHog polling every ${this.pollIntervalMs}ms`);
+    console.log(`📧 Starting MailHog polling every ${this.pollIntervalMs}ms at ${this.mailhogApiUrl}`);
     this.isPolling = true;
+
+    // Do an immediate poll to check connectivity
+    this.pollForNewEmails().catch((error: any) => {
+      console.error('❌ Initial MailHog poll failed:', error.message);
+    });
 
     this.pollingInterval = setInterval(async () => {
       try {
@@ -80,7 +85,7 @@ export class MailHogPollingService {
       }
 
       const data = await response.json();
-      const messages = data.messages || [];
+      const messages = Array.isArray(data) ? data : (data.messages || []);
 
       console.log(`📧 Found ${messages.length} total messages in MailHog`);
 
@@ -118,6 +123,7 @@ export class MailHogPollingService {
         id: uuidv4(),
         messageId: emailData.id,
         providerId: 'mailhog-test-provider', // Special provider ID for MailHog
+        provider: 'microsoft', // Use microsoft as the base type for mailhog-test-provider
         tenant: tenantId,
         attempt: 1,
         maxRetries: 3,
@@ -125,6 +131,13 @@ export class MailHogPollingService {
         webhookData: {
           source: 'mailhog',
           originalMessageId: mailhogMessage.ID
+        },
+        // Include the already-converted email data so EmailProcessor doesn't need to fetch it
+        emailData: {
+          ...emailData,
+          provider: 'microsoft' as const,
+          providerId: 'mailhog-test-provider',
+          tenant: tenantId
         }
       };
 
@@ -165,18 +178,21 @@ export class MailHogPollingService {
       id: mailhogMessage.ID,
       subject: headers.Subject?.[0] || '(No Subject)',
       from: {
-        email: fromEmail,
-        name: fromName || null
+        email: fromEmail || 'unknown@example.com', // Ensure valid email
+        name: fromName || undefined // Use undefined instead of null for optional fields
       },
-      to: toEmails,
+      to: toEmails.map(to => ({
+        email: to.email || 'unknown@example.com', // Ensure valid email
+        name: to.name || undefined // Use undefined instead of null
+      })),
       body: {
         text: mailhogMessage.Content?.Body || '',
-        html: null // MailHog doesn't separate HTML/text in our simple case
+        html: undefined // Use undefined instead of null for optional fields
       },
       receivedAt: new Date().toISOString(),
       attachments: [], // MailHog attachments would need more complex parsing
-      threadId: headers['Message-ID']?.[0] || null,
-      inReplyTo: headers['In-Reply-To']?.[0] || null,
+      threadId: headers['Message-ID']?.[0] || undefined, // Use undefined instead of null
+      inReplyTo: headers['In-Reply-To']?.[0] || undefined, // Use undefined instead of null
       references: headers.References ? headers.References[0].split(/\s+/) : []
     };
   }
@@ -188,8 +204,8 @@ export class MailHogPollingService {
   private async getDefaultTenant(): Promise<string> {
     try {
       // Import database connection dynamically to avoid circular dependencies
-      const { getKnex } = await import('../../lib/db');
-      const db = getKnex();
+      const { getConnection } = await import('@shared/db/connection');
+      const db = await getConnection();
       
       // Get the first available tenant from the database
       const tenant = await db('tenants').select('tenant').first();

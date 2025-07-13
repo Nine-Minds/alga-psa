@@ -18,10 +18,18 @@ export class EmailProcessor {
     try {
       // 1. Get provider configuration and create adapter
       const providerConfig = await this.getProviderConfig(job.providerId, job.tenant);
-      const adapter = await this.createProviderAdapter(providerConfig);
-
+      
       // 2. Get email message details
-      const emailMessage = await adapter.getMessageDetails(job.messageId);
+      let emailMessage;
+      if (job.emailData) {
+        // Use provided email data (e.g., from MailHog) instead of fetching from external API
+        console.log(`📧 Using provided email data for ${job.providerId}`);
+        emailMessage = job.emailData;
+      } else {
+        // Create adapter and fetch email details from external API
+        const adapter = await this.createProviderAdapter(providerConfig);
+        emailMessage = await adapter.getMessageDetails(job.messageId);
+      }
 
       // 3. Emit workflow event for email processing
       await this.emitEmailReceivedEvent({
@@ -31,8 +39,13 @@ export class EmailProcessor {
         emailData: emailMessage,
       });
 
-      // 4. Mark message as processed in the provider
-      await adapter.markMessageProcessed(job.messageId);
+      // 4. Mark message as processed in the provider (skip for provided email data)
+      if (!job.emailData) {
+        const adapter = await this.createProviderAdapter(providerConfig);
+        await adapter.markMessageProcessed(job.messageId);
+      } else {
+        console.log(`📧 Skipping markMessageProcessed for ${job.providerId} (using provided email data)`);
+      }
 
       // 5. Record successful processing in database
       await this.recordProcessedMessage(job, emailMessage, 'success');
@@ -58,8 +71,8 @@ export class EmailProcessor {
   private async getProviderConfig(providerId: string, tenant: string): Promise<EmailProviderConfig> {
     try {
       // Import database connection dynamically to avoid module resolution issues
-      const { getDb } = await import('../../lib/db');
-      const db = getDb();
+      const { getConnection } = await import('@shared/db/connection');
+      const db = await getConnection();
       
       // For MailHog test provider, return a mock configuration
       if (providerId === 'mailhog-test-provider') {
@@ -170,8 +183,8 @@ export class EmailProcessor {
 
     try {
       // Import database connection dynamically to avoid module resolution issues
-      const { getDb } = await import('../../lib/db');
-      const db = getDb();
+      const { getConnection } = await import('@shared/db/connection');
+      const db = await getConnection();
       
       const record = {
         message_id: job.messageId,
