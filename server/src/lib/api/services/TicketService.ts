@@ -10,6 +10,9 @@ import { withTransaction } from '@shared/db';
 import { NumberingService } from 'server/src/lib/services/numberingService';
 import { getEventBus } from 'server/src/lib/eventBus';
 import { NotFoundError, ValidationError } from '../middleware/apiMiddleware';
+import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
+import { ServerEventPublisher } from '../../adapters/serverEventPublisher';
+import { ServerAnalyticsTracker } from '../../adapters/serverAnalyticsTracker';
 // Event types no longer needed as we create objects directly
 import { 
   CreateTicketData, 
@@ -245,56 +248,60 @@ export class TicketService extends BaseService<ITicket> {
       const { knex } = await this.getKnex();
   
       return withTransaction(knex, async (trx) => {
-        // Generate ticket number
-        const numberingService = new NumberingService();
-        const ticketNumber = await numberingService.getNextTicketNumber();
-  
-        // Prepare ticket data
-        const ticketData = {
-          ticket_id: knex.raw('gen_random_uuid()'),
-          ticket_number: ticketNumber,
+        // Convert API data format to TicketModel input format
+        const createTicketInput: CreateTicketInput = {
           title: data.title,
-          url: data.url || null,
+          url: data.url,
           channel_id: data.channel_id,
           company_id: data.company_id,
-          location_id: data.location_id || null,
-          contact_name_id: data.contact_name_id || null,
+          location_id: data.location_id,
+          contact_id: data.contact_name_id, // Maps to contact_name_id in database
           status_id: data.status_id,
-          category_id: data.category_id || null,
-          subcategory_id: data.subcategory_id || null,
+          category_id: data.category_id,
+          subcategory_id: data.subcategory_id,
           entered_by: context.userId,
-          updated_by: context.userId,
-          assigned_to: data.assigned_to || null,
+          assigned_to: data.assigned_to,
           priority_id: data.priority_id,
-          attributes: data.attributes || null,
-          entered_at: knex.raw('now()'),
-          updated_at: knex.raw('now()'),
-          tenant: context.tenant
+          attributes: data.attributes,
+          source: 'api'
         };
-  
-        // Insert ticket
-        const [ticket] = await trx('tickets').insert(ticketData).returning('*');
-  
-        // Handle tags if provided
+
+        // Create adapters for API service context
+        const eventPublisher = new ServerEventPublisher();
+        const analyticsTracker = new ServerAnalyticsTracker();
+
+        // Use shared TicketModel with retry logic, events, and analytics
+        const ticketResult = await TicketModel.createTicketWithRetry(
+          createTicketInput,
+          context.tenant,
+          trx,
+          {}, // validation options
+          eventPublisher,
+          analyticsTracker,
+          context.userId,
+          3 // max retries
+        );
+
+        // Handle tags if provided (API service specific functionality)
         if (data.tags && data.tags.length > 0) {
-          await this.handleTags(ticket.ticket_id, data.tags, context, trx);
-          // Temporarily add tags to the returned object until proper tag system is implemented
-          (ticket as any).tags = data.tags;
+          await this.handleTags(ticketResult.ticket_id, data.tags, context, trx);
         }
-  
-        // Publish ticket created event
-        await this.safePublishEvent('TicketCreated', {
-          id: require("crypto").randomUUID(),
-          eventType: "TICKET_CREATED" as const,
-          timestamp: new Date().toISOString(),
-          payload: {
-            tenantId: context.tenant,
-            ticketId: ticket.ticket_id,
-            userId: context.userId
-          }
-        });
-  
-        return ticket as ITicket;
+
+        // Get the full ticket data for return
+        const fullTicket = await trx('tickets')
+          .where({ ticket_id: ticketResult.ticket_id, tenant: context.tenant })
+          .first();
+
+        if (!fullTicket) {
+          throw new Error('Failed to retrieve created ticket');
+        }
+
+        // Add tags to returned object if provided (temporary until proper tag system)
+        if (data.tags && data.tags.length > 0) {
+          (fullTicket as any).tags = data.tags;
+        }
+
+        return fullTicket as ITicket;
       });
     }
 
@@ -383,7 +390,7 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      // Verify asset exists and get default values
+      // Verify asset exists
       const asset = await trx('assets')
         .where({ asset_id: data.asset_id, tenant: context.tenant })
         .first();
@@ -392,43 +399,44 @@ export class TicketService extends BaseService<ITicket> {
         throw new NotFoundError('Asset not found');
       }
 
-      // Get default channel and status for tickets
-      const [defaultChannel, defaultStatus] = await Promise.all([
-        trx('channels').where({ tenant: context.tenant, is_default: true }).first(),
-        trx('statuses').where({ tenant: context.tenant, is_default: true }).first()
-      ]);
+      // Create adapters for API service context
+      const eventPublisher = new ServerEventPublisher();
+      const analyticsTracker = new ServerAnalyticsTracker();
 
-      if (!defaultChannel || !defaultStatus) {
-        throw new Error('Default channel or status not configured');
-      }
-
-      // Create ticket with asset association
-      const ticketData: CreateTicketData = {
-        title: data.title,
-        channel_id: defaultChannel.channel_id,
-        company_id: data.company_id,
-        contact_name_id: data.contact_name_id,
-        status_id: defaultStatus.status_id,
-        category_id: data.category_id,
-        priority_id: data.priority_id,
-        attributes: {
+      // Use shared TicketModel for asset ticket creation
+      const ticketResult = await TicketModel.createTicketFromAsset(
+        {
+          title: data.title,
           description: data.description,
+          priority_id: data.priority_id,
           asset_id: data.asset_id,
-          asset_name: asset.asset_name
-        }
-      };
+          company_id: data.company_id
+        },
+        context.userId,
+        context.tenant,
+        trx,
+        eventPublisher,
+        analyticsTracker
+      );
 
-      const ticket = await this.create(ticketData, context);
-
-      // Create asset association
+      // Create API-specific asset association (additional to shared model association)
       await trx('asset_ticket_associations').insert({
         asset_id: data.asset_id,
-        ticket_id: ticket.ticket_id,
+        ticket_id: ticketResult.ticket_id,
         tenant: context.tenant,
         created_at: knex.raw('now()')
       });
 
-      return ticket;
+      // Get the full ticket data for return
+      const fullTicket = await trx('tickets')
+        .where({ ticket_id: ticketResult.ticket_id, tenant: context.tenant })
+        .first();
+
+      if (!fullTicket) {
+        throw new Error('Failed to retrieve created ticket');
+      }
+
+      return fullTicket as ITicket;
     });
   }
 
