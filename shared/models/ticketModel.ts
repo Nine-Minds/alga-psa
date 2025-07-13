@@ -6,6 +6,80 @@
 
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { z } from 'zod';
+
+// =============================================================================
+// VALIDATION SCHEMAS
+// =============================================================================
+
+// Core ticket form validation schema extracted from server actions
+export const ticketFormSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  channel_id: z.string().uuid('Channel ID must be a valid UUID'),
+  company_id: z.string().uuid('Company ID must be a valid UUID'),
+  location_id: z.string().uuid('Location ID must be a valid UUID').nullable().optional(),
+  contact_name_id: z.string().uuid('Contact ID must be a valid UUID').nullable(),
+  status_id: z.string().uuid('Status ID must be a valid UUID'),
+  assigned_to: z.string().uuid('Assigned to must be a valid UUID').nullable(),
+  priority_id: z.string().uuid('Priority ID must be a valid UUID'),
+  description: z.string(),
+  category_id: z.string().uuid('Category ID must be a valid UUID').nullable(),
+  subcategory_id: z.string().uuid('Subcategory ID must be a valid UUID').nullable(),
+});
+
+// Ticket creation from asset schema
+export const createTicketFromAssetSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  description: z.string(),
+  priority_id: z.string().uuid('Priority ID must be a valid UUID'),
+  asset_id: z.string().uuid('Asset ID must be a valid UUID'),
+  company_id: z.string().uuid('Company ID must be a valid UUID')
+});
+
+// Complete ticket schema for validation
+export const ticketSchema = z.object({
+  tenant: z.string().uuid().optional(),
+  ticket_id: z.string().uuid(),
+  ticket_number: z.string(),
+  title: z.string(),
+  url: z.string().nullable(),
+  channel_id: z.string().uuid(),
+  company_id: z.string().uuid(),
+  location_id: z.string().uuid().nullable().optional(),
+  contact_name_id: z.string().uuid().nullable(),
+  status_id: z.string().uuid(),
+  category_id: z.string().uuid().nullable(),
+  subcategory_id: z.string().uuid().nullable(),
+  entered_by: z.string().uuid(),
+  updated_by: z.string().uuid().nullable(),
+  closed_by: z.string().uuid().nullable(),
+  assigned_to: z.string().uuid().nullable(),
+  entered_at: z.string().nullable(),
+  updated_at: z.string().nullable(),
+  closed_at: z.string().nullable(),
+  attributes: z.record(z.unknown()).nullable(),
+  priority_id: z.string().uuid()
+});
+
+// Ticket update schema
+export const ticketUpdateSchema = ticketSchema.partial().omit({
+  tenant: true,
+  ticket_id: true,
+  ticket_number: true,
+  entered_by: true,
+  entered_at: true
+});
+
+// Comment validation schema
+export const createCommentSchema = z.object({
+  ticket_id: z.string().uuid('Ticket ID must be a valid UUID'),
+  content: z.string().min(1, 'Comment content is required'),
+  is_internal: z.boolean().optional(),
+  is_resolution: z.boolean().optional(),
+  author_type: z.enum(['internal', 'contact', 'system']).optional(),
+  author_id: z.string().uuid('Author ID must be a valid UUID').optional(),
+  metadata: z.record(z.unknown()).optional()
+});
 
 // =============================================================================
 // INTERFACES
@@ -36,6 +110,60 @@ export interface CreateTicketInput {
   closed_by?: string;
   closed_at?: string;
   is_closed?: boolean;
+}
+
+export interface CreateTicketFromAssetInput {
+  title: string;
+  description: string;
+  priority_id: string;
+  asset_id: string;
+  company_id: string;
+}
+
+export interface UpdateTicketInput {
+  title?: string;
+  url?: string;
+  company_id?: string;
+  location_id?: string;
+  contact_name_id?: string;
+  status_id?: string;
+  category_id?: string;
+  subcategory_id?: string;
+  updated_by?: string;
+  closed_by?: string;
+  assigned_to?: string;
+  updated_at?: string;
+  closed_at?: string;
+  attributes?: Record<string, any>;
+  priority_id?: string;
+}
+
+export interface ValidationOptions {
+  skipLocationValidation?: boolean;
+  skipCategoryValidation?: boolean;
+  skipSubcategoryValidation?: boolean;
+  allowEmptyFields?: boolean;
+}
+
+export interface BusinessRuleResult {
+  valid: boolean;
+  error?: string;
+}
+
+export interface TicketValidationResult {
+  valid: boolean;
+  data?: any;
+  errors?: string[];
+}
+
+export interface CreateCommentValidationInput {
+  ticket_id: string;
+  content: string;
+  is_internal?: boolean;
+  is_resolution?: boolean;
+  author_type?: 'internal' | 'contact' | 'system';
+  author_id?: string;
+  metadata?: any;
 }
 
 export interface CreateTicketOutput {
@@ -70,25 +198,261 @@ export interface CreateCommentOutput {
 }
 
 // =============================================================================
+// VALIDATION HELPER FUNCTIONS
+// =============================================================================
+
+/**
+ * Validates form data using the provided schema
+ */
+export function validateData<T>(schema: z.ZodSchema<T>, data: unknown): T {
+  try {
+    return schema.parse(data);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const errorMessages = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
+      throw new Error(`Validation failed: ${errorMessages}`);
+    }
+    throw error;
+  }
+}
+
+/**
+ * Cleans empty string values to null for nullable fields
+ */
+export function cleanNullableFields(data: Record<string, any>): Record<string, any> {
+  const cleaned = { ...data };
+  const nullableFields = ['contact_name_id', 'category_id', 'subcategory_id', 'location_id', 'assigned_to'];
+  
+  for (const field of nullableFields) {
+    if (cleaned[field] === '') {
+      cleaned[field] = null;
+    }
+  }
+  
+  return cleaned;
+}
+
+// =============================================================================
 // CORE TICKET MODEL
 // =============================================================================
 
 export class TicketModel {
   /**
-   * Create a new ticket with proper number generation and validation
+   * Validates ticket creation input using extracted validation logic
+   */
+  static validateCreateTicketInput(input: CreateTicketInput): TicketValidationResult {
+    try {
+      // Basic required field validation
+      if (!input.title || input.title.trim() === '') {
+        return { valid: false, errors: ['Ticket title is required'] };
+      }
+
+      // Clean nullable fields (convert empty strings to null)
+      const cleanedInput = cleanNullableFields(input);
+
+      return { valid: true, data: cleanedInput };
+    } catch (error) {
+      return {
+        valid: false,
+        errors: [error instanceof Error ? error.message : 'Validation failed']
+      };
+    }
+  }
+
+  /**
+   * Validates ticket form data using server action validation logic
+   */
+  static validateTicketFormData(formData: Record<string, any>): TicketValidationResult {
+    try {
+      const validatedData = validateData(ticketFormSchema, formData);
+      return { valid: true, data: validatedData };
+    } catch (error) {
+      return {
+        valid: false,
+        errors: [error instanceof Error ? error.message : 'Form validation failed']
+      };
+    }
+  }
+
+  /**
+   * Validates ticket creation from asset using server action validation logic
+   */
+  static validateCreateTicketFromAssetData(data: CreateTicketFromAssetInput): TicketValidationResult {
+    try {
+      const validatedData = validateData(createTicketFromAssetSchema, data);
+      return { valid: true, data: validatedData };
+    } catch (error) {
+      return {
+        valid: false,
+        errors: [error instanceof Error ? error.message : 'Asset ticket validation failed']
+      };
+    }
+  }
+
+  /**
+   * Validates ticket update data using server action validation logic
+   */
+  static validateUpdateTicketData(data: UpdateTicketInput): TicketValidationResult {
+    try {
+      const validatedData = validateData(ticketUpdateSchema, data);
+      return { valid: true, data: validatedData };
+    } catch (error) {
+      return {
+        valid: false,
+        errors: [error instanceof Error ? error.message : 'Update validation failed']
+      };
+    }
+  }
+
+  /**
+   * Validates that a location belongs to the specified company
+   */
+  static async validateLocationBelongsToCompany(
+    locationId: string,
+    companyId: string,
+    tenant: string,
+    trx: Knex.Transaction
+  ): Promise<BusinessRuleResult> {
+    try {
+      const location = await trx('company_locations')
+        .where({
+          location_id: locationId,
+          company_id: companyId,
+          tenant: tenant
+        })
+        .first();
+      
+      if (!location) {
+        return {
+          valid: false,
+          error: 'Invalid location: Location does not belong to the selected company'
+        };
+      }
+
+      return { valid: true };
+    } catch (error) {
+      return {
+        valid: false,
+        error: `Location validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  }
+
+  /**
+   * Validates that a subcategory belongs to the specified parent category
+   */
+  static async validateCategorySubcategoryRelationship(
+    subcategoryId: string,
+    categoryId: string,
+    tenant: string,
+    trx: Knex.Transaction
+  ): Promise<BusinessRuleResult> {
+    try {
+      const subcategory = await trx('categories')
+        .where({ category_id: subcategoryId, tenant: tenant })
+        .first();
+
+      if (subcategory && subcategory.parent_category !== categoryId) {
+        return {
+          valid: false,
+          error: 'Invalid category combination: subcategory must belong to the selected parent category'
+        };
+      }
+
+      return { valid: true };
+    } catch (error) {
+      return {
+        valid: false,
+        error: `Category validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  }
+
+  /**
+   * Performs comprehensive business rule validation for ticket creation
+   */
+  static async validateBusinessRules(
+    input: CreateTicketInput,
+    tenant: string,
+    trx: Knex.Transaction,
+    options: ValidationOptions = {}
+  ): Promise<BusinessRuleResult> {
+    const errors: string[] = [];
+
+    try {
+      // Validate location belongs to company if both are provided
+      if (!options.skipLocationValidation && input.location_id && input.company_id) {
+        const locationResult = await this.validateLocationBelongsToCompany(
+          input.location_id,
+          input.company_id,
+          tenant,
+          trx
+        );
+        if (!locationResult.valid && locationResult.error) {
+          errors.push(locationResult.error);
+        }
+      }
+
+      // Validate category/subcategory compatibility if both are provided
+      if (!options.skipCategoryValidation && input.subcategory_id && input.category_id) {
+        const categoryResult = await this.validateCategorySubcategoryRelationship(
+          input.subcategory_id,
+          input.category_id,
+          tenant,
+          trx
+        );
+        if (!categoryResult.valid && categoryResult.error) {
+          errors.push(categoryResult.error);
+        }
+      }
+
+      if (errors.length > 0) {
+        return {
+          valid: false,
+          error: errors.join('; ')
+        };
+      }
+
+      return { valid: true };
+    } catch (error) {
+      return {
+        valid: false,
+        error: `Business rule validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  }
+
+  /**
+   * Create a new ticket with complete validation and business rule checking
    */
   static async createTicket(
     input: CreateTicketInput,
     tenant: string,
-    trx: Knex.Transaction
+    trx: Knex.Transaction,
+    validationOptions: ValidationOptions = {}
   ): Promise<CreateTicketOutput> {
-    // Validate required fields
-    if (!input.title) {
-      throw new Error('Ticket title is required');
-    }
-
+    // Validate required tenant
     if (!tenant) {
       throw new Error('Tenant is required');
+    }
+
+    // Perform input validation
+    const inputValidation = this.validateCreateTicketInput(input);
+    if (!inputValidation.valid) {
+      throw new Error(`Input validation failed: ${inputValidation.errors?.join('; ')}`);
+    }
+
+    const cleanedInput = inputValidation.data || input;
+
+    // Perform business rule validation
+    const businessRuleValidation = await this.validateBusinessRules(
+      cleanedInput,
+      tenant,
+      trx,
+      validationOptions
+    );
+    if (!businessRuleValidation.valid && businessRuleValidation.error) {
+      throw new Error(businessRuleValidation.error);
     }
 
     // Generate ticket number using the database function
@@ -105,104 +469,311 @@ export class TicketModel {
     const ticketId = uuidv4();
     const now = new Date();
 
-    // Validate location belongs to company if both are provided
-    if (input.location_id && input.company_id) {
-      const location = await trx('company_locations')
-        .where({
-          location_id: input.location_id,
-          company_id: input.company_id,
-          tenant: tenant
-        })
-        .first();
-      
-      if (!location) {
-        throw new Error('Invalid location: Location does not belong to the selected company');
-      }
-    }
-
-    // Validate category/subcategory compatibility if both are provided
-    if (input.subcategory_id && input.category_id) {
-      const subcategory = await trx('categories')
-        .where({ category_id: input.subcategory_id, tenant: tenant })
-        .first();
-
-      if (subcategory && subcategory.parent_category !== input.category_id) {
-        throw new Error('Invalid category combination: subcategory must belong to the selected parent category');
-      }
-    }
-
     // Prepare attributes object - description goes into attributes.description
-    const attributes = { ...input.attributes };
-    if (input.description) {
-      attributes.description = input.description;
+    const attributes = { ...cleanedInput.attributes };
+    if (cleanedInput.description) {
+      attributes.description = cleanedInput.description;
     }
 
     // Prepare ticket data
     const ticketData = {
       ticket_id: ticketId,
       tenant,
-      title: input.title,
+      title: cleanedInput.title,
       ticket_number: ticketNumber,
-      company_id: input.company_id || null,
-      contact_name_id: input.contact_id || null, // Map contact_id to contact_name_id
-      location_id: input.location_id || null,
-      status_id: input.status_id || null,
-      assigned_to: input.assigned_to || null,
-      priority_id: input.priority_id || null,
-      category_id: input.category_id || null,
-      subcategory_id: input.subcategory_id || null,
-      channel_id: input.channel_id || null,
-      source: input.source || null,
-      entered_by: input.entered_by || null,
+      company_id: cleanedInput.company_id || null,
+      contact_name_id: cleanedInput.contact_id || null, // Map contact_id to contact_name_id
+      location_id: cleanedInput.location_id || null,
+      status_id: cleanedInput.status_id || null,
+      assigned_to: cleanedInput.assigned_to || null,
+      priority_id: cleanedInput.priority_id || null,
+      category_id: cleanedInput.category_id || null,
+      subcategory_id: cleanedInput.subcategory_id || null,
+      channel_id: cleanedInput.channel_id || null,
+      source: cleanedInput.source || null,
+      entered_by: cleanedInput.entered_by || null,
       entered_at: now,
       updated_at: now,
       // Store attributes and email_metadata as JSON
       attributes: Object.keys(attributes).length > 0 ? JSON.stringify(attributes) : null,
-      email_metadata: input.email_metadata ? JSON.stringify(input.email_metadata) : null
+      email_metadata: cleanedInput.email_metadata ? JSON.stringify(cleanedInput.email_metadata) : null
     };
 
+    // Final validation of complete ticket data
+    const completeValidation = validateData(ticketSchema.partial(), ticketData);
+
     // Insert the ticket
-    await trx('tickets').insert(ticketData);
+    await trx('tickets').insert(completeValidation);
 
     return {
       ticket_id: ticketId,
       ticket_number: ticketNumber,
-      title: input.title,
-      company_id: input.company_id,
-      contact_id: input.contact_id,
-      status_id: input.status_id,
-      priority_id: input.priority_id,
-      channel_id: input.channel_id,
+      title: cleanedInput.title,
+      company_id: cleanedInput.company_id,
+      contact_id: cleanedInput.contact_id,
+      status_id: cleanedInput.status_id,
+      priority_id: cleanedInput.priority_id,
+      channel_id: cleanedInput.channel_id,
       entered_at: now.toISOString(),
       tenant
     };
   }
 
   /**
-   * Create a comment for a ticket
+   * Create a ticket from asset with full validation
+   */
+  static async createTicketFromAsset(
+    input: CreateTicketFromAssetInput,
+    enteredBy: string,
+    tenant: string,
+    trx: Knex.Transaction
+  ): Promise<CreateTicketOutput> {
+    // Validate input data
+    const validation = this.validateCreateTicketFromAssetData(input);
+    if (!validation.valid) {
+      throw new Error(`Asset ticket validation failed: ${validation.errors?.join('; ')}`);
+    }
+
+    const validatedData = validation.data;
+
+    // Get default status for tickets
+    const defaultStatusId = await this.getDefaultStatusId(tenant, trx);
+    if (!defaultStatusId) {
+      throw new Error('No default status found for tickets');
+    }
+
+    // Convert to CreateTicketInput format
+    const createTicketInput: CreateTicketInput = {
+      title: validatedData.title,
+      description: validatedData.description,
+      priority_id: validatedData.priority_id,
+      company_id: validatedData.company_id,
+      status_id: defaultStatusId,
+      entered_by: enteredBy,
+      attributes: {
+        created_from_asset: validatedData.asset_id
+      }
+    };
+
+    return this.createTicket(createTicketInput, tenant, trx);
+  }
+
+  /**
+   * Update ticket with validation and business rule checking
+   */
+  static async updateTicket(
+    ticketId: string,
+    input: UpdateTicketInput,
+    tenant: string,
+    trx: Knex.Transaction,
+    validationOptions: ValidationOptions = {}
+  ): Promise<any> {
+    // Validate required parameters
+    if (!ticketId) {
+      throw new Error('Ticket ID is required');
+    }
+    if (!tenant) {
+      throw new Error('Tenant is required');
+    }
+
+    // Validate input data
+    const validation = this.validateUpdateTicketData(input);
+    if (!validation.valid) {
+      throw new Error(`Update validation failed: ${validation.errors?.join('; ')}`);
+    }
+
+    const validatedData = validation.data;
+
+    // Get current ticket state
+    const currentTicket = await trx('tickets')
+      .where({ ticket_id: ticketId, tenant: tenant })
+      .first();
+
+    if (!currentTicket) {
+      throw new Error('Ticket not found');
+    }
+
+    // Clean up the data before update
+    const updateData = cleanNullableFields({ ...validatedData });
+
+    // Validate location belongs to the company if provided
+    if (!validationOptions.skipLocationValidation && 'location_id' in updateData && updateData.location_id) {
+      const companyId = 'company_id' in updateData ? updateData.company_id : currentTicket.company_id;
+      const locationResult = await this.validateLocationBelongsToCompany(
+        updateData.location_id,
+        companyId,
+        tenant,
+        trx
+      );
+      if (!locationResult.valid && locationResult.error) {
+        throw new Error(locationResult.error);
+      }
+    }
+
+    // If updating category or subcategory, ensure they are compatible
+    if (!validationOptions.skipCategoryValidation && ('subcategory_id' in updateData || 'category_id' in updateData)) {
+      const newSubcategoryId = updateData.subcategory_id;
+      const newCategoryId = updateData.category_id || currentTicket?.category_id;
+
+      if (newSubcategoryId) {
+        const categoryResult = await this.validateCategorySubcategoryRelationship(
+          newSubcategoryId,
+          newCategoryId,
+          tenant,
+          trx
+        );
+        if (!categoryResult.valid && categoryResult.error) {
+          throw new Error(categoryResult.error);
+        }
+      }
+    }
+
+    // Update the ticket
+    const [updatedTicket] = await trx('tickets')
+      .where({ ticket_id: ticketId, tenant: tenant })
+      .update({
+        ...updateData,
+        updated_at: new Date()
+      })
+      .returning('*');
+
+    if (!updatedTicket) {
+      throw new Error('Ticket not found or update failed');
+    }
+
+    return updatedTicket;
+  }
+
+  /**
+   * Handle assignment changes with ticket_resources table management
+   * This is the complex assignment logic extracted from server actions
+   */
+  static async updateTicketWithAssignmentChange(
+    ticketId: string,
+    updateData: UpdateTicketInput,
+    tenant: string,
+    trx: Knex.Transaction
+  ): Promise<any> {
+    // Get current ticket state
+    const currentTicket = await trx('tickets')
+      .where({ ticket_id: ticketId, tenant: tenant })
+      .first();
+
+    if (!currentTicket) {
+      throw new Error('Ticket not found');
+    }
+
+    // Check if we're updating the assigned_to field
+    const isChangingAssignment = 'assigned_to' in updateData &&
+                                updateData.assigned_to !== currentTicket.assigned_to;
+
+    if (!isChangingAssignment) {
+      // Regular update without changing assignment
+      return this.updateTicket(ticketId, updateData, tenant, trx);
+    }
+
+    // Handle the complex assignment change logic from server actions
+    // Step 1: Delete any ticket_resources where the new assigned_to is an additional_user_id
+    // to avoid constraint violations after the update
+    await trx('ticket_resources')
+      .where({
+        tenant: tenant,
+        ticket_id: ticketId,
+        additional_user_id: updateData.assigned_to
+      })
+      .delete();
+    
+    // Step 2: Get existing resources with the old assigned_to value
+    const existingResources = await trx('ticket_resources')
+      .where({
+        tenant: tenant,
+        ticket_id: ticketId,
+        assigned_to: currentTicket.assigned_to
+      })
+      .select('*');
+      
+    // Step 3: Store resources for recreation, excluding those that would violate constraints
+    const resourcesToRecreate = [];
+    for (const resource of existingResources) {
+      // Skip resources where additional_user_id would equal the new assigned_to
+      if (resource.additional_user_id !== updateData.assigned_to) {
+        // Clone the resource but exclude the primary key fields
+        const { assignment_id, ...resourceData } = resource;
+        resourcesToRecreate.push(resourceData);
+      }
+    }
+    
+    // Step 4: Delete the existing resources with the old assigned_to
+    if (existingResources.length > 0) {
+      await trx('ticket_resources')
+        .where({
+          tenant: tenant,
+          ticket_id: ticketId,
+          assigned_to: currentTicket.assigned_to
+        })
+        .delete();
+    }
+    
+    // Step 5: Update the ticket with the new assigned_to
+    const [updatedTicket] = await trx('tickets')
+      .where({ ticket_id: ticketId, tenant: tenant })
+      .update({
+        ...updateData,
+        updated_at: new Date()
+      })
+      .returning('*');
+      
+    // Step 6: Re-create the resources with the new assigned_to
+    for (const resourceData of resourcesToRecreate) {
+      await trx('ticket_resources').insert({
+        ...resourceData,
+        assigned_to: updateData.assigned_to
+      });
+    }
+    
+    return updatedTicket;
+  }
+
+  /**
+   * Validates comment creation input
+   */
+  static validateCreateCommentInput(input: CreateCommentValidationInput): TicketValidationResult {
+    try {
+      const validatedData = validateData(createCommentSchema, input);
+      return { valid: true, data: validatedData };
+    } catch (error) {
+      return {
+        valid: false,
+        errors: [error instanceof Error ? error.message : 'Comment validation failed']
+      };
+    }
+  }
+
+  /**
+   * Create a comment for a ticket with validation
    */
   static async createComment(
     input: CreateCommentInput,
     tenant: string,
     trx: Knex.Transaction
   ): Promise<CreateCommentOutput> {
-    // Validate required fields
-    if (!input.ticket_id) {
-      throw new Error('Ticket ID is required');
-    }
-
-    if (!input.content) {
-      throw new Error('Comment content is required');
-    }
-
+    // Validate required tenant
     if (!tenant) {
       throw new Error('Tenant is required');
     }
 
+    // Validate input data
+    const validation = this.validateCreateCommentInput(input);
+    if (!validation.valid) {
+      throw new Error(`Comment validation failed: ${validation.errors?.join('; ')}`);
+    }
+
+    const validatedData = validation.data;
+
     // Verify ticket exists and belongs to tenant
     const ticket = await trx('tickets')
       .where({
-        ticket_id: input.ticket_id,
+        ticket_id: validatedData.ticket_id,
         tenant: tenant
       })
       .first();
@@ -217,13 +788,13 @@ export class TicketModel {
     const commentData = {
       comment_id: commentId,
       tenant,
-      ticket_id: input.ticket_id,
-      note: input.content,
-      is_internal: input.is_internal || false,
-      is_resolution: input.is_resolution || false,
-      author_type: input.author_type || 'system',
-      user_id: input.author_id || null,
-      metadata: input.metadata ? JSON.stringify(input.metadata) : null,
+      ticket_id: validatedData.ticket_id,
+      note: validatedData.content,
+      is_internal: validatedData.is_internal || false,
+      is_resolution: validatedData.is_resolution || false,
+      author_type: validatedData.author_type || 'system',
+      user_id: validatedData.author_id || null,
+      metadata: validatedData.metadata ? JSON.stringify(validatedData.metadata) : null,
       created_at: now,
       updated_at: now
     };
@@ -232,9 +803,9 @@ export class TicketModel {
 
     return {
       comment_id: commentId,
-      ticket_id: input.ticket_id,
-      content: input.content,
-      author_type: input.author_type || 'system',
+      ticket_id: validatedData.ticket_id,
+      content: validatedData.content,
+      author_type: validatedData.author_type || 'system',
       created_at: now.toISOString()
     };
   }
