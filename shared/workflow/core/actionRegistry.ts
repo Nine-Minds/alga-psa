@@ -128,6 +128,7 @@ export class ActionRegistry {
       parameterKeys: Object.keys(context.parameters)
     });
     
+    let knex: any;
     try {
       // Import models here to avoid circular dependencies
       const { default: WorkflowActionResultModel } = await import('../persistence/workflowActionResultModel.js');
@@ -135,7 +136,7 @@ export class ActionRegistry {
       // Create Knex instance - assuming we can get it from a connection pool or similar
       // This would typically be passed in the context or obtained from a service locator
       const { getAdminConnection } = await import('@shared/db/admin.js');
-      const knex = await getAdminConnection();
+      knex = await getAdminConnection();
       
       // Create action result record (pre-execution)
       let resultId;
@@ -214,6 +215,11 @@ export class ActionRegistry {
     } catch (error) {
       console.error(`[ActionRegistry] Error in action execution process:`, error);
       throw error;
+    } finally {
+      // CRITICAL: Close the database connection to prevent pool exhaustion
+      if (knex) {
+        await knex.destroy();
+      }
     }
   }
   

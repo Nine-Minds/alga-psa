@@ -491,45 +491,49 @@ export async function resolveEmailProviderDefaults(
   tenant: string
 ): Promise<any> {
   const { getAdminConnection } = await import('@shared/db/admin.js');
+  const { withTransaction } = await import('@shared/db/index.js');
   const knex = await getAdminConnection();
   
   try {
-    // Get email provider with its defaults reference
-    const provider = await knex('email_providers')
-      .where({ id: providerId, tenant })
-      .select('inbound_ticket_defaults_id')
-      .first();
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Get email provider with its defaults reference
+      const provider = await trx('email_providers')
+        .where({ id: providerId, tenant })
+        .select('inbound_ticket_defaults_id')
+        .first();
 
-    if (!provider || !provider.inbound_ticket_defaults_id) {
-      console.warn(`No inbound ticket defaults configured for provider ${providerId}`);
-      return null;
-    }
+      if (!provider || !provider.inbound_ticket_defaults_id) {
+        console.warn(`No inbound ticket defaults configured for provider ${providerId}`);
+        return null;
+      }
 
-    // Get the defaults configuration with flat structure
-    const defaults = await knex('inbound_ticket_defaults')
-      .where({ id: provider.inbound_ticket_defaults_id, tenant })
-      .select(
-        'channel_id',
-        'status_id',
-        'priority_id',
-        'company_id',
-        'entered_by',
-        'category_id',
-        'subcategory_id',
-        'location_id'
-      )
-      .first();
+      // Get the defaults configuration with flat structure
+      const defaults = await trx('inbound_ticket_defaults')
+        .where({ id: provider.inbound_ticket_defaults_id, tenant })
+        .select(
+          'channel_id',
+          'status_id',
+          'priority_id',
+          'company_id',
+          'entered_by',
+          'category_id',
+          'subcategory_id',
+          'location_id'
+        )
+        .first();
 
-    if (!defaults) {
-      console.warn(`Inbound ticket defaults not found for ID ${provider.inbound_ticket_defaults_id}`);
-      return null;
-    }
+      if (!defaults) {
+        console.warn(`Inbound ticket defaults not found for ID ${provider.inbound_ticket_defaults_id}`);
+        return null;
+      }
 
-    // Return the flat defaults structure
-    return defaults;
+      console.log(`Retrieved ticket defaults:`, defaults);
+      // Return the flat defaults structure
+      return defaults;
+    });
   } catch (error) {
     console.error('Error resolving email provider defaults:', error);
-    return null;
+    throw error; // Throw instead of returning null to see the actual error
   } finally {
     await knex.destroy();
   }
