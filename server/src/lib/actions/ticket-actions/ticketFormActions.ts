@@ -32,7 +32,7 @@ export async function getTicketFormData(prefilledCompanyId?: string): Promise<Ti
 
     // Fetch required data first
     const [users, channels, statuses, priorities, companies] = await Promise.all([
-      getAllUsers().catch(error => {
+      getAllUsers(false).catch(error => {
         console.error('Error fetching users:', error);
         return [];
       }),

@@ -22,6 +22,10 @@ const User = {
       if (!includeInactive) {
         query = query.andWhere('is_inactive', false);
       }
+      query = query.orderBy([
+        { column: 'first_name', order: 'asc' },
+        { column: 'last_name', order: 'asc' }
+      ]);
       
       const users = await query;
       return users;

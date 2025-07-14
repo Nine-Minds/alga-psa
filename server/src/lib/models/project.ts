@@ -189,11 +189,13 @@ const ProjectModel = {
         assigned_to_first_name,
         assigned_to_last_name,
         contact_name,
+        tenant: _tenant, // Remove tenant from update data
         ...updateData 
       } = projectData;
       
       const [updatedProject] = await knexOrTrx<IProject>('projects')
         .where('project_id', projectId)
+        .andWhere('tenant', tenant)
         .update({
           ...updateData,
           updated_at: knexOrTrx.fn.now()
