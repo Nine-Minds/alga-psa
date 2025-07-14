@@ -68,11 +68,10 @@ services:
 
   # Workflow Worker Service - Dev mode with volume mounts
   workflow-worker-test:
-    platform: linux/arm64
     image: node:20.9-alpine
     container_name: ${APP_NAME:-sebastian}_workflow_worker_test
     working_dir: /app
-    command: sh -c "apk add --no-cache curl postgresql-client redis && cd /app && npm install && cd /app/services/workflow-worker && npm run dev"
+    command: sh -c "apk add --no-cache curl postgresql-client && cd /app/services/workflow-worker && npm run dev"
     environment:
       # Database configuration
       DB_TYPE: postgres

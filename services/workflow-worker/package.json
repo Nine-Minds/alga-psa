@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && tsc-alias",
     "start": "node .",
-    "dev": "tsx watch src/index.ts /app/shared-dev"
+    "dev": "tsx watch src/index.ts /app/shared"
   },
   "engines": {
     "node": ">=20.0.0"

@@ -131,15 +131,6 @@ export class MailHogPollingService {
         emailData: emailData
       };
       
-      console.log(`[TENANT-DEBUG] MailHogPollingService created email job: tenant=${tenantId}, jobId=${emailJob.id}`);
-
-      // For MailHog test emails, emit the event directly instead of using EmailProcessor
-      // which requires Microsoft Graph credentials
-      const eventData = {
-        tenantId: tenantId,  // Changed from 'tenant' to 'tenantId' to match schema
-        providerId: 'mailhog-test-provider',
-        emailData: emailData
-      };
       console.log(`[TENANT-DEBUG] MailHogPollingService about to emit INBOUND_EMAIL_RECEIVED event: tenant=${tenantId}, providerId=${eventData.providerId}, emailSubject=${emailData.subject}`);
       await this.emitEmailReceivedEvent(eventData);
       
