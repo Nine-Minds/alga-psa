@@ -226,7 +226,7 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
       ),
     },
     {
-      title: 'Channel',
+      title: 'Board',
       dataIndex: 'channel_name',
     },
     {

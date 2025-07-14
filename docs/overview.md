@@ -84,7 +84,7 @@ This document provides a high-level architectural overview of the open-source MS
     - `server/src/lib/eventBus/subscribers/`: Event subscribers
     - `server/src/config/redisConfig.ts`: Redis configuration
   * Features:
-    - Simple event type based channels
+    - Simple event type based boards
     - Tenant isolation through event payloads
     - Type-safe event publishing and handling
     - Automatic Redis reconnection with exponential backoff
@@ -163,10 +163,10 @@ This document provides a high-level architectural overview of the open-source MS
     - Reference data import system for standardized configurations
     - Multi-tenant reference data isolation
   * Reference Data Import System:
-    - Import pre-defined standard configurations (priorities, statuses, channels, categories)
+    - Import pre-defined standard configurations (priorities, statuses, boards, categories)
     - Conflict resolution for duplicate names and display orders
     - Hierarchical category management with parent-child relationships
-    - Channel-based category organization (channels as organizational containers/boards)
+    - Board-based category organization (boards as organizational containers)
   * Key Files:
     - `server/src/components/settings/`: All settings UI components
     - `server/src/components/settings/general/`: User management and ticketing settings

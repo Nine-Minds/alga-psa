@@ -67,7 +67,7 @@ const ChannelsSettings: React.FC = () => {
       setChannels(allChannels);
     } catch (error) {
       console.error('Error fetching channels:', error);
-      setError('Failed to fetch channels');
+      setError('Failed to fetch boards');
     }
   };
 
@@ -86,11 +86,11 @@ const ChannelsSettings: React.FC = () => {
   const handleDeleteChannel = async () => {
     try {
       await deleteChannel(deleteDialog.channelId);
-      toast.success('Channel deleted successfully');
+      toast.success('Board deleted successfully');
       await fetchChannels();
     } catch (error) {
       console.error('Error deleting channel:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to delete channel');
+      toast.error(error instanceof Error ? error.message : 'Failed to delete board');
     } finally {
       setDeleteDialog({ isOpen: false, channelId: '', channelName: '' });
     }
@@ -99,7 +99,7 @@ const ChannelsSettings: React.FC = () => {
   const handleSaveChannel = async () => {
     try {
       if (!formData.channel_name.trim()) {
-        setError('Channel name is required');
+        setError('Board name is required');
         return;
       }
 
@@ -110,7 +110,7 @@ const ChannelsSettings: React.FC = () => {
           display_order: formData.display_order,
           is_inactive: formData.is_inactive
         });
-        toast.success('Channel updated successfully');
+        toast.success('Board updated successfully');
       } else {
         await createChannel({
           channel_name: formData.channel_name,
@@ -118,7 +118,7 @@ const ChannelsSettings: React.FC = () => {
           display_order: formData.display_order,
           is_inactive: formData.is_inactive
         });
-        toast.success('Channel created successfully');
+        toast.success('Board created successfully');
       }
       
       setShowAddEditDialog(false);
@@ -127,7 +127,7 @@ const ChannelsSettings: React.FC = () => {
       await fetchChannels();
     } catch (error) {
       console.error('Error saving channel:', error);
-      setError(error instanceof Error ? error.message : 'Failed to save channel');
+      setError(error instanceof Error ? error.message : 'Failed to save board');
     }
   };
 
@@ -144,7 +144,7 @@ const ChannelsSettings: React.FC = () => {
         await importReferenceData('channels', selectedImportChannels);
       }
       
-      toast.success('Channels imported successfully');
+      toast.success('Boards imported successfully');
       setShowImportDialog(false);
       setSelectedImportChannels([]);
       setImportConflicts([]);
@@ -152,7 +152,7 @@ const ChannelsSettings: React.FC = () => {
       await fetchChannels();
     } catch (error) {
       console.error('Error importing channels:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to import channels');
+      toast.error(error instanceof Error ? error.message : 'Failed to import boards');
     }
   };
 
@@ -189,7 +189,7 @@ const ChannelsSettings: React.FC = () => {
                 await fetchChannels();
               } catch (error) {
                 console.error('Error updating channel status:', error);
-                toast.error('Failed to update channel status');
+                toast.error('Failed to update board status');
               }
             }}
             className="data-[state=checked]:bg-primary-500"
@@ -219,7 +219,7 @@ const ChannelsSettings: React.FC = () => {
                 await fetchChannels();
               } catch (error) {
                 console.error('Error updating default channel:', error);
-                toast.error('Failed to update default channel');
+                toast.error('Failed to update default board');
               }
             }}
             className="data-[state=checked]:bg-primary-500"
@@ -275,7 +275,14 @@ const ChannelsSettings: React.FC = () => {
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">
       <div>
-        <h3 className="text-lg font-semibold mb-4 text-gray-800">Channels</h3>
+        <h3 className="text-lg font-semibold mb-4 text-gray-800">Boards</h3>
+        <div className="bg-blue-50 p-4 rounded-md mb-4">
+          <p className="text-sm text-blue-700">
+            <strong>Default Board:</strong> When clients create tickets through the client portal,
+            they will automatically be assigned to the board marked as default. Only one board can
+            be set as default at a time. Boards help organize tickets by department, team, or workflow type.
+          </p>
+        </div>
         {error && (
           <Alert variant="destructive" className="mb-4">
             <AlertDescription>{error}</AlertDescription>
@@ -295,7 +302,7 @@ const ChannelsSettings: React.FC = () => {
             }} 
             className="bg-primary-500 text-white hover:bg-primary-600"
           >
-            <Plus className="h-4 w-4 mr-2" /> Add Channel
+            <Plus className="h-4 w-4 mr-2" /> Add Board
           </Button>
           <Button 
             id="import-channels-button"
@@ -308,11 +315,11 @@ const ChannelsSettings: React.FC = () => {
                 setShowImportDialog(true);
               } catch (error) {
                 console.error('Error fetching available channels:', error);
-                toast.error('Failed to fetch available channels for import');
+                toast.error('Failed to fetch available boards for import');
               }
             }}
           >
-            Import from Standard Channels
+            Import from Standard Boards
           </Button>
         </div>
       </div>
@@ -321,7 +328,7 @@ const ChannelsSettings: React.FC = () => {
         isOpen={deleteDialog.isOpen}
         onClose={() => setDeleteDialog({ isOpen: false, channelId: '', channelName: '' })}
         onConfirm={handleDeleteChannel}
-        title="Delete Channel"
+        title="Delete Board"
         message={`Are you sure you want to delete "${deleteDialog.channelName}"? This action cannot be undone.`}
         confirmLabel="Delete"
       />
@@ -335,7 +342,7 @@ const ChannelsSettings: React.FC = () => {
           setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false });
           setError(null);
         }} 
-        title={editingChannel ? "Edit Channel" : "Add Channel"}
+        title={editingChannel ? "Edit Board" : "Add Board"}
       >
         <DialogContent>
           <div className="space-y-4">
@@ -345,7 +352,7 @@ const ChannelsSettings: React.FC = () => {
               </Alert>
             )}
             <div>
-              <Label htmlFor="channel_name">Channel Name *</Label>
+              <Label htmlFor="channel_name">Board Name *</Label>
               <Input
                 id="channel_name"
                 value={formData.channel_name}
@@ -408,16 +415,16 @@ const ChannelsSettings: React.FC = () => {
           setShowImportDialog(false);
           setSelectedImportChannels([]);
         }} 
-        title="Import Standard Channels"
+        title="Import Standard Boards"
       >
         <DialogContent>
           <div className="space-y-4">
             {!availableReferenceChannels || availableReferenceChannels.length === 0 ? (
-              <p className="text-muted-foreground">No standard channels available to import.</p>
+              <p className="text-muted-foreground">No standard boards available to import.</p>
             ) : (
               <>
                 <p className="text-sm text-muted-foreground">
-                  Select standard channels to import into your organization:
+                  Select standard boards to import into your organization:
                 </p>
                 <div className="border rounded-md">
                   <div className="flex items-center space-x-2 p-2 bg-muted/50 font-medium text-sm border-b">
@@ -537,7 +544,7 @@ const ChannelsSettings: React.FC = () => {
                     {conflict.conflictType === 'name' && (
                       <div className="space-y-2">
                         <p className="text-sm text-muted-foreground">
-                          A channel with this name already exists.
+                          A board with this name already exists.
                         </p>
                         <div className="space-y-2">
                           <label className="flex items-center space-x-2">

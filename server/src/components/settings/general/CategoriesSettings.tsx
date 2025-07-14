@@ -150,7 +150,7 @@ const CategoriesSettings: React.FC = () => {
       } else {
         // For new categories
         if (!formData.parent_category && !formData.channel_id) {
-          setError('Channel is required for top-level categories');
+          setError('Board is required for top-level categories');
           return;
         }
         
@@ -188,7 +188,7 @@ const CategoriesSettings: React.FC = () => {
   const handleImport = async () => {
     try {
       if (!importTargetChannel) {
-        toast.error('Please select a channel for the imported categories');
+        toast.error('Please select a board for the imported categories');
         return;
       }
 
@@ -260,7 +260,7 @@ const CategoriesSettings: React.FC = () => {
       ),
     },
     {
-      title: 'Channel',
+      title: 'Board',
       dataIndex: 'channel_id',
       render: (value: string) => {
         const channel = channels.find(ch => ch.channel_id === value);
@@ -330,13 +330,13 @@ const CategoriesSettings: React.FC = () => {
             value={channelFilter}
             onValueChange={setChannelFilter}
             options={[
-              { value: 'all', label: 'All Channels' },
+              { value: 'all', label: 'All Boards' },
               ...channels.map(ch => ({
                 value: ch.channel_id || '',
                 label: ch.channel_name || ''
               }))
             ]}
-            placeholder="Filter by channel"
+            placeholder="Filter by board"
             className="w-64"
           />
         </div>
@@ -467,7 +467,7 @@ const CategoriesSettings: React.FC = () => {
             )}
             {!editingCategory && !formData.parent_category && (
               <div>
-                <Label htmlFor="channel_id">Channel *</Label>
+                <Label htmlFor="channel_id">Board *</Label>
                 <CustomSelect
                   value={formData.channel_id}
                   onValueChange={(value) => setFormData({ ...formData, channel_id: value })}
@@ -475,7 +475,7 @@ const CategoriesSettings: React.FC = () => {
                     value: ch.channel_id || '',
                     label: ch.channel_name || ''
                   }))}
-                  placeholder="Select a channel"
+                  placeholder="Select a board"
                   className="w-full"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
@@ -486,7 +486,7 @@ const CategoriesSettings: React.FC = () => {
             {editingCategory && !editingCategory.parent_category && (
               <>
                 <div>
-                  <Label htmlFor="channel_id">Channel</Label>
+                  <Label htmlFor="channel_id">Board</Label>
                   <CustomSelect
                     value={formData.channel_id}
                     onValueChange={(value) => setFormData({ ...formData, channel_id: value })}
@@ -494,7 +494,7 @@ const CategoriesSettings: React.FC = () => {
                       value: ch.channel_id || '',
                       label: ch.channel_name || ''
                     }))}
-                    placeholder="Select a channel"
+                    placeholder="Select a board"
                     className="w-full"
                   />
                 </div>
@@ -559,7 +559,7 @@ const CategoriesSettings: React.FC = () => {
                 </p>
                 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Target Channel *</label>
+                  <label className="text-sm font-medium">Target Board *</label>
                   <CustomSelect
                     value={importTargetChannel}
                     onValueChange={setImportTargetChannel}
@@ -567,11 +567,11 @@ const CategoriesSettings: React.FC = () => {
                       value: ch.channel_id || '',
                       label: ch.channel_name || ''
                     }))}
-                    placeholder="Select a channel for imported categories"
+                    placeholder="Select a board for imported categories"
                     className="w-full"
                   />
                   <p className="text-xs text-muted-foreground">
-                    All imported categories will be assigned to this channel
+                    All imported categories will be assigned to this board
                   </p>
                 </div>
                 <div className="border rounded-md">

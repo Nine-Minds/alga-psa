@@ -549,7 +549,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         >
           <div className="flex items-center gap-2">
             <Package className="w-5 h-5 text-gray-500" />
-            <span className="font-medium">Channels</span>
+            <span className="font-medium">Boards</span>
             {!hasChannel() && (
               <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">Required</span>
             )}
@@ -565,7 +565,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
           <div className="p-4 border-t space-y-4">
             <div className="rounded-md bg-blue-50 p-4 mb-4">
               <p className="text-sm text-blue-800">
-                <span className="font-semibold">Note:</span> Channels act as boards or queues where tickets are organized. Each channel can have its own workflow, categories, and team assignments. The default channel is used when no specific channel is specified.
+                <span className="font-semibold">Note:</span> Boards help organize tickets by department, team, or workflow type. When clients create tickets through the client portal, they will automatically be assigned to the board marked as default.
               </p>
             </div>
 
@@ -589,23 +589,23 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 className="flex-1"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Add New Channel
+                Add New Board
               </Button>
             </div>
 
             {/* Add New Channel Form - Right under buttons */}
             {showAddForms.channel && (
               <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
-                <h4 className="font-medium">Add New Channel</h4>
+                <h4 className="font-medium">Add New Board</h4>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="new-channel-name">Channel Name *</Label>
+                    <Label htmlFor="new-channel-name">Board Name *</Label>
                     <Input
                       id="new-channel-name"
                       value={channelForm.name}
                       onChange={(e) => setChannelForm(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Enter channel name"
+                      placeholder="Enter board name"
                     />
                   </div>
                   <div>
@@ -665,7 +665,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       
                       // Check if channel already exists
                       if (importedChannels.some(ch => ch.channel_name === channelForm.name)) {
-                        alert('Channel already exists');
+                        alert('Board already exists');
                         return;
                       }
                       
@@ -700,13 +700,13 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             {/* Import Dialog - Right under buttons */}
             {showImportDialogs.channels && (
               <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
-                <h4 className="font-medium">Import Standard Channels</h4>
+                <h4 className="font-medium">Import Standard Boards</h4>
                 
                 {importResults.channels && (
                   <div className="rounded-md bg-green-50 border border-green-200 p-3 flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
                     <p className="text-sm text-green-800">
-                      Successfully imported {importResults.channels.imported} channel{importResults.channels.imported !== 1 ? 's' : ''}.
+                      Successfully imported {importResults.channels.imported} board{importResults.channels.imported !== 1 ? 's' : ''}.
                     </p>
                   </div>
                 )}
@@ -791,7 +791,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             {/* Existing Channels */}
             {(importedChannels.length > 0 || data.channelName) && (
               <div>
-                <Label className="mb-2 block">Current Channels</Label>
+                <Label className="mb-2 block">Current Boards</Label>
                 <div className="border rounded-lg overflow-hidden">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50 border-b">
@@ -842,7 +842,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             <Package className="w-5 h-5 text-gray-500" />
             <span className="font-medium">Categories</span>
             {!hasChannel() && (
-              <span className="text-xs text-gray-500">(requires channel)</span>
+              <span className="text-xs text-gray-500">(requires board)</span>
             )}
           </div>
           {expandedSections.categories ? (
@@ -900,7 +900,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="new-category-channel">Target Channel *</Label>
+                    <Label htmlFor="new-category-channel">Target Board *</Label>
                     <CustomSelect
                       value={categoryForm.channelId}
                       onValueChange={(value) => setCategoryForm(prev => ({ ...prev, channelId: value }))}
@@ -908,7 +908,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         value: ch.channel_id,
                         label: ch.channel_name
                       }))}
-                      placeholder="Select a channel"
+                      placeholder="Select a board"
                       className="w-full"
                     />
                   </div>
@@ -985,7 +985,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
 
                 {/* Channel Selection */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Target Channel *</Label>
+                  <Label className="text-sm font-medium">Target Board *</Label>
                   <CustomSelect
                     value={importTargetChannel}
                     onValueChange={setImportTargetChannel}
@@ -995,11 +995,11 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         label: ch.channel_name
                       }))
                     ]}
-                    placeholder="Select a channel for imported categories"
+                    placeholder="Select a board for imported categories"
                     className="w-full"
                   />
                   <p className="text-xs text-gray-600">
-                    All imported categories will be assigned to this channel
+                    All imported categories will be assigned to this board
                   </p>
                 </div>
 

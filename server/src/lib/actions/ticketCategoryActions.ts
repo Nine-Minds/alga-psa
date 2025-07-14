@@ -73,7 +73,7 @@ export async function createTicketCategory(categoryName: string, channelId: stri
   }
 
   if (!channelId) {
-    throw new Error('Channel ID is required');
+    throw new Error('Board ID is required');
   }
 
   const { knex: db, tenant } = await createTenantKnex();
@@ -89,7 +89,7 @@ export async function createTicketCategory(categoryName: string, channelId: stri
       .first();
 
     if (existingCategory) {
-      throw new Error('A ticket category with this name already exists in this channel');
+      throw new Error('A ticket category with this name already exists in this board');
     }
 
     if (!tenant) {
@@ -205,7 +205,7 @@ export async function updateTicketCategory(categoryId: string, categoryData: Par
         .first();
 
       if (existingCategory) {
-        throw new Error('A ticket category with this name already exists in this channel');
+        throw new Error('A ticket category with this name already exists in this board');
       }
     }
 
@@ -243,7 +243,7 @@ export async function getTicketCategoriesByChannel(channelId: string) {
   }
 
   if (!channelId) {
-    throw new Error('Channel ID is required');
+    throw new Error('Board ID is required');
   }
 
   const { knex: db, tenant } = await createTenantKnex();
@@ -258,7 +258,7 @@ export async function getTicketCategoriesByChannel(channelId: string) {
       // Order them hierarchically
       return orderCategoriesHierarchically(categories);
     } catch (error) {
-      console.error('Error fetching ticket categories by channel:', error);
+      console.error('Error fetching ticket categories by board:', error);
       throw new Error('Failed to fetch ticket categories');
     }
   });
@@ -298,7 +298,7 @@ export async function createCategory(data: {
   }
 
   if (!data.channel_id) {
-    throw new Error('Channel ID is required');
+    throw new Error('Board ID is required');
   }
 
   const { knex: db, tenant } = await createTenantKnex();
