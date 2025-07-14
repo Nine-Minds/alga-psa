@@ -16,6 +16,7 @@ import { WorkflowWorker } from './WorkflowWorker.js';
 import { WorkerServer } from './server.js';
 import logger from '@shared/core/logger.js';
 import { initializeServerWorkflows } from '@shared/workflow/init/serverInit.js';
+import { registerEmailActions } from './emailActionRegistrations.js';
 
 async function startServices() {
   try {
@@ -26,6 +27,10 @@ async function startServices() {
     
     // Get the action registry and workflow runtime
     const actionRegistry = getActionRegistry();
+    
+    // Register email-specific actions for workflow worker
+    registerEmailActions(actionRegistry);
+    
     const workflowRuntime = getWorkflowRuntime(actionRegistry);
     
     // Create worker instance with configuration from environment

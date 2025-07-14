@@ -14,6 +14,9 @@ DB_PASSWORD_SERVER_ESC=$(echo "$DB_PASSWORD_SERVER" | sed -e 's/[\/&]/\\&/g')
 sed -i "s#POSTGRES_PASSWORD_PLACEHOLDER#$POSTGRES_PASSWORD_ESC#g" /etc/pgbouncer/userlist.txt
 sed -i "s#DB_PASSWORD_SERVER_PLACEHOLDER#$DB_PASSWORD_SERVER_ESC#g" /etc/pgbouncer/userlist.txt
 
+# Substitute environment variables in pgbouncer.ini
+sed -i "s/\${POSTGRES_HOST:-postgres}/${POSTGRES_HOST:-postgres}/g" /etc/pgbouncer/pgbouncer.ini
+
 # Start pgbouncer
 # Use standard su to switch user (target user is 'postgres' based on whoami)
 exec su -s /bin/sh -c 'pgbouncer /etc/pgbouncer/pgbouncer.ini' postgres

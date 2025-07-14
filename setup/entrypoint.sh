@@ -23,17 +23,19 @@ trap 'handle_error' ERR
 # Function to check if postgres is ready
 wait_for_postgres() {
     log "Waiting for PostgreSQL to be ready..."
+    set +e  # Temporarily disable exit on error for the until loop
     until PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h ${DB_HOST:-postgres} -U postgres -c '\q' 2>/dev/null; do
         log "PostgreSQL is unavailable - sleeping"
         sleep 1
     done
+    set -e  # Re-enable exit on error
     log "PostgreSQL is up and running!"
 }
 
 # Function to check if seeds have been run
 check_seeds_status() {
     local has_seeds
-    has_seeds=$(PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h postgres -U postgres -d server -tAc "SELECT EXISTS (SELECT 1 FROM users LIMIT 1);")
+    has_seeds=$(PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h ${DB_HOST:-postgres} -U postgres -d ${DB_NAME_SERVER:-server} -tAc "SELECT EXISTS (SELECT 1 FROM users LIMIT 1);")
     if [ "$has_seeds" = "t" ]; then
         return 0  # Seeds have been run
     else

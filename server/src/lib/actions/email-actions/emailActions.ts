@@ -1,8 +1,8 @@
 'use server'
 
-import { findContactByEmailAddress, createOrFindContactByEmail } from '../contact-actions/contactActions';
-import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '@shared/db';
+import { findContactByEmailAddress, createOrFindContactByEmail } from '../contact-actions/contactActions.js';
+import { createTenantKnex } from '../../db/index.js';
+import { withTransaction } from '@shared/db/index.js';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 

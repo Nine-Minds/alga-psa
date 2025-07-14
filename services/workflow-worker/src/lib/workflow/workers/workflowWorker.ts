@@ -688,7 +688,7 @@ export class WorkflowWorker {
       // Find workflows attached to this event type
       const dbConnection = await getConnection();
       const attachments = await dbConnection('workflow_event_attachments as wea')
-        .join('event_catalog as ec', function() {
+        .join('event_catalog as ec', function(this: any) {
           this.on('wea.event_id', 'ec.event_id')
               .andOn('wea.tenant', 'ec.tenant');
         })
@@ -739,7 +739,7 @@ export class WorkflowWorker {
         try {
           // Get the workflow registration and its current version
           const registration = await dbConnection('workflow_registrations as wr')
-            .join('workflow_registration_versions as wrv', function() {
+            .join('workflow_registration_versions as wrv', function(this: any) {
               this.on('wrv.registration_id', '=', 'wr.registration_id')
                   .andOn('wrv.is_current', '=', dbConnection.raw('true'));
             })

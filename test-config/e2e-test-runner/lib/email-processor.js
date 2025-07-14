@@ -13,7 +13,7 @@ export class EmailProcessor {
       baseUrl: 'http://localhost:8025'
     };
     
-    this.transporter = nodemailer.createTransporter({
+    this.transporter = nodemailer.createTransport({
       host: 'localhost',
       port: this.mailhogConfig.smtpPort,
       secure: false, // MailHog doesn't use TLS

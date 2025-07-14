@@ -89,6 +89,9 @@ export function registerWorkflowActions(): ActionRegistry {
   registeredActions = Object.keys(actionRegistry.getRegisteredActions());
   logger.info(`[WorkflowInit] Actions registered after task inbox actions: ${registeredActions.join(', ')}`);
   logger.info(`[WorkflowInit] Total actions registered: ${registeredActions.length}`);
+
+  // Email actions are registered separately in the workflow worker
+  // to avoid server dependencies in the shared library
   
   logger.info('[WorkflowInit] Workflow action registration complete.');
   return actionRegistry;
@@ -724,7 +727,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         // 1. Attempt to find as a system workflow first
         logger.debug(`[ACTION] trigger_workflow: Checking for system workflow named '${params.name}'`);
         const systemWorkflowCheck = await knex('system_workflow_registrations as reg')
-          .join('system_workflow_registration_versions as ver', function() {
+          .join('system_workflow_registration_versions as ver', function(this: any) {
             this.on('reg.registration_id', '=', 'ver.registration_id');
             this.andOn('ver.is_current', '=', knex.raw('?', [true]));
           })
@@ -742,7 +745,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
           // 2. If not found as system, try as tenant workflow
           logger.debug(`[ACTION] trigger_workflow: System workflow '${params.name}' not found. Checking for tenant workflow for tenant: ${context.tenant}`);
           const tenantWorkflowCheck = await knex('workflow_registrations as reg')
-            .join('workflow_registration_versions as ver', function() {
+            .join('workflow_registration_versions as ver', function(this: any) {
               this.on('reg.registration_id', '=', 'ver.registration_id');
               this.andOn('ver.is_current', '=', knex.raw('?', [true]));
               this.andOn('reg.tenant', '=', knex.raw('?', [context.tenant]));

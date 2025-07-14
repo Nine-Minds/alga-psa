@@ -49,12 +49,20 @@ export class EmailTestFactory {
   }
 
   async createBasicEmailScenario(): Promise<EmailScenario> {
-    // Use existing tenant from setup container
-    const existingTenant = await this.context.db('tenants').first();
-    if (!existingTenant) {
-      throw new Error('No tenant found in database - setup container may not have run properly');
+    // Look for existing tenants first
+    let existingTenant = await this.context.db('tenants').first();
+    let tenantId: string;
+    
+    if (existingTenant) {
+      tenantId = existingTenant.tenant;
+      console.log(`✅ Using existing tenant from database: ${tenantId}`);
+    } else {
+      // Create a new tenant if none exist
+      console.log(`🏗️ No tenants found, creating new test tenant`);
+      tenantId = await createTenant(this.context.db, 'E2E Test Tenant');
+      this.createdResources.tenants.push(tenantId);
+      console.log(`✅ Created test tenant: ${tenantId}`);
     }
-    const tenantId = existingTenant.tenant;
 
     // Create company for this test
     const companyId = await createCompany(this.context.db, tenantId, 'E2E Test Company', {
@@ -333,6 +341,27 @@ export class EmailTestFactory {
       if (this.createdResources.emailProviders.length > 0) {
         await this.context.db('email_providers')
           .whereIn('provider_id', this.createdResources.emailProviders)
+          .del();
+      }
+
+      // Clean up comments that reference tickets (must be done before deleting tickets)
+      if (this.createdResources.contacts.length > 0) {
+        const tickets = await this.context.db('tickets')
+          .whereIn('contact_name_id', this.createdResources.contacts)
+          .select('ticket_id');
+        
+        if (tickets.length > 0) {
+          const ticketIds = tickets.map(t => t.ticket_id);
+          await this.context.db('comments')
+            .whereIn('ticket_id', ticketIds)
+            .del();
+        }
+      }
+
+      // Clean up tickets that reference contacts (must be done before deleting contacts)
+      if (this.createdResources.contacts.length > 0) {
+        await this.context.db('tickets')
+          .whereIn('contact_name_id', this.createdResources.contacts)
           .del();
       }
 

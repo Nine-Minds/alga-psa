@@ -180,15 +180,16 @@ export class RedisStreamClient {
       await client.xGroupCreate(streamName, this.config.consumerGroup, '0', {
         MKSTREAM: true
       });
-      logger.info(`[RedisStreamClient] Created consumer group for stream: ${streamName}`);
+      logger.info(`[RedisStreamClient] Created consumer group ${this.config.consumerGroup} for stream: ${streamName}`);
       // Add to the set of created consumer groups
       RedisStreamClient.createdConsumerGroups.add(streamName);
     } catch (err: any) {
       if (err.message.includes('BUSYGROUP')) {
-        logger.info(`[RedisStreamClient] Consumer group already exists for stream: ${streamName}`);
+        logger.info(`[RedisStreamClient] Consumer group ${this.config.consumerGroup} already exists for stream: ${streamName}`);
         // Add to the set of created consumer groups even if it already existed
         RedisStreamClient.createdConsumerGroups.add(streamName);
       } else {
+        logger.error(`[RedisStreamClient] Error creating consumer group ${this.config.consumerGroup} for stream ${streamName}:`, err);
         throw err;
       }
     }
@@ -271,6 +272,8 @@ export class RedisStreamClient {
       const count = options.count || this.config.batchSize;
       const block = options.block || this.config.blockingTimeout;
 
+      logger.debug(`[RedisStreamClient] Reading from stream ${streamName} with consumer ${this.consumerId} in group ${this.config.consumerGroup}`);
+
       // First, check if there are any pending messages for this consumer
       const pendingInfo = await client.xPending(
         streamName,
@@ -298,8 +301,11 @@ export class RedisStreamClient {
       }
 
       if (!streamEntries || streamEntries.length === 0) {
+        logger.debug(`[RedisStreamClient] No messages found in stream ${streamName}`);
         return [];
       }
+      
+      logger.info(`[RedisStreamClient] Successfully read ${streamEntries.length} entries from stream ${streamName}`);
 
       // Extract messages from the stream entries
       const resultMessages: RedisStreamMessage[] = [];
@@ -462,7 +468,8 @@ export class RedisStreamClient {
     handler: (event: WorkflowEventBase) => Promise<void>
   ): void {
     this.consumerHandlers.set(executionId, handler);
-    logger.info(`[RedisStreamClient] Registered consumer for execution ${executionId}`);
+    const streamName = this.getStreamName(executionId);
+    logger.info(`[RedisStreamClient] Registered consumer for execution ${executionId}, will read from stream: ${streamName}`);
     
     // Start the consumer if it's not already running
     if (!this.isConsumerRunning) {
@@ -499,11 +506,15 @@ export class RedisStreamClient {
         // Process each registered execution
         for (const [executionId, handler] of this.consumerHandlers.entries()) {
           try {
+            // Log which stream we're reading from
+            const streamName = this.getStreamName(executionId);
+            logger.debug(`[RedisStreamClient] Attempting to read from stream: ${streamName}`);
+            
             // Read new messages
             const messages = await this.readGroupMessages(executionId);
             
             if (messages.length > 0) {
-              logger.debug(`[RedisStreamClient] Processing ${messages.length} messages for execution ${executionId}`);
+              logger.info(`[RedisStreamClient] Processing ${messages.length} messages from stream ${streamName}`);
             }
             
             // Process messages in batches to improve efficiency

@@ -11,46 +11,33 @@
  * No imports or TypeScript types are used to avoid serialization issues.
  */
 
+import type { WorkflowContext } from '../core/types.js';
+
 // No imports - all dependencies are available in the workflow context
 
-export async function systemEmailProcessingWorkflow(context) {
-  const { actions, data, logger, setState } = context;
+// Email actions are called through the workflow action registry
+// to avoid module resolution issues during Docker builds
+
+export async function systemEmailProcessingWorkflow(context: WorkflowContext): Promise<void> {
+  const { actions, data, logger, setState, events } = context;
   
-  // Debug: Log the context structure
-  console.log('Context input:', JSON.stringify(context.input));
-  console.log('Context data:', JSON.stringify(data.get('triggerEvent')));
+  setState('PROCESSING_INBOUND_EMAIL');
+  logger.info('🚀 Starting email processing workflow');
   
-  const triggerEvent = context.input?.triggerEvent;
+  // Wait for the INBOUND_EMAIL_RECEIVED event that triggered this workflow
+  // This event should have been submitted immediately after starting the workflow
+  logger.info('⏳ Waiting for INBOUND_EMAIL_RECEIVED event...');
+  const eventPayload = await events.waitFor('INBOUND_EMAIL_RECEIVED', 10000); // 10 second timeout
   
-  if (!triggerEvent) {
-    console.error('No triggerEvent found in context.input');
-    throw new Error('Missing trigger event');
-  }
+  logger.info('✅ Received INBOUND_EMAIL_RECEIVED event', {
+    hasPayload: !!eventPayload,
+    payloadKeys: eventPayload ? Object.keys(eventPayload) : []
+  });
   
-  if (!triggerEvent.payload) {
-    console.error('No payload in triggerEvent:', JSON.stringify(triggerEvent));
-    throw new Error('Missing payload in trigger event');
-  }
-  
-  // Extract email data from the INBOUND_EMAIL_RECEIVED event payload
-  const emailData = triggerEvent.payload.emailData;
-  const providerId = triggerEvent.payload.providerId;
-  const tenant = triggerEvent.tenant; // tenant is at the root level of triggerEvent, not in payload
-  
-  if (!emailData) {
-    console.error('No emailData in payload:', JSON.stringify(triggerEvent.payload));
-    throw new Error('Missing email data in trigger event payload');
-  }
-  
-  if (!providerId) {
-    console.error('No providerId in payload:', JSON.stringify(triggerEvent.payload));
-    throw new Error('Missing provider ID in trigger event payload');
-  }
-  
-  if (!tenant) {
-    console.error('No tenant in triggerEvent:', JSON.stringify(triggerEvent));
-    throw new Error('Missing tenant in trigger event');
-  }
+  // Extract email data from the event payload
+  const emailData = eventPayload.emailData;
+  const providerId = eventPayload.providerId;
+  const tenant = eventPayload.tenantId;
   
   setState('PROCESSING_INBOUND_EMAIL');
   console.log(`Processing inbound email: ${emailData.subject} from ${emailData.from.email}`);
@@ -160,15 +147,7 @@ export async function systemEmailProcessingWorkflow(context) {
       content: emailData.body.html || emailData.body.text,
       format: emailData.body.html ? 'html' : 'text',
       source: 'email',
-      author_type: 'system',
-      metadata: {
-        emailSource: true,
-        originalEmailId: emailData.id,
-        fromEmail: emailData.from.email,
-        fromName: emailData.from.name,
-        emailSubject: emailData.subject,
-        emailReceivedAt: emailData.receivedAt
-      }
+      author_type: 'internal'
     });
     
     setState('EMAIL_PROCESSED');
@@ -232,17 +211,7 @@ async function handleEmailReply(emailData, existingTicket, actions) {
     content: emailData.body.html || emailData.body.text,
     format: emailData.body.html ? 'html' : 'text',
     source: 'email',
-    author_type: 'contact', // This is a reply from the client
-    metadata: {
-      emailSource: true,
-      emailId: emailData.id,
-      fromEmail: emailData.from.email,
-      fromName: emailData.from.name,
-      emailSubject: emailData.subject,
-      emailReceivedAt: emailData.receivedAt,
-      isReply: true,
-      replyToMessageId: emailData.inReplyTo
-    }
+    author_type: 'client' // This is a reply from the client
   });
   
   // Handle attachments for reply
