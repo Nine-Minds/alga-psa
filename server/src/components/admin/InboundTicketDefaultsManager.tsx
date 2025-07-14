@@ -105,7 +105,7 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
         </div>
         <Button 
           onClick={() => setShowForm(true)}
-          disabled={showForm || editingDefaults}
+          disabled={showForm || !!editingDefaults}
         >
           <Plus className="h-4 w-4 mr-2" />
           Add Defaults
@@ -187,16 +187,16 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
                     {/* Defaults Preview */}
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <span className="font-medium">Channel:</span> {defaultConfig.defaults.channel_id || 'Not set'}
+                        <span className="font-medium">Channel:</span> {defaultConfig.channel_id || 'Not set'}
                       </div>
                       <div>
-                        <span className="font-medium">Status:</span> {defaultConfig.defaults.status_id || 'Not set'}
+                        <span className="font-medium">Status:</span> {defaultConfig.status_id || 'Not set'}
                       </div>
                       <div>
-                        <span className="font-medium">Priority:</span> {defaultConfig.defaults.priority_id || 'Not set'}
+                        <span className="font-medium">Priority:</span> {defaultConfig.priority_id || 'Not set'}
                       </div>
                       <div>
-                        <span className="font-medium">Entered By:</span> {defaultConfig.defaults.entered_by || 'System'}
+                        <span className="font-medium">Entered By:</span> {defaultConfig.entered_by || 'System'}
                       </div>
                     </div>
                   </div>
@@ -206,7 +206,7 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
                       variant="outline"
                       size="sm"
                       onClick={() => handleEdit(defaultConfig)}
-                      disabled={showForm || editingDefaults || deleting === defaultConfig.id}
+                      disabled={showForm || !!editingDefaults || deleting === defaultConfig.id}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -214,7 +214,7 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
                       variant="outline"
                       size="sm"
                       onClick={() => handleDelete(defaultConfig.id)}
-                      disabled={showForm || editingDefaults || deleting === defaultConfig.id}
+                      disabled={showForm || !!editingDefaults || deleting === defaultConfig.id}
                       className="text-red-600 hover:text-red-700"
                     >
                       {deleting === defaultConfig.id ? (

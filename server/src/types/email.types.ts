@@ -222,16 +222,14 @@ export interface InboundTicketDefaults {
   short_name: string;
   display_name: string;
   description?: string;
-  defaults: {
-    channel_id: string;
-    status_id: string;
-    priority_id: string;
-    company_id?: string;
-    entered_by?: string | null;
-    category_id?: string;
-    subcategory_id?: string;
-    location_id?: string;
-  };
+  channel_id?: string;
+  status_id?: string;
+  priority_id?: string;
+  company_id?: string;
+  entered_by?: string | null;
+  category_id?: string;
+  subcategory_id?: string;
+  location_id?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;

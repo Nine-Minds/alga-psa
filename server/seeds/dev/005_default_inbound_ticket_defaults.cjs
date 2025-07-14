@@ -49,20 +49,20 @@ exports.seed = async function(knex) {
   }
 
   // Create the default inbound ticket defaults configuration
-  const defaultsConfig = {
-    channel_id: defaultChannelId,
-    status_id: defaultStatusId,
-    priority_id: defaultPriorityId,
-    entered_by: null // System-generated tickets
-  };
-
   await knex('inbound_ticket_defaults').insert({
     id: knex.raw('gen_random_uuid()'),
     tenant: tenantId,
     short_name: 'email-general',
     display_name: 'General Email Support',
     description: 'Default configuration for tickets created from email processing',
-    defaults: JSON.stringify(defaultsConfig),
+    channel_id: defaultChannelId,
+    status_id: defaultStatusId,
+    priority_id: defaultPriorityId,
+    company_id: null,
+    entered_by: null, // System-generated tickets
+    category_id: null,
+    subcategory_id: null,
+    location_id: null,
     is_active: true,
     created_at: knex.fn.now(),
     updated_at: knex.fn.now()

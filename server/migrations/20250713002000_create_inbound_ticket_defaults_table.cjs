@@ -13,8 +13,15 @@ exports.up = function(knex) {
     table.string('display_name', 255).notNullable(); // e.g., "General Email Support"
     table.text('description').nullable(); // Optional description
     
-    // The actual default values (JSON)
-    table.jsonb('defaults').notNullable().defaultTo('{}');
+    // The actual default values (flat columns)
+    table.uuid('channel_id').nullable();
+    table.uuid('status_id').nullable();
+    table.uuid('priority_id').nullable();
+    table.uuid('company_id').nullable();
+    table.uuid('entered_by').nullable();
+    table.uuid('category_id').nullable();
+    table.uuid('subcategory_id').nullable();
+    table.uuid('location_id').nullable();
     
     // Status
     table.boolean('is_active').defaultTo(true);

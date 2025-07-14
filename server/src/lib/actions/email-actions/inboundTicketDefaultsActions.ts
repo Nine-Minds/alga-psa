@@ -22,7 +22,14 @@ export async function getInboundTicketDefaults(): Promise<{ defaults: InboundTic
         'short_name',
         'display_name',
         'description',
-        'defaults',
+        'channel_id',
+        'status_id',
+        'priority_id',
+        'company_id',
+        'entered_by',
+        'category_id',
+        'subcategory_id',
+        'location_id',
         'is_active',
         'created_at',
         'updated_at'
@@ -39,7 +46,14 @@ export async function createInboundTicketDefaults(data: {
   short_name: string;
   display_name: string;
   description?: string;
-  defaults: InboundTicketDefaults['defaults'];
+  channel_id?: string;
+  status_id?: string;
+  priority_id?: string;
+  company_id?: string;
+  entered_by?: string | null;
+  category_id?: string;
+  subcategory_id?: string;
+  location_id?: string;
   is_active?: boolean;
 }): Promise<{ defaults: InboundTicketDefaults }> {
   const user = await getCurrentUser();
@@ -51,8 +65,8 @@ export async function createInboundTicketDefaults(data: {
   
   try {
     // Validate required defaults fields
-    if (!data.defaults.channel_id || !data.defaults.status_id || !data.defaults.priority_id) {
-      throw new Error('Channel, status, and priority are required in defaults');
+    if (!data.channel_id || !data.status_id || !data.priority_id) {
+      throw new Error('Channel, status, and priority are required');
     }
 
     const [defaults] = await knex('inbound_ticket_defaults')
@@ -62,7 +76,14 @@ export async function createInboundTicketDefaults(data: {
         short_name: data.short_name,
         display_name: data.display_name,
         description: data.description,
-        defaults: JSON.stringify(data.defaults),
+        channel_id: data.channel_id,
+        status_id: data.status_id,
+        priority_id: data.priority_id,
+        company_id: data.company_id,
+        entered_by: data.entered_by,
+        category_id: data.category_id,
+        subcategory_id: data.subcategory_id,
+        location_id: data.location_id,
         is_active: data.is_active ?? true,
         created_at: knex.fn.now(),
         updated_at: knex.fn.now()
@@ -73,7 +94,14 @@ export async function createInboundTicketDefaults(data: {
         'short_name',
         'display_name',
         'description',
-        'defaults',
+        'channel_id',
+        'status_id',
+        'priority_id',
+        'company_id',
+        'entered_by',
+        'category_id',
+        'subcategory_id',
+        'location_id',
         'is_active',
         'created_at',
         'updated_at'
@@ -95,7 +123,14 @@ export async function updateInboundTicketDefaults(
     short_name?: string;
     display_name?: string;
     description?: string;
-    defaults?: InboundTicketDefaults['defaults'];
+    channel_id?: string;
+    status_id?: string;
+    priority_id?: string;
+    company_id?: string;
+    entered_by?: string | null;
+    category_id?: string;
+    subcategory_id?: string;
+    location_id?: string;
     is_active?: boolean;
   }
 ): Promise<{ defaults: InboundTicketDefaults }> {
@@ -108,9 +143,19 @@ export async function updateInboundTicketDefaults(
   
   try {
     // If updating defaults, validate required fields
-    if (data.defaults) {
-      if (!data.defaults.channel_id || !data.defaults.status_id || !data.defaults.priority_id) {
-        throw new Error('Channel, status, and priority are required in defaults');
+    if (data.channel_id !== undefined || data.status_id !== undefined || data.priority_id !== undefined) {
+      // Get current values to check if all required fields will be present after update
+      const current = await knex('inbound_ticket_defaults')
+        .where({ id, tenant })
+        .select('channel_id', 'status_id', 'priority_id')
+        .first();
+      
+      const finalChannelId = data.channel_id !== undefined ? data.channel_id : current?.channel_id;
+      const finalStatusId = data.status_id !== undefined ? data.status_id : current?.status_id;
+      const finalPriorityId = data.priority_id !== undefined ? data.priority_id : current?.priority_id;
+      
+      if (!finalChannelId || !finalStatusId || !finalPriorityId) {
+        throw new Error('Channel, status, and priority are required');
       }
     }
 
@@ -121,7 +166,14 @@ export async function updateInboundTicketDefaults(
     if (data.short_name !== undefined) updateData.short_name = data.short_name;
     if (data.display_name !== undefined) updateData.display_name = data.display_name;
     if (data.description !== undefined) updateData.description = data.description;
-    if (data.defaults !== undefined) updateData.defaults = JSON.stringify(data.defaults);
+    if (data.channel_id !== undefined) updateData.channel_id = data.channel_id;
+    if (data.status_id !== undefined) updateData.status_id = data.status_id;
+    if (data.priority_id !== undefined) updateData.priority_id = data.priority_id;
+    if (data.company_id !== undefined) updateData.company_id = data.company_id;
+    if (data.entered_by !== undefined) updateData.entered_by = data.entered_by;
+    if (data.category_id !== undefined) updateData.category_id = data.category_id;
+    if (data.subcategory_id !== undefined) updateData.subcategory_id = data.subcategory_id;
+    if (data.location_id !== undefined) updateData.location_id = data.location_id;
     if (data.is_active !== undefined) updateData.is_active = data.is_active;
 
     const [defaults] = await knex('inbound_ticket_defaults')
@@ -133,7 +185,14 @@ export async function updateInboundTicketDefaults(
         'short_name',
         'display_name',
         'description',
-        'defaults',
+        'channel_id',
+        'status_id',
+        'priority_id',
+        'company_id',
+        'entered_by',
+        'category_id',
+        'subcategory_id',
+        'location_id',
         'is_active',
         'created_at',
         'updated_at'

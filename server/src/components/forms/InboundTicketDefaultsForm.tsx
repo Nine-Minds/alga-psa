@@ -31,16 +31,14 @@ export function InboundTicketDefaultsForm({
     display_name: '',
     description: '',
     is_active: true,
-    defaults: {
-      channel_id: '',
-      status_id: '',
-      priority_id: '',
-      company_id: '',
-      category_id: '',
-      subcategory_id: '',
-      location_id: '',
-      entered_by: null as string | null
-    }
+    channel_id: '',
+    status_id: '',
+    priority_id: '',
+    company_id: '',
+    category_id: '',
+    subcategory_id: '',
+    location_id: '',
+    entered_by: null as string | null
   });
   
   const [fieldOptions, setFieldOptions] = useState<TicketFieldOptions>({
@@ -70,16 +68,14 @@ export function InboundTicketDefaultsForm({
         display_name: defaults.display_name,
         description: defaults.description || '',
         is_active: defaults.is_active,
-        defaults: {
-          channel_id: defaults.defaults.channel_id || '',
-          status_id: defaults.defaults.status_id || '',
-          priority_id: defaults.defaults.priority_id || '',
-          company_id: defaults.defaults.company_id || '',
-          category_id: defaults.defaults.category_id || '',
-          subcategory_id: defaults.defaults.subcategory_id || '',
-          location_id: defaults.defaults.location_id || '',
-          entered_by: defaults.defaults.entered_by
-        }
+        channel_id: defaults.channel_id || '',
+        status_id: defaults.status_id || '',
+        priority_id: defaults.priority_id || '',
+        company_id: defaults.company_id || '',
+        category_id: defaults.category_id || '',
+        subcategory_id: defaults.subcategory_id || '',
+        location_id: defaults.location_id || '',
+        entered_by: defaults.entered_by
       });
     }
   }, [defaults]);
@@ -104,7 +100,7 @@ export function InboundTicketDefaultsForm({
       return;
     }
 
-    if (!formData.defaults.channel_id || !formData.defaults.status_id || !formData.defaults.priority_id) {
+    if (!formData.channel_id || !formData.status_id || !formData.priority_id) {
       setError('Channel, status, and priority are required');
       return;
     }
@@ -118,16 +114,14 @@ export function InboundTicketDefaultsForm({
         display_name: formData.display_name.trim(),
         description: formData.description.trim() || undefined,
         is_active: formData.is_active,
-        defaults: {
-          channel_id: formData.defaults.channel_id,
-          status_id: formData.defaults.status_id,
-          priority_id: formData.defaults.priority_id,
-          company_id: formData.defaults.company_id || undefined,
-          category_id: formData.defaults.category_id || undefined,
-          subcategory_id: formData.defaults.subcategory_id || undefined,
-          location_id: formData.defaults.location_id || undefined,
-          entered_by: formData.defaults.entered_by || null
-        }
+        channel_id: formData.channel_id,
+        status_id: formData.status_id,
+        priority_id: formData.priority_id,
+        company_id: formData.company_id || undefined,
+        category_id: formData.category_id || undefined,
+        subcategory_id: formData.subcategory_id || undefined,
+        location_id: formData.location_id || undefined,
+        entered_by: formData.entered_by || null
       };
 
       let result;
@@ -148,10 +142,7 @@ export function InboundTicketDefaultsForm({
   const handleDefaultChange = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
-      defaults: {
-        ...prev.defaults,
-        [field]: value
-      }
+      [field]: value
     }));
   };
 
@@ -231,7 +222,7 @@ export function InboundTicketDefaultsForm({
             <Label htmlFor="channel_id">Channel *</Label>
             <CustomSelect
               id="channel_id"
-              value={formData.defaults.channel_id}
+              value={formData.channel_id}
               onValueChange={(value) => handleDefaultChange('channel_id', value)}
               options={fieldOptions.channels.map(c => ({ 
                 value: c.id, 
@@ -245,7 +236,7 @@ export function InboundTicketDefaultsForm({
             <Label htmlFor="status_id">Status *</Label>
             <CustomSelect
               id="status_id"
-              value={formData.defaults.status_id}
+              value={formData.status_id}
               onValueChange={(value) => handleDefaultChange('status_id', value)}
               options={fieldOptions.statuses.map(s => ({ 
                 value: s.id, 
@@ -259,7 +250,7 @@ export function InboundTicketDefaultsForm({
             <Label htmlFor="priority_id">Priority *</Label>
             <CustomSelect
               id="priority_id"
-              value={formData.defaults.priority_id}
+              value={formData.priority_id}
               onValueChange={(value) => handleDefaultChange('priority_id', value)}
               options={fieldOptions.priorities.map(p => ({ 
                 value: p.id, 
@@ -274,7 +265,7 @@ export function InboundTicketDefaultsForm({
             <Label htmlFor="company_id">Company</Label>
             <CustomSelect
               id="company_id"
-              value={formData.defaults.company_id}
+              value={formData.company_id}
               onValueChange={(value) => handleDefaultChange('company_id', value)}
               options={[
                 { value: '', label: 'None' },
@@ -288,7 +279,7 @@ export function InboundTicketDefaultsForm({
             <Label htmlFor="category_id">Category</Label>
             <CustomSelect
               id="category_id"
-              value={formData.defaults.category_id}
+              value={formData.category_id}
               onValueChange={(value) => handleDefaultChange('category_id', value)}
               options={[
                 { value: '', label: 'None' },
@@ -304,16 +295,16 @@ export function InboundTicketDefaultsForm({
             <Label htmlFor="subcategory_id">Subcategory</Label>
             <CustomSelect
               id="subcategory_id"
-              value={formData.defaults.subcategory_id}
+              value={formData.subcategory_id}
               onValueChange={(value) => handleDefaultChange('subcategory_id', value)}
               options={[
                 { value: '', label: 'None' },
                 ...fieldOptions.categories
-                  .filter(c => c.parent_id === formData.defaults.category_id)
+                  .filter(c => c.parent_id === formData.category_id)
                   .map(c => ({ value: c.id, label: c.name }))
               ]}
               placeholder="Select subcategory"
-              disabled={!formData.defaults.category_id}
+              disabled={!formData.category_id}
             />
           </div>
 
@@ -321,7 +312,7 @@ export function InboundTicketDefaultsForm({
             <Label htmlFor="entered_by">Entered By</Label>
             <CustomSelect
               id="entered_by"
-              value={formData.defaults.entered_by || 'system'}
+              value={formData.entered_by || 'system'}
               onValueChange={(value) => handleDefaultChange('entered_by', value === 'system' ? null : value)}
               options={[
                 { value: 'system', label: 'System (null)' },

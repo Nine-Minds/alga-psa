@@ -505,10 +505,19 @@ export async function resolveEmailProviderDefaults(
       return null;
     }
 
-    // Get the defaults configuration
+    // Get the defaults configuration with flat structure
     const defaults = await knex('inbound_ticket_defaults')
       .where({ id: provider.inbound_ticket_defaults_id, tenant })
-      .select('defaults')
+      .select(
+        'channel_id',
+        'status_id',
+        'priority_id',
+        'company_id',
+        'entered_by',
+        'category_id',
+        'subcategory_id',
+        'location_id'
+      )
       .first();
 
     if (!defaults) {
@@ -516,10 +525,8 @@ export async function resolveEmailProviderDefaults(
       return null;
     }
 
-    // Parse and return the defaults JSON
-    return typeof defaults.defaults === 'string' 
-      ? JSON.parse(defaults.defaults) 
-      : defaults.defaults;
+    // Return the flat defaults structure
+    return defaults;
   } catch (error) {
     console.error('Error resolving email provider defaults:', error);
     return null;
@@ -576,7 +583,7 @@ export async function createTicketFromEmail(
         category_id: ticketData.category_id,
         subcategory_id: ticketData.subcategory_id,
         location_id: ticketData.location_id,
-        entered_by: ticketData.entered_by,
+        entered_by: ticketData.entered_by || undefined,
         email_metadata: ticketData.email_metadata
       }, tenant, trx, {}, eventPublisher, analyticsTracker, userId, 3);
 
