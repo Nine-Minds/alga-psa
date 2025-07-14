@@ -240,6 +240,26 @@ export class MailHogPollingService {
     this.processedMessageIds.clear();
     console.log('🧹 Cleared MailHog processed message history');
   }
+  
+  /**
+   * Find email provider by mailbox address
+   */
+  private async findProviderByMailbox(mailbox: string): Promise<any> {
+    try {
+      const { getConnection } = await import('@shared/db/connection');
+      const db = await getConnection();
+      
+      const provider = await db('email_providers')
+        .where('mailbox', mailbox)
+        .where('isActive', true)
+        .first();
+      
+      return provider;
+    } catch (error: any) {
+      console.error(`Failed to find provider for mailbox ${mailbox}:`, error.message);
+      return null;
+    }
+  }
 }
 
 // Singleton instance for use in E2E tests

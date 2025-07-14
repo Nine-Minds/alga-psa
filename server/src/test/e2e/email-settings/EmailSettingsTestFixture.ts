@@ -1,4 +1,5 @@
 import { EmailSettingsTestContext } from './EmailSettingsTestContext';
+import { seedTestDefaults } from './seed-test-defaults';
 
 /**
  * Optimized test fixture for email settings tests that minimizes database setup overhead
@@ -52,6 +53,10 @@ export class EmailSettingsTestFixture {
     console.log(`     ✓ Base tenant: ${this.baseTestData.tenant.tenant}`);
     console.log(`     ✓ Base company: ${this.baseTestData.company.company_name}`);
     console.log(`     ✓ Base contact: ${this.baseTestData.contact.email}`);
+    
+    // Seed test defaults for email processing
+    await seedTestDefaults(this.context.db, this.baseTestData.tenant.tenant);
+    console.log('     ✓ Test inbound ticket defaults seeded');
 
     console.log('✅ Email Settings Test Fixture initialized successfully!\n');
   }

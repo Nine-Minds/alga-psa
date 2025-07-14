@@ -67,15 +67,25 @@ export class EmailSettingsTestContext extends E2ETestContext {
   }) {
     console.log(`     📋 Generating OAuth tokens for ${config.provider} provider...`);
     
+    // First, find the default inbound ticket defaults for this tenant
+    const defaultConfig = await this.db('inbound_ticket_defaults')
+      .where({ tenant: config.tenant_id, short_name: 'email-general' })
+      .first();
+    
+    if (!defaultConfig) {
+      console.warn(`     ⚠️ No default inbound ticket defaults found for tenant`);
+    } else {
+      console.log(`     ✓ Found default ticket configuration: ${defaultConfig.display_name}`);
+    }
+    
     const providerData = {
       id: crypto.randomUUID(),
       tenant: config.tenant_id,
-      name: `${config.provider} - ${config.mailbox}`,
-      provider_type: config.provider,
+      providerName: `${config.provider} - ${config.mailbox}`,
+      providerType: 'test', // Use 'test' provider type to skip OAuth
       mailbox: config.mailbox,
-      active: true,
-      connection_status: 'connected',
-      provider_config: {
+      isActive: true,
+      vendorConfig: {
         clientId: 'test-client-id',
         clientSecret: 'test-client-secret',
         redirectUri: 'http://localhost:3000/api/auth/callback',
@@ -84,18 +94,20 @@ export class EmailSettingsTestContext extends E2ETestContext {
         tokenExpiry: new Date(Date.now() + 3600000).toISOString(),
         clientState: crypto.randomBytes(16).toString('hex')
       },
-      webhook_notification_url: `http://localhost:3000/api/webhooks/${config.provider}`,
-      webhook_verification_token: crypto.randomBytes(32).toString('hex'),
+      inboundTicketDefaultsId: defaultConfig?.id || null, // Link to default configuration
       created_at: new Date(),
       updated_at: new Date()
     };
 
     console.log(`     💾 Storing provider configuration in database...`);
-    const [provider] = await this.db('email_provider_configs')
+    const [provider] = await this.db('email_providers') // Use correct table name
       .insert(providerData)
       .returning('*');
 
     console.log(`     🔗 Provider linked to tenant: ${config.tenant_id.substring(0, 8)}...`);
+    if (provider.inboundTicketDefaultsId) {
+      console.log(`     ✓ Provider configured with ticket defaults: ${provider.inboundTicketDefaultsId}`);
+    }
     return provider;
   }
 

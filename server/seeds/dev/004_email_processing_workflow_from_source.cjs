@@ -103,7 +103,10 @@ function loadWorkflowCodeFromSource() {
     console.log('Creating new ticket from email');
     
     // Resolve ticket defaults from email provider configuration
-    const ticketDefaults = await actions.resolve_email_provider_defaults(providerId, tenant);
+    const ticketDefaults = await actions.resolve_email_provider_defaults({
+      providerId: providerId,
+      tenant: tenant
+    });
     console.log('Retrieved ticket defaults:', JSON.stringify(ticketDefaults));
     
     const ticketResult = await actions.create_ticket_from_email({
