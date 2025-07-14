@@ -31,10 +31,50 @@ export interface EmailProvider {
   status: 'connected' | 'disconnected' | 'error' | 'configuring';
   lastSyncAt?: string;
   errorMessage?: string;
-  vendorConfig: any;
   inboundTicketDefaultsId?: string;
   createdAt: string;
   updatedAt: string;
+  // Vendor-specific config will be loaded separately
+  microsoftConfig?: MicrosoftEmailProviderConfig;
+  googleConfig?: GoogleEmailProviderConfig;
+}
+
+export interface MicrosoftEmailProviderConfig {
+  email_provider_id: string;
+  tenant: string;
+  client_id: string;
+  client_secret: string;
+  tenant_id: string;
+  redirect_uri: string;
+  auto_process_emails: boolean;
+  max_emails_per_sync: number;
+  folder_filters: string[];
+  access_token?: string;
+  refresh_token?: string;
+  token_expires_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GoogleEmailProviderConfig {
+  email_provider_id: string;
+  tenant: string;
+  client_id: string;
+  client_secret: string;
+  project_id: string;
+  redirect_uri: string;
+  pubsub_topic_name?: string;
+  pubsub_subscription_name?: string;
+  auto_process_emails: boolean;
+  max_emails_per_sync: number;
+  label_filters: string[];
+  access_token?: string;
+  refresh_token?: string;
+  token_expires_at?: string;
+  history_id?: string;
+  watch_expiration?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface EmailProviderConfigurationProps {

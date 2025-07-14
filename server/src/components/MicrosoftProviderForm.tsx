@@ -80,17 +80,17 @@ export function MicrosoftProviderForm({
 
   const form = useForm<MicrosoftProviderFormData>({
     resolver: zodResolver(microsoftProviderSchema) as any,
-    defaultValues: provider ? {
+    defaultValues: provider && provider.microsoftConfig ? {
       providerName: provider.providerName,
       mailbox: provider.mailbox,
-      clientId: provider.vendorConfig.clientId,
-      clientSecret: provider.vendorConfig.clientSecret,
-      tenantId: provider.vendorConfig.tenantId,
-      redirectUri: provider.vendorConfig.redirectUri,
+      clientId: provider.microsoftConfig.client_id,
+      clientSecret: provider.microsoftConfig.client_secret,
+      tenantId: provider.microsoftConfig.tenant_id,
+      redirectUri: provider.microsoftConfig.redirect_uri,
       isActive: provider.isActive,
-      autoProcessEmails: provider.vendorConfig.autoProcessEmails ?? true,
-      folderFilters: provider.vendorConfig.folderFilters?.join(', '),
-      maxEmailsPerSync: provider.vendorConfig.maxEmailsPerSync ?? 50,
+      autoProcessEmails: provider.microsoftConfig.auto_process_emails ?? true,
+      folderFilters: provider.microsoftConfig.folder_filters?.join(', '),
+      maxEmailsPerSync: provider.microsoftConfig.max_emails_per_sync ?? 50,
       inboundTicketDefaultsId: provider.inboundTicketDefaultsId
     } : {
       redirectUri: `${window.location.origin}/api/auth/microsoft/callback`,
@@ -112,14 +112,14 @@ export function MicrosoftProviderForm({
         providerName: data.providerName,
         mailbox: data.mailbox,
         isActive: data.isActive,
-        vendorConfig: {
-          clientId: data.clientId,
-          clientSecret: data.clientSecret,
-          tenantId: data.tenantId,
-          redirectUri: data.redirectUri,
-          autoProcessEmails: data.autoProcessEmails,
-          folderFilters: data.folderFilters ? data.folderFilters.split(',').map(f => f.trim()) : ['Inbox'],
-          maxEmailsPerSync: data.maxEmailsPerSync
+        microsoftConfig: {
+          client_id: data.clientId,
+          client_secret: data.clientSecret,
+          tenant_id: data.tenantId || '',
+          redirect_uri: data.redirectUri,
+          auto_process_emails: data.autoProcessEmails,
+          folder_filters: data.folderFilters ? data.folderFilters.split(',').map(f => f.trim()) : ['Inbox'],
+          max_emails_per_sync: data.maxEmailsPerSync
         },
         inboundTicketDefaultsId: data.inboundTicketDefaultsId || undefined
       };

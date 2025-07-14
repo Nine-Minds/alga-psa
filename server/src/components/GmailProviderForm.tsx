@@ -61,19 +61,19 @@ export function GmailProviderForm({
 
   const form = useForm<GmailProviderFormData>({
     resolver: zodResolver(gmailProviderSchema) as any,
-    defaultValues: provider ? {
+    defaultValues: provider && provider.googleConfig ? {
       providerName: provider.providerName,
       mailbox: provider.mailbox,
-      clientId: provider.vendorConfig.clientId,
-      clientSecret: provider.vendorConfig.clientSecret,
-      projectId: provider.vendorConfig.projectId,
-      redirectUri: provider.vendorConfig.redirectUri,
-      pubsubTopicName: provider.vendorConfig.pubsubTopicName,
-      pubsubSubscriptionName: provider.vendorConfig.pubsubSubscriptionName,
+      clientId: provider.googleConfig.client_id,
+      clientSecret: provider.googleConfig.client_secret,
+      projectId: provider.googleConfig.project_id,
+      redirectUri: provider.googleConfig.redirect_uri,
+      pubsubTopicName: provider.googleConfig.pubsub_topic_name || 'gmail-notifications',
+      pubsubSubscriptionName: provider.googleConfig.pubsub_subscription_name || 'gmail-webhook-subscription',
       isActive: provider.isActive,
-      autoProcessEmails: provider.vendorConfig.autoProcessEmails ?? true,
-      labelFilters: provider.vendorConfig.labelFilters?.join(', '),
-      maxEmailsPerSync: provider.vendorConfig.maxEmailsPerSync ?? 50
+      autoProcessEmails: provider.googleConfig.auto_process_emails ?? true,
+      labelFilters: provider.googleConfig.label_filters?.join(', '),
+      maxEmailsPerSync: provider.googleConfig.max_emails_per_sync ?? 50
     } : {
       redirectUri: `${window.location.origin}/api/auth/google/callback`,
       pubsubTopicName: 'gmail-notifications',
@@ -103,16 +103,16 @@ export function GmailProviderForm({
         providerName: data.providerName,
         mailbox: data.mailbox,
         isActive: data.isActive,
-        vendorConfig: {
-          clientId: data.clientId,
-          clientSecret: data.clientSecret,
-          projectId: data.projectId,
-          redirectUri: data.redirectUri,
-          pubsubTopicName: data.pubsubTopicName,
-          pubsubSubscriptionName: data.pubsubSubscriptionName,
-          autoProcessEmails: data.autoProcessEmails,
-          labelFilters: data.labelFilters ? data.labelFilters.split(',').map(l => l.trim()) : ['INBOX'],
-          maxEmailsPerSync: data.maxEmailsPerSync
+        googleConfig: {
+          client_id: data.clientId,
+          client_secret: data.clientSecret,
+          project_id: data.projectId,
+          redirect_uri: data.redirectUri,
+          pubsub_topic_name: data.pubsubTopicName,
+          pubsub_subscription_name: data.pubsubSubscriptionName,
+          auto_process_emails: data.autoProcessEmails,
+          label_filters: data.labelFilters ? data.labelFilters.split(',').map(l => l.trim()) : ['INBOX'],
+          max_emails_per_sync: data.maxEmailsPerSync
         }
       };
 
