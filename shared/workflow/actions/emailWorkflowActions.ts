@@ -484,10 +484,9 @@ export async function saveEmailClientAssociation(
 // =============================================================================
 
 /**
- * Resolve email provider's inbound ticket defaults
+ * Resolve default inbound ticket settings for a tenant
  */
-export async function resolveEmailProviderDefaults(
-  providerId: string,
+export async function resolveInboundTicketDefaults(
   tenant: string
 ): Promise<any> {
   const { getAdminConnection } = await import('@shared/db/admin.js');
@@ -496,20 +495,9 @@ export async function resolveEmailProviderDefaults(
   
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Get email provider with its defaults reference
-      const provider = await trx('email_providers')
-        .where({ id: providerId, tenant })
-        .select('inbound_ticket_defaults_id')
-        .first();
-
-      if (!provider || !provider.inbound_ticket_defaults_id) {
-        console.warn(`No inbound ticket defaults configured for provider ${providerId}`);
-        return null;
-      }
-
-      // Get the defaults configuration with flat structure
+      // Get the default inbound ticket configuration for this tenant
       const defaults = await trx('inbound_ticket_defaults')
-        .where({ id: provider.inbound_ticket_defaults_id, tenant })
+        .where({ tenant, is_default: true, is_active: true })
         .select(
           'channel_id',
           'status_id',
@@ -523,20 +511,32 @@ export async function resolveEmailProviderDefaults(
         .first();
 
       if (!defaults) {
-        console.warn(`Inbound ticket defaults not found for ID ${provider.inbound_ticket_defaults_id}`);
+        console.warn(`No default inbound ticket settings found for tenant ${tenant}`);
         return null;
       }
 
-      console.log(`Retrieved ticket defaults:`, defaults);
+      console.log(`Retrieved inbound ticket defaults:`, defaults);
       // Return the flat defaults structure
       return defaults;
     });
   } catch (error) {
-    console.error('Error resolving email provider defaults:', error);
+    console.error('Error resolving inbound ticket defaults:', error);
     throw error; // Throw instead of returning null to see the actual error
   } finally {
     await knex.destroy();
   }
+}
+
+/**
+ * @deprecated Use resolveInboundTicketDefaults instead
+ * Resolve email provider's inbound ticket defaults
+ */
+export async function resolveEmailProviderDefaults(
+  providerId: string,
+  tenant: string
+): Promise<any> {
+  console.warn('resolveEmailProviderDefaults is deprecated, use resolveInboundTicketDefaults instead');
+  return await resolveInboundTicketDefaults(tenant);
 }
 
 /**

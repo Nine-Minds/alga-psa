@@ -10,7 +10,7 @@ export async function seedTestDefaults(db: Knex, tenantId: string): Promise<void
   
   // Check if defaults already exist
   const existingDefaults = await db('inbound_ticket_defaults')
-    .where({ tenant: tenantId, short_name: 'email-general' })
+    .where({ tenant: tenantId, is_default: true })
     .first();
     
   if (existingDefaults) {
@@ -48,6 +48,7 @@ export async function seedTestDefaults(db: Knex, tenantId: string): Promise<void
     category_id: null,
     subcategory_id: null,
     location_id: null,
+    is_default: true, // Mark as the default for this tenant
     is_active: true,
     created_at: new Date(),
     updated_at: new Date()

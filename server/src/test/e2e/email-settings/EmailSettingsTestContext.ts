@@ -67,16 +67,8 @@ export class EmailSettingsTestContext extends E2ETestContext {
   }) {
     console.log(`     📋 Generating OAuth tokens for ${config.provider} provider...`);
     
-    // First, find the default inbound ticket defaults for this tenant
-    const defaultConfig = await this.db('inbound_ticket_defaults')
-      .where({ tenant: config.tenant_id, short_name: 'email-general' })
-      .first();
-    
-    if (!defaultConfig) {
-      console.warn(`     ⚠️ No default inbound ticket defaults found for tenant`);
-    } else {
-      console.log(`     ✓ Found default ticket configuration: ${defaultConfig.display_name}`);
-    }
+    // Note: Inbound ticket defaults are now tenant-level settings, not linked to providers
+    console.log(`     ℹ️ Using tenant-level inbound ticket defaults (not provider-specific)`);
     
     const providerId = crypto.randomUUID();
     
@@ -87,7 +79,6 @@ export class EmailSettingsTestContext extends E2ETestContext {
       provider_type: 'test', // Use 'test' provider type to skip OAuth
       mailbox: config.mailbox,
       is_active: true,
-      inbound_ticket_defaults_id: defaultConfig?.id || null, // Link to default configuration
       status: 'connected',
       created_at: new Date(),
       updated_at: new Date()
@@ -139,9 +130,6 @@ export class EmailSettingsTestContext extends E2ETestContext {
     }
 
     console.log(`     🔗 Provider linked to tenant: ${config.tenant_id.substring(0, 8)}...`);
-    if (provider.inbound_ticket_defaults_id) {
-      console.log(`     ✓ Provider configured with ticket defaults: ${provider.inbound_ticket_defaults_id}`);
-    }
     return provider;
   }
 

@@ -63,6 +63,7 @@ exports.seed = async function(knex) {
     category_id: null,
     subcategory_id: null,
     location_id: null,
+    is_default: true, // Mark as the default for this tenant
     is_active: true,
     created_at: knex.fn.now(),
     updated_at: knex.fn.now()

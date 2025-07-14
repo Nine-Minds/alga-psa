@@ -90,17 +90,16 @@ export async function systemEmailProcessingWorkflow(context: WorkflowContext): P
       data.set('matchedClient', matchedClient);
     }
     
-    // Step 3: Get provider-specific inbound ticket defaults
+    // Step 3: Get tenant-level inbound ticket defaults
     setState('RESOLVING_TICKET_DEFAULTS');
-    console.log('Resolving ticket defaults for provider:', providerId);
+    console.log('Resolving inbound ticket defaults for tenant:', tenant);
     
-    const ticketDefaults = await actions.resolve_email_provider_defaults({
-      providerId: providerId,
+    const ticketDefaults = await actions.resolve_inbound_ticket_defaults({
       tenant: tenant
     });
     
     if (!ticketDefaults) {
-      console.warn('No ticket defaults configured for provider, using system defaults');
+      console.warn('No ticket defaults configured for tenant, using system defaults');
       // Fall back to system defaults
       ticketDefaults = {
         channel_id: await getEmailChannelId(actions),
@@ -117,9 +116,9 @@ export async function systemEmailProcessingWorkflow(context: WorkflowContext): P
     console.log('Using ticket defaults:', ticketDefaults);
     data.set('ticketDefaults', ticketDefaults);
     
-    // Step 4: Create new ticket from email using provider defaults
+    // Step 4: Create new ticket from email using tenant defaults
     setState('CREATING_TICKET');
-    console.log('Creating new ticket from email with provider defaults');
+    console.log('Creating new ticket from email with tenant defaults');
     
     // Override defaults with matched client info if available
     const finalCompanyId = matchedClient?.companyId || ticketDefaults.company_id;

@@ -1927,20 +1927,19 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
   );
 
   actionRegistry.registerSimpleAction(
-    'resolve_email_provider_defaults',
-    'Resolve inbound ticket defaults for an email provider',
+    'resolve_inbound_ticket_defaults',
+    'Resolve default inbound ticket settings for a tenant',
     [
-      { name: 'providerId', type: 'string', required: true },
       { name: 'tenant', type: 'string', required: true }
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { resolveEmailProviderDefaults } = await import('@shared/workflow/actions/emailWorkflowActions.js');
-        const defaults = await resolveEmailProviderDefaults(params.providerId, params.tenant);
+        const { resolveInboundTicketDefaults } = await import('@shared/workflow/actions/emailWorkflowActions.js');
+        const defaults = await resolveInboundTicketDefaults(params.tenant);
         
         return defaults;
       } catch (error: any) {
-        logger.error(`[ACTION] resolve_email_provider_defaults: Error resolving defaults for provider ${params.providerId}`, error);
+        logger.error(`[ACTION] resolve_inbound_ticket_defaults: Error resolving defaults for tenant ${params.tenant}`, error);
         return null;
       }
     }
