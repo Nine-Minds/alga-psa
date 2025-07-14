@@ -33,19 +33,21 @@ export async function seedTestDefaults(db: Knex, tenantId: string): Promise<void
     throw new Error('Missing required fields for ticket defaults');
   }
   
-  // Create test defaults
+  // Create test defaults with flat structure
   const testDefaults = {
     id: db.raw('gen_random_uuid()'),
     tenant: tenantId,
     short_name: 'email-general',
     display_name: 'Test Email Defaults',
     description: 'Default configuration for test email processing',
-    defaults: JSON.stringify({
-      channel_id: channel.channel_id,
-      status_id: status.status_id,
-      priority_id: priority.priority_id,
-      entered_by: null // System-generated tickets
-    }),
+    channel_id: channel.channel_id,
+    status_id: status.status_id,
+    priority_id: priority.priority_id,
+    company_id: null,
+    entered_by: null, // System-generated tickets
+    category_id: null,
+    subcategory_id: null,
+    location_id: null,
     is_active: true,
     created_at: new Date(),
     updated_at: new Date()
