@@ -90,19 +90,54 @@ export async function systemEmailProcessingWorkflow(context: WorkflowContext): P
       data.set('matchedClient', matchedClient);
     }
     
-    // Step 3: Create new ticket from email
+    // Step 3: Get provider-specific inbound ticket defaults
+    setState('RESOLVING_TICKET_DEFAULTS');
+    console.log('Resolving ticket defaults for provider:', providerId);
+    
+    const ticketDefaults = await actions.resolve_email_provider_defaults({
+      providerId: providerId,
+      tenant: tenant
+    });
+    
+    if (!ticketDefaults) {
+      console.warn('No ticket defaults configured for provider, using system defaults');
+      // Fall back to system defaults
+      ticketDefaults = {
+        channel_id: await getEmailChannelId(actions),
+        status_id: await getNewTicketStatusId(actions),
+        priority_id: await getDefaultPriorityId(actions),
+        company_id: null,
+        entered_by: null,
+        category_id: null,
+        subcategory_id: null,
+        location_id: null
+      };
+    }
+    
+    console.log('Using ticket defaults:', ticketDefaults);
+    data.set('ticketDefaults', ticketDefaults);
+    
+    // Step 4: Create new ticket from email using provider defaults
     setState('CREATING_TICKET');
-    console.log('Creating new ticket from email');
+    console.log('Creating new ticket from email with provider defaults');
+    
+    // Override defaults with matched client info if available
+    const finalCompanyId = matchedClient?.companyId || ticketDefaults.company_id;
+    const finalContactId = matchedClient?.contactId || null;
     
     const ticketResult = await actions.create_ticket_from_email({
       title: emailData.subject,
       description: emailData.body.text,
-      company_id: matchedClient?.companyId,
-      contact_id: matchedClient?.contactId,
+      company_id: finalCompanyId,
+      contact_id: finalContactId,
       source: 'email',
-      channel_id: await getEmailChannelId(actions), // Get or create email channel
-      status_id: await getNewTicketStatusId(actions), // Get default new ticket status
-      priority_id: await getDefaultPriorityId(actions), // Get default priority
+      channel_id: ticketDefaults.channel_id,
+      status_id: ticketDefaults.status_id,
+      priority_id: ticketDefaults.priority_id,
+      category_id: ticketDefaults.category_id,
+      subcategory_id: ticketDefaults.subcategory_id,
+      location_id: ticketDefaults.location_id,
+      entered_by: ticketDefaults.entered_by,
       // Store email metadata for future threading
       email_metadata: {
         messageId: emailData.id,
@@ -117,7 +152,7 @@ export async function systemEmailProcessingWorkflow(context: WorkflowContext): P
     console.log(`Ticket created with ID: ${ticketResult.ticket_id}`);
     data.set('ticketId', ticketResult.ticket_id);
     
-    // Step 4: Handle attachments if present
+    // Step 5: Handle attachments if present
     if (emailData.attachments && emailData.attachments.length > 0) {
       setState('PROCESSING_ATTACHMENTS');
       console.log(`Processing ${emailData.attachments.length} email attachments`);
@@ -141,7 +176,7 @@ export async function systemEmailProcessingWorkflow(context: WorkflowContext): P
       console.log(`Processed ${emailData.attachments.length} attachments`);
     }
     
-    // Step 5: Create initial comment with original email content
+    // Step 6: Create initial comment with original email content
     await actions.create_comment_from_email({
       ticket_id: ticketResult.ticket_id,
       content: emailData.body.html || emailData.body.text,
@@ -153,7 +188,7 @@ export async function systemEmailProcessingWorkflow(context: WorkflowContext): P
     setState('EMAIL_PROCESSED');
     console.log('Email processing completed successfully');
     
-    // Step 6: Optional notification (if we have a matched client)
+    // Step 7: Optional notification (if we have a matched client)
     if (matchedClient?.companyId) {
       try {
         // TODO: Implement notification system
