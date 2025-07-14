@@ -135,7 +135,7 @@ export default function TaskDocuments({ taskId, editable = true }: TaskDocuments
     <div className="space-y-4" onClick={(e) => e.stopPropagation()}>
       {editable && (
         <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
+          <h3 className="font-semibold flex items-center gap-2">
             <Paperclip className="w-5 h-5" />
             Attachments
           </h3>
@@ -145,6 +145,7 @@ export default function TaskDocuments({ taskId, editable = true }: TaskDocuments
               e.stopPropagation();
               setShowUpload(!showUpload);
             }}
+            id="show-upload-files-section"
             size="sm"
             variant="outline"
             type="button"
@@ -192,6 +193,7 @@ export default function TaskDocuments({ taskId, editable = true }: TaskDocuments
                       e.stopPropagation();
                       handleDownload(doc);
                     }}
+                    id="download-document-button"
                     size="sm"
                     variant="ghost"
                     type="button"
@@ -206,6 +208,7 @@ export default function TaskDocuments({ taskId, editable = true }: TaskDocuments
                         e.stopPropagation();
                         handleDeleteClick(doc);
                       }}
+                      id="remove-document-button"
                       size="sm"
                       variant="ghost"
                       type="button"

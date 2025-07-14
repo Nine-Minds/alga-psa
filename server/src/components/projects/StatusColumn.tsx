@@ -278,7 +278,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
     >
-      <div className="font-bold text-sm p-3 rounded-t-lg flex items-center justify-between relative z-10">
+      <div className="font-bold text-sm p-3 rounded-t-lg flex items-center justify-between relative">
         <div className={`flex ${darkBackgroundColor} rounded-[20px] border-2 ${borderColor} shadow-sm items-center ps-3 py-3 pe-4`}>
           {statusIcon}
           <span className="ml-2">{status.custom_name || status.name}</span>

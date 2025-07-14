@@ -3,6 +3,7 @@ import { ITag, TaggedEntityType } from 'server/src/interfaces/tag.interfaces';
 import { createTag, deleteTag, getAllTags, checkTagPermissions } from 'server/src/lib/actions/tagActions';
 import { TagList } from './TagList';
 import { TagInput } from './TagInput';
+import { TagInputInline } from './TagInputInline';
 // import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { toast } from 'react-hot-toast';
 import { useTags } from 'server/src/context/TagContext';
@@ -17,6 +18,7 @@ interface TagManagerProps {
   className?: string;
   allowColorEdit?: boolean;
   allowTextEdit?: boolean;
+  useInlineInput?: boolean; // Use inline input instead of portal-based input
   permissions?: {
     canAddExisting: boolean;
     canCreateNew: boolean;
@@ -36,6 +38,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
   className = '',
   allowColorEdit = true,
   allowTextEdit = true,
+  useInlineInput = false,
   permissions: passedPermissions
 }) => {
   // Always call useTags to avoid conditional hooks
@@ -44,11 +47,11 @@ export const TagManager: React.FC<TagManagerProps> = ({
   const [localAllTags, setLocalAllTags] = useState<ITag[]>([]);
   const [permissions, setPermissions] = useState(
     passedPermissions || {
-      canAddExisting: false,
-      canCreateNew: false,
-      canEditColors: false,
-      canEditText: false,
-      canDelete: false,
+      canAddExisting: true,
+      canCreateNew: true,
+      canEditColors: true,
+      canEditText: true,
+      canDelete: true,
       canDeleteAll: false
     }
   );
@@ -136,6 +139,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
   // Re-enable proper permissions checking
   useEffect(() => {
     if (passedPermissions) {
+      console.log('Using passed permissions:', passedPermissions);
       setPermissions(passedPermissions);
       return;
     }
@@ -145,6 +149,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
       if (tagContext?.getPermissions) {
         try {
           const perms = await tagContext.getPermissions(entityType);
+          console.log('Fetched permissions for', entityType, ':', perms);
           setPermissions(perms);
         } catch (error) {
           console.error('Failed to get tag permissions:', error);
@@ -177,11 +182,13 @@ export const TagManager: React.FC<TagManagerProps> = ({
     }
 
     try {
+      console.log('Adding tag:', { tagText, entityId, entityType });
       const newTag = await createTag({
         tag_text: tagText,
         tagged_id: entityId,
         tagged_type: entityType,
       });
+      console.log('Tag created successfully:', newTag);
 
       const updatedTags = [...tags, newTag];
       setTags(updatedTags);
@@ -189,7 +196,9 @@ export const TagManager: React.FC<TagManagerProps> = ({
       
       // Skip TagContext updates to prevent circular updates
       // Global syncing is handled by the parent component through onTagsChange
+      toast.success(`Tag "${tagText}" added successfully`);
     } catch (error) {
+      console.error('Failed to add tag:', error);
       handleError(error, 'Failed to add tag');
     }
   };
@@ -276,14 +285,23 @@ export const TagManager: React.FC<TagManagerProps> = ({
           onTagUpdate={handleTagUpdate}
         />
       </div>
-      {permissions.canAddExisting && (
+      {(permissions.canAddExisting || permissions.canCreateNew) && (
         <div className="flex-shrink-0 overflow-visible">
-          <TagInput
-            id={`${id}-input`}
-            existingTags={allTags.filter(t => t.tagged_type === entityType)}
-            currentTags={tags}
-            onAddTag={handleAddTag}
-          />
+          {useInlineInput ? (
+            <TagInputInline
+              id={`${id}-input`}
+              existingTags={allTags.filter(t => t.tagged_type === entityType)}
+              currentTags={tags}
+              onAddTag={handleAddTag}
+            />
+          ) : (
+            <TagInput
+              id={`${id}-input`}
+              existingTags={allTags.filter(t => t.tagged_type === entityType)}
+              currentTags={tags}
+              onAddTag={handleAddTag}
+            />
+          )}
         </div>
       )}
     </div>
