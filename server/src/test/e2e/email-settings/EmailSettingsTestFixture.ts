@@ -23,6 +23,7 @@ export class EmailSettingsTestFixture {
     return EmailSettingsTestFixture.instance;
   }
 
+
   /**
    * Initialize the test fixture once - expensive operations done here
    */
@@ -33,12 +34,21 @@ export class EmailSettingsTestFixture {
 
     console.log('🏗️ Initializing Email Settings Test Fixture (one-time setup)...');
 
+    // Set E2E environment variables before initializing context
+    process.env.DB_NAME_SERVER = 'server_test';
+    process.env.DB_HOST = process.env.DB_HOST || 'localhost';
+    // Don't set DB_PORT here - let the test context handle it
+    // The test context will use direct postgres for admin operations
+    process.env.PGBOUNCER_HOST = 'localhost';
+    process.env.PGBOUNCER_PORT = '6434';
+
     // Create and initialize the test context with provided options
+    // The context will handle database reset during its initialization
     this.context = new EmailSettingsTestContext({
       testMode: 'e2e',
       autoStartServices: true,
       clearEmailsBeforeTest: false, // We'll handle this manually
-      runSeeds: true,
+      runSeeds: true, // Let the context handle seeds during database reset
       // Override with any provided options
       ...options
     });

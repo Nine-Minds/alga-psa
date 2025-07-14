@@ -16,17 +16,18 @@ export class EmailProcessor {
     console.log(`📧 Processing email: ${job.messageId} from provider ${job.providerId}`);
 
     try {
-      // 1. Get provider configuration and create adapter
-      const providerConfig = await this.getProviderConfig(job.providerId, job.tenant);
-      
-      // 2. Get email message details
+      // Get email message details
       let emailMessage;
+      let providerConfig;
+      
       if (job.emailData) {
         // Use provided email data (e.g., from MailHog) instead of fetching from external API
         console.log(`📧 Using provided email data for ${job.providerId}`);
         emailMessage = job.emailData;
+        // Skip provider config lookup for test emails with provided data
       } else {
-        // Create adapter and fetch email details from external API
+        // Get provider configuration for fetching from external API
+        providerConfig = await this.getProviderConfig(job.providerId, job.tenant);
         const adapter = await this.createProviderAdapter(providerConfig);
         emailMessage = await adapter.getMessageDetails(job.messageId);
       }
@@ -74,22 +75,7 @@ export class EmailProcessor {
       const { getConnection } = await import('@shared/db/connection');
       const db = await getConnection();
       
-      // For MailHog test provider, return a mock configuration
-      if (providerId === 'mailhog-test-provider') {
-        return {
-          id: providerId,
-          tenant: tenant,
-          name: 'MailHog Test Provider',
-          provider_type: 'microsoft', // Use microsoft as default for test
-          mailbox: 'support@example.com',
-          folder_to_monitor: 'Inbox',
-          active: true,
-          webhook_notification_url: `${process.env.APP_BASE_URL || 'http://localhost:3000'}/api/email/webhooks/microsoft`,
-          connection_status: 'connected',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-      }
+      // No special handling for test providers - all providers should be in the database
       
       // Query the actual database for real providers
       const [provider] = await db('email_provider_configs')
@@ -208,13 +194,8 @@ export class EmailProcessor {
       const tableExists = await db.schema.hasTable('email_processed_messages');
       
       if (tableExists) {
-        // Check if the provider_id is a valid UUID, if not skip for test providers
-        if (job.providerId === 'mailhog-test-provider') {
-          console.log(`⚠️ Skipping recording for test provider: ${job.messageId}`);
-        } else {
-          await db('email_processed_messages').insert(record);
-          console.log(`✅ Recorded processed message: ${job.messageId}`);
-        }
+        await db('email_processed_messages').insert(record);
+        console.log(`✅ Recorded processed message: ${job.messageId}`);
       } else {
         console.log(`⚠️ email_processed_messages table not found, skipping recording for: ${job.messageId}`);
       }

@@ -28,8 +28,18 @@ async function startServices() {
     const actionRegistry = getActionRegistry();
     const workflowRuntime = getWorkflowRuntime(actionRegistry);
     
-    // Create worker instance
-    const worker = new WorkflowWorker(workflowRuntime);
+    // Create worker instance with configuration from environment
+    const workerConfig = {
+      pollIntervalMs: parseInt(process.env.POLL_INTERVAL_MS || '300000', 10),
+      batchSize: parseInt(process.env.BATCH_SIZE || '10', 10),
+      maxRetries: parseInt(process.env.MAX_RETRIES || '3', 10),
+      concurrencyLimit: parseInt(process.env.CONCURRENCY_LIMIT || '5', 10),
+      healthCheckIntervalMs: parseInt(process.env.HEALTH_CHECK_INTERVAL_MS || '30000', 10),
+      metricsReportingIntervalMs: parseInt(process.env.METRICS_REPORTING_INTERVAL_MS || '60000', 10)
+    };
+    
+    logger.info('[WorkflowWorker] Starting with config:', workerConfig);
+    const worker = new WorkflowWorker(workflowRuntime, workerConfig);
     
     // Create HTTP server instance
     const server = new WorkerServer(worker);

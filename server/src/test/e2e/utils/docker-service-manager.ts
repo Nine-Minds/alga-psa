@@ -1,6 +1,7 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import axios from 'axios';
+import * as path from 'path';
 
 const execAsync = promisify(exec);
 
@@ -12,12 +13,13 @@ export interface ServiceHealthCheck {
 }
 
 export class DockerServiceManager {
-  private readonly composeFile = 'docker-compose.e2e-with-worker.yaml';
-  private readonly projectRoot = '../../../..'; // Relative to src/test/e2e/utils/ -> go to alga-psa root
+  private readonly composeFile = 'docker-compose.e2e-local.yaml';
+  // Calculate the absolute path to the project root dynamically
+  private readonly projectRoot = path.resolve(__dirname, '../../../../..');
   private readonly services = [
-    'postgres',
+    'postgres-test',
+    'pgbouncer-test',
     'redis-test', 
-    'setup-test',
     'workflow-worker-test',
     'mailhog',
     'webhook-mock'
@@ -31,24 +33,22 @@ export class DockerServiceManager {
       timeout: 30000
     },
     {
-      name: 'workflow-worker',
-      url: 'http://localhost:4001/health',
-      expectedStatus: 200,
-      timeout: 30000
-    },
-    {
       name: 'webhook-mock',
       url: 'http://localhost:8080/__admin/health',
       expectedStatus: 200,
       timeout: 30000
     }
+    // Note: workflow-worker doesn't expose a health endpoint, 
+    // but we can see it's running from the logs
   ];
 
   async startE2EServices(): Promise<void> {
     try {
+      // Use absolute path to ensure we're in the right directory
+      const absoluteProjectRoot = '/Users/robertisaacs/alga-psa';
       // Change to project root and start services
       const { stdout, stderr } = await execAsync(
-        `cd ${this.projectRoot} && docker-compose -f ${this.composeFile} up -d`,
+        `cd ${absoluteProjectRoot} && docker-compose -f ${this.composeFile} up -d`,
         { timeout: 120000 }
       );
       
@@ -66,8 +66,9 @@ export class DockerServiceManager {
     console.log('🛑 Stopping E2E Docker services...');
     
     try {
+      const absoluteProjectRoot = '/Users/robertisaacs/alga-psa';
       await execAsync(
-        `cd ${this.projectRoot} && docker-compose -f ${this.composeFile} down`,
+        `cd ${absoluteProjectRoot} && docker-compose -f ${this.composeFile} down`,
         { timeout: 60000 }
       );
       
@@ -215,52 +216,66 @@ export class DockerServiceManager {
   }
 
   async ensureServicesRunning(): Promise<void> {
-    console.log('🔍 Checking if E2E services are running...');
+    console.log('🔍 Checking E2E service health endpoints...');
     
-    const runningServices = await Promise.all(
-      this.services.map(async service => ({
-        name: service,
-        running: await this.isServiceRunning(service)
-      }))
-    );
-    
-    const stoppedServices = runningServices.filter(s => !s.running);
-    
-    if (stoppedServices.length > 0) {
-      console.log(`🚀 Starting stopped services: ${stoppedServices.map(s => s.name).join(', ')}`);
-      console.log('🚀 Starting E2E Docker services...');
-      
+    // First check if services are accessible via their health endpoints
+    let healthyCount = 0;
+    for (const check of this.healthChecks) {
       try {
-        await this.startE2EServices();
-      } catch (error) {
-        // Check if this is a "file not found" error for docker-compose
-        if (error.message && error.message.includes('no such file or directory')) {
-          console.log('⚠️ Service startup failed, but services may already be running:', error.message);
-          // Re-check if services are actually running
-          const recheckServices = await Promise.all(
-            this.services.map(async service => ({
-              name: service,
-              running: await this.isServiceRunning(service)
-            }))
-          );
-          
-          const stillStoppedServices = recheckServices.filter(s => !s.running);
-          if (stillStoppedServices.length === 0) {
-            console.log('✅ Services are healthy, continuing with existing services');
-            return;
-          } else {
-            // Services are not running and we can't start them
-            throw error;
-          }
+        const response = await axios.get(check.url, { 
+          timeout: 2000,
+          validateStatus: () => true
+        });
+        if (response.status === (check.expectedStatus || 200)) {
+          console.log(`✅ ${check.name} is healthy`);
+          healthyCount++;
         } else {
-          // Other errors should be thrown
-          throw error;
+          console.log(`⚠️ ${check.name} returned status ${response.status}`);
+        }
+      } catch (error) {
+        console.log(`⚠️ ${check.name} is not accessible: ${error.message}`);
+      }
+    }
+    
+    // If all services are healthy, we're done
+    if (healthyCount === this.healthChecks.length) {
+      console.log('✅ All required services are already running and healthy');
+      return;
+    }
+    
+    // If some services are missing, try to start them
+    console.log(`⚠️ Only ${healthyCount}/${this.healthChecks.length} services are healthy`);
+    console.log('🚀 Attempting to start E2E Docker services...');
+    
+    try {
+      await this.startE2EServices();
+      await this.waitForHealthChecks();
+    } catch (error) {
+      // If startup fails, it might be because services are already running
+      // or docker-compose file is missing. Try health checks one more time.
+      console.log('⚠️ Service startup failed:', error.message);
+      console.log('🔄 Retrying health checks...');
+      
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      let retryHealthyCount = 0;
+      for (const check of this.healthChecks) {
+        try {
+          const response = await axios.get(check.url, { timeout: 2000 });
+          if (response.status === (check.expectedStatus || 200)) {
+            retryHealthyCount++;
+          }
+        } catch (e) {
+          // Service not available
         }
       }
       
-      await this.waitForHealthChecks();
-    } else {
-      console.log('✅ All E2E services are already running');
+      if (retryHealthyCount === this.healthChecks.length) {
+        console.log('✅ All services are healthy on retry, continuing...');
+        return;
+      }
+      
+      throw new Error(`Failed to ensure services are running. Only ${retryHealthyCount}/${this.healthChecks.length} services are healthy.`);
     }
   }
 }

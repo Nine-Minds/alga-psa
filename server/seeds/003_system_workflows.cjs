@@ -1,5 +1,4 @@
-import { Knex } from 'knex';
-import { v4 as uuidv4 } from 'uuid';
+const { v4: uuidv4 } = require('uuid');
 
 // Use the same static UUID as defined in the migration
 const QBO_REGISTRATION_ID = 'a1b2c3d4-e5f6-7890-1234-567890abcdef';
@@ -32,7 +31,7 @@ const qboSyncWorkflowDefinition = {
   `,
 };
 
-export async function seed(knex: Knex): Promise<void> {
+exports.seed = async function (knex) {
   // Check if the QBO system workflow already exists (added by migration or previous seed run)
   const existingReg = await knex('system_workflow_registrations')
     .where({ registration_id: QBO_REGISTRATION_ID })
@@ -90,4 +89,4 @@ export async function seed(knex: Knex): Promise<void> {
   ]);
   */
 
-}
+};

@@ -118,7 +118,7 @@ describe('Email Settings Webhook Processing Tests', () => {
       const provider = await context.createEmailProvider({
         provider: 'microsoft',
         mailbox: 'support@example.com',
-        tenant_id: tenant.id
+        tenant_id: tenant.tenant
       });
       
       const webhookPayload = context.createMicrosoftWebhookPayload({
@@ -143,8 +143,8 @@ describe('Email Settings Webhook Processing Tests', () => {
       const provider = await context.createEmailProvider({
         provider: 'google',
         mailbox: 'support@example.com',
-        tenant_id: tenant.id,
-        company_id: company.id
+        tenant_id: tenant.tenant,
+        company_id: company.company_id
       });
       
       // 2. Create Pub/Sub message
@@ -240,7 +240,7 @@ describe('Email Settings Webhook Processing Tests', () => {
       const provider = await context.createEmailProvider({
         provider: 'microsoft',
         mailbox: 'support@example.com',
-        tenant_id: tenant.id
+        tenant_id: tenant.tenant
       });
       
       const webhookPayload = context.createMicrosoftWebhookPayload({

@@ -38,7 +38,7 @@ const DEFAULT_CONFIG: RedisStreamConfig = {
   streamPrefix: 'workflow:events:',
   consumerGroup: 'workflow-processors',
   maxStreamLength: 1000,
-  blockingTimeout: 5000, // ms
+  blockingTimeout: 300000, // 5 minutes in ms
   claimTimeout: 30000, // ms
   batchSize: 10,
   maxRetries: 3, // Maximum number of retries before moving to DLQ

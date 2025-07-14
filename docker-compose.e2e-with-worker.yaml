@@ -99,6 +99,7 @@ services:
       DB_PORT: 5432
       DB_NAME_SERVER: server_test
       DB_USER_SERVER: app_user
+      POSTGRES_HOST: postgres-test  # Also set POSTGRES_HOST for entrypoint script
       
       # Redis configuration
       REDIS_HOST: redis-test
@@ -106,12 +107,12 @@ services:
       
       # Workflow worker configuration
       WORKER_COUNT: 2
-      POLL_INTERVAL_MS: 500
+      POLL_INTERVAL_MS: 300000  # 5 minutes in milliseconds
       BATCH_SIZE: 5
       MAX_RETRIES: 3
       CONCURRENCY_LIMIT: 3
-      HEALTH_CHECK_INTERVAL_MS: 10000
-      METRICS_REPORTING_INTERVAL_MS: 30000
+      HEALTH_CHECK_INTERVAL_MS: 300000  # 5 minutes
+      METRICS_REPORTING_INTERVAL_MS: 300000  # 5 minutes
       
       # Logging
       LOG_LEVEL: debug

@@ -1,5 +1,5 @@
-# E2E Testing Configuration with Workflow Worker - Development Mode
-# This uses volumes to share local files for faster development
+# E2E Testing Configuration for Local Development
+# This configuration excludes the setup container since tests handle their own DB setup
 # Run from the alga-psa root directory
 
 services:
@@ -43,52 +43,30 @@ services:
       timeout: 3s
       retries: 5
 
-  # Test setup service (database migrations and seeding)
-  setup-test:
+  # Test-specific PgBouncer instance
+  pgbouncer-test:
     build:
-      context: .
-      dockerfile: setup/Dockerfile
-    container_name: ${APP_NAME:-sebastian}_setup_test
-    networks:
-      - app-network
+      context: ./pgbouncer
+      dockerfile: Dockerfile
+    container_name: ${APP_NAME:-sebastian}_pgbouncer_test
     environment:
-      # Database configuration
-      DB_TYPE: postgres
-      DB_HOST: postgres-test
-      DB_PORT: 5432
-      DB_NAME_SERVER: server_test
-      DB_USER_ADMIN: postgres
-      DB_USER_SERVER: app_user
       POSTGRES_USER: postgres
-      POSTGRES_HOST: postgres-test
-      POSTGRES_PORT: 5432
-      
-      # Logging
-      LOG_LEVEL: debug
-      NODE_OPTIONS: --experimental-vm-modules
-      
-      # App info
-      APP_NAME: ${APP_NAME:-sebastian}
-      APP_ENV: test
-      VERSION: e2e-test
-    volumes:
-      - type: bind
-        source: ./secrets/postgres_password
-        target: /run/secrets/postgres_password
-        read_only: true
-      - type: bind
-        source: ./secrets/db_password_server
-        target: /run/secrets/db_password_server
-        read_only: true
+      # Override database configuration for test
+      DATABASES_HOST: postgres-test
+      DATABASES_PORT: 5432
+      DATABASES_DBNAME: server_test
     secrets:
       - postgres_password
       - db_password_server
-    entrypoint: ["/app/setup/entrypoint.sh"]
+    ports:
+      - "6434:6432"  # Different port from main pgbouncer
+    networks:
+      - app-network
     depends_on:
       postgres-test:
         condition: service_healthy
 
-  # Workflow Worker Service - Development Mode with volumes
+  # Workflow Worker Service - Dev mode with volume mounts
   workflow-worker-test:
     platform: linux/arm64
     image: node:20.9-alpine
@@ -101,11 +79,8 @@ services:
       DB_HOST: postgres-test
       DB_PORT: 5432
       DB_NAME_SERVER: server_test
-      DB_USER_ADMIN: postgres
       DB_USER_SERVER: app_user
-      POSTGRES_USER: postgres
-      POSTGRES_HOST: postgres-test
-      POSTGRES_PORT: 5432
+      POSTGRES_HOST: postgres-test  # Also set POSTGRES_HOST for entrypoint script
       
       # Redis configuration
       REDIS_HOST: redis-test
@@ -113,12 +88,12 @@ services:
       
       # Workflow worker configuration
       WORKER_COUNT: 2
-      POLL_INTERVAL_MS: 500
+      POLL_INTERVAL_MS: 300000  # 5 minutes in milliseconds
       BATCH_SIZE: 5
       MAX_RETRIES: 3
       CONCURRENCY_LIMIT: 3
-      HEALTH_CHECK_INTERVAL_MS: 10000
-      METRICS_REPORTING_INTERVAL_MS: 30000
+      HEALTH_CHECK_INTERVAL_MS: 300000  # 5 minutes
+      METRICS_REPORTING_INTERVAL_MS: 300000  # 5 minutes
       
       # Logging
       LOG_LEVEL: debug
@@ -162,11 +137,17 @@ services:
         source: ./secrets/token_secret_key
         target: /run/secrets/token_secret_key
         read_only: true
+    secrets:
+      - db_password_server
+      - redis_password
+      - crypto_key
+      - token_secret_key
     depends_on:
       postgres-test:
         condition: service_healthy
       redis-test:
         condition: service_healthy
+      # No dependency on setup-test since tests handle their own setup
     ports:
       - "4001:3001"
     healthcheck:

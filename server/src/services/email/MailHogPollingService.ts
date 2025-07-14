@@ -115,16 +115,29 @@ export class MailHogPollingService {
       // Convert MailHog message format to our email format
       const emailData = this.convertMailHogToEmailData(mailhogMessage);
       
-      // Get a default tenant - in E2E tests, use the first available tenant
-      const tenantId = await this.getDefaultTenant();
+      // In test environment, use a default test configuration
+      const toEmail = emailData.to[0]?.email || 'test@example.com';
+      console.log(`📧 Processing email to: ${toEmail}`);
+      
+      // For MailHog test environment, we'll use a default test configuration
+      // This allows us to process emails without requiring provider setup
+      const testTenant = await this.getDefaultTenant();
+      const provider = {
+        id: 'test-provider-' + uuidv4(),
+        provider_type: 'test',
+        tenant: testTenant,
+        mailbox: toEmail
+      };
+      
+      console.log(`📧 Using test configuration for tenant: ${testTenant}`);
       
       // Create an email processing job
       const emailJob: EmailQueueJob = {
         id: uuidv4(),
         messageId: emailData.id,
-        providerId: 'mailhog-test-provider', // Special provider ID for MailHog
-        provider: 'microsoft', // Use microsoft as the base type for mailhog-test-provider
-        tenant: tenantId,
+        providerId: provider.id,
+        provider: provider.provider_type === 'test' ? 'microsoft' : provider.provider_type, // Map test to microsoft
+        tenant: provider.tenant,
         attempt: 1,
         maxRetries: 3,
         createdAt: new Date().toISOString(),
@@ -135,9 +148,9 @@ export class MailHogPollingService {
         // Include the already-converted email data so EmailProcessor doesn't need to fetch it
         emailData: {
           ...emailData,
-          provider: 'microsoft' as const,
-          providerId: 'mailhog-test-provider',
-          tenant: tenantId
+          provider: provider.provider_type === 'test' ? 'microsoft' as const : provider.provider_type,
+          providerId: provider.id,
+          tenant: provider.tenant
         }
       };
 
@@ -154,8 +167,8 @@ export class MailHogPollingService {
    * Convert MailHog message format to our standard email data format
    */
   private convertMailHogToEmailData(mailhogMessage: any): any {
-    const rawMessage = mailhogMessage.Raw || {};
-    const headers = rawMessage.Headers || {};
+    // MailHog message structure - headers can be in Content.Headers or Raw.Headers
+    const headers = mailhogMessage.Content?.Headers || mailhogMessage.Raw?.Headers || {};
     
     // Extract email addresses
     const fromHeader = headers.From?.[0] || '';
@@ -181,7 +194,7 @@ export class MailHogPollingService {
         email: fromEmail || 'unknown@example.com', // Ensure valid email
         name: fromName || undefined // Use undefined instead of null for optional fields
       },
-      to: toEmails.map(to => ({
+      to: toEmails.map((to: any) => ({
         email: to.email || 'unknown@example.com', // Ensure valid email
         name: to.name || undefined // Use undefined instead of null
       })),
@@ -241,25 +254,6 @@ export class MailHogPollingService {
     console.log('🧹 Cleared MailHog processed message history');
   }
   
-  /**
-   * Find email provider by mailbox address
-   */
-  private async findProviderByMailbox(mailbox: string): Promise<any> {
-    try {
-      const { getConnection } = await import('@shared/db/connection');
-      const db = await getConnection();
-      
-      const provider = await db('email_providers')
-        .where('mailbox', mailbox)
-        .where('isActive', true)
-        .first();
-      
-      return provider;
-    } catch (error: any) {
-      console.error(`Failed to find provider for mailbox ${mailbox}:`, error.message);
-      return null;
-    }
-  }
 }
 
 // Singleton instance for use in E2E tests

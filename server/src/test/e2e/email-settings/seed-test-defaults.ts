@@ -20,9 +20,9 @@ export async function seedTestDefaults(db: Knex, tenantId: string): Promise<void
   
   // Get default IDs for required fields
   const [channel, status, priority] = await Promise.all([
-    db('channels').where({ tenant: tenantId }).orderBy('is_default', 'desc').first(),
-    db('statuses').where({ tenant: tenantId }).orderBy('is_default', 'desc').first(),
-    db('priorities').where({ tenant: tenantId }).orderBy('is_default', 'desc').first()
+    db('channels').where({ tenant: tenantId }).first(),
+    db('statuses').where({ tenant: tenantId }).first(),
+    db('priorities').where({ tenant: tenantId }).first()
   ]);
   
   if (!channel || !status || !priority) {

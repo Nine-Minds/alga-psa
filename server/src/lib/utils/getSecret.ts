@@ -1,5 +1,5 @@
-import { getSecretProviderInstance } from '@shared/core/secretProvider';
-import logger from '@shared/core/logger.js'; // Corrected import path
+import { getSecretProviderInstance } from '../../../../shared/core/secretProvider.js';
+import logger from '../../../../shared/core/logger.js'; // Corrected import path
 
 /**
  * Gets a secret value using the configured secret provider, with fallbacks.

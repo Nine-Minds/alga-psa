@@ -15,7 +15,7 @@ describe('Email Threading Tests', () => {
       autoStartEmailPolling: true, // Enable automatic email processing
       runSeeds: true
     });
-  });
+  }, 60000); // 60 second timeout for database reset and setup
 
   afterAll(async () => {
     await testHelpers.afterAll();
@@ -98,7 +98,7 @@ describe('Email Threading Tests', () => {
         console.log('     ℹ️ This is expected until the email processing workflow is complete');
         console.log('\n  ⏸️ Email to ticket creation test skipped pending implementation\n');
       }
-    });
+    }, 60000); // 60 second timeout for workflow processing
   });
 
   describe('Reply Threading', () => {

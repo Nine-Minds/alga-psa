@@ -78,9 +78,11 @@ export class E2ETestContext extends TestContext {
     // Store original values for restoration later
     const e2eEnvVars = {
       'DB_HOST': 'localhost',
-      'DB_PORT': '5433',
+      'DB_PORT': '5433',  // Use direct postgres port for admin operations (migrations, seeds)
       'DB_NAME_SERVER': 'server_test',
-      'DB_USER_ADMIN': 'postgres',
+      'DB_USER_ADMIN': 'postgres',  // Use postgres user for admin operations
+      'PGBOUNCER_HOST': 'localhost',
+      'PGBOUNCER_PORT': '6434',
       'REDIS_HOST': 'localhost',
       'REDIS_PORT': '6380',
       'EMAIL_HOST': 'localhost',

@@ -81,11 +81,11 @@ export class EmailSettingsTestContext extends E2ETestContext {
     const providerData = {
       id: crypto.randomUUID(),
       tenant: config.tenant_id,
-      providerName: `${config.provider} - ${config.mailbox}`,
-      providerType: 'test', // Use 'test' provider type to skip OAuth
+      provider_name: `${config.provider} - ${config.mailbox}`,
+      provider_type: 'test', // Use 'test' provider type to skip OAuth
       mailbox: config.mailbox,
-      isActive: true,
-      vendorConfig: {
+      is_active: true,
+      vendor_config: {
         clientId: 'test-client-id',
         clientSecret: 'test-client-secret',
         redirectUri: 'http://localhost:3000/api/auth/callback',
@@ -94,7 +94,7 @@ export class EmailSettingsTestContext extends E2ETestContext {
         tokenExpiry: new Date(Date.now() + 3600000).toISOString(),
         clientState: crypto.randomBytes(16).toString('hex')
       },
-      inboundTicketDefaultsId: defaultConfig?.id || null, // Link to default configuration
+      inbound_ticket_defaults_id: defaultConfig?.id || null, // Link to default configuration
       created_at: new Date(),
       updated_at: new Date()
     };
@@ -105,8 +105,8 @@ export class EmailSettingsTestContext extends E2ETestContext {
       .returning('*');
 
     console.log(`     🔗 Provider linked to tenant: ${config.tenant_id.substring(0, 8)}...`);
-    if (provider.inboundTicketDefaultsId) {
-      console.log(`     ✓ Provider configured with ticket defaults: ${provider.inboundTicketDefaultsId}`);
+    if (provider.inbound_ticket_defaults_id) {
+      console.log(`     ✓ Provider configured with ticket defaults: ${provider.inbound_ticket_defaults_id}`);
     }
     return provider;
   }
