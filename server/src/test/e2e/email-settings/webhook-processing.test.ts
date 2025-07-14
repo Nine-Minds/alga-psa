@@ -243,8 +243,11 @@ describe('Email Settings Webhook Processing Tests', () => {
         tenant_id: tenant.tenant
       });
       
+      // Generate a mock client state for testing
+      const mockClientState = `test-client-state-${Date.now()}`;
+      
       const webhookPayload = context.createMicrosoftWebhookPayload({
-        clientState: provider.vendor_config.clientState,
+        clientState: mockClientState,
         subscriptionId: provider.webhook_id,
         resourceData: {
           id: 'duplicate-123',
@@ -254,7 +257,7 @@ describe('Email Settings Webhook Processing Tests', () => {
       
       // Send same webhook twice
       const response1 = await context.simulateEmailWebhook('microsoft', webhookPayload, {
-        'Client-State': provider.vendor_config.clientState
+        'Client-State': mockClientState
       });
       
       if (response1.status === 404) {
@@ -262,7 +265,7 @@ describe('Email Settings Webhook Processing Tests', () => {
       }
       
       const response2 = await context.simulateEmailWebhook('microsoft', webhookPayload, {
-        'Client-State': provider.vendor_config.clientState
+        'Client-State': mockClientState
       });
       
       // Both should succeed

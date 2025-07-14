@@ -78,23 +78,17 @@ export class EmailSettingsTestContext extends E2ETestContext {
       console.log(`     ✓ Found default ticket configuration: ${defaultConfig.display_name}`);
     }
     
+    const providerId = crypto.randomUUID();
+    
     const providerData = {
-      id: crypto.randomUUID(),
+      id: providerId,
       tenant: config.tenant_id,
       provider_name: `${config.provider} - ${config.mailbox}`,
       provider_type: 'test', // Use 'test' provider type to skip OAuth
       mailbox: config.mailbox,
       is_active: true,
-      vendor_config: {
-        clientId: 'test-client-id',
-        clientSecret: 'test-client-secret',
-        redirectUri: 'http://localhost:3000/api/auth/callback',
-        accessToken: `mock-access-token-${Date.now()}`,
-        refreshToken: `mock-refresh-token-${Date.now()}`,
-        tokenExpiry: new Date(Date.now() + 3600000).toISOString(),
-        clientState: crypto.randomBytes(16).toString('hex')
-      },
       inbound_ticket_defaults_id: defaultConfig?.id || null, // Link to default configuration
+      status: 'connected',
       created_at: new Date(),
       updated_at: new Date()
     };
@@ -103,6 +97,46 @@ export class EmailSettingsTestContext extends E2ETestContext {
     const [provider] = await this.db('email_providers') // Use correct table name
       .insert(providerData)
       .returning('*');
+    
+    // Create vendor-specific config in separate table
+    console.log(`     🔧 Creating ${config.provider} configuration...`);
+    if (config.provider === 'microsoft') {
+      await this.db('microsoft_email_provider_config').insert({
+        email_provider_id: providerId,
+        tenant: config.tenant_id,
+        client_id: 'test-client-id',
+        client_secret: 'test-client-secret',
+        tenant_id: 'test-tenant-id',
+        redirect_uri: 'http://localhost:3000/api/auth/callback',
+        auto_process_emails: true,
+        max_emails_per_sync: 50,
+        folder_filters: JSON.stringify(['Inbox']),
+        access_token: `mock-access-token-${Date.now()}`,
+        refresh_token: `mock-refresh-token-${Date.now()}`,
+        token_expires_at: new Date(Date.now() + 3600000).toISOString(),
+        created_at: new Date(),
+        updated_at: new Date()
+      });
+    } else if (config.provider === 'google') {
+      await this.db('google_email_provider_config').insert({
+        email_provider_id: providerId,
+        tenant: config.tenant_id,
+        client_id: 'test-client-id',
+        client_secret: 'test-client-secret',
+        project_id: 'test-project-id',
+        redirect_uri: 'http://localhost:3000/api/auth/callback',
+        pubsub_topic_name: 'test-topic',
+        pubsub_subscription_name: 'test-subscription',
+        auto_process_emails: true,
+        max_emails_per_sync: 50,
+        label_filters: JSON.stringify(['INBOX']),
+        access_token: `mock-access-token-${Date.now()}`,
+        refresh_token: `mock-refresh-token-${Date.now()}`,
+        token_expires_at: new Date(Date.now() + 3600000).toISOString(),
+        created_at: new Date(),
+        updated_at: new Date()
+      });
+    }
 
     console.log(`     🔗 Provider linked to tenant: ${config.tenant_id.substring(0, 8)}...`);
     if (provider.inbound_ticket_defaults_id) {
