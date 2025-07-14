@@ -5,10 +5,11 @@ import { IProjectTask, IProjectTicketLinkWithDetails, ITaskType } from 'server/s
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
-import { CheckSquare, Square, Ticket, Users, MoreVertical, Move, Copy, Edit, Trash2, Bug, Sparkles, TrendingUp, Flag, BookOpen } from 'lucide-react';
+import { CheckSquare, Square, Ticket, Users, MoreVertical, Move, Copy, Edit, Trash2, Bug, Sparkles, TrendingUp, Flag, BookOpen, Paperclip } from 'lucide-react';
 import { findPriorityById } from 'server/src/lib/actions/priorityActions';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { getTaskTicketLinksAction, getTaskResourcesAction } from 'server/src/lib/actions/project-actions/projectTaskActions';
+import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/documentActions';
 import { TagList, TagManager } from 'server/src/components/tags';
 import { Button } from 'server/src/components/ui/Button';
 import {
@@ -82,6 +83,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   );
   const [isDragging, setIsDragging] = useState(false);
   const [priority, setPriority] = useState<IPriority | IStandardPriority | null>(null);
+  const [documentCount, setDocumentCount] = useState<number>(0);
   const Icon = taskTypeIcons[task.task_type_key || 'task'] || CheckSquare;
 
   useEffect(() => {
@@ -119,6 +121,17 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           const taskPriority = await findPriorityById(task.priority_id);
           setPriority(taskPriority);
         }
+
+        // Fetch document count - only do this once when task changes
+        // Comment out for now to avoid performance issues
+        // if (task.task_id) {
+        //   try {
+        //     const docsResponse = await getDocumentsByEntity(task.task_id, 'project_task', {}, 1, 1);
+        //     setDocumentCount(docsResponse.totalCount);
+        //   } catch (error) {
+        //     console.error('Error fetching document count:', error);
+        //   }
+        // }
 
         // Fetch tags only if not provided
 
@@ -322,6 +335,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             <div className={`flex items-center gap-1 ${allTicketsCompleted ? 'bg-green-50 text-green-600' : 'text-gray-500'} px-2 py-1 rounded`}>
               <Ticket className="w-3 h-3" />
               <span>{completedTickets}/{displayTickets.length}</span>
+            </div>
+          )}
+          {documentCount > 0 && (
+            <div className="flex items-center gap-1 text-gray-500 px-2 py-1 rounded bg-gray-50">
+              <Paperclip className="w-3 h-3" />
+              <span>{documentCount}</span>
             </div>
           )}
         </div>

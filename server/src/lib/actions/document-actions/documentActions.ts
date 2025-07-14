@@ -24,7 +24,7 @@ import {
     DocumentInput,
     PaginatedDocumentsResponse
 } from 'server/src/interfaces/document.interface';
-import { IDocumentAssociation, IDocumentAssociationInput } from 'server/src/interfaces/document-association.interface';
+import { IDocumentAssociation, IDocumentAssociationInput, DocumentAssociationEntityType } from 'server/src/interfaces/document-association.interface';
 import { v4 as uuidv4 } from 'uuid';
 import { getStorageConfig } from 'server/src/config/storage';
 import { deleteFile } from 'server/src/lib/actions/file-actions/fileActions';
@@ -524,7 +524,7 @@ export async function getDocumentDownloadUrl(file_id: string): Promise<string> {
 }
 
 // Download document
-export async function downloadDocument(file_id: string) {
+export async function downloadDocument(documentIdOrFileId: string) {
     try {
         const currentUser = await getCurrentUser();
         if (!currentUser) {
@@ -541,19 +541,23 @@ export async function downloadDocument(file_id: string) {
             throw new Error('No tenant found');
         }
 
-        // Get document by file_id
+        // Get document by file_id or document_id
         const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
             return await trx('documents')
-                .where({ file_id, tenant })
+                .where({ tenant })
+                .andWhere(function() {
+                    this.where({ file_id: documentIdOrFileId })
+                        .orWhere({ document_id: documentIdOrFileId });
+                })
                 .first();
         });
 
-        if (!document) {
-            throw new Error('Document not found');
+        if (!document || !document.file_id) {
+            throw new Error('Document not found or has no associated file');
         }
 
         // Download file from storage
-        const result = await StorageService.downloadFile(file_id);
+        const result = await StorageService.downloadFile(document.file_id);
         if (!result) {
             throw new Error('File not found in storage');
         }
@@ -1242,7 +1246,7 @@ export async function getAllDocuments(
 // Create document associations
 export async function createDocumentAssociations(
   entity_id: string,
-  entity_type: 'ticket' | 'company' | 'contact' | 'asset',
+  entity_type: DocumentAssociationEntityType,
   document_ids: string[]
 ): Promise<{ success: boolean }> {
   try {
@@ -1287,7 +1291,7 @@ export async function createDocumentAssociations(
 // Remove document associations
 export async function removeDocumentAssociations(
   entity_id: string,
-  entity_type: 'ticket' | 'company' | 'contact' | 'asset',
+  entity_type: DocumentAssociationEntityType,
   document_ids?: string[]
 ) {
   try {

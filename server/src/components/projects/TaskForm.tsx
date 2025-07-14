@@ -40,6 +40,7 @@ import { ITaskType } from 'server/src/interfaces/project.interfaces';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import TaskTicketLinks from './TaskTicketLinks';
 import { TaskDependencies } from './TaskDependencies';
+import TaskDocuments from './TaskDocuments';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from 'server/src/components/ui/TreeSelect';
 import { PrioritySelect } from 'server/src/components/tickets/PrioritySelect';
@@ -1179,6 +1180,15 @@ export default function TaskForm({
               users={users}
               onLinksChange={setPendingTicketLinks}
             />
+
+            {mode === 'edit' && task && (
+              <div onClick={(e) => e.stopPropagation()} onSubmit={(e) => e.preventDefault()}>
+                <TaskDocuments
+                  taskId={task.task_id}
+                  editable={true}
+                />
+              </div>
+            )}
 
                 <div className="flex justify-between mt-6">
                   <div className="flex gap-2">
