@@ -258,7 +258,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
       },
     },
     {
-      title: 'Channel',
+      title: 'Board',
       dataIndex: 'channel_name',
       render: (value: string) => value || 'N/A',
     },

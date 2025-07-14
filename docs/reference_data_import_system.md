@@ -23,7 +23,7 @@ tenant tables (per-organization)
 
 The following standard reference tables are available:
 
-- `standard_channels` - Organizational containers/boards for grouping categories
+- `standard_boards` - Organizational containers/boards for grouping categories
 - `standard_service_categories` - Categories for service catalog items  
 - `standard_categories` - Ticket/project categories with parent-child relationships
 - `standard_priorities` - Ticket priority levels
@@ -38,7 +38,7 @@ The following standard reference tables are available:
 All reference data types that support importing include an "Import from Standard Types" button on their respective settings pages:
 
 1. Navigate to **Settings** → **General** → **Ticketing Settings**
-2. Select the appropriate tab (Priorities, Statuses, Channels, Categories, etc.)
+2. Select the appropriate tab (Priorities, Statuses, Boards, Categories, etc.)
 3. Click the **"Import from Standard Types"** button
 
 ### Import Process
@@ -50,15 +50,15 @@ When clicking "Import from Standard Types", users see:
 - A list of all available standard items
 - Checkboxes to select individual items or select all via header checkbox
 - Visual indicators:
-  - For channels: Active/Inactive switches and Default status
+  - For boards: Active/Inactive switches and Default status
   - For categories: Hierarchical display with parent-child relationships
   - Display order for all items
 
 #### 2. Additional Options
 
 **Categories Import**: 
-- Requires selecting a target channel
-- All imported categories will be assigned to the selected channel
+- Requires selecting a target board
+- All imported categories will be assigned to the selected board
 - Parent-child relationships are preserved
 
 #### 3. Conflict Resolution
@@ -84,9 +84,9 @@ After successful import:
 ### Parent-Child Relationships (Categories)
 
 Categories support hierarchical organization:
-- Parent categories can be assigned to different channels
-- Subcategories inherit their parent's channel
-- Changing a parent's channel updates all subcategories
+- Parent categories can be assigned to different boards
+- Subcategories inherit their parent's board
+- Changing a parent's board updates all subcategories
 - Visual indentation shows hierarchy
 
 ### Display Ordering
@@ -96,19 +96,19 @@ All reference data types support custom display ordering:
 - Conflicts are automatically resolved
 - Subcategories are ordered within their parent
 
-### Channel Assignment (Categories)
+### Board Assignment (Categories)
 
-- Parent categories must have a channel
-- Subcategories inherit parent's channel
-- Channel can be edited for parent categories only
+- Parent categories must have a board
+- Subcategories inherit parent's board
+- Board can be edited for parent categories only
 - Warning shown when changing affects subcategories
 
 ### Active/Default Flags
 
-**Channels**:
-- `is_inactive` - Marks channel as inactive
-- `is_default` - Sets default channel for client portal
-- Only one channel can be default at a time
+**Boards**:
+- `is_inactive` - Marks board as inactive
+- `is_default` - Sets default board for client portal
+- Only one board can be default at a time
 
 **Other Types**:
 - Most types include `is_active` or similar status flags

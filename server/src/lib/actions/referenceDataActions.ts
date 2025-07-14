@@ -357,7 +357,7 @@ export async function importReferenceData(
   
   // Validate required filters for specific data types
   if (dataType === 'categories' && !filters?.channel_id) {
-    throw new Error('Channel ID is required when importing categories');
+    throw new Error('Board ID is required when importing categories');
   }
 
   const config = referenceDataConfigs[dataType];

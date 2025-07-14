@@ -282,7 +282,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       ),
     },
     {
-      title: 'Channel',
+      title: 'Board',
       dataIndex: 'channel_name',
       width: '10%',
     },
