@@ -109,34 +109,27 @@ export function useTicketTimeTracking(
     // End tracking when component unmounts
     return () => {
       mounted = false;
-      // We no longer close intervals on component unmount to avoid timing issues
-      // Interval closing is now handled by navigation controls before route changes
+      
+      // FIXED: Close interval when component unmounts (navigating within the app)
+      if (currentIntervalId && isTracking) {
+        console.debug('Closing interval on component unmount:', currentIntervalId);
+        intervalService.endInterval(currentIntervalId).catch(error => {
+          console.error('Error ending interval on component unmount:', error);
+        });
+      }
     };
-  }, [ticketId, ticketNumber, ticketTitle, userId, intervalService]);
+  }, [ticketId, ticketNumber, ticketTitle, userId, intervalService, currentIntervalId, isTracking]);
   // Note: We don't need to include isStartingTrackingRef in the dependency array
   // since it's a ref and we're accessing its .current property
 
   // Add event listeners for page visibility changes and beforeunload
   useEffect(() => {
     // Handle when user leaves the page or switches tabs
+    // FIXED: No longer end interval when switching tabs - keep tracking time
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden' && currentIntervalId && isTracking) {
-        // User has switched tabs or minimized the window
-        intervalService.endInterval(currentIntervalId).catch(error => {
-          console.error('Error ending interval on visibility change:', error);
-        });
-        setIsTracking(false);
-      } else if (document.visibilityState === 'visible' && !isTracking && ticketId) {
-        // User has returned to the tab
-        intervalService.startInterval(ticketId, ticketNumber, ticketTitle, userId)
-          .then(intervalId => {
-            setCurrentIntervalId(intervalId);
-            setIsTracking(true);
-          })
-          .catch(error => {
-            console.error('Error restarting interval on visibility change:', error);
-          });
-      }
+      // We don't do anything when the user switches tabs now
+      // This allows the timer to keep running when the user is in a different tab
+      console.debug('Visibility changed, but keeping interval active');
     };
     
     // Handle when user is about to close the page
