@@ -171,6 +171,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const { tags: allTags } = useTags();
     const [currentTimeSheet, setCurrentTimeSheet] = useState<ITimeSheet | null>(null);
     const [currentTimePeriod, setCurrentTimePeriod] = useState<ITimePeriodView | null>(null);
+    
+    // Add automatic interval tracking using the custom hook
+    const { currentIntervalId, closeInterval } = useTicketTimeTracking(
+        initialTicket.ticket_id || '',
+        initialTicket.ticket_number || '',
+        initialTicket.title || '',
+        userId || ''
+    );
 
     const [team, setTeam] = useState<ITeam | null>(null);
 
@@ -225,13 +233,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }, [ticket.ticket_id]);
     
     
-    // Add automatic interval tracking using the custom hook
-    const { currentIntervalId, closeInterval } = useTicketTimeTracking(
-        initialTicket.ticket_id || '',
-        initialTicket.ticket_number || '',
-        initialTicket.title || '',
-        userId || ''
-    );
+
 
     // Restore timer if an open interval exists (e.g., when opening in a new tab)
     useEffect(() => {
