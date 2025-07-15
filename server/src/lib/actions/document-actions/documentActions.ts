@@ -581,6 +581,45 @@ export async function downloadDocument(documentIdOrFileId: string) {
 }
 
 // Get documents by entity using the new association table
+export async function getDocumentCountsForEntities(
+  entityIds: string[],
+  entityType: string
+): Promise<Map<string, number>> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser || !currentUser.tenant) {
+    throw new Error('User not authenticated');
+  }
+
+  const { knex } = await createTenantKnex();
+  
+  try {
+    const counts = await knex('document_associations')
+      .select('entity_id')
+      .count('document_id as count')
+      .where('tenant', currentUser.tenant)
+      .whereIn('entity_id', entityIds)
+      .where('entity_type', entityType)
+      .groupBy('entity_id');
+
+    const countMap = new Map<string, number>();
+    for (const row of counts) {
+      countMap.set(String(row.entity_id), Number(row.count));
+    }
+    
+    // Ensure all requested entities have a count (0 if no documents)
+    for (const entityId of entityIds) {
+      if (!countMap.has(entityId)) {
+        countMap.set(entityId, 0);
+      }
+    }
+    
+    return countMap;
+  } catch (error) {
+    console.error('Error fetching document counts:', error);
+    throw error;
+  }
+}
+
 export async function getDocumentsByEntity(
   entity_id: string,
   entity_type: string,

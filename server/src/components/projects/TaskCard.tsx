@@ -9,7 +9,6 @@ import { CheckSquare, Square, Ticket, Users, MoreVertical, Move, Copy, Edit, Tra
 import { findPriorityById } from 'server/src/lib/actions/priorityActions';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { getTaskTicketLinksAction, getTaskResourcesAction } from 'server/src/lib/actions/project-actions/projectTaskActions';
-import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/documentActions';
 import { TagList, TagManager } from 'server/src/components/tags';
 import { Button } from 'server/src/components/ui/Button';
 import {
@@ -28,6 +27,7 @@ interface TaskCardProps {
   ticketLinks?: IProjectTicketLinkWithDetails[];
   taskResources?: any[];
   taskTags?: ITag[];
+  documentCount?: number;
   isAnimating?: boolean;
   onTaskSelected: (task: IProjectTask) => void;
   onAssigneeChange: (taskId: string, newAssigneeId: string, newTaskName?: string) => void;
@@ -58,6 +58,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   ticketLinks,
   taskResources: providedTaskResources,
   taskTags: providedTaskTags = [],
+  documentCount: providedDocumentCount,
   isAnimating = false,
   onTaskSelected,
   onAssigneeChange,
@@ -74,7 +75,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const [taskTickets, setTaskTickets] = useState<IProjectTicketLinkWithDetails[] | null>(
     task.ticket_links !== undefined ? task.ticket_links :
     ticketLinks !== undefined ? ticketLinks :
-    null
+    [] // Start with empty array instead of null to show counter immediately
   );
   const [taskResources, setTaskResources] = useState<any[] | null>(
     task.resources !== undefined ? task.resources :
@@ -83,7 +84,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   );
   const [isDragging, setIsDragging] = useState(false);
   const [priority, setPriority] = useState<IPriority | IStandardPriority | null>(null);
-  const [documentCount, setDocumentCount] = useState<number>(0);
+  const [documentCount, setDocumentCount] = useState<number>(providedDocumentCount ?? 0);
+  
+  // Update documentCount when providedDocumentCount changes
+  useEffect(() => {
+    if (providedDocumentCount !== undefined) {
+      setDocumentCount(providedDocumentCount);
+    }
+  }, [providedDocumentCount]);
   const Icon = taskTypeIcons[task.task_type_key || 'task'] || CheckSquare;
 
   useEffect(() => {
@@ -99,10 +107,15 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           setTaskTickets(task.ticket_links);
         } else if (ticketLinks !== undefined) {
           setTaskTickets(ticketLinks);
-        } else if (task.task_id && taskTickets === null) {
-          // Only fetch if data hasn't been loaded yet (null) and we have a task ID
-          const links = await getTaskTicketLinksAction(task.task_id);
-          setTaskTickets(links || []); // Ensure empty array if API returns null/undefined
+        } else if (task.task_id && taskTickets !== null && taskTickets.length === 0 && task.ticket_links === undefined && ticketLinks === undefined) {
+          // Only fetch if we have an empty array and no data was provided
+          try {
+            const links = await getTaskTicketLinksAction(task.task_id);
+            setTaskTickets(links || []); // Ensure empty array if API returns null/undefined
+          } catch (error) {
+            console.error('Error fetching ticket links:', error);
+            setTaskTickets([]); // Set empty array on error
+          }
         }
 
         // Handle task resources - null means we need to load the data
@@ -122,16 +135,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           setPriority(taskPriority);
         }
 
-        // Fetch document count
-        if (task.task_id) {
-          try {
-            const docsResponse = await getDocumentsByEntity(task.task_id, 'project_task', {}, 1, 1);
-            setDocumentCount(docsResponse.totalCount);
-          } catch (error) {
-            console.error('Error fetching document count:', error);
-            setDocumentCount(0);
-          }
-        }
+        // Don't fetch document count - it should be provided from parent
+        // Documents should only be fetched when opening the task form
 
         // Fetch tags only if not provided
 
@@ -141,7 +146,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     };
 
     fetchData();
-  }, [task.task_id, task.ticket_links, task.resources, ticketLinks, providedTaskResources, task.priority_id, priority]);
+  }, [task.task_id, task.ticket_links, task.resources, ticketLinks, providedTaskResources, task.priority_id, priority, providedDocumentCount]);
 
   // Computed values - ensure we handle the loading state
   const checklistItems = task.checklist_items || [];
@@ -331,10 +336,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               <span>{completedItems}/{checklistItems.length}</span>
             </div>
           )}
-          {hasTickets && (
-            <div className={`flex items-center gap-1 ${allTicketsCompleted ? 'bg-green-50 text-green-600' : 'text-gray-500'} px-2 py-1 rounded`}>
+          {taskTickets !== null && displayTickets.length > 0 && (
+            <div className="flex items-center gap-1 text-gray-500 px-2 py-1 rounded bg-gray-50">
               <Ticket className="w-3 h-3" />
-              <span>{completedTickets}/{displayTickets.length}</span>
+              <span>{displayTickets.length}</span>
             </div>
           )}
           {documentCount > 0 && (

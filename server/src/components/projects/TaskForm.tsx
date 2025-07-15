@@ -418,34 +418,45 @@ export default function TaskForm({
       const finalAssignedTo = !assignedUser || assignedUser === '' ? null : assignedUser;
 
       if (mode === 'edit' && task?.task_id) {
-        // Edit mode - handle cross-project moves properly
-        const movedTask = await moveTaskToPhase(
-          task.task_id, 
-          selectedPhaseId, 
-          isCrossProjectMove ? undefined : selectedStatusId
-        );
+        // Check if phase or status actually changed
+        const phaseChanged = task.phase_id !== selectedPhaseId;
+        const statusChanged = task.project_status_mapping_id !== selectedStatusId;
         
-        if (movedTask) {
-          // For cross-project moves, use the status mapping that moveTaskToPhase determined
-          // Update our local state to match the new status
-          if (isCrossProjectMove) {
-            setSelectedStatusId(movedTask.project_status_mapping_id);
+        let taskToUpdate = task;
+        
+        // Only call moveTaskToPhase if phase or status actually changed
+        if (phaseChanged || statusChanged) {
+          // Phase or status changed - handle the move
+          const movedTask = await moveTaskToPhase(
+            task.task_id, 
+            selectedPhaseId, 
+            isCrossProjectMove ? undefined : selectedStatusId
+          );
+          
+          if (movedTask) {
+            taskToUpdate = movedTask;
+            // For cross-project moves, use the status mapping that moveTaskToPhase determined
+            if (isCrossProjectMove) {
+              setSelectedStatusId(movedTask.project_status_mapping_id);
+            }
           }
-
-          const taskData: Partial<IProjectTask> = {
-            task_name: taskName,
-            description: description,
-            assigned_to: finalAssignedTo,
-            estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
-            actual_hours: Math.round(actualHours * 60), // Convert hours to minutes for storage
-            due_date: dueDate || null,
-            priority_id: selectedPriorityId,
-            checklist_items: checklistItems,
-            project_status_mapping_id: movedTask.project_status_mapping_id, // Always use the mapping from moveTaskToPhase
-            task_type_key: selectedTaskType
-          };
-          resultTask = await updateTaskWithChecklist(movedTask.task_id, taskData);
         }
+
+        // Always update the task data (whether moved or not)
+        const taskData: Partial<IProjectTask> = {
+          task_name: taskName,
+          description: description,
+          assigned_to: finalAssignedTo,
+          estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
+          actual_hours: Math.round(actualHours * 60), // Convert hours to minutes for storage
+          due_date: dueDate || null,
+          priority_id: selectedPriorityId,
+          checklist_items: checklistItems,
+          project_status_mapping_id: statusChanged ? taskToUpdate.project_status_mapping_id : task.project_status_mapping_id,
+          task_type_key: selectedTaskType,
+          order_key: task.order_key // Always preserve the original order_key
+        };
+        resultTask = await updateTaskWithChecklist(taskToUpdate.task_id, taskData);
         onSubmit(resultTask);
         onClose();
       } else {

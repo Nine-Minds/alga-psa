@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState, useRef } from 'react';
-import { Paperclip, Plus, Link, FileText, File, Image, Download, X } from 'lucide-react';
+import { Paperclip, Plus, Link, FileText, File, Image, Download, X, ChevronRight, ChevronDown } from 'lucide-react';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { 
   getDocumentsByEntity,
@@ -22,6 +22,7 @@ import {
   createBlockDocument
 } from 'server/src/lib/actions/document-actions/documentBlockContentActions';
 import { updateDocument } from 'server/src/lib/actions/document-actions/documentActions';
+import { downloadDocumentInBrowser } from 'server/src/lib/actions/document-download/downloadHelpers';
 import { toast } from 'react-hot-toast';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 
@@ -45,7 +46,8 @@ interface TaskDocumentsSimpleProps {
 
 export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps) {
   const [documents, setDocuments] = useState<IDocument[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [documentsLoaded, setDocumentsLoaded] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [showSelector, setShowSelector] = useState(false);
@@ -68,20 +70,30 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
   // Delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<IDocument | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
 
-  useEffect(() => {
-    const fetchUser = async () => {
+  const fetchUser = async () => {
+    if (currentUser) return currentUser;
+    
+    try {
       const user = await getCurrentUser();
       setCurrentUser(user);
-    };
-    fetchUser();
-  }, []);
+      return user;
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      return null;
+    }
+  };
 
   const fetchDocuments = async () => {
+    if (documentsLoaded) return; // Don't refetch if already loaded
+    
     try {
       setLoading(true);
       const response = await getDocumentsByEntity(taskId, 'project_task');
       setDocuments(response.documents);
+      setDocumentsLoaded(true);
     } catch (error) {
       console.error('Error fetching documents:', error);
       toast.error('Failed to load documents');
@@ -90,11 +102,12 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
     }
   };
 
+  // Load documents when expanded or when performing actions
   useEffect(() => {
-    if (taskId) {
+    if (isExpanded && taskId && !documentsLoaded) {
       fetchDocuments();
     }
-  }, [taskId]);
+  }, [isExpanded, taskId]);
 
   const getFileIcon = (document: IDocument) => {
     if (!document.file_id) return <FileText className="h-4 w-4 text-blue-600" />;
@@ -105,41 +118,57 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
   };
 
   const handleDocumentClick = async (document: IDocument) => {
+    // For uploaded files, download directly
+    if (document.file_id) {
+      await handleDownload({ stopPropagation: () => {} } as React.MouseEvent, document);
+      return;
+    }
+    
+    // For in-app documents, open in drawer for editing
     setSelectedDocument(document);
     setDocumentName(document.document_name);
     setIsCreatingNew(false);
-    setIsEditMode(false);
+    setIsEditMode(true); // Always open in edit mode
     setIsDrawerOpen(true);
     
-    // Load content if it's a block document
-    if (!document.file_id) {
-      setIsLoadingContent(true);
-      try {
-        const content = await getBlockContent(document.document_id);
-        if (content?.block_data) {
-          try {
-            const parsedContent = typeof content.block_data === 'string'
-              ? JSON.parse(content.block_data)
-              : content.block_data;
-            setCurrentContent(parsedContent);
-          } catch (error) {
-            console.error('Error parsing content:', error);
-            setCurrentContent(DEFAULT_BLOCKS);
-          }
-        } else {
+    // Load content for block document
+    setIsLoadingContent(true);
+    try {
+      const content = await getBlockContent(document.document_id);
+      if (content?.block_data) {
+        try {
+          const parsedContent = typeof content.block_data === 'string'
+            ? JSON.parse(content.block_data)
+            : content.block_data;
+          setCurrentContent(parsedContent);
+        } catch (error) {
+          console.error('Error parsing content:', error);
           setCurrentContent(DEFAULT_BLOCKS);
         }
-      } catch (error) {
-        console.error('Error loading document content:', error);
-        toast.error('Failed to load document content');
+      } else {
         setCurrentContent(DEFAULT_BLOCKS);
-      } finally {
-        setIsLoadingContent(false);
       }
+    } catch (error) {
+      console.error('Error loading document content:', error);
+      toast.error('Failed to load document content');
+      setCurrentContent(DEFAULT_BLOCKS);
+    } finally {
+      setIsLoadingContent(false);
     }
   };
 
-  const handleCreateNew = () => {
+  const handleCreateNew = async () => {
+    // Fetch user if not already loaded
+    const user = await fetchUser();
+    if (!user) {
+      toast.error('Please log in to create documents');
+      return;
+    }
+    
+    // Load documents if not already loaded
+    if (!documentsLoaded) {
+      await fetchDocuments();
+    }
     setIsCreatingNew(true);
     setNewDocumentName('');
     setCurrentContent(DEFAULT_BLOCKS);
@@ -153,20 +182,28 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
       toast.error('Document name is required');
       return;
     }
+    
+    // Fetch user if not already loaded
+    const user = await fetchUser();
+    if (!user) {
+      toast.error('Please log in to save documents');
+      return;
+    }
 
     try {
       setIsSaving(true);
       await createBlockDocument({
         document_name: newDocumentName,
-        user_id: currentUser.user_id,
+        user_id: user.user_id,
         block_data: JSON.stringify(currentContent),
         entityId: taskId,
         entityType: 'project_task'
       });
 
       toast.success('Document created successfully');
+      setDocumentsLoaded(false); // Force refresh
       await fetchDocuments();
-      setIsDrawerOpen(false);
+      handleCloseDrawer();
       setIsCreatingNew(false);
     } catch (error) {
       console.error('Error creating document:', error);
@@ -178,6 +215,13 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
 
   const handleSaveChanges = async () => {
     if (!selectedDocument) return;
+    
+    // Fetch user if not already loaded
+    const user = await fetchUser();
+    if (!user) {
+      toast.error('Please log in to save documents');
+      return;
+    }
 
     try {
       setIsSaving(true);
@@ -185,18 +229,19 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
       // Update document name
       await updateDocument(selectedDocument.document_id, {
         document_name: documentName,
-        edited_by: currentUser.user_id
+        edited_by: user.user_id
       });
 
       // Update content if changed
       if (hasContentChanged) {
         await updateBlockContent(selectedDocument.document_id, {
           block_data: JSON.stringify(currentContent),
-          user_id: currentUser.user_id
+          user_id: user.user_id
         });
       }
 
       toast.success('Document updated successfully');
+      setDocumentsLoaded(false); // Force refresh
       await fetchDocuments();
       setHasContentChanged(false);
       setIsEditMode(false);
@@ -220,6 +265,7 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
     try {
       await removeDocumentAssociations(taskId, 'project_task', [documentToDelete.document_id]);
       toast.success('Document removed successfully');
+      setDocumentsLoaded(false); // Force refresh
       await fetchDocuments();
     } catch (error) {
       console.error('Error removing document:', error);
@@ -235,31 +281,79 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
     setHasContentChanged(true);
   };
 
-  const handleDownload = (e: React.MouseEvent, document: IDocument) => {
+  const handleCloseDrawer = () => {
+    // Mark as closing to hide the editor
+    setIsClosing(true);
+    
+    // Clear editor ref first to prevent cleanup issues
+    if (editorRef.current) {
+      editorRef.current = null;
+    }
+    
+    // Small delay to allow editor cleanup
+    setTimeout(() => {
+      setIsDrawerOpen(false);
+      setIsEditMode(false);
+      setIsCreatingNew(false);
+      setSelectedDocument(null);
+      setCurrentContent(DEFAULT_BLOCKS);
+      setHasContentChanged(false);
+      setDocumentName('');
+      setNewDocumentName('');
+      setIsClosing(false);
+    }, 100);
+  };
+
+  const handleDownload = async (e: React.MouseEvent, document: IDocument) => {
     e.stopPropagation();
-    if (document.file_id) {
-      window.open(`/api/documents/download/${document.document_id}`, '_blank');
-    } else {
-      window.open(`/api/documents/download/${document.document_id}?format=pdf`, '_blank');
+    try {
+      // For in-app documents, download as PDF
+      if (!document.file_id) {
+        window.open(`/api/documents/download/${document.document_id}?format=pdf`, '_blank');
+      } else {
+        // For uploaded files, download the original file
+        const result = await downloadDocumentInBrowser(document.document_id, document.document_name);
+        if (!result.success) {
+          throw new Error(result.error || 'Download failed');
+        }
+      }
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      toast.error('Failed to download document');
     }
   };
 
-  if (!currentUser) {
-    return (
-      <div className="flex justify-center py-4">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
-      </div>
-    );
-  }
+  const handlePDFExport = async (document: IDocument) => {
+    try {
+      // For PDF export, we need to use the API route directly for now
+      // TODO: Update downloadDocumentInBrowser to support format parameter
+      window.open(`/api/documents/download/${document.document_id}?format=pdf`, '_blank');
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      toast.error('Failed to export PDF');
+    }
+  };
 
   return (
     <>
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <button 
+            className="flex items-center gap-2 hover:text-gray-700 transition-colors"
+            onClick={() => setIsExpanded(!isExpanded)}
+            type="button"
+          >
+            {isExpanded ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
             <Paperclip className="h-4 w-4" />
             <h3 className="font-medium">Attachments</h3>
-          </div>
+            {documentsLoaded && documents.length > 0 && (
+              <span className="text-sm text-gray-500">({documents.length})</span>
+            )}
+          </button>
           <div className="flex gap-2">
             <Button
               id="task-documents-create-new-btn"
@@ -277,7 +371,19 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
               type="button"
               size="sm"
               variant="ghost"
-              onClick={() => setShowUpload(!showUpload)}
+              onClick={async () => {
+                // Fetch user if not already loaded
+                const user = await fetchUser();
+                if (!user) {
+                  toast.error('Please log in to upload documents');
+                  return;
+                }
+                
+                if (!documentsLoaded) {
+                  await fetchDocuments();
+                }
+                setShowUpload(!showUpload);
+              }}
               title="Upload file"
             >
               <Plus className="h-4 w-4 mr-1" />
@@ -288,7 +394,12 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
               type="button"
               size="sm"
               variant="ghost"
-              onClick={() => setShowSelector(true)}
+              onClick={async () => {
+                if (!documentsLoaded) {
+                  await fetchDocuments();
+                }
+                setShowSelector(true);
+              }}
               title="Link existing document"
             >
               <Link className="h-4 w-4 mr-1" />
@@ -297,9 +408,10 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
           </div>
         </div>
 
-        {/* Action sections */}
-
-        {showUpload && currentUser && (
+        {/* Action sections and document list - only show when expanded */}
+        {isExpanded && (
+          <>
+            {showUpload && currentUser && (
           <div className="p-3 border border-gray-200 rounded-md bg-gray-50">
             <DocumentUpload
               id="task-document-upload"
@@ -310,6 +422,7 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
                 setShowUpload(false);
                 if (result?.success) {
                   toast.success('Document uploaded successfully');
+                  setDocumentsLoaded(false); // Force refresh
                   await fetchDocuments();
                 }
               }}
@@ -339,7 +452,7 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
                   {getFileIcon(doc)}
                   <span className="text-sm truncate">{doc.document_name}</span>
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1">
                   <Button
                     id={`task-document-download-${doc.document_id}`}
                     type="button"
@@ -366,6 +479,8 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
             ))}
           </div>
         )}
+          </>
+        )}
       </div>
 
       {/* Document selector modal */}
@@ -376,6 +491,7 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
           entityType="project_task"
           onDocumentsSelected={async () => {
             setShowSelector(false);
+            setDocumentsLoaded(false); // Force refresh
             await fetchDocuments();
           }}
           isOpen={showSelector}
@@ -387,11 +503,7 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
       <Drawer
         id="task-document-drawer"
         isOpen={isDrawerOpen}
-        onClose={() => {
-          setIsDrawerOpen(false);
-          setIsEditMode(false);
-          setHasContentChanged(false);
-        }}
+        onClose={handleCloseDrawer}
         isInDrawer={true}
         hideCloseButton={true}
         drawerVariant="document"
@@ -402,23 +514,32 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
               {isCreatingNew ? 'New Document' : (isEditMode ? 'Edit Document' : 'View Document')}
             </h2>
             <div className="flex items-center gap-2">
-              {selectedDocument && !selectedDocument.file_id && !isEditMode && (
-                <Button
-                  id="task-document-edit-btn"
-                  onClick={() => setIsEditMode(true)}
-                  variant="outline"
-                  size="sm"
-                >
-                  Edit
-                </Button>
+              {selectedDocument && !selectedDocument.file_id && (
+                <>
+                  <Button
+                    id="task-document-pdf-btn"
+                    onClick={() => handlePDFExport(selectedDocument)}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Download className="h-4 w-4 mr-1" />
+                    PDF
+                  </Button>
+                  {!isEditMode && (
+                    <Button
+                      id="task-document-edit-btn"
+                      onClick={() => setIsEditMode(true)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Edit
+                    </Button>
+                  )}
+                </>
               )}
               <Button
                 id="task-document-drawer-close-btn"
-                onClick={() => {
-                  setIsDrawerOpen(false);
-                  setIsEditMode(false);
-                  setHasContentChanged(false);
-                }}
+                onClick={handleCloseDrawer}
                 variant="ghost"
                 size="sm"
               >
@@ -455,7 +576,17 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
                 <p className="mb-4">This is a file attachment</p>
                 <Button
                   id="task-document-download-file-btn"
-                  onClick={() => window.open(`/api/documents/download/${selectedDocument.document_id}`, '_blank')}
+                  onClick={async () => {
+                    try {
+                      const result = await downloadDocumentInBrowser(selectedDocument.document_id, selectedDocument.document_name);
+                      if (!result.success) {
+                        throw new Error(result.error || 'Download failed');
+                      }
+                    } catch (error) {
+                      console.error('Error downloading document:', error);
+                      toast.error('Failed to download document');
+                    }
+                  }}
                   variant="default"
                 >
                   <Download className="h-4 w-4 mr-2" />
@@ -466,19 +597,20 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
               <div className="flex justify-center items-center h-full">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
               </div>
-            ) : (isCreatingNew || isEditMode) ? (
+            ) : (isCreatingNew || isEditMode) && !isClosing ? (
               <TextEditor
+                key={selectedDocument?.document_id || 'new'}
                 id="task-document-editor"
                 initialContent={currentContent}
                 onContentChange={handleContentChange}
                 editorRef={editorRef}
               />
-            ) : (
+            ) : !isClosing ? (
               <RichTextViewer
                 id="task-document-viewer"
                 content={currentContent}
               />
-            )}
+            ) : null}
           </div>
 
           {/* Actions */}
@@ -488,7 +620,7 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
                 id="task-document-cancel-btn"
                 onClick={() => {
                   if (isCreatingNew) {
-                    setIsDrawerOpen(false);
+                    handleCloseDrawer();
                     setIsCreatingNew(false);
                   } else {
                     setIsEditMode(false);
@@ -522,9 +654,9 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
           setDocumentToDelete(null);
         }}
         onConfirm={handleDeleteConfirm}
-        title="Remove Document"
-        message="Are you sure you want to remove this document from the task?"
-        confirmLabel="Remove"
+        title="Remove Document from Task"
+        message={`Are you sure you want to remove "${documentToDelete?.document_name}" from this task? The document will still be available in the Documents section and can be linked to other items.`}
+        confirmLabel="Remove from Task"
         cancelLabel="Cancel"
       />
     </>

@@ -18,6 +18,7 @@ interface StatusColumnProps {
   ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] };
   taskResources: { [taskId: string]: any[] };
   taskTags?: Record<string, ITag[]>;
+  taskDocumentCounts?: Record<string, number>;
   allTaskTagTexts?: string[];
   statusIcon: React.ReactNode;
   backgroundColor: string;
@@ -50,6 +51,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   ticketLinks,
   taskResources,
   taskTags = {},
+  taskDocumentCounts = {},
   allTaskTagTexts = [],
   statusIcon,
   backgroundColor,
@@ -318,6 +320,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
               ticketLinks={ticketLinks[task.task_id]}
               taskResources={taskResources[task.task_id]}
               taskTags={taskTags[task.task_id] || []}
+              documentCount={taskDocumentCounts[task.task_id]}
               isAnimating={animatingTasks.has(task.task_id)}
               onTaskSelected={onTaskSelected}
               onAssigneeChange={onAssigneeChange}

@@ -97,13 +97,14 @@ export class PDFGenerationService {
     });
     
     // Update metadata separately if needed
-    await FileStoreModel.updateMetadata(knex, fileRecord.file_id, {
-      version: options.version || 1,
-      cacheKey: options.cacheKey,
-      generatedAt: new Date().toISOString(),
-      entityId,
-      tenant: this.tenant
-    });
+    // TODO: Re-enable when metadata column is added to external_files table
+    // await FileStoreModel.updateMetadata(knex, fileRecord.file_id, {
+    //   version: options.version || 1,
+    //   cacheKey: options.cacheKey,
+    //   generatedAt: new Date().toISOString(),
+    //   entityId,
+    //   tenant: this.tenant
+    // });
 
     return fileRecord;
   }
