@@ -14,26 +14,42 @@ import {
   importServiceTypes, 
   getTenantServiceTypes 
 } from 'server/src/lib/actions/onboarding-actions/serviceTypeActions';
+import { createServiceType } from 'server/src/lib/actions/serviceActions';
+import { useSession } from 'next-auth/react';
+import { Switch } from 'server/src/components/ui/Switch';
+import { Plus } from 'lucide-react';
 
 export function BillingSetupStep({ data, updateData }: StepProps) {
+  const { data: session } = useSession();
   const isServiceCreated = !!data.serviceId;
-  const [showImportSection, setShowImportSection] = useState(false);
+  const [showServiceTypes, setShowServiceTypes] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [standardTypes, setStandardTypes] = useState<Array<{ id: string; name: string; billing_method: string; display_order?: number }>>([]);
   const [tenantTypes, setTenantTypes] = useState<Array<{ id: string; name: string; billing_method: string }>>([]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ imported: number; skipped: number } | null>(null);
   const [isLoadingTypes, setIsLoadingTypes] = useState(false);
+  
+  // Form state for new service type
+  const [serviceTypeForm, setServiceTypeForm] = useState({
+    name: '',
+    description: '',
+    billingMethod: 'fixed' as 'fixed' | 'per_unit',
+    isActive: true,
+    displayOrder: 0
+  });
 
   useEffect(() => {
     loadTenantServiceTypes();
   }, []);
 
   useEffect(() => {
-    if (showImportSection) {
+    if (showImportDialog) {
       loadStandardServiceTypes();
     }
-  }, [showImportSection, tenantTypes]); // Reload when tenant types change
+  }, [showImportDialog, tenantTypes]); // Reload when tenant types change
 
   const loadStandardServiceTypes = async () => {
     const result = await getStandardServiceTypes();
@@ -111,34 +127,227 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
         </div>
       )}
 
-      {/* Import Service Types Section */}
+      {/* Service Types Section */}
       <div className="border rounded-lg">
         <button
           type="button"
-          onClick={() => setShowImportSection(!showImportSection)}
+          onClick={() => setShowServiceTypes(!showServiceTypes)}
           className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
         >
           <div className="flex items-center gap-2">
             <Package className="w-5 h-5 text-gray-500" />
-            <span className="font-medium">Import Service Types</span>
+            <span className="font-medium">Service Types</span>
             {tenantTypes.length === 0 && (
               <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">Required</span>
             )}
           </div>
-          {showImportSection ? (
+          {showServiceTypes ? (
             <ChevronUp className="w-4 h-4 text-gray-500" />
           ) : (
             <ChevronDown className="w-4 h-4 text-gray-500" />
           )}
         </button>
 
-        {showImportSection && (
+        {showServiceTypes && (
           <div className="p-4 border-t space-y-4">
-            <p className="text-sm text-gray-600">
-              Select standard service types to import into your system:
-            </p>
+            <div className="flex gap-2">
+              <Button
+                id="import-standard-types-btn"
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowImportDialog(true);
+                  setShowAddForm(false);
+                  loadStandardServiceTypes();
+                }}
+                className="flex-1"
+              >
+                <Package className="w-4 h-4 mr-2" />
+                Import from Standard
+              </Button>
+              <Button
+                id="add-service-type-btn"
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowAddForm(true);
+                  setShowImportDialog(false);
+                  // Calculate next order number
+                  const maxOrder = tenantTypes.reduce((max, t) => {
+                    const order = (t as any).order_number || (t as any).display_order || 0;
+                    return Math.max(max, order);
+                  }, 0);
+                  setServiceTypeForm(prev => ({ ...prev, displayOrder: maxOrder + 1 }));
+                }}
+                className="flex-1"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add New
+              </Button>
+            </div>
 
-            {importResult && importResult.imported > 0 && (
+            {/* Add New Service Type Form */}
+            {showAddForm && (
+              <div className="border rounded-lg p-4 space-y-4 mb-4">
+                <h4 className="font-medium">Add New Service Type</h4>
+                
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="serviceTypeName">Name *</Label>
+                    <Input
+                      id="serviceTypeName"
+                      value={serviceTypeForm.name}
+                      onChange={(e) => setServiceTypeForm(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="e.g., Premium Support"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="serviceTypeDescription">Description</Label>
+                    <TextArea
+                      id="serviceTypeDescription"
+                      value={serviceTypeForm.description}
+                      onChange={(e) => setServiceTypeForm(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Describe this service type..."
+                      rows={2}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="billingMethod">Billing Method *</Label>
+                    <CustomSelect
+                      id="billingMethod"
+                      options={[
+                        { value: 'fixed', label: 'Fixed' },
+                        { value: 'per_unit', label: 'Per Unit' },
+                      ]}
+                      value={serviceTypeForm.billingMethod}
+                      onValueChange={(value: string) => 
+                        setServiceTypeForm(prev => ({ ...prev, billingMethod: value as 'fixed' | 'per_unit' }))
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="displayOrder">Display Order</Label>
+                    <Input
+                      id="displayOrder"
+                      type="number"
+                      value={serviceTypeForm.displayOrder}
+                      onChange={(e) => setServiceTypeForm(prev => ({ ...prev, displayOrder: parseInt(e.target.value) || 0 }))}
+                      placeholder="1"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="isActive"
+                      checked={serviceTypeForm.isActive}
+                      onCheckedChange={(checked) => setServiceTypeForm(prev => ({ ...prev, isActive: checked }))}
+                    />
+                    <Label htmlFor="isActive" className="cursor-pointer">Active</Label>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    id="cancel-service-type-form"
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowAddForm(false);
+                      setServiceTypeForm({
+                        name: '',
+                        description: '',
+                        billingMethod: 'fixed',
+                        isActive: true,
+                        displayOrder: 0
+                      });
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    id="save-service-type-form"
+                    type="button"
+                    onClick={async () => {
+                      if (!serviceTypeForm.name.trim()) {
+                        alert('Service type name is required');
+                        return;
+                      }
+
+                      try {
+                        // Get the latest service types directly from the API
+                        const result = await getTenantServiceTypes();
+                        let latestTypes: any[] = [];
+                        if (result.success && result.data) {
+                          latestTypes = result.data;
+                        }
+                        
+                        // Calculate the actual next order number to avoid conflicts
+                        const allOrders = latestTypes.map(t => 
+                          t.order_number || t.display_order || 0
+                        );
+                        const maxOrder = allOrders.length > 0 ? Math.max(...allOrders) : 0;
+                        let finalOrder = maxOrder + 1;
+                        
+                        // If user provided a custom order, check if it's available
+                        if (serviceTypeForm.displayOrder && serviceTypeForm.displayOrder > 0) {
+                          const usedOrders = new Set(allOrders);
+                          if (usedOrders.has(serviceTypeForm.displayOrder)) {
+                            // Order is taken, use the next available
+                            finalOrder = maxOrder + 1;
+                          } else {
+                            // Use the user's preferred order
+                            finalOrder = serviceTypeForm.displayOrder;
+                          }
+                        }
+
+                        console.log('Creating service type with order:', finalOrder, 'Existing orders:', allOrders);
+
+                        const createdType = await createServiceType({
+                          name: serviceTypeForm.name,
+                          description: serviceTypeForm.description || null,
+                          billing_method: serviceTypeForm.billingMethod,
+                          is_active: serviceTypeForm.isActive,
+                          order_number: finalOrder
+                        });
+
+                        // Reload tenant types
+                        await loadTenantServiceTypes();
+                        
+                        // Reset form and close
+                        setServiceTypeForm({
+                          name: '',
+                          description: '',
+                          billingMethod: 'fixed',
+                          isActive: true,
+                          displayOrder: 0
+                        });
+                        setShowAddForm(false);
+                      } catch (error) {
+                        console.error('Error creating service type:', error);
+                        alert('Failed to create service type. Please try again.');
+                      }
+                    }}
+                    disabled={!serviceTypeForm.name.trim()}
+                  >
+                    Add Service Type
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Import Dialog */}
+            {showImportDialog && (
+              <div className="border rounded-lg p-4 space-y-4">
+                <h4 className="font-medium">Import Standard Service Types</h4>
+                
+                <p className="text-sm text-gray-600">
+                  Select standard service types to import into your system:
+                </p>
+
+                {importResult && importResult.imported > 0 && (
               <div className="rounded-md bg-green-50 border border-green-200 p-4 flex items-center gap-3">
                 <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
                 <div>
@@ -198,15 +407,17 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
               </div>
             </div>
 
-            <Button
-              id="import-service-types"
-              type="button"
-              onClick={handleImport}
-              disabled={selectedTypes.length === 0 || isImporting}
-              className="w-full"
-            >
-              {isImporting ? 'Importing...' : `Import Selected (${selectedTypes.length})`}
-            </Button>
+                <Button
+                  id="import-service-types"
+                  type="button"
+                  onClick={handleImport}
+                  disabled={selectedTypes.length === 0 || isImporting}
+                  className="w-full"
+                >
+                  {isImporting ? 'Importing...' : `Import Selected (${selectedTypes.length})`}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -277,8 +488,8 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
       </div>
 
       {serviceTypeOptions.length === 0 && (
-        <div className="rounded-md bg-red-50 border border-red-200 p-4">
-          <p className="text-sm text-red-700">
+        <div className="rounded-md bg-blue-50 p-4">
+          <p className="text-sm text-blue-800">
             <span className="font-semibold">Action Required:</span> Import at least one service type from the section above to proceed with service creation.
           </p>
         </div>

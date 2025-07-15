@@ -66,7 +66,7 @@ export async function importServiceTypes(typeIds: string[]): Promise<{
 
 export async function getTenantServiceTypes(): Promise<{
   success: boolean;
-  data?: Array<{ id: string; name: string; billing_method: string }>;
+  data?: Array<{ id: string; name: string; billing_method: string; order_number?: number }>;
   error?: string;
 }> {
   try {
@@ -88,7 +88,7 @@ export async function getTenantServiceTypes(): Promise<{
           tenant: tenant,
           is_active: true
         })
-        .select('id', 'name', 'billing_method')
+        .select('id', 'name', 'billing_method', 'order_number')
         .orderBy('name');
     });
 

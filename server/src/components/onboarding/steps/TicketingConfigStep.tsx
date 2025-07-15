@@ -8,6 +8,7 @@ import { Plus, Package, ChevronDown, ChevronUp, CheckCircle, Settings, Palette }
 import { StepProps } from '../types';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import ColorPicker from 'server/src/components/ui/ColorPicker';
+import { useSession } from 'next-auth/react';
 import { 
   getAvailableReferenceData, 
   importReferenceData 
@@ -17,6 +18,10 @@ import { IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
 import { IStandardStatus } from 'server/src/interfaces/status.interface';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Switch } from 'server/src/components/ui/Switch';
+import { createChannel } from 'server/src/lib/actions/channel-actions/channelActions';
+import { createCategory } from 'server/src/lib/actions/ticketCategoryActions';
+import { createStatus } from 'server/src/lib/actions/status-actions/statusActions';
+import { createPriority } from 'server/src/lib/actions/priorityActions';
 
 interface SectionState {
   numbering: boolean;
@@ -69,6 +74,7 @@ interface PriorityFormData {
 }
 
 export function TicketingConfigStep({ data, updateData }: StepProps) {
+  const { data: session } = useSession();
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [expandedSections, setExpandedSections] = useState<SectionState>({
     numbering: false,
@@ -388,7 +394,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     }
   };
 
-  const addCategory = () => {
+  const addCategory = async () => {
     if (!categoryForm.name.trim() || !categoryForm.channelId) return;
     
     // Check if category already exists
@@ -397,23 +403,30 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       return;
     }
     
-    const newCat = {
-      category_id: `manual-${Date.now()}`,
-      category_name: categoryForm.name,
-      display_order: categoryForm.displayOrder || data.categories.filter(c => c.channel_id === categoryForm.channelId).length + 1,
-      parent_category: categoryForm.parentCategory || null,
-      channel_id: categoryForm.channelId
-    };
-    
-    updateData({ categories: [...data.categories, newCat] });
-    
-    // Reset form and close dialog
-    setCategoryForm({ name: '', parentCategory: '', displayOrder: 0, channelId: '' });
-    setShowAddForms(prev => ({ ...prev, category: false }));
+    try {
+      // Create actual category in database
+      const createdCategory = await createCategory({
+        category_name: categoryForm.name,
+        channel_id: categoryForm.channelId,
+        parent_category: categoryForm.parentCategory || undefined,
+        display_order: categoryForm.displayOrder || data.categories.filter(c => c.channel_id === categoryForm.channelId).length + 1
+      });
+      
+      // Update wizard data with the created category
+      updateData({ categories: [...data.categories, createdCategory] });
+      setImportedCategories(prev => [...prev, createdCategory.category_name]);
+      
+      // Reset form and close dialog
+      setCategoryForm({ name: '', parentCategory: '', displayOrder: 0, channelId: '' });
+      setShowAddForms(prev => ({ ...prev, category: false }));
+    } catch (error) {
+      console.error('Error creating category:', error);
+      alert('Failed to create category. Please try again.');
+    }
   };
 
 
-  const addPriority = () => {
+  const addPriority = async () => {
     if (!priorityForm.name.trim()) return;
     
     // Check if priority already exists
@@ -422,23 +435,37 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       return;
     }
     
-    // Create the priority object
-    const newPriority = {
-      priority_id: `manual-${Date.now()}`,
-      priority_name: priorityForm.name,
-      color: priorityForm.color,
-      order_number: priorityForm.displayOrder || (importedPriorities.length + data.priorities.length + 1)
-    };
-    
-    // Add full priority object to data
-    updateData({ priorities: [...data.priorities, newPriority] });
-    
-    // Also track for display
-    setImportedPriorities(prev => [...prev, newPriority]);
-    
-    // Reset form and close dialog
-    setPriorityForm({ name: '', color: '#3b82f6', displayOrder: 0 });
-    setShowAddForms(prev => ({ ...prev, priority: false }));
+    try {
+      // Get current user ID
+      const userId = session?.user?.id;
+      if (!userId) {
+        alert('User session not found. Please refresh and try again.');
+        return;
+      }
+      
+      // Create actual priority in database
+      const createdPriority = await createPriority({
+        priority_name: priorityForm.name,
+        color: priorityForm.color,
+        order_number: priorityForm.displayOrder || (importedPriorities.length + data.priorities.length + 1),
+        item_type: 'ticket',
+        created_by: userId,
+        created_at: new Date()
+      });
+      
+      // Add full priority object to data
+      updateData({ priorities: [...data.priorities, createdPriority] });
+      
+      // Also track for display
+      setImportedPriorities(prev => [...prev, createdPriority]);
+      
+      // Reset form and close dialog
+      setPriorityForm({ name: '', color: '#3b82f6', displayOrder: 0 });
+      setShowAddForms(prev => ({ ...prev, priority: false }));
+    } catch (error) {
+      console.error('Error creating priority:', error);
+      alert('Failed to create priority. Please try again.');
+    }
   };
 
 
@@ -660,7 +687,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                   </Button>
                   <Button
                     id="save-add-channel-form"
-                    onClick={() => {
+                    onClick={async () => {
                       if (!channelForm.name.trim()) return;
                       
                       // Check if channel already exists
@@ -669,24 +696,46 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         return;
                       }
                       
-                      // Add new channel
-                      const newChannel = {
-                        channel_id: `manual-${Date.now()}`,
-                        channel_name: channelForm.name,
-                        description: channelForm.description,
-                        display_order: channelForm.displayOrder || importedChannels.length + 1,
-                        is_inactive: !channelForm.isActive,
-                        is_default: channelForm.isDefault
-                      };
-                      
-                      setImportedChannels(prev => [...prev, newChannel]);
-                      if (!data.channelName) {
-                        updateData({ channelName: channelForm.name });
+                      try {
+                        // Calculate the next display order if not provided
+                        let displayOrder = channelForm.displayOrder;
+                        if (!displayOrder || displayOrder === 0) {
+                          const maxOrder = importedChannels.reduce((max, ch) => 
+                            Math.max(max, ch.display_order || 0), 0
+                          );
+                          displayOrder = maxOrder + 1;
+                        }
+                        
+                        // Create actual channel in database
+                        const createdChannel = await createChannel({
+                          channel_name: channelForm.name,
+                          description: channelForm.description || '',
+                          display_order: displayOrder,
+                          is_inactive: !channelForm.isActive,
+                          is_default: channelForm.isDefault
+                        });
+                        
+                        // Add to imported channels list
+                        setImportedChannels(prev => [...prev, createdChannel]);
+                        
+                        // Update wizard data if this is the first channel
+                        if (!data.channelId) {
+                          updateData({ 
+                            channelId: createdChannel.channel_id,
+                            channelName: createdChannel.channel_name
+                          });
+                        }
+                        
+                        // Reset and close
+                        setChannelForm({ name: '', description: '', displayOrder: 0, isActive: true, isDefault: false });
+                        setShowAddForms(prev => ({ ...prev, channel: false }));
+                        
+                        // Reload available channels for category creation
+                        await loadAvailableChannels();
+                      } catch (error) {
+                        console.error('Error creating channel:', error);
+                        alert('Failed to create board. Please try again.');
                       }
-                      
-                      // Reset and close
-                      setChannelForm({ name: '', description: '', displayOrder: 0, isActive: true, isDefault: false });
-                      setShowAddForms(prev => ({ ...prev, channel: false }));
                     }}
                     disabled={!channelForm.name.trim()}
                     className="flex-1"
@@ -1228,7 +1277,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                   </Button>
                   <Button
                     id="save-add-status-form"
-                    onClick={() => {
+                    onClick={async () => {
                       if (!statusForm.name.trim()) return;
                       
                       // Check if status already exists
@@ -1237,24 +1286,30 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         return;
                       }
                       
-                      // Add new status
-                      const newStatus = {
-                        status_id: `manual-${Date.now()}`,
-                        name: statusForm.name,
-                        is_closed: statusForm.isClosed,
-                        is_default: statusForm.isDefault,
-                        order_number: statusForm.displayOrder || importedStatuses.length + 1
-                      };
-                      
-                      setImportedStatuses(prev => [...prev, newStatus]);
-                      
-                      // Track all statuses in form data
-                      const allStatuses = [...importedStatuses, newStatus];
-                      updateData({ statuses: allStatuses });
-                      
-                      // Reset and close
-                      setStatusForm({ name: '', isClosed: false, isDefault: false, displayOrder: 0 });
-                      setShowAddForms(prev => ({ ...prev, status: false }));
+                      try {
+                        // Create actual status in database
+                        const createdStatus = await createStatus({
+                          name: statusForm.name,
+                          is_closed: statusForm.isClosed,
+                          is_default: statusForm.isDefault,
+                          status_type: 'ticket',
+                          order_number: statusForm.displayOrder || importedStatuses.length + 1
+                        });
+                        
+                        // Add to imported statuses list
+                        setImportedStatuses(prev => [...prev, createdStatus]);
+                        
+                        // Track all statuses in form data
+                        const allStatuses = [...importedStatuses, createdStatus];
+                        updateData({ statuses: allStatuses });
+                        
+                        // Reset and close
+                        setStatusForm({ name: '', isClosed: false, isDefault: false, displayOrder: 0 });
+                        setShowAddForms(prev => ({ ...prev, status: false }));
+                      } catch (error) {
+                        console.error('Error creating status:', error);
+                        alert('Failed to create status. Please try again.');
+                      }
                     }}
                     disabled={!statusForm.name.trim()}
                     className="flex-1"
@@ -1405,6 +1460,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
           <div className="flex items-center gap-2">
             <Package className="w-5 h-5 text-gray-500" />
             <span className="font-medium">Priorities</span>
+            {data.priorities.length === 0 && (
+              <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">Required</span>
+            )}
           </div>
           {expandedSections.priorities ? (
             <ChevronUp className="w-4 h-4 text-gray-500" />
@@ -1698,7 +1756,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
 
       <div className="rounded-md bg-blue-50 p-4">
         <p className="text-sm text-blue-800">
-          <span className="font-semibold">Required:</span> Please configure at least one channel to complete setup.
+          <span className="font-semibold">Required:</span> Please configure at least one board and one priority to complete setup.
           Import standard configurations to quickly set up your ticketing system.
         </p>
       </div>

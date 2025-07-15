@@ -49,8 +49,8 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     }
   };
 
-  // Don't block rendering while checking onboarding status
-  if (loading && status === 'loading') {
+  // Block rendering while checking onboarding status to prevent flash of content
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">

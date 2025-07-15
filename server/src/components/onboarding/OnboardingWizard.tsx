@@ -73,6 +73,7 @@ export function OnboardingWizard({
 
     // Ticketing
     channelName: '',
+    channelId: undefined,
     supportEmail: '',
     categories: [],
     priorities: [],
@@ -298,8 +299,11 @@ export function OnboardingWizard({
   };
 
   const isTicketingStepValid = () => {
-    const { channelName, categories, priorities } = wizardData;
-    return !!(channelName && channelName.trim() && categories.length > 0 && priorities.length > 0);
+    const { channelName, channelId, priorities } = wizardData;
+    // Check if we have either a channel name or channel ID (from import)
+    const hasChannel = (channelName && channelName.trim()) || channelId;
+    // Categories are optional, but we need at least one priority
+    return !!(hasChannel && priorities.length > 0);
   };
 
   const hasAtLeastOneFieldFilled = () => {
