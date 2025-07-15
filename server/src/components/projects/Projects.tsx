@@ -262,7 +262,7 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
       dataIndex: 'project_name',
       width: '20%',
       render: (text: string, record: IProject) => (
-        <Link href={`/msp/projects/${record.project_id}`} className="text-blue-600 hover:text-blue-800 block truncate">
+        <Link href={`/msp/projects/${record.project_id}`} className="text-blue-600 hover:text-blue-800 block whitespace-normal break-words">
           {text}
         </Link>
       ),
@@ -281,7 +281,7 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
               e.stopPropagation();
               onQuickViewCompany(value);
             }}
-            className="text-blue-500 hover:underline text-left"
+            className="text-blue-500 hover:underline text-left whitespace-normal break-words"
           >
             {company.company_name}
           </button>

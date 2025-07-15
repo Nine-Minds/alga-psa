@@ -265,7 +265,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     {
       title: 'Ticket Number',
       dataIndex: 'ticket_number',
-      width: '10%',
+      width: '9%',
       render: (value: string, record: ITicketListItem) => (
         <Link
           href={`/msp/tickets/${record.ticket_id}`}
@@ -278,17 +278,17 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     {
       title: 'Title',
       dataIndex: 'title',
-      width: '22%',
+      width: '20%',
     },
     {
       title: 'Status',
       dataIndex: 'status_name',
-      width: '10%',
+      width: '9%',
     },
     {
       title: 'Priority',
       dataIndex: 'priority_name',
-      width: '10%',
+      width: '9%',
       render: (value: string, record: ITicketListItem) => (
         <div className="flex items-center gap-2">
           <div 
@@ -302,7 +302,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     {
       title: 'Board',
       dataIndex: 'channel_name',
-      width: '10%',
+      width: '9%',
     },
     {
       title: 'Category',
@@ -329,7 +329,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     {
       title: 'Client',
       dataIndex: 'company_name',
-      width: '10%',
+      width: '9%',
       render: (value: string, record: ITicketListItem) => (
         <button
           onClick={(e) => {
@@ -338,7 +338,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               onQuickViewCompany(record.company_id);
             }
           }}
-          className="text-blue-500 hover:underline text-left"
+          className="text-blue-500 hover:underline text-left whitespace-normal break-words"
         >
           {value || 'No Client'}
         </button>
@@ -347,12 +347,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     {
       title: 'Created By',
       dataIndex: 'entered_by_name',
-      width: '10%',
+      width: '9%',
     },
     {
       title: 'Tags',
       dataIndex: 'tags',
-      width: '15%',
+      width: '13%',
       render: (value: string, record: ITicketListItem) => {
         if (!record.ticket_id) return null;
         

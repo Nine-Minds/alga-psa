@@ -84,7 +84,7 @@ const CompanyLink: React.FC<CompanyLinkProps> = ({ company, onClick }) => {
       data-automation-id={linkId}
       href={`/msp/companies/${company.company_id}`}
       onClick={onClick}
-      className="text-blue-600 hover:underline font-medium truncate"
+      className="text-blue-600 hover:underline font-medium whitespace-normal break-words"
       title={company.company_name}
     >
       {company.company_name}
@@ -175,7 +175,7 @@ const CompaniesList = ({
                     company.state_province
                 ].filter(Boolean);
                 const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : 'N/A';
-                return <span className="truncate" title={fullAddress}>{fullAddress}</span>;
+                return <span className="break-words" title={fullAddress}>{fullAddress}</span>;
             },
         },
         {
@@ -183,7 +183,7 @@ const CompaniesList = ({
             dataIndex: 'account_manager_full_name',
             width: '9%',
             render: (text: string | undefined, record: ICompany) =>
-                <span className="truncate" title={record.account_manager_full_name ?? ''}>{record.account_manager_full_name || 'N/A'}</span>,
+                <span className="break-words" title={record.account_manager_full_name ?? ''}>{record.account_manager_full_name || 'N/A'}</span>,
         },
         {
             title: 'URL',
@@ -191,7 +191,7 @@ const CompaniesList = ({
             width: '10%',
             render: (text: string | null, record: ICompany) => (
                 record.url && record.url.trim() !== '' ? (
-                    <a href={record.url.startsWith('http') ? record.url : `https://${record.url}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate block" title={record.url}>
+                    <a href={record.url.startsWith('http') ? record.url : `https://${record.url}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline whitespace-normal break-words block" title={record.url}>
                         {record.url}
                     </a>
                 ) : 'N/A'
