@@ -26,11 +26,11 @@ exports.seed = async function(knex) {
     getDefaultId('channels', { is_default: true }, 'channel_id') || 
     getDefaultId('channels', {}, 'channel_id'), // Fallback to first channel
     
-    getDefaultId('statuses', { is_default: true }, 'status_id') ||
-    getDefaultId('statuses', {}, 'status_id'), // Fallback to first status
+    getDefaultId('statuses', { is_default: true, status_type: 'ticket' }, 'status_id') ||
+    getDefaultId('statuses', { status_type: 'ticket' }, 'status_id'), // Fallback to first ticket status
     
-    getDefaultId('priorities', { is_default: true }, 'priority_id') ||
-    getDefaultId('priorities', {}, 'priority_id') // Fallback to first priority
+    // Priorities table doesn't have is_default column, so just get the first one
+    getDefaultId('priorities', { item_type: 'ticket' }, 'priority_id')
   ]);
 
   if (!defaultChannelId || !defaultStatusId || !defaultPriorityId) {

@@ -40,7 +40,7 @@ describe('Email Settings Webhook Processing Tests', () => {
       
       const provider = await context.createEmailProvider({
         provider: 'microsoft',
-        mailbox: 'support@example.com',
+        mailbox: 'webhook-test@example.com',
         tenant_id: tenant.tenant,
         company_id: company.company_id
       });
@@ -117,7 +117,7 @@ describe('Email Settings Webhook Processing Tests', () => {
       const { tenant } = await context.emailTestFactory.createBasicEmailScenario();
       const provider = await context.createEmailProvider({
         provider: 'microsoft',
-        mailbox: 'support@example.com',
+        mailbox: 'webhook-invalid-state@example.com',
         tenant_id: tenant.tenant
       });
       
@@ -142,7 +142,7 @@ describe('Email Settings Webhook Processing Tests', () => {
       const { tenant, company, contact } = await context.emailTestFactory.createBasicEmailScenario();
       const provider = await context.createEmailProvider({
         provider: 'google',
-        mailbox: 'support@example.com',
+        mailbox: 'webhook-google@example.com',
         tenant_id: tenant.tenant,
         company_id: company.company_id
       });
@@ -239,7 +239,7 @@ describe('Email Settings Webhook Processing Tests', () => {
       const { tenant, contact } = await context.emailTestFactory.createBasicEmailScenario();
       const provider = await context.createEmailProvider({
         provider: 'microsoft',
-        mailbox: 'support@example.com',
+        mailbox: 'webhook-duplicate@example.com',
         tenant_id: tenant.tenant
       });
       

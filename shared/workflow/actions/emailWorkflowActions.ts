@@ -108,12 +108,9 @@ export async function findContactByEmail(
   email: string,
   tenant: string
 ): Promise<FindContactByEmailOutput | null> {
-  const { getAdminConnection } = await import('@shared/db/admin.js');
-  const { withTransaction } = await import('@shared/db/index.js');
-  const knex = await getAdminConnection();
+  const { withAdminTransaction } = await import('@shared/db/index.js');
   
-  try {
-    const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
+  const contact = await withAdminTransaction(async (trx: Knex.Transaction) => {
       return await trx('contacts')
         .select(
           'contacts.contact_name_id as contact_id',
@@ -136,9 +133,6 @@ export async function findContactByEmail(
     });
     
     return contact || null;
-  } finally {
-    await knex.destroy();
-  }
 }
 
 /**
@@ -148,12 +142,9 @@ export async function createOrFindContact(
   input: CreateOrFindContactInput,
   tenant: string
 ): Promise<CreateOrFindContactOutput> {
-  const { getAdminConnection } = await import('@shared/db/admin.js');
-  const { withTransaction } = await import('@shared/db/index.js');
-  const knex = await getAdminConnection();
+  const { withAdminTransaction } = await import('@shared/db/index.js');
   
-  try {
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+  return await withAdminTransaction(async (trx: Knex.Transaction) => {
       // First try to find existing contact
       const existingContact = await trx('contacts')
         .where({
@@ -203,9 +194,6 @@ export async function createOrFindContact(
         is_new: true
       };
     });
-  } finally {
-    await knex.destroy();
-  }
 }
 
 // =============================================================================
@@ -219,12 +207,9 @@ export async function findTicketByEmailThread(
   input: FindTicketByEmailThreadInput,
   tenant: string
 ): Promise<FindTicketByEmailThreadOutput | null> {
-  const { getAdminConnection } = await import('@shared/db/admin.js');
-  const { withTransaction } = await import('@shared/db/index.js');
-  const knex = await getAdminConnection();
+  const { withAdminTransaction } = await import('@shared/db/index.js');
   
-  try {
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+  return await withAdminTransaction(async (trx: Knex.Transaction) => {
       // Strategy 1: Search by thread ID if available
       if (input.threadId) {
         const ticket = await findTicketByThreadId(trx, tenant, input.threadId);
@@ -253,9 +238,6 @@ export async function findTicketByEmailThread(
       
       return null;
     });
-  } finally {
-    await knex.destroy();
-  }
 }
 
 /**
@@ -358,12 +340,9 @@ export async function processEmailAttachment(
   input: ProcessEmailAttachmentInput,
   tenant: string
 ): Promise<ProcessEmailAttachmentOutput> {
-  const { getAdminConnection } = await import('@shared/db/admin.js');
-  const { withTransaction } = await import('@shared/db/index.js');
-  const knex = await getAdminConnection();
+  const { withAdminTransaction } = await import('@shared/db/index.js');
   
-  try {
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+  return await withAdminTransaction(async (trx: Knex.Transaction) => {
       const documentId = uuidv4();
       const now = new Date();
 
@@ -402,9 +381,6 @@ export async function processEmailAttachment(
         contentType: input.attachmentData.contentType
       };
     });
-  } finally {
-    await knex.destroy();
-  }
 }
 
 // =============================================================================
@@ -418,12 +394,9 @@ export async function saveEmailClientAssociation(
   input: SaveEmailClientAssociationInput,
   tenant: string
 ): Promise<SaveEmailClientAssociationOutput> {
-  const { getAdminConnection } = await import('@shared/db/admin.js');
-  const { withTransaction } = await import('@shared/db/index.js');
-  const knex = await getAdminConnection();
+  const { withAdminTransaction } = await import('@shared/db/index.js');
   
-  try {
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+  return await withAdminTransaction(async (trx: Knex.Transaction) => {
       const associationId = uuidv4();
       const now = new Date();
 
@@ -474,9 +447,6 @@ export async function saveEmailClientAssociation(
         };
       }
     });
-  } finally {
-    await knex.destroy();
-  }
 }
 
 // =============================================================================
@@ -489,12 +459,9 @@ export async function saveEmailClientAssociation(
 export async function resolveInboundTicketDefaults(
   tenant: string
 ): Promise<any> {
-  const { getAdminConnection } = await import('@shared/db/admin.js');
-  const { withTransaction } = await import('@shared/db/index.js');
-  const knex = await getAdminConnection();
+  const { withAdminTransaction } = await import('@shared/db/index.js');
   
-  try {
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+  return await withAdminTransaction(async (trx: Knex.Transaction) => {
       // Get the default inbound ticket configuration for this tenant
       const defaults = await trx('inbound_ticket_defaults')
         .where({ tenant, is_default: true, is_active: true })
@@ -519,12 +486,6 @@ export async function resolveInboundTicketDefaults(
       // Return the flat defaults structure
       return defaults;
     });
-  } catch (error) {
-    console.error('Error resolving inbound ticket defaults:', error);
-    throw error; // Throw instead of returning null to see the actual error
-  } finally {
-    await knex.destroy();
-  }
 }
 
 /**
@@ -561,15 +522,12 @@ export async function createTicketFromEmail(
   tenant: string,
   userId?: string
 ): Promise<{ ticket_id: string; ticket_number: string }> {
-  const { getAdminConnection } = await import('@shared/db/admin.js');
-  const { withTransaction } = await import('@shared/db/index.js');
+  const { withAdminTransaction } = await import('@shared/db/index.js');
   const { TicketModel } = await import('@shared/models/ticketModel.js');
   const { WorkflowEventPublisher } = await import('../adapters/workflowEventPublisher.js');
   const { WorkflowAnalyticsTracker } = await import('../adapters/workflowAnalyticsTracker.js');
-  const knex = await getAdminConnection();
   
-  try {
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+  return await withAdminTransaction(async (trx: Knex.Transaction) => {
       // Create adapters for workflow context
       const eventPublisher = new WorkflowEventPublisher();
       const analyticsTracker = new WorkflowAnalyticsTracker();
@@ -596,9 +554,6 @@ export async function createTicketFromEmail(
         ticket_number: result.ticket_number
       };
     });
-  } finally {
-    await knex.destroy();
-  }
 }
 
 /**
@@ -617,15 +572,12 @@ export async function createCommentFromEmail(
   tenant: string,
   userId?: string
 ): Promise<string> {
-  const { getAdminConnection } = await import('@shared/db/admin.js');
-  const { withTransaction } = await import('@shared/db/index.js');
+  const { withAdminTransaction } = await import('@shared/db/index.js');
   const { TicketModel } = await import('@shared/models/ticketModel.js');
   const { WorkflowEventPublisher } = await import('../adapters/workflowEventPublisher.js');
   const { WorkflowAnalyticsTracker } = await import('../adapters/workflowAnalyticsTracker.js');
-  const knex = await getAdminConnection();
   
-  try {
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+  return await withAdminTransaction(async (trx: Knex.Transaction) => {
       // Create adapters for workflow context
       const eventPublisher = new WorkflowEventPublisher();
       const analyticsTracker = new WorkflowAnalyticsTracker();
@@ -643,9 +595,6 @@ export async function createCommentFromEmail(
 
       return result.comment_id;
     });
-  } finally {
-    await knex.destroy();
-  }
 }
 
 /**
@@ -659,12 +608,9 @@ export async function createCompanyFromEmail(
   },
   tenant: string
 ): Promise<{ company_id: string; company_name: string }> {
-  const { getAdminConnection } = await import('@shared/db/admin.js');
-  const { withTransaction } = await import('@shared/db/index.js');
-  const knex = await getAdminConnection();
+  const { withAdminTransaction } = await import('@shared/db/index.js');
   
-  try {
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+  return await withAdminTransaction(async (trx: Knex.Transaction) => {
       const companyId = uuidv4();
       
       await trx('companies')
@@ -683,9 +629,6 @@ export async function createCompanyFromEmail(
         company_name: companyData.company_name
       };
     });
-  } finally {
-    await knex.destroy();
-  }
 }
 
 /**
@@ -695,12 +638,9 @@ export async function getCompanyByIdForEmail(
   companyId: string,
   tenant: string
 ): Promise<{ company_id: string; company_name: string } | null> {
-  const { getAdminConnection } = await import('@shared/db/admin.js');
-  const { withTransaction } = await import('@shared/db/index.js');
-  const knex = await getAdminConnection();
+  const { withAdminTransaction } = await import('@shared/db/index.js');
   
-  try {
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+  return await withAdminTransaction(async (trx: Knex.Transaction) => {
       const company = await trx('companies')
         .select('company_id', 'company_name')
         .where({ company_id: companyId, tenant })
@@ -708,9 +648,6 @@ export async function getCompanyByIdForEmail(
 
       return company || null;
     });
-  } finally {
-    await knex.destroy();
-  }
 }
 
 /**
@@ -724,12 +661,9 @@ export async function createChannelFromEmail(
   },
   tenant: string
 ): Promise<{ channel_id: string; channel_name: string }> {
-  const { getAdminConnection } = await import('@shared/db/admin.js');
-  const { withTransaction } = await import('@shared/db/index.js');
-  const knex = await getAdminConnection();
+  const { withAdminTransaction } = await import('@shared/db/index.js');
   
-  try {
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+  return await withAdminTransaction(async (trx: Knex.Transaction) => {
       const channelId = uuidv4();
       
       await trx('channels')
@@ -749,7 +683,4 @@ export async function createChannelFromEmail(
         channel_name: channelData.channel_name
       };
     });
-  } finally {
-    await knex.destroy();
-  }
 }

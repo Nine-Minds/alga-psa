@@ -11,159 +11,16 @@
  * No imports or TypeScript types are used to avoid serialization issues.
  */
 
+import type { WorkflowContext } from '../core/types.js';
+
 // No imports - all dependencies are available in the workflow context
 
 // Email actions are called through the workflow action registry
 // to avoid module resolution issues during Docker builds
 
-export async function systemEmailProcessingWorkflow(context) {
+export async function systemEmailProcessingWorkflow(context: WorkflowContext): Promise<void> {
   const { actions, data, logger, setState, events } = context;
   
-  // Helper functions - defined inside the main workflow function
-  /**
-   * Check if email is part of existing conversation thread
-   */
-  const checkEmailThreading = async (emailData, actions) => {
-    // Check for threading headers
-    if (!emailData.inReplyTo && (!emailData.references || emailData.references.length === 0)) {
-      return null;
-    }
-    
-    // Look for existing ticket with matching email metadata
-    try {
-      const result = await actions.find_ticket_by_email_thread({
-        threadId: emailData.threadId,
-        inReplyTo: emailData.inReplyTo,
-        references: emailData.references,
-        originalMessageId: emailData.inReplyTo // Look for ticket created from the original message
-      });
-      
-      return result.success ? result.ticket : null;
-    } catch (error) {
-      console.warn(`Error checking email threading: ${error.message}`);
-      return null;
-    }
-  };
-
-  /**
-   * Handle email reply to existing ticket
-   */
-  const handleEmailReply = async (emailData, existingTicket, actions) => {
-    // Add email as comment to existing ticket
-    await actions.create_comment_from_email({
-      ticket_id: existingTicket.ticketId,
-      content: emailData.body.html || emailData.body.text,
-      format: emailData.body.html ? 'html' : 'text',
-      source: 'email',
-      author_type: 'client' // This is a reply from the client
-    });
-    
-    // Handle attachments for reply
-    if (emailData.attachments && emailData.attachments.length > 0) {
-      for (const attachment of emailData.attachments) {
-        try {
-          await actions.process_email_attachment({
-            emailId: emailData.id,
-            attachmentId: attachment.id,
-            ticketId: existingTicket.ticketId,
-            tenant: emailData.tenant,
-            providerId: emailData.providerId,
-            attachmentData: attachment
-          });
-        } catch (attachmentError) {
-          console.warn(`Failed to process reply attachment ${attachment.name}: ${attachmentError.message}`);
-        }
-      }
-    }
-  };
-
-  /**
-   * Find exact email match in contacts
-   */
-  const findExactEmailMatch = async (emailAddress, actions) => {
-    try {
-      const result = await actions.find_contact_by_email({ email: emailAddress });
-      
-      if (result.success && result.contact) {
-        return {
-          contactId: result.contact.contact_id,
-          contactName: result.contact.name,
-          companyId: result.contact.company_id,
-          companyName: result.contact.company_name
-        };
-      }
-      
-      return null;
-    } catch (error) {
-      console.warn(`Error finding email match: ${error.message}`);
-      return null;
-    }
-  };
-
-  /**
-   * Process the result of manual client matching
-   */
-  const processClientMatchingResult = async (
-    matchingResult, 
-    emailData,
-    actions
-  ) => {
-    let companyId = matchingResult.selectedCompanyId;
-    let companyName = '';
-    let contactId = null;
-    
-    // Create new company if requested
-    if (matchingResult.createNewCompany && matchingResult.newCompanyName) {
-      const result = await actions.create_company_from_email({
-        company_name: matchingResult.newCompanyName,
-        email: emailData.from.email,
-        source: 'email'
-      });
-      
-      if (result.success) {
-        companyId = result.company.company_id;
-        companyName = result.company.company_name;
-      }
-    } else {
-      // Get existing company details
-      const result = await actions.get_company_by_id_for_email({ companyId });
-      if (result.success && result.company) {
-        companyName = result.company.company_name || '';
-      }
-    }
-    
-    // Create or find contact
-    if (matchingResult.contactName || emailData.from.name) {
-      const result = await actions.create_or_find_contact({
-        email: emailData.from.email,
-        name: matchingResult.contactName || emailData.from.name,
-        company_id: companyId
-      });
-      
-      if (result.success) {
-        contactId = result.contact.id;
-      }
-    }
-    
-    // Save email association if requested
-    if (matchingResult.saveEmailAssociation) {
-      await actions.save_email_client_association({
-        email: emailData.from.email,
-        company_id: companyId,
-        contact_id: contactId || undefined
-      });
-    }
-    
-    return {
-      companyId,
-      companyName,
-      contactId,
-      contactName: matchingResult.contactName || emailData.from.name
-    };
-  };
-
-
-  // Main workflow logic starts here
   setState('PROCESSING_INBOUND_EMAIL');
   logger.info('🚀 Starting email processing workflow');
   
@@ -237,14 +94,23 @@ export async function systemEmailProcessingWorkflow(context) {
     setState('RESOLVING_TICKET_DEFAULTS');
     console.log('Resolving inbound ticket defaults for tenant:', tenant);
     
-    let ticketDefaults = await actions.resolve_inbound_ticket_defaults({
+    const ticketDefaults = await actions.resolve_inbound_ticket_defaults({
       tenant: tenant
     });
     
     if (!ticketDefaults) {
-      console.error(`No inbound ticket defaults configured for tenant ${tenant}. Email processing cannot continue.`);
-      setState('ERROR_NO_TICKET_DEFAULTS');
-      throw new Error(`No inbound ticket defaults configured for tenant ${tenant}. Please configure default ticket settings for email processing.`);
+      console.warn('No ticket defaults configured for tenant, using system defaults');
+      // Fall back to system defaults
+      ticketDefaults = {
+        channel_id: await getEmailChannelId(actions),
+        status_id: await getNewTicketStatusId(actions),
+        priority_id: await getDefaultPriorityId(actions),
+        company_id: null,
+        entered_by: null,
+        category_id: null,
+        subcategory_id: null,
+        location_id: null
+      };
     }
     
     console.log('Using ticket defaults:', ticketDefaults);
@@ -342,4 +208,188 @@ export async function systemEmailProcessingWorkflow(context) {
     // Don't re-throw the error - let the human task handle resolution
     setState('AWAITING_MANUAL_RESOLUTION');
   }
+}
+
+/**
+ * Check if email is part of existing conversation thread
+ */
+async function checkEmailThreading(emailData, actions) {
+  // Check for threading headers
+  if (!emailData.inReplyTo && (!emailData.references || emailData.references.length === 0)) {
+    return null;
+  }
+  
+  // Look for existing ticket with matching email metadata
+  try {
+    const result = await actions.find_ticket_by_email_thread({
+      threadId: emailData.threadId,
+      inReplyTo: emailData.inReplyTo,
+      references: emailData.references,
+      originalMessageId: emailData.inReplyTo // Look for ticket created from the original message
+    });
+    
+    return result.success ? result.ticket : null;
+  } catch (error) {
+    console.warn(`Error checking email threading: ${error.message}`);
+    return null;
+  }
+}
+
+/**
+ * Handle email reply to existing ticket
+ */
+async function handleEmailReply(emailData, existingTicket, actions) {
+  // Add email as comment to existing ticket
+  await actions.create_comment_from_email({
+    ticket_id: existingTicket.ticketId,
+    content: emailData.body.html || emailData.body.text,
+    format: emailData.body.html ? 'html' : 'text',
+    source: 'email',
+    author_type: 'client' // This is a reply from the client
+  });
+  
+  // Handle attachments for reply
+  if (emailData.attachments && emailData.attachments.length > 0) {
+    for (const attachment of emailData.attachments) {
+      try {
+        await actions.process_email_attachment({
+          emailId: emailData.id,
+          attachmentId: attachment.id,
+          ticketId: existingTicket.ticketId,
+          tenant: emailData.tenant,
+          providerId: emailData.providerId,
+          attachmentData: attachment
+        });
+      } catch (attachmentError: any) {
+        console.warn(`Failed to process reply attachment ${attachment.name}: ${attachmentError.message}`);
+      }
+    }
+  }
+}
+
+/**
+ * Find exact email match in contacts
+ */
+async function findExactEmailMatch(emailAddress, actions) {
+  try {
+    const result = await actions.find_contact_by_email({ email: emailAddress });
+    
+    if (result.success && result.contact) {
+      return {
+        contactId: result.contact.contact_id,
+        contactName: result.contact.name,
+        companyId: result.contact.company_id,
+        companyName: result.contact.company_name
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.warn(`Error finding email match: ${error.message}`);
+    return null;
+  }
+}
+
+/**
+ * Process the result of manual client matching
+ */
+async function processClientMatchingResult(
+  matchingResult, 
+  emailData,
+  actions
+) {
+  let companyId = matchingResult.selectedCompanyId;
+  let companyName = '';
+  let contactId = null;
+  
+  // Create new company if requested
+  if (matchingResult.createNewCompany && matchingResult.newCompanyName) {
+    const result = await actions.create_company_from_email({
+      company_name: matchingResult.newCompanyName,
+      email: emailData.from.email,
+      source: 'email'
+    });
+    
+    if (result.success) {
+      companyId = result.company.company_id;
+      companyName = result.company.company_name;
+    }
+  } else {
+    // Get existing company details
+    const result = await actions.get_company_by_id_for_email({ companyId });
+    if (result.success && result.company) {
+      companyName = result.company.company_name || '';
+    }
+  }
+  
+  // Create or find contact
+  if (matchingResult.contactName || emailData.from.name) {
+    const result = await actions.create_or_find_contact({
+      email: emailData.from.email,
+      name: matchingResult.contactName || emailData.from.name,
+      company_id: companyId
+    });
+    
+    if (result.success) {
+      contactId = result.contact.id;
+    }
+  }
+  
+  // Save email association if requested
+  if (matchingResult.saveEmailAssociation) {
+    await actions.save_email_client_association({
+      email: emailData.from.email,
+      company_id: companyId,
+      contact_id: contactId || undefined
+    });
+  }
+  
+  return {
+    companyId,
+    companyName,
+    contactId,
+    contactName: matchingResult.contactName || emailData.from.name
+  };
+}
+
+/**
+ * Get or create email channel ID
+ */
+async function getEmailChannelId(actions) {
+  // Try to find existing email channel
+  const result = await actions.find_channel_by_name({ name: 'Email' });
+  
+  if (result.success && result.channel) {
+    return result.channel.id;
+  }
+  
+  // Create email channel if it doesn't exist
+  const createResult = await actions.create_channel_from_email({
+    channel_name: 'Email',
+    description: 'Tickets created from inbound emails',
+    is_default: false
+  });
+  
+  return createResult.success ? createResult.channel.channel_id : '';
+}
+
+/**
+ * Get default status ID for new tickets
+ */
+async function getNewTicketStatusId(actions) {
+  const result = await actions.find_status_by_name({ 
+    name: 'New',
+    item_type: 'ticket'
+  });
+  
+  return (result.success && result.status) ? result.status.id : '';
+}
+
+/**
+ * Get default priority ID
+ */
+async function getDefaultPriorityId(actions) {
+  const result = await actions.find_priority_by_name({ name: 'Medium' });
+  
+  return (result.success && result.priority) ? result.priority.id : '';
 }

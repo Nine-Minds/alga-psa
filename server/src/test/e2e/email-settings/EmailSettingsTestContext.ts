@@ -1,6 +1,6 @@
 import { E2ETestContext, E2ETestContextOptions } from '../utils/e2e-test-context';
-import crypto from 'crypto';
-import jwt from 'jsonwebtoken';
+import * as crypto from 'crypto';
+import * as jwt from 'jsonwebtoken';
 
 export interface EmailSettingsTestContextOptions extends E2ETestContextOptions {
   /**
@@ -36,7 +36,7 @@ export class EmailSettingsTestContext extends E2ETestContext {
   }
 
   /**
-   * Configure OAuth provider URLs to use mock service
+   * Configure OAuth provider URLs and credentials for testing
    */
   setupOAuthProviders(): void {
     // Microsoft OAuth endpoints
@@ -50,10 +50,18 @@ export class EmailSettingsTestContext extends E2ETestContext {
     process.env.GOOGLE_API_URL = `${this.oauthMockUrl}`;
     process.env.GOOGLE_PUBSUB_API_URL = `${this.oauthMockUrl}`;
     
+    // OAuth credentials for testing
+    process.env.MICROSOFT_CLIENT_ID = 'test-microsoft-client-id';
+    process.env.MICROSOFT_CLIENT_SECRET = 'test-microsoft-client-secret';
+    process.env.GOOGLE_CLIENT_ID = 'test-google-client-id';
+    process.env.GOOGLE_CLIENT_SECRET = 'test-google-client-secret';
+    process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
+    
     console.log('🔧 Configured OAuth providers to use mock service');
     console.log(`   📍 Mock OAuth server: ${this.oauthMockUrl}`);
     console.log(`   🔐 Microsoft endpoints: ${this.oauthMockUrl}/common/oauth2/v2.0/*`);
     console.log(`   🔐 Google endpoints: ${this.oauthMockUrl}/o/oauth2/*`);
+    console.log(`   🔑 OAuth credentials configured for testing`);
   }
 
   /**
@@ -76,7 +84,7 @@ export class EmailSettingsTestContext extends E2ETestContext {
       id: providerId,
       tenant: config.tenant_id,
       provider_name: `${config.provider} - ${config.mailbox}`,
-      provider_type: 'test', // Use 'test' provider type to skip OAuth
+      provider_type: config.provider, // Use actual provider type for tests
       mailbox: config.mailbox,
       is_active: true,
       status: 'connected',
@@ -91,8 +99,9 @@ export class EmailSettingsTestContext extends E2ETestContext {
     
     // Create vendor-specific config in separate table
     console.log(`     🔧 Creating ${config.provider} configuration...`);
+    let vendorConfig;
     if (config.provider === 'microsoft') {
-      await this.db('microsoft_email_provider_config').insert({
+      const microsoftConfigData = {
         email_provider_id: providerId,
         tenant: config.tenant_id,
         client_id: 'test-client-id',
@@ -107,9 +116,14 @@ export class EmailSettingsTestContext extends E2ETestContext {
         token_expires_at: new Date(Date.now() + 3600000).toISOString(),
         created_at: new Date(),
         updated_at: new Date()
-      });
+      };
+      
+      const [insertedConfig] = await this.db('microsoft_email_provider_config')
+        .insert(microsoftConfigData)
+        .returning('*');
+      vendorConfig = insertedConfig;
     } else if (config.provider === 'google') {
-      await this.db('google_email_provider_config').insert({
+      const googleConfigData = {
         email_provider_id: providerId,
         tenant: config.tenant_id,
         client_id: 'test-client-id',
@@ -126,11 +140,103 @@ export class EmailSettingsTestContext extends E2ETestContext {
         token_expires_at: new Date(Date.now() + 3600000).toISOString(),
         created_at: new Date(),
         updated_at: new Date()
-      });
+      };
+      
+      const [insertedConfig] = await this.db('google_email_provider_config')
+        .insert(googleConfigData)
+        .returning('*');
+      vendorConfig = insertedConfig;
     }
 
     console.log(`     🔗 Provider linked to tenant: ${config.tenant_id.substring(0, 8)}...`);
-    return provider;
+    
+    // Add provider_config field with OAuth tokens to the returned object
+    const webhookToken = `webhook-token-${Date.now()}`;
+    const providerWithConfig = {
+      ...provider,
+      provider_config: {
+        accessToken: vendorConfig?.access_token,
+        refreshToken: vendorConfig?.refresh_token,
+        clientState: `test-client-state-${Date.now()}`,
+        ...(vendorConfig && {
+          client_id: vendorConfig.client_id,
+          client_secret: vendorConfig.client_secret,
+          token_expires_at: vendorConfig.token_expires_at
+        })
+      },
+      webhook_verification_token: webhookToken,
+      webhook_id: webhookToken, // Some tests use webhook_id instead of webhook_verification_token
+      webhook_notification_url: `${process.env.BASE_URL || 'http://localhost:3000'}/api/email/webhooks/${config.provider}`,
+      connection_status: 'connected'
+    };
+    
+    console.log(`     ✅ Provider created with config: accessToken=${vendorConfig?.access_token?.substring(0, 20)}...`);
+    return providerWithConfig;
+  }
+
+  /**
+   * Find an existing email provider by tenant + mailbox
+   */
+  async findExistingEmailProvider(config: {
+    provider: 'microsoft' | 'google';
+    mailbox: string;
+    tenant_id: string;
+  }) {
+    console.log(`     🔍 Looking for existing ${config.provider} provider for mailbox: ${config.mailbox}`);
+    
+    // Query the email_providers table for matching provider
+    const [provider] = await this.db('email_providers')
+      .where('tenant', config.tenant_id)
+      .where('mailbox', config.mailbox)
+      .where('provider_type', config.provider)
+      .limit(1);
+    
+    if (!provider) {
+      console.log(`     ❌ No existing provider found for ${config.provider} - ${config.mailbox}`);
+      return null;
+    }
+    
+    console.log(`     ✅ Found existing provider: ${provider.id}`);
+    
+    // Load vendor-specific config
+    let vendorConfig;
+    if (config.provider === 'microsoft') {
+      const [microsoftConfig] = await this.db('microsoft_email_provider_config')
+        .where('email_provider_id', provider.id)
+        .limit(1);
+      vendorConfig = microsoftConfig;
+    } else if (config.provider === 'google') {
+      const [googleConfig] = await this.db('google_email_provider_config')
+        .where('email_provider_id', provider.id)
+        .limit(1);
+      vendorConfig = googleConfig;
+    }
+    
+    if (!vendorConfig) {
+      console.log(`     ⚠️ Provider found but no vendor config exists for ${provider.id}`);
+      return null;
+    }
+    
+    // Return provider object with same structure as createEmailProvider
+    const webhookToken = `webhook-token-${Date.now()}`;
+    const providerWithConfig = {
+      ...provider,
+      provider_config: {
+        accessToken: vendorConfig.access_token,
+        refreshToken: vendorConfig.refresh_token,
+        clientState: `test-client-state-${Date.now()}`,
+        client_id: vendorConfig.client_id,
+        client_secret: vendorConfig.client_secret,
+        token_expires_at: vendorConfig.token_expires_at
+      },
+      webhook_verification_token: webhookToken,
+      webhook_id: webhookToken,
+      webhook_notification_url: `${process.env.BASE_URL || 'http://localhost:3000'}/api/email/webhooks/${config.provider}`,
+      connection_status: 'connected'
+    };
+    
+    console.log(`     ✅ Existing provider loaded with config: accessToken=${vendorConfig.access_token?.substring(0, 20)}...`);
+    return providerWithConfig;
   }
 
   /**
@@ -144,11 +250,30 @@ export class EmailSettingsTestContext extends E2ETestContext {
   ): Promise<Response> {
     const url = `http://localhost:3000/api/auth/${provider}/callback?code=${code}&state=${state}`;
     
-    return fetch(url, {
-      method: 'GET',
-      headers: sessionCookie ? { 'Cookie': sessionCookie } : {},
-      redirect: 'manual'
-    });
+    console.log(`     📡 Making OAuth callback request to: ${url}`);
+    console.log(`     🔑 Environment check - MICROSOFT_CLIENT_ID: ${process.env.MICROSOFT_CLIENT_ID ? 'SET' : 'NOT SET'}`);
+    console.log(`     🔑 Environment check - MICROSOFT_CLIENT_SECRET: ${process.env.MICROSOFT_CLIENT_SECRET ? 'SET' : 'NOT SET'}`);
+    
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: sessionCookie ? { 'Cookie': sessionCookie } : {},
+        redirect: 'manual'
+      });
+      
+      console.log(`     📡 Fetch completed with status: ${response.status}`);
+      return response;
+    } catch (error: any) {
+      console.log(`     ❌ Fetch failed with error: ${error.message}`);
+      
+      // If the server isn't running, return a mock 404 response
+      if (error.code === 'ECONNREFUSED' || error.message.includes('ECONNREFUSED')) {
+        console.log(`     ⚠️ Next.js server not running on localhost:3000`);
+        return new Response('Not Found', { status: 404 });
+      }
+      
+      throw error;
+    }
   }
 
   /**

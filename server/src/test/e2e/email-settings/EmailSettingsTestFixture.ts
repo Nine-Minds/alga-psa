@@ -143,6 +143,7 @@ export class EmailSettingsTestFixture {
 
   /**
    * Create test-specific email provider using base test data
+   * Reuses existing provider if one exists for the same tenant + mailbox
    */
   async createTestEmailProvider(overrides: {
     provider: 'microsoft' | 'google';
@@ -151,8 +152,26 @@ export class EmailSettingsTestFixture {
     const context = await this.getContext();
     const baseData = this.getBaseTestData();
 
-    console.log(`     📧 Creating ${overrides.provider} provider: ${overrides.mailbox}`);
+    console.log(`     📧 Looking for existing ${overrides.provider} provider: ${overrides.mailbox}`);
     
+    // First, try to find existing provider
+    const existingProvider = await context.findExistingEmailProvider({
+      provider: overrides.provider,
+      mailbox: overrides.mailbox,
+      tenant_id: baseData.tenant.tenant
+    });
+
+    if (existingProvider) {
+      console.log(`     ♻️ Reusing existing provider: ${existingProvider.id}`);
+      // Track this provider for cleanup (if not already tracked)
+      const trackedProviders = context.emailTestFactory.getCreatedResources().emailProviders;
+      if (!trackedProviders.includes(existingProvider.id)) {
+        trackedProviders.push(existingProvider.id);
+      }
+      return existingProvider;
+    }
+
+    console.log(`     📧 Creating new ${overrides.provider} provider: ${overrides.mailbox}`);
     const provider = await context.createEmailProvider({
       provider: overrides.provider,
       mailbox: overrides.mailbox,

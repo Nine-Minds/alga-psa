@@ -44,7 +44,7 @@ describe('Email Threading Tests', () => {
       console.log('  2️⃣ Setting up Microsoft email provider for ticket creation...');
       const provider = await testHelpers.createTestEmailProvider({
         provider: 'microsoft',
-        mailbox: 'support@example.com'
+        mailbox: 'threading-initial@example.com'
       });
       console.log(`     ✓ Created provider for mailbox: ${provider.mailbox}`);
       
@@ -116,7 +116,7 @@ describe('Email Threading Tests', () => {
       console.log('  2️⃣ Setting up Microsoft email provider for threading test...');
       const provider = await testHelpers.createTestEmailProvider({
         provider: 'microsoft',
-        mailbox: 'support@example.com'
+        mailbox: 'threading-reply@example.com'
       });
       console.log(`     ✓ Created provider for mailbox: ${provider.mailbox}`);
       
@@ -241,7 +241,7 @@ describe('Email Threading Tests', () => {
       console.log('  2️⃣ Setting up Google email provider for thread ID preservation test...');
       const provider = await testHelpers.createTestEmailProvider({
         provider: 'google',
-        mailbox: 'support@example.com'
+        mailbox: 'threading-google@example.com'
       });
       console.log(`     ✓ Created Google provider: ${provider.mailbox}`);
       

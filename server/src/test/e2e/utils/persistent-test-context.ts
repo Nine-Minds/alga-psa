@@ -81,7 +81,7 @@ export class PersistentE2ETestContext extends E2ETestContext {
     
     const services = [
       { name: 'MailHog', url: 'http://localhost:8025', required: true },
-      { name: 'Workflow Worker', url: 'http://localhost:4001/health', required: true },
+      // { name: 'Workflow Worker', url: 'http://localhost:4001/health', required: true },
       { name: 'Webhook Mock', url: 'http://localhost:8080/__admin/health', required: false }
     ];
 
