@@ -26,9 +26,6 @@ export function AddClientStep({ data, updateData }: StepProps) {
             <p className="text-sm text-green-600 mt-1">
               <span className="font-semibold">{data.clientName}</span> has been added to your client list.
             </p>
-            <p className="text-sm text-green-600 mt-1">
-              The company has been created with default non-taxable (0%) tax settings. You can configure tax rates later in the company settings.
-            </p>
           </div>
         </div>
       )}
@@ -75,6 +72,14 @@ export function AddClientStep({ data, updateData }: StepProps) {
           />
         </div>
       </div>
+
+      {!isClientCreated && (
+        <div className="rounded-md bg-blue-50 p-4">
+          <p className="text-sm text-blue-800">
+            <span className="font-semibold">Note:</span> The client will be created with default non-taxable (0%) tax settings. You can configure tax rates later in the company settings.
+          </p>
+        </div>
+      )}
 
       <div className="rounded-md bg-gray-50 p-4">
         <p className="text-sm text-gray-700">
