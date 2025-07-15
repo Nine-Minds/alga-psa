@@ -18,6 +18,23 @@ export function useTicketTimeTracking(
   // Ref to track if a startTracking operation is in progress to prevent race conditions
   const isStartingTrackingRef = useRef(false);
   
+  // Function to close the current interval - can be called before navigation
+  const closeInterval = useCallback(async () => {
+    if (currentIntervalId && isTracking) {
+      console.debug('Manually closing interval:', currentIntervalId);
+      try {
+        await intervalService.endInterval(currentIntervalId);
+        setIsTracking(false);
+        setCurrentIntervalId(null);
+        return true;
+      } catch (error) {
+        console.error('Error closing interval:', error);
+        return false;
+      }
+    }
+    return true;
+  }, [currentIntervalId, isTracking, intervalService]);
+  
   // Start tracking when component mounts
   useEffect(() => {
     let mounted = true;
@@ -111,14 +128,12 @@ export function useTicketTimeTracking(
       mounted = false;
       
       // FIXED: Close interval when component unmounts (navigating within the app)
-      if (currentIntervalId && isTracking) {
-        console.debug('Closing interval on component unmount:', currentIntervalId);
-        intervalService.endInterval(currentIntervalId).catch(error => {
-          console.error('Error ending interval on component unmount:', error);
-        });
-      }
+      // Use the closeInterval function to ensure state is updated properly
+      closeInterval().catch(error => {
+        console.error('Error closing interval on component unmount:', error);
+      });
     };
-  }, [ticketId, ticketNumber, ticketTitle, userId, intervalService, currentIntervalId, isTracking]);
+  }, [ticketId, ticketNumber, ticketTitle, userId, intervalService, currentIntervalId, isTracking, closeInterval]);
   // Note: We don't need to include isStartingTrackingRef in the dependency array
   // since it's a ref and we're accessing its .current property
 
@@ -186,5 +201,6 @@ export function useTicketTimeTracking(
   return {
     isTracking,
     currentIntervalId,
+    closeInterval,
   };
 }

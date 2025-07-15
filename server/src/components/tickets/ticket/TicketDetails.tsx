@@ -221,7 +221,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     
     
     // Add automatic interval tracking using the custom hook
-    const { currentIntervalId } = useTicketTimeTracking(
+    const { currentIntervalId, closeInterval } = useTicketTimeTracking(
         initialTicket.ticket_id || '',
         initialTicket.ticket_number || '',
         initialTicket.title || '',
@@ -253,7 +253,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // Enhanced function to close the interval - will find and close any open interval for this ticket
     const closeCurrentInterval = useCallback(async () => {
         try {
-            // If we have a currentIntervalId, use it
+            // First, try to use the closeInterval function from the hook
+            if (closeInterval) {
+                console.debug('Using hook closeInterval function');
+                await closeInterval();
+                return;
+            }
+            
+            // Fallback: If we have a currentIntervalId, use it
             if (currentIntervalId) {
                 console.debug('Closing known interval before navigation:', currentIntervalId);
                 await intervalService.endInterval(currentIntervalId);
@@ -274,7 +281,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         } catch (error: any) {
             console.error('Error closing interval:', error);
         }
-    }, [currentIntervalId, intervalService, userId, initialTicket.ticket_id]);
+    }, [closeInterval, currentIntervalId, intervalService, userId, initialTicket.ticket_id]);
     
     // Fixed navigation function - wait for interval to close before navigating
     const handleBackToTickets = useCallback(async () => {
