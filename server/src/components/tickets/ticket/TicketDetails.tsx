@@ -183,9 +183,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isTimeEntryPeriodDialogOpen, setIsTimeEntryPeriodDialogOpen] = useState(false);
 
     const { openDrawer, closeDrawer } = useDrawer();
-    const router = useRouter();
     // Create a single instance of the service
     const intervalService = useMemo(() => new IntervalTrackingService(), []);
+    // Get router for navigation
+    const router = useRouter();
 
     // Timer logic
     const tick = useCallback(() => {
@@ -249,22 +250,79 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         restoreTimer();
     }, [initialTicket.ticket_id, userId, intervalService]);
     
+    // Add a router event listener to detect navigation and close the interval
+    
+    // Use an effect to handle navigation events
+    useEffect(() => {
+        // Create a function to handle before navigation
+        const handleBeforeNavigation = async (url: string) => {
+            console.debug('Navigation detected, closing interval before navigating to:', url);
+            
+            // Only close interval if navigating away from ticket page
+            if (!url.includes(`/tickets/${initialTicket.ticket_id}`)) {
+                try {
+                    // Close the interval before navigation
+                    await closeInterval();
+                    console.debug('Successfully closed interval before navigation');
+                } catch (error) {
+                    console.error('Error closing interval before navigation:', error);
+                }
+            }
+        };
+        
+        // Add event listener for route change start
+        window.addEventListener('beforeunload', () => {
+            closeInterval();
+        });
+        
+        // Patch the router.push method to close interval before navigation
+        const originalPush = router.push;
+        const originalReplace = router.replace;
+        
+        // @ts-ignore - Override router methods to close interval before navigation
+        router.push = async (...args: any[]) => {
+            const url = args[0];
+            await handleBeforeNavigation(url);
+            return originalPush.apply(router, args);
+        };
+        
+        // @ts-ignore - Override router methods to close interval before navigation
+        router.replace = async (...args: any[]) => {
+            const url = args[0];
+            await handleBeforeNavigation(url);
+            return originalReplace.apply(router, args);
+        };
+        
+        // Cleanup function to restore original router methods
+        return () => {
+            window.removeEventListener('beforeunload', () => {
+                closeInterval();
+            });
+            
+            // @ts-ignore - Restore original router methods
+            router.push = originalPush;
+            router.replace = originalReplace;
+        };
+    }, [router, closeInterval, initialTicket.ticket_id]);
+    
     // Function to close the current interval before navigation
     // Enhanced function to close the interval - will find and close any open interval for this ticket
     const closeCurrentInterval = useCallback(async () => {
         try {
-            // First, try to use the closeInterval function from the hook
+            console.debug('Closing interval before navigation');
+            
+            // Use the closeInterval function from the hook
             if (closeInterval) {
                 console.debug('Using hook closeInterval function');
                 await closeInterval();
-                return;
+                return true;
             }
             
             // Fallback: If we have a currentIntervalId, use it
             if (currentIntervalId) {
                 console.debug('Closing known interval before navigation:', currentIntervalId);
                 await intervalService.endInterval(currentIntervalId);
-                return;
+                return true;
             }
             
             // If currentIntervalId is null, try to find any open interval for this ticket
@@ -274,25 +332,35 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 if (openInterval) {
                     console.debug('Found open interval to close:', openInterval.id);
                     await intervalService.endInterval(openInterval.id);
+                    return true;
                 } else {
                     console.debug('No open intervals found for this ticket');
+                    return true;
                 }
             }
+            
+            return true;
         } catch (error: any) {
             console.error('Error closing interval:', error);
+            return false;
         }
     }, [closeInterval, currentIntervalId, intervalService, userId, initialTicket.ticket_id]);
     
     // Fixed navigation function - wait for interval to close before navigating
     const handleBackToTickets = useCallback(async () => {
         try {
+            console.debug('Handling back to tickets navigation');
+            
             // Wait for the interval to close
-            await closeCurrentInterval();
+            const success = await closeCurrentInterval();
+            console.debug('Interval close result:', success);
             
             // Navigate after interval is closed
             if (onClose) {
+                console.debug('Using onClose callback');
                 onClose();
             } else {
+                console.debug('Navigating to tickets dashboard');
                 // Use proper routing to tickets dashboard instead of router.back()
                 router.push('/msp/tickets');
             }
