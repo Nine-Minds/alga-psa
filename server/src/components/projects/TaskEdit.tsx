@@ -9,7 +9,7 @@ import TaskFormSkeleton from 'server/src/components/ui/skeletons/TaskFormSkeleto
 
 // Dynamic import for TaskForm
 const TaskForm = dynamic(() => import('./TaskForm'), {
-  loading: () => <TaskFormSkeleton title="Edit Task" isEdit={true} />,
+  loading: () => <TaskFormSkeleton isEdit={true} />,
   ssr: false
 });
 
@@ -74,7 +74,7 @@ export default function TaskEdit({
 
   return (
     <div className="h-full">
-      <Suspense fallback={<TaskFormSkeleton title="Edit Task" isEdit={true} />}>
+      <Suspense fallback={<TaskFormSkeleton isEdit={true} />}>
         <TaskForm
           task={task}
           phase={phase}

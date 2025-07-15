@@ -1339,6 +1339,7 @@ export async function uploadDocument(
     ticketId?: string;
     contactNameId?: string;
     assetId?: string;
+    projectTaskId?: string;
   }
 ): Promise<
   | { success: true; document: IDocument }
@@ -1436,6 +1437,15 @@ export async function uploadDocument(
         document_id: documentWithId.document_id,
         entity_id: options.assetId,
         entity_type: 'asset',
+        tenant
+      });
+    }
+
+    if (options.projectTaskId) {
+      associations.push({
+        document_id: documentWithId.document_id,
+        entity_id: options.projectTaskId,
+        entity_type: 'project_task',
         tenant
       });
     }

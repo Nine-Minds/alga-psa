@@ -122,16 +122,16 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           setPriority(taskPriority);
         }
 
-        // Fetch document count - only do this once when task changes
-        // Comment out for now to avoid performance issues
-        // if (task.task_id) {
-        //   try {
-        //     const docsResponse = await getDocumentsByEntity(task.task_id, 'project_task', {}, 1, 1);
-        //     setDocumentCount(docsResponse.totalCount);
-        //   } catch (error) {
-        //     console.error('Error fetching document count:', error);
-        //   }
-        // }
+        // Fetch document count
+        if (task.task_id) {
+          try {
+            const docsResponse = await getDocumentsByEntity(task.task_id, 'project_task', {}, 1, 1);
+            setDocumentCount(docsResponse.totalCount);
+          } catch (error) {
+            console.error('Error fetching document count:', error);
+            setDocumentCount(0);
+          }
+        }
 
         // Fetch tags only if not provided
 
@@ -141,7 +141,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     };
 
     fetchData();
-  }, [task.task_id, task.ticket_links, task.resources, ticketLinks, providedTaskResources, task.priority_id]);
+  }, [task.task_id, task.ticket_links, task.resources, ticketLinks, providedTaskResources, task.priority_id, priority]);
 
   // Computed values - ensure we handle the loading state
   const checklistItems = task.checklist_items || [];
