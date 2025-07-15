@@ -21,18 +21,22 @@ export function useTicketTimeTracking(
   // Ref to track if the component is mounted
   const isMountedRef = useRef(true);
   
+  // Ref to track the current interval ID
+  const currentIntervalIdRef = useRef<string | null>(null);
+  
   // Function to close the current interval - can be called before navigation
   const closeInterval = useCallback(async () => {
-    if (currentIntervalId && isTracking) {
-      console.debug('Manually closing interval:', currentIntervalId);
+    // Use the ref value to ensure we have the most up-to-date interval ID
+    const intervalIdToClose = currentIntervalIdRef.current;
+    
+    if (intervalIdToClose && isTracking) {
+      console.debug('Manually closing interval:', intervalIdToClose);
       try {
-        // Store the interval ID in a local variable to ensure we close the correct one
-        const intervalIdToClose = currentIntervalId;
-        
         // Update state immediately to prevent further tracking
         if (isMountedRef.current) {
           setIsTracking(false);
           setCurrentIntervalId(null);
+          currentIntervalIdRef.current = null;
         }
         
         // Close the interval in the background
@@ -45,7 +49,7 @@ export function useTicketTimeTracking(
       }
     }
     return true;
-  }, [currentIntervalId, isTracking, intervalService]);
+  }, [isTracking, intervalService]);
   
   // Start tracking when component mounts
   useEffect(() => {
@@ -80,7 +84,7 @@ export function useTicketTimeTracking(
           console.debug('Found existing open interval for this ticket, using it for current session:', existingInterval.id);
           if (mounted) {
             setCurrentIntervalId(existingInterval.id);
-            intervalIdRef = existingInterval.id;
+            currentIntervalIdRef.current = existingInterval.id;
             setIsTracking(true);
           }
         } else {
@@ -105,7 +109,7 @@ export function useTicketTimeTracking(
             console.debug('Found open interval on double-check, using it:', doubleCheckInterval.id);
             if (mounted) {
               setCurrentIntervalId(doubleCheckInterval.id);
-              intervalIdRef = doubleCheckInterval.id;
+              currentIntervalIdRef.current = doubleCheckInterval.id;
               setIsTracking(true);
             }
           } else {
@@ -120,7 +124,7 @@ export function useTicketTimeTracking(
             
             if (mounted) {
               setCurrentIntervalId(intervalId);
-              intervalIdRef = intervalId;
+              currentIntervalIdRef.current = intervalId;
               setIsTracking(true);
             }
           }
@@ -142,11 +146,10 @@ export function useTicketTimeTracking(
       
       // FIXED: Close interval when component unmounts (navigating within the app)
       // Close the interval synchronously to ensure it's closed before navigation
-      if (currentIntervalId && isTracking) {
-        console.debug('Closing interval synchronously on unmount:', currentIntervalId);
-        
-        // Store the interval ID in a local variable to ensure we close the correct one
-        const intervalIdToClose = currentIntervalId;
+      const intervalIdToClose = currentIntervalIdRef.current;
+      
+      if (intervalIdToClose && isTracking) {
+        console.debug('Closing interval synchronously on unmount:', intervalIdToClose);
         
         // Close the interval in the background without waiting for it to complete
         intervalService.endInterval(intervalIdToClose).catch(error => {
@@ -156,9 +159,10 @@ export function useTicketTimeTracking(
         // Reset tracking state immediately
         setIsTracking(false);
         setCurrentIntervalId(null);
+        currentIntervalIdRef.current = null;
       }
     };
-  }, [ticketId, ticketNumber, ticketTitle, userId, intervalService, currentIntervalId, isTracking, closeInterval]);
+  }, [ticketId, ticketNumber, ticketTitle, userId, intervalService, isTracking, closeInterval]);
   // Note: We don't need to include isStartingTrackingRef in the dependency array
   // since it's a ref and we're accessing its .current property
 
