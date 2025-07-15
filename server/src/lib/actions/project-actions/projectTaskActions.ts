@@ -418,6 +418,69 @@ export async function getTaskTicketLinksAction(taskId: string): Promise<IProject
     }
 }
 
+export async function getTasksForPhase(phaseId: string): Promise<{
+    tasks: IProjectTask[];
+    ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] };
+    taskResources: { [taskId: string]: any[] };
+}> {
+    try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser) {
+            throw new Error("user not found");
+        }
+        const {knex: db} = await createTenantKnex();
+        return await withTransaction(db, async (trx: Knex.Transaction) => {
+            await checkPermission(currentUser, 'project', 'read', trx);
+            
+            // Get phase to get its WBS code
+            const phase = await trx('project_phases')
+                .where({ phase_id: phaseId })
+                .first();
+                
+            if (!phase) {
+                throw new Error('Phase not found');
+            }
+            
+            // Get all tasks for this phase
+            const tasks = await ProjectTaskModel.getTasksByPhase(trx, phaseId);
+            
+            // Get all related data in parallel
+            const taskIds = tasks.map(t => t.task_id);
+            const [ticketLinksArray, taskResourcesArray] = await Promise.all([
+                taskIds.length > 0 ? ProjectTaskModel.getTaskTicketLinksForTasks(trx, taskIds) : [],
+                taskIds.length > 0 ? ProjectTaskModel.getTaskResourcesForTasks(trx, taskIds) : []
+            ]);
+            
+            // Convert arrays to maps
+            const ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] } = {};
+            const taskResources: { [taskId: string]: any[] } = {};
+            
+            for (const link of ticketLinksArray) {
+                if (link.task_id) {
+                    if (!ticketLinks[link.task_id]) {
+                        ticketLinks[link.task_id] = [];
+                    }
+                    ticketLinks[link.task_id].push(link);
+                }
+            }
+            
+            for (const resource of taskResourcesArray) {
+                if (resource.task_id) {
+                    if (!taskResources[resource.task_id]) {
+                        taskResources[resource.task_id] = [];
+                    }
+                    taskResources[resource.task_id].push(resource);
+                }
+            }
+            
+            return { tasks, ticketLinks, taskResources };
+        });
+    } catch (error) {
+        console.error('Error getting tasks for phase:', error);
+        throw error;
+    }
+}
+
 export async function addTaskResourceAction(taskId: string, userId: string, role?: string): Promise<void> {
     try {
         const currentUser = await getCurrentUser();

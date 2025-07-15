@@ -18,7 +18,7 @@ interface CreateBlockDocumentInput extends BlockContentInput {
   user_id: string;
   type_id?: string;
   entityId?: string;
-  entityType?: 'ticket' | 'company' | 'contact' | 'asset';
+  entityType?: 'ticket' | 'company' | 'contact' | 'asset' | 'project_task';
 }
 
 // Create a new document with block content

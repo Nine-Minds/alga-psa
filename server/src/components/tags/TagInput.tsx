@@ -148,6 +148,7 @@ export const TagInput: React.FC<TagInputProps> = ({
         <Button
           ref={buttonRef}
           id="tag-add-button"
+          type="button"
           onClick={() => setIsEditing(true)}
           className="text-gray-500 hover:text-gray-700"
           variant="icon"
@@ -184,6 +185,7 @@ export const TagInput: React.FC<TagInputProps> = ({
               />
               <Button
                 id="tag-save-button"
+                type="button"
                 onClick={() => handleSave()}
                 disabled={isSaving || !inputValue.trim()}
                 className="rounded-r-md px-3 py-1 text-sm font-medium border-0 whitespace-nowrap"
@@ -225,6 +227,7 @@ export const TagInput: React.FC<TagInputProps> = ({
               return (
                 <button
                   key={index}
+                  type="button"
                   className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center border-b border-gray-100 last:border-b-0 transition-colors"
                   onMouseDown={(e) => {
                     e.preventDefault();

@@ -9,7 +9,7 @@ export interface ITicket extends TenantEntity, ITaggable {
   title: string;
   url: string | null;
   channel_id: string;
-  company_id: string;
+  company_id: string | null;
   location_id?: string | null;
   contact_name_id: string | null;
   status_id: string;

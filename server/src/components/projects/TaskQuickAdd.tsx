@@ -8,7 +8,7 @@ import TaskFormSkeleton from 'server/src/components/ui/skeletons/TaskFormSkeleto
 
 // Dynamic import for TaskForm
 const TaskForm = dynamic(() => import('./TaskForm'), {
-  loading: () => <TaskFormSkeleton title="Add Task" isEdit={false} />,
+  loading: () => <TaskFormSkeleton isEdit={false} />,
   ssr: false
 });
 
@@ -59,7 +59,7 @@ export default function TaskQuickAdd({
   };
 
   return (
-    <Suspense fallback={<TaskFormSkeleton title={task ? "Edit Task" : "Add Task"} isEdit={!!task} />}>
+    <Suspense fallback={<TaskFormSkeleton isEdit={!!task} />}>
       <TaskForm
         task={task}
         phase={phase}

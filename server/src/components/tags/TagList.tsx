@@ -99,6 +99,7 @@ export const TagList: React.FC<TagListProps> = ({
               allowColorEdit={allowColorEdit}
               trigger={
                 <button
+                  type="button"
                   className="inline-flex items-center justify-center h-full px-2 py-1 hover:opacity-70 transition-opacity"
                   style={{
                     borderRight: `1px dotted ${tag.text_color || colors.text}`,
@@ -112,6 +113,7 @@ export const TagList: React.FC<TagListProps> = ({
             {tag.tag_text}
             {onRemoveTag && (
               <button
+                type="button"
                 onClick={() => void onRemoveTag(tag.tag_id)}
                 className="ml-1 text-red-500 hover:text-red-700"
                 title="Remove tag"

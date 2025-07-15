@@ -9,6 +9,7 @@ import { useDrawer } from "server/src/context/DrawerContext";
 import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import { findTagsByEntityId, findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
+import { getDocumentCountsForEntities } from 'server/src/lib/actions/document-actions/documentActions';
 import { TagManager, TagFilter } from 'server/src/components/tags';
 import { useTags } from 'server/src/context/TagContext';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
@@ -17,7 +18,7 @@ import TaskQuickAdd from './TaskQuickAdd';
 import TaskEdit from './TaskEdit';
 import PhaseQuickAdd from './PhaseQuickAdd';
 import { getProjectTaskStatuses, updatePhase, deletePhase, getProjectTreeData, reorderPhase } from 'server/src/lib/actions/project-actions/projectActions';
-import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction } from 'server/src/lib/actions/project-actions/projectTaskActions';
+import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import styles from './ProjectDetail.module.css';
 import { Toaster, toast } from 'react-hot-toast';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
@@ -31,12 +32,11 @@ import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { HelpCircle } from 'lucide-react';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { generateKeyBetween } from 'fractional-indexing';
+import KanbanBoardSkeleton from 'server/src/components/ui/skeletons/KanbanBoardSkeleton';
 
 interface ProjectDetailProps {
   project: IProject;
   phases: IProjectPhase[];
-  tasks: IProjectTask[];
-  ticketLinks: IProjectTicketLink[];
   statuses: ProjectStatus[];
   users: IUserWithRoles[];
   companies: ICompany[];
@@ -48,8 +48,6 @@ interface ProjectDetailProps {
 export default function ProjectDetail({ 
   project, 
   phases, 
-  tasks: initialTasks, 
-  ticketLinks: _ticketLinks, 
   statuses: initialStatuses, 
   users,
   companies,
@@ -65,9 +63,12 @@ export default function ProjectDetail({
   const [currentPhase, setCurrentPhase] = useState<IProjectPhase | null>(null);
   const [selectedPhase, setSelectedPhase] = useState<IProjectPhase | null>(null);
   const { openDrawer: _openDrawer, closeDrawer: _closeDrawer } = useDrawer();
-  const [projectTasks, setProjectTasks] = useState<IProjectTask[]>(initialTasks);
+  const [projectTasks, setProjectTasks] = useState<IProjectTask[]>([]);
+  const [phaseTicketLinks, setPhaseTicketLinks] = useState<{ [taskId: string]: IProjectTicketLinkWithDetails[] }>({});
+  const [phaseTaskResources, setPhaseTaskResources] = useState<{ [taskId: string]: any[] }>({});
   const [projectPhases, setProjectPhases] = useState<IProjectPhase[]>(phases);
   const [projectStatuses, setProjectStatuses] = useState<ProjectStatus[]>(initialStatuses);
+  const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [defaultStatus, setDefaultStatus] = useState<ProjectStatus | null>(null);
   const [editingPhaseId, setEditingPhaseId] = useState<string | null>(null);
@@ -149,6 +150,7 @@ export default function ProjectDetail({
   const [selectedTaskTags, setSelectedTaskTags] = useState<string[]>([]);
   const [taskTags, setTaskTags] = useState<Record<string, ITag[]>>({});
   const [allTaskTags, setAllTaskTags] = useState<ITag[]>([]);
+  const [taskDocumentCounts, setTaskDocumentCounts] = useState<Map<string, number>>(new Map());
 
   const filteredTasks = useMemo(() => {
     if (!selectedPhase) return [];
@@ -307,6 +309,73 @@ export default function ProjectDetail({
       }
     }
   }, [allTags]);
+
+  // Fetch tasks when phase is selected
+  useEffect(() => {
+    const fetchPhaseTasks = async () => {
+      if (!selectedPhase) {
+        setProjectTasks([]);
+        setPhaseTicketLinks({});
+        setPhaseTaskResources({});
+        return;
+      }
+
+      setIsLoadingTasks(true);
+      try {
+        const { tasks, ticketLinks, taskResources } = await getTasksForPhase(selectedPhase.phase_id);
+        
+        // Add checklist items to tasks
+        const tasksWithChecklists = await Promise.all(
+          tasks.map(async (task) => {
+            const checklistItems = await getTaskChecklistItems(task.task_id);
+            return { ...task, checklist_items: checklistItems };
+          })
+        );
+        
+        setProjectTasks(tasksWithChecklists);
+        setPhaseTicketLinks(ticketLinks);
+        setPhaseTaskResources(taskResources);
+      } catch (error) {
+        console.error('Error fetching phase tasks:', error);
+        toast.error('Failed to load tasks for the selected phase');
+      } finally {
+        setIsLoadingTasks(false);
+      }
+    };
+
+    fetchPhaseTasks();
+  }, [selectedPhase]);
+
+  // Fetch document counts for tasks in the selected phase
+  useEffect(() => {
+    const fetchDocumentCounts = async () => {
+      if (!selectedPhase || filteredTasks.length === 0) {
+        setTaskDocumentCounts(new Map());
+        return;
+      }
+      
+      try {
+        // Get task IDs for bulk fetch
+        const taskIds = filteredTasks.map(task => task.task_id);
+        
+        // Fetch all document counts in one query
+        const countMap = await getDocumentCountsForEntities(taskIds, 'project_task');
+        
+        // Set the Map directly
+        setTaskDocumentCounts(countMap);
+      } catch (error) {
+        console.error('Error fetching document counts:', error);
+        // Set empty counts on error
+        const emptyMap = new Map<string, number>();
+        filteredTasks.forEach(task => {
+          emptyMap.set(task.task_id, 0);
+        });
+        setTaskDocumentCounts(emptyMap);
+      }
+    };
+    
+    fetchDocumentCounts();
+  }, [selectedPhase, filteredTasks]);
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     e.dataTransfer.setData('text/plain', taskId);
@@ -1040,44 +1109,43 @@ export default function ProjectDetail({
           </div>
         </div>
         <div className={styles.kanbanWrapper}>
-          <KanbanBoard
-            tasks={projectTasks}
-            phaseTasks={filteredTasks}
-            users={users}
-            taskTypes={taskTypes}
-            statuses={projectStatuses}
-            isAddingTask={isAddingTask}
-            selectedPhase={!!selectedPhase}
-            ticketLinks={projectTasks.reduce((acc, task) => {
-              if (task.ticket_links) {
-                acc[task.task_id] = task.ticket_links;
-              }
-              return acc;
-            }, {} as { [taskId: string]: IProjectTicketLinkWithDetails[] })}
-            taskResources={projectTasks.reduce((acc, task) => {
-              if (task.resources) {
-                acc[task.task_id] = task.resources;
-              }
-              return acc;
-            }, {} as { [taskId: string]: any[] })}
-            taskTags={taskTags}
-            allTaskTags={allTaskTags}
-            projectTreeData={projectTreeData} // Pass project tree data
-            animatingTasks={animatingTasks}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onAddCard={handleAddCard}
-            onTaskSelected={handleTaskSelected}
-            onAssigneeChange={handleAssigneeChange}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onReorderTasks={handleReorderTasks}
-            onMoveTaskClick={handleMoveTaskClick}
-            onDuplicateTaskClick={handleDuplicateTaskClick}
-            onEditTaskClick={handleTaskSelected}
-            onDeleteTaskClick={handleDeleteTaskClick}
-            onTaskTagsChange={handleTaskTagsChange}
-          />
+          {!selectedPhase ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-gray-500">Please select a phase to view tasks</div>
+            </div>
+          ) : isLoadingTasks ? (
+            <KanbanBoardSkeleton />
+          ) : (
+            <KanbanBoard
+              tasks={projectTasks}
+              phaseTasks={filteredTasks}
+              users={users}
+              taskTypes={taskTypes}
+              statuses={projectStatuses}
+              isAddingTask={isAddingTask}
+              selectedPhase={!!selectedPhase}
+              ticketLinks={phaseTicketLinks}
+              taskResources={phaseTaskResources}
+              taskTags={taskTags}
+              taskDocumentCounts={taskDocumentCounts}
+              allTaskTags={allTaskTags}
+              projectTreeData={projectTreeData} // Pass project tree data
+              animatingTasks={animatingTasks}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onAddCard={handleAddCard}
+              onTaskSelected={handleTaskSelected}
+              onAssigneeChange={handleAssigneeChange}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onReorderTasks={handleReorderTasks}
+              onMoveTaskClick={handleMoveTaskClick}
+              onDuplicateTaskClick={handleDuplicateTaskClick}
+              onEditTaskClick={handleTaskSelected}
+              onDeleteTaskClick={handleDeleteTaskClick}
+              onTaskTagsChange={handleTaskTagsChange}
+            />
+          )}
         </div>
       </div>
     );
@@ -1136,8 +1204,8 @@ export default function ProjectDetail({
       </div>
 
       {(showQuickAdd && (currentPhase || selectedPhase)) && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg shadow-lg relative">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg relative w-full max-w-3xl">
             <button
               onClick={handleCloseQuickAdd}
               className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"

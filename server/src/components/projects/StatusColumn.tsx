@@ -18,6 +18,7 @@ interface StatusColumnProps {
   ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] };
   taskResources: { [taskId: string]: any[] };
   taskTags?: Record<string, ITag[]>;
+  taskDocumentCounts?: Record<string, number>;
   allTaskTagTexts?: string[];
   statusIcon: React.ReactNode;
   backgroundColor: string;
@@ -50,6 +51,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   ticketLinks,
   taskResources,
   taskTags = {},
+  taskDocumentCounts = {},
   allTaskTagTexts = [],
   statusIcon,
   backgroundColor,
@@ -278,7 +280,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
     >
-      <div className="font-bold text-sm p-3 rounded-t-lg flex items-center justify-between relative z-10">
+      <div className="font-bold text-sm p-3 rounded-t-lg flex items-center justify-between relative">
         <div className={`flex ${darkBackgroundColor} rounded-[20px] border-2 ${borderColor} shadow-sm items-center ps-3 py-3 pe-4`}>
           {statusIcon}
           <span className="ml-2">{status.custom_name || status.name}</span>
@@ -318,6 +320,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
               ticketLinks={ticketLinks[task.task_id]}
               taskResources={taskResources[task.task_id]}
               taskTags={taskTags[task.task_id] || []}
+              documentCount={taskDocumentCounts[task.task_id]}
               isAnimating={animatingTasks.has(task.task_id)}
               onTaskSelected={onTaskSelected}
               onAssigneeChange={onAssigneeChange}
