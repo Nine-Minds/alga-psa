@@ -202,8 +202,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             if (intervalId) {
                 clearInterval(intervalId);
             }
+            
+            // Ensure interval is closed when component unmounts
+            if (currentIntervalId) {
+                console.debug('Closing interval in timer effect cleanup');
+                closeInterval();
+            }
         };
-    }, [isRunning, tick]);
+    }, [isRunning, tick, currentIntervalId, closeInterval]);
 
     // Fetch tags when component mounts
     useEffect(() => {
@@ -270,10 +276,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             }
         };
         
-        // Add event listener for route change start
-        window.addEventListener('beforeunload', () => {
+        // Add event listener for beforeunload to close interval when leaving the page
+        const handleBeforeUnload = () => {
+            console.debug('Page unload detected, closing interval');
             closeInterval();
-        });
+        };
+        
+        window.addEventListener('beforeunload', handleBeforeUnload);
         
         // Patch the router.push method to close interval before navigation
         const originalPush = router.push;
@@ -282,6 +291,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         // @ts-ignore - Override router methods to close interval before navigation
         router.push = async (...args: any[]) => {
             const url = args[0];
+            console.debug('Router.push intercepted:', url);
             await handleBeforeNavigation(url);
             return originalPush.apply(router, args);
         };
@@ -289,21 +299,28 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         // @ts-ignore - Override router methods to close interval before navigation
         router.replace = async (...args: any[]) => {
             const url = args[0];
+            console.debug('Router.replace intercepted:', url);
             await handleBeforeNavigation(url);
             return originalReplace.apply(router, args);
         };
         
         // Cleanup function to restore original router methods
         return () => {
-            window.removeEventListener('beforeunload', () => {
+            console.debug('Navigation effect cleanup - closing interval and restoring router methods');
+            
+            // Close interval on cleanup
+            if (currentIntervalId) {
+                console.debug('Closing interval in navigation effect cleanup');
                 closeInterval();
-            });
+            }
+            
+            window.removeEventListener('beforeunload', handleBeforeUnload);
             
             // @ts-ignore - Restore original router methods
             router.push = originalPush;
             router.replace = originalReplace;
         };
-    }, [router, closeInterval, initialTicket.ticket_id]);
+    }, [router, closeInterval, initialTicket.ticket_id, currentIntervalId]);
     
     // Function to close the current interval before navigation
     // Enhanced function to close the interval - will find and close any open interval for this ticket
@@ -379,6 +396,12 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const handleCompanyClick = async () => {
         if (ticket.company_id) {
             try {
+                // Close interval before opening drawer
+                if (currentIntervalId) {
+                    console.debug('Company click - closing interval before opening drawer');
+                    await closeInterval();
+                }
+                
                 const company = await getCompanyById(ticket.company_id);
                 if (company) {
                     openDrawer(
@@ -400,8 +423,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
     };
 
-    const handleContactClick = () => {
+    const handleContactClick = async () => {
         if (contactInfo && company) {
+            // Close interval before opening drawer
+            if (currentIntervalId) {
+                console.debug('Contact click - closing interval before opening drawer');
+                await closeInterval();
+            }
+            
             openDrawer(
                 <ContactDetailsView 
                     initialContact={{
@@ -417,7 +446,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
     };
 
-  const handleAgentClick = (userId: string) => {
+  const handleAgentClick = async (userId: string) => {
+    // Close interval before opening drawer
+    if (currentIntervalId) {
+        console.debug('Agent click - closing interval before opening drawer');
+        await closeInterval();
+    }
+    
     openDrawer(
       <AgentScheduleDrawer
         agentId={userId}

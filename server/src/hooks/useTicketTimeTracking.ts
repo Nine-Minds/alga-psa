@@ -18,14 +18,26 @@ export function useTicketTimeTracking(
   // Ref to track if a startTracking operation is in progress to prevent race conditions
   const isStartingTrackingRef = useRef(false);
   
+  // Ref to track if the component is mounted
+  const isMountedRef = useRef(true);
+  
   // Function to close the current interval - can be called before navigation
   const closeInterval = useCallback(async () => {
     if (currentIntervalId && isTracking) {
       console.debug('Manually closing interval:', currentIntervalId);
       try {
-        await intervalService.endInterval(currentIntervalId);
-        setIsTracking(false);
-        setCurrentIntervalId(null);
+        // Store the interval ID in a local variable to ensure we close the correct one
+        const intervalIdToClose = currentIntervalId;
+        
+        // Update state immediately to prevent further tracking
+        if (isMountedRef.current) {
+          setIsTracking(false);
+          setCurrentIntervalId(null);
+        }
+        
+        // Close the interval in the background
+        await intervalService.endInterval(intervalIdToClose);
+        console.debug('Successfully closed interval:', intervalIdToClose);
         return true;
       } catch (error) {
         console.error('Error closing interval:', error);
@@ -126,12 +138,25 @@ export function useTicketTimeTracking(
     // End tracking when component unmounts
     return () => {
       mounted = false;
+      isMountedRef.current = false;
       
       // FIXED: Close interval when component unmounts (navigating within the app)
-      // Use the closeInterval function to ensure state is updated properly
-      closeInterval().catch(error => {
-        console.error('Error closing interval on component unmount:', error);
-      });
+      // Close the interval synchronously to ensure it's closed before navigation
+      if (currentIntervalId && isTracking) {
+        console.debug('Closing interval synchronously on unmount:', currentIntervalId);
+        
+        // Store the interval ID in a local variable to ensure we close the correct one
+        const intervalIdToClose = currentIntervalId;
+        
+        // Close the interval in the background without waiting for it to complete
+        intervalService.endInterval(intervalIdToClose).catch(error => {
+          console.error('Error ending interval on component unmount:', error);
+        });
+        
+        // Reset tracking state immediately
+        setIsTracking(false);
+        setCurrentIntervalId(null);
+      }
     };
   }, [ticketId, ticketNumber, ticketTitle, userId, intervalService, currentIntervalId, isTracking, closeInterval]);
   // Note: We don't need to include isStartingTrackingRef in the dependency array
