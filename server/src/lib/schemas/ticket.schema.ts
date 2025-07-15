@@ -90,6 +90,7 @@ export const ticketListItemSchema = baseTicketSchema.extend({
     priority_color: z.string().optional(),
     channel_name: z.string(),
     category_name: z.string(),
+    company_name: z.string(),
     entered_by_name: z.string(),
     assigned_to_name: z.string().nullable()
 });

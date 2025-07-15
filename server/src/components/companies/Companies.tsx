@@ -25,19 +25,19 @@ import CompaniesList from './CompaniesList';
 import ViewSwitcher, { ViewSwitcherOption } from '../ui/ViewSwitcher';
 import { TrashIcon, MoreVertical, CloudDownload, Upload, LayoutGrid, List, Search, XCircle } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import CustomSelect from '../ui/CustomSelect';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { useUserPreference } from 'server/src/hooks/useUserPreference';
 import CompaniesImportDialog from './CompaniesImportDialog';
-import { ConfirmationDialog } from '../ui/ConfirmationDialog';
-import { Dialog, DialogContent, DialogFooter } from '../ui/Dialog';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';
 import Drawer from 'server/src/components/ui/Drawer';
-import CompanyDetails from './CompanyDetails';
+import CompanyDetails from 'server/src/components/companies/CompanyDetails';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import toast from 'react-hot-toast';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
-import LoadingIndicator from '../ui/LoadingIndicator';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 const COMPANY_VIEW_MODE_SETTING = 'company_list_view_mode';
 

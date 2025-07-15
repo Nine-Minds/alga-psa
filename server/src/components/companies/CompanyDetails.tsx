@@ -21,6 +21,7 @@ import { updateCompany, uploadCompanyLogo, deleteCompanyLogo, getCompanyById } f
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
 import { Button } from 'server/src/components/ui/Button';
+import { ExternalLink } from 'lucide-react';
 import BackNav from 'server/src/components/ui/BackNav';
 import TaxSettingsForm from 'server/src/components/TaxSettingsForm';
 import InteractionsFeed from '../interactions/InteractionsFeed';
@@ -881,7 +882,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     <ReflectionContainer id={id} label="Company Details">
       <div className="flex items-center space-x-5 mb-4 pt-2">
         {!quickView && (
-          <BackNav href={!isInDrawer ? "/msp/companies" : undefined}>
+          <BackNav href="/msp/companies">
             {isInDrawer ? 'Back' : 'Back to Clients'}
           </BackNav>
         )}
@@ -913,9 +914,24 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           />
         </div>
 
-        <Heading size="6" tabIndex={quickView ? 0 : undefined} autoFocus={quickView}>
-          {editedCompany.company_name}
-        </Heading>
+        <div className="flex-1 flex items-center justify-between">
+          <Heading size="6" tabIndex={quickView ? 0 : undefined} autoFocus={quickView}>
+            {editedCompany.company_name}
+          </Heading>
+          
+          {isInDrawer && (
+            <Button
+              id={`${id}-go-to-client-button`}
+              onClick={() => window.open(`/msp/companies/${editedCompany.company_id}`, '_blank')}
+              variant="soft"
+              size="sm"
+              className="flex items-center ml-4 mr-8"
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Go to client
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Content Area */}

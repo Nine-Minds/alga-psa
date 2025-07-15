@@ -573,6 +573,7 @@ export async function getTicketsForListWithCursor(
         'p.color as priority_color',
         'c.channel_name',
         'cat.category_name',
+        'comp.company_name',
         trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
         trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name")
       )
@@ -592,6 +593,10 @@ export async function getTicketsForListWithCursor(
       .leftJoin('categories as cat', function() {
         this.on('t.category_id', 'cat.category_id')
            .andOn('t.tenant', 'cat.tenant')
+      })
+      .leftJoin('companies as comp', function() {
+        this.on('t.company_id', 'comp.company_id')
+           .andOn('t.tenant', 'comp.tenant')
       })
       .leftJoin('users as u', function() {
         this.on('t.entered_by', 'u.user_id')
@@ -720,6 +725,7 @@ export async function getTicketsForListWithCursor(
         priority_color,
         channel_name,
         category_name,
+        company_name,
         entered_by_name,
         assigned_to_name,
         ...rest
@@ -736,6 +742,7 @@ export async function getTicketsForListWithCursor(
         priority_color: priority_color || '#6B7280',
         channel_name: channel_name || 'Unknown',
         category_name: category_name || 'Unknown',
+        company_name: company_name || 'Unknown',
         entered_by_name: entered_by_name || 'Unknown',
         assigned_to_name: assigned_to_name || 'Unknown',
         ...convertDates(rest)

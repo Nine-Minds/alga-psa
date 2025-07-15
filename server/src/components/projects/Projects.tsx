@@ -17,7 +17,7 @@ import { TagFilter, TagManager } from 'server/src/components/tags';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
-import { Search, MoreVertical, Pen, Trash2, XCircle } from 'lucide-react';
+import { Search, MoreVertical, Pen, Trash2, XCircle, ExternalLink } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useDrawer } from "server/src/context/DrawerContext";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
@@ -31,6 +31,8 @@ import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import Drawer from 'server/src/components/ui/Drawer';
+import CompanyDetails from 'server/src/components/companies/CompanyDetails';
 
 interface ProjectsProps {
   initialProjects: IProject[];
@@ -65,6 +67,10 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
   // Data for pickers
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [users, setUsers] = useState<IUserWithRoles[]>([]);
+  
+  // Quick View state
+  const [quickViewCompany, setQuickViewCompany] = useState<ICompany | null>(null);
+  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
   
   const handleTagsChange = (projectId: string, tags: ITag[]) => {
     projectTagsRef.current[projectId] = tags;
@@ -242,6 +248,14 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
     }
   };
 
+  const onQuickViewCompany = (companyId: string) => {
+    const company = companies.find(c => c.company_id === companyId);
+    if (company) {
+      setQuickViewCompany(company);
+      setIsQuickViewOpen(true);
+    }
+  };
+
   const columns: ColumnDefinition<IProject>[] = [
     {
       title: 'Project Name',
@@ -259,7 +273,19 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
       width: '15%',
       render: (value, record) => {
         const company = companies.find(c => c.company_id === value);
-        return company ? company.company_name : 'No Client';
+        if (!company) return 'No Client';
+        
+        return (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onQuickViewCompany(value);
+            }}
+            className="text-blue-500 hover:underline text-left"
+          >
+            {company.company_name}
+          </button>
+        );
       }
     },
     {
@@ -539,6 +565,23 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
         confirmLabel="Delete"
         cancelLabel="Cancel"
       />
+
+      {/* Company Quick View Drawer */}
+      <Drawer
+        isOpen={isQuickViewOpen}
+        onClose={() => {
+          setIsQuickViewOpen(false);
+          setQuickViewCompany(null);
+        }}
+      >
+        {quickViewCompany && (
+          <CompanyDetails
+            company={quickViewCompany}
+            isInDrawer={true}
+            quickView={true}
+          />
+        )}
+      </Drawer>
     </div>
   );
 }

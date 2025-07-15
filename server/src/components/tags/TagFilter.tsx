@@ -35,7 +35,7 @@ export const TagFilter: React.FC<TagFilterProps> = ({
       <Popover.Trigger asChild>
         <button className={`flex items-center gap-2 bg-white border border-gray-300 rounded-md p-2 hover:bg-gray-50 ${className}`}>
           <TagIcon size={16} className="text-gray-400" />
-          <span className="text-gray-400">Filter by tags</span>
+          <span className="text-gray-400">Tags Filter</span>
           {selectedTags.length > 0 && (
             <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-0.5 rounded-full">
               {selectedTags.length}
