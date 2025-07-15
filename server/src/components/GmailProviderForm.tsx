@@ -17,7 +17,8 @@ import { Alert, AlertDescription } from './ui/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
 import { ExternalLink, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
-import { createEmailProvider, updateEmailProvider, setupPubSub } from '../lib/actions/email-actions/emailProviderActions';
+import { createEmailProvider, updateEmailProvider } from '../lib/actions/email-actions/emailProviderActions';
+import { setupPubSub } from 'server/src/lib/actions/email-actions/setupPubSub';
 
 const gmailProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),
@@ -185,9 +186,8 @@ export function GmailProviderForm({
           popup?.close();
           
           if (event.data.success) {
-            // Store the authorization code and tokens
-            form.setValue('authorizationCode', event.data.data.code);
-            form.setValue('oauthState', event.data.data.state);
+            // Store the authorization code and tokens in OAuth data (not form)
+            // These are temporary OAuth fields, not part of the provider configuration
             
             // Store tokens for the submit
             setOauthData(event.data.data);

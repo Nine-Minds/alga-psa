@@ -21,7 +21,7 @@ export async function setupPubSub(request: SetupPubSubRequest) {
 
     // Get Google service account credentials
     const secretProvider = getSecretProviderInstance();
-    const serviceAccountKey = await secretProvider.getSecret('google_service_account_key');
+    const serviceAccountKey = await secretProvider.getAppSecret('google_service_account_key');
     
     if (!serviceAccountKey) {
       throw new Error('Google service account credentials not configured. Please contact your administrator.');

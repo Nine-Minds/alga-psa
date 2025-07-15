@@ -3,6 +3,8 @@ import { headers } from 'next/headers';
 import { getSecretProviderInstance } from '@shared/core';
 import axios from 'axios';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Microsoft OAuth callback endpoint
  * Handles the authorization code exchange for access and refresh tokens

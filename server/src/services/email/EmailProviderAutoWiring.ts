@@ -271,8 +271,8 @@ export class EmailProviderAutoWiring {
     try {
       // Get OAuth client credentials
       const secretProvider = getSecretProviderInstance();
-      const clientId = process.env.MICROSOFT_CLIENT_ID || await secretProvider.getSecret('microsoft_client_id');
-      const clientSecret = process.env.MICROSOFT_CLIENT_SECRET || await secretProvider.getSecret('microsoft_client_secret');
+      const clientId = process.env.MICROSOFT_CLIENT_ID || await secretProvider.getAppSecret('microsoft_client_id');
+      const clientSecret = process.env.MICROSOFT_CLIENT_SECRET || await secretProvider.getAppSecret('microsoft_client_secret');
       
       if (!clientId || !clientSecret) {
         throw new Error('Microsoft OAuth credentials not configured');
@@ -319,8 +319,8 @@ export class EmailProviderAutoWiring {
     try {
       // Get OAuth client credentials
       const secretProvider = getSecretProviderInstance();
-      const clientId = process.env.GOOGLE_CLIENT_ID || await secretProvider.getSecret('google_client_id');
-      const clientSecret = process.env.GOOGLE_CLIENT_SECRET || await secretProvider.getSecret('google_client_secret');
+      const clientId = process.env.GOOGLE_CLIENT_ID || await secretProvider.getAppSecret('google_client_id');
+      const clientSecret = process.env.GOOGLE_CLIENT_SECRET || await secretProvider.getAppSecret('google_client_secret');
       
       if (!clientId || !clientSecret) {
         throw new Error('Google OAuth credentials not configured');

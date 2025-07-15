@@ -138,10 +138,10 @@ async function verifyGoogleToken(token: string): Promise<void> {
     // Verify the token
     const ticket = await client.verifyIdToken({
       idToken: token,
-      audience: null, // Accept any audience for Pub/Sub
+      audience: undefined, // Accept any audience for Pub/Sub
     });
     
-    const payload = ticket.getPayload();
+    const payload = await ticket.getPayload();
     
     // Verify it's from Google Pub/Sub
     if (payload?.email !== 'pubsub-publishing@system.gserviceaccount.com' &&

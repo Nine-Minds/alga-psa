@@ -193,9 +193,8 @@ export function MicrosoftProviderForm({
           popup?.close();
           
           if (event.data.success) {
-            // Store the authorization code and tokens
-            form.setValue('authorizationCode', event.data.data.code);
-            form.setValue('oauthState', event.data.data.state);
+            // Store the authorization code and tokens in OAuth data (not form)
+            // These are temporary OAuth fields, not part of the provider configuration
             
             // Store tokens for the submit
             setOauthData(event.data.data);

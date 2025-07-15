@@ -149,6 +149,6 @@ function extractMessageId(resource: string): string | null {
 }
 
 // Generate client state for webhook validation
-export function generateClientState(): string {
+function generateClientState(): string {
   return randomBytes(32).toString('hex');
 }

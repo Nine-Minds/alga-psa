@@ -38,6 +38,7 @@ export interface EmailMessage {
   id: string;
   provider: 'microsoft' | 'google';
   providerId: string;
+  tenant: string;
   receivedAt: string;
   from: {
     email: string;
@@ -66,7 +67,6 @@ export interface EmailMessage {
   threadId?: string;
   references?: string[];
   inReplyTo?: string;
-  tenant: string;
 }
 
 export interface EmailMessageDetails extends EmailMessage {

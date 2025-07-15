@@ -104,6 +104,7 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
           </p>
         </div>
         <Button 
+          id="add-defaults-button"
           onClick={() => setShowForm(true)}
           disabled={showForm || !!editingDefaults}
         >
@@ -203,6 +204,7 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
 
                   <div className="flex items-center gap-2 ml-4">
                     <Button
+                      id={`edit-defaults-${defaultConfig.id}`}
                       variant="outline"
                       size="sm"
                       onClick={() => handleEdit(defaultConfig)}
@@ -211,6 +213,7 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button
+                      id={`delete-defaults-${defaultConfig.id}`}
                       variant="outline"
                       size="sm"
                       onClick={() => handleDelete(defaultConfig.id)}

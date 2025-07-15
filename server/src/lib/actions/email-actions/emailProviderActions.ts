@@ -4,6 +4,7 @@ import { createTenantKnex } from '../../db';
 import { getCurrentUser } from '../user-actions/userActions';
 import type { EmailProvider, MicrosoftEmailProviderConfig, GoogleEmailProviderConfig } from '../../../components/EmailProviderConfiguration';
 
+
 export async function getEmailProviders(): Promise<{ providers: EmailProvider[] }> {
   const user = await getCurrentUser();
   if (!user) {
@@ -431,4 +432,4 @@ export async function testEmailProviderConnection(providerId: string): Promise<{
 }
 
 // Re-export setupPubSub from the actual implementation
-export { setupPubSub } from './setupPubSub';
+// export { setupPubSub } from './setupPubSub';

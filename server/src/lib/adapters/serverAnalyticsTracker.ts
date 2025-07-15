@@ -70,7 +70,9 @@ export class ServerAnalyticsTracker implements IAnalyticsTracker {
 
   async trackFeatureUsage(feature: string, userId?: string, metadata?: Record<string, any>): Promise<void> {
     try {
-      featureAdoptionTracker.trackFeatureUsage(feature, userId, metadata);
+      if (userId) {
+        featureAdoptionTracker.trackFeatureUsage(feature, userId, metadata);
+      }
     } catch (error) {
       console.error('Failed to track feature usage:', error);
       // Don't throw - analytics failure shouldn't break ticket operations

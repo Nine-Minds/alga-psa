@@ -80,7 +80,8 @@ export async function getTicketFieldOptions(): Promise<{ options: TicketFieldOpt
       // Users
       knex('users')
         .where({ tenant })
-        .orderBy(['first_name', 'last_name'], 'asc')
+        .orderBy('first_name', 'asc')
+        .orderBy('last_name', 'asc')
         .select('user_id as id', 'username')
         .select(knex.raw("CONCAT(first_name, ' ', last_name) as name"))
         .then(rows => rows.map(row => ({ 
@@ -268,7 +269,8 @@ export async function getAvailableUsers(): Promise<{ users: TicketFieldOptions['
   try {
     const users = await knex('users')
       .where({ tenant })
-      .orderBy(['first_name', 'last_name'], 'asc')
+      .orderBy('first_name', 'asc')
+      .orderBy('last_name', 'asc')
       .select('user_id as id', 'username')
       .select(knex.raw("CONCAT(first_name, ' ', last_name) as name"))
       .then(rows => rows.map(row => ({ 

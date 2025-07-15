@@ -407,7 +407,7 @@ export class TicketService extends BaseService<ITicket> {
       const ticketResult = await TicketModel.createTicketFromAsset(
         {
           title: data.title,
-          description: data.description,
+          description: data.description || '',
           priority_id: data.priority_id,
           asset_id: data.asset_id,
           company_id: data.company_id

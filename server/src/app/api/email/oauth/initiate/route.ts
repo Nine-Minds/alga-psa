@@ -25,8 +25,8 @@ export async function POST(request: NextRequest) {
     // Get OAuth credentials
     const secretProvider = getSecretProviderInstance();
     const clientId = provider === 'microsoft'
-      ? process.env.MICROSOFT_CLIENT_ID || await secretProvider.getSecret('microsoft_client_id')
-      : process.env.GOOGLE_CLIENT_ID || await secretProvider.getSecret('google_client_id');
+      ? process.env.MICROSOFT_CLIENT_ID || await secretProvider.getAppSecret('microsoft_client_id')
+      : process.env.GOOGLE_CLIENT_ID || await secretProvider.getAppSecret('google_client_id');
 
     if (!clientId) {
       return NextResponse.json({ 

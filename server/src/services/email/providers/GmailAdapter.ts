@@ -68,7 +68,7 @@ export class GmailAdapter extends BaseEmailAdapter {
       this.tokenExpiresAt = new Date(credentials.accessTokenExpiresAt);
 
       // Configure OAuth2 client with stored credentials
-      const vendorConfig = this.config.vendor_config || {};
+      const vendorConfig = this.config.provider_config || {};
       this.oauth2Client.setCredentials({
         access_token: this.accessToken,
         refresh_token: this.refreshToken,
@@ -92,8 +92,8 @@ export class GmailAdapter extends BaseEmailAdapter {
       }
 
       const secretProvider = getSecretProviderInstance();
-      const clientId = process.env.GOOGLE_CLIENT_ID || await secretProvider.getSecret('google_client_id');
-      const clientSecret = process.env.GOOGLE_CLIENT_SECRET || await secretProvider.getSecret('google_client_secret');
+      const clientId = process.env.GOOGLE_CLIENT_ID || await secretProvider.getAppSecret('google_client_id');
+      const clientSecret = process.env.GOOGLE_CLIENT_SECRET || await secretProvider.getAppSecret('google_client_secret');
 
       if (!clientId || !clientSecret) {
         throw new Error('Google OAuth credentials not configured');
@@ -188,8 +188,8 @@ export class GmailAdapter extends BaseEmailAdapter {
    */
   async registerWebhookSubscription(): Promise<void> {
     try {
-      const vendorConfig = this.config.vendor_config || {};
-      const topicName = vendorConfig.pubsubTopicName;
+      const vendorConfig = this.config.provider_config || {};
+      const topicName = vendorConfig.pubsubTopic;
       
       if (!topicName) {
         throw new Error('Pub/Sub topic name not configured');
@@ -200,7 +200,7 @@ export class GmailAdapter extends BaseEmailAdapter {
         userId: 'me',
         requestBody: {
           topicName: `projects/${vendorConfig.projectId}/topics/${topicName}`,
-          labelIds: vendorConfig.labelFilters || ['INBOX'],
+          labelIds: ['INBOX'],
           labelFilterAction: 'include'
         }
       });
@@ -229,7 +229,7 @@ export class GmailAdapter extends BaseEmailAdapter {
   async processWebhookNotification(payload: any): Promise<string[]> {
     try {
       const messageIds: string[] = [];
-      const vendorConfig = this.config.vendor_config || {};
+      const vendorConfig = this.config.provider_config || {};
       
       // Extract historyId from the notification
       const historyId = payload.historyId;
@@ -245,7 +245,7 @@ export class GmailAdapter extends BaseEmailAdapter {
         userId: 'me',
         startHistoryId: lastHistoryId,
         historyTypes: ['messageAdded'],
-        labelId: vendorConfig.labelFilters?.[0] || 'INBOX'
+        labelId: 'INBOX'
       });
 
       if (history.data.history) {
@@ -274,11 +274,11 @@ export class GmailAdapter extends BaseEmailAdapter {
    */
   async markMessageProcessed(messageId: string): Promise<void> {
     try {
-      const vendorConfig = this.config.vendor_config || {};
+      const vendorConfig = this.config.provider_config || {};
       
       // Add a custom label to mark as processed
       // First, check if we have a processed label
-      let processedLabelId = vendorConfig.processedLabelId;
+      let processedLabelId: string | undefined;
       
       if (!processedLabelId) {
         // Try to find or create the label
@@ -303,7 +303,7 @@ export class GmailAdapter extends BaseEmailAdapter {
         }
         
         // Store label ID for future use
-        vendorConfig.processedLabelId = processedLabelId;
+        // Store the label ID for future use (would need to update config)
       }
 
       // Apply the label to the message
@@ -379,22 +379,43 @@ export class GmailAdapter extends BaseEmailAdapter {
         extractAttachments(message.data.payload.parts);
       }
 
+      const fromEmail = getHeader('From') || '';
+      const toEmails = getHeader('To') || '';
+      const ccEmails = getHeader('Cc') || '';
+      
       return {
         id: message.data.id!,
-        threadId: message.data.threadId || message.data.id!,
-        subject: getHeader('Subject'),
-        from: getHeader('From'),
-        to: getHeader('To'),
-        cc: getHeader('Cc'),
-        date: getHeader('Date'),
-        bodyText: bodyContent,
-        bodyHtml: htmlContent || bodyContent,
-        attachments: attachments,
+        provider: 'google' as const,
+        providerId: this.config.id,
+        tenant: this.config.tenant,
+        receivedAt: getHeader('Date') || new Date().toISOString(),
+        from: {
+          email: fromEmail.includes('<') ? fromEmail.split('<')[1].split('>')[0] : fromEmail,
+          name: fromEmail.includes('<') ? fromEmail.split('<')[0].trim() : undefined
+        },
+        to: toEmails ? toEmails.split(',').map((email: string) => ({
+          email: email.includes('<') ? email.split('<')[1].split('>')[0].trim() : email.trim(),
+          name: email.includes('<') ? email.split('<')[0].trim() : undefined
+        })) : [],
+        cc: ccEmails ? ccEmails.split(',').map((email: string) => ({
+          email: email.includes('<') ? email.split('<')[1].split('>')[0].trim() : email.trim(),
+          name: email.includes('<') ? email.split('<')[0].trim() : undefined
+        })) : undefined,
+        subject: getHeader('Subject') || '',
+        body: {
+          text: bodyContent,
+          html: htmlContent
+        },
+        attachments: attachments.map(att => ({
+          id: att.attachmentId,
+          name: att.filename,
+          size: att.size,
+          contentType: att.mimeType
+        })),
         headers: headers.reduce((acc: any, header: any) => {
           acc[header.name] = header.value;
           return acc;
-        }, {}),
-        raw: message.data
+        }, {})
       };
     } catch (error) {
       throw this.handleError(error, 'getMessageDetails');

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
-import { Textarea } from '../ui/Textarea';
+import { TextArea } from '../ui/TextArea';
 import { Switch } from '../ui/Switch';
 import CustomSelect from '../ui/CustomSelect';
 import { Alert, AlertDescription } from '../ui/Alert';
@@ -75,7 +75,7 @@ export function InboundTicketDefaultsForm({
         category_id: defaults.category_id || '',
         subcategory_id: defaults.subcategory_id || '',
         location_id: defaults.location_id || '',
-        entered_by: defaults.entered_by
+        entered_by: defaults.entered_by || null
       });
     }
   }, [defaults]);
@@ -139,7 +139,7 @@ export function InboundTicketDefaultsForm({
     }
   };
 
-  const handleDefaultChange = (field: string, value: string) => {
+  const handleDefaultChange = (field: string, value: string | null) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -194,7 +194,7 @@ export function InboundTicketDefaultsForm({
 
       <div>
         <Label htmlFor="description">Description</Label>
-        <Textarea
+        <TextArea
           id="description"
           value={formData.description}
           onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
@@ -329,10 +329,10 @@ export function InboundTicketDefaultsForm({
 
       {/* Actions */}
       <div className="flex justify-end gap-3 pt-6 border-t">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+        <Button id="cancel-button" type="button" variant="outline" onClick={onCancel} disabled={loading}>
           Cancel
         </Button>
-        <Button type="submit" disabled={loading}>
+        <Button id="submit-button" type="submit" disabled={loading}>
           {loading ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
