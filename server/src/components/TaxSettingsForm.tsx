@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getCompanyTaxSettings, updateCompanyTaxSettings, getTaxRates, createDefaultTaxSettings } from '../lib/actions/taxSettingsActions';
 import { ICompanyTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from '../interfaces/tax.interfaces';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Button } from 'server/src/components/ui/Button';
 
 interface TaxSettingsFormProps {
   companyId: string;
@@ -185,12 +186,13 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ companyId }) => {
     return (
       <div className="text-center">
         <p className="mb-4">No tax settings found for this company.</p>
-        <button
+        <Button
+          id="create-default-tax-settings-button"
           onClick={handleCreateDefaultSettings}
-          className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          variant="default"
         >
           Create Default Tax Settings
-        </button>
+        </Button>
       </div>
     );
   }
@@ -221,7 +223,8 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ companyId }) => {
      {/* Removed UI sections for Tax Components, Thresholds, and Holidays */}
 
       <div className="flex justify-between">
-        <button
+        <Button
+          id="reset-tax-settings-button"
           type="button"
           onClick={() => {
             if (originalSettings) {
@@ -229,18 +232,19 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ companyId }) => {
               setError(null);
             }
           }}
-          className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          variant="outline"
           disabled={isSubmitting}
         >
           Reset Changes
-        </button>
-        <button
+        </Button>
+        <Button
+          id="update-tax-settings-button"
           type="submit"
-          className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          variant="default"
           disabled={isSubmitting}
         >
           {isSubmitting ? 'Updating...' : 'Update Tax Settings'}
-        </button>
+        </Button>
       </div>
     </form>
   );
