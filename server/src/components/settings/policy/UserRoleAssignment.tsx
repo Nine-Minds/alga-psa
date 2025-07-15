@@ -193,8 +193,8 @@ export default function UserRoleAssignment() {
       </CardHeader>
       <CardContent>
         <Flex direction="column" gap="4">
-          <Flex gap="2" align="center" className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <div className="relative z-20 inline-block">
+          <Flex gap="3" align="end" className="p-4 bg-gray-50 rounded-lg">
+            <div className="flex-1 max-w-xs">
               <UserPicker
                 value={selectedUser}
                 onValueChange={setSelectedUser}
@@ -202,7 +202,7 @@ export default function UserRoleAssignment() {
                 label="Select User"
               />
             </div>
-            <div className="relative z-10 inline-block">
+            <div className="flex-1 max-w-xs">
               <CustomSelect
                 value={selectedRole}
                 onValueChange={setSelectedRole}
