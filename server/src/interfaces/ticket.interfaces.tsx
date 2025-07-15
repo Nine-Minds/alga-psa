@@ -40,6 +40,7 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   priority_color?: string;
   channel_name: string;
   category_name: string;
+  company_name: string;
   entered_by_name: string;
   assigned_to_name: string | null;
 }

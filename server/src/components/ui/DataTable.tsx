@@ -120,7 +120,7 @@ const ReflectedTableCell: React.FC<ReflectedTableCellProps> = ({
       style={style}
       data-automation-id={id}
     >
-      <div className="truncate w-full">
+      <div className="break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap">
         {children}
       </div>
     </td>
@@ -159,7 +159,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     if (!tableContainerRef.current) return;
     
     const containerWidth = tableContainerRef.current.clientWidth;
-    const minColumnWidth = 150; // Minimum width for a column in pixels
+    const minColumnWidth = 120; // Reduced minimum width to show more columns with multiline content
     
     // Check if the last column is 'Actions' or 'Action' with interactive elements
     const lastColumnIndex = columns.length - 1;
@@ -207,7 +207,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
       if (!tableContainerRef.current) return;
       
       const containerWidth = tableContainerRef.current.clientWidth;
-      const minColumnWidth = 150; // Minimum width for a column in pixels
+      const minColumnWidth = 120; // Reduced minimum width to show more columns with multiline content
       
       // Check if the last column is 'Actions' or 'Action' with interactive elements
       const lastColumnIndex = columns.length - 1;
@@ -482,7 +482,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                           key={`cell_${rowId}_${columnId}_${cellIndex}`}
                           id={cellId}
                           content={cellContent}
-                          className="px-6 py-4 text-[14px] text-[rgb(var(--color-text-700))] max-w-0"
+                          className="px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top"
                           style={{ width: columns.find(col => col.dataIndex === cell.column.id)?.width }}
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}

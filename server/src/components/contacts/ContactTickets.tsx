@@ -213,7 +213,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
       title: 'Title',
       dataIndex: 'title',
       render: (value: string, record: ITicketListItem) => (
-        <div className="max-w-xs truncate" title={value}>
+        <div className="break-words" title={value}>
           {value}
         </div>
       ),

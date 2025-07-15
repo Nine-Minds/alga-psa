@@ -123,7 +123,7 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
       width: '50%',
       render: (value, record) => (
         <div className="flex items-center gap-2">
-          <span className="font-medium text-gray-900 truncate">{value}</span>
+          <span className="font-medium text-gray-900 break-words">{value}</span>
           {record.type === ActivityType.SCHEDULE && (record as ScheduleActivity).isRecurring && (
              <span title="Recurring Event">
                <Repeat className="h-4 w-4 text-gray-500 flex-shrink-0" />

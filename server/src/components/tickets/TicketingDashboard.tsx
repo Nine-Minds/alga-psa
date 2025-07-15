@@ -21,7 +21,7 @@ import { IChannel, ICompany, IUser } from 'server/src/interfaces';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { deleteTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
-import { MoreVertical, XCircle, Clock, Trash2 } from 'lucide-react';
+import { MoreVertical, XCircle, Clock, Trash2, ExternalLink } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from 'server/src/components/ui/DropdownMenu';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
@@ -29,6 +29,8 @@ import { useIntervalTracking } from 'server/src/hooks/useIntervalTracking';
 import { IntervalManagementDrawer } from 'server/src/components/time-management/interval-tracking/IntervalManagementDrawer';
 import { saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
 import { toast } from 'react-hot-toast';
+import Drawer from 'server/src/components/ui/Drawer';
+import CompanyDetails from 'server/src/components/companies/CompanyDetails';
 
 interface TicketingDashboardProps {
   id?: string;
@@ -104,6 +106,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isLoadingSelf, setIsLoadingSelf] = useState(false);
+  
+  // Quick View state
+  const [quickViewCompanyId, setQuickViewCompanyId] = useState<string | null>(null);
+  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
   
   // Tag-related state
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -196,6 +202,18 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setDeleteError(null);
   };
   
+  const [quickViewCompany, setQuickViewCompany] = useState<ICompany | null>(null);
+  
+  const onQuickViewCompany = async (companyId: string) => {
+    // First try to find the company in our existing data
+    const company = initialCompanies.find(c => c.company_id === companyId);
+    if (company) {
+      setQuickViewCompany(company);
+      setQuickViewCompanyId(companyId);
+      setIsQuickViewOpen(true);
+    }
+  };
+  
   // Initialize currentUser state from props if available
   useEffect(() => {
     // Only fetch user if not already provided in props
@@ -247,7 +265,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     {
       title: 'Ticket Number',
       dataIndex: 'ticket_number',
-      width: '10%',
+      width: '9%',
       render: (value: string, record: ITicketListItem) => (
         <Link
           href={`/msp/tickets/${record.ticket_id}`}
@@ -260,17 +278,17 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     {
       title: 'Title',
       dataIndex: 'title',
-      width: '22%',
+      width: '20%',
     },
     {
       title: 'Status',
       dataIndex: 'status_name',
-      width: '10%',
+      width: '9%',
     },
     {
       title: 'Priority',
       dataIndex: 'priority_name',
-      width: '10%',
+      width: '9%',
       render: (value: string, record: ITicketListItem) => (
         <div className="flex items-center gap-2">
           <div 
@@ -284,7 +302,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     {
       title: 'Board',
       dataIndex: 'channel_name',
-      width: '10%',
+      width: '9%',
     },
     {
       title: 'Category',
@@ -309,14 +327,32 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       },
     },
     {
+      title: 'Client',
+      dataIndex: 'company_name',
+      width: '9%',
+      render: (value: string, record: ITicketListItem) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (record.company_id) {
+              onQuickViewCompany(record.company_id);
+            }
+          }}
+          className="text-blue-500 hover:underline text-left whitespace-normal break-words"
+        >
+          {value || 'No Client'}
+        </button>
+      ),
+    },
+    {
       title: 'Created By',
       dataIndex: 'entered_by_name',
-      width: '10%',
+      width: '9%',
     },
     {
       title: 'Tags',
       dataIndex: 'tags',
-      width: '15%',
+      width: '13%',
       render: (value: string, record: ITicketListItem) => {
         if (!record.ticket_id) return null;
         
@@ -413,6 +449,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         }
       }
       
+      // Find the company name
+      const company = initialCompanies.find(c => c.company_id === newTicket.company_id);
+      const companyName = company ? company.company_name : 'Unknown';
+      
       // Convert the new ticket to match the ITicketListItem format
       const newTicketListItem: ITicketListItem = {
         ticket_id: newTicket.ticket_id,
@@ -429,6 +469,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         subcategory_id: newTicket.subcategory_id,
         category_name: categoryName,
         company_id: newTicket.company_id,
+        company_name: companyName,
         contact_name_id: newTicket.contact_name_id,
         entered_by: newTicket.entered_by,
         entered_by_name: currentUser ? `${currentUser.first_name} ${currentUser.last_name}` : '',
@@ -675,6 +716,24 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           onCreateTimeEntry={handleCreateTimeEntry}
         />
       )}
+      
+      {/* Company Quick View Drawer */}
+      <Drawer
+        isOpen={isQuickViewOpen}
+        onClose={() => {
+          setIsQuickViewOpen(false);
+          setQuickViewCompanyId(null);
+          setQuickViewCompany(null);
+        }}
+      >
+        {quickViewCompany && (
+          <CompanyDetails
+            company={quickViewCompany}
+            isInDrawer={true}
+            quickView={true}
+          />
+        )}
+      </Drawer>
     </ReflectionContainer>
   );
 };
