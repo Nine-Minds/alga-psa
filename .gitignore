@@ -85,6 +85,7 @@ yarn-error.log*
 .roo/
 .mcp.json
 CLAUDE.md
+.claude/
 
 # vercel
 .vercel
