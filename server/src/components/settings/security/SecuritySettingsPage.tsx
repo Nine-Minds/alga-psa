@@ -17,17 +17,17 @@ const RoleManagement = dynamic(() => import('../policy/RoleManagement'), {
 });
 
 const PermissionsMatrix = dynamic(() => import('../policy/PermissionsMatrix'), {
-  loading: () => <SettingsTabSkeleton title="Permissions Matrix" description="Loading permissions configuration..." />,
+  loading: () => <SettingsTabSkeleton title="Permissions Matrix" description="Loading permissions configuration..." showTable={true} showForm={false} />,
   ssr: false
 });
 
 const UserRoleAssignment = dynamic(() => import('../policy/UserRoleAssignment'), {
-  loading: () => <SettingsTabSkeleton title="User Role Assignment" description="Loading user role configuration..." />,
+  loading: () => <SettingsTabSkeleton title="User Role Assignment" description="Loading user role configuration..." showDropdowns={true} />,
   ssr: false
 });
 
 const PolicyManagement = dynamic(() => import('../policy/PolicyManagement'), {
-  loading: () => <SettingsTabSkeleton title="Policy Management" description="Loading policy configuration..." />,
+  loading: () => <SettingsTabSkeleton title="Policy Management" description="Loading policy configuration..." showTextArea={true} showTable={true} noCard={true} />,
   ssr: false
 });
 

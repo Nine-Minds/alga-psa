@@ -21,6 +21,7 @@ interface UserPickerProps {
   labelStyle?: 'bold' | 'medium' | 'normal' | 'none'; 
   buttonWidth?: 'fit' | 'full'; 
   placeholder?: string;
+  userTypeFilter?: string | string[] | null; // null means no filtering, string/array for specific types
 }
 
 // Component for individual option buttons that registers with UI reflection
@@ -64,6 +65,7 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
   labelStyle = 'bold',
   buttonWidth = 'fit',
   placeholder = 'Not assigned',
+  userTypeFilter = 'internal',
   'data-automation-id': dataAutomationId,
   'data-automation-type': dataAutomationType = 'user-picker'
 }) => {
@@ -79,15 +81,26 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
   // Create stable automation ID for the picker
   const pickerId = dataAutomationId || 'account-manager-picker';
   
-  // Find the current user first (even if inactive)
-  const currentUser = users.find(user => user.user_id === value && user.user_type === 'internal');
+  // Apply user type filter
+  const applyUserTypeFilter = (user: IUserWithRoles) => {
+    if (userTypeFilter === null) {
+      return true; // No filtering
+    }
+    if (Array.isArray(userTypeFilter)) {
+      return userTypeFilter.includes(user.user_type);
+    }
+    return user.user_type === userTypeFilter;
+  };
   
-  // Filter for internal users only and exclude inactive users for the dropdown
-  const internalUsers = users.filter(user => 
-    user.user_type === 'internal' && !user.is_inactive
+  // Find the current user first (even if inactive)
+  const currentUser = users.find(user => user.user_id === value && applyUserTypeFilter(user));
+  
+  // Filter users based on type and exclude inactive users for the dropdown
+  const filteredByType = users.filter(user => 
+    applyUserTypeFilter(user) && !user.is_inactive
   );
   
-  const filteredUsers = internalUsers
+  const filteredUsers = filteredByType
     .filter(user => {
       const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim().toLowerCase();
       return fullName.includes(searchQuery.toLowerCase());
