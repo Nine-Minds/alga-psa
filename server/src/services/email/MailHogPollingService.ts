@@ -167,8 +167,19 @@ export class MailHogPollingService {
       return { email: emailAddr || 'test@example.com', name: name || '' };
     }).filter((e: { email: string; name: string }) => e.email && e.email.includes('@')); // Filter out invalid emails
 
+    // Extract threading information
+    const messageId = headers['Message-ID']?.[0] || '';
+    const inReplyTo = headers['In-Reply-To']?.[0] || '';
+    const references = headers.References ? headers.References[0].split(/\s+/) : [];
+    
+    // For threading, we'll pass all potential identifiers to the workflow
+    // and let the database lookup find the correct existing ticket
+    // Don't try to determine threadId here - let the workflow handle it
+    let threadId = messageId; // Default to current message ID
+
     return {
-      id: mailhogMessage.ID,
+      id: messageId, // Use Message-ID header for threading compatibility
+      mailhogId: mailhogMessage.ID, // Keep MailHog's internal ID for debugging
       subject: headers.Subject?.[0] || '(No Subject)',
       from: {
         email: validFromEmail,
@@ -184,9 +195,9 @@ export class MailHogPollingService {
       },
       receivedAt: new Date().toISOString(),
       attachments: this.parseAttachments(mailhogMessage),
-      threadId: headers['Message-ID']?.[0] || '',
-      inReplyTo: headers['In-Reply-To']?.[0] || '',
-      references: headers.References ? headers.References[0].split(/\s+/) : []
+      threadId: threadId,
+      inReplyTo: inReplyTo,
+      references: references
     };
   }
 
@@ -346,22 +357,21 @@ export class MailHogPollingService {
     }
     
     try {
-      // Get the actual tenant from the database
-      const { getAdminConnection, destroyAdminConnection } = await import('@shared/db/admin.js');
+      // Get the actual tenant from the database using proper transaction wrapper
+      const { withAdminTransaction } = await import('@shared/db/index.js');
       
-      // Force a fresh connection to ensure we see the latest data
-      await destroyAdminConnection();
-      const knex = await getAdminConnection();
+      const tenantId = await withAdminTransaction(async (trx) => {
+        const tenant = await trx('tenants').select('tenant').first();
+        if (tenant) {
+          console.log(`[TENANT-DEBUG] MailHogPollingService found tenant in database: tenant=${tenant.tenant}`);
+          return tenant.tenant;
+        }
+        
+        // No tenant found - this is an error condition
+        throw new Error('No tenant found in database - cannot process emails without a valid tenant');
+      });
       
-      const tenant = await knex('tenants').select('tenant').first();
-      if (tenant) {
-        console.log(`[TENANT-DEBUG] MailHogPollingService found tenant in database: tenant=${tenant.tenant}`);
-        return tenant.tenant;
-      }
-      
-      // Fallback to default test tenant ID if no tenant found
-      console.warn('⚠️ No tenant found in database, using default test tenant ID');
-      return '00000000-0000-0000-0000-000000000001';
+      return tenantId;
     } catch (error: any) {
       console.warn('⚠️ Failed to get tenant from database, using default test tenant ID:', error.message);
       return '00000000-0000-0000-0000-000000000001';

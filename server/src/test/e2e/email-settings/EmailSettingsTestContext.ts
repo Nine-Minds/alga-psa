@@ -399,13 +399,36 @@ export class EmailSettingsTestContext extends E2ETestContext {
     const startTime = Date.now();
     
     while (Date.now() - startTime < timeoutMs) {
+      // Search for tickets by email metadata, checking both the MailHog ID and Message-ID
+      // The emailId passed in is the MailHog internal ID, but the workflow stores the Message-ID header
       const [ticket] = await this.db('tickets')
         .where('tenant', tenant_id)
-        .whereRaw(`email_metadata->>'messageId' = ?`, [emailId])
+        .where(function() {
+          // Primary search: look for MailHog internal ID in mailhogId field
+          this.whereRaw(`email_metadata->>'mailhogId' = ?`, [emailId])
+          // Fallback search: look for Message-ID in messageId field (in case emailId is actually the Message-ID)
+          .orWhereRaw(`email_metadata->>'messageId' = ?`, [emailId]);
+        })
         .limit(1);
       
       if (ticket) {
+        console.log(`     ✅ Found ticket for email ID ${emailId}: ${ticket.ticket_id}`);
+        console.log(`     📧 Email metadata: ${JSON.stringify(ticket.email_metadata)}`);
         return ticket;
+      }
+      
+      // Debug: Log what tickets exist for this tenant to help troubleshoot
+      if ((Date.now() - startTime) > timeoutMs / 2) { // Only log after half the timeout
+        const allTickets = await this.db('tickets')
+          .where('tenant', tenant_id)
+          .whereNotNull('email_metadata')
+          .select('ticket_id', 'title', 'email_metadata')
+          .limit(5);
+        
+        console.log(`     🔍 Debug: Found ${allTickets.length} tickets with email metadata:`);
+        allTickets.forEach(t => {
+          console.log(`       - ${t.ticket_id}: "${t.title}" -> ${JSON.stringify(t.email_metadata)}`);
+        });
       }
       
       // Wait 500ms before checking again

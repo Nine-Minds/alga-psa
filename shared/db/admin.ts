@@ -7,18 +7,18 @@ let adminConnection: any = null;
 
 export async function getAdminConnection() {
     const connectionId = Math.random().toString(36).substring(7);
-    console.log(`[getAdminConnection:${connectionId}] Called - adminConnection exists:`, !!adminConnection);
+    // console.log(`[getAdminConnection:${connectionId}] Called - adminConnection exists:`, !!adminConnection);
     
     // Return existing connection if available and not destroyed
     if (adminConnection) {
         try {
-            console.log(`[getAdminConnection:${connectionId}] Testing existing connection`);
+            // console.log(`[getAdminConnection:${connectionId}] Testing existing connection`);
             // Test if connection is still valid
             await adminConnection.raw('SELECT 1');
-            console.log(`[getAdminConnection:${connectionId}] Existing connection is valid, returning it`);
+            // console.log(`[getAdminConnection:${connectionId}] Existing connection is valid, returning it`);
             return adminConnection;
         } catch (error) {
-            console.log(`[getAdminConnection:${connectionId}] Admin connection test failed, recreating connection:`, error instanceof Error ? error.message : String(error));
+            // console.log(`[getAdminConnection:${connectionId}] Admin connection test failed, recreating connection:`, error instanceof Error ? error.message : String(error));
             adminConnection = null;
         }
     }
@@ -42,29 +42,29 @@ export async function getAdminConnection() {
             createTimeoutMillis: parseInt(process.env.DB_POOL_CREATE_TIMEOUT || '10000'),
         }
     };
-    console.log(`[getAdminConnection:${connectionId}] Creating new admin database connection`);
-    console.log(`[getAdminConnection:${connectionId}] Admin connection config:`, {
-        host: config.connection.host,
-        port: config.connection.port,
-        database: config.connection.database,
-        user: config.connection.user,
-        environment,
-        poolConfig: {
-            min: config.pool.min,
-            max: config.pool.max,
-            acquireTimeout: config.pool.acquireTimeoutMillis,
-            createTimeout: config.pool.createTimeoutMillis
-        }
-    });
+    // console.log(`[getAdminConnection:${connectionId}] Creating new admin database connection`);
+    // console.log(`[getAdminConnection:${connectionId}] Admin connection config:`, {
+    //     host: config.connection.host,
+    //     port: config.connection.port,
+    //     database: config.connection.database,
+    //     user: config.connection.user,
+    //     environment,
+    //     poolConfig: {
+    //         min: config.pool.min,
+    //         max: config.pool.max,
+    //         acquireTimeout: config.pool.acquireTimeoutMillis,
+    //         createTimeout: config.pool.createTimeoutMillis
+    //     }
+    // });
 
     adminConnection = Knex(config);
-    console.log(`[getAdminConnection:${connectionId}] Created new Knex instance, testing connection...`);
+    // console.log(`[getAdminConnection:${connectionId}] Created new Knex instance, testing connection...`);
     
     try {
         await adminConnection.raw('SELECT 1');
-        console.log(`[getAdminConnection:${connectionId}] New connection test successful`);
+        // console.log(`[getAdminConnection:${connectionId}] New connection test successful`);
     } catch (error) {
-        console.error(`[getAdminConnection:${connectionId}] New connection test failed:`, error instanceof Error ? error.message : String(error));
+        // console.error(`[getAdminConnection:${connectionId}] New connection test failed:`, error instanceof Error ? error.message : String(error));
         throw error;
     }
     

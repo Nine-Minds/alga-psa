@@ -274,6 +274,7 @@ export async function systemEmailProcessingWorkflow(context) {
       // Store email metadata for future threading
       email_metadata: {
         messageId: emailData.id,
+        mailhogId: emailData.mailhogId,
         threadId: emailData.threadId,
         from: emailData.from,
         inReplyTo: emailData.inReplyTo,

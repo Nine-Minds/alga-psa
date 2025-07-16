@@ -18,7 +18,7 @@ describe('Email Threading Tests', () => {
   }, 60000); // 60 second timeout for database reset and setup
 
   afterAll(async () => {
-    await testHelpers.afterAll();
+    // await testHelpers.afterAll();
   });
 
   beforeEach(async () => {
@@ -89,8 +89,9 @@ describe('Email Threading Tests', () => {
         // Verify email metadata stored
         console.log('     🔗 Verifying email metadata linkage...');
         expect(ticket.email_metadata).toBeDefined();
-        expect(ticket.email_metadata.messageId).toBe(capturedEmail.ID);
-        console.log(`     ✓ Email metadata stored: Message ID ${capturedEmail.ID}`);
+        // Check for MailHog ID in the mailhogId field (not messageId which contains the Message-ID header)
+        expect(ticket.email_metadata.mailhogId).toBe(capturedEmail.ID);
+        console.log(`     ✓ Email metadata stored: MailHog ID ${capturedEmail.ID}`);
         
         console.log('\n  ✅ Email to ticket creation flow completed successfully!\n');
       } catch (error) {
@@ -134,36 +135,10 @@ describe('Email Threading Tests', () => {
       
       await context.waitForWorkflowProcessing(10000);
       
-      // 4. Try to find or create the ticket
-      console.log('  4️⃣ Locating or creating ticket for threading test...');
-      let ticket: any;
-      try {
-        ticket = await context.waitForTicketCreation(tenant.tenant, capturedEmail.ID, 10000);
-        console.log(`     ✓ Found ticket from email workflow: ${ticket.ticket_id}`);
-      } catch (error) {
-        console.log('     ⚠️ Automatic ticket creation not implemented yet');
-        console.log('     🛠️ Creating manual ticket for threading test...');
-        // Create a manual ticket for testing
-        [ticket] = await context.db('tickets').insert({
-          ticket_id: `TICKET-${Date.now()}`,
-          tenant: tenant.tenant,
-          company_id: company.company_id,
-          contact_name_id: contact.contact_name_id,
-          title: 'Initial support request',
-          channel_id: 'email',
-          status_id: 'open',
-          priority_id: 'medium',
-          entered_at: new Date(),
-          updated_at: new Date()
-        }).returning('*');
-        console.log(`     ✓ Created manual ticket: ${ticket.ticket_id}`);
-      }
-      
-      if (!ticket) {
-        console.log('     ❌ No ticket available for threading test');
-        console.log('\n  ⏸️ Reply threading test skipped - no ticket\n');
-        return;
-      }
+      // 4. Find the ticket created by the email workflow
+      console.log('  4️⃣ Locating ticket created by email workflow...');
+      const ticket = await context.waitForTicketCreation(tenant.tenant, capturedEmail.ID, 10000);
+      console.log(`     ✓ Found ticket from email workflow: ${ticket.ticket_id}`);
       
       // 5. Send support reply email
       console.log('  5️⃣ Sending support team reply...');
@@ -174,8 +149,8 @@ describe('Email Threading Tests', () => {
         to: contact.email,
         subject: 'Re: Initial support request',
         body: 'This is our reply to your request',
-        inReplyTo: `<${capturedEmail.ID}>`,
-        references: `<${capturedEmail.ID}>`
+        inReplyTo: capturedEmail.ID,
+        references: capturedEmail.ID
       });
       console.log(`     ✓ Support reply sent: ${replyEmail.messageId}`);
       
@@ -189,8 +164,8 @@ describe('Email Threading Tests', () => {
         to: provider.mailbox,
         subject: 'Re: Initial support request',
         body: 'Thanks for the reply. Here is more info.',
-        inReplyTo: `<${replyEmail.messageId}>`,
-        references: `<${capturedEmail.ID}> <${replyEmail.messageId}>`
+        inReplyTo: replyEmail.messageId,
+        references: `${capturedEmail.ID} ${replyEmail.messageId}`
       });
       console.log(`     ✓ Follow-up email sent: ${followupEmail.messageId}`);
       
@@ -208,20 +183,35 @@ describe('Email Threading Tests', () => {
       console.log(`     📊 Found ${comments.length} comments on ticket`);
       
       if (comments.length > 0) {
+        console.log('     ✅ Comments found - validating reply threading...');
+        console.log(JSON.stringify(comments, null, 2));
         console.log('     ✅ Email threading successful!');
-        console.log(`     💬 Comment content: "${comments[0].content.substring(0, 50)}..."`);
-        console.log(`     👤 Comment type: ${comments[0].is_internal ? 'Internal' : 'Customer'}`);
         
-        expect(comments).toHaveLength(1);
-        expect(comments[0].content).toContain('Thanks for the reply');
-        expect(comments[0].is_internal).toBe(false);
+        // Expect 3 comments: initial email + support reply + customer follow-up
+        expect(comments).toHaveLength(3);
         
-        console.log('     ✓ Comment validation passed');
+        // Sort comments by creation time to ensure consistent order
+        const sortedComments = comments.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        
+        // Validate that all expected comment contents are present (order-independent)
+        const expectedComments = [
+          'This is the initial request',
+          'This is our reply to your request', 
+          'Thanks for the reply. Here is more info'
+        ];
+        
+        // Check that each expected comment exists somewhere in the comments
+        for (const expectedContent of expectedComments) {
+          const matchingComment = comments.find(comment => comment.note.includes(expectedContent));
+          expect(matchingComment).toBeDefined();
+          expect(matchingComment.is_internal).toBe(false); // All comments should be external (is_internal=false)
+          console.log(`     💬 Found expected comment: "${matchingComment.note.substring(0, 50)}..."`);
+        }
+        
+        console.log('     ✓ All three expected comments (initial, support reply, customer follow-up) found and validated');
         console.log('\n  ✅ Email reply threading completed successfully!\n');
       } else {
-        console.log('     ⚠️ No comments found - email threading not fully implemented yet');
-        console.log('     ℹ️ This is expected until the email threading workflow is complete');
-        console.log('\n  ⏸️ Email threading test skipped pending implementation\n');
+        throw new Error('No comments found - email threading is busted');
       }
     });
   });
@@ -302,8 +292,8 @@ describe('Email Threading Tests', () => {
       expect(ticket.email_metadata.threadId).toBe(originalThreadId);
       console.log(`     ✓ Thread ID preserved: ${ticket.email_metadata.threadId}`);
       
-      expect(ticket.email_metadata.messageId).toBe(capturedEmail.ID);
-      console.log(`     ✓ Original message ID maintained: ${ticket.email_metadata.messageId}`);
+      expect(ticket.email_metadata.mailhogId).toBe(capturedEmail.ID);
+      console.log(`     ✓ Original MailHog ID maintained: ${ticket.email_metadata.mailhogId}`);
       
       console.log('  7️⃣ Thread preservation validation completed...');
       console.log('     ✅ Thread ID correctly preserved across email exchanges');

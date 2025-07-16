@@ -303,19 +303,33 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        logger.info(`[ACTION] find_ticket_by_email_thread called with threadId: ${params.threadId}, tenant: ${context.tenant}`);
+        logger.info(`[ACTION] find_ticket_by_email_thread called with:`, {
+          threadId: params.threadId,
+          inReplyTo: params.inReplyTo,
+          references: params.references,
+          originalMessageId: params.originalMessageId,
+          tenant: context.tenant
+        });
         
-        // Use shared database utilities directly
-        const { getAdminConnection } = await import('@shared/db/admin.js');
-        const knex = await getAdminConnection();
+        // Use proper transaction wrapper to avoid nesting transactions
+        const { withAdminTransaction } = await import('@shared/db/index.js');
         
-        // Search for ticket by various email thread identifiers
-        let ticket = null;
+        // Search for ticket by various email thread identifiers using comprehensive strategy
+        const ticket = await withAdminTransaction(async (trx) => {
+          let foundTicket = null;
         
-        // Strategy 1: Search by In-Reply-To header matching original ticket's threadId or messageId
-        if (params.inReplyTo) {
-          ticket = await knex('tickets as t')
-            .leftJoin('statuses as s', 't.status_id', 's.status_id')
+          // Strategy 1: Search by In-Reply-To header matching original ticket's threadId or messageId
+          if (params.inReplyTo) {
+            logger.info(`[ACTION] Strategy 1: Searching for ticket with inReplyTo: ${params.inReplyTo}`);
+            
+            // Strip angle brackets from inReplyTo for comparison
+            const cleanInReplyTo = params.inReplyTo.replace(/^<|>$/g, '');
+            
+            foundTicket = await trx('tickets as t')
+            .leftJoin('statuses as s', function() {
+              this.on('t.status_id', 's.status_id')
+                .andOn('t.tenant', 's.tenant');
+            })
             .select(
               't.ticket_id as ticketId',
               't.ticket_number as ticketNumber',
@@ -325,17 +339,68 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
             )
             .where('t.tenant', context.tenant)
             .where(function() {
-              // Reply's inReplyTo should match original ticket's threadId OR messageId
+              // Reply's inReplyTo should match original ticket's threadId, messageId, or mailhogId
               this.whereRaw("t.email_metadata->>'threadId' = ?", [params.inReplyTo])
-                  .orWhereRaw("t.email_metadata->>'messageId' = ?", [params.inReplyTo]);
+                  .orWhereRaw("t.email_metadata->>'messageId' = ?", [params.inReplyTo])
+                  .orWhereRaw("t.email_metadata->>'mailhogId' = ?", [cleanInReplyTo])
+                  .orWhereRaw("t.email_metadata->>'threadId' = ?", [cleanInReplyTo])
+                  .orWhereRaw("t.email_metadata->>'messageId' = ?", [cleanInReplyTo]);
             })
             .first();
-        }
+            
+            if (foundTicket) {
+              logger.info(`[ACTION] Found ticket by inReplyTo: ${foundTicket.ticketId}`);
+              return foundTicket;
+            } else {
+              logger.info(`[ACTION] Strategy 1: No ticket found with inReplyTo: ${params.inReplyTo}`);
+            }
+          }
         
-        // Strategy 2: Search by thread ID if no ticket found yet
-        if (!ticket && params.threadId) {
-          ticket = await knex('tickets as t')
-            .leftJoin('statuses as s', 't.status_id', 's.status_id')
+          // Strategy 2: Search through References array for any matching message IDs
+          if (!foundTicket && params.references && Array.isArray(params.references) && params.references.length > 0) {
+            for (const messageId of params.references) {
+              if (messageId && messageId.trim()) {
+                // Strip angle brackets for comparison
+                const cleanMessageId = messageId.replace(/^<|>$/g, '');
+                
+                foundTicket = await trx('tickets as t')
+                .leftJoin('statuses as s', function() {
+                  this.on('t.status_id', 's.status_id')
+                    .andOn('t.tenant', 's.tenant');
+                })
+                .select(
+                  't.ticket_id as ticketId',
+                  't.ticket_number as ticketNumber',
+                  't.title as subject',
+                  's.name as status',
+                  't.email_metadata'
+                )
+                .where('t.tenant', context.tenant)
+                .where(function() {
+                  this.whereRaw("t.email_metadata->>'messageId' = ?", [messageId])
+                      .orWhereRaw("t.email_metadata->>'threadId' = ?", [messageId])
+                      .orWhereRaw("t.email_metadata->>'mailhogId' = ?", [cleanMessageId])
+                      .orWhereRaw("t.email_metadata->>'messageId' = ?", [cleanMessageId])
+                      .orWhereRaw("t.email_metadata->>'threadId' = ?", [cleanMessageId])
+                      .orWhereRaw("t.email_metadata->'references' @> ?", [JSON.stringify([messageId])]);
+                })
+                .first();
+                
+                if (foundTicket) {
+                  logger.info(`[ACTION] Found ticket by reference messageId ${messageId}: ${foundTicket.ticketId}`);
+                  return foundTicket;
+                }
+              }
+            }
+          }
+        
+          // Strategy 3: Search by thread ID if no ticket found yet
+          if (!foundTicket && params.threadId) {
+            foundTicket = await trx('tickets as t')
+            .leftJoin('statuses as s', function() {
+              this.on('t.status_id', 's.status_id')
+                .andOn('t.tenant', 's.tenant');
+            })
             .select(
               't.ticket_id as ticketId',
               't.ticket_number as ticketNumber', 
@@ -346,7 +411,15 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
             .where('t.tenant', context.tenant)
             .whereRaw("t.email_metadata->>'threadId' = ?", [params.threadId])
             .first();
-        }
+            
+            if (foundTicket) {
+              logger.info(`[ACTION] Found ticket by threadId: ${foundTicket.ticketId}`);
+              return foundTicket;
+            }
+          }
+        
+          return null;
+        });
         
         if (ticket) {
           logger.info(`[ACTION] find_ticket_by_email_thread: Found ticket ${ticket.ticketId}`);

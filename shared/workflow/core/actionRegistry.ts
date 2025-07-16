@@ -159,7 +159,7 @@ export class ActionRegistry {
         });
         
         resultId = createResult.result_id;
-        console.log(`[ActionRegistry] Created action result record with ID ${resultId}`);
+        // console.log(`[ActionRegistry] Created action result record with ID ${resultId}`);
         
         // Mark as started
         await WorkflowActionResultModel.markAsStarted(knex, context.tenant, resultId);
@@ -171,7 +171,7 @@ export class ActionRegistry {
       // Execute action
       try {
         const result = await action.execute(context.parameters, context);
-        console.log(`[ActionRegistry] Action "${actionName}" executed successfully`);
+        // console.log(`[ActionRegistry] Action "${actionName}" executed successfully`);
         
         // Mark as completed successfully if we have a resultId
         if (resultId) {
@@ -183,9 +183,10 @@ export class ActionRegistry {
               true, 
               result
             );
-            console.log(`[ActionRegistry] Updated action result record ${resultId} as completed successfully`);
+            // console.log(`[ActionRegistry] Updated action result record ${resultId} as completed successfully`);
           } catch (dbError) {
-            console.error(`[ActionRegistry] Error updating action result record:`, dbError);
+            // console.error(`[ActionRegistry] Error updating action result record:`, dbError);
+            throw dbError;  
           }
         }
         

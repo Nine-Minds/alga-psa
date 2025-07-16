@@ -43,20 +43,20 @@ export async function withAdminTransaction<T>(
     // Otherwise, get admin connection and create transaction
     console.log(`[withAdminTransaction:${transactionId}] Getting admin connection for new transaction`);
     const adminDb = await getAdminConnection();
-    console.log(`[withAdminTransaction:${transactionId}] Got admin connection, pool stats:`, {
-      pool: adminDb.client?.pool ? {
-        min: adminDb.client.pool.min,
-        max: adminDb.client.pool.max,
-        size: adminDb.client.pool.size,
-        available: adminDb.client.pool.available,
-        borrowed: adminDb.client.pool.borrowed,
-        pending: adminDb.client.pool.pending
-      } : 'No pool info available'
-    });
+    // console.log(`[withAdminTransaction:${transactionId}] Got admin connection, pool stats:`, {
+    //   pool: adminDb.client?.pool ? {
+    //     min: adminDb.client.pool.min,
+    //     max: adminDb.client.pool.max,
+    //     size: adminDb.client.pool.size,
+    //     available: adminDb.client.pool.available,
+    //     borrowed: adminDb.client.pool.borrowed,
+    //     pending: adminDb.client.pool.pending
+    //   } : 'No pool info available'
+    // });
     
-    console.log(`[withAdminTransaction:${transactionId}] Creating transaction on admin connection`);
+    // console.log(`[withAdminTransaction:${transactionId}] Creating transaction on admin connection`);
     const result = await adminDb.transaction(callback);
-    console.log(`[withAdminTransaction:${transactionId}] Admin transaction completed successfully`);
+    // console.log(`[withAdminTransaction:${transactionId}] Admin transaction completed successfully`);
     return result;
   } catch (error) {
     console.error(`[withAdminTransaction:${transactionId}] Transaction failed:`, {
