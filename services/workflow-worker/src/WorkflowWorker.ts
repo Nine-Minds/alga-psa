@@ -800,7 +800,7 @@ export class WorkflowWorker {
 
       // Query the appropriate tables based on isSystemManaged
       const registration = await db(`${registrationTable} as wr`)
-        .join(`${versionTable} as wrv`, function() {
+        .join(`${versionTable} as wrv`, function(this: any) {
           this.on('wrv.registration_id', '=', 'wr.registration_id');
           // No tenant join needed for system tables or version table here
           // if (!isSystemManaged) {
@@ -848,7 +848,7 @@ export class WorkflowWorker {
       return registration; // Return the fetched registration or null
     } catch (error) {
       logger.error(`[WorkflowWorker] Error getting ${isSystemManaged ? 'system' : 'tenant'} workflow registration ${workflowId}:`, error);
-      console.log(`[TENANT-DEBUG] WorkflowWorker ERROR getting workflow registration: tenant=${tenant}, workflowId=${workflowId}, error=${error.message}`);
+      console.log(`[TENANT-DEBUG] WorkflowWorker ERROR getting workflow registration: tenant=${tenant}, workflowId=${workflowId}, error=${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
   }
