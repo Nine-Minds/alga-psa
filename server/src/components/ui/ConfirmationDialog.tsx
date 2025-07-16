@@ -8,12 +8,13 @@ import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomati
 interface ConfirmationDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (selectedValue?: string) => Promise<void> | void;
+  onConfirm?: (selectedValue?: string) => Promise<void> | void;
   title: string;
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
   isConfirming?: boolean;
+  hideConfirmButton?: boolean;
   options?: Array<{ value: string; label: string }>;
   id?: string;
   className?: string;
@@ -29,6 +30,7 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps & AutomationPr
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   isConfirming,
+  hideConfirmButton = false,
   options,
   id,
   className
@@ -37,6 +39,9 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps & AutomationPr
   const [selectedValue, setSelectedValue] = useState('');
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
   
+  // Reference for the cancel button
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+
   useEffect(() => {
     if (options?.[0]?.value) {
       setSelectedValue(options[0].value);
@@ -44,6 +49,8 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps & AutomationPr
   }, [isOpen, options]);
   
   const handleConfirm = async () => {
+    if (!onConfirm) return;
+    
     setIsProcessing(true);
     try {
       await onConfirm(options ? selectedValue : undefined);
@@ -61,7 +68,12 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps & AutomationPr
       className={className}
       onOpenAutoFocus={(e) => {
         e.preventDefault();
-        confirmButtonRef.current?.focus();
+        // Focus on the confirm button if it exists, otherwise focus on the cancel button
+        if (!hideConfirmButton && confirmButtonRef.current) {
+          confirmButtonRef.current.focus();
+        } else if (cancelButtonRef.current) {
+          cancelButtonRef.current.focus();
+        }
       }}
     >
       <DialogContent>
@@ -88,21 +100,24 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps & AutomationPr
           <div className="mt-4 space-x-2">
           {/* Render Cancel button first */}
           <Button
-            variant="outline"
+            variant={hideConfirmButton ? "default" : "outline"}
             onClick={onClose}
             id={`${id}-cancel`}
+            ref={cancelButtonRef}
           >
             {cancelLabel}
           </Button>
-          {/* Render Confirm button second (last focusable element) */}
-          <Button
-            onClick={handleConfirm}
-            disabled={isConfirming || isProcessing}
-            id={`${id}-confirm`}
-            ref={confirmButtonRef}
-          >
-            {confirmLabel}
-          </Button>
+          {/* Render Confirm button second (last focusable element) if not hidden */}
+          {!hideConfirmButton && onConfirm && (
+            <Button
+              onClick={handleConfirm}
+              disabled={isConfirming || isProcessing}
+              id={`${id}-confirm`}
+              ref={confirmButtonRef}
+            >
+              {confirmLabel}
+            </Button>
+          )}
           </div>
         </DialogFooter>
       </DialogContent>

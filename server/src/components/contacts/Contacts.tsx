@@ -655,7 +655,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
             setContactToDelete(null);
             setDeleteError(null);
           }}
-          onConfirm={confirmDelete}
+          onConfirm={deleteError ? undefined : confirmDelete}
           title="Delete Contact"
           message={
             deleteError
@@ -663,7 +663,8 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
               : "Are you sure you want to delete this contact? This action cannot be undone."
           }
           confirmLabel={deleteError ? undefined : "Delete"}
-          cancelLabel={deleteError ? "Close" : "Cancel"}
+          cancelLabel={deleteError ? "OK" : "Cancel"}
+          hideConfirmButton={!!deleteError}
           isConfirming={false}
         />
       </div>
