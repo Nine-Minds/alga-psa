@@ -59,9 +59,9 @@ export function UserManagementSettings() {
       // Check if user has required permissions
       const hasRequiredPermissions = rolesWithPermissions.some(role => 
         role.permissions.some((permission: IPermission) => 
-          `${permission.resource}.${permission.action}` === 'client_profile.read' ||
-          `${permission.resource}.${permission.action}` === 'client_profile.update' ||
-          `${permission.resource}.${permission.action}` === 'client_profile.delete'
+          `${permission.resource}.${permission.action}` === 'user.read' ||
+          `${permission.resource}.${permission.action}` === 'user.update' ||
+          `${permission.resource}.${permission.action}` === 'user.delete'
         )
       );
 

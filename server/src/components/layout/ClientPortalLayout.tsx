@@ -33,12 +33,12 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
       if (user) {
         setUserData(user);
         
-        // Check for company_setting read permission
+        // Check for company read permission
         const rolesWithPermissions = await getUserRolesWithPermissions(user.user_id);
         let foundAccess = false;
         for (const role of rolesWithPermissions) {
           for (const permission of role.permissions) {
-            if (permission.resource === 'company_setting' && permission.action === 'read') {
+            if (permission.resource === 'company' && permission.action === 'read') {
               foundAccess = true;
               break;
             }
