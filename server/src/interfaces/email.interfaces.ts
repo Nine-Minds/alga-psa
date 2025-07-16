@@ -38,6 +38,7 @@ export interface EmailMessage {
   id: string;
   provider: 'microsoft' | 'google';
   providerId: string;
+  tenant: string;
   receivedAt: string;
   from: {
     email: string;
@@ -66,7 +67,6 @@ export interface EmailMessage {
   threadId?: string;
   references?: string[];
   inReplyTo?: string;
-  tenant: string;
 }
 
 export interface EmailMessageDetails extends EmailMessage {
@@ -110,5 +110,8 @@ export interface EmailQueueJob {
   providerId: string;
   webhookData: any;
   attempt: number;
+  maxRetries: number;
   createdAt: string;
+  // Optional email data for cases where we already have the email content (e.g., MailHog)
+  emailData?: EmailMessage;
 }

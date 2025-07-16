@@ -160,11 +160,44 @@ jobs:
           echo "Postgres is ready."
         shell: bash
 
-      - name: Start setup services
+      - name: Start pgbouncer service
         if: steps.changed_files_check.outputs.any_changed == 'true' && steps.install_docker_compose.outcome == 'success'
         run: |
-          echo "Starting setup and pgbouncer services"
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up --build -d pgbouncer setup
+          echo "Starting pgbouncer service"
+          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up --build -d pgbouncer
+        shell: bash
+
+      - name: Wait for pgbouncer to be ready
+        if: steps.changed_files_check.outputs.any_changed == 'true' && steps.install_docker_compose.outcome == 'success'
+        run: |
+          echo "Waiting for pgbouncer to be ready..."
+          
+          # Wait for pgbouncer port to be open
+          echo "Checking pgbouncer port availability..."
+          MAX_ATTEMPTS=30
+          ATTEMPT_NUM=1
+          until docker run --rm --network alga-e2e-test_app-network busybox nc -z pgbouncer 6432; do
+            if [ $ATTEMPT_NUM -ge $MAX_ATTEMPTS ]; then
+              echo "Timeout: PgBouncer port did not become available within the allocated time."
+              docker-compose -p alga-e2e-test logs pgbouncer
+              exit 1
+            fi
+            echo "Attempt $ATTEMPT_NUM/$MAX_ATTEMPTS: PgBouncer port not ready. Waiting 5 seconds..."
+            sleep 5
+            ATTEMPT_NUM=$((ATTEMPT_NUM+1))
+          done
+          echo "PgBouncer port is ready."
+          
+          # Additional wait for pgbouncer to fully initialize
+          echo "Waiting additional 5 seconds for pgbouncer to fully initialize..."
+          sleep 5
+        shell: bash
+
+      - name: Start setup service
+        if: steps.changed_files_check.outputs.any_changed == 'true' && steps.install_docker_compose.outcome == 'success'
+        run: |
+          echo "Starting setup service"
+          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up --build -d setup
         shell: bash
 
       - name: Wait for Setup service to complete

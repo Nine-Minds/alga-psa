@@ -85,16 +85,26 @@ export function serializeWorkflowFunction(fn: WorkflowFunction): string {
  */
 export function deserializeWorkflowFunction(fnString: string): WorkflowFunction {
   try {
-    console.log('fnString length:', fnString.length);
-    console.log('Deserializing workflow function:', fnString.length > 100 ? fnString.substring(0, 100) + '...' : fnString);
-    
     // The function string should already be an async function with a context parameter
     const wrappedCode = fnString;
+    
+    // Check if ES2020 is available, fallback to ES2018 or ES5
+    let targetVersion: ts.ScriptTarget;
+    
+    if (ts.ScriptTarget.ES2020 !== undefined) {
+      targetVersion = ts.ScriptTarget.ES2020;
+    } else if (ts.ScriptTarget.ES2018 !== undefined) {
+      targetVersion = ts.ScriptTarget.ES2018;
+    } else if (ts.ScriptTarget.ES2017 !== undefined) {
+      targetVersion = ts.ScriptTarget.ES2017;
+    } else {
+      targetVersion = ts.ScriptTarget.ES5;
+    }
     
     // Compile TypeScript to JavaScript
     const result = ts.transpileModule(wrappedCode, {
       compilerOptions: {
-        target: ts.ScriptTarget.ES2020,
+        target: targetVersion,
         module: ts.ModuleKind.ESNext,
         removeComments: true,
         esModuleInterop: true,
@@ -102,7 +112,6 @@ export function deserializeWorkflowFunction(fnString: string): WorkflowFunction 
     });
     
     const jsCode = result.outputText;
-    console.log('Compiled JavaScript:', jsCode.length > 100 ? jsCode.substring(0, 100) + '...' : jsCode);
     
     // Extract the function body from the compiled code
     // This regex extracts the content between the first { and the last }

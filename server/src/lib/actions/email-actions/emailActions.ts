@@ -1,8 +1,8 @@
 'use server'
 
-import { findContactByEmailAddress, createOrFindContactByEmail } from '../contact-actions/contactActions';
-import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '@shared/db';
+import { findContactByEmailAddress, createOrFindContactByEmail } from '../contact-actions/contactActions.js';
+import { createTenantKnex } from '../../db/index.js';
+import { withTransaction } from '@shared/db/index.js';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -319,64 +319,9 @@ export async function saveEmailClientAssociation(input: SaveEmailClientAssociati
 // EMAIL WORKFLOW WRAPPER FUNCTIONS
 // =============================================================================
 
-/**
- * Create ticket from email data - wrapper for email workflows
- * Converts email workflow interface to server action requirements
- */
-export async function createTicketFromEmail(ticketData: {
-  title: string;
-  description: string;
-  company_id?: string;
-  contact_id?: string;
-  source?: string;
-  channel_id?: string;
-  status_id?: string;
-  priority_id?: string;
-  email_metadata?: any;
-}): Promise<{ ticket_id: string; ticket_number: string }> {
-  const { knex: db, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
-
-  return await withTransaction(db, async (trx: Knex.Transaction) => {
-    // Get next ticket number
-    const nextNumber = await trx('next_numbers')
-      .where({ tenant, entity_type: 'ticket' })
-      .first();
-    
-    const ticketNumber = `TKT-${String(nextNumber?.next_value || 1).padStart(6, '0')}`;
-    
-    // Create ticket
-    const [ticket] = await trx('tickets')
-      .insert({
-        tenant,
-        title: ticketData.title,
-        description: ticketData.description,
-        company_id: ticketData.company_id,
-        contact_id: ticketData.contact_id,
-        source: ticketData.source || 'email',
-        channel_id: ticketData.channel_id,
-        status_id: ticketData.status_id,
-        priority_id: ticketData.priority_id,
-        ticket_number: ticketNumber,
-        email_metadata: JSON.stringify(ticketData.email_metadata),
-        created_at: new Date(),
-        updated_at: new Date()
-      })
-      .returning(['ticket_id', 'ticket_number']);
-
-    // Update next number
-    await trx('next_numbers')
-      .where({ tenant, entity_type: 'ticket' })
-      .increment('next_value', 1);
-
-    return {
-      ticket_id: ticket.ticket_id,
-      ticket_number: ticket.ticket_number
-    };
-  });
-}
+// REMOVED: createTicketFromEmail function has been moved to shared workflow actions
+// This eliminates duplicate ticket creation logic and ensures consistency
+// Use shared/workflow/actions/emailWorkflowActions.ts:createTicketFromEmail instead
 
 /**
  * Create comment from email data - wrapper for email workflows

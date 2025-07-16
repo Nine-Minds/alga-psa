@@ -224,6 +224,7 @@ export class EmailQueueService {
       providerId: job.providerId,
       webhookData: job.webhookData,
       attempt: 0,
+      maxRetries: job.maxRetries || 3,
       createdAt: job.createdAt,
     };
 

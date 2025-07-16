@@ -14,6 +14,12 @@ import { Plus, Settings, Trash2, CheckCircle, Clock } from 'lucide-react';
 import { MicrosoftProviderForm } from './MicrosoftProviderForm';
 import { GmailProviderForm } from './GmailProviderForm';
 import { EmailProviderList } from './EmailProviderList';
+import { InboundTicketDefaultsManager } from './admin/InboundTicketDefaultsManager';
+import { 
+  getEmailProviders, 
+  deleteEmailProvider, 
+  testEmailProviderConnection 
+} from '../lib/actions/email-actions/emailProviderActions';
 
 export interface EmailProvider {
   id: string;
@@ -25,9 +31,50 @@ export interface EmailProvider {
   status: 'connected' | 'disconnected' | 'error' | 'configuring';
   lastSyncAt?: string;
   errorMessage?: string;
-  vendorConfig: any;
+  inboundTicketDefaultsId?: string;
   createdAt: string;
   updatedAt: string;
+  // Vendor-specific config will be loaded separately
+  microsoftConfig?: MicrosoftEmailProviderConfig;
+  googleConfig?: GoogleEmailProviderConfig;
+}
+
+export interface MicrosoftEmailProviderConfig {
+  email_provider_id: string;
+  tenant: string;
+  client_id: string;
+  client_secret: string;
+  tenant_id: string;
+  redirect_uri: string;
+  auto_process_emails: boolean;
+  max_emails_per_sync: number;
+  folder_filters: string[];
+  access_token?: string;
+  refresh_token?: string;
+  token_expires_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GoogleEmailProviderConfig {
+  email_provider_id: string;
+  tenant: string;
+  client_id: string;
+  client_secret: string;
+  project_id: string;
+  redirect_uri: string;
+  pubsub_topic_name?: string;
+  pubsub_subscription_name?: string;
+  auto_process_emails: boolean;
+  max_emails_per_sync: number;
+  label_filters: string[];
+  access_token?: string;
+  refresh_token?: string;
+  token_expires_at?: string;
+  history_id?: string;
+  watch_expiration?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface EmailProviderConfigurationProps {
@@ -48,6 +95,8 @@ export function EmailProviderConfiguration({
   const [error, setError] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<EmailProvider | null>(null);
+  const [selectedProviderType, setSelectedProviderType] = useState<'microsoft' | 'gmail'>('microsoft');
+  const [showDefaultsManager, setShowDefaultsManager] = useState(false);
 
   // Load existing providers on component mount
   useEffect(() => {
@@ -59,12 +108,7 @@ export function EmailProviderConfiguration({
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`/api/email/providers?tenant=${tenant}`);
-      if (!response.ok) {
-        throw new Error('Failed to load email providers');
-      }
-      
-      const data = await response.json();
+      const data = await getEmailProviders();
       setProviders(data.providers || []);
     } catch (err: any) {
       setError(err.message);
@@ -87,13 +131,7 @@ export function EmailProviderConfiguration({
 
   const handleProviderDeleted = async (providerId: string) => {
     try {
-      const response = await fetch(`/api/email/providers/${providerId}`, {
-        method: 'DELETE'
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to delete provider');
-      }
+      await deleteEmailProvider(providerId);
       
       setProviders(prev => prev.filter(p => p.id !== providerId));
       onProviderDeleted?.(providerId);
@@ -106,15 +144,7 @@ export function EmailProviderConfiguration({
     try {
       setError(null);
       
-      const response = await fetch(`/api/email/providers/${provider.id}/test`, {
-        method: 'POST'
-      });
-      
-      if (!response.ok) {
-        throw new Error('Connection test failed');
-      }
-      
-      const result = await response.json();
+      const result = await testEmailProviderConnection(provider.id);
       
       if (result.success) {
         // Update provider status
@@ -166,6 +196,35 @@ export function EmailProviderConfiguration({
         </Alert>
       )}
 
+      {/* Ticket Defaults Management */}
+      {showDefaultsManager && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Manage Ticket Defaults</CardTitle>
+            <CardDescription>
+              Configure default values for tickets created from email processing
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <InboundTicketDefaultsManager 
+              onDefaultsChange={() => {
+                // Optionally refresh providers to show updated defaults
+                loadProviders();
+              }}
+            />
+            <div className="flex justify-end mt-6">
+              <Button 
+                id="close-defaults-btn"
+                variant="outline" 
+                onClick={() => setShowDefaultsManager(false)}
+              >
+                Close
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Add Provider Form */}
       {showAddForm && (
         <Card>
@@ -176,7 +235,7 @@ export function EmailProviderConfiguration({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs value="microsoft" onValueChange={() => {}} className="w-full">
+            <Tabs value={selectedProviderType} onValueChange={(value) => setSelectedProviderType(value as 'microsoft' | 'gmail')} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="microsoft">Microsoft 365</TabsTrigger>
                 <TabsTrigger value="gmail">Gmail</TabsTrigger>
@@ -239,6 +298,30 @@ export function EmailProviderConfiguration({
           </CardContent>
         </Card>
       )}
+
+      {/* Management Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Management</CardTitle>
+          <CardDescription>
+            Additional configuration options for email processing
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button 
+            id="manage-defaults-btn"
+            variant="outline"
+            onClick={() => setShowDefaultsManager(true)}
+            disabled={showDefaultsManager}
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Manage Ticket Defaults
+          </Button>
+          <p className="text-sm text-muted-foreground mt-2">
+            Configure default values that will be applied to tickets created from email processing
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Help Information */}
       <Card>

@@ -17,6 +17,10 @@ import { Alert, AlertDescription } from './ui/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
 import { ExternalLink, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
+import { createEmailProvider, updateEmailProvider } from '../lib/actions/email-actions/emailProviderActions';
+import { getInboundTicketDefaults } from '../lib/actions/email-actions/inboundTicketDefaultsActions';
+import CustomSelect from './ui/CustomSelect';
+import type { InboundTicketDefaults } from '../types/email.types';
 
 const microsoftProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),
@@ -28,7 +32,8 @@ const microsoftProviderSchema = z.object({
   isActive: z.boolean(),
   autoProcessEmails: z.boolean(),
   folderFilters: z.string().optional(),
-  maxEmailsPerSync: z.number().min(1).max(1000)
+  maxEmailsPerSync: z.number().min(1).max(1000),
+  inboundTicketDefaultsId: z.string().optional()
 });
 
 type MicrosoftProviderFormData = z.infer<typeof microsoftProviderSchema>;
@@ -50,27 +55,49 @@ export function MicrosoftProviderForm({
   const [error, setError] = useState<string | null>(null);
   const [showClientSecret, setShowClientSecret] = useState(false);
   const [oauthStatus, setOauthStatus] = useState<'idle' | 'authorizing' | 'success' | 'error'>('idle');
+  const [oauthData, setOauthData] = useState<any>(null);
+  const [ticketDefaults, setTicketDefaults] = useState<InboundTicketDefaults[]>([]);
+  const [loadingDefaults, setLoadingDefaults] = useState(true);
 
   const isEditing = !!provider;
 
+  // Load ticket defaults on mount
+  React.useEffect(() => {
+    loadTicketDefaults();
+  }, []);
+
+  const loadTicketDefaults = async () => {
+    try {
+      setLoadingDefaults(true);
+      const data = await getInboundTicketDefaults();
+      setTicketDefaults(data.defaults || []);
+    } catch (err: any) {
+      console.error('Failed to load ticket defaults:', err);
+    } finally {
+      setLoadingDefaults(false);
+    }
+  };
+
   const form = useForm<MicrosoftProviderFormData>({
     resolver: zodResolver(microsoftProviderSchema) as any,
-    defaultValues: provider ? {
+    defaultValues: provider && provider.microsoftConfig ? {
       providerName: provider.providerName,
       mailbox: provider.mailbox,
-      clientId: provider.vendorConfig.clientId,
-      clientSecret: provider.vendorConfig.clientSecret,
-      tenantId: provider.vendorConfig.tenantId,
-      redirectUri: provider.vendorConfig.redirectUri,
+      clientId: provider.microsoftConfig.client_id,
+      clientSecret: provider.microsoftConfig.client_secret,
+      tenantId: provider.microsoftConfig.tenant_id,
+      redirectUri: provider.microsoftConfig.redirect_uri,
       isActive: provider.isActive,
-      autoProcessEmails: provider.vendorConfig.autoProcessEmails ?? true,
-      folderFilters: provider.vendorConfig.folderFilters?.join(', '),
-      maxEmailsPerSync: provider.vendorConfig.maxEmailsPerSync ?? 50
+      autoProcessEmails: provider.microsoftConfig.auto_process_emails ?? true,
+      folderFilters: provider.microsoftConfig.folder_filters?.join(', '),
+      maxEmailsPerSync: provider.microsoftConfig.max_emails_per_sync ?? 50,
+      inboundTicketDefaultsId: provider.inboundTicketDefaultsId
     } : {
       redirectUri: `${window.location.origin}/api/auth/microsoft/callback`,
       isActive: true,
       autoProcessEmails: true,
-      maxEmailsPerSync: 50
+      maxEmailsPerSync: 50,
+      inboundTicketDefaultsId: ''
     }
   });
 
@@ -85,34 +112,22 @@ export function MicrosoftProviderForm({
         providerName: data.providerName,
         mailbox: data.mailbox,
         isActive: data.isActive,
-        vendorConfig: {
-          clientId: data.clientId,
-          clientSecret: data.clientSecret,
-          tenantId: data.tenantId,
-          redirectUri: data.redirectUri,
-          autoProcessEmails: data.autoProcessEmails,
-          folderFilters: data.folderFilters ? data.folderFilters.split(',').map(f => f.trim()) : ['Inbox'],
-          maxEmailsPerSync: data.maxEmailsPerSync
-        }
+        microsoftConfig: {
+          client_id: data.clientId,
+          client_secret: data.clientSecret,
+          tenant_id: data.tenantId || '',
+          redirect_uri: data.redirectUri,
+          auto_process_emails: data.autoProcessEmails,
+          folder_filters: data.folderFilters ? data.folderFilters.split(',').map(f => f.trim()) : ['Inbox'],
+          max_emails_per_sync: data.maxEmailsPerSync
+        },
+        inboundTicketDefaultsId: data.inboundTicketDefaultsId || undefined
       };
 
-      const url = isEditing ? `/api/email/providers/${provider.id}` : '/api/email/providers';
-      const method = isEditing ? 'PUT' : 'POST';
+      const result = isEditing 
+        ? await updateEmailProvider(provider.id, payload)
+        : await createEmailProvider(payload);
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to save provider');
-      }
-
-      const result = await response.json();
       onSuccess(result.provider);
 
     } catch (err: any) {
@@ -128,44 +143,68 @@ export function MicrosoftProviderForm({
       setError(null);
 
       const formData = form.getValues();
-      
-      // Construct OAuth URL
-      const authUrl = new URL('https://login.microsoftonline.com/common/oauth2/v2.0/authorize');
-      authUrl.searchParams.set('client_id', formData.clientId);
-      authUrl.searchParams.set('response_type', 'code');
-      authUrl.searchParams.set('redirect_uri', formData.redirectUri);
-      authUrl.searchParams.set('scope', 'https://graph.microsoft.com/Mail.Read offline_access');
-      authUrl.searchParams.set('state', btoa(JSON.stringify({ tenant, mailbox: formData.mailbox })));
 
-      // Open OAuth window
+      // Get OAuth URL from API
+      const response = await fetch('/api/email/oauth/initiate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          provider: 'microsoft',
+          redirectUri: formData.redirectUri,
+          providerId: provider?.id
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to initiate OAuth');
+      }
+
+      const { authUrl } = await response.json();
+
+      // Open OAuth popup
       const popup = window.open(
-        authUrl.toString(),
+        authUrl,
         'microsoft-oauth',
         'width=600,height=700,scrollbars=yes,resizable=yes'
       );
 
-      // Listen for OAuth completion
+      if (!popup) {
+        throw new Error('Failed to open OAuth popup. Please allow popups for this site.');
+      }
+
+      // Monitor popup for completion
       const checkClosed = setInterval(() => {
-        if (popup?.closed) {
+        if (popup.closed) {
           clearInterval(checkClosed);
-          setOauthStatus('idle');
+          if (oauthStatus === 'authorizing') {
+            setOauthStatus('idle');
+          }
         }
       }, 1000);
 
-      // Listen for success message from popup
+      // Listen for OAuth callback
       const messageHandler = (event: MessageEvent) => {
-        if (event.origin !== window.location.origin) return;
-        
-        if (event.data.type === 'MICROSOFT_OAUTH_SUCCESS') {
+        // Validate message is from our callback
+        if (event.data.type === 'oauth-callback' && event.data.provider === 'microsoft') {
           clearInterval(checkClosed);
           popup?.close();
-          setOauthStatus('success');
-          window.removeEventListener('message', messageHandler);
-        } else if (event.data.type === 'MICROSOFT_OAUTH_ERROR') {
-          clearInterval(checkClosed);
-          popup?.close();
-          setOauthStatus('error');
-          setError(event.data.error);
+          
+          if (event.data.success) {
+            // Store the authorization code and tokens in OAuth data (not form)
+            // These are temporary OAuth fields, not part of the provider configuration
+            
+            // Store tokens for the submit
+            setOauthData(event.data.data);
+            
+            setOauthStatus('success');
+          } else {
+            setOauthStatus('error');
+            setError(event.data.errorDescription || event.data.error || 'Authorization failed');
+          }
+          
           window.removeEventListener('message', messageHandler);
         }
       };
@@ -372,6 +411,30 @@ export function MicrosoftProviderForm({
                 max="1000"
               />
             </div>
+          </div>
+
+          {/* Ticket Defaults Selection */}
+          <div className="space-y-2">
+            <Label htmlFor="inboundTicketDefaultsId">Ticket Defaults</Label>
+            <CustomSelect
+              id="inboundTicketDefaultsId"
+              value={form.watch('inboundTicketDefaultsId') || ''}
+              onValueChange={(value) => form.setValue('inboundTicketDefaultsId', value || undefined)}
+              options={[
+                { value: '', label: 'No defaults configured' },
+                ...ticketDefaults
+                  .filter(d => d.is_active)
+                  .map(d => ({ 
+                    value: d.id, 
+                    label: `${d.display_name} (${d.short_name})` 
+                  }))
+              ]}
+              placeholder="Select ticket defaults"
+              disabled={loadingDefaults}
+            />
+            <p className="text-xs text-muted-foreground">
+              Default values applied to tickets created from emails
+            </p>
           </div>
         </CardContent>
       </Card>

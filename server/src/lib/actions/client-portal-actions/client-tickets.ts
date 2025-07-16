@@ -11,6 +11,9 @@ import { options } from 'server/src/app/api/auth/[...nextauth]/options';
 import { z } from 'zod';
 import { NumberingService } from 'server/src/lib/services/numberingService';
 import { convertBlockNoteToMarkdown } from 'server/src/lib/utils/blocknoteUtils';
+import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
+import { ServerEventPublisher } from '../../adapters/serverEventPublisher';
+import { ServerAnalyticsTracker } from '../../adapters/serverAnalyticsTracker';
 
 const clientTicketSchema = z.object({
   title: z.string().min(1),
@@ -542,99 +545,73 @@ export async function createClientTicket(data: FormData): Promise<ITicket> {
     }
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Get default status for new tickets
-      const defaultStatus = await trx('statuses')
-      .where({ 
-        tenant,
-        is_default: true,
-        status_type: 'ticket'
-      })
-      .first();
-
-      if (!defaultStatus) {
-        throw new Error('No default status found for tickets');
-      }
-
-      // Get default channel for tickets
-      const defaultChannel = await trx('channels')
-      .where({ 
-        tenant,
-        is_default: true
-      })
-      .first();
-
-      if (!defaultChannel) {
-        throw new Error('No default channel found for tickets');
-      }
-
-      // Get user's company_id
+      // Get user's contact and company information
       const user = await trx('users')
-      .where({
-        user_id: session.user.id,
-        tenant
-      })
-      .first();
+        .where({
+          user_id: session.user.id,
+          tenant
+        })
+        .first();
 
       if (!user?.contact_id) {
         throw new Error('User not associated with a contact');
       }
 
       const contact = await trx('contacts')
-      .where({
-        contact_name_id: user.contact_id,
-        tenant
-      })
-      .first();
+        .where({
+          contact_name_id: user.contact_id,
+          tenant
+        })
+        .first();
 
       if (!contact?.company_id) {
         throw new Error('Contact not associated with a company');
       }
 
-      // Generate ticket number
-      const numberingService = new NumberingService();
-      const ticketNumber = await numberingService.getNextTicketNumber();
-
-      // Validate input data
+      // Validate input data using shared validation approach
       const validatedData = validateData(clientTicketSchema, {
         title: data.get('title'),
         description: data.get('description'),
         priority_id: data.get('priority_id'),
       });
 
-      const ticketData: Partial<ITicket> = {
+      // Convert to TicketModel input format
+      const createTicketInput: CreateTicketInput = {
         title: validatedData.title,
-        ticket_number: ticketNumber,
-        status_id: defaultStatus.status_id,
+        description: validatedData.description,
         priority_id: validatedData.priority_id,
-        channel_id: defaultChannel.channel_id,
         company_id: contact.company_id,
-        contact_name_id: user.contact_id,
+        contact_id: user.contact_id, // Maps to contact_name_id in database
         entered_by: session.user.id,
-        entered_at: new Date().toISOString(),
-        attributes: {
-          description: validatedData.description
-        },
-        tenant,
-        url: null,
-        category_id: null,
-        subcategory_id: null,
-        updated_by: null,
-        closed_by: null,
-        assigned_to: null,
-        updated_at: null,
-        closed_at: null,
+        source: 'client_portal'
       };
 
-      // Insert the ticket
-      const [newTicket] = await trx('tickets')
-        .insert(ticketData)
-        .returning('*');
+      // Create adapters for client portal context
+      const eventPublisher = new ServerEventPublisher();
+      const analyticsTracker = new ServerAnalyticsTracker();
 
-      if (!newTicket.ticket_id) {
-        throw new Error('Failed to create ticket');
+      // Use shared TicketModel with retry logic, events, and analytics
+      const ticketResult = await TicketModel.createTicketWithRetry(
+        createTicketInput,
+        tenant,
+        trx,
+        {}, // validation options
+        eventPublisher,
+        analyticsTracker,
+        session.user.id,
+        3 // max retries
+      );
+
+      // Get the full ticket data for return
+      const fullTicket = await trx('tickets')
+        .where({ ticket_id: ticketResult.ticket_id, tenant: tenant })
+        .first();
+
+      if (!fullTicket) {
+        throw new Error('Failed to retrieve created ticket');
       }
 
-      return newTicket;
+      return fullTicket as ITicket;
     });
 
     return result;

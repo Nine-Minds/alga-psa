@@ -16,12 +16,21 @@ export class EmailProcessor {
     console.log(`📧 Processing email: ${job.messageId} from provider ${job.providerId}`);
 
     try {
-      // 1. Get provider configuration and create adapter
-      const providerConfig = await this.getProviderConfig(job.providerId, job.tenant);
-      const adapter = await this.createProviderAdapter(providerConfig);
-
-      // 2. Get email message details
-      const emailMessage = await adapter.getMessageDetails(job.messageId);
+      // Get email message details
+      let emailMessage;
+      let providerConfig;
+      
+      if (job.emailData) {
+        // Use provided email data (e.g., from MailHog) instead of fetching from external API
+        console.log(`📧 Using provided email data for ${job.providerId}`);
+        emailMessage = job.emailData;
+        // Skip provider config lookup for test emails with provided data
+      } else {
+        // Get provider configuration for fetching from external API
+        providerConfig = await this.getProviderConfig(job.providerId, job.tenant);
+        const adapter = await this.createProviderAdapter(providerConfig);
+        emailMessage = await adapter.getMessageDetails(job.messageId);
+      }
 
       // 3. Emit workflow event for email processing
       await this.emitEmailReceivedEvent({
@@ -31,8 +40,13 @@ export class EmailProcessor {
         emailData: emailMessage,
       });
 
-      // 4. Mark message as processed in the provider
-      await adapter.markMessageProcessed(job.messageId);
+      // 4. Mark message as processed in the provider (skip for provided email data)
+      if (!job.emailData && providerConfig) {
+        const adapter = await this.createProviderAdapter(providerConfig);
+        await adapter.markMessageProcessed(job.messageId);
+      } else {
+        console.log(`📧 Skipping markMessageProcessed for ${job.providerId} (using provided email data or missing config)`);
+      }
 
       // 5. Record successful processing in database
       await this.recordProcessedMessage(job, emailMessage, 'success');
@@ -56,25 +70,42 @@ export class EmailProcessor {
    * Get provider configuration from database
    */
   private async getProviderConfig(providerId: string, tenant: string): Promise<EmailProviderConfig> {
-    // This would normally query the database
-    // For now, return a mock configuration
-    // TODO: Implement actual database query
-    
-    const mockConfig: EmailProviderConfig = {
-      id: providerId,
-      tenant: tenant,
-      name: 'Test Provider',
-      provider_type: 'microsoft',
-      mailbox: 'test@example.com',
-      folder_to_monitor: 'Inbox',
-      active: true,
-      webhook_notification_url: `${process.env.APP_BASE_URL}/api/email/webhooks/microsoft`,
-      connection_status: 'connected',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    return mockConfig;
+    try {
+      // Import database connection dynamically to avoid module resolution issues
+      const { getConnection } = await import('@shared/db/connection');
+      const db = await getConnection();
+      
+      // No special handling for test providers - all providers should be in the database
+      
+      // Query the actual database for real providers
+      const [provider] = await db('email_provider_configs')
+        .where({ id: providerId, tenant: tenant })
+        .select('*');
+      
+      if (!provider) {
+        throw new Error(`Provider ${providerId} not found for tenant ${tenant}`);
+      }
+      
+      // Map database fields to interface
+      const config: EmailProviderConfig = {
+        id: provider.id,
+        tenant: provider.tenant,
+        name: provider.name,
+        provider_type: provider.provider_type,
+        mailbox: provider.mailbox,
+        folder_to_monitor: provider.folder_to_monitor || 'Inbox',
+        active: provider.active,
+        webhook_notification_url: provider.webhook_notification_url,
+        connection_status: provider.connection_status,
+        created_at: provider.created_at,
+        updated_at: provider.updated_at,
+      };
+      
+      return config;
+    } catch (error: any) {
+      console.error(`Failed to get provider config for ${providerId}:`, error.message);
+      throw error;
+    }
   }
 
   /**
@@ -103,17 +134,26 @@ export class EmailProcessor {
   }): Promise<void> {
     console.log(`📨 Emitting INBOUND_EMAIL_RECEIVED event for email ${eventData.emailId}`);
     
-    // TODO: Implement actual event emission to workflow system
-    // This would typically publish to the event bus or workflow system
-    // For now, just log the event
-    
-    const event = {
-      event_type: 'INBOUND_EMAIL_RECEIVED',
-      payload: eventData,
-      timestamp: new Date().toISOString(),
-    };
-
-    console.log('📨 Event emitted:', JSON.stringify(event, null, 2));
+    try {
+      // Import EventBus dynamically to avoid module resolution issues
+      const { getEventBus } = await import('../../lib/eventBus');
+      const eventBus = getEventBus();
+      
+      // Publish the event to the workflow system
+      await eventBus.publish({
+        eventType: 'INBOUND_EMAIL_RECEIVED',
+        payload: {
+          tenantId: eventData.tenant,
+          providerId: eventData.providerId,
+          emailData: eventData.emailData
+        }
+      });
+      
+      console.log(`✅ INBOUND_EMAIL_RECEIVED event published for email ${eventData.emailId}`);
+    } catch (error: any) {
+      console.error(`❌ Failed to emit INBOUND_EMAIL_RECEIVED event for email ${eventData.emailId}:`, error.message);
+      throw error;
+    }
   }
 
   /**
@@ -127,27 +167,41 @@ export class EmailProcessor {
   ): Promise<void> {
     console.log(`📝 Recording processed message: ${job.messageId} with status: ${status}`);
 
-    // TODO: Implement actual database recording
-    // This would insert into the email_processed_messages table
-    
-    const record = {
-      message_id: job.messageId,
-      provider_id: job.providerId,
-      tenant: job.tenant,
-      processed_at: new Date().toISOString(),
-      processing_status: status,
-      from_email: emailMessage?.from?.email,
-      subject: emailMessage?.subject,
-      received_at: emailMessage?.receivedAt,
-      attachment_count: emailMessage?.attachments?.length || 0,
-      error_message: errorMessage,
-      metadata: {
-        jobId: job.id,
-        attempt: job.attempt,
-        webhookData: job.webhookData,
-      },
-    };
+    try {
+      // Import database connection dynamically to avoid module resolution issues
+      const { getConnection } = await import('@shared/db/connection');
+      const db = await getConnection();
+      
+      const record = {
+        message_id: job.messageId,
+        provider_id: job.providerId,
+        tenant: job.tenant,
+        processed_at: new Date().toISOString(),
+        processing_status: status,
+        from_email: emailMessage?.from?.email,
+        subject: emailMessage?.subject,
+        received_at: emailMessage?.receivedAt,
+        attachment_count: emailMessage?.attachments?.length || 0,
+        error_message: errorMessage,
+        metadata: JSON.stringify({
+          jobId: job.id,
+          attempt: job.attempt,
+          webhookData: job.webhookData,
+        }),
+      };
 
-    console.log('📝 Would record:', JSON.stringify(record, null, 2));
+      // Check if table exists, if not skip recording (for E2E tests)
+      const tableExists = await db.schema.hasTable('email_processed_messages');
+      
+      if (tableExists) {
+        await db('email_processed_messages').insert(record);
+        console.log(`✅ Recorded processed message: ${job.messageId}`);
+      } else {
+        console.log(`⚠️ email_processed_messages table not found, skipping recording for: ${job.messageId}`);
+      }
+    } catch (error: any) {
+      console.error(`❌ Failed to record processed message ${job.messageId}:`, error.message);
+      // Don't throw error here to avoid breaking the main processing flow
+    }
   }
 }
