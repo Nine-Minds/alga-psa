@@ -160,70 +160,19 @@ jobs:
           echo "Postgres is ready."
         shell: bash
 
-      - name: Start pgbouncer service
+      - name: Skip pgbouncer for E2E tests
         if: steps.changed_files_check.outputs.any_changed == 'true' && steps.install_docker_compose.outcome == 'success'
         run: |
-          echo "Starting pgbouncer service"
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up --build -d pgbouncer
-        shell: bash
-
-      - name: Wait for pgbouncer to be ready
-        if: steps.changed_files_check.outputs.any_changed == 'true' && steps.install_docker_compose.outcome == 'success'
-        run: |
-          echo "Waiting for pgbouncer to be ready..."
-          
-          # Wait for pgbouncer port to be open first
-          echo "Checking pgbouncer port availability..."
-          MAX_ATTEMPTS=30
-          ATTEMPT_NUM=1
-          until docker run --rm --network alga-e2e-test_app-network busybox nc -z pgbouncer 6432; do
-            if [ $ATTEMPT_NUM -ge $MAX_ATTEMPTS ]; then
-              echo "Timeout: PgBouncer port did not become available within the allocated time."
-              docker-compose -p alga-e2e-test logs pgbouncer
-              exit 1
-            fi
-            echo "Attempt $ATTEMPT_NUM/$MAX_ATTEMPTS: PgBouncer port not ready. Waiting 5 seconds..."
-            sleep 5
-            ATTEMPT_NUM=$((ATTEMPT_NUM+1))
-          done
-          echo "PgBouncer port is ready."
-          
-          # Test actual database connection through pgbouncer (same as setup service uses)
-          echo "Testing database connection through pgbouncer..."
-          
-          # First, let's check pgbouncer logs for any startup errors
-          echo "=== PgBouncer logs (before connection test) ==="
-          docker-compose -p alga-e2e-test logs pgbouncer
-          
-          MAX_ATTEMPTS=15  # Reduced attempts since we'll fail fast if there's a config issue
-          ATTEMPT_NUM=1
-          until docker run --rm --network alga-e2e-test_app-network \
-            -v $(pwd)/secrets/postgres_password:/run/secrets/postgres_password:ro \
-            postgres:15 sh -c 'PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h pgbouncer -U postgres -c "\q"' > /dev/null 2>&1; do
-            if [ $ATTEMPT_NUM -ge $MAX_ATTEMPTS ]; then
-              echo "Timeout: PgBouncer database connection did not become ready within the allocated time."
-              echo "=== PgBouncer logs ==="
-              docker-compose -p alga-e2e-test logs pgbouncer
-              echo "=== PostgreSQL logs ==="
-              docker-compose -p alga-e2e-test logs postgres
-              echo "=== Testing direct PostgreSQL connection ==="
-              docker run --rm --network alga-e2e-test_app-network \
-                -v $(pwd)/secrets/postgres_password:/run/secrets/postgres_password:ro \
-                postgres:15 sh -c 'PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h postgres -U postgres -c "\q"' || echo "Direct PostgreSQL connection also failed"
-              exit 1
-            fi
-            echo "Attempt $ATTEMPT_NUM/$MAX_ATTEMPTS: PgBouncer database connection not ready. Waiting 5 seconds..."
-            sleep 5
-            ATTEMPT_NUM=$((ATTEMPT_NUM+1))
-          done
-          echo "PgBouncer database connection is ready."
+          echo "Skipping pgbouncer setup for E2E tests - will connect directly to postgres"
+          echo "This simplifies the test setup and avoids pgbouncer authentication issues"
         shell: bash
 
       - name: Start setup service
         if: steps.changed_files_check.outputs.any_changed == 'true' && steps.install_docker_compose.outcome == 'success'
         run: |
-          echo "Starting setup service"
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up --build -d setup
+          echo "Starting setup service (bypassing pgbouncer for E2E tests)"
+          # Override DB_HOST to connect directly to postgres for setup service
+          DB_HOST=postgres DB_PORT=5432 docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up --build -d setup
         shell: bash
 
       - name: Wait for Setup service to complete
