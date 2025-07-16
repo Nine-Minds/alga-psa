@@ -103,7 +103,6 @@ export async function deleteContact(contactId: string) {
       const ticketCount = await trx('tickets')
         .where({
           contact_name_id: contactId,
-          is_closed: false,
           tenant
         })
         .count('* as count')
@@ -139,6 +138,45 @@ export async function deleteContact(contactId: string) {
         dependencies.push('document');
         counts['document'] = Number(documentCount.count);
       }
+
+      // Check for projects
+      const projectCount = await trx('projects')
+        .where({
+          contact_name_id: contactId,
+          tenant
+        })
+        .count('* as count')
+        .first();
+      if (projectCount && Number(projectCount.count) > 0) {
+        dependencies.push('project');
+        counts['project'] = Number(projectCount.count);
+      }
+
+      // Check for channels
+      const channelCount = await trx('channels')
+        .where({
+          contact_name_id: contactId,
+          tenant
+        })
+        .count('* as count')
+        .first();
+      if (channelCount && Number(channelCount.count) > 0) {
+        dependencies.push('channel');
+        counts['channel'] = Number(channelCount.count);
+      }
+
+      // Check for comments
+      const commentCount = await trx('comments')
+        .where({
+          contact_name_id: contactId,
+          tenant
+        })
+        .count('* as count')
+        .first();
+      if (commentCount && Number(commentCount.count) > 0) {
+        dependencies.push('comment');
+        counts['comment'] = Number(commentCount.count);
+      }
     });
 
     // If there are dependencies, throw a detailed error
@@ -150,14 +188,45 @@ export async function deleteContact(contactId: string) {
     // If no dependencies, proceed with deletion
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       try {
-        // Delete associated tags first
-        await trx('tags')
+        // Delete associated tag mappings first
+        // First get the tag_ids for this contact
+        const tagMappings = await trx('tag_mappings')
+          .where({
+            tagged_id: contactId,
+            tagged_type: 'contact',
+            tenant
+          })
+          .select('tag_id');
+        
+        // Delete the tag mappings
+        await trx('tag_mappings')
           .where({
             tagged_id: contactId,
             tagged_type: 'contact',
             tenant
           })
           .delete();
+        
+        // Check if any of these tags are now orphaned (not used by anything else)
+        for (const mapping of tagMappings) {
+          const remainingMappings = await trx('tag_mappings')
+            .where({
+              tag_id: mapping.tag_id,
+              tenant
+            })
+            .count('* as count')
+            .first();
+          
+          // If no other mappings exist for this tag, delete the tag definition
+          if (remainingMappings && Number(remainingMappings.count) === 0) {
+            await trx('tag_definitions')
+              .where({
+                tag_id: mapping.tag_id,
+                tenant
+              })
+              .delete();
+          }
+        }
 
         // Delete the contact
         const deleted = await trx('contacts')
@@ -170,7 +239,12 @@ export async function deleteContact(contactId: string) {
 
         return { success: true };
       } catch (err) {
-        throw new Error('SYSTEM_ERROR: Failed to delete contact and its associated records');
+        console.error('Error during contact deletion transaction:', err);
+        // Re-throw the error with more context
+        if (err instanceof Error) {
+          throw new Error(`SYSTEM_ERROR: Failed to delete contact - ${err.message}`);
+        }
+        throw new Error('SYSTEM_ERROR: An unexpected error occurred while deleting the contact');
       }
     });
 
@@ -913,8 +987,8 @@ export async function importContactsFromCSV(
             // Handle tags if provided (for updates, we'll replace existing tags)
             if (contactData.tags !== undefined) {
               try {
-                // First, delete existing tags
-                await trx('tags')
+                // First, delete existing tag mappings
+                await trx('tag_mappings')
                   .where({
                     tagged_id: savedContact.contact_name_id,
                     tagged_type: 'contact',
