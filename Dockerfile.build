@@ -19,9 +19,7 @@ COPY server/package.json ./server/
 COPY tsconfig.base.json ./
 COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/assemblyscript
 
-RUN npm install
-# Remove existing sharp and install the correct platform-specific version
-RUN npm uninstall sharp && npm install --platform=linux --arch=x64 sharp
+RUN npm install --include=optional sharp
 
 # Builder stage for compiling the application
 FROM deps AS builder
