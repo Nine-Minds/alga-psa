@@ -24,7 +24,7 @@ trap 'handle_error' ERR
 wait_for_postgres() {
     log "Waiting for PostgreSQL to be ready..."
     set +e  # Temporarily disable exit on error for the until loop
-    until PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h ${DB_HOST:-postgres} -U postgres -c '\q' 2>/dev/null; do
+    until PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h ${DB_HOST:-postgres} -p ${DB_PORT:-5432} -U postgres -c '\q' 2>/dev/null; do
         log "PostgreSQL is unavailable - sleeping"
         sleep 1
     done
@@ -35,7 +35,7 @@ wait_for_postgres() {
 # Function to check if seeds have been run
 check_seeds_status() {
     local has_seeds
-    has_seeds=$(PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h ${DB_HOST:-postgres} -U postgres -d ${DB_NAME_SERVER:-server} -tAc "SELECT EXISTS (SELECT 1 FROM users LIMIT 1);")
+    has_seeds=$(PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h ${DB_HOST:-postgres} -p ${DB_PORT:-5432} -U postgres -d ${DB_NAME_SERVER:-server} -tAc "SELECT EXISTS (SELECT 1 FROM users LIMIT 1);")
     if [ "$has_seeds" = "t" ]; then
         return 0  # Seeds have been run
     else
@@ -51,10 +51,10 @@ main() {
     node /app/server/setup/create_database.js
 
     log "Creating pgboss schema..."
-    PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h ${DB_HOST:-postgres} -U postgres -d ${DB_NAME_SERVER:-server} -c 'CREATE SCHEMA IF NOT EXISTS pgboss;'
+    PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h ${DB_HOST:-postgres} -p ${DB_PORT:-5432} -U postgres -d ${DB_NAME_SERVER:-server} -c 'CREATE SCHEMA IF NOT EXISTS pgboss;'
 
     log "Granting necessary permissions..."
-    PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h ${DB_HOST:-postgres} -U postgres -d ${DB_NAME_SERVER:-server} -c 'GRANT ALL ON SCHEMA public TO postgres;'
+    PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h ${DB_HOST:-postgres} -p ${DB_PORT:-5432} -U postgres -d ${DB_NAME_SERVER:-server} -c 'GRANT ALL ON SCHEMA public TO postgres;'
 
     log "Running migrations..."
     NODE_ENV=migration npx knex migrate:latest --knexfile /app/server/knexfile.cjs
