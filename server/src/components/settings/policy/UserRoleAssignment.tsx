@@ -193,16 +193,17 @@ export default function UserRoleAssignment() {
       </CardHeader>
       <CardContent>
         <Flex direction="column" gap="4">
-          <Flex gap="3" align="end" className="p-4 bg-gray-50 rounded-lg">
-            <div className="flex-1 max-w-xs">
-              <UserPicker
-                value={selectedUser}
-                onValueChange={setSelectedUser}
-                users={filteredUsers}
-                label="Select User"
-              />
-            </div>
-            <div className="flex-1 max-w-xs">
+          <div className="flex items-end gap-3 p-4 bg-gray-50 rounded-lg">
+            <UserPicker
+              value={selectedUser}
+              onValueChange={setSelectedUser}
+              users={filteredUsers}
+              label="Select User"
+              buttonWidth="fit"
+              userTypeFilter={viewMode === 'client' ? 'client' : 'internal'}
+            />
+            <div>
+              <h5 className="font-bold mb-1">Select Role</h5>
               <CustomSelect
                 value={selectedRole}
                 onValueChange={setSelectedRole}
@@ -217,7 +218,7 @@ export default function UserRoleAssignment() {
             >
               Assign Role
             </Button>
-          </Flex>
+          </div>
 
           {filteredUsers.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
