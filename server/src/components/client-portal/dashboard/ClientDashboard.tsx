@@ -197,7 +197,7 @@ export function ClientDashboard() {
           <div className="flex gap-4">
             <Button
               id="create-ticket-button"
-              className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] px-6 py-3"
+              variant="default"
               onClick={() => setIsTicketDialogOpen(true)}
             >
               Create Support Ticket
@@ -209,7 +209,7 @@ export function ClientDashboard() {
             />
             <Button
               id="view-invoice-button"
-              className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background relative bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))] hover:bg-[rgb(var(--color-primary-200))] h-10 py-2 px-4 group"
+              variant="soft"
               onClick={() => router.push('/client-portal/billing')}
             >
               View Latest Invoice
