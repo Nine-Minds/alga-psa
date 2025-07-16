@@ -172,7 +172,7 @@ jobs:
         run: |
           echo "Waiting for pgbouncer to be ready..."
           
-          # Wait for pgbouncer port to be open
+          # Wait for pgbouncer port to be open first
           echo "Checking pgbouncer port availability..."
           MAX_ATTEMPTS=30
           ATTEMPT_NUM=1
@@ -188,9 +188,26 @@ jobs:
           done
           echo "PgBouncer port is ready."
           
-          # Additional wait for pgbouncer to fully initialize
-          echo "Waiting additional 10 seconds for pgbouncer to fully initialize..."
-          sleep 10
+          # Test actual database connection through pgbouncer (same as setup service uses)
+          echo "Testing database connection through pgbouncer..."
+          MAX_ATTEMPTS=30
+          ATTEMPT_NUM=1
+          until docker run --rm --network alga-e2e-test_app-network \
+            -v $(pwd)/secrets/postgres_password:/run/secrets/postgres_password:ro \
+            postgres:15 sh -c 'PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h pgbouncer -U postgres -c "\q"' > /dev/null 2>&1; do
+            if [ $ATTEMPT_NUM -ge $MAX_ATTEMPTS ]; then
+              echo "Timeout: PgBouncer database connection did not become ready within the allocated time."
+              echo "=== PgBouncer logs ==="
+              docker-compose -p alga-e2e-test logs pgbouncer
+              echo "=== PostgreSQL logs ==="
+              docker-compose -p alga-e2e-test logs postgres
+              exit 1
+            fi
+            echo "Attempt $ATTEMPT_NUM/$MAX_ATTEMPTS: PgBouncer database connection not ready. Waiting 5 seconds..."
+            sleep 5
+            ATTEMPT_NUM=$((ATTEMPT_NUM+1))
+          done
+          echo "PgBouncer database connection is ready."
         shell: bash
 
       - name: Start setup service
