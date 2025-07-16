@@ -190,7 +190,12 @@ jobs:
           
           # Test actual database connection through pgbouncer (same as setup service uses)
           echo "Testing database connection through pgbouncer..."
-          MAX_ATTEMPTS=30
+          
+          # First, let's check pgbouncer logs for any startup errors
+          echo "=== PgBouncer logs (before connection test) ==="
+          docker-compose -p alga-e2e-test logs pgbouncer
+          
+          MAX_ATTEMPTS=15  # Reduced attempts since we'll fail fast if there's a config issue
           ATTEMPT_NUM=1
           until docker run --rm --network alga-e2e-test_app-network \
             -v $(pwd)/secrets/postgres_password:/run/secrets/postgres_password:ro \
@@ -201,6 +206,10 @@ jobs:
               docker-compose -p alga-e2e-test logs pgbouncer
               echo "=== PostgreSQL logs ==="
               docker-compose -p alga-e2e-test logs postgres
+              echo "=== Testing direct PostgreSQL connection ==="
+              docker run --rm --network alga-e2e-test_app-network \
+                -v $(pwd)/secrets/postgres_password:/run/secrets/postgres_password:ro \
+                postgres:15 sh -c 'PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h postgres -U postgres -c "\q"' || echo "Direct PostgreSQL connection also failed"
               exit 1
             fi
             echo "Attempt $ATTEMPT_NUM/$MAX_ATTEMPTS: PgBouncer database connection not ready. Waiting 5 seconds..."
