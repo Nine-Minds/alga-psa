@@ -5,7 +5,7 @@
  * with workflow analytics systems or external tracking services
  */
 
-import { IAnalyticsTracker } from '../../models/ticketModel';
+import { IAnalyticsTracker } from '../../models/ticketModel.js';
 
 export class WorkflowAnalyticsTracker implements IAnalyticsTracker {
   async trackTicketCreated(data: {
