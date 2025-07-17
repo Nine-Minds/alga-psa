@@ -228,6 +228,73 @@ Run migrations with the migration environment (env) flag.
 
 Every query should filter on the tenant column (including joins) to ensure compatibility with citusdb.
 
+## JSON/JSONB Column Handling with Knex
+
+When working with PostgreSQL JSON and JSONB columns in Knex.js, follow these guidelines:
+
+1. **JSONB Column Behavior**
+   - PostgreSQL JSONB columns automatically serialize/deserialize JSON data
+   - Knex automatically handles the conversion between JavaScript objects/arrays and JSON strings
+   - When you store data in a JSONB column, PostgreSQL converts it to binary JSON format
+   - When you retrieve data from a JSONB column, PostgreSQL returns it as parsed JavaScript objects/arrays
+
+2. **Storage Pattern**
+   ```typescript
+   // Store arrays/objects as JSON strings for JSONB columns
+   await knex('table_name')
+     .insert({
+       json_column: JSON.stringify(arrayOrObject)
+     });
+   ```
+
+3. **Retrieval Pattern**
+   ```typescript
+   // JSONB columns are automatically parsed - no need to JSON.parse()
+   const result = await knex('table_name')
+     .select('json_column')
+     .first();
+   
+   // result.json_column is already a JavaScript object/array
+   const parsedData = result.json_column || [];  // Use directly
+   ```
+
+4. **Common Mistake to Avoid**
+   ```typescript
+   // WRONG - Don't JSON.parse() data from JSONB columns
+   const data = JSON.parse(result.json_column);  // This will fail!
+   
+   // CORRECT - JSONB data is already parsed
+   const data = result.json_column || [];
+   ```
+
+5. **Complete Example**
+   ```typescript
+   // Storing an array in JSONB
+   const labelFilters = ['INBOX', 'SENT'];
+   await knex('google_email_provider_config')
+     .insert({
+       label_filters: JSON.stringify(labelFilters)  // Store as JSON string
+     });
+   
+   // Retrieving from JSONB
+   const config = await knex('google_email_provider_config')
+     .select('label_filters')
+     .first();
+   
+   // Use directly - already parsed by PostgreSQL/Knex
+   const filters = config.label_filters || [];  // No JSON.parse() needed
+   ```
+
+6. **Error Symptoms**
+   - If you see `SyntaxError: Unexpected token` when calling `JSON.parse()` on JSONB data, you're trying to parse already-parsed data
+   - If you see `invalid input syntax for type json` when inserting, you may be passing objects instead of JSON strings
+
+7. **Migration Pattern**
+   ```sql
+   -- Define JSONB column with default
+   table.jsonb('json_column').defaultTo('[]');
+   ```
+
 ## CitusDB Compatibility
 
 1. **CitusDB UPDATE Restrictions**

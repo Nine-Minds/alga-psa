@@ -3,6 +3,7 @@
 import { createTenantKnex } from '../../db';
 import { getCurrentUser } from '../user-actions/userActions';
 import type { EmailProvider, MicrosoftEmailProviderConfig, GoogleEmailProviderConfig } from '../../../components/EmailProviderConfiguration';
+import { getSecretProviderInstance } from '@shared/core';
 
 
 export async function getEmailProviders(): Promise<{ providers: EmailProvider[] }> {
@@ -55,7 +56,8 @@ export async function getEmailProviders(): Promise<{ providers: EmailProvider[] 
           .first();
         
         if (msConfig) {
-          msConfig.folder_filters = JSON.parse(msConfig.folder_filters || '[]');
+          // For jsonb columns, PostgreSQL automatically parses the JSON, so no need to JSON.parse
+          msConfig.folder_filters = msConfig.folder_filters || [];
           provider.microsoftConfig = msConfig;
         }
       } else if (provider.providerType === 'google') {
@@ -84,7 +86,7 @@ export async function getEmailProviders(): Promise<{ providers: EmailProvider[] 
           .first();
         
         if (googleConfig) {
-          googleConfig.label_filters = JSON.parse(googleConfig.label_filters || '[]');
+          googleConfig.label_filters = googleConfig.label_filters || [];
           provider.googleConfig = googleConfig;
         }
       }
@@ -97,6 +99,186 @@ export async function getEmailProviders(): Promise<{ providers: EmailProvider[] 
     console.error('Failed to load email providers:', error);
     // Return empty array if table doesn't exist yet
     return { providers: [] };
+  }
+}
+
+export async function upsertEmailProvider(data: {
+  tenant: string;
+  providerType: string;
+  providerName: string;
+  mailbox: string;
+  isActive: boolean;
+  microsoftConfig?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
+  googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
+}): Promise<{ provider: EmailProvider }> {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+  const { knex, tenant } = await createTenantKnex();
+  
+  try {
+    // Start a transaction to ensure consistency
+    const result = await knex.transaction(async (trx) => {
+      // Check if provider already exists
+      let existingProvider = await trx('email_providers')
+        .where({ tenant, mailbox: data.mailbox })
+        .first();
+
+      let provider;
+      if (existingProvider) {
+        // Update existing provider
+        [provider] = await trx('email_providers')
+          .where({ tenant, mailbox: data.mailbox })
+          .update({
+            provider_type: data.providerType,
+            provider_name: data.providerName,
+            is_active: data.isActive,
+            updated_at: knex.fn.now()
+          })
+          .returning([
+            'id',
+            'tenant',
+            'provider_type as providerType',
+            'provider_name as providerName',
+            'mailbox',
+            'is_active as isActive',
+            'status',
+            'last_sync_at as lastSyncAt',
+            'error_message as errorMessage',
+            'created_at as createdAt',
+            'updated_at as updatedAt'
+          ]);
+      } else {
+        // Create new provider
+        const providerId = knex.raw('gen_random_uuid()');
+        [provider] = await trx('email_providers')
+          .insert({
+            id: providerId,
+            tenant,
+            provider_type: data.providerType,
+            provider_name: data.providerName,
+            mailbox: data.mailbox,
+            is_active: data.isActive,
+            status: 'configuring',
+            created_at: knex.fn.now(),
+            updated_at: knex.fn.now()
+          })
+          .returning([
+            'id',
+            'tenant',
+            'provider_type as providerType',
+            'provider_name as providerName',
+            'mailbox',
+            'is_active as isActive',
+            'status',
+            'last_sync_at as lastSyncAt',
+            'error_message as errorMessage',
+            'created_at as createdAt',
+            'updated_at as updatedAt'
+          ]);
+      }
+      
+      // Handle vendor-specific config (insert or update)
+      if (data.providerType === 'microsoft' && data.microsoftConfig) {
+        // Save secrets to tenant-specific secret store
+        const secretProvider = getSecretProviderInstance();
+        if (data.microsoftConfig.client_id) {
+          await secretProvider.setTenantSecret(tenant, 'microsoft_client_id', data.microsoftConfig.client_id);
+        }
+        if (data.microsoftConfig.client_secret) {
+          await secretProvider.setTenantSecret(tenant, 'microsoft_client_secret', data.microsoftConfig.client_secret);
+        }
+        
+        // Delete existing config if any
+        await trx('microsoft_email_provider_config')
+          .where({ email_provider_id: provider.id, tenant })
+          .delete();
+        
+        // Insert new config
+        const msConfig = await trx('microsoft_email_provider_config')
+          .insert({
+            email_provider_id: provider.id,
+            tenant,
+            client_id: data.microsoftConfig.client_id,
+            client_secret: data.microsoftConfig.client_secret,
+            tenant_id: data.microsoftConfig.tenant_id,
+            redirect_uri: data.microsoftConfig.redirect_uri,
+            auto_process_emails: data.microsoftConfig.auto_process_emails,
+            max_emails_per_sync: data.microsoftConfig.max_emails_per_sync,
+            folder_filters: JSON.stringify(data.microsoftConfig.folder_filters || []),
+            access_token: data.microsoftConfig.access_token,
+            refresh_token: data.microsoftConfig.refresh_token,
+            token_expires_at: data.microsoftConfig.token_expires_at,
+            created_at: knex.fn.now(),
+            updated_at: knex.fn.now()
+          })
+          .returning('*')
+          .then(rows => rows[0]);
+        
+        if (msConfig) {
+          // For jsonb columns, PostgreSQL automatically parses the JSON, so no need to JSON.parse
+          msConfig.folder_filters = msConfig.folder_filters || [];
+          provider.microsoftConfig = msConfig;
+        }
+      } else if (data.providerType === 'google' && data.googleConfig) {
+        // Save secrets to tenant-specific secret store
+        const secretProvider = getSecretProviderInstance();
+        if (data.googleConfig.client_id) {
+          await secretProvider.setTenantSecret(tenant, 'google_client_id', data.googleConfig.client_id);
+        }
+        if (data.googleConfig.client_secret) {
+          await secretProvider.setTenantSecret(tenant, 'google_client_secret', data.googleConfig.client_secret);
+        }
+        
+        // Delete existing config if any
+        await trx('google_email_provider_config')
+          .where({ email_provider_id: provider.id, tenant })
+          .delete();
+        
+        // Insert new config
+        const labelFiltersArray = data.googleConfig.label_filters || [];
+        
+        const insertPayload = {
+            email_provider_id: provider.id,
+            tenant,
+            client_id: data.googleConfig.client_id,
+            client_secret: data.googleConfig.client_secret,
+            project_id: data.googleConfig.project_id,
+            redirect_uri: data.googleConfig.redirect_uri,
+            pubsub_topic_name: data.googleConfig.pubsub_topic_name,
+            pubsub_subscription_name: data.googleConfig.pubsub_subscription_name,
+            auto_process_emails: data.googleConfig.auto_process_emails,
+            max_emails_per_sync: data.googleConfig.max_emails_per_sync,
+            label_filters: JSON.stringify(labelFiltersArray),
+            access_token: data.googleConfig.access_token,
+            refresh_token: data.googleConfig.refresh_token,
+            token_expires_at: data.googleConfig.token_expires_at,
+            history_id: data.googleConfig.history_id,
+            watch_expiration: data.googleConfig.watch_expiration,
+            created_at: knex.fn.now(),
+            updated_at: knex.fn.now()
+          };
+        
+        const googleConfig = await trx('google_email_provider_config')
+          .insert(insertPayload)
+          .returning('*')
+          .then(rows => rows[0]);
+        
+        if (googleConfig) {
+          // For jsonb columns, PostgreSQL automatically parses the JSON, so no need to JSON.parse
+          googleConfig.label_filters = googleConfig.label_filters || [];
+          provider.googleConfig = googleConfig;
+        }
+      }
+      
+      return provider;
+    });
+    
+    return { provider: result };
+  } catch (error) {
+    console.error('Failed to upsert email provider:', error);
+    throw new Error('Failed to upsert email provider');
   }
 }
 
@@ -172,12 +354,14 @@ export async function createEmailProvider(data: {
           .then(rows => rows[0]);
         
         if (msConfig) {
-          msConfig.folder_filters = JSON.parse(msConfig.folder_filters || '[]');
+          // For jsonb columns, PostgreSQL automatically parses the JSON, so no need to JSON.parse
+          msConfig.folder_filters = msConfig.folder_filters || [];
           provider.microsoftConfig = msConfig;
         }
       } else if (data.providerType === 'google' && data.googleConfig) {
-        const googleConfig = await trx('google_email_provider_config')
-          .insert({
+        const labelFiltersArray = data.googleConfig.label_filters || [];
+        
+        const insertPayload = {
             email_provider_id: provider.id,
             tenant,
             client_id: data.googleConfig.client_id,
@@ -188,7 +372,7 @@ export async function createEmailProvider(data: {
             pubsub_subscription_name: data.googleConfig.pubsub_subscription_name,
             auto_process_emails: data.googleConfig.auto_process_emails,
             max_emails_per_sync: data.googleConfig.max_emails_per_sync,
-            label_filters: JSON.stringify(data.googleConfig.label_filters || []),
+            label_filters: JSON.stringify(labelFiltersArray),
             access_token: data.googleConfig.access_token,
             refresh_token: data.googleConfig.refresh_token,
             token_expires_at: data.googleConfig.token_expires_at,
@@ -196,12 +380,16 @@ export async function createEmailProvider(data: {
             watch_expiration: data.googleConfig.watch_expiration,
             created_at: knex.fn.now(),
             updated_at: knex.fn.now()
-          })
+          };
+        
+        const googleConfig = await trx('google_email_provider_config')
+          .insert(insertPayload)
           .returning('*')
           .then(rows => rows[0]);
         
         if (googleConfig) {
-          googleConfig.label_filters = JSON.parse(googleConfig.label_filters || '[]');
+          // For jsonb columns, PostgreSQL automatically parses the JSON, so no need to JSON.parse
+          googleConfig.label_filters = googleConfig.label_filters || [];
           provider.googleConfig = googleConfig;
         }
       }
@@ -296,7 +484,8 @@ export async function updateEmailProvider(
           .then(rows => rows[0]);
         
         if (msConfig) {
-          msConfig.folder_filters = JSON.parse(msConfig.folder_filters || '[]');
+          // For jsonb columns, PostgreSQL automatically parses the JSON, so no need to JSON.parse
+          msConfig.folder_filters = msConfig.folder_filters || [];
           provider.microsoftConfig = msConfig;
         }
       } else if (data.providerType === 'google' && data.googleConfig) {
@@ -331,7 +520,7 @@ export async function updateEmailProvider(
           .then(rows => rows[0]);
         
         if (googleConfig) {
-          googleConfig.label_filters = JSON.parse(googleConfig.label_filters || '[]');
+          googleConfig.label_filters = googleConfig.label_filters || [];
           provider.googleConfig = googleConfig;
         }
       }

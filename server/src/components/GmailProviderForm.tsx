@@ -17,7 +17,7 @@ import { Alert, AlertDescription } from './ui/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
 import { ExternalLink, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
-import { createEmailProvider, updateEmailProvider } from '../lib/actions/email-actions/emailProviderActions';
+import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from '../lib/actions/email-actions/emailProviderActions';
 import { setupPubSub } from 'server/src/lib/actions/email-actions/setupPubSub';
 
 const gmailProviderSchema = z.object({
@@ -73,7 +73,7 @@ export function GmailProviderForm({
       pubsubSubscriptionName: provider.googleConfig.pubsub_subscription_name || 'gmail-webhook-subscription',
       isActive: provider.isActive,
       autoProcessEmails: provider.googleConfig.auto_process_emails ?? true,
-      labelFilters: provider.googleConfig.label_filters?.join(', '),
+      labelFilters: provider.googleConfig.label_filters?.join(', ') || '',
       maxEmailsPerSync: provider.googleConfig.max_emails_per_sync ?? 50
     } : {
       redirectUri: `${window.location.origin}/api/auth/google/callback`,
@@ -81,6 +81,7 @@ export function GmailProviderForm({
       pubsubSubscriptionName: 'gmail-webhook-subscription',
       isActive: true,
       autoProcessEmails: true,
+      labelFilters: '',
       maxEmailsPerSync: 50
     }
   });
@@ -137,6 +138,40 @@ export function GmailProviderForm({
 
       const formData = form.getValues();
 
+      // Validate required fields for OAuth
+      const isValid = await form.trigger();
+      if (!isValid) {
+        setOauthStatus('error');
+        setError('Please fill in all required fields before authorizing');
+        return;
+      }
+
+      // Save provider first so credentials are available for OAuth
+      let providerId = provider?.id;
+      if (!providerId) {
+        const payload = {
+          tenant,
+          providerType: 'google',
+          providerName: formData.providerName,
+          mailbox: formData.mailbox,
+          isActive: formData.isActive,
+          googleConfig: {
+            client_id: formData.clientId,
+            client_secret: formData.clientSecret,
+            project_id: formData.projectId,
+            redirect_uri: formData.redirectUri,
+            pubsub_topic_name: formData.pubsubTopicName,
+            pubsub_subscription_name: formData.pubsubSubscriptionName,
+            auto_process_emails: formData.autoProcessEmails,
+            label_filters: formData.labelFilters ? formData.labelFilters.split(',').map(l => l.trim()) : ['INBOX'],
+            max_emails_per_sync: formData.maxEmailsPerSync
+          }
+        };
+
+        const result = await upsertEmailProvider(payload);
+        providerId = result.provider.id;
+      }
+
       // Get OAuth URL from API
       const response = await fetch('/api/email/oauth/initiate', {
         method: 'POST',
@@ -146,7 +181,7 @@ export function GmailProviderForm({
         body: JSON.stringify({
           provider: 'google',
           redirectUri: formData.redirectUri,
-          providerId: provider?.id
+          providerId: providerId
         })
       });
 

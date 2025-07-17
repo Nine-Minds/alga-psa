@@ -92,8 +92,8 @@ export class GmailAdapter extends BaseEmailAdapter {
       }
 
       const secretProvider = getSecretProviderInstance();
-      const clientId = process.env.GOOGLE_CLIENT_ID || await secretProvider.getAppSecret('google_client_id');
-      const clientSecret = process.env.GOOGLE_CLIENT_SECRET || await secretProvider.getAppSecret('google_client_secret');
+      const clientId = process.env.GOOGLE_CLIENT_ID || await secretProvider.getTenantSecret(this.config.tenant, 'google_client_id');
+      const clientSecret = process.env.GOOGLE_CLIENT_SECRET || await secretProvider.getTenantSecret(this.config.tenant, 'google_client_secret');
 
       if (!clientId || !clientSecret) {
         throw new Error('Google OAuth credentials not configured');

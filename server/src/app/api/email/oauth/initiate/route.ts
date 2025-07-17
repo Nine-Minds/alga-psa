@@ -22,11 +22,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid provider' }, { status: 400 });
     }
 
-    // Get OAuth credentials
+    // Get OAuth credentials - use tenant-specific secrets
     const secretProvider = getSecretProviderInstance();
     const clientId = provider === 'microsoft'
-      ? process.env.MICROSOFT_CLIENT_ID || await secretProvider.getAppSecret('microsoft_client_id')
-      : process.env.GOOGLE_CLIENT_ID || await secretProvider.getAppSecret('google_client_id');
+      ? process.env.MICROSOFT_CLIENT_ID || await secretProvider.getTenantSecret(user.tenant, 'microsoft_client_id')
+      : process.env.GOOGLE_CLIENT_ID || await secretProvider.getTenantSecret(user.tenant, 'google_client_id');
 
     if (!clientId) {
       return NextResponse.json({ 

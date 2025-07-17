@@ -17,7 +17,7 @@ import { Alert, AlertDescription } from './ui/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
 import { ExternalLink, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
-import { createEmailProvider, updateEmailProvider } from '../lib/actions/email-actions/emailProviderActions';
+import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from '../lib/actions/email-actions/emailProviderActions';
 
 const microsoftProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),
@@ -67,12 +67,13 @@ export function MicrosoftProviderForm({
       redirectUri: provider.microsoftConfig.redirect_uri,
       isActive: provider.isActive,
       autoProcessEmails: provider.microsoftConfig.auto_process_emails ?? true,
-      folderFilters: provider.microsoftConfig.folder_filters?.join(', '),
+      folderFilters: provider.microsoftConfig.folder_filters?.join(', ') || '',
       maxEmailsPerSync: provider.microsoftConfig.max_emails_per_sync ?? 50
     } : {
       redirectUri: `${window.location.origin}/api/auth/microsoft/callback`,
       isActive: true,
       autoProcessEmails: true,
+      folderFilters: '',
       maxEmailsPerSync: 50
     }
   });
@@ -127,6 +128,38 @@ export function MicrosoftProviderForm({
 
       const formData = form.getValues();
 
+      // Validate required fields for OAuth
+      const isValid = await form.trigger();
+      if (!isValid) {
+        setOauthStatus('error');
+        setError('Please fill in all required fields before authorizing');
+        return;
+      }
+
+      // Save provider first so credentials are available for OAuth
+      let providerId = provider?.id;
+      if (!providerId) {
+        const payload = {
+          tenant,
+          providerType: 'microsoft',
+          providerName: formData.providerName,
+          mailbox: formData.mailbox,
+          isActive: formData.isActive,
+          microsoftConfig: {
+            client_id: formData.clientId,
+            client_secret: formData.clientSecret,
+            tenant_id: formData.tenantId,
+            redirect_uri: formData.redirectUri,
+            auto_process_emails: formData.autoProcessEmails,
+            folder_filters: formData.folderFilters && formData.folderFilters.trim() ? formData.folderFilters.split(',').map(f => f.trim()) : ['INBOX'],
+            max_emails_per_sync: formData.maxEmailsPerSync
+          }
+        };
+
+        const result = await upsertEmailProvider(payload);
+        providerId = result.provider.id;
+      }
+
       // Get OAuth URL from API
       const response = await fetch('/api/email/oauth/initiate', {
         method: 'POST',
@@ -136,7 +169,7 @@ export function MicrosoftProviderForm({
         body: JSON.stringify({
           provider: 'microsoft',
           redirectUri: formData.redirectUri,
-          providerId: provider?.id
+          providerId: providerId
         })
       });
 
