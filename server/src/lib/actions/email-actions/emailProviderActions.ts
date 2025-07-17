@@ -293,6 +293,15 @@ export async function upsertEmailProvider(data: {
     if (data.providerType === 'google' && data.googleConfig && result.googleConfig) {
       try {
         const pubsubNames = generatePubSubNames(tenant);
+        console.log(`🔧 Initiating automatic Pub/Sub setup for Gmail provider ${result.id}:`, {
+          tenant,
+          providerId: result.id,
+          projectId: data.googleConfig.project_id,
+          topicName: pubsubNames.topicName,
+          subscriptionName: pubsubNames.subscriptionName,
+          webhookUrl: pubsubNames.webhookUrl
+        });
+        
         await setupPubSub({
           projectId: data.googleConfig.project_id,
           topicName: pubsubNames.topicName,
@@ -300,9 +309,20 @@ export async function upsertEmailProvider(data: {
           webhookUrl: pubsubNames.webhookUrl
         });
         
-        console.log(`Automatically set up Pub/Sub for Gmail provider ${result.id}: ${pubsubNames.topicName}`);
+        console.log(`✅ Successfully set up Pub/Sub for Gmail provider ${result.id}:`, {
+          tenant,
+          providerId: result.id,
+          topicName: pubsubNames.topicName,
+          subscriptionName: pubsubNames.subscriptionName
+        });
       } catch (pubsubError) {
-        console.error('Failed to set up Pub/Sub automatically:', pubsubError);
+        console.error(`❌ Failed to set up Pub/Sub automatically for Gmail provider ${result.id}:`, {
+          tenant,
+          providerId: result.id,
+          projectId: data.googleConfig.project_id,
+          error: pubsubError instanceof Error ? pubsubError.message : String(pubsubError),
+          stack: pubsubError instanceof Error ? pubsubError.stack : undefined
+        });
         // Don't throw error here - provider is still functional without Pub/Sub
         // The error will be logged and can be addressed later
       }
@@ -437,6 +457,15 @@ export async function createEmailProvider(data: {
     if (data.providerType === 'google' && data.googleConfig && result.googleConfig) {
       try {
         const pubsubNames = generatePubSubNames(tenant);
+        console.log(`🔧 Initiating automatic Pub/Sub setup for Gmail provider ${result.id}:`, {
+          tenant,
+          providerId: result.id,
+          projectId: data.googleConfig.project_id,
+          topicName: pubsubNames.topicName,
+          subscriptionName: pubsubNames.subscriptionName,
+          webhookUrl: pubsubNames.webhookUrl
+        });
+        
         await setupPubSub({
           projectId: data.googleConfig.project_id,
           topicName: pubsubNames.topicName,
@@ -444,9 +473,20 @@ export async function createEmailProvider(data: {
           webhookUrl: pubsubNames.webhookUrl
         });
         
-        console.log(`Automatically set up Pub/Sub for Gmail provider ${result.id}: ${pubsubNames.topicName}`);
+        console.log(`✅ Successfully set up Pub/Sub for Gmail provider ${result.id}:`, {
+          tenant,
+          providerId: result.id,
+          topicName: pubsubNames.topicName,
+          subscriptionName: pubsubNames.subscriptionName
+        });
       } catch (pubsubError) {
-        console.error('Failed to set up Pub/Sub automatically:', pubsubError);
+        console.error(`❌ Failed to set up Pub/Sub automatically for Gmail provider ${result.id}:`, {
+          tenant,
+          providerId: result.id,
+          projectId: data.googleConfig.project_id,
+          error: pubsubError instanceof Error ? pubsubError.message : String(pubsubError),
+          stack: pubsubError instanceof Error ? pubsubError.stack : undefined
+        });
         // Don't throw error here - provider is still functional without Pub/Sub
         // The error will be logged and can be addressed later
       }
@@ -590,6 +630,15 @@ export async function updateEmailProvider(
     if (data.providerType === 'google' && data.googleConfig && result.googleConfig) {
       try {
         const pubsubNames = generatePubSubNames(tenant);
+        console.log(`🔧 Initiating automatic Pub/Sub setup for Gmail provider ${result.id}:`, {
+          tenant,
+          providerId: result.id,
+          projectId: data.googleConfig.project_id,
+          topicName: pubsubNames.topicName,
+          subscriptionName: pubsubNames.subscriptionName,
+          webhookUrl: pubsubNames.webhookUrl
+        });
+        
         await setupPubSub({
           projectId: data.googleConfig.project_id,
           topicName: pubsubNames.topicName,
@@ -597,9 +646,20 @@ export async function updateEmailProvider(
           webhookUrl: pubsubNames.webhookUrl
         });
         
-        console.log(`Automatically set up Pub/Sub for Gmail provider ${result.id}: ${pubsubNames.topicName}`);
+        console.log(`✅ Successfully set up Pub/Sub for Gmail provider ${result.id}:`, {
+          tenant,
+          providerId: result.id,
+          topicName: pubsubNames.topicName,
+          subscriptionName: pubsubNames.subscriptionName
+        });
       } catch (pubsubError) {
-        console.error('Failed to set up Pub/Sub automatically:', pubsubError);
+        console.error(`❌ Failed to set up Pub/Sub automatically for Gmail provider ${result.id}:`, {
+          tenant,
+          providerId: result.id,
+          projectId: data.googleConfig.project_id,
+          error: pubsubError instanceof Error ? pubsubError.message : String(pubsubError),
+          stack: pubsubError instanceof Error ? pubsubError.stack : undefined
+        });
         // Don't throw error here - provider is still functional without Pub/Sub
         // The error will be logged and can be addressed later
       }
