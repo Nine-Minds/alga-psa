@@ -75,11 +75,11 @@ export async function getClientInvoices(): Promise<InvoiceViewModel[]> {
     throw new Error('Unauthorized');
   }
 
-  // Check for client_billing permission
+  // Check for billing permission (client portal uses 'billing' resource)
   const userRoles = await getUserRolesWithPermissions(session.user.id);
   const hasInvoiceAccess = userRoles.some(role =>
     role.permissions.some(p =>
-      p.resource === 'client_billing' && p.action === 'read'
+      p.resource === 'billing' && p.action === 'read' && p.client === true
     )
   );
 
@@ -106,11 +106,11 @@ export async function getClientInvoiceById(invoiceId: string): Promise<InvoiceVi
     throw new Error('Unauthorized');
   }
 
-  // Check for client_billing permission
+  // Check for billing permission (client portal uses 'billing' resource)
   const userRoles = await getUserRolesWithPermissions(session.user.id);
   const hasInvoiceAccess = userRoles.some(role =>
     role.permissions.some(p =>
-      p.resource === 'client_billing' && p.action === 'read'
+      p.resource === 'billing' && p.action === 'read' && p.client === true
     )
   );
 
@@ -154,11 +154,11 @@ export async function getClientInvoiceLineItems(invoiceId: string) {
     throw new Error('Unauthorized');
   }
 
-  // Check for client_billing permission
+  // Check for billing permission (client portal uses 'billing' resource)
   const userRoles = await getUserRolesWithPermissions(session.user.id);
   const hasInvoiceAccess = userRoles.some(role =>
     role.permissions.some(p =>
-      p.resource === 'client_billing' && p.action === 'read'
+      p.resource === 'billing' && p.action === 'read' && p.client === true
     )
   );
 
@@ -221,11 +221,11 @@ export async function downloadClientInvoicePdf(invoiceId: string) {
     throw new Error('Unauthorized');
   }
 
-  // Check for client_billing permission
+  // Check for billing permission (client portal uses 'billing' resource)
   const userRoles = await getUserRolesWithPermissions(session.user.id);
   const hasInvoiceAccess = userRoles.some(role =>
     role.permissions.some(p =>
-      p.resource === 'client_billing' && p.action === 'read'
+      p.resource === 'billing' && p.action === 'read' && p.client === true
     )
   );
 
@@ -269,11 +269,11 @@ export async function sendClientInvoiceEmail(invoiceId: string) {
     throw new Error('Unauthorized');
   }
 
-  // Check for client_billing permission
+  // Check for billing permission (client portal uses 'billing' resource)
   const userRoles = await getUserRolesWithPermissions(session.user.id);
   const hasInvoiceAccess = userRoles.some(role =>
     role.permissions.some(p =>
-      p.resource === 'client_billing' && p.action === 'read'
+      p.resource === 'billing' && p.action === 'read' && p.client === true
     )
   );
 

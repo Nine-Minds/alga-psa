@@ -512,8 +512,8 @@ export class ApiInvoiceController extends ApiBaseController {
         
         // Run within tenant context
         return await runWithTenant(apiRequest.context.tenant, async () => {
-          // Check permissions
-          await this.checkPermission(apiRequest, 'tax');
+          // Check permissions - tax operations require billing permissions
+          await this.checkPermission(apiRequest, 'billing');
 
           // Validate request body
           const body = await req.json();

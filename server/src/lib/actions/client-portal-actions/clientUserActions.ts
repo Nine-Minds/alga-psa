@@ -8,6 +8,7 @@ import { IUser } from 'server/src/interfaces/auth.interfaces';;
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser, getUserRolesWithPermissions, getUserCompanyId } from 'server/src/lib/actions/user-actions/userActions';
 import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/EntityImageService';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 /**
  * Update a client user
  */
@@ -443,5 +444,46 @@ export async function deleteContactAvatar(
     });
     const message = error instanceof Error ? error.message : 'Failed to delete contact avatar';
     return { success: false, message };
+  }
+}
+
+/**
+ * Check client portal permissions for navigation
+ * Returns permissions for billing, user management, and company settings
+ */
+export async function checkClientPortalPermissions(): Promise<{
+  hasBillingAccess: boolean;
+  hasUserManagementAccess: boolean;
+  hasCompanySettingsAccess: boolean;
+}> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return {
+        hasBillingAccess: false,
+        hasUserManagementAccess: false,
+        hasCompanySettingsAccess: false
+      };
+    }
+
+    // Check permissions using the hasPermission function from rbac
+    const [hasBilling, hasUser, hasCompany] = await Promise.all([
+      hasPermission(currentUser, 'billing', 'read'),
+      hasPermission(currentUser, 'user', 'read'),
+      hasPermission(currentUser, 'client', 'read')
+    ]);
+
+    return {
+      hasBillingAccess: hasBilling,
+      hasUserManagementAccess: hasUser,
+      hasCompanySettingsAccess: hasCompany
+    };
+  } catch (error) {
+    console.error('Error checking client portal permissions:', error);
+    return {
+      hasBillingAccess: false,
+      hasUserManagementAccess: false,
+      hasCompanySettingsAccess: false
+    };
   }
 }

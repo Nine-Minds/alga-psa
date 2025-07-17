@@ -7,10 +7,11 @@ import { signOut } from "next-auth/react";
 import { ExitIcon, PersonIcon } from '@radix-ui/react-icons';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
-import { getCurrentUser, getUserRolesWithPermissions } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { useRouter } from 'next/navigation';
 import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
+import { checkClientPortalPermissions } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
 
 interface ClientPortalLayoutProps {
   children: ReactNode;
@@ -19,6 +20,8 @@ interface ClientPortalLayoutProps {
 export default function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
   const [userData, setUserData] = useState<IUserWithRoles | null>(null);
   const [hasCompanySettingsAccess, setHasCompanySettingsAccess] = useState(false);
+  const [hasBillingAccess, setHasBillingAccess] = useState(false);
+  const [hasUserManagementAccess, setHasUserManagementAccess] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const router = useRouter();
 
@@ -33,19 +36,11 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
       if (user) {
         setUserData(user);
         
-        // Check for company read permission
-        const rolesWithPermissions = await getUserRolesWithPermissions(user.user_id);
-        let foundAccess = false;
-        for (const role of rolesWithPermissions) {
-          for (const permission of role.permissions) {
-            if (permission.resource === 'company' && permission.action === 'read') {
-              foundAccess = true;
-              break;
-            }
-          }
-          if (foundAccess) break;
-        }
-        setHasCompanySettingsAccess(foundAccess);
+        // Check permissions using the server action
+        const permissions = await checkClientPortalPermissions();
+        setHasCompanySettingsAccess(permissions.hasCompanySettingsAccess);
+        setHasBillingAccess(permissions.hasBillingAccess);
+        setHasUserManagementAccess(permissions.hasUserManagementAccess);
         
         if (user.contact_id) {
           try {
@@ -105,12 +100,14 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
                 >
                   Projects
                 </Link>
-                <Link 
-                  href="/client-portal/billing" 
-                  className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]"
-                >
-                  Billing
-                </Link>
+                {hasBillingAccess && (
+                  <Link 
+                    href="/client-portal/billing" 
+                    className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]"
+                  >
+                    Billing
+                  </Link>
+                )}
                 {/*
                 <Link
                   href="/client-portal/assets"

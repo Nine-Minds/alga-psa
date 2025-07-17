@@ -116,7 +116,7 @@ export class ApiCompanyController extends ApiBaseController {
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
           const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'company', 'read', knex);
+          const hasAccess = await hasPermission(user, 'client', 'read', knex);
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot read company');
           }
@@ -186,7 +186,7 @@ export class ApiCompanyController extends ApiBaseController {
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
           const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'company', 'read', knex);
+          const hasAccess = await hasPermission(user, 'client', 'read', knex);
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot read company');
           }
@@ -279,7 +279,7 @@ export class ApiCompanyController extends ApiBaseController {
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
           const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'company', 'update', knex);
+          const hasAccess = await hasPermission(user, 'client', 'update', knex);
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot update company');
           }
@@ -371,7 +371,7 @@ export class ApiCompanyController extends ApiBaseController {
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
           const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'company', 'read', knex);
+          const hasAccess = await hasPermission(user, 'client', 'read', knex);
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot read company');
           }

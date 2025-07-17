@@ -31,8 +31,8 @@ export default function EmailRegistrationContainer() {
         // Check if user has Client Admin role with required permissions
         const hasRequiredPermissions = rolesWithPermissions.some(role => 
           role.permissions.some((permission: IPermission) => 
-            `${permission.resource}.${permission.action}` === 'company.read' || 
-            `${permission.resource}.${permission.action}` === 'company.update'
+            `${permission.resource}.${permission.action}` === 'client.read' || 
+            `${permission.resource}.${permission.action}` === 'client.update'
           )
         );
 

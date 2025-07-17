@@ -712,7 +712,9 @@ export async function getUserCompanyId(userId: string): Promise<string | null> {
     }
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      if (!await hasPermission(currentUser, 'user', 'read', trx)) {
+      // For client users accessing their own company ID, no permission check needed
+      // For other users, check user:read permission
+      if (currentUser.user_id !== userId && !await hasPermission(currentUser, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot read user company ID');
       }
 
