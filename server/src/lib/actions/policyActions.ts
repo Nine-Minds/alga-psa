@@ -106,6 +106,29 @@ export async function removePermissionFromRole(roleId: string, permissionId: str
 export async function assignRoleToUser(userId: string, roleId: string): Promise<IUserRole> {
     const { knex: db, tenant } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
+        // Validate that the role and user exist and are compatible
+        const [user, role] = await Promise.all([
+            trx('users').where({ user_id: userId, tenant }).first(),
+            trx('roles').where({ role_id: roleId, tenant }).first()
+        ]);
+        
+        if (!user) {
+            throw new Error('User not found');
+        }
+        
+        if (!role) {
+            throw new Error('Role not found');
+        }
+        
+        // Validate role compatibility based on user type
+        if (user.user_type === 'internal' && !role.msp) {
+            throw new Error('Cannot assign client portal role to MSP user');
+        }
+        
+        if (user.user_type === 'client' && !role.client) {
+            throw new Error('Cannot assign MSP role to client portal user');
+        }
+        
         const [userRole] = await trx('user_roles')
             .insert({ user_id: userId, role_id: roleId, tenant })
             .returning('*');

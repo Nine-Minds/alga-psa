@@ -31,7 +31,9 @@ export default function RoleManagement() {
 
   const fetchRoles = async () => {
     const fetchedRoles = await getRoles();
-    setRoles(fetchedRoles);
+    // Sort roles alphabetically by role_name
+    const sortedRoles = fetchedRoles.sort((a, b) => a.role_name.localeCompare(b.role_name));
+    setRoles(sortedRoles);
   };
 
   const handleCreateRole = async () => {

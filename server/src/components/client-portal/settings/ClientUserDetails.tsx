@@ -1,16 +1,25 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { IUser, IPermission } from 'server/src/interfaces/auth.interfaces';
+import { IUser, IPermission, IRole } from 'server/src/interfaces/auth.interfaces';
 import { getCurrentUser, getUserRolesWithPermissions } from 'server/src/lib/actions/user-actions/userActions';
-import { getClientUserById, updateClientUser, resetClientUserPassword } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
+import { 
+  getClientUserById, 
+  updateClientUser, 
+  resetClientUserPassword,
+  getClientPortalRoles,
+  getClientUserRoles,
+  assignClientUserRole,
+  removeClientUserRole
+} from 'server/src/lib/actions/client-portal-actions/clientUserActions';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Card, CardContent } from 'server/src/components/ui/Card';
-import { Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
+import { Eye, EyeOff, ChevronDown, ChevronUp, X } from 'lucide-react';
 import ClientPasswordChangeForm from './ClientPasswordChangeForm';
+import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 
 interface ClientUserDetailsProps {
   userId: string;
@@ -36,6 +45,12 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
   const [isAdminPasswordExpanded, setIsAdminPasswordExpanded] = useState(false);
+  
+  // Role management states
+  const [userRoles, setUserRoles] = useState<IRole[]>([]);
+  const [availableRoles, setAvailableRoles] = useState<IRole[]>([]);
+  const [selectedRoleId, setSelectedRoleId] = useState<string>('');
+  const [canManageRoles, setCanManageRoles] = useState(false);
 
   useEffect(() => {
     fetchUserDetails();
@@ -56,11 +71,20 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
           )
         );
         
+        const hasRoleManagementPermission = rolesWithPermissions.some(role => 
+          role.permissions.some((permission: IPermission) => 
+            `${permission.resource}.${permission.action}` === 'user.update' ||
+            `${permission.resource}.${permission.action}` === 'role.assign'
+          )
+        );
+        
         setCanResetPassword(hasPasswordResetPermission);
+        setCanManageRoles(hasRoleManagementPermission);
         setIsOwnProfile(user.user_id === userId);
         
         console.log('Current user roles:', user.roles?.map(r => r.role_name));
         console.log('Has password reset permission:', hasPasswordResetPermission);
+        console.log('Has role management permission:', hasRoleManagementPermission);
         console.log('Is own profile:', user.user_id === userId);
       }
     } catch (err) {
@@ -79,6 +103,14 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
         setLastName(fetchedUser.last_name || '');
         setEmail(fetchedUser.email);
         setIsActive(!fetchedUser.is_inactive);
+        
+        // Fetch user's current roles
+        const roles = await getClientUserRoles(userId);
+        setUserRoles(roles);
+        
+        // Fetch available roles for assignment
+        const allRoles = await getClientPortalRoles();
+        setAvailableRoles(allRoles);
       } else {
         setError('User not found');
       }
@@ -112,6 +144,33 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
         console.error('Error updating user:', err);
         setError('Failed to update user. Please try again.');
       }
+    }
+  };
+
+  const handleAssignRole = async () => {
+    if (!selectedRoleId) return;
+    
+    try {
+      await assignClientUserRole(userId, selectedRoleId);
+      // Refresh user roles
+      const updatedRoles = await getClientUserRoles(userId);
+      setUserRoles(updatedRoles);
+      setSelectedRoleId('');
+    } catch (err) {
+      console.error('Error assigning role:', err);
+      setError('Failed to assign role');
+    }
+  };
+  
+  const handleRemoveRole = async (roleId: string) => {
+    try {
+      await removeClientUserRole(userId, roleId);
+      // Refresh user roles
+      const updatedRoles = await getClientUserRoles(userId);
+      setUserRoles(updatedRoles);
+    } catch (err) {
+      console.error('Error removing role:', err);
+      setError('Failed to remove role');
     }
   };
 
@@ -236,6 +295,64 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
             />
           </div>
         </div>
+
+        {/* Role Management Section */}
+        {canManageRoles && (
+          <div className="mt-4 space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Roles
+              </label>
+              
+              {/* Current Roles */}
+              <div className="space-y-2 mb-4">
+                {userRoles.length > 0 ? (
+                  userRoles.map((role) => (
+                    <div key={role.role_id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                      <span className="text-sm">{role.role_name}</span>
+                      <Button
+                        id={`remove-role-${role.role_id}`}
+                        onClick={() => handleRemoveRole(role.role_id)}
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-500">No roles assigned</p>
+                )}
+              </div>
+              
+              {/* Add Role */}
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <CustomSelect
+                    value={selectedRoleId}
+                    onValueChange={setSelectedRoleId}
+                    options={availableRoles
+                      .filter(role => !userRoles.some(ur => ur.role_id === role.role_id))
+                      .map((role): SelectOption => ({
+                        value: role.role_id,
+                        label: role.role_name
+                      }))}
+                    placeholder="Select a role to assign"
+                  />
+                </div>
+                <Button
+                  id="assign-role-btn"
+                  onClick={handleAssignRole}
+                  disabled={!selectedRoleId}
+                  size="sm"
+                >
+                  Assign Role
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Password Change Section */}
         {isOwnProfile && (

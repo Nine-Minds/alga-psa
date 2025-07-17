@@ -4,11 +4,63 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
-import { IUser } from 'server/src/interfaces/auth.interfaces';;
+import { IUser, IRole } from 'server/src/interfaces/auth.interfaces';;
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser, getUserRolesWithPermissions, getUserCompanyId } from 'server/src/lib/actions/user-actions/userActions';
 import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/EntityImageService';
 import { hasPermission } from 'server/src/lib/auth/rbac';
+import { getRoles, assignRoleToUser, removeRoleFromUser, getUserRoles } from 'server/src/lib/actions/policyActions';
+
+/**
+ * Get available client portal roles
+ */
+export async function getClientPortalRoles(): Promise<IRole[]> {
+  try {
+    const allRoles = await getRoles();
+    // Filter to only client portal roles
+    return allRoles.filter(role => role.client && !role.msp);
+  } catch (error) {
+    console.error('Error fetching client portal roles:', error);
+    return [];
+  }
+}
+
+/**
+ * Assign a role to a client user
+ */
+export async function assignClientUserRole(userId: string, roleId: string): Promise<void> {
+  try {
+    await assignRoleToUser(userId, roleId);
+  } catch (error) {
+    console.error('Error assigning role to client user:', error);
+    throw error;
+  }
+}
+
+/**
+ * Remove a role from a client user
+ */
+export async function removeClientUserRole(userId: string, roleId: string): Promise<void> {
+  try {
+    await removeRoleFromUser(userId, roleId);
+  } catch (error) {
+    console.error('Error removing role from client user:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get roles for a specific client user
+ */
+export async function getClientUserRoles(userId: string): Promise<IRole[]> {
+  try {
+    return await getUserRoles(userId);
+  } catch (error) {
+    console.error('Error getting client user roles:', error);
+    return [];
+  }
+}
+
 /**
  * Update a client user
  */
@@ -113,7 +165,8 @@ export async function createClientUser({
   contactId,
   companyId,
   firstName,
-  lastName
+  lastName,
+  roleId
 }: {
   email: string;
   password: string;
@@ -121,6 +174,7 @@ export async function createClientUser({
   companyId: string;
   firstName?: string;
   lastName?: string;
+  roleId?: string;
 }): Promise<{ success: boolean; error?: string }> {
   try {
     const { knex, tenant } = await createTenantKnex();
@@ -129,27 +183,46 @@ export async function createClientUser({
     }
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Get the client portal user role
-      // After migration, look for "User" role in client portal
-      let clientRole = await trx('roles')
-        .where({ 
-          tenant,
-          client: true,
-          msp: false
-        })
-        .whereRaw('LOWER(role_name) = ?', ['user'])
-        .first();
+      let roleToAssign: { role_id: string } | null = null;
 
-      // Fallback: try to find any role with "client" in name for backwards compatibility
-      if (!clientRole) {
-        const roles = await trx('roles').where({ tenant });
-        clientRole = roles.find(role => 
-          role.role_name && role.role_name.toLowerCase().includes('client')
-        );
-      }
+      if (roleId) {
+        // Verify the provided role exists and is a client portal role
+        roleToAssign = await trx('roles')
+          .where({ 
+            role_id: roleId,
+            tenant,
+            client: true
+          })
+          .first();
+        
+        if (!roleToAssign) {
+          throw new Error('Invalid role ID or role is not a client portal role');
+        }
+      } else {
+        // Get the default client portal user role
+        // After migration, look for "User" role in client portal
+        let clientRole = await trx('roles')
+          .where({ 
+            tenant,
+            client: true,
+            msp: false
+          })
+          .whereRaw('LOWER(role_name) = ?', ['user'])
+          .first();
 
-      if (!clientRole) {
-        throw new Error(`Client portal user role not found for tenant`);
+        // Fallback: try to find any role with "client" in name for backwards compatibility
+        if (!clientRole) {
+          const roles = await trx('roles').where({ tenant });
+          clientRole = roles.find(role => 
+            role.role_name && role.role_name.toLowerCase().includes('client')
+          );
+        }
+
+        if (!clientRole) {
+          throw new Error(`Client portal user role not found for tenant`);
+        }
+        
+        roleToAssign = clientRole;
       }
 
       // Hash the password
@@ -183,13 +256,15 @@ export async function createClientUser({
         .insert(userData)
         .returning('*');
 
-      // Assign the client role
-      await trx('user_roles')
-        .insert({
-          user_id: user.user_id,
-          role_id: clientRole.role_id,
-          tenant
-        });
+      // Assign the role
+      if (roleToAssign) {
+        await trx('user_roles')
+          .insert({
+            user_id: user.user_id,
+            role_id: roleToAssign.role_id,
+            tenant
+          });
+      }
     });
 
     return { success: true };
