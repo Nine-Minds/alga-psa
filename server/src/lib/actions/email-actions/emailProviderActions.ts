@@ -661,6 +661,8 @@ export async function updateEmailProvider(
       return provider;
     });
 
+    console.log(data.providerType, ' is the provider type of the updated provider');
+
     // After successful database transaction, set up Pub/Sub for Google providers
     if (data.providerType === 'google' && data.googleConfig && result.googleConfig) {
       try {

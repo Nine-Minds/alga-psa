@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -53,8 +53,18 @@ export function GmailProviderForm({
   const [oauthStatus, setOauthStatus] = useState<'idle' | 'authorizing' | 'success' | 'error'>('idle');
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [oauthData, setOauthData] = useState<any>(null);
+  const [autoSubmitCountdown, setAutoSubmitCountdown] = useState<number | null>(null);
 
   const isEditing = !!provider;
+
+  // Clean up countdown on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSubmitCountdown !== null) {
+        setAutoSubmitCountdown(null);
+      }
+    };
+  }, [autoSubmitCountdown]);
 
   const form = useForm<GmailProviderFormData>({
     resolver: zodResolver(gmailProviderSchema) as any,
@@ -104,7 +114,13 @@ export function GmailProviderForm({
           redirect_uri: data.redirectUri,
           auto_process_emails: data.autoProcessEmails,
           label_filters: data.labelFilters ? data.labelFilters.split(',').map(l => l.trim()) : ['INBOX'],
-          max_emails_per_sync: data.maxEmailsPerSync
+          max_emails_per_sync: data.maxEmailsPerSync,
+          // Include OAuth tokens if available from authorization
+          ...(oauthData && {
+            access_token: oauthData.access_token,
+            refresh_token: oauthData.refresh_token,
+            token_expires_at: oauthData.expires_at
+          })
         }
       };
 
@@ -216,6 +232,20 @@ export function GmailProviderForm({
             setOauthData(event.data.data);
             
             setOauthStatus('success');
+            
+            // Start countdown for auto-submission
+            setAutoSubmitCountdown(10);
+            const countdownInterval = setInterval(() => {
+              setAutoSubmitCountdown(prev => {
+                if (prev === null || prev <= 1) {
+                  clearInterval(countdownInterval);
+                  // Auto-submit the form
+                  form.handleSubmit(onSubmit as any)();
+                  return null;
+                }
+                return prev - 1;
+              });
+            }, 1000);
           } else {
             setOauthStatus('error');
             setError(event.data.errorDescription || event.data.error || 'Authorization failed');
@@ -372,12 +402,17 @@ export function GmailProviderForm({
           </div>
 
           {/* OAuth Authorization */}
-          <div className="bg-blue-50 p-4 rounded-lg">
+          <div className={`p-4 rounded-lg transition-colors ${
+            oauthStatus === 'success' ? 'bg-green-50 border-2 border-green-200' : 'bg-blue-50'
+          }`}>
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="font-medium">OAuth Authorization</h4>
+                <h4 className="font-medium">Step 1: OAuth Authorization</h4>
                 <p className="text-sm text-muted-foreground">
-                  Complete OAuth flow to grant access to Gmail
+                  {oauthStatus === 'success' 
+                    ? 'Successfully authorized! Now click "' + (isEditing ? 'Update Provider' : 'Add Provider') + '" below to complete setup.'
+                    : 'Complete OAuth flow to grant access to Gmail'
+                  }
                 </p>
               </div>
               <Button
@@ -393,6 +428,43 @@ export function GmailProviderForm({
               </Button>
             </div>
           </div>
+
+          {/* Next Step Indicator */}
+          {oauthStatus === 'success' && (
+            <div className="bg-amber-50 border-2 border-amber-200 p-4 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
+                      <span className="text-amber-600 font-semibold">2</span>
+                    </div>
+                  </div>
+                  <div className="ml-3">
+                    <h4 className="font-medium text-amber-800">Complete Setup</h4>
+                    <p className="text-sm text-amber-700">
+                      {autoSubmitCountdown !== null ? (
+                        <>Auto-completing in <strong>{autoSubmitCountdown}</strong> seconds, or click "<strong>{isEditing ? 'Update Provider' : 'Add Provider'}</strong>" below now.</>
+                      ) : (
+                        <>Click "<strong>{isEditing ? 'Update Provider' : 'Add Provider'}</strong>" below to finish configuration and set up Gmail notifications.</>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                {autoSubmitCountdown !== null && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setAutoSubmitCountdown(null);
+                    }}
+                  >
+                    Cancel Auto-Submit
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -465,6 +537,25 @@ export function GmailProviderForm({
         </Alert>
       )}
 
+      {/* OAuth Warning */}
+      {oauthStatus !== 'success' && (
+        <div className="bg-yellow-50 border-2 border-yellow-200 p-4 rounded-lg">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                <span className="text-yellow-600 font-semibold">⚠</span>
+              </div>
+            </div>
+            <div className="ml-3">
+              <h4 className="font-medium text-yellow-800">OAuth Authorization Required</h4>
+              <p className="text-sm text-yellow-700">
+                You must complete OAuth authorization above before {isEditing ? 'updating' : 'adding'} the provider to enable Gmail notifications.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Form Actions */}
       <div className="flex items-center justify-end space-x-2">
         <Button id="gmail-cancel-btn" type="button" variant="outline" onClick={onCancel}>
@@ -474,9 +565,21 @@ export function GmailProviderForm({
           id="gmail-submit-btn" 
           type="submit" 
           disabled={loading}
-          className={Object.keys(form.formState.errors).length > 0 && !loading ? 'opacity-50' : ''}
+          className={`${Object.keys(form.formState.errors).length > 0 && !loading ? 'opacity-50' : ''} ${
+            oauthStatus === 'success' ? 'bg-green-600 hover:bg-green-700 animate-pulse' : ''
+          }`}
         >
-          {loading ? 'Saving...' : isEditing ? 'Update Provider' : 'Add Provider'}
+          {loading ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              Setting up Gmail notifications...
+            </>
+          ) : (
+            <>
+              {isEditing ? 'Update Provider' : 'Add Provider'}
+              {oauthStatus === 'success' && ' & Complete Setup'}
+            </>
+          )}
         </Button>
       </div>
     </form>
