@@ -4,7 +4,18 @@ import { createTenantKnex } from '../../db';
 import { getCurrentUser } from '../user-actions/userActions';
 import type { EmailProvider, MicrosoftEmailProviderConfig, GoogleEmailProviderConfig } from '../../../components/EmailProviderConfiguration';
 import { getSecretProviderInstance } from '@shared/core';
+import { setupPubSub } from './setupPubSub';
 
+/**
+ * Generate standardized Pub/Sub topic and subscription names for a tenant
+ */
+function generatePubSubNames(tenantId: string) {
+  return {
+    topicName: `gmail-notifications-${tenantId}`,
+    subscriptionName: `gmail-webhook-${tenantId}`,
+    webhookUrl: `${process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL}/api/email/webhooks/google`
+  };
+}
 
 export async function getEmailProviders(): Promise<{ providers: EmailProvider[] }> {
   const user = await getCurrentUser();
@@ -236,7 +247,10 @@ export async function upsertEmailProvider(data: {
           .where({ email_provider_id: provider.id, tenant })
           .delete();
         
-        // Insert new config
+        // Generate standardized Pub/Sub names
+        const pubsubNames = generatePubSubNames(tenant);
+        
+        // Insert new config with standardized Pub/Sub names
         const labelFiltersArray = data.googleConfig.label_filters || [];
         
         const insertPayload = {
@@ -246,8 +260,8 @@ export async function upsertEmailProvider(data: {
             client_secret: data.googleConfig.client_secret,
             project_id: data.googleConfig.project_id,
             redirect_uri: data.googleConfig.redirect_uri,
-            pubsub_topic_name: data.googleConfig.pubsub_topic_name,
-            pubsub_subscription_name: data.googleConfig.pubsub_subscription_name,
+            pubsub_topic_name: pubsubNames.topicName,
+            pubsub_subscription_name: pubsubNames.subscriptionName,
             auto_process_emails: data.googleConfig.auto_process_emails,
             max_emails_per_sync: data.googleConfig.max_emails_per_sync,
             label_filters: JSON.stringify(labelFiltersArray),
@@ -274,6 +288,25 @@ export async function upsertEmailProvider(data: {
       
       return provider;
     });
+    
+    // After successful database transaction, set up Pub/Sub for Google providers
+    if (data.providerType === 'google' && data.googleConfig && result.googleConfig) {
+      try {
+        const pubsubNames = generatePubSubNames(tenant);
+        await setupPubSub({
+          projectId: data.googleConfig.project_id,
+          topicName: pubsubNames.topicName,
+          subscriptionName: pubsubNames.subscriptionName,
+          webhookUrl: pubsubNames.webhookUrl
+        });
+        
+        console.log(`Automatically set up Pub/Sub for Gmail provider ${result.id}: ${pubsubNames.topicName}`);
+      } catch (pubsubError) {
+        console.error('Failed to set up Pub/Sub automatically:', pubsubError);
+        // Don't throw error here - provider is still functional without Pub/Sub
+        // The error will be logged and can be addressed later
+      }
+    }
     
     return { provider: result };
   } catch (error) {
@@ -359,6 +392,9 @@ export async function createEmailProvider(data: {
           provider.microsoftConfig = msConfig;
         }
       } else if (data.providerType === 'google' && data.googleConfig) {
+        // Generate standardized Pub/Sub names
+        const pubsubNames = generatePubSubNames(tenant);
+        
         const labelFiltersArray = data.googleConfig.label_filters || [];
         
         const insertPayload = {
@@ -368,8 +404,8 @@ export async function createEmailProvider(data: {
             client_secret: data.googleConfig.client_secret,
             project_id: data.googleConfig.project_id,
             redirect_uri: data.googleConfig.redirect_uri,
-            pubsub_topic_name: data.googleConfig.pubsub_topic_name,
-            pubsub_subscription_name: data.googleConfig.pubsub_subscription_name,
+            pubsub_topic_name: pubsubNames.topicName,
+            pubsub_subscription_name: pubsubNames.subscriptionName,
             auto_process_emails: data.googleConfig.auto_process_emails,
             max_emails_per_sync: data.googleConfig.max_emails_per_sync,
             label_filters: JSON.stringify(labelFiltersArray),
@@ -396,6 +432,25 @@ export async function createEmailProvider(data: {
       
       return provider;
     });
+
+    // After successful database transaction, set up Pub/Sub for Google providers
+    if (data.providerType === 'google' && data.googleConfig && result.googleConfig) {
+      try {
+        const pubsubNames = generatePubSubNames(tenant);
+        await setupPubSub({
+          projectId: data.googleConfig.project_id,
+          topicName: pubsubNames.topicName,
+          subscriptionName: pubsubNames.subscriptionName,
+          webhookUrl: pubsubNames.webhookUrl
+        });
+        
+        console.log(`Automatically set up Pub/Sub for Gmail provider ${result.id}: ${pubsubNames.topicName}`);
+      } catch (pubsubError) {
+        console.error('Failed to set up Pub/Sub automatically:', pubsubError);
+        // Don't throw error here - provider is still functional without Pub/Sub
+        // The error will be logged and can be addressed later
+      }
+    }
 
     return { provider: result };
   } catch (error) {
@@ -494,7 +549,10 @@ export async function updateEmailProvider(
           .where({ email_provider_id: providerId, tenant })
           .delete();
         
-        // Insert new config
+        // Generate standardized Pub/Sub names
+        const pubsubNames = generatePubSubNames(tenant);
+        
+        // Insert new config with standardized Pub/Sub names
         const googleConfig = await trx('google_email_provider_config')
           .insert({
             email_provider_id: providerId,
@@ -503,8 +561,8 @@ export async function updateEmailProvider(
             client_secret: data.googleConfig.client_secret,
             project_id: data.googleConfig.project_id,
             redirect_uri: data.googleConfig.redirect_uri,
-            pubsub_topic_name: data.googleConfig.pubsub_topic_name,
-            pubsub_subscription_name: data.googleConfig.pubsub_subscription_name,
+            pubsub_topic_name: pubsubNames.topicName,
+            pubsub_subscription_name: pubsubNames.subscriptionName,
             auto_process_emails: data.googleConfig.auto_process_emails,
             max_emails_per_sync: data.googleConfig.max_emails_per_sync,
             label_filters: JSON.stringify(data.googleConfig.label_filters || []),
@@ -527,6 +585,25 @@ export async function updateEmailProvider(
       
       return provider;
     });
+
+    // After successful database transaction, set up Pub/Sub for Google providers
+    if (data.providerType === 'google' && data.googleConfig && result.googleConfig) {
+      try {
+        const pubsubNames = generatePubSubNames(tenant);
+        await setupPubSub({
+          projectId: data.googleConfig.project_id,
+          topicName: pubsubNames.topicName,
+          subscriptionName: pubsubNames.subscriptionName,
+          webhookUrl: pubsubNames.webhookUrl
+        });
+        
+        console.log(`Automatically set up Pub/Sub for Gmail provider ${result.id}: ${pubsubNames.topicName}`);
+      } catch (pubsubError) {
+        console.error('Failed to set up Pub/Sub automatically:', pubsubError);
+        // Don't throw error here - provider is still functional without Pub/Sub
+        // The error will be logged and can be addressed later
+      }
+    }
 
     return { provider: result };
   } catch (error) {
