@@ -122,6 +122,7 @@ USER coder
 WORKDIR /home/coder/alga-psa
 
 # Install dependencies during build
+# Force rebuild of native modules for the correct platform
 RUN echo "📦 Pre-installing root dependencies..." && \
     npm ci --prefer-offline --no-audit && \
     echo "📦 Pre-installing server dependencies..." && \
@@ -132,7 +133,10 @@ RUN echo "📦 Pre-installing root dependencies..." && \
     cd ../.. && \
     echo "📄 Pre-installing AssemblyScript template dependencies..." && \
     cd server/src/invoice-templates/assemblyscript && npm ci --prefer-offline --no-audit && \
-    cd ../..
+    cd ../.. && \
+    echo "🔧 Rebuilding Sharp for correct platform..." && \
+    cd server && npm rebuild sharp && \
+    cd ..
 
 # Switch back to root for final setup
 USER root
