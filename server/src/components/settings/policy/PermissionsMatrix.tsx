@@ -108,9 +108,11 @@ export default function PermissionsMatrix() {
     return permissions.filter(p => viewMode === 'msp' ? p.msp : p.client);
   }, [permissions, viewMode]);
 
-  // Filter roles by view mode
+  // Filter roles by view mode and sort alphabetically
   const filteredRoles = useMemo(() => {
-    return roles.filter(r => viewMode === 'msp' ? r.msp : r.client);
+    return roles
+      .filter(r => viewMode === 'msp' ? r.msp : r.client)
+      .sort((a, b) => a.role_name.localeCompare(b.role_name));
   }, [roles, viewMode]);
 
   // Fetch all role permissions

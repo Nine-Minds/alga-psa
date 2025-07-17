@@ -49,7 +49,7 @@ const SecuritySettingsPage = (): JSX.Element => {
     'user-roles': 'User Roles',
     'policies': 'Policies',
     'api-keys': 'API Keys',
-    'security': 'Security'
+    // 'security': 'Security'
   };
 
   // Determine initial active tab based on URL parameter
@@ -109,7 +109,7 @@ const SecuritySettingsPage = (): JSX.Element => {
         </Suspense>
       ),
     },
-    {
+    /* {
       label: "Security",
       content: (
         <Card>
@@ -127,12 +127,11 @@ const SecuritySettingsPage = (): JSX.Element => {
                 />
                 <Label htmlFor="two-factor-auth">Two-Factor Authentication</Label>
               </div>
-              {/* Add more security settings here */}
             </div>
           </CardContent>
         </Card>
       ),
-    }
+    } */
   ];
 
   return (

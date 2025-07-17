@@ -88,7 +88,9 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
   const fetchAvailableRoles = async () => {
     try {
       const allRoles = await getRoles();
-      setAvailableRoles(allRoles);
+      // Filter to only show MSP roles for MSP users
+      const mspRoles = allRoles.filter(role => role.msp);
+      setAvailableRoles(mspRoles);
     } catch (err) {
       console.error('Error fetching available roles:', err);
       setError('Failed to load available roles.');
