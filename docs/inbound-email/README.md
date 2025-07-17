@@ -76,7 +76,7 @@ flowchart TD
     
     G --> I[Save OAuth Credentials to Tenant Secrets]
     H --> I
-    I --> J[Store client_id & client_secret in tenant secrets]
+    I --> J[Store client_id and client_secret in tenant secrets]
     
     J --> K[POST /api/email/oauth/initiate]
     K --> L[Generate OAuth State]
@@ -90,7 +90,7 @@ flowchart TD
     Q --> R[OAuth callback endpoint]
     R --> S[Validate State Parameter]
     S --> T[Exchange Code for Tokens]
-    T --> U[Store Access & Refresh Tokens]
+    T --> U[Store Access and Refresh Tokens]
     
     U --> V[Return Success to Popup]
     V --> W[Popup Posts Message to Parent]
