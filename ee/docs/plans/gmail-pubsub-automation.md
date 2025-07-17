@@ -46,6 +46,39 @@ Automate the Pub/Sub configuration using standardized naming conventions based o
 
 ## Technical Details
 
+### OAuth Authorization Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Form as GmailProviderForm
+    participant Actions as emailProviderActions
+    participant PubSub as setupPubSub
+    participant Gmail as GmailAdapter
+    participant Google as Google APIs
+
+    User->>Form: Click "Authorize with Google"
+    Form->>Actions: upsertEmailProvider(providerData)
+    
+    Actions->>Actions: Check existing provider
+    Actions->>Actions: Delete/recreate Google config
+    Actions->>Actions: Generate standardized Pub/Sub names
+    Actions->>Actions: Save provider to database
+    
+    Actions->>PubSub: setupPubSub(config)
+    PubSub->>Google: Check/create topic
+    PubSub->>Google: Check/create subscription
+    PubSub->>Google: Update webhook endpoint
+    PubSub-->>Actions: Pub/Sub configured
+    
+    Actions->>Gmail: initializeProviderWebhook(providerId)
+    Gmail->>Google: Register Gmail watch subscription
+    Gmail-->>Actions: Watch subscription active
+    
+    Actions-->>Form: Provider configured
+    Form-->>User: Setup complete
+```
+
 ### Naming Conventions
 
 ```typescript
@@ -84,14 +117,39 @@ const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/email/webhooks/google
 - [x] Setup process is faster and more reliable
 - [x] Error handling provides clear feedback to users
 
+## Phase 5: Gmail Watch Subscription Automation
+
+### Critical Gap Identified
+
+**Issue**: Gmail watch subscriptions (required for real-time email notifications) are not automatically renewed during OAuth authorization, causing potential service disruption.
+
+**Requirements**:
+- [x] Automatic Gmail watch subscription setup during OAuth authorization  
+- [x] Automatic renewal of existing Gmail watch subscriptions during re-authorization
+- [x] Integration with `EmailProviderService.initializeProviderWebhook()`
+- [x] Proper error handling for watch subscription failures
+- [x] Logging for Gmail watch subscription lifecycle events
+
+### Implementation Plan
+
+1. [x] **Modify OAuth Flow**: Update `upsertEmailProvider`, `createEmailProvider`, and `updateEmailProvider` functions to call `initializeProviderWebhook()` after successful Pub/Sub setup
+2. [x] **Watch Subscription Management**: Ensure Gmail watch subscriptions are established automatically without manual intervention
+3. [x] **Re-authorization Handling**: Existing providers get both OAuth tokens and Gmail watch subscriptions renewed
+4. [x] **Error Resilience**: Watch subscription failures don't break provider creation but are logged for manual resolution
+
 ## Implementation Status
 
-✅ **COMPLETED** - All phases of the Gmail Pub/Sub automation have been successfully implemented:
+✅ **Phase 1-4 COMPLETED** - Gmail Pub/Sub automation implemented:
 
 1. **UI Simplification**: Removed manual Pub/Sub configuration from Gmail provider form
 2. **Automatic Setup**: Implemented standardized naming and automatic Pub/Sub creation
 3. **Database Integration**: Updated all provider actions to use standardized naming
 4. **Error Handling**: Added proper error handling that doesn't break provider creation
 5. **User Experience**: Simplified flow to OAuth → automatic configuration → ready to use
+6. **Comprehensive Logging**: Added detailed logging for troubleshooting and monitoring
+
+✅ **Phase 5 COMPLETED** - Gmail watch subscription automation:
+
+**Implemented**: Gmail watch subscriptions are now automatically established and renewed during OAuth authorization, ensuring continuous real-time email processing without manual intervention.
 
 The migration file was removed as no existing providers had pubsub callbacks configured.

@@ -96,6 +96,47 @@ flowchart TD
     class WARN1 warning
 ```
 
+## Gmail Provider OAuth Authorization Flow
+
+The Gmail provider setup requires OAuth authorization and automatic Gmail watch subscription setup for real-time email notifications.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Form as GmailProviderForm
+    participant Actions as emailProviderActions
+    participant PubSub as setupPubSub
+    participant EmailService as EmailProviderService
+    participant Gmail as GmailAdapter
+    participant Google as Google APIs
+
+    User->>Form: Click "Authorize with Google"
+    Form->>Actions: upsertEmailProvider(providerData)
+    
+    Actions->>Actions: Check existing provider
+    Actions->>Actions: Delete/recreate Google config
+    Actions->>Actions: Generate standardized Pub/Sub names
+    Actions->>Actions: Save provider to database
+    
+    Actions->>PubSub: setupPubSub(config)
+    PubSub->>Google: Check/create topic
+    PubSub->>Google: Check/create subscription
+    PubSub->>Google: Update webhook endpoint
+    PubSub-->>Actions: Pub/Sub configured
+    
+    Actions->>EmailService: initializeProviderWebhook(providerId)
+    EmailService->>Gmail: Initialize Gmail adapter
+    Gmail->>Google: Register Gmail watch subscription
+    Note over Gmail,Google: 7-day expiration, renewable
+    Gmail-->>EmailService: Watch subscription active
+    EmailService-->>Actions: Webhook initialized
+    
+    Actions-->>Form: Provider configured
+    Form-->>User: Setup complete with real-time monitoring
+    
+    Note over User,Google: Re-authorization flow renews both OAuth tokens and Gmail watch
+```
+
 ## Workflow Flow
 
 ### 1. Email Reception

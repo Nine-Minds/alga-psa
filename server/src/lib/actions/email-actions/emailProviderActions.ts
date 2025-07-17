@@ -5,6 +5,7 @@ import { getCurrentUser } from '../user-actions/userActions';
 import type { EmailProvider, MicrosoftEmailProviderConfig, GoogleEmailProviderConfig } from '../../../components/EmailProviderConfiguration';
 import { getSecretProviderInstance } from '@shared/core';
 import { setupPubSub } from './setupPubSub';
+import { EmailProviderService } from '../../../services/email/EmailProviderService';
 
 /**
  * Generate standardized Pub/Sub topic and subscription names for a tenant
@@ -315,6 +316,23 @@ export async function upsertEmailProvider(data: {
           topicName: pubsubNames.topicName,
           subscriptionName: pubsubNames.subscriptionName
         });
+        
+        // Initialize Gmail watch subscription for real-time email notifications
+        try {
+          console.log(`🔗 Initializing Gmail watch subscription for provider ${result.id}`);
+          const emailProviderService = new EmailProviderService();
+          await emailProviderService.initializeProviderWebhook(result.id);
+          console.log(`✅ Successfully initialized Gmail watch subscription for provider ${result.id}`);
+        } catch (watchError) {
+          console.error(`❌ Failed to initialize Gmail watch subscription for provider ${result.id}:`, {
+            tenant,
+            providerId: result.id,
+            error: watchError instanceof Error ? watchError.message : String(watchError),
+            stack: watchError instanceof Error ? watchError.stack : undefined
+          });
+          // Don't throw error here - provider is still functional without real-time notifications
+          // The watch subscription can be manually initialized later
+        }
       } catch (pubsubError) {
         console.error(`❌ Failed to set up Pub/Sub automatically for Gmail provider ${result.id}:`, {
           tenant,
@@ -479,6 +497,23 @@ export async function createEmailProvider(data: {
           topicName: pubsubNames.topicName,
           subscriptionName: pubsubNames.subscriptionName
         });
+        
+        // Initialize Gmail watch subscription for real-time email notifications
+        try {
+          console.log(`🔗 Initializing Gmail watch subscription for provider ${result.id}`);
+          const emailProviderService = new EmailProviderService();
+          await emailProviderService.initializeProviderWebhook(result.id);
+          console.log(`✅ Successfully initialized Gmail watch subscription for provider ${result.id}`);
+        } catch (watchError) {
+          console.error(`❌ Failed to initialize Gmail watch subscription for provider ${result.id}:`, {
+            tenant,
+            providerId: result.id,
+            error: watchError instanceof Error ? watchError.message : String(watchError),
+            stack: watchError instanceof Error ? watchError.stack : undefined
+          });
+          // Don't throw error here - provider is still functional without real-time notifications
+          // The watch subscription can be manually initialized later
+        }
       } catch (pubsubError) {
         console.error(`❌ Failed to set up Pub/Sub automatically for Gmail provider ${result.id}:`, {
           tenant,
@@ -652,6 +687,23 @@ export async function updateEmailProvider(
           topicName: pubsubNames.topicName,
           subscriptionName: pubsubNames.subscriptionName
         });
+        
+        // Initialize Gmail watch subscription for real-time email notifications
+        try {
+          console.log(`🔗 Initializing Gmail watch subscription for provider ${result.id}`);
+          const emailProviderService = new EmailProviderService();
+          await emailProviderService.initializeProviderWebhook(result.id);
+          console.log(`✅ Successfully initialized Gmail watch subscription for provider ${result.id}`);
+        } catch (watchError) {
+          console.error(`❌ Failed to initialize Gmail watch subscription for provider ${result.id}:`, {
+            tenant,
+            providerId: result.id,
+            error: watchError instanceof Error ? watchError.message : String(watchError),
+            stack: watchError instanceof Error ? watchError.stack : undefined
+          });
+          // Don't throw error here - provider is still functional without real-time notifications
+          // The watch subscription can be manually initialized later
+        }
       } catch (pubsubError) {
         console.error(`❌ Failed to set up Pub/Sub automatically for Gmail provider ${result.id}:`, {
           tenant,
