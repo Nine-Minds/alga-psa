@@ -62,8 +62,6 @@ export interface GoogleEmailProviderConfig {
   client_secret: string;
   project_id: string;
   redirect_uri: string;
-  pubsub_topic_name?: string;
-  pubsub_subscription_name?: string;
   auto_process_emails: boolean;
   max_emails_per_sync: number;
   label_filters: string[];
