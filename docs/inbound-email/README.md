@@ -59,6 +59,67 @@ The feature uses two main tables:
    npm run dev
    ```
 
+## OAuth Authorization Process
+
+The OAuth authorization process enables secure connection to email providers without storing user credentials. The system uses a popup-based OAuth flow with automatic provider configuration.
+
+```mermaid
+flowchart TD
+    A[User clicks 'Authorize Access'] --> B{Form Validation}
+    B -->|Invalid| C[Show Validation Errors]
+    B -->|Valid| D[Auto-save Provider Config]
+    
+    D --> E[upsertEmailProvider]
+    E --> F{Provider Exists?}
+    F -->|Yes| G[Update Existing Provider]
+    F -->|No| H[Create New Provider]
+    
+    G --> I[Save OAuth Credentials to Tenant Secrets]
+    H --> I
+    I --> J[Store client_id & client_secret in tenant secrets]
+    
+    J --> K[POST /api/email/oauth/initiate]
+    K --> L[Generate OAuth State]
+    L --> M[Create Authorization URL]
+    M --> N[Return Auth URL to Client]
+    
+    N --> O[Open OAuth Popup Window]
+    O --> P[User Authorizes on Provider]
+    P --> Q[Provider Redirects to Callback]
+    
+    Q --> R[OAuth callback endpoint]
+    R --> S[Validate State Parameter]
+    S --> T[Exchange Code for Tokens]
+    T --> U[Store Access & Refresh Tokens]
+    
+    U --> V[Return Success to Popup]
+    V --> W[Popup Posts Message to Parent]
+    W --> X[Form Handles Success]
+    X --> Y[Update Provider Status]
+    Y --> Z[Provider Ready for Use]
+    
+    S -->|Invalid State| ERROR1[Return Error Response]
+    T -->|Exchange Fails| ERROR2[Return Token Error]
+    
+    classDef userAction fill:#e1f5fe
+    classDef systemAction fill:#f3e5f5
+    classDef oauthAction fill:#e8f5e8
+    classDef errorAction fill:#ffebee
+    
+    class A,O,P userAction
+    class B,D,E,F,G,H,I,J,L,M,N,X,Y,Z systemAction
+    class K,Q,R,S,T,U,V,W oauthAction
+    class C,ERROR1,ERROR2 errorAction
+```
+
+### OAuth Flow Security Features
+
+- **State Parameter**: Prevents CSRF attacks with encrypted state containing tenant, user, and nonce
+- **Tenant Isolation**: OAuth credentials stored in tenant-specific secret directories
+- **Token Security**: Access and refresh tokens encrypted in database
+- **Popup Flow**: Prevents redirect attacks and provides better UX
+- **Automatic Refresh**: Tokens refreshed automatically before expiration
+
 ## Provider Setup
 
 ### Microsoft 365 Setup
