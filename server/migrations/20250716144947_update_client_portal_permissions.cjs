@@ -13,19 +13,34 @@ exports.up = async function(knex) {
     console.log(`Removing all permissions for tenant ${tenant}`);
     await knex('permissions').where({ tenant }).delete();
     
-    // Step 3: Remove unwanted roles
+    // Step 3: Remove user assignments for roles that will be deleted
+    console.log(`Removing user role assignments for unwanted roles in tenant ${tenant}`);
+    const rolesToDelete = await knex('roles')
+      .where({ tenant })
+      .where(function() {
+        this.where({ role_name: 'Manager', msp: true });
+      })
+      .select('role_id');
+    
+    if (rolesToDelete.length > 0) {
+      const roleIds = rolesToDelete.map(r => r.role_id);
+      await knex('user_roles')
+        .where({ tenant })
+        .whereIn('role_id', roleIds)
+        .delete();
+      console.log(`Removed user role assignments for ${roleIds.length} roles`);
+    }
+    
+    // Step 4: Remove unwanted roles
     console.log(`Removing unwanted roles for tenant ${tenant}`);
     await knex('roles')
       .where({ tenant })
       .where(function() {
-        this.where({ role_name: 'client_admin' })
-            .orWhere(function() {
-              this.where({ role_name: 'Manager', msp: true });
-            });
+        this.where({ role_name: 'Manager', msp: true });
       })
       .delete();
     
-    // Step 4: Create all permissions from permissions_list.md
+    // Step 5: Create all permissions from permissions_list.md
     console.log(`Creating permissions for tenant ${tenant}`);
     const allPermissions = [
       // MSP permissions
@@ -218,7 +233,7 @@ exports.up = async function(knex) {
     await knex('permissions').insert(allPermissions);
     console.log(`Created ${allPermissions.length} permissions for tenant ${tenant}`);
     
-    // Step 5: Get all roles for mapping
+    // Step 6: Get all roles for mapping
     const roles = await knex('roles').where({ tenant });
     const roleMap = {};
     roles.forEach(role => {
@@ -226,7 +241,7 @@ exports.up = async function(knex) {
       roleMap[key] = role;
     });
     
-    // Step 6: Assign permissions to roles according to permissions_list.md
+    // Step 7: Assign permissions to roles according to permissions_list.md
     
     // MSP Admin gets all MSP permissions
     if (roleMap.msp_admin) {
@@ -419,8 +434,9 @@ exports.up = async function(knex) {
       }
     }
     
-    // Client Portal Admin permissions
-    if (roleMap.client_admin) {
+    // Client Portal Admin permissions (role name is 'Admin' with client=true)
+    const clientAdminRole = roles.find(r => r.role_name === 'Admin' && r.client === true && r.msp === false);
+    if (clientAdminRole) {
       const clientAdminPermissions = {
         billing: ['create', 'read', 'update'],
         client: ['create', 'read', 'update', 'delete'],
@@ -441,7 +457,7 @@ exports.up = async function(knex) {
           if (permission) {
             clientAdminRolePerms.push({
               tenant,
-              role_id: roleMap.client_admin.role_id,
+              role_id: clientAdminRole.role_id,
               permission_id: permission.permission_id
             });
           }
@@ -455,7 +471,8 @@ exports.up = async function(knex) {
     }
     
     // Client Finance permissions  
-    if (roleMap.client_finance) {
+    const clientFinanceRole = roles.find(r => r.role_name === 'Finance' && r.client === true && r.msp === false);
+    if (clientFinanceRole) {
       const clientFinancePermissions = {
         billing: ['read'],
         client: ['create', 'read', 'update'],
@@ -476,7 +493,7 @@ exports.up = async function(knex) {
           if (permission) {
             clientFinanceRolePerms.push({
               tenant,
-              role_id: roleMap.client_finance.role_id,
+              role_id: clientFinanceRole.role_id,
               permission_id: permission.permission_id
             });
           }
@@ -490,7 +507,8 @@ exports.up = async function(knex) {
     }
     
     // Client User permissions
-    if (roleMap.client_user) {
+    const clientUserRole = roles.find(r => r.role_name === 'User' && r.client === true && r.msp === false);
+    if (clientUserRole) {
       const clientUserPermissions = {
         client: ['create', 'read', 'update'],
         project: ['read'],
@@ -508,7 +526,7 @@ exports.up = async function(knex) {
           if (permission) {
             clientUserRolePerms.push({
               tenant,
-              role_id: roleMap.client_user.role_id,
+              role_id: clientUserRole.role_id,
               permission_id: permission.permission_id
             });
           }
