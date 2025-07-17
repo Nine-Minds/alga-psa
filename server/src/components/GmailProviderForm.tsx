@@ -18,7 +18,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { ExternalLink, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
 import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from '../lib/actions/email-actions/emailProviderActions';
-import { setupPubSub } from 'server/src/lib/actions/email-actions/setupPubSub';
 
 const gmailProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),
@@ -27,8 +26,6 @@ const gmailProviderSchema = z.object({
   clientSecret: z.string().min(1, 'Client Secret is required'),
   projectId: z.string().min(1, 'Google Cloud Project ID is required'),
   redirectUri: z.string().url('Valid redirect URI is required'),
-  pubsubTopicName: z.string().min(1, 'Pub/Sub topic name is required'),
-  pubsubSubscriptionName: z.string().min(1, 'Pub/Sub subscription name is required'),
   isActive: z.boolean(),
   autoProcessEmails: z.boolean(),
   labelFilters: z.string().optional(),
@@ -54,7 +51,6 @@ export function GmailProviderForm({
   const [error, setError] = useState<string | null>(null);
   const [showClientSecret, setShowClientSecret] = useState(false);
   const [oauthStatus, setOauthStatus] = useState<'idle' | 'authorizing' | 'success' | 'error'>('idle');
-  const [pubsubStatus, setPubsubStatus] = useState<'idle' | 'creating' | 'success' | 'error'>('idle');
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [oauthData, setOauthData] = useState<any>(null);
 
@@ -69,16 +65,12 @@ export function GmailProviderForm({
       clientSecret: provider.googleConfig.client_secret,
       projectId: provider.googleConfig.project_id,
       redirectUri: provider.googleConfig.redirect_uri,
-      pubsubTopicName: provider.googleConfig.pubsub_topic_name || 'gmail-notifications',
-      pubsubSubscriptionName: provider.googleConfig.pubsub_subscription_name || 'gmail-webhook-subscription',
       isActive: provider.isActive,
       autoProcessEmails: provider.googleConfig.auto_process_emails ?? true,
       labelFilters: provider.googleConfig.label_filters?.join(', ') || '',
       maxEmailsPerSync: provider.googleConfig.max_emails_per_sync ?? 50
     } : {
       redirectUri: `${window.location.origin}/api/auth/google/callback`,
-      pubsubTopicName: 'gmail-notifications',
-      pubsubSubscriptionName: 'gmail-webhook-subscription',
       isActive: true,
       autoProcessEmails: true,
       labelFilters: '',
@@ -110,8 +102,6 @@ export function GmailProviderForm({
           client_secret: data.clientSecret,
           project_id: data.projectId,
           redirect_uri: data.redirectUri,
-          pubsub_topic_name: data.pubsubTopicName,
-          pubsub_subscription_name: data.pubsubSubscriptionName,
           auto_process_emails: data.autoProcessEmails,
           label_filters: data.labelFilters ? data.labelFilters.split(',').map(l => l.trim()) : ['INBOX'],
           max_emails_per_sync: data.maxEmailsPerSync
@@ -160,8 +150,6 @@ export function GmailProviderForm({
             client_secret: formData.clientSecret,
             project_id: formData.projectId,
             redirect_uri: formData.redirectUri,
-            pubsub_topic_name: formData.pubsubTopicName,
-            pubsub_subscription_name: formData.pubsubSubscriptionName,
             auto_process_emails: formData.autoProcessEmails,
             label_filters: formData.labelFilters ? formData.labelFilters.split(',').map(l => l.trim()) : ['INBOX'],
             max_emails_per_sync: formData.maxEmailsPerSync
@@ -245,27 +233,6 @@ export function GmailProviderForm({
     }
   };
 
-  const handlePubSubSetup = async () => {
-    try {
-      setPubsubStatus('creating');
-      setError(null);
-
-      const formData = form.getValues();
-      
-      await setupPubSub({
-        projectId: formData.projectId,
-        topicName: formData.pubsubTopicName,
-        subscriptionName: formData.pubsubSubscriptionName,
-        webhookUrl: `${window.location.origin}/api/email/webhooks/google`
-      });
-
-      setPubsubStatus('success');
-
-    } catch (err: any) {
-      setPubsubStatus('error');
-      setError(err.message);
-    }
-  };
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
@@ -429,67 +396,6 @@ export function GmailProviderForm({
         </CardContent>
       </Card>
 
-      {/* Google Pub/Sub Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Pub/Sub Configuration</CardTitle>
-          <CardDescription>
-            Configure Google Cloud Pub/Sub for real-time email notifications
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="pubsubTopicName">Pub/Sub Topic Name *</Label>
-              <Input
-                id="pubsubTopicName"
-                {...form.register('pubsubTopicName')}
-                placeholder="gmail-notifications"
-                className={hasAttemptedSubmit && form.formState.errors.pubsubTopicName ? 'border-red-500' : ''}
-              />
-              {form.formState.errors.pubsubTopicName && (
-                <p className="text-sm text-red-500">{form.formState.errors.pubsubTopicName.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="pubsubSubscriptionName">Subscription Name *</Label>
-              <Input
-                id="pubsubSubscriptionName"
-                {...form.register('pubsubSubscriptionName')}
-                placeholder="gmail-webhook-subscription"
-                className={hasAttemptedSubmit && form.formState.errors.pubsubSubscriptionName ? 'border-red-500' : ''}
-              />
-              {form.formState.errors.pubsubSubscriptionName && (
-                <p className="text-sm text-red-500">{form.formState.errors.pubsubSubscriptionName.message}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Pub/Sub Setup */}
-          <div className="bg-green-50 p-4 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-medium">Pub/Sub Setup</h4>
-                <p className="text-sm text-muted-foreground">
-                  Create topic and subscription for Gmail push notifications
-                </p>
-              </div>
-              <Button
-                id="pubsub-setup-btn"
-                type="button"
-                variant="outline"
-                onClick={handlePubSubSetup}
-                disabled={!form.watch('projectId') || !form.watch('pubsubTopicName') || pubsubStatus === 'creating'}
-              >
-                {pubsubStatus === 'creating' && 'Setting up...'}
-                {pubsubStatus === 'success' && <><CheckCircle className="h-4 w-4 mr-2" />Configured</>}
-                {(pubsubStatus === 'idle' || pubsubStatus === 'error') && 'Setup Pub/Sub'}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Advanced Settings */}
       <Card>
@@ -548,8 +454,6 @@ export function GmailProviderForm({
               {form.formState.errors.clientId && <li>Client ID</li>}
               {form.formState.errors.clientSecret && <li>Client Secret</li>}
               {form.formState.errors.redirectUri && <li>Redirect URI</li>}
-              {form.formState.errors.pubsubTopicName && <li>Pub/Sub Topic Name</li>}
-              {form.formState.errors.pubsubSubscriptionName && <li>Subscription Name</li>}
             </ul>
           </AlertDescription>
         </Alert>
