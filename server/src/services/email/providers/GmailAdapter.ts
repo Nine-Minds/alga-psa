@@ -189,17 +189,39 @@ export class GmailAdapter extends BaseEmailAdapter {
   async registerWebhookSubscription(): Promise<void> {
     try {
       const vendorConfig = this.config.provider_config || {};
-      const topicName = vendorConfig.pubsubTopic;
+      const topicName = vendorConfig.pubsub_topic_name;
+      const projectId = vendorConfig.project_id;
       
       if (!topicName) {
         throw new Error('Pub/Sub topic name not configured');
       }
 
+      if (!projectId) {
+        throw new Error('Google Cloud project ID not configured');
+      }
+
+      console.log('📦 vendorConfig', vendorConfig);
+
+      // Check if user has completed OAuth authorization
+      if (!vendorConfig.access_token || !vendorConfig.refresh_token) {
+        const errorMsg = `Gmail watch subscription setup failed: OAuth tokens are missing. 
+Expected tokens to be saved after OAuth authorization but found:
+- access_token: ${vendorConfig.access_token ? '[PRESENT]' : '[MISSING]'}
+- refresh_token: ${vendorConfig.refresh_token ? '[PRESENT]' : '[MISSING]'}
+This indicates a problem with the OAuth token saving process.`;
+        
+        this.log('error', errorMsg);
+        throw new Error('Gmail OAuth tokens are missing. Please check the OAuth authorization flow.');
+      }
+
+      // Load credentials and ensure valid token
+      await this.ensureValidToken();
+
       // Enable Gmail push notifications
       const response = await this.gmail.users.watch({
         userId: 'me',
         requestBody: {
-          topicName: `projects/${vendorConfig.projectId}/topics/${topicName}`,
+          topicName: `projects/${projectId}/topics/${topicName}`,
           labelIds: ['INBOX'],
           labelFilterAction: 'include'
         }

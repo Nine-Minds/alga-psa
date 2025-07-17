@@ -45,12 +45,24 @@ export class EmailProviderService {
   }
 
   /**
+   * Generate webhook URL with proper environment-aware base URL
+   * Uses the same priority logic as generatePubSubNames
+   */
+  private generateWebhookUrl(path: string): string {
+    const baseUrl = process.env.NGROK_URL || 
+                    process.env.NEXT_PUBLIC_APP_URL || 
+                    process.env.NEXTAUTH_URL ||
+                    'http://localhost:3000';
+    return `${baseUrl}${path}`;
+  }
+
+  /**
    * Get email providers based on filters
    */
   async getProviders(filters: GetProvidersFilter): Promise<EmailProviderConfig[]> {
     try {
       const db = await this.getDb();
-      let query = db('email_provider_configs')
+      let query = db('email_providers')
         .where('tenant', filters.tenant)
         .orderBy('created_at', 'desc');
 
@@ -59,7 +71,7 @@ export class EmailProviderService {
       }
 
       if (filters.isActive !== undefined) {
-        query = query.where('active', filters.isActive);
+        query = query.where('is_active', filters.isActive);
       }
 
       if (filters.mailbox) {
@@ -68,7 +80,22 @@ export class EmailProviderService {
 
       const providers = await query;
       
-      return providers.map(this.mapDbRowToProvider);
+      // Load vendor configs for each provider
+      const providersWithConfig = await Promise.all(providers.map(async (provider) => {
+        let vendorConfig = null;
+        if (provider.provider_type === 'google') {
+          vendorConfig = await db('google_email_provider_config')
+            .where('email_provider_id', provider.id)
+            .first();
+        } else if (provider.provider_type === 'microsoft') {
+          vendorConfig = await db('microsoft_email_provider_config')
+            .where('email_provider_id', provider.id)
+            .first();
+        }
+        return this.mapCurrentDbRowToProvider(provider, vendorConfig);
+      }));
+
+      return providersWithConfig;
     } catch (error: any) {
       console.error('Error fetching email providers:', error);
       throw new Error(`Failed to fetch email providers: ${error.message}`);
@@ -81,7 +108,7 @@ export class EmailProviderService {
   async getProvider(providerId: string): Promise<EmailProviderConfig | null> {
     try {
       const db = await this.getDb();
-      const provider = await db('email_provider_configs')
+      const provider = await db('email_providers')
         .where('id', providerId)
         .first();
 
@@ -89,7 +116,19 @@ export class EmailProviderService {
         return null;
       }
 
-      return this.mapDbRowToProvider(provider);
+      // Load vendor-specific configuration
+      let vendorConfig = null;
+      if (provider.provider_type === 'google') {
+        vendorConfig = await db('google_email_provider_config')
+          .where('email_provider_id', providerId)
+          .first();
+      } else if (provider.provider_type === 'microsoft') {
+        vendorConfig = await db('microsoft_email_provider_config')
+          .where('email_provider_id', providerId)
+          .first();
+      }
+
+      return this.mapCurrentDbRowToProvider(provider, vendorConfig);
     } catch (error: any) {
       console.error(`Error fetching email provider ${providerId}:`, error);
       throw new Error(`Failed to fetch email provider: ${error.message}`);
@@ -247,7 +286,7 @@ export class EmailProviderService {
 
       if (provider.provider_type === 'microsoft') {
         const adapter = new MicrosoftGraphAdapter(provider);
-        const webhookUrl = `${process.env.NEXTAUTH_URL}/api/email/webhooks/microsoft`;
+        const webhookUrl = this.generateWebhookUrl('/api/email/webhooks/microsoft');
         const result = await adapter.initializeWebhook(webhookUrl);
         
         if (!result.success) {
@@ -264,16 +303,20 @@ export class EmailProviderService {
 
       } else if (provider.provider_type === 'google') {
         const gmailWebhookService = GmailWebhookService.getInstance();
-        const webhookUrl = `${process.env.NEXTAUTH_URL}/api/email/webhooks/google`;
+        const webhookUrl = this.generateWebhookUrl('/api/email/webhooks/google');
         
-        if (!provider.provider_config?.projectId || !provider.provider_config?.pubsubTopic) {
-          throw new Error('Missing required Google Cloud configuration (projectId, pubsubTopic)');
+        console.log(`🌐 Using webhook URL: ${webhookUrl}`);
+
+        console.log(provider.provider_config);
+        
+        if (!provider.provider_config?.project_id || !provider.provider_config?.pubsub_topic_name) {
+          throw new Error('Missing required Google Cloud configuration (project_id, pubsub_topic_name)');
         }
 
         const result = await gmailWebhookService.setupGmailWebhook(provider, {
-          projectId: provider.provider_config.projectId,
-          topicName: provider.provider_config.pubsubTopic,
-          subscriptionName: provider.provider_config.pubsubTopic + '-subscription',
+          projectId: provider.provider_config.project_id,
+          topicName: provider.provider_config.pubsub_topic_name,
+          subscriptionName: provider.provider_config.pubsub_subscription_name,
           webhookUrl
         });
 
@@ -326,12 +369,14 @@ export class EmailProviderService {
       if (provider.provider_type === 'google') {
         const gmailWebhookService = GmailWebhookService.getInstance();
         
-        if (provider.provider_config?.projectId && provider.provider_config?.pubsubTopic) {
+        if (provider.provider_config?.project_id && provider.provider_config?.pubsub_topic_name) {
+          const webhookUrl = this.generateWebhookUrl('/api/email/webhooks/google');
+          
           await gmailWebhookService.removeGmailWebhook(provider, {
-            projectId: provider.provider_config.projectId,
-            topicName: provider.provider_config.pubsubTopic,
-            subscriptionName: provider.provider_config.pubsubTopic + '-subscription',
-            webhookUrl: `${process.env.NEXTAUTH_URL}/api/email/webhooks/google`
+            projectId: provider.provider_config.project_id,
+            topicName: provider.provider_config.pubsub_topic_name,
+            subscriptionName: provider.provider_config.pubsub_subscription_name,
+            webhookUrl
           });
         }
       }
@@ -352,29 +397,38 @@ export class EmailProviderService {
   /**
    * Map database row to EmailProviderConfig interface
    */
-  private mapDbRowToProvider(row: any): EmailProviderConfig {
+  private mapCurrentDbRowToProvider(row: any, vendorConfig: any): EmailProviderConfig {
     return {
       id: row.id,
       tenant: row.tenant,
-      name: row.name,
+      name: row.provider_name,
       provider_type: row.provider_type,
       mailbox: row.mailbox,
-      folder_to_monitor: row.folder_to_monitor || 'Inbox',
-      active: row.active,
-      webhook_notification_url: row.webhook_notification_url || '',
-      webhook_subscription_id: row.webhook_subscription_id,
-      webhook_verification_token: row.webhook_verification_token,
-      webhook_expires_at: row.webhook_expires_at,
-      last_subscription_renewal: row.last_subscription_renewal,
-      connection_status: row.connection_status,
-      last_connection_test: row.last_connection_test,
-      connection_error_message: row.connection_error_message,
-      provider_config: typeof row.provider_config === 'string' 
-        ? JSON.parse(row.provider_config) 
-        : row.provider_config,
+      folder_to_monitor: 'Inbox', // Default for current implementation
+      active: row.is_active,
+      webhook_notification_url: vendorConfig?.webhook_notification_url || '',
+      webhook_subscription_id: vendorConfig?.webhook_subscription_id || null,
+      webhook_verification_token: vendorConfig?.webhook_verification_token || null,
+      webhook_expires_at: vendorConfig?.webhook_expires_at || null,
+      last_subscription_renewal: vendorConfig?.last_subscription_renewal || null,
+      connection_status: row.status || 'configuring',
+      last_connection_test: row.last_sync_at || null,
+      connection_error_message: row.error_message || null,
+      provider_config: vendorConfig || {},
       created_at: row.created_at,
       updated_at: row.updated_at
     };
+  }
+
+  /**
+   * @deprecated This method is for the old table structure
+   * Use mapCurrentDbRowToProvider instead
+   */
+  private mapDbRowToProvider(row: any): EmailProviderConfig {
+    // This method is deprecated but kept for backward compatibility
+    // with any remaining code that hasn't been updated
+    console.warn('mapDbRowToProvider is deprecated. Use mapCurrentDbRowToProvider instead.');
+    return this.mapCurrentDbRowToProvider(row, {});
   }
 }
 

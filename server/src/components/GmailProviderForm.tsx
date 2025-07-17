@@ -88,7 +88,7 @@ export function GmailProviderForm({
     }
   });
 
-  const onSubmit = async (data: GmailProviderFormData) => {
+  const onSubmit = async (data: GmailProviderFormData, providedOauthData?: any) => {
     setHasAttemptedSubmit(true);
     
     // Check if form is valid
@@ -100,6 +100,18 @@ export function GmailProviderForm({
     try {
       setLoading(true);
       setError(null);
+
+      // Use provided OAuth data if available, otherwise fall back to state
+      const activeOauthData = providedOauthData || oauthData;
+
+      // Debug OAuth data
+      console.log('🔧 Submitting Gmail provider with OAuth data:', {
+        hasProvidedOauthData: !!providedOauthData,
+        hasStateOauthData: !!oauthData,
+        hasActiveOauthData: !!activeOauthData,
+        activeOauthDataKeys: activeOauthData ? Object.keys(activeOauthData) : 'N/A',
+        activeOauthData: activeOauthData
+      });
 
       const payload = {
         tenant,
@@ -116,13 +128,15 @@ export function GmailProviderForm({
           label_filters: data.labelFilters ? data.labelFilters.split(',').map(l => l.trim()) : ['INBOX'],
           max_emails_per_sync: data.maxEmailsPerSync,
           // Include OAuth tokens if available from authorization
-          ...(oauthData && {
-            access_token: oauthData.access_token,
-            refresh_token: oauthData.refresh_token,
-            token_expires_at: oauthData.expires_at
+          ...(activeOauthData && {
+            access_token: activeOauthData.accessToken,
+            refresh_token: activeOauthData.refreshToken,
+            token_expires_at: activeOauthData.expiresAt
           })
         }
       };
+
+      console.log('📤 Final payload being sent:', JSON.stringify(payload, null, 2));
 
       const result = isEditing 
         ? await updateEmailProvider(provider.id, payload)
@@ -221,6 +235,13 @@ export function GmailProviderForm({
       const messageHandler = (event: MessageEvent) => {
         // Validate message is from our callback
         if (event.data.type === 'oauth-callback' && event.data.provider === 'google') {
+          console.log('🔔 OAuth callback received:', {
+            success: event.data.success,
+            hasData: !!event.data.data,
+            dataKeys: event.data.data ? Object.keys(event.data.data) : 'N/A',
+            fullData: event.data
+          });
+          
           clearInterval(checkClosed);
           popup?.close();
           
@@ -228,10 +249,15 @@ export function GmailProviderForm({
             // Store the authorization code and tokens in OAuth data (not form)
             // These are temporary OAuth fields, not part of the provider configuration
             
+            console.log('💾 Storing OAuth data:', event.data.data);
+            
             // Store tokens for the submit
             setOauthData(event.data.data);
             
             setOauthStatus('success');
+            
+            // Store the OAuth data for auto-submission (avoid React state timing issues)
+            const oauthDataForSubmit = event.data.data;
             
             // Start countdown for auto-submission
             setAutoSubmitCountdown(10);
@@ -239,8 +265,12 @@ export function GmailProviderForm({
               setAutoSubmitCountdown(prev => {
                 if (prev === null || prev <= 1) {
                   clearInterval(countdownInterval);
-                  // Auto-submit the form
-                  form.handleSubmit(onSubmit as any)();
+                  console.log('⏰ Auto-submitting form with OAuth data:', {
+                    hasOauthData: !!oauthDataForSubmit,
+                    oauthDataAtSubmit: oauthDataForSubmit
+                  });
+                  // Auto-submit the form with OAuth data
+                  form.handleSubmit((data) => onSubmit(data, oauthDataForSubmit))();
                   return null;
                 }
                 return prev - 1;

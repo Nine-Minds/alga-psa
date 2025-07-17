@@ -11,10 +11,16 @@ import { EmailProviderService } from '../../../services/email/EmailProviderServi
  * Generate standardized Pub/Sub topic and subscription names for a tenant
  */
 function generatePubSubNames(tenantId: string) {
+  // Use ngrok URL in development if available
+  const baseUrl = process.env.NGROK_URL || 
+                  process.env.NEXT_PUBLIC_APP_URL || 
+                  process.env.NEXTAUTH_URL ||
+                  'http://localhost:3000';
+  
   return {
     topicName: `gmail-notifications-${tenantId}`,
     subscriptionName: `gmail-webhook-${tenantId}`,
-    webhookUrl: `${process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL}/api/email/webhooks/google`
+    webhookUrl: `${baseUrl}/api/email/webhooks/google`
   };
 }
 
