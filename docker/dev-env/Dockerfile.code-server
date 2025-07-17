@@ -25,6 +25,19 @@ RUN apt-get update && \
         tree \
         unzip \
         sudo \
+        # Dependencies for Sharp image processing
+        libvips-dev \
+        libglib2.0-dev \
+        libexpat1-dev \
+        librsvg2-dev \
+        libpng-dev \
+        libjpeg-dev \
+        libwebp-dev \
+        libheif-dev \
+        libtiff-dev \
+        libexif-dev \
+        liblcms2-dev \
+        liborc-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Give coder user sudo privileges for development tasks
