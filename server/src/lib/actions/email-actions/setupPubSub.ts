@@ -130,9 +130,7 @@ export async function setupPubSub(request: SetupPubSubRequest) {
             },
             ackDeadlineSeconds: 600, // 10 minutes
             messageRetentionDuration: '604800s', // 7 days
-            expirationPolicy: {
-              ttl: '' // Never expire
-            }
+            // Omit expirationPolicy to never expire (default behavior)
           }
         });
         
@@ -141,7 +139,7 @@ export async function setupPubSub(request: SetupPubSubRequest) {
           pushEndpoint: request.webhookUrl,
           ackDeadlineSeconds: 600,
           messageRetentionDuration: '604800s',
-          expirationPolicy: { ttl: '' }
+          expirationPolicy: 'never expires (default)'
         });
       } else {
         console.error(`❌ Failed to check/create subscription ${subscriptionPath}:`, error);
