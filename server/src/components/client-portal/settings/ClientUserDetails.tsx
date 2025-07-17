@@ -52,7 +52,7 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
         
         const hasPasswordResetPermission = rolesWithPermissions.some(role => 
           role.permissions.some((permission: IPermission) => 
-            `${permission.resource}.${permission.action}` === 'client_password.update'
+            `${permission.resource}.${permission.action}` === 'user.reset_password'
           )
         );
         

@@ -628,8 +628,8 @@ export class ApiWebhookController {
         
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          // Check permissions
-          await this.checkPermission(apiRequest, 'create_template');
+          // Check permissions - webhook templates require system settings permissions
+          await this.checkPermission(apiRequest, 'system_settings');
 
           const templateData = await this.validateData(apiRequest, webhookTemplateSchema.omit({ 
             template_id: true, 

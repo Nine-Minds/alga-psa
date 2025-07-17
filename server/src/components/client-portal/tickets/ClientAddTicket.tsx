@@ -6,7 +6,7 @@ import { Button } from 'server/src/components/ui/Button';
 import Spinner from 'server/src/components/ui/Spinner';
 import { AlertCircle } from 'lucide-react';
 import { createClientTicket } from 'server/src/lib/actions/client-portal-actions/client-tickets';
-import { getTicketFormData } from 'server/src/lib/actions/ticket-actions/ticketFormActions';
+import { getClientTicketFormData } from 'server/src/lib/actions/ticket-actions/ticketFormActions';
 import { IPriority } from 'server/src/interfaces';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Input } from 'server/src/components/ui/Input';
@@ -39,7 +39,7 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const formData = await getTicketFormData();
+        const formData = await getClientTicketFormData();
         setPriorities(formData.priorities as IPriority[]);
       } catch (error) {
         console.error('Error fetching form data:', error);

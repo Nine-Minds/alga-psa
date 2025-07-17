@@ -74,9 +74,8 @@ export function CompanyDetailsSettings() {
         
         const hasRequiredPermissions = rolesWithPermissions.some(role => 
           role.permissions.some((permission: IPermission) => 
-            `${permission.resource}.${permission.action}` === 'company_setting.read' || 
-            `${permission.resource}.${permission.action}` === 'company_setting.update' ||
-            `${permission.resource}.${permission.action}` === 'company_setting.delete'
+            `${permission.resource}.${permission.action}` === 'client.read' || 
+            `${permission.resource}.${permission.action}` === 'client.update'
           )
         );
 

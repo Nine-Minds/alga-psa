@@ -18,7 +18,7 @@ import { updateProject, getProjectStatuses } from 'server/src/lib/actions/projec
 import { getContactsByCompany, getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
-// import { useTags } from 'server/src/context/TagContext';
+import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import { toast } from 'react-hot-toast';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
@@ -36,6 +36,9 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   onSave,
   onCancel,
 }) => {
+  // Initialize tag permissions for project tags
+  useTagPermissions(['project']);
+  
   // Debug logs
   useEffect(() => {
     console.log('ProjectDetailsEdit:', {

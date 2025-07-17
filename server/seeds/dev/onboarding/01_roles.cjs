@@ -17,17 +17,16 @@ exports.seed = async function (knex) {
     const existingRoleNames = new Set(existingRoles.map(r => `${r.role_name}-${r.msp}-${r.client}`));
 
     const rolesToInsert = [
-        // MSP Roles
+        // MSP Roles (based on permissions_list.md)
         { tenant: tenantId, role_name: 'Admin', description: 'Full system administrator access', msp: true, client: false },
-        { tenant: tenantId, role_name: 'Manager', description: 'Manage tickets and users', msp: true, client: false },
-        { tenant: tenantId, role_name: 'Technician', description: 'Technical support and ticket management', msp: true, client: false },
         { tenant: tenantId, role_name: 'Finance', description: 'Financial operations and billing management', msp: true, client: false },
-        { tenant: tenantId, role_name: 'Project Manager', description: 'Project planning and management', msp: true, client: false },
-        { tenant: tenantId, role_name: 'Dispatcher', description: 'Technician scheduling and dispatch', msp: true, client: false },
+        { tenant: tenantId, role_name: 'Technician', description: 'Technical support and service delivery', msp: true, client: false },
+        { tenant: tenantId, role_name: 'Project Manager', description: 'Project oversight and team coordination', msp: true, client: false },
+        { tenant: tenantId, role_name: 'Dispatcher', description: 'Scheduling and dispatch operations', msp: true, client: false },
         
-        // Client Portal Roles
+        // Client Portal Roles (based on permissions_list.md)
         { tenant: tenantId, role_name: 'Admin', description: 'Client portal administrator', msp: false, client: true },
-        { tenant: tenantId, role_name: 'Finance', description: 'Client financial operations', msp: false, client: true },
+        { tenant: tenantId, role_name: 'Finance', description: 'Client billing and financial visibility', msp: false, client: true },
         { tenant: tenantId, role_name: 'User', description: 'Standard client portal user', msp: false, client: true }
     ].filter(role => !existingRoleNames.has(`${role.role_name}-${role.msp}-${role.client}`));
 
