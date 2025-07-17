@@ -79,12 +79,11 @@ describe('Simple Email to Ticket Test', () => {
     await db('email_providers').insert({
       id: providerId,
       tenant: tenantId,
-      providerName: 'Test Provider',
-      providerType: 'test',
+      provider_name: 'Test Provider',
+      provider_type: 'test',
       mailbox: 'test@example.com',
-      isActive: true,
-      vendorConfig: {},
-      inboundTicketDefaultsId: defaultsId,
+      is_active: true,
+      status: 'active',
       created_at: new Date(),
       updated_at: new Date()
     });

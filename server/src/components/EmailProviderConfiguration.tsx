@@ -31,7 +31,6 @@ export interface EmailProvider {
   status: 'connected' | 'disconnected' | 'error' | 'configuring';
   lastSyncAt?: string;
   errorMessage?: string;
-  inboundTicketDefaultsId?: string;
   createdAt: string;
   updatedAt: string;
   // Vendor-specific config will be loaded separately
