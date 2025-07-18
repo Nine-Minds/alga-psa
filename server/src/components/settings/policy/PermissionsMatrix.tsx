@@ -10,6 +10,8 @@ import { Tooltip } from 'server/src/components/ui/Tooltip';
 import ViewSwitcher, { ViewSwitcherOption } from 'server/src/components/ui/ViewSwitcher';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { Button } from 'server/src/components/ui/Button';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { 
   getPermissions, 
   getRoles, 
@@ -18,6 +20,7 @@ import {
   removePermissionFromRole 
 } from 'server/src/lib/actions/policyActions';
 import { IPermission, IRole } from 'server/src/interfaces/auth.interfaces';
+import toast from 'react-hot-toast';
 
 type ViewMode = 'msp' | 'client';
 
@@ -56,7 +59,11 @@ export default function PermissionsMatrix() {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingChanges, setPendingChanges] = useState<Map<string, Map<string, boolean>>>(new Map());
+  const [isSaving, setIsSaving] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [allRolePermissions, setAllRolePermissions] = useState<Map<string, string[]>>(new Map());
+  const [originalRolePermissions, setOriginalRolePermissions] = useState<Map<string, string[]>>(new Map());
 
   // Standard CRUD actions
   const standardActions = ['create', 'read', 'update', 'delete'];
@@ -115,6 +122,20 @@ export default function PermissionsMatrix() {
       .sort((a, b) => a.role_name.localeCompare(b.role_name));
   }, [roles, viewMode]);
 
+  const hasUnsavedChanges = useMemo(() => {
+    return pendingChanges.size > 0;
+  }, [pendingChanges]);
+
+  const hasAdminRoleChanges = useMemo(() => {
+    const adminRoleIds = roles
+      .filter(r => r.role_name.toLowerCase() === 'admin')
+      .map(r => r.role_id);
+    
+    return Array.from(pendingChanges.keys()).some(roleId => 
+      adminRoleIds.includes(roleId)
+    );
+  }, [pendingChanges, roles]);
+
   // Fetch all role permissions
   const fetchAllRolePermissions = useCallback(async () => {
     try {
@@ -128,6 +149,7 @@ export default function PermissionsMatrix() {
       }
       
       setAllRolePermissions(rolePermissionsMap);
+      setOriginalRolePermissions(new Map(rolePermissionsMap));
     } catch (err) {
       console.error('Error fetching all role permissions:', err);
       setError('Failed to fetch role permissions');
@@ -187,73 +209,102 @@ export default function PermissionsMatrix() {
   }, [filteredPermissions, selectedResource]);
 
   // Handle permission toggle
-  const handlePermissionToggle = async (permissionId: string, checked: boolean) => {
-    if (!selectedRole || isUpdating) return;
+  const handlePermissionToggle = (permissionId: string, checked: boolean) => {
+    if (!selectedRole || selectedRole === 'all') return;
 
-    setIsUpdating(true);
-    setError(null);
+    // Check if this is an admin role
+    const selectedRoleObj = roles.find(r => r.role_id === selectedRole);
+    if (selectedRoleObj && selectedRoleObj.role_name.toLowerCase() === 'admin') {
+      toast.error("Admin role permissions cannot be modified");
+      return; // Don't make any changes for admin roles
+    }
 
-    try {
-      if (checked) {
-        await assignPermissionToRole(selectedRole, permissionId);
-        setRolePermissions(prev => [...prev, permissionId]);
+    // Store the change locally
+    setPendingChanges(prev => {
+      const newChanges = new Map(prev);
+      const roleChanges = newChanges.get(selectedRole) || new Map();
+      
+      // Get original state
+      const originalPermissions = originalRolePermissions.get(selectedRole) || [];
+      const isOriginallyChecked = originalPermissions.includes(permissionId);
+      
+      // If the new state matches the original, remove the pending change
+      if (checked === isOriginallyChecked) {
+        roleChanges.delete(permissionId);
       } else {
-        await removePermissionFromRole(selectedRole, permissionId);
-        setRolePermissions(prev => prev.filter(id => id !== permissionId));
+        roleChanges.set(permissionId, checked);
       }
-    } catch (err) {
-      console.error('Error updating permission:', err);
-      setError('Failed to update permission');
-      await fetchRolePermissions(selectedRole);
-    } finally {
-      setIsUpdating(false);
+      
+      if (roleChanges.size === 0) {
+        newChanges.delete(selectedRole);
+      } else {
+        newChanges.set(selectedRole, roleChanges);
+      }
+      
+      return newChanges;
+    });
+    
+    // Update the UI immediately
+    if (checked) {
+      setRolePermissions(prev => [...prev, permissionId]);
+    } else {
+      setRolePermissions(prev => prev.filter(id => id !== permissionId));
     }
   };
 
   // Handle permission toggle for a specific role (resource view)
-  const handlePermissionToggleForRole = async (permissionId: string, roleId: string, checked: boolean) => {
-    if (isUpdating) return;
+  const handlePermissionToggleForRole = (permissionId: string, roleId: string, checked: boolean) => {
+    // Check if this is an admin role
+    const roleObj = roles.find(r => r.role_id === roleId);
+    if (roleObj && roleObj.role_name.toLowerCase() === 'admin') {
+      toast.error("Admin role permissions cannot be modified");
+      return; // Don't make any changes for admin roles
+    }
 
-    setIsUpdating(true);
-    setError(null);
-
-    try {
-      if (checked) {
-        await assignPermissionToRole(roleId, permissionId);
-        // Update local state
-        setAllRolePermissions(prev => {
-          const newMap = new Map(prev);
-          const rolePerms = newMap.get(roleId) || [];
-          if (!rolePerms.includes(permissionId)) {
-            newMap.set(roleId, [...rolePerms, permissionId]);
-          }
-          return newMap;
-        });
-        // Update current role permissions if it's the selected role
-        if (roleId === selectedRole) {
-          setRolePermissions(prev => [...prev, permissionId]);
-        }
+    // Store the change locally
+    setPendingChanges(prev => {
+      const newChanges = new Map(prev);
+      const roleChanges = newChanges.get(roleId) || new Map();
+      
+      // Get original state
+      const originalPermissions = originalRolePermissions.get(roleId) || [];
+      const isOriginallyChecked = originalPermissions.includes(permissionId);
+      
+      // If the new state matches the original, remove the pending change
+      if (checked === isOriginallyChecked) {
+        roleChanges.delete(permissionId);
       } else {
-        await removePermissionFromRole(roleId, permissionId);
-        // Update local state
-        setAllRolePermissions(prev => {
-          const newMap = new Map(prev);
-          const rolePerms = newMap.get(roleId) || [];
-          newMap.set(roleId, rolePerms.filter(id => id !== permissionId));
-          return newMap;
-        });
-        // Update current role permissions if it's the selected role
-        if (roleId === selectedRole) {
-          setRolePermissions(prev => prev.filter(id => id !== permissionId));
-        }
+        roleChanges.set(permissionId, checked);
       }
-    } catch (err) {
-      console.error('Error updating permission:', err);
-      setError('Failed to update permission');
-      // Refresh all role permissions
-      await fetchAllRolePermissions();
-    } finally {
-      setIsUpdating(false);
+      
+      if (roleChanges.size === 0) {
+        newChanges.delete(roleId);
+      } else {
+        newChanges.set(roleId, roleChanges);
+      }
+      
+      return newChanges;
+    });
+    
+    // Update the UI immediately
+    setAllRolePermissions(prev => {
+      const newMap = new Map(prev);
+      const rolePerms = newMap.get(roleId) || [];
+      if (checked && !rolePerms.includes(permissionId)) {
+        newMap.set(roleId, [...rolePerms, permissionId]);
+      } else if (!checked) {
+        newMap.set(roleId, rolePerms.filter(id => id !== permissionId));
+      }
+      return newMap;
+    });
+    
+    // Update current role permissions if it's the selected role
+    if (roleId === selectedRole) {
+      if (checked) {
+        setRolePermissions(prev => [...prev, permissionId]);
+      } else {
+        setRolePermissions(prev => prev.filter(id => id !== permissionId));
+      }
     }
   };
 
@@ -268,6 +319,64 @@ export default function PermissionsMatrix() {
       }
       return next;
     });
+  };
+
+  // Handle save changes
+  const handleSaveChanges = async () => {
+    // Since the button is disabled for admin changes, this will only be called for non-admin changes
+    setShowConfirmDialog(true);
+  };
+
+  // Perform the actual save
+  const performSave = async () => {
+    setIsSaving(true);
+    setError(null);
+    
+    try {
+      const promises: Promise<void>[] = [];
+      
+      // Process all pending changes
+      pendingChanges.forEach((roleChanges, roleId) => {
+        roleChanges.forEach((shouldAdd, permissionId) => {
+          if (shouldAdd) {
+            promises.push(assignPermissionToRole(roleId, permissionId));
+          } else {
+            promises.push(removePermissionFromRole(roleId, permissionId));
+          }
+        });
+      });
+      
+      await Promise.all(promises);
+      
+      // Clear pending changes
+      setPendingChanges(new Map());
+      
+      // Refresh data
+      await fetchAllRolePermissions();
+      if (selectedRole && selectedRole !== 'all') {
+        await fetchRolePermissions(selectedRole);
+      }
+      
+      toast.success("Permissions updated successfully");
+    } catch (err) {
+      console.error('Error saving permissions:', err);
+      setError('Failed to save permissions');
+      toast.error("Failed to save permissions");
+    } finally {
+      setIsSaving(false);
+      setShowConfirmDialog(false);
+    }
+  };
+
+  // Handle cancel changes
+  const handleCancelChanges = async () => {
+    setPendingChanges(new Map());
+    
+    // Refresh data to restore original state
+    await fetchAllRolePermissions();
+    if (selectedRole && selectedRole !== 'all') {
+      await fetchRolePermissions(selectedRole);
+    }
   };
 
   // Calculate statistics
@@ -343,11 +452,18 @@ export default function PermissionsMatrix() {
       return <span className="text-gray-400">-</span>;
     }
 
+    // Check if there's a pending change for this permission
+    const pendingChange = selectedRole !== 'all' && pendingChanges.get(selectedRole)?.get(permission.permission_id);
+    const isChecked = pendingChange !== undefined 
+      ? pendingChange 
+      : rolePermissions.includes(permission.permission_id);
+    
     const checkbox = (
       <Checkbox
-        checked={rolePermissions.includes(permission.permission_id)}
+        checked={isChecked}
         onChange={(e) => handlePermissionToggle(permission.permission_id, e.target.checked)}
-        disabled={isUpdating || !selectedRole || selectedRole === 'all'}
+        disabled={!selectedRole || selectedRole === 'all'}
+        className={pendingChange !== undefined ? 'ring-2 ring-purple-500' : ''}
       />
     );
 
@@ -370,13 +486,18 @@ export default function PermissionsMatrix() {
       return <span className="text-gray-400">-</span>;
     }
 
-    const isChecked = rolePermissions.includes(permission.permission_id);
+    // Check if there's a pending change for this permission
+    const pendingChange = pendingChanges.get(roleId)?.get(permission.permission_id);
+    const isChecked = pendingChange !== undefined 
+      ? pendingChange 
+      : rolePermissions.includes(permission.permission_id);
 
     const checkbox = (
       <Checkbox
         checked={isChecked}
         onChange={(e) => handlePermissionToggleForRole(permission.permission_id, roleId, e.target.checked)}
-        disabled={isUpdating}
+        disabled={false}
+        className={pendingChange !== undefined ? 'ring-2 ring-purple-500' : ''}
       />
     );
 
@@ -668,7 +789,71 @@ export default function PermissionsMatrix() {
             pageSize={999}
           />
         )}
+
+        {/* Save/Cancel Buttons */}
+        {hasUnsavedChanges && (
+          <div className="flex items-center justify-between mt-6 pt-6 border-t">
+            <div className="text-sm text-muted-foreground">
+              {hasAdminRoleChanges 
+                ? "Admin role permissions cannot be modified" 
+                : "You have unsaved changes"}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                id="cancel-changes-button"
+                variant="ghost"
+                onClick={handleCancelChanges}
+                disabled={isSaving}
+              >
+                Cancel
+              </Button>
+              {hasAdminRoleChanges ? (
+                <Tooltip content="Admin role permissions are system-defined and cannot be changed">
+                  <span>
+                    <Button
+                      id="save-changes-button"
+                      disabled={true}
+                      className="flex items-center gap-2"
+                    >
+                      Save changes
+                    </Button>
+                  </span>
+                </Tooltip>
+              ) : (
+                <Button
+                  id="save-changes-button"
+                  onClick={handleSaveChanges}
+                  disabled={isSaving}
+                  className="flex items-center gap-2"
+                >
+                  {isSaving ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      Save changes
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
       </CardContent>
+      
+      {/* Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
+        title="Confirm Permission Changes"
+        message="Are you sure you want to save these permission changes?"
+        onConfirm={performSave}
+        confirmLabel="Save Changes"
+        cancelLabel="Cancel"
+        isConfirming={isSaving}
+      />
     </Card>
   );
 }

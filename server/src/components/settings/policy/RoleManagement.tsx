@@ -13,6 +13,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
 
 export default function RoleManagement() {
   const [roles, setRoles] = useState<IRole[]>([]);
@@ -57,8 +58,14 @@ export default function RoleManagement() {
   };
 
   const handleDeleteRole = async (roleId: string) => {
-    await deleteRole(roleId);
-    fetchRoles();
+    try {
+      await deleteRole(roleId);
+      fetchRoles();
+    } catch (error) {
+      console.error('Error deleting role:', error);
+      // Show error message to user
+      alert(error instanceof Error ? error.message : 'Failed to delete role');
+    }
   };
 
   const columns: ColumnDefinition<IRole>[] = [
@@ -89,16 +96,30 @@ export default function RoleManagement() {
       title: 'Actions',
       dataIndex: 'role_id',
       width: '150px',
-      render: (roleId) => (
-        <Button
-          variant="destructive"
-          id="delete-role-button"
-          size="sm"
-          onClick={() => handleDeleteRole(roleId)}
-        >
-          Delete
-        </Button>
-      )
+      render: (roleId, role) => {
+        const isAdminRole = role.role_name.toLowerCase() === 'admin';
+        const button = (
+          <Button
+            variant="destructive"
+            id="delete-role-button"
+            size="sm"
+            onClick={() => handleDeleteRole(roleId)}
+            disabled={isAdminRole}
+          >
+            Delete
+          </Button>
+        );
+
+        if (isAdminRole) {
+          return (
+            <Tooltip content="Admin roles cannot be deleted as they are system roles">
+              <span>{button}</span>
+            </Tooltip>
+          );
+        }
+        
+        return button;
+      }
     }
   ];
 

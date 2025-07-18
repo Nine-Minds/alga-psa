@@ -10,6 +10,7 @@ import { unparseCSV } from 'server/src/lib/utils/csvParser';
 import { getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 import { createTag } from 'server/src/lib/actions/tagActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 
 export async function getContactByContactNameId(contactNameId: string): Promise<IContact | null> {
   // Revert to using createTenantKnex for now
@@ -1425,4 +1426,118 @@ function extractNameFromEmail(email: string): string {
     .split(' ')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
+}
+
+/**
+ * Update contact's portal admin status
+ */
+export async function updateContactPortalAdminStatus(
+  contactId: string,
+  isPortalAdmin: boolean
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+
+    // Check permissions
+    const hasUpdatePermission = await hasPermission(currentUser, 'client', 'update');
+    if (!hasUpdatePermission) {
+      throw new Error('You do not have permission to update client settings');
+    }
+
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const updated = await trx('contacts')
+        .where({ 
+          contact_name_id: contactId,
+          tenant
+        })
+        .update({
+          is_client_admin: isPortalAdmin,
+          updated_at: new Date().toISOString()
+        });
+
+      if (updated === 0) {
+        throw new Error('Contact not found');
+      }
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('[contactActions.updateContactPortalAdminStatus]', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to update contact' 
+    };
+  }
+}
+
+/**
+ * Get user associated with a contact
+ */
+export async function getUserByContactId(
+  contactId: string
+): Promise<{ user: any | null; error?: string }> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+
+    // Check permissions
+    const hasReadPermission = await hasPermission(currentUser, 'client', 'read');
+    if (!hasReadPermission) {
+      throw new Error('You do not have permission to view client information');
+    }
+
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
+    // First get the user
+    const user = await knex('users')
+      .where({ 
+        contact_id: contactId,
+        tenant: tenant,
+        user_type: 'client'
+      })
+      .first();
+
+    if (!user) {
+      return { user: null, error: undefined };
+    }
+
+    // Then get the roles separately
+    const roles = await knex('user_roles')
+      .select('roles.role_id', 'roles.role_name')
+      .join('roles', function(this: Knex.JoinClause) {
+        this.on('user_roles.role_id', 'roles.role_id')
+          .andOn('roles.tenant', knex.raw('?', [tenant]));
+      })
+      .where({
+        'user_roles.user_id': user.user_id,
+        'user_roles.tenant': tenant
+      });
+
+    // Attach roles to user object
+    const userWithRoles = {
+      ...user,
+      roles: roles || []
+    };
+
+    return { user: userWithRoles, error: undefined };
+  } catch (error) {
+    console.error('[contactActions.getUserByContactId]', error);
+    return { 
+      user: null,
+      error: error instanceof Error ? error.message : 'Failed to get user' 
+    };
+  }
 }
