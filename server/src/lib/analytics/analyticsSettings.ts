@@ -105,18 +105,28 @@ async function saveAnalyticsSettings(tenant: string, analyticsSettings: Analytic
         }
       };
 
-      // Upsert the settings
-      await trx('tenant_settings')
-        .insert({
-          tenant,
-          settings: JSON.stringify(updatedSettings),
-          updated_at: trx.fn.now()
-        })
-        .onConflict('tenant')
-        .merge({
-          settings: JSON.stringify(updatedSettings),
-          updated_at: trx.fn.now()
-        });
+      // Check if tenant settings already exist
+      const existingRecord = await trx('tenant_settings')
+        .where({ tenant })
+        .first();
+
+      if (existingRecord) {
+        // Update existing settings
+        await trx('tenant_settings')
+          .where({ tenant })
+          .update({
+            settings: JSON.stringify(updatedSettings),
+            updated_at: trx.fn.now()
+          });
+      } else {
+        // Insert new settings
+        await trx('tenant_settings')
+          .insert({
+            tenant,
+            settings: JSON.stringify(updatedSettings),
+            updated_at: trx.fn.now()
+          });
+      }
     });
   } catch (error) {
     console.error('Error saving analytics settings:', error);
