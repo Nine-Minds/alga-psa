@@ -42,33 +42,22 @@ export class GmailAdapter extends BaseEmailAdapter {
   }
 
   /**
-   * Load stored credentials from the secret provider
+   * Load stored credentials from the provider configuration
    */
   protected async loadCredentials(): Promise<void> {
     try {
-      const secretProvider = getSecretProviderInstance();
-      const secret = await secretProvider.getTenantSecret(
-        this.config.tenant, 
-        'email_provider_credentials'
-      );
+      const vendorConfig = this.config.provider_config || {};
 
-      if (!secret) {
-        throw new Error('No email provider credentials found');
+      // Check if OAuth tokens are available in provider config
+      if (!vendorConfig.access_token || !vendorConfig.refresh_token) {
+        throw new Error('OAuth tokens not found in provider configuration. Please complete OAuth authorization.');
       }
 
-      const allCredentials = JSON.parse(secret);
-      const credentials = allCredentials[this.config.id];
-
-      if (!credentials || credentials.provider !== 'google') {
-        throw new Error('Google credentials not found');
-      }
-
-      this.accessToken = credentials.accessToken;
-      this.refreshToken = credentials.refreshToken;
-      this.tokenExpiresAt = new Date(credentials.accessTokenExpiresAt);
+      this.accessToken = vendorConfig.access_token;
+      this.refreshToken = vendorConfig.refresh_token;
+      this.tokenExpiresAt = vendorConfig.token_expires_at ? new Date(vendorConfig.token_expires_at) : new Date();
 
       // Configure OAuth2 client with stored credentials
-      const vendorConfig = this.config.provider_config || {};
       this.oauth2Client.setCredentials({
         access_token: this.accessToken,
         refresh_token: this.refreshToken,
@@ -76,7 +65,7 @@ export class GmailAdapter extends BaseEmailAdapter {
         expiry_date: this.tokenExpiresAt.getTime()
       });
 
-      this.log('info', 'Credentials loaded successfully');
+      this.log('info', 'Credentials loaded successfully from provider configuration');
     } catch (error) {
       throw this.handleError(error, 'loadCredentials');
     }
@@ -91,9 +80,18 @@ export class GmailAdapter extends BaseEmailAdapter {
         throw new Error('No refresh token available');
       }
 
-      const secretProvider = getSecretProviderInstance();
-      const clientId = process.env.GOOGLE_CLIENT_ID || await secretProvider.getTenantSecret(this.config.tenant, 'google_client_id');
-      const clientSecret = process.env.GOOGLE_CLIENT_SECRET || await secretProvider.getTenantSecret(this.config.tenant, 'google_client_secret');
+      const vendorConfig = this.config.provider_config || {};
+      
+      // Get client credentials from provider config, environment, or tenant secrets
+      let clientId = vendorConfig.client_id || process.env.GOOGLE_CLIENT_ID;
+      let clientSecret = vendorConfig.client_secret || process.env.GOOGLE_CLIENT_SECRET;
+      
+      // Fall back to tenant secrets if not found in config or environment
+      if (!clientId || !clientSecret) {
+        const secretProvider = getSecretProviderInstance();
+        clientId = clientId || await secretProvider.getTenantSecret(this.config.tenant, 'google_client_id');
+        clientSecret = clientSecret || await secretProvider.getTenantSecret(this.config.tenant, 'google_client_secret');
+      }
 
       if (!clientId || !clientSecret) {
         throw new Error('Google OAuth credentials not configured');
@@ -138,33 +136,20 @@ export class GmailAdapter extends BaseEmailAdapter {
 
   /**
    * Update stored credentials with new tokens
+   * Note: This method updates the in-memory config only.
+   * The calling service should persist these changes to the database.
    */
   private async updateStoredCredentials(): Promise<void> {
     try {
-      const secretProvider = getSecretProviderInstance();
-      const secret = await secretProvider.getTenantSecret(
-        this.config.tenant, 
-        'email_provider_credentials'
-      );
-
-      const allCredentials = secret ? JSON.parse(secret) : {};
+      // Update the provider config with new tokens
+      if (this.config.provider_config) {
+        this.config.provider_config.access_token = this.accessToken;
+        this.config.provider_config.refresh_token = this.refreshToken;
+        this.config.provider_config.token_expires_at = this.tokenExpiresAt?.toISOString();
+      }
       
-      allCredentials[this.config.id] = {
-        provider: 'google',
-        accessToken: this.accessToken,
-        refreshToken: this.refreshToken,
-        accessTokenExpiresAt: this.tokenExpiresAt?.toISOString(),
-        refreshTokenExpiresAt: this.tokenExpiresAt ? 
-          new Date(this.tokenExpiresAt.getTime() + (30 * 24 * 60 * 60 * 1000)).toISOString() : // 30 days
-          undefined,
-        mailbox: this.config.mailbox,
-      };
-
-      await secretProvider.setTenantSecret(
-        this.config.tenant,
-        'email_provider_credentials',
-        JSON.stringify(allCredentials, null, 2)
-      );
+      this.log('info', 'Updated credentials in provider configuration');
+      this.log('warn', 'Note: Updated credentials are in-memory only. The calling service should persist these changes to the database.');
     } catch (error) {
       this.log('warn', 'Failed to update stored credentials', error);
     }
@@ -227,11 +212,29 @@ This indicates a problem with the OAuth token saving process.`;
         }
       });
 
-      // Store the history ID for tracking changes
-      this.config.webhook_subscription_id = response.data.historyId;
-      this.config.webhook_expires_at = new Date(response.data.expiration).toISOString();
+      // Store the history ID for tracking changes in provider config
+      if (!this.config.provider_config) {
+        this.config.provider_config = {};
+      }
+      this.config.provider_config.history_id = response.data.historyId;
+      
+      // Handle expiration date safely - Gmail API returns expiration as a string timestamp in milliseconds
+      let expirationISO: string | null = null;
+      if (response.data.expiration) {
+        try {
+          // Gmail API returns expiration as a string of milliseconds since epoch
+          const expirationMs = parseInt(response.data.expiration, 10);
+          if (!isNaN(expirationMs) && expirationMs > 0) {
+            expirationISO = new Date(expirationMs).toISOString();
+          }
+        } catch (err) {
+          this.log('warn', `Failed to parse expiration date: ${response.data.expiration}`, err);
+        }
+      }
+      
+      this.config.provider_config.watch_expiration = expirationISO;
 
-      this.log('info', `Gmail watch created with historyId: ${response.data.historyId}`);
+      this.log('info', `Gmail watch created with historyId: ${response.data.historyId}, expiration: ${expirationISO}`);
     } catch (error) {
       throw this.handleError(error, 'registerWebhookSubscription');
     }
@@ -255,7 +258,7 @@ This indicates a problem with the OAuth token saving process.`;
       
       // Extract historyId from the notification
       const historyId = payload.historyId;
-      const lastHistoryId = this.config.webhook_subscription_id;
+      const lastHistoryId = this.config.provider_config?.history_id;
 
       if (!historyId || !lastHistoryId) {
         this.log('warn', 'Missing history ID in webhook notification');
@@ -282,7 +285,10 @@ This indicates a problem with the OAuth token saving process.`;
 
       // Update last known historyId
       if (history.data.historyId) {
-        this.config.webhook_subscription_id = history.data.historyId;
+        if (!this.config.provider_config) {
+          this.config.provider_config = {};
+        }
+        this.config.provider_config.history_id = history.data.historyId;
       }
 
       return messageIds;

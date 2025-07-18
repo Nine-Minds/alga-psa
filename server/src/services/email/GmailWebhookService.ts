@@ -61,12 +61,17 @@ export class GmailWebhookService {
       
       console.log(`✅ Gmail webhook setup completed for: ${providerConfig.mailbox}`);
 
+      // Get the real historyId and expiration from the Gmail adapter after registration
+      const adapterConfig = gmailAdapter.getConfig();
+      const historyId = adapterConfig.provider_config?.history_id || null;
+      const expiration = adapterConfig.provider_config?.watch_expiration || null;
+
       return {
         success: true,
         topicName: pubsubResult.topicPath,
         subscriptionName: pubsubResult.subscriptionPath,
-        historyId: 'generated-id',
-        expiration: 'TODO: Extract from Gmail API response'
+        historyId: historyId,
+        expiration: expiration
       };
 
     } catch (error: any) {

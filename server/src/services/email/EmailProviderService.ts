@@ -141,26 +141,57 @@ export class EmailProviderService {
   async createProvider(data: CreateProviderData): Promise<EmailProviderConfig> {
     try {
       const db = await this.getDb();
-      const [provider] = await db('email_provider_configs')
+      
+      // Create main provider record
+      const [provider] = await db('email_providers')
         .insert({
           id: db.raw('gen_random_uuid()'),
           tenant: data.tenant,
           provider_type: data.providerType,
-          name: data.providerName,
+          provider_name: data.providerName,
           mailbox: data.mailbox,
-          folder_to_monitor: 'Inbox',
-          active: data.isActive,
-          connection_status: 'disconnected',
-          webhook_notification_url: '',
-          provider_config: JSON.stringify(data.vendorConfig),
+          is_active: data.isActive,
+          status: 'configuring',
           created_at: db.fn.now(),
           updated_at: db.fn.now()
         })
         .returning('*');
 
-      console.log(`✅ Created email provider: ${provider.name} (${provider.id})`);
+      // Create vendor-specific configuration
+      if (data.providerType === 'google') {
+        const insertPayload = { ...data.vendorConfig };
+        
+        // Ensure label_filters is properly JSON-stringified for jsonb column
+        if (insertPayload.label_filters && Array.isArray(insertPayload.label_filters)) {
+          insertPayload.label_filters = JSON.stringify(insertPayload.label_filters);
+        }
+        
+        await db('google_email_provider_config')
+          .insert({
+            email_provider_id: provider.id,
+            ...insertPayload,
+            created_at: db.fn.now(),
+            updated_at: db.fn.now()
+          });
+      } else if (data.providerType === 'microsoft') {
+        await db('microsoft_email_provider_config')
+          .insert({
+            email_provider_id: provider.id,
+            ...data.vendorConfig,
+            created_at: db.fn.now(),
+            updated_at: db.fn.now()
+          });
+      }
+
+      console.log(`✅ Created email provider: ${provider.provider_name} (${provider.id})`);
       
-      return this.mapDbRowToProvider(provider);
+      // Fetch the complete provider with vendor config
+      const createdProvider = await this.getProvider(provider.id);
+      if (!createdProvider) {
+        throw new Error('Failed to fetch created provider');
+      }
+      
+      return createdProvider;
     } catch (error: any) {
       console.error('Error creating email provider:', error);
       throw new Error(`Failed to create email provider: ${error.message}`);
@@ -173,48 +204,77 @@ export class EmailProviderService {
   async updateProvider(providerId: string, data: UpdateProviderData): Promise<EmailProviderConfig> {
     try {
       const db = await this.getDb();
-      const updateData: any = {
+      
+      // Get existing provider to determine type and current config
+      const existingProvider = await this.getProvider(providerId);
+      if (!existingProvider) {
+        throw new Error('Provider not found');
+      }
+
+      // Update main provider table
+      const mainUpdateData: any = {
         updated_at: db.fn.now()
       };
 
       if (data.providerName !== undefined) {
-        updateData.name = data.providerName;
+        mainUpdateData.provider_name = data.providerName;
       }
 
       if (data.mailbox !== undefined) {
-        updateData.mailbox = data.mailbox;
+        mainUpdateData.mailbox = data.mailbox;
       }
 
       if (data.isActive !== undefined) {
-        updateData.active = data.isActive;
+        mainUpdateData.is_active = data.isActive;
       }
 
+      // Update main provider record
+      await db('email_providers')
+        .where('id', providerId)
+        .update(mainUpdateData);
+
+      // Update vendor-specific configuration if provided
       if (data.vendorConfig !== undefined) {
-        // Merge with existing vendor config
-        const existingProvider = await this.getProvider(providerId);
-        if (existingProvider) {
-          const mergedConfig = {
-            ...existingProvider.provider_config,
-            ...data.vendorConfig
-          };
-          updateData.provider_config = JSON.stringify(mergedConfig);
-        } else {
-          updateData.provider_config = JSON.stringify(data.vendorConfig);
+        const mergedConfig = {
+          ...existingProvider.provider_config,
+          ...data.vendorConfig
+        };
+
+        if (existingProvider.provider_type === 'google') {
+          // Update Google-specific configuration
+          const updatePayload = { ...mergedConfig };
+          
+          // Ensure label_filters is properly JSON-stringified for jsonb column
+          if (updatePayload.label_filters && Array.isArray(updatePayload.label_filters)) {
+            updatePayload.label_filters = JSON.stringify(updatePayload.label_filters);
+          }
+          
+          await db('google_email_provider_config')
+            .where('email_provider_id', providerId)
+            .update({
+              ...updatePayload,
+              updated_at: db.fn.now()
+            });
+        } else if (existingProvider.provider_type === 'microsoft') {
+          // Update Microsoft-specific configuration
+          await db('microsoft_email_provider_config')
+            .where('email_provider_id', providerId)
+            .update({
+              ...mergedConfig,
+              updated_at: db.fn.now()
+            });
         }
       }
 
-      const [provider] = await db('email_provider_configs')
-        .where('id', providerId)
-        .update(updateData)
-        .returning('*');
-
-      if (!provider) {
-        throw new Error('Provider not found');
+      // Fetch updated provider with vendor config
+      const updatedProvider = await this.getProvider(providerId);
+      if (!updatedProvider) {
+        throw new Error('Failed to fetch updated provider');
       }
 
-      console.log(`✅ Updated email provider: ${provider.name} (${provider.id})`);
+      console.log(`✅ Updated email provider: ${updatedProvider.name} (${updatedProvider.id})`);
       
-      return this.mapDbRowToProvider(provider);
+      return updatedProvider;
     } catch (error: any) {
       console.error(`Error updating email provider ${providerId}:`, error);
       throw new Error(`Failed to update email provider: ${error.message}`);
@@ -228,19 +288,19 @@ export class EmailProviderService {
     try {
       const db = await this.getDb();
       const updateData: any = {
-        connection_status: status.status,
+        status: status.status,
         updated_at: db.fn.now()
       };
 
       if (status.errorMessage !== undefined) {
-        updateData.connection_error_message = status.errorMessage;
+        updateData.error_message = status.errorMessage;
       }
 
       if (status.lastSyncAt) {
-        updateData.last_connection_test = status.lastSyncAt;
+        updateData.last_sync_at = status.lastSyncAt;
       }
 
-      await db('email_provider_configs')
+      await db('email_providers')
         .where('id', providerId)
         .update(updateData);
 
@@ -257,7 +317,29 @@ export class EmailProviderService {
   async deleteProvider(providerId: string): Promise<void> {
     try {
       const db = await this.getDb();
-      const deleted = await db('email_provider_configs')
+      
+      // Get provider info to determine type for cleanup
+      const provider = await db('email_providers')
+        .where('id', providerId)
+        .first();
+
+      if (!provider) {
+        throw new Error('Provider not found');
+      }
+
+      // Delete vendor-specific configuration first
+      if (provider.provider_type === 'google') {
+        await db('google_email_provider_config')
+          .where('email_provider_id', providerId)
+          .del();
+      } else if (provider.provider_type === 'microsoft') {
+        await db('microsoft_email_provider_config')
+          .where('email_provider_id', providerId)
+          .del();
+      }
+
+      // Delete main provider record
+      const deleted = await db('email_providers')
         .where('id', providerId)
         .del();
 
@@ -328,8 +410,8 @@ export class EmailProviderService {
         await this.updateProvider(providerId, {
           vendorConfig: {
             ...provider.provider_config,
-            historyId: result.historyId,
-            expiration: result.expiration
+            history_id: result.historyId,
+            watch_expiration: result.expiration
           }
         });
       }
