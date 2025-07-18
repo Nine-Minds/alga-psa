@@ -39,6 +39,20 @@ export async function updateRole(roleId: string, roleName: string): Promise<IRol
 export async function deleteRole(roleId: string): Promise<void> {
     const { knex: db, tenant } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
+        // Check if role is an Admin role (immutable)
+        const role = await trx('roles')
+            .where({ role_id: roleId, tenant })
+            .first();
+        
+        if (!role) {
+            throw new Error('Role not found');
+        }
+        
+        // Prevent deletion of Admin roles
+        if (role.role_name.toLowerCase() === 'admin') {
+            throw new Error('Admin roles cannot be deleted');
+        }
+        
         await trx('roles').where({ role_id: roleId, tenant }).del();
     });
 }
