@@ -19,14 +19,28 @@ interface GmailNotification {
 }
 
 export async function POST(request: NextRequest) {
+  // Initialize variables that might be needed in catch block
+  let payloadData: { messageId?: string; publishTime?: string; subscription?: string } = {};
+  
   try {
     // Parse Pub/Sub payload
     const payload: GooglePubSubMessage = await request.json();
+    
+    // Add detailed logging of the incoming message structure
     console.log('🔔 Google Pub/Sub webhook notification received:', {
       messageId: payload.message?.messageId,
       subscription: payload.subscription,
       timestamp: new Date().toISOString(),
-      hasMessageData: !!payload.message?.data
+      hasMessageData: !!payload.message?.data,
+      fullPayload: JSON.stringify(payload, null, 2)
+    });
+    
+    // Debug: Log the complete payload structure
+    console.log('🔍 Complete payload structure:', {
+      payload: payload,
+      messageKeys: payload.message ? Object.keys(payload.message) : 'No message object',
+      subscriptionType: typeof payload.subscription,
+      subscriptionValue: payload.subscription
     });
 
     if (!payload.message?.data) {
@@ -62,6 +76,15 @@ export async function POST(request: NextRequest) {
 
     const knex = await getAdminConnection();
     let processed = false;
+    
+    // Store payload data to ensure it's accessible in all scopes
+    payloadData = {
+      messageId: payload.message.messageId,
+      publishTime: payload.message.publishTime,
+      subscription: payload.subscription
+    };
+    
+    console.log('🔍 Payload data extracted for processing:', payloadData);
 
     await withTransaction(knex, async (trx) => {
       // Look up provider by email address
@@ -79,18 +102,29 @@ export async function POST(request: NextRequest) {
 
       console.log(`✅ Found Gmail provider: ${provider.id} for ${notification.emailAddress}`);
 
+      // Load Google-specific vendor configuration
+      const googleConfig = await trx('google_email_provider_config')
+        .where('email_provider_id', provider.id)
+        .first();
+
+      if (!googleConfig) {
+        console.error(`❌ Google config not found for provider: ${provider.id}`);
+        return;
+      }
+
+      console.log(`✅ Loaded Google config for provider: ${provider.id}`, {
+        hasConfig: !!googleConfig,
+        pubsubSubscriptionName: googleConfig.pubsub_subscription_name
+      });
+
       // Extract subscription name from payload
-      const subscriptionName = payload.subscription?.split('/').pop();
+      const subscriptionName = payloadData.subscription?.split('/').pop();
       console.log(`🔔 Subscription name extracted: ${subscriptionName}`);
-      
-      const vendorConfig = typeof provider.vendor_config === 'string' 
-        ? JSON.parse(provider.vendor_config) 
-        : provider.vendor_config;
 
       // Validate subscription (optional but recommended)
-      if (subscriptionName && vendorConfig.pubsubSubscriptionName !== subscriptionName) {
+      if (subscriptionName && googleConfig.pubsub_subscription_name !== subscriptionName) {
         console.warn(`⚠️  Subscription mismatch for provider ${provider.id}:`, {
-          expected: vendorConfig.pubsubSubscriptionName,
+          expected: googleConfig.pubsub_subscription_name,
           received: subscriptionName,
           provider: provider.id,
           email: notification.emailAddress
@@ -112,9 +146,9 @@ export async function POST(request: NextRequest) {
           webhookData: {
             emailAddress: notification.emailAddress,
             historyId: notification.historyId,
-            messageId: payload.message.messageId,
-            publishTime: payload.message.publishTime,
-            subscription: payload.subscription,
+            messageId: payloadData.messageId,
+            publishTime: payloadData.publishTime,
+            subscription: payloadData.subscription,
             timestamp: new Date().toISOString()
           }
         }
@@ -133,21 +167,21 @@ export async function POST(request: NextRequest) {
     console.log(`📋 Webhook processing complete:`, {
       success: true,
       processed: processed,
-      messageId: payload.message.messageId
+      messageId: payloadData.messageId
     });
     
     return NextResponse.json({ 
       success: true,
       processed: processed,
-      messageId: payload.message.messageId
+      messageId: payloadData.messageId
     });
 
   } catch (error: any) {
     console.error('❌ Google webhook handler error:', {
       error: error.message,
       stack: error.stack,
-      messageId: payload?.message?.messageId,
-      subscription: payload?.subscription
+      messageId: payloadData?.messageId || 'unknown',
+      subscription: payloadData?.subscription || 'unknown'
     });
     // Return 200 to avoid Pub/Sub retries for permanent errors
     return NextResponse.json({ 
