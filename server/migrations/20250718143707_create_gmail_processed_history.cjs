@@ -9,9 +9,8 @@ exports.up = function(knex) {
     table.timestamp('processed_at').defaultTo(knex.fn.now());
     table.timestamps(true, true);
     
-    // Foreign key constraints
-    table.foreign('tenant').references('tenant').inTable('tenants').onDelete('CASCADE');
-    table.foreign(['provider_id', 'tenant']).references(['id', 'tenant']).inTable('email_providers').onDelete('CASCADE');
+    // Note: Foreign key constraints removed for CitusDB compatibility
+    // Referential integrity enforced in application code
     
     // Unique constraint to prevent duplicate processing
     table.unique(['tenant', 'provider_id', 'history_id']);

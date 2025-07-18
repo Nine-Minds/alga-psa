@@ -1,14 +1,12 @@
 -- Cleanup obsolete email provider tables
 -- These tables represent the old data model and are empty
 
--- First, update the foreign key in email_processed_messages to reference the new table structure
+-- Remove foreign key constraint for CitusDB compatibility
 ALTER TABLE email_processed_messages 
 DROP CONSTRAINT IF EXISTS email_processed_messages_provider_id_tenant_foreign;
 
--- Add new foreign key to reference email_providers instead of email_provider_configs
-ALTER TABLE email_processed_messages 
-ADD CONSTRAINT email_processed_messages_provider_id_tenant_foreign 
-FOREIGN KEY (provider_id, tenant) REFERENCES email_providers(id, tenant) ON DELETE CASCADE;
+-- Note: Foreign key constraint not re-added for CitusDB compatibility
+-- Referential integrity enforced in application code
 
 -- Drop the obsolete tables (all are empty)
 DROP TABLE IF EXISTS email_provider_configs CASCADE;
