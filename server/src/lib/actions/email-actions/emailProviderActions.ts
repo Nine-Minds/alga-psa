@@ -201,11 +201,11 @@ export async function upsertEmailProvider(data: {
       if (data.providerType === 'microsoft' && data.microsoftConfig) {
         // Save secrets to tenant-specific secret store
         const secretProvider = getSecretProviderInstance();
-        if (data.microsoftConfig.client_id) {
-          await secretProvider.setTenantSecret(tenant, 'microsoft_client_id', data.microsoftConfig.client_id as string);
+        if (data.microsoftConfig.client_id && data.microsoftConfig.client_id !== null) {
+          await secretProvider.setTenantSecret(tenant, 'microsoft_client_id', data.microsoftConfig.client_id);
         }
-        if (data.microsoftConfig.client_secret) {
-          await secretProvider.setTenantSecret(tenant, 'microsoft_client_secret', data.microsoftConfig.client_secret as string);
+        if (data.microsoftConfig.client_secret && data.microsoftConfig.client_secret !== null) {
+          await secretProvider.setTenantSecret(tenant, 'microsoft_client_secret', data.microsoftConfig.client_secret);
         }
         
         // Delete existing config if any
@@ -218,8 +218,8 @@ export async function upsertEmailProvider(data: {
           .insert({
             email_provider_id: provider.id,
             tenant,
-            client_id: data.microsoftConfig.client_id,
-            client_secret: data.microsoftConfig.client_secret,
+            client_id: data.microsoftConfig.client_id || null,
+            client_secret: data.microsoftConfig.client_secret || null,
             tenant_id: data.microsoftConfig.tenant_id,
             redirect_uri: data.microsoftConfig.redirect_uri,
             auto_process_emails: data.microsoftConfig.auto_process_emails,
@@ -242,11 +242,11 @@ export async function upsertEmailProvider(data: {
       } else if (data.providerType === 'google' && data.googleConfig) {
         // Save secrets to tenant-specific secret store
         const secretProvider = getSecretProviderInstance();
-        if (data.googleConfig.client_id) {
-          await secretProvider.setTenantSecret(tenant, 'google_client_id', data.googleConfig.client_id as string);
+        if (data.googleConfig.client_id && data.googleConfig.client_id !== null) {
+          await secretProvider.setTenantSecret(tenant, 'google_client_id', data.googleConfig.client_id);
         }
-        if (data.googleConfig.client_secret) {
-          await secretProvider.setTenantSecret(tenant, 'google_client_secret', data.googleConfig.client_secret as string);
+        if (data.googleConfig.client_secret && data.googleConfig.client_secret !== null) {
+          await secretProvider.setTenantSecret(tenant, 'google_client_secret', data.googleConfig.client_secret);
         }
         
         // Generate standardized Pub/Sub names
@@ -478,8 +478,8 @@ export async function createEmailProvider(data: {
           .insert({
             email_provider_id: provider.id,
             tenant,
-            client_id: data.microsoftConfig.client_id,
-            client_secret: data.microsoftConfig.client_secret,
+            client_id: data.microsoftConfig.client_id || null,
+            client_secret: data.microsoftConfig.client_secret || null,
             tenant_id: data.microsoftConfig.tenant_id,
             redirect_uri: data.microsoftConfig.redirect_uri,
             auto_process_emails: data.microsoftConfig.auto_process_emails,
@@ -703,8 +703,8 @@ export async function updateEmailProvider(
           .insert({
             email_provider_id: providerId,
             tenant,
-            client_id: data.microsoftConfig.client_id,
-            client_secret: data.microsoftConfig.client_secret,
+            client_id: data.microsoftConfig.client_id || null,
+            client_secret: data.microsoftConfig.client_secret || null,
             tenant_id: data.microsoftConfig.tenant_id,
             redirect_uri: data.microsoftConfig.redirect_uri,
             auto_process_emails: data.microsoftConfig.auto_process_emails,
@@ -738,8 +738,8 @@ export async function updateEmailProvider(
           .insert({
             email_provider_id: providerId,
             tenant,
-            client_id: data.googleConfig.client_id,
-            client_secret: data.googleConfig.client_secret,
+            client_id: data.googleConfig.client_id || null,
+            client_secret: data.googleConfig.client_secret || null,
             project_id: data.googleConfig.project_id,
             redirect_uri: data.googleConfig.redirect_uri,
             pubsub_topic_name: pubsubNames.topicName,
