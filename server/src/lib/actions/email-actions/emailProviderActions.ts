@@ -201,11 +201,11 @@ export async function upsertEmailProvider(data: {
       if (data.providerType === 'microsoft' && data.microsoftConfig) {
         // Save secrets to tenant-specific secret store
         const secretProvider = getSecretProviderInstance();
-        if (data.microsoftConfig.client_id && data.microsoftConfig.client_id !== null) {
-          await secretProvider.setTenantSecret(tenant, 'microsoft_client_id', data.microsoftConfig.client_id);
+        if (data.microsoftConfig.client_id) {
+          await secretProvider.setTenantSecret(tenant || '', 'microsoft_client_id', data.microsoftConfig.client_id as string);
         }
-        if (data.microsoftConfig.client_secret && data.microsoftConfig.client_secret !== null) {
-          await secretProvider.setTenantSecret(tenant, 'microsoft_client_secret', data.microsoftConfig.client_secret);
+        if (data.microsoftConfig.client_secret) {
+          await secretProvider.setTenantSecret(tenant || '', 'microsoft_client_secret', data.microsoftConfig.client_secret as string);
         }
         
         // Delete existing config if any
@@ -242,15 +242,15 @@ export async function upsertEmailProvider(data: {
       } else if (data.providerType === 'google' && data.googleConfig) {
         // Save secrets to tenant-specific secret store
         const secretProvider = getSecretProviderInstance();
-        if (data.googleConfig.client_id && data.googleConfig.client_id !== null) {
-          await secretProvider.setTenantSecret(tenant, 'google_client_id', data.googleConfig.client_id);
+        if (data.googleConfig.client_id) {
+          await secretProvider.setTenantSecret(tenant || '', 'google_client_id', data.googleConfig.client_id as string);
         }
-        if (data.googleConfig.client_secret && data.googleConfig.client_secret !== null) {
-          await secretProvider.setTenantSecret(tenant, 'google_client_secret', data.googleConfig.client_secret);
+        if (data.googleConfig.client_secret) {
+          await secretProvider.setTenantSecret(tenant || '', 'google_client_secret', data.googleConfig.client_secret as string);
         }
         
         // Generate standardized Pub/Sub names
-        const pubsubNames = generatePubSubNames(tenant);
+        const pubsubNames = generatePubSubNames(tenant!);
         
         // Upsert Google config using ON CONFLICT
         const labelFiltersArray = data.googleConfig.label_filters || [];
@@ -331,7 +331,7 @@ export async function upsertEmailProvider(data: {
     // After successful database transaction, set up Pub/Sub for Google providers
     if (data.providerType === 'google' && data.googleConfig && result.googleConfig) {
       try {
-        const pubsubNames = generatePubSubNames(tenant);
+        const pubsubNames = generatePubSubNames(tenant!);
         console.log(`🔧 Initiating automatic Pub/Sub setup for Gmail provider ${result.id}:`, {
           tenant,
           providerId: result.id,
@@ -501,7 +501,7 @@ export async function createEmailProvider(data: {
         }
       } else if (data.providerType === 'google' && data.googleConfig) {
         // Generate standardized Pub/Sub names
-        const pubsubNames = generatePubSubNames(tenant);
+        const pubsubNames = generatePubSubNames(tenant!);
         
         const labelFiltersArray = data.googleConfig.label_filters || [];
         
@@ -580,7 +580,7 @@ export async function createEmailProvider(data: {
     // After successful database transaction, set up Pub/Sub for Google providers
     if (data.providerType === 'google' && data.googleConfig && result.googleConfig) {
       try {
-        const pubsubNames = generatePubSubNames(tenant);
+        const pubsubNames = generatePubSubNames(tenant!);
         console.log(`🔧 Initiating automatic Pub/Sub setup for Gmail provider ${result.id}:`, {
           tenant,
           providerId: result.id,
@@ -731,7 +731,7 @@ export async function updateEmailProvider(
           .delete();
         
         // Generate standardized Pub/Sub names
-        const pubsubNames = generatePubSubNames(tenant);
+        const pubsubNames = generatePubSubNames(tenant!);
         
         // Insert new config with standardized Pub/Sub names
         const googleConfig = await trx('google_email_provider_config')
@@ -772,7 +772,7 @@ export async function updateEmailProvider(
     // After successful database transaction, set up Pub/Sub for Google providers
     if (data.providerType === 'google' && data.googleConfig && result.googleConfig) {
       try {
-        const pubsubNames = generatePubSubNames(tenant);
+        const pubsubNames = generatePubSubNames(tenant!);
         console.log(`🔧 Initiating automatic Pub/Sub setup for Gmail provider ${result.id}:`, {
           tenant,
           providerId: result.id,
