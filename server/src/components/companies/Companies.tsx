@@ -84,6 +84,9 @@ interface CompanyResultsProps {
   companyTags?: Record<string, ITag[]>;
   allUniqueTagsFromParent?: ITag[];
   editingId?: string | null;
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
+  onSortChange?: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
 }
 
 const CompanyResults = memo(({
@@ -105,7 +108,10 @@ const CompanyResults = memo(({
   onCompanyTagsLoaded,
   companyTags: parentCompanyTags,
   allUniqueTagsFromParent,
-  editingId
+  editingId,
+  sortBy,
+  sortDirection,
+  onSortChange
 }: CompanyResultsProps) => {
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -129,7 +135,9 @@ const CompanyResults = memo(({
           searchTerm: searchTerm || undefined,
           clientTypeFilter,
           selectedTags,
-          loadLogos: true
+          loadLogos: true,
+          sortBy,
+          sortDirection
         });
 
         setCompanies(response.companies);
@@ -142,7 +150,7 @@ const CompanyResults = memo(({
     };
 
     loadCompanies();
-  }, [currentPage, pageSize, filterStatus, searchTerm, clientTypeFilter, selectedTags]);
+  }, [currentPage, pageSize, filterStatus, searchTerm, clientTypeFilter, selectedTags, sortBy, sortDirection]);
 
   // Fetch tags when companies change
   useEffect(() => {
@@ -233,6 +241,9 @@ const CompanyResults = memo(({
           allUniqueTags={effectiveAllUniqueTags}
           onTagsChange={onTagsChange}
           editingId={editingId}
+          sortBy={sortBy}
+          sortDirection={sortDirection}
+          onSortChange={onSortChange}
         />
       )}
     </div>
@@ -336,6 +347,10 @@ const Companies: React.FC = () => {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(viewMode === 'grid' ? 9 : 10);
+  
+  // Sorting state
+  const [sortBy, setSortBy] = useState<string>('company_name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   
   // For multi-delete functionality, we need to track companies
   const [companiesForDelete, setCompaniesForDelete] = useState<ICompany[]>([]);
@@ -545,6 +560,13 @@ const Companies: React.FC = () => {
     setSelectedTags([]);
     setCurrentPage(1);
     setIsFiltered(false);
+  }, []);
+  
+  // Handle sort change
+  const handleSortChange = useCallback((newSortBy: string, newSortDirection: 'asc' | 'desc') => {
+    setSortBy(newSortBy);
+    setSortDirection(newSortDirection);
+    setCurrentPage(1); // Reset to first page when sorting changes
   }, []);
   
   const confirmMultiDelete = async () => {
@@ -903,6 +925,9 @@ const Companies: React.FC = () => {
         companyTags={companyTags}
         allUniqueTagsFromParent={allUniqueTags}
         editingId={editingId}
+        sortBy={sortBy}
+        sortDirection={sortDirection}
+        onSortChange={handleSortChange}
       />
 
       {/* Multi-delete confirmation dialog */}
