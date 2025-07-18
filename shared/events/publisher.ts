@@ -32,7 +32,7 @@ export async function publishEvent(event: EventPayload): Promise<string> {
       event_id: uuidv4(),
       execution_id: event.correlationId || uuidv4(),
       event_name: event.eventType,
-      event_type: 'system', // System-generated events
+      event_type: event.eventType, // Use the actual event type instead of hardcoded 'system'
       timestamp: new Date().toISOString(),
       tenant: event.tenant,
       payload: event.payload
