@@ -201,11 +201,11 @@ export async function upsertEmailProvider(data: {
       if (data.providerType === 'microsoft' && data.microsoftConfig) {
         // Save secrets to tenant-specific secret store
         const secretProvider = getSecretProviderInstance();
-        if (data.microsoftConfig.client_id !== null && data.microsoftConfig.client_id !== undefined) {
-          await secretProvider.setTenantSecret(tenant, 'microsoft_client_id', data.microsoftConfig.client_id);
+        if (data.microsoftConfig.client_id) {
+          await secretProvider.setTenantSecret(tenant, 'microsoft_client_id', data.microsoftConfig.client_id as string);
         }
-        if (data.microsoftConfig.client_secret !== null && data.microsoftConfig.client_secret !== undefined) {
-          await secretProvider.setTenantSecret(tenant, 'microsoft_client_secret', data.microsoftConfig.client_secret);
+        if (data.microsoftConfig.client_secret) {
+          await secretProvider.setTenantSecret(tenant, 'microsoft_client_secret', data.microsoftConfig.client_secret as string);
         }
         
         // Delete existing config if any
@@ -242,11 +242,11 @@ export async function upsertEmailProvider(data: {
       } else if (data.providerType === 'google' && data.googleConfig) {
         // Save secrets to tenant-specific secret store
         const secretProvider = getSecretProviderInstance();
-        if (data.googleConfig.client_id !== null && data.googleConfig.client_id !== undefined) {
-          await secretProvider.setTenantSecret(tenant, 'google_client_id', data.googleConfig.client_id);
+        if (data.googleConfig.client_id) {
+          await secretProvider.setTenantSecret(tenant, 'google_client_id', data.googleConfig.client_id as string);
         }
-        if (data.googleConfig.client_secret !== null && data.googleConfig.client_secret !== undefined) {
-          await secretProvider.setTenantSecret(tenant, 'google_client_secret', data.googleConfig.client_secret);
+        if (data.googleConfig.client_secret) {
+          await secretProvider.setTenantSecret(tenant, 'google_client_secret', data.googleConfig.client_secret as string);
         }
         
         // Generate standardized Pub/Sub names
@@ -258,8 +258,8 @@ export async function upsertEmailProvider(data: {
         const configPayload = {
             email_provider_id: provider.id,
             tenant,
-            client_id: data.googleConfig.client_id,
-            client_secret: data.googleConfig.client_secret,
+            client_id: data.googleConfig.client_id || null,
+            client_secret: data.googleConfig.client_secret || null,
             project_id: data.googleConfig.project_id,
             redirect_uri: data.googleConfig.redirect_uri,
             pubsub_topic_name: pubsubNames.topicName,
@@ -508,8 +508,8 @@ export async function createEmailProvider(data: {
         const configPayload = {
             email_provider_id: provider.id,
             tenant,
-            client_id: data.googleConfig.client_id,
-            client_secret: data.googleConfig.client_secret,
+            client_id: data.googleConfig.client_id || null,
+            client_secret: data.googleConfig.client_secret || null,
             project_id: data.googleConfig.project_id,
             redirect_uri: data.googleConfig.redirect_uri,
             pubsub_topic_name: pubsubNames.topicName,

@@ -61,8 +61,8 @@ export function MicrosoftProviderForm({
     defaultValues: provider && provider.microsoftConfig ? {
       providerName: provider.providerName,
       mailbox: provider.mailbox,
-      clientId: provider.microsoftConfig.client_id,
-      clientSecret: provider.microsoftConfig.client_secret,
+      clientId: provider.microsoftConfig.client_id || '',
+      clientSecret: provider.microsoftConfig.client_secret || '',
       tenantId: provider.microsoftConfig.tenant_id,
       redirectUri: provider.microsoftConfig.redirect_uri,
       isActive: provider.isActive,
