@@ -63,8 +63,8 @@ export class GmailWebhookService {
 
       // Get the real historyId and expiration from the Gmail adapter after registration
       const adapterConfig = gmailAdapter.getConfig();
-      const historyId = adapterConfig.provider_config?.history_id || null;
-      const expiration = adapterConfig.provider_config?.watch_expiration || null;
+      const historyId = adapterConfig.provider_config?.history_id || undefined;
+      const expiration = adapterConfig.provider_config?.watch_expiration || undefined;
 
       return {
         success: true,

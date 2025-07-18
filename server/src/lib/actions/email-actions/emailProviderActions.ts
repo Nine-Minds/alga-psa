@@ -201,10 +201,10 @@ export async function upsertEmailProvider(data: {
       if (data.providerType === 'microsoft' && data.microsoftConfig) {
         // Save secrets to tenant-specific secret store
         const secretProvider = getSecretProviderInstance();
-        if (data.microsoftConfig.client_id) {
+        if (data.microsoftConfig.client_id !== null && data.microsoftConfig.client_id !== undefined) {
           await secretProvider.setTenantSecret(tenant, 'microsoft_client_id', data.microsoftConfig.client_id);
         }
-        if (data.microsoftConfig.client_secret) {
+        if (data.microsoftConfig.client_secret !== null && data.microsoftConfig.client_secret !== undefined) {
           await secretProvider.setTenantSecret(tenant, 'microsoft_client_secret', data.microsoftConfig.client_secret);
         }
         
@@ -242,10 +242,10 @@ export async function upsertEmailProvider(data: {
       } else if (data.providerType === 'google' && data.googleConfig) {
         // Save secrets to tenant-specific secret store
         const secretProvider = getSecretProviderInstance();
-        if (data.googleConfig.client_id) {
+        if (data.googleConfig.client_id !== null && data.googleConfig.client_id !== undefined) {
           await secretProvider.setTenantSecret(tenant, 'google_client_id', data.googleConfig.client_id);
         }
-        if (data.googleConfig.client_secret) {
+        if (data.googleConfig.client_secret !== null && data.googleConfig.client_secret !== undefined) {
           await secretProvider.setTenantSecret(tenant, 'google_client_secret', data.googleConfig.client_secret);
         }
         

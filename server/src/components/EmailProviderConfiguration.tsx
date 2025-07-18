@@ -41,8 +41,8 @@ export interface EmailProvider {
 export interface MicrosoftEmailProviderConfig {
   email_provider_id: string;
   tenant: string;
-  client_id: string;
-  client_secret: string;
+  client_id: string | null;
+  client_secret: string | null;
   tenant_id: string;
   redirect_uri: string;
   auto_process_emails: boolean;
@@ -58,8 +58,8 @@ export interface MicrosoftEmailProviderConfig {
 export interface GoogleEmailProviderConfig {
   email_provider_id: string;
   tenant: string;
-  client_id: string;
-  client_secret: string;
+  client_id: string | null;
+  client_secret: string | null;
   project_id: string;
   redirect_uri: string;
   auto_process_emails: boolean;

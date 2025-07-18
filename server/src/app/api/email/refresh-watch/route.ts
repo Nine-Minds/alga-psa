@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    console.log(`👤 User requesting refresh: ${user.email || user.id}`);
+    console.log(`👤 User requesting refresh: ${user.email || 'unknown'}`);
     
     // Get the email provider ID from request body
     const { providerId } = await request.json();

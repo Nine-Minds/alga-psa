@@ -26,7 +26,7 @@ export async function setupPubSub(request: SetupPubSubRequest) {
       throw new Error('Unauthorized');
     }
 
-    console.log(`👤 Authenticated user: ${user.email || user.id}`);
+    console.log(`👤 Authenticated user: ${user.email || 'unknown'}`);
 
     // Get Google service account credentials
     const secretProvider = getSecretProviderInstance();

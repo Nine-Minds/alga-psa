@@ -253,7 +253,7 @@ This indicates a problem with the OAuth token saving process.`;
         }
       }
       
-      this.config.provider_config.watch_expiration = expirationISO;
+      this.config.provider_config.watch_expiration = expirationISO || undefined;
 
       // Save updated history_id and watch_expiration to database
       try {

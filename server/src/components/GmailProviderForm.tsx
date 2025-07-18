@@ -482,6 +482,7 @@ export function GmailProviderForm({
                 </div>
                 {autoSubmitCountdown !== null && (
                   <Button
+                    id="cancel-auto-submit"
                     type="button"
                     variant="outline"
                     size="sm"

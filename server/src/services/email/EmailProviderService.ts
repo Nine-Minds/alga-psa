@@ -396,9 +396,9 @@ export class EmailProviderService {
         }
 
         const result = await gmailWebhookService.setupGmailWebhook(provider, {
-          projectId: provider.provider_config.project_id,
-          topicName: provider.provider_config.pubsub_topic_name,
-          subscriptionName: provider.provider_config.pubsub_subscription_name,
+          projectId: provider.provider_config.project_id!,
+          topicName: provider.provider_config.pubsub_topic_name!,
+          subscriptionName: provider.provider_config.pubsub_subscription_name!,
           webhookUrl
         });
 
@@ -455,9 +455,9 @@ export class EmailProviderService {
           const webhookUrl = this.generateWebhookUrl('/api/email/webhooks/google');
           
           await gmailWebhookService.removeGmailWebhook(provider, {
-            projectId: provider.provider_config.project_id,
-            topicName: provider.provider_config.pubsub_topic_name,
-            subscriptionName: provider.provider_config.pubsub_subscription_name,
+            projectId: provider.provider_config.project_id!,
+            topicName: provider.provider_config.pubsub_topic_name!,
+            subscriptionName: provider.provider_config.pubsub_subscription_name!,
             webhookUrl
           });
         }

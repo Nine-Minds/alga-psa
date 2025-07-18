@@ -148,7 +148,7 @@ export function MicrosoftProviderForm({
           microsoftConfig: {
             client_id: formData.clientId,
             client_secret: formData.clientSecret,
-            tenant_id: formData.tenantId,
+            tenant_id: formData.tenantId || '',
             redirect_uri: formData.redirectUri,
             auto_process_emails: formData.autoProcessEmails,
             folder_filters: formData.folderFilters && formData.folderFilters.trim() ? formData.folderFilters.split(',').map(f => f.trim()) : ['INBOX'],
