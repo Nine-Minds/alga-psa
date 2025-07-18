@@ -37,6 +37,7 @@ import ContactAvatarUpload from 'server/src/components/client-portal/contacts/Co
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
 import { getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
 import CompanyDetails from 'server/src/components/companies/CompanyDetails';
+import { ContactPortalTab } from './ContactPortalTab';
 
 const SwitchDetailItem: React.FC<{
   value: boolean;
@@ -124,6 +125,11 @@ interface ContactDetailsProps {
   isInDrawer?: boolean;
   userId?: string;
   onDocumentCreated?: () => Promise<void>;
+  userPermissions?: {
+    canInvite: boolean;
+    canUpdateRoles: boolean;
+    canRead: boolean;
+  };
 }
 
 const ContactDetails: React.FC<ContactDetailsProps> = ({
@@ -133,7 +139,12 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   documents = [],
   isInDrawer = false,
   userId,
-  onDocumentCreated
+  onDocumentCreated,
+  userPermissions = {
+    canInvite: false,
+    canUpdateRoles: false,
+    canRead: false
+  }
 }) => {
   const [editedContact, setEditedContact] = useState<IContact>(contact);
   const [originalContact, setOriginalContact] = useState<IContact>(contact);
@@ -484,6 +495,15 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
             setInteractions={setInteractions}
           />
         </div>
+      )
+    },
+    {
+      label: "Portal",
+      content: (
+        <ContactPortalTab
+          contact={editedContact}
+          currentUserPermissions={userPermissions}
+        />
       )
     }
   ];

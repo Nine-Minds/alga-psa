@@ -185,6 +185,7 @@ export async function createClientUser({
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       let roleToAssign: { role_id: string } | null = null;
 
+      // If roleId is provided, use it (for backward compatibility)
       if (roleId) {
         // Verify the provided role exists and is a client portal role
         roleToAssign = await trx('roles')
@@ -199,19 +200,33 @@ export async function createClientUser({
           throw new Error('Invalid role ID or role is not a client portal role');
         }
       } else {
-        // Get the default client portal user role
-        // After migration, look for "User" role in client portal
+        // Get the contact to check is_client_admin flag
+        const contact = await trx('contacts')
+          .where({ 
+            contact_name_id: contactId,
+            tenant
+          })
+          .first();
+
+        if (!contact) {
+          throw new Error('Contact not found');
+        }
+
+        // Determine role based on is_client_admin flag
+        const roleName = contact.is_client_admin ? 'admin' : 'user';
+        
+        // Get the appropriate client portal role
         let clientRole = await trx('roles')
           .where({ 
             tenant,
             client: true,
             msp: false
           })
-          .whereRaw('LOWER(role_name) = ?', ['user'])
+          .whereRaw('LOWER(role_name) = ?', [roleName])
           .first();
 
-        // Fallback: try to find any role with "client" in name for backwards compatibility
-        if (!clientRole) {
+        // Fallback for User role: try to find any role with "client" in name for backwards compatibility
+        if (!clientRole && roleName === 'user') {
           const roles = await trx('roles').where({ tenant });
           clientRole = roles.find(role => 
             role.role_name && role.role_name.toLowerCase().includes('client')
@@ -219,7 +234,7 @@ export async function createClientUser({
         }
 
         if (!clientRole) {
-          throw new Error(`Client portal user role not found for tenant`);
+          throw new Error(`Client portal ${roleName} role not found for tenant`);
         }
         
         roleToAssign = clientRole;
@@ -276,6 +291,7 @@ export async function createClientUser({
     };
   }
 }
+
 
 /**
  * Upload a contact avatar image
