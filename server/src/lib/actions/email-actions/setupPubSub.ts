@@ -104,6 +104,10 @@ export async function setupPubSub(request: SetupPubSubRequest) {
         requestBody: {
           pushConfig: {
             pushEndpoint: request.webhookUrl,
+            oidcToken: {
+              serviceAccountEmail: credentials.client_email,
+              audience: request.webhookUrl
+            },
             attributes: {
               'x-goog-version': 'v1'
             }
@@ -124,6 +128,10 @@ export async function setupPubSub(request: SetupPubSubRequest) {
             topic: topicPath,
             pushConfig: {
               pushEndpoint: request.webhookUrl,
+              oidcToken: {
+                serviceAccountEmail: credentials.client_email,
+                audience: request.webhookUrl
+              },
               attributes: {
                 'x-goog-version': 'v1'
               }

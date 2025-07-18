@@ -155,6 +155,31 @@ export function EmailProviderConfiguration({
     }
   };
 
+  const handleRefreshWatchSubscription = async (provider: EmailProvider) => {
+    try {
+      setError(null);
+      
+      const response = await fetch('/api/email/refresh-watch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ providerId: provider.id }),
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        // Refresh the providers list to show updated status
+        await loadProviders();
+      } else {
+        setError(result.error || 'Failed to refresh watch subscription');
+      }
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -265,6 +290,7 @@ export function EmailProviderConfiguration({
         onDelete={handleProviderDeleted}
         onTestConnection={handleTestConnection}
         onRefresh={loadProviders}
+        onRefreshWatchSubscription={handleRefreshWatchSubscription}
       />
 
       {/* Edit Provider Form */}

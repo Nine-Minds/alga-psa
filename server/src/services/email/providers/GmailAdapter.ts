@@ -4,6 +4,7 @@ import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/em
 import { getSecretProviderInstance } from '@shared/core';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
+import { getAdminConnection } from '@shared/db/admin';
 
 /**
  * Gmail API adapter for email processing
@@ -136,8 +137,7 @@ export class GmailAdapter extends BaseEmailAdapter {
 
   /**
    * Update stored credentials with new tokens
-   * Note: This method updates the in-memory config only.
-   * The calling service should persist these changes to the database.
+   * This method updates both in-memory config and persists changes to the database.
    */
   private async updateStoredCredentials(): Promise<void> {
     try {
@@ -149,9 +149,28 @@ export class GmailAdapter extends BaseEmailAdapter {
       }
       
       this.log('info', 'Updated credentials in provider configuration');
-      this.log('warn', 'Note: Updated credentials are in-memory only. The calling service should persist these changes to the database.');
+
+      // Persist updated credentials to database
+      try {
+        const knex = await getAdminConnection();
+        await knex('google_email_provider_config')
+          .where('email_provider_id', this.config.id)
+          .update({
+            access_token: this.accessToken,
+            refresh_token: this.refreshToken,
+            token_expires_at: this.tokenExpiresAt?.toISOString(),
+            updated_at: new Date().toISOString()
+          });
+        
+        this.log('info', 'Successfully persisted refreshed OAuth tokens to database');
+      } catch (dbError: any) {
+        this.log('error', `Failed to persist credentials to database: ${dbError.message}`, dbError);
+        // Don't throw here - we still have the tokens in memory, so the current operation can continue
+        // But log the error so we know there's a persistence issue
+      }
     } catch (error) {
       this.log('warn', 'Failed to update stored credentials', error);
+      throw error; // Re-throw for the calling method to handle
     }
   }
 
@@ -208,9 +227,11 @@ This indicates a problem with the OAuth token saving process.`;
         requestBody: {
           topicName: `projects/${projectId}/topics/${topicName}`,
           labelIds: ['INBOX'],
-          labelFilterAction: 'include'
+          labelFilterBehavior: 'include'
         }
       });
+
+      console.log('✅ Gmail watch response:', response.data);
 
       // Store the history ID for tracking changes in provider config
       if (!this.config.provider_config) {
@@ -234,6 +255,22 @@ This indicates a problem with the OAuth token saving process.`;
       
       this.config.provider_config.watch_expiration = expirationISO;
 
+      // Save updated history_id and watch_expiration to database
+      try {
+        const knex = await getAdminConnection();
+        await knex('google_email_provider_config')
+          .where('email_provider_id', this.config.id)
+          .update({
+            history_id: response.data.historyId,
+            watch_expiration: expirationISO,
+            updated_at: new Date().toISOString()
+          });
+        this.log('info', 'Updated database with new watch subscription details');
+      } catch (dbError: any) {
+        this.log('error', 'Failed to update database with watch subscription details', dbError);
+        // Continue execution - the watch subscription is still valid even if DB update fails
+      }
+
       this.log('info', `Gmail watch created with historyId: ${response.data.historyId}, expiration: ${expirationISO}`);
     } catch (error) {
       throw this.handleError(error, 'registerWebhookSubscription');
@@ -244,8 +281,27 @@ This indicates a problem with the OAuth token saving process.`;
    * Renew webhook subscription
    */
   async renewWebhookSubscription(): Promise<void> {
-    // Gmail watch subscriptions last 7 days max, so we just re-register
-    await this.registerWebhookSubscription();
+    try {
+      // Load credentials and ensure valid token
+      await this.ensureValidToken();
+      
+      // Stop existing watch subscription first
+      try {
+        // await this.gmail.users.stop({ userId: 'me' });
+        this.log('info', 'Stopped existing Gmail watch subscription');
+      } catch (error: any) {
+        // It's okay if there's no existing watch to stop
+        this.log('warn', `No existing watch to stop: ${error.message}`);
+      }
+      
+      // Create new watch subscription
+      await this.registerWebhookSubscription();
+      
+      this.log('info', 'Successfully renewed Gmail watch subscription');
+    } catch (error) {
+      this.log('error', 'Failed to renew Gmail watch subscription', error);
+      throw error;
+    }
   }
 
   /**

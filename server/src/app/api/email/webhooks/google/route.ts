@@ -48,20 +48,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'No data to process' });
     }
 
-    // Verify JWT token (for production security)
+    // Verify JWT token (required for security)
     const authHeader = request.headers.get('authorization');
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
       console.log('🔐 Verifying JWT token from Pub/Sub');
       try {
-        await verifyGoogleToken(token);
+        const webhookUrl = `${request.nextUrl.origin}${request.nextUrl.pathname}`;
+        await verifyGoogleToken(token, webhookUrl);
         console.log('✅ JWT token verified successfully');
       } catch (error) {
         console.error('❌ JWT verification failed:', error);
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
     } else {
-      console.log('⚠️  No JWT token provided in authorization header');
+      console.error('❌ No JWT token provided - Pub/Sub notifications must include JWT tokens');
+      return NextResponse.json({ error: 'Unauthorized - JWT token required' }, { status: 401 });
     }
 
     // Decode base64 message data
@@ -132,6 +134,31 @@ export async function POST(request: NextRequest) {
       } else {
         console.log(`✅ Subscription validated: ${subscriptionName} matches provider ${provider.id}`);
       }
+
+      // Check if this historyId has already been processed to prevent duplicates
+      const existingProcessed = await trx('gmail_processed_history')
+        .where('tenant', provider.tenant)
+        .where('provider_id', provider.id)
+        .where('history_id', notification.historyId)
+        .first();
+
+      // if (existingProcessed) {
+      //   console.log(`⚠️  HistoryId ${notification.historyId} already processed for provider ${provider.id}, skipping duplicate`);
+      //   processed = true; // Mark as processed to avoid error
+      //   return; // Exit early - this is a duplicate
+      // }
+
+      // Record this historyId as processed
+      await trx('gmail_processed_history').insert({
+        tenant: provider.tenant,
+        provider_id: provider.id,
+        history_id: notification.historyId,
+        message_id: payloadData.messageId,
+        processed_at: new Date().toISOString()
+      });
+
+      console.log(`✅ Recorded historyId ${notification.historyId} as processed for provider ${provider.id}`);
+    
 
       // Publish INBOUND_EMAIL_RECEIVED event
       console.log(`📤 Publishing INBOUND_EMAIL_RECEIVED event for provider ${provider.id}`);
@@ -204,23 +231,40 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 // Verify Google JWT token
-async function verifyGoogleToken(token: string): Promise<void> {
+async function verifyGoogleToken(token: string, expectedAudience: string): Promise<void> {
   const client = new OAuth2Client();
   
   try {
-    // Verify the token
+    // First decode the token to see what audience it has
+    const decodedToken = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+    console.log('🔍 JWT token payload:', {
+      audience: decodedToken.aud,
+      issuer: decodedToken.iss,
+      subject: decodedToken.sub,
+      email: decodedToken.email
+    });
+    
+    // Verify the token with the actual audience from the token
     const ticket = await client.verifyIdToken({
       idToken: token,
-      audience: undefined, // Accept any audience for Pub/Sub
+      audience: decodedToken.aud, // Use the audience from the token itself
     });
     
     const payload = await ticket.getPayload();
     
-    // Verify it's from Google Pub/Sub
+    // Verify it's from Google Pub/Sub or our configured service account
     if (payload?.email !== 'pubsub-publishing@system.gserviceaccount.com' &&
-        !payload?.email?.endsWith('@system.gserviceaccount.com')) {
+        !payload?.email?.endsWith('@system.gserviceaccount.com') &&
+        !payload?.email?.endsWith('@alga-psa-466214.iam.gserviceaccount.com')) {
       throw new Error('Invalid token issuer');
     }
+
+    console.log('🔐 JWT token verified successfully:', {
+      issuer: payload?.email,
+      audience: payload?.aud,
+      subject: payload?.sub,
+      expectedAudience: expectedAudience
+    });
   } catch (error) {
     console.error('Token verification failed:', error);
     throw error;

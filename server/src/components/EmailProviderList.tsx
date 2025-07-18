@@ -26,7 +26,8 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  Clock
+  Clock,
+  Repeat
 } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
 
@@ -36,6 +37,7 @@ interface EmailProviderListProps {
   onDelete: (providerId: string) => void;
   onTestConnection: (provider: EmailProvider) => void;
   onRefresh: () => void;
+  onRefreshWatchSubscription: (provider: EmailProvider) => void;
 }
 
 export function EmailProviderList({
@@ -43,7 +45,8 @@ export function EmailProviderList({
   onEdit,
   onDelete,
   onTestConnection,
-  onRefresh
+  onRefresh,
+  onRefreshWatchSubscription
 }: EmailProviderListProps) {
   
   const getStatusIcon = (status: EmailProvider['status']) => {
@@ -166,6 +169,12 @@ export function EmailProviderList({
                         <TestTube className="h-4 w-4 mr-2" />
                         Test Connection
                       </DropdownMenuItem>
+                      {provider.providerType === 'google' && (
+                        <DropdownMenuItem onClick={() => onRefreshWatchSubscription(provider)}>
+                          <Repeat className="h-4 w-4 mr-2" />
+                          Refresh Watch Subscription
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem 
                         onClick={() => onDelete(provider.id)}

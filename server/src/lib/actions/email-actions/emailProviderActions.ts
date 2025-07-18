@@ -249,18 +249,13 @@ export async function upsertEmailProvider(data: {
           await secretProvider.setTenantSecret(tenant, 'google_client_secret', data.googleConfig.client_secret);
         }
         
-        // Delete existing config if any
-        await trx('google_email_provider_config')
-          .where({ email_provider_id: provider.id, tenant })
-          .delete();
-        
         // Generate standardized Pub/Sub names
         const pubsubNames = generatePubSubNames(tenant);
         
-        // Insert new config with standardized Pub/Sub names
+        // Upsert Google config using ON CONFLICT
         const labelFiltersArray = data.googleConfig.label_filters || [];
         
-        const insertPayload = {
+        const configPayload = {
             email_provider_id: provider.id,
             tenant,
             client_id: data.googleConfig.client_id,
@@ -277,14 +272,51 @@ export async function upsertEmailProvider(data: {
             token_expires_at: data.googleConfig.token_expires_at,
             history_id: data.googleConfig.history_id,
             watch_expiration: data.googleConfig.watch_expiration,
-            created_at: knex.fn.now(),
             updated_at: knex.fn.now()
           };
         
-        const googleConfig = await trx('google_email_provider_config')
-          .insert(insertPayload)
-          .returning('*')
-          .then(rows => rows[0]);
+        const googleConfig = await trx.raw(`
+          INSERT INTO google_email_provider_config (
+            email_provider_id, tenant, client_id, client_secret, project_id, redirect_uri,
+            pubsub_topic_name, pubsub_subscription_name, auto_process_emails, max_emails_per_sync,
+            label_filters, access_token, refresh_token, token_expires_at, history_id,
+            watch_expiration, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          ON CONFLICT (email_provider_id, tenant) DO UPDATE SET
+            client_id = EXCLUDED.client_id,
+            client_secret = EXCLUDED.client_secret,
+            project_id = EXCLUDED.project_id,
+            redirect_uri = EXCLUDED.redirect_uri,
+            pubsub_topic_name = EXCLUDED.pubsub_topic_name,
+            pubsub_subscription_name = EXCLUDED.pubsub_subscription_name,
+            auto_process_emails = EXCLUDED.auto_process_emails,
+            max_emails_per_sync = EXCLUDED.max_emails_per_sync,
+            label_filters = EXCLUDED.label_filters,
+            access_token = EXCLUDED.access_token,
+            refresh_token = EXCLUDED.refresh_token,
+            token_expires_at = EXCLUDED.token_expires_at,
+            history_id = EXCLUDED.history_id,
+            watch_expiration = EXCLUDED.watch_expiration,
+            updated_at = CURRENT_TIMESTAMP
+          RETURNING *
+        `, [
+          provider.id, 
+          tenant, 
+          configPayload.client_id, 
+          configPayload.client_secret,
+          configPayload.project_id, 
+          configPayload.redirect_uri, 
+          configPayload.pubsub_topic_name,
+          configPayload.pubsub_subscription_name, 
+          configPayload.auto_process_emails,
+          configPayload.max_emails_per_sync, 
+          configPayload.label_filters,
+          configPayload.access_token || null, 
+          configPayload.refresh_token || null, 
+          configPayload.token_expires_at || null,
+          configPayload.history_id || null, 
+          configPayload.watch_expiration || null
+        ]).then(result => result.rows[0]);
         
         if (googleConfig) {
           // For jsonb columns, PostgreSQL automatically parses the JSON, so no need to JSON.parse
@@ -381,32 +413,64 @@ export async function createEmailProvider(data: {
     const result = await knex.transaction(async (trx) => {
       const providerId = knex.raw('gen_random_uuid()');
       
-      // Insert the main provider record
-      const [provider] = await trx('email_providers')
-        .insert({
-          id: providerId,
-          tenant,
-          provider_type: data.providerType,
-          provider_name: data.providerName,
-          mailbox: data.mailbox,
-          is_active: data.isActive,
-          status: 'configuring',
-          created_at: knex.fn.now(),
-          updated_at: knex.fn.now()
-        })
-        .returning([
-          'id',
-          'tenant',
-          'provider_type as providerType',
-          'provider_name as providerName',
-          'mailbox',
-          'is_active as isActive',
-          'status',
-          'last_sync_at as lastSyncAt',
-          'error_message as errorMessage',
-          'created_at as createdAt',
-          'updated_at as updatedAt'
-        ]);
+      // Check if provider already exists
+      const existingProvider = await trx('email_providers')
+        .where({ tenant, mailbox: data.mailbox })
+        .first();
+
+      let provider;
+      if (existingProvider) {
+        // Update existing provider
+        [provider] = await trx('email_providers')
+          .where({ tenant, mailbox: data.mailbox })
+          .update({
+            provider_type: data.providerType,
+            provider_name: data.providerName,
+            is_active: data.isActive,
+            status: 'configuring',
+            updated_at: knex.fn.now()
+          })
+          .returning([
+            'id',
+            'tenant',
+            'provider_type as providerType',
+            'provider_name as providerName',
+            'mailbox',
+            'is_active as isActive',
+            'status',
+            'last_sync_at as lastSyncAt',
+            'error_message as errorMessage',
+            'created_at as createdAt',
+            'updated_at as updatedAt'
+          ]);
+      } else {
+        // Insert new provider record
+        [provider] = await trx('email_providers')
+          .insert({
+            id: providerId,
+            tenant,
+            provider_type: data.providerType,
+            provider_name: data.providerName,
+            mailbox: data.mailbox,
+            is_active: data.isActive,
+            status: 'configuring',
+            created_at: knex.fn.now(),
+            updated_at: knex.fn.now()
+          })
+          .returning([
+            'id',
+            'tenant',
+            'provider_type as providerType',
+            'provider_name as providerName',
+            'mailbox',
+            'is_active as isActive',
+            'status',
+            'last_sync_at as lastSyncAt',
+            'error_message as errorMessage',
+            'created_at as createdAt',
+            'updated_at as updatedAt'
+          ]);
+      }
       
       // Insert vendor-specific config
       if (data.providerType === 'microsoft' && data.microsoftConfig) {
@@ -441,7 +505,7 @@ export async function createEmailProvider(data: {
         
         const labelFiltersArray = data.googleConfig.label_filters || [];
         
-        const insertPayload = {
+        const configPayload = {
             email_provider_id: provider.id,
             tenant,
             client_id: data.googleConfig.client_id,
@@ -457,15 +521,51 @@ export async function createEmailProvider(data: {
             refresh_token: data.googleConfig.refresh_token,
             token_expires_at: data.googleConfig.token_expires_at,
             history_id: data.googleConfig.history_id,
-            watch_expiration: data.googleConfig.watch_expiration,
-            created_at: knex.fn.now(),
-            updated_at: knex.fn.now()
+            watch_expiration: data.googleConfig.watch_expiration
           };
         
-        const googleConfig = await trx('google_email_provider_config')
-          .insert(insertPayload)
-          .returning('*')
-          .then(rows => rows[0]);
+        const googleConfig = await trx.raw(`
+          INSERT INTO google_email_provider_config (
+            email_provider_id, tenant, client_id, client_secret, project_id, redirect_uri,
+            pubsub_topic_name, pubsub_subscription_name, auto_process_emails, max_emails_per_sync,
+            label_filters, access_token, refresh_token, token_expires_at, history_id,
+            watch_expiration, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          ON CONFLICT (email_provider_id, tenant) DO UPDATE SET
+            client_id = EXCLUDED.client_id,
+            client_secret = EXCLUDED.client_secret,
+            project_id = EXCLUDED.project_id,
+            redirect_uri = EXCLUDED.redirect_uri,
+            pubsub_topic_name = EXCLUDED.pubsub_topic_name,
+            pubsub_subscription_name = EXCLUDED.pubsub_subscription_name,
+            auto_process_emails = EXCLUDED.auto_process_emails,
+            max_emails_per_sync = EXCLUDED.max_emails_per_sync,
+            label_filters = EXCLUDED.label_filters,
+            access_token = EXCLUDED.access_token,
+            refresh_token = EXCLUDED.refresh_token,
+            token_expires_at = EXCLUDED.token_expires_at,
+            history_id = EXCLUDED.history_id,
+            watch_expiration = EXCLUDED.watch_expiration,
+            updated_at = CURRENT_TIMESTAMP
+          RETURNING *
+        `, [
+          provider.id, 
+          tenant, 
+          configPayload.client_id, 
+          configPayload.client_secret,
+          configPayload.project_id, 
+          configPayload.redirect_uri, 
+          configPayload.pubsub_topic_name,
+          configPayload.pubsub_subscription_name, 
+          configPayload.auto_process_emails,
+          configPayload.max_emails_per_sync, 
+          configPayload.label_filters,
+          configPayload.access_token || null, 
+          configPayload.refresh_token || null, 
+          configPayload.token_expires_at || null,
+          configPayload.history_id || null, 
+          configPayload.watch_expiration || null
+        ]).then(result => result.rows[0]);
         
         if (googleConfig) {
           // For jsonb columns, PostgreSQL automatically parses the JSON, so no need to JSON.parse
