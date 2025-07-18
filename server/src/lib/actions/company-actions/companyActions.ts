@@ -344,6 +344,8 @@ export interface CompanyPaginationParams {
    *  - 'all'      -> include both active and inactive
    */
   statusFilter?: 'all' | 'active' | 'inactive';
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
 }
 
 export interface PaginatedCompaniesResponse {
@@ -373,7 +375,9 @@ export async function getAllCompaniesPaginated(params: CompanyPaginationParams =
     clientTypeFilter = 'all',
     loadLogos = true,
     statusFilter,
-    selectedTags
+    selectedTags,
+    sortBy = 'company_name',
+    sortDirection = 'asc'
   } = params;
 
   const {knex: db, tenant} = await createTenantKnex();
@@ -442,7 +446,7 @@ export async function getAllCompaniesPaginated(params: CompanyPaginationParams =
       const totalCount = parseInt(countResult?.count as string || '0', 10);
 
       // Get paginated companies with location data
-      const companies = await baseQuery
+      let companiesQuery = baseQuery
         .select(
           'c.*',
           trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`),
@@ -454,8 +458,29 @@ export async function getAllCompaniesPaginated(params: CompanyPaginationParams =
           'cl.state_province',
           'cl.postal_code',
           'cl.country_name'
-        )
-        .orderBy('c.company_name', 'asc')
+        );
+
+      // Apply sorting based on the column name
+      if (sortBy) {
+        // Map frontend column names to database column names
+        const sortColumnMap: Record<string, string> = {
+          'company_name': 'c.company_name',
+          'client_type': 'c.client_type',
+          'phone_no': 'cl.phone',
+          'address': 'cl.address_line1',
+          'account_manager_full_name': 'account_manager_full_name',
+          'url': 'c.url'
+        };
+        
+        const sortColumn = sortColumnMap[sortBy] || 'c.company_name';
+        // Validate sortDirection to prevent SQL injection
+        const validSortDirection = sortDirection === 'desc' ? 'desc' : 'asc';
+        companiesQuery = companiesQuery.orderBy(sortColumn, validSortDirection);
+      } else {
+        companiesQuery = companiesQuery.orderBy('c.company_name', 'asc');
+      }
+
+      const companies = await companiesQuery
         .limit(pageSize)
         .offset(offset);
 

@@ -35,4 +35,12 @@ export interface DataTableProps<T> {
   rowClassName?: (record: T) => string;
   /** Initial sorting configuration */
   initialSorting?: { id: string; desc: boolean }[];
+  /** Enable manual (server-side) sorting */
+  manualSorting?: boolean;
+  /** Current sort column identifier for server-side sorting */
+  sortBy?: string;
+  /** Current sort direction for server-side sorting */
+  sortDirection?: 'asc' | 'desc';
+  /** Callback invoked when sort configuration changes */
+  onSortChange?: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
 }

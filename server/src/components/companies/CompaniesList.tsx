@@ -32,6 +32,9 @@ interface CompaniesListProps {
     allUniqueTags?: ITag[];
     onTagsChange?: (companyId: string, tags: ITag[]) => void;
     editingId?: string | null;
+    sortBy?: string;
+    sortDirection?: 'asc' | 'desc';
+    onSortChange?: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
 }
 
 // Component for company selection checkbox
@@ -107,7 +110,10 @@ const CompaniesList = ({
   companyTags = {},
   allUniqueTags = [],
   onTagsChange,
-  editingId
+  editingId,
+  sortBy,
+  sortDirection,
+  onSortChange
 }: CompaniesListProps) => {
   const router = useRouter(); // Get router instance
 
@@ -133,7 +139,7 @@ const CompaniesList = ({
         {
             title: 'Name',
             dataIndex: 'company_name',
-            width: '30%',
+            width: '29%',
             render: (text: string, record: ICompany) => (
                 <div className="flex items-center">
                     <CompanyAvatar
@@ -153,7 +159,7 @@ const CompaniesList = ({
         {
             title: 'Type',
             dataIndex: 'client_type',
-            width: '8%',
+            width: '9%',
             render: (text: string | null, record: ICompany) => record.client_type || 'N/A',
         },
         {
@@ -286,6 +292,10 @@ const CompaniesList = ({
                 rowClassName={(company: ICompany) => 
                     editingId === company.company_id ? 'bg-purple-50 border-l-4 border-l-purple-500' : ''
                 }
+                manualSorting={true}
+                sortBy={sortBy}
+                sortDirection={sortDirection}
+                onSortChange={onSortChange}
             />
         </div>
     );
