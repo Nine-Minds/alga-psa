@@ -85,13 +85,13 @@ Database adds `google_config.pubsub_initialised_at` timestamp for an extra idemp
   - Method now only registers Gmail watch via `GmailAdapter.registerWebhookSubscription()`
 - [x] Update return type `GmailWebhookSetupResult` to remove `topicPath` and `subscriptionPath` fields
   - Renamed to `GmailWatchRegistrationResult` and removed topic/subscription fields
-- [ ] Update all call sites that reference `setupGmailWebhook` to use `registerWatch`
+- [x] Update all call sites that reference `setupGmailWebhook` to use `registerWatch`
 
 ### Phase 3: Wire Up New Orchestrator
-- [ ] Replace `finalizeGoogleProvider` calls with `configureGmailProvider`:
+- [x] Replace `finalizeGoogleProvider` calls with `configureGmailProvider`:
   - In `upsertEmailProvider()` (`emailProviderActions.ts:419-454`)
   - In `updateEmailProvider()` (`emailProviderActions.ts:469-507`)
-- [ ] Remove or reduce `finalizeGoogleProvider` to thin wrapper (or delete entirely)
+- [x] Remove or reduce `finalizeGoogleProvider` to thin wrapper (or delete entirely)
 
 ### Phase 4: UI & Automation Control
 - [ ] Add `skipAutomation?: boolean = false` parameter to:
