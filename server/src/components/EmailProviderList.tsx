@@ -172,7 +172,7 @@ export function EmailProviderList({
                       {provider.providerType === 'google' && (
                         <DropdownMenuItem onClick={() => onRefreshWatchSubscription(provider)}>
                           <Repeat className="h-4 w-4 mr-2" />
-                          Refresh Watch Subscription
+                          Refresh Pub/Sub & Watch
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuSeparator />

@@ -102,7 +102,10 @@ Database adds `google_config.pubsub_initialised_at` timestamp for an extra idemp
 - [x] Update UI provider form `onSubmit()` in `GmailProviderForm.tsx:91-152`:
   - Modify to pass `skipAutomation: true` for normal saves
   - Keep OAuth flow with `skipAutomation: false` (default)
-- [ ] Add "Refresh Pub/Sub" button that calls `configureGmailProvider()` with `force: true`
+- [x] Add "Refresh Pub/Sub" button that calls `configureGmailProvider()` with `force: true`
+  - Updated existing "Refresh Watch Subscription" dropdown to use `configureGmailProvider(force: true)`
+  - Modified `/api/email/refresh-watch` endpoint to call new orchestrator
+  - Updated UI text to "Refresh Pub/Sub & Watch" to reflect complete refresh
 
 ## Current Architecture Analysis
 

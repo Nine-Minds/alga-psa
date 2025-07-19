@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminConnection } from '@shared/db/admin';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { GmailAdapter } from '@/services/email/providers/GmailAdapter';
+import { configureGmailProvider } from '@/lib/actions/email-actions/configureGmailProvider';
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,45 +48,31 @@ export async function POST(request: NextRequest) {
     
     console.log(`✅ Found Gmail provider: ${provider.mailbox}`);
     
-    // Create properly formatted configuration for Gmail adapter
-    const adapterConfig = {
-      ...provider,
-      name: provider.provider_name,
-      provider_type: provider.provider_type,
-      active: provider.is_active,
-      connection_status: provider.status || 'disconnected',
-      webhook_notification_url: googleConfig.redirect_uri,
-      provider_config: {
-        project_id: googleConfig.project_id,
-        pubsub_topic_name: googleConfig.pubsub_topic_name,
-        pubsub_subscription_name: googleConfig.pubsub_subscription_name,
-        client_id: googleConfig.client_id,
-        access_token: googleConfig.access_token,
-        refresh_token: googleConfig.refresh_token,
-        token_expires_at: googleConfig.token_expires_at,
-        history_id: googleConfig.history_id,
-        watch_expiration: googleConfig.watch_expiration
-      }
-    };
+    if (!googleConfig.project_id) {
+      return NextResponse.json({ error: 'Gmail provider missing project_id configuration' }, { status: 400 });
+    }
     
-    // Create Gmail adapter instance
-    const adapter = new GmailAdapter(adapterConfig);
+    // Use the new configureGmailProvider orchestrator with force=true
+    // This will refresh both Pub/Sub setup and Gmail watch subscription
+    console.log('🔄 Starting complete Gmail provider refresh (Pub/Sub + Watch)...');
+    await configureGmailProvider({
+      tenant: provider.tenant,
+      providerId: providerId,
+      projectId: googleConfig.project_id,
+      force: true // Force refresh even if recently initialized
+    });
     
-    // Refresh the watch subscription
-    console.log('🔄 Starting watch subscription renewal...');
-    await adapter.renewWebhookSubscription();
-    
-    console.log('✅ Gmail watch subscription refreshed successfully');
+    console.log('✅ Gmail provider refresh completed successfully');
     
     return NextResponse.json({
       success: true,
-      message: 'Gmail watch subscription refreshed successfully',
+      message: 'Gmail provider refreshed successfully (Pub/Sub + Watch)',
       providerId: providerId,
       mailbox: provider.mailbox
     });
     
   } catch (error: any) {
-    console.error('❌ Failed to refresh Gmail watch subscription:', {
+    console.error('❌ Failed to refresh Gmail provider:', {
       error: error.message,
       stack: error.stack
     });
