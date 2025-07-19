@@ -18,6 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { ExternalLink, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
 import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from '../lib/actions/email-actions/emailProviderActions';
+import { pubsub } from 'googleapis/build/src/apis/pubsub';
 
 const gmailProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),
@@ -138,9 +139,10 @@ export function GmailProviderForm({
 
       console.log('📤 Final payload being sent:', JSON.stringify(payload, null, 2));
 
+      // For normal saves (not OAuth), skip automation to prevent duplicate Pub/Sub setup
       const result = isEditing 
-        ? await updateEmailProvider(provider.id, payload)
-        : await createEmailProvider(payload);
+        ? await updateEmailProvider(provider.id, payload, true) // skipAutomation: true
+        : await createEmailProvider(payload, true); // skipAutomation: true
 
       onSuccess(result.provider);
 
@@ -186,7 +188,8 @@ export function GmailProviderForm({
           }
         };
 
-        const result = await upsertEmailProvider(payload);
+        // OAuth flow - allow automation for initial setup
+        const result = await upsertEmailProvider(payload); // skipAutomation: false (default)
         providerId = result.provider.id;
       }
 

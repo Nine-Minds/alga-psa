@@ -395,7 +395,7 @@ export class EmailProviderService {
           throw new Error('Missing required Google Cloud configuration (project_id, pubsub_topic_name)');
         }
 
-        const result = await gmailWebhookService.setupGmailWebhook(provider, {
+        const result = await gmailWebhookService.registerWatch(provider, {
           projectId: provider.provider_config.project_id!,
           topicName: provider.provider_config.pubsub_topic_name!,
           subscriptionName: provider.provider_config.pubsub_subscription_name!,

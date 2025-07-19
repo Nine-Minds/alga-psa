@@ -70,6 +70,7 @@ export interface GoogleEmailProviderConfig {
   token_expires_at?: string;
   history_id?: string;
   watch_expiration?: string;
+  pubsub_initialised_at?: string;
   created_at: string;
   updated_at: string;
 }

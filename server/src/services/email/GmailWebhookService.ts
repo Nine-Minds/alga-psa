@@ -5,7 +5,6 @@
 
 import { EmailProviderConfig } from '../../interfaces/email.interfaces';
 import { GmailAdapter } from './providers/GmailAdapter';
-import { setupPubSub } from '../../lib/actions/email-actions/setupPubSub';
 
 export interface GmailPubSubSetupOptions {
   projectId: string;
@@ -15,10 +14,8 @@ export interface GmailPubSubSetupOptions {
   serviceAccountKey?: any;
 }
 
-export interface GmailWebhookSetupResult {
+export interface GmailWatchRegistrationResult {
   success: boolean;
-  topicName?: string;
-  subscriptionName?: string;
   historyId?: string;
   expiration?: string;
   error?: string;
@@ -35,31 +32,21 @@ export class GmailWebhookService {
   }
 
   /**
-   * Set up complete Gmail webhook integration
-   * This includes creating Pub/Sub topic, subscription, and Gmail watch
+   * Register Gmail watch subscription only (no Pub/Sub setup)
+   * Pub/Sub topic and subscription should already be created by configureGmailProvider
    */
-  async setupGmailWebhook(
+  async registerWatch(
     providerConfig: EmailProviderConfig,
     pubsubOptions: GmailPubSubSetupOptions
-  ): Promise<GmailWebhookSetupResult> {
+  ): Promise<GmailWatchRegistrationResult> {
     try {
-      console.log(`📧 Setting up Gmail webhook for: ${providerConfig.mailbox}`);
+      console.log(`📧 Registering Gmail watch for: ${providerConfig.mailbox}`);
 
-      // Step 1: Set up Pub/Sub topic and subscription using the real implementation
-      const pubsubResult = await setupPubSub({
-        projectId: pubsubOptions.projectId,
-        topicName: pubsubOptions.topicName,
-        subscriptionName: pubsubOptions.subscriptionName,
-        webhookUrl: pubsubOptions.webhookUrl
-      });
-
-      console.log(`✅ Pub/Sub setup completed for: ${providerConfig.mailbox}`);
-
-      // Step 2: Set up Gmail watch with the topic
+      // Register Gmail watch with the existing Pub/Sub topic
       const gmailAdapter = new GmailAdapter(providerConfig);
       await gmailAdapter.registerWebhookSubscription();
       
-      console.log(`✅ Gmail webhook setup completed for: ${providerConfig.mailbox}`);
+      console.log(`✅ Gmail watch registration completed for: ${providerConfig.mailbox}`);
 
       // Get the real historyId and expiration from the Gmail adapter after registration
       const adapterConfig = gmailAdapter.getConfig();
@@ -68,17 +55,15 @@ export class GmailWebhookService {
 
       return {
         success: true,
-        topicName: pubsubResult.topicPath,
-        subscriptionName: pubsubResult.subscriptionPath,
         historyId: historyId,
         expiration: expiration
       };
 
     } catch (error: any) {
-      console.error('❌ Failed to setup Gmail webhook:', error);
+      console.error('❌ Failed to register Gmail watch:', error);
       return {
         success: false,
-        error: `Gmail webhook setup failed: ${error.message}`
+        error: `Gmail watch registration failed: ${error.message}`
       };
     }
   }
