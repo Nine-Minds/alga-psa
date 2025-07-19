@@ -4,6 +4,7 @@ import { createTenantKnex } from '../../db';
 import { setupPubSub } from './setupPubSub';
 import { GmailWebhookService } from '../../../services/email/GmailWebhookService';
 import type { GoogleEmailProviderConfig } from '../../../components/EmailProviderConfiguration';
+import type { EmailProviderConfig } from '../../../interfaces/email.interfaces';
 
 /**
  * Generate standardized Pub/Sub topic and subscription names for a tenant
@@ -40,10 +41,14 @@ export async function configureGmailProvider({
   projectId,
   force = false
 }: ConfigureGmailProviderOptions) {
+  if (tenant == null || !tenant || !providerId || !projectId) {
+    throw new Error('Missing required parameters: tenant, providerId, and projectId are required');
+  }
+
   try {
     // Check if Pub/Sub was already initialized recently (within 24 hours) unless force=true
     if (!force) {
-      const knex = createTenantKnex();
+      const {knex, tenant} = await createTenantKnex();
       const config = await knex('google_email_provider_config')
         .select('pubsub_initialised_at')
         .where('email_provider_id', providerId)
@@ -92,7 +97,7 @@ export async function configureGmailProvider({
     });
 
     // Step 2: Update pubsub_initialised_at timestamp
-    const knex = createTenantKnex();
+    const { knex, tenant } = await createTenantKnex();
     await knex('google_email_provider_config')
       .where('email_provider_id', providerId)
       .andWhere('tenant', tenant)
@@ -104,22 +109,51 @@ export async function configureGmailProvider({
     try {
       console.log(`🔗 Registering Gmail watch subscription for provider ${providerId}`);
       
-      // Get the provider config for the Gmail webhook service
-      const providerConfig = await knex('google_email_provider_config')
+      // Get both the base provider and Google-specific config
+      const baseProvider = await knex('email_providers')
+        .select('*')
+        .where('id', providerId)
+        .andWhere('tenant', tenant)
+        .first();
+
+      const googleConfig = await knex('google_email_provider_config')
         .select('*')
         .where('email_provider_id', providerId)
         .andWhere('tenant', tenant)
         .first() as GoogleEmailProviderConfig;
 
-      if (!providerConfig) {
-        throw new Error(`Gmail provider config not found for provider ${providerId}`);
+      if (!baseProvider || !googleConfig) {
+        throw new Error(`Gmail provider or config not found for provider ${providerId}`);
       }
+
+      // Create EmailProviderConfig for the GmailWebhookService
+      const emailProviderConfig: EmailProviderConfig = {
+        id: baseProvider.id,
+        tenant: baseProvider.tenant,
+        name: baseProvider.provider_name,
+        provider_type: baseProvider.provider_type as 'google',
+        mailbox: baseProvider.mailbox,
+        folder_to_monitor: 'Inbox',
+        active: baseProvider.is_active,
+        webhook_notification_url: pubsubNames.webhookUrl,
+        connection_status: baseProvider.status || 'disconnected',
+        provider_config: {
+          projectId: googleConfig.project_id,
+          pubsubTopic: googleConfig.pubsub_topic_name,
+          clientId: googleConfig.client_id,
+          access_token: googleConfig.access_token,
+          refresh_token: googleConfig.refresh_token,
+          token_expires_at: googleConfig.token_expires_at,
+          history_id: googleConfig.history_id,
+          watch_expiration: googleConfig.watch_expiration
+        }
+      };
 
       const gmailWebhookService = new GmailWebhookService();
       
       // Note: This will call the new registerWatch method (not setupGmailWebhook)
       // which only registers the Gmail watch and doesn't touch Pub/Sub
-      await gmailWebhookService.registerWatch(providerConfig, {
+      await gmailWebhookService.registerWatch(emailProviderConfig, {
         projectId,
         topicName: pubsubNames.topicName,
         subscriptionName: pubsubNames.subscriptionName,
