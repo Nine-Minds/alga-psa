@@ -367,7 +367,7 @@ export async function upsertEmailProvider(data: {
   isActive: boolean;
   microsoftConfig?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
-}): Promise<{ provider: EmailProvider }> {
+}, skipAutomation?: boolean): Promise<{ provider: EmailProvider }> {
   await assertAuthenticated();
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) throw new Error('Tenant is required');
@@ -385,7 +385,7 @@ export async function upsertEmailProvider(data: {
       return base;
     });
     
-    if (data.providerType === 'google' && data.googleConfig && provider.googleConfig && data.googleConfig.project_id) {
+    if (!skipAutomation && data.providerType === 'google' && data.googleConfig && provider.googleConfig && data.googleConfig.project_id) {
       await configureGmailProvider({
         tenant,
         providerId: provider.id,
@@ -408,9 +408,9 @@ export async function createEmailProvider(data: {
   isActive: boolean;
   microsoftConfig?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
-}): Promise<{ provider: EmailProvider }> {
+}, skipAutomation?: boolean): Promise<{ provider: EmailProvider }> {
   // Delegate to upsertEmailProvider since they have identical logic
-  return upsertEmailProvider(data);
+  return upsertEmailProvider(data, skipAutomation);
 }
 
 export async function updateEmailProvider(
@@ -423,7 +423,8 @@ export async function updateEmailProvider(
     isActive: boolean;
     microsoftConfig?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
     googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
-  }
+  },
+  skipAutomation?: boolean
 ): Promise<{ provider: EmailProvider }> {
   await assertAuthenticated();
   const { knex, tenant } = await createTenantKnex();
@@ -442,7 +443,7 @@ export async function updateEmailProvider(
       return base;
     });
     
-    if (data.providerType === 'google' && data.googleConfig && provider.googleConfig && data.googleConfig.project_id) {
+    if (!skipAutomation && data.providerType === 'google' && data.googleConfig && provider.googleConfig && data.googleConfig.project_id) {
       await configureGmailProvider({
         tenant,
         providerId: provider.id,

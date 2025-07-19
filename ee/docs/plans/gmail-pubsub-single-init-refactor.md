@@ -94,13 +94,14 @@ Database adds `google_config.pubsub_initialised_at` timestamp for an extra idemp
 - [x] Remove or reduce `finalizeGoogleProvider` to thin wrapper (or delete entirely)
 
 ### Phase 4: UI & Automation Control
-- [ ] Add `skipAutomation?: boolean = false` parameter to:
+- [x] Add `skipAutomation?: boolean = false` parameter to:
   - `upsertEmailProvider()` signature and implementation
-  - `updateEmailProvider()` signature and implementation
-- [ ] Only call `configureGmailProvider()` when `!skipAutomation`
-- [ ] Update UI provider form `onSubmit()` in `GmailProviderForm.tsx:91-152`:
+  - `updateEmailProvider()` signature and implementation  
+  - `createEmailProvider()` signature and implementation
+- [x] Only call `configureGmailProvider()` when `!skipAutomation`
+- [x] Update UI provider form `onSubmit()` in `GmailProviderForm.tsx:91-152`:
   - Modify to pass `skipAutomation: true` for normal saves
-  - Keep OAuth flow with `skipAutomation: false`
+  - Keep OAuth flow with `skipAutomation: false` (default)
 - [ ] Add "Refresh Pub/Sub" button that calls `configureGmailProvider()` with `force: true`
 
 ## Current Architecture Analysis
