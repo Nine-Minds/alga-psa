@@ -48,11 +48,11 @@ export async function configureGmailProvider({
   try {
     // Check if Pub/Sub was already initialized recently (within 24 hours) unless force=true
     if (!force) {
-      const {knex, tenant} = await createTenantKnex();
+      const {knex, tenant: currentTenant} = await createTenantKnex();
       const config = await knex('google_email_provider_config')
         .select('pubsub_initialised_at')
         .where('email_provider_id', providerId)
-        .andWhere('tenant', tenant)
+        .andWhere('tenant', currentTenant)
         .first() as GoogleEmailProviderConfig | undefined;
 
       if (config?.pubsub_initialised_at) {
@@ -97,10 +97,10 @@ export async function configureGmailProvider({
     });
 
     // Step 2: Update pubsub_initialised_at timestamp
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant: currentTenant } = await createTenantKnex();
     await knex('google_email_provider_config')
       .where('email_provider_id', providerId)
-      .andWhere('tenant', tenant)
+      .andWhere('tenant', currentTenant)
       .update({
         pubsub_initialised_at: knex.fn.now()
       });
@@ -113,13 +113,13 @@ export async function configureGmailProvider({
       const baseProvider = await knex('email_providers')
         .select('*')
         .where('id', providerId)
-        .andWhere('tenant', tenant)
+        .andWhere('tenant', currentTenant)
         .first();
 
       const googleConfig = await knex('google_email_provider_config')
         .select('*')
         .where('email_provider_id', providerId)
-        .andWhere('tenant', tenant)
+        .andWhere('tenant', currentTenant)
         .first() as GoogleEmailProviderConfig;
 
       if (!baseProvider || !googleConfig) {
@@ -137,15 +137,18 @@ export async function configureGmailProvider({
         active: baseProvider.is_active,
         webhook_notification_url: pubsubNames.webhookUrl,
         connection_status: baseProvider.status || 'disconnected',
+        created_at: baseProvider.created_at,
+        updated_at: baseProvider.updated_at,
         provider_config: {
-          projectId: googleConfig.project_id,
-          pubsubTopic: googleConfig.pubsub_topic_name,
-          clientId: googleConfig.client_id,
-          access_token: googleConfig.access_token,
-          refresh_token: googleConfig.refresh_token,
-          token_expires_at: googleConfig.token_expires_at,
-          history_id: googleConfig.history_id,
-          watch_expiration: googleConfig.watch_expiration
+          project_id: googleConfig.project_id,
+          pubsub_topic_name: pubsubNames.topicName,
+          pubsub_subscription_name: pubsubNames.subscriptionName,
+          client_id: googleConfig.client_id || undefined,
+          access_token: googleConfig.access_token || undefined,
+          refresh_token: googleConfig.refresh_token || undefined,
+          token_expires_at: googleConfig.token_expires_at || undefined,
+          history_id: googleConfig.history_id || undefined,
+          watch_expiration: googleConfig.watch_expiration || undefined
         }
       };
 
