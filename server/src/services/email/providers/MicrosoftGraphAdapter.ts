@@ -75,8 +75,8 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       }
 
       const secretProvider = getSecretProviderInstance();
-      const clientId = await secretProvider.getAppSecret('microsoft_client_id');
-      const clientSecret = await secretProvider.getAppSecret('microsoft_client_secret');
+      const clientId = await secretProvider.getTenantSecret(this.config.tenant, 'microsoft_client_id');
+      const clientSecret = await secretProvider.getTenantSecret(this.config.tenant, 'microsoft_client_secret');
 
       if (!clientId || !clientSecret) {
         throw new Error('Microsoft OAuth credentials not configured');

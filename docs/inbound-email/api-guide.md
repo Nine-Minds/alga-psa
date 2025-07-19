@@ -514,6 +514,81 @@ export function useEmailProviders(tenant: string) {
 }
 ```
 
+## OAuth Token Expiration Handling
+
+The system automatically handles OAuth token expiration and refresh to maintain continuous email processing without manual intervention.
+
+```mermaid
+flowchart TD
+    A[API Call to Email Provider] --> B{Access Token Valid}
+    B -->|Valid| C[Process API Request]
+    B -->|Expired| D[Check Refresh Token]
+    
+    D --> E{Refresh Token Valid}
+    E -->|Valid| F[Exchange Refresh Token]
+    E -->|Expired| G[Mark Provider as Disconnected]
+    
+    F --> H{Token Exchange Success}
+    H -->|Success| I[Update Stored Tokens]
+    H -->|Failed| J[Check Error Type]
+    
+    J --> K{Refresh Token Revoked}
+    K -->|Yes| L[Require OAuth Re-authorization]
+    K -->|No| M[Retry with Backoff]
+    
+    I --> N[Retry Original API Call]
+    N --> O{API Call Success}
+    O -->|Success| C
+    O -->|Failed| P[Check if Auth Error]
+    
+    P --> Q{Auth Error}
+    Q -->|Yes| R[Log Token Refresh Failure]
+    Q -->|No| S[Handle Other Error]
+    
+    G --> T[Create Human Task]
+    L --> U[Update Provider Status]
+    U --> V[Send Notification]
+    V --> W[Create Reconnection Task]
+    
+    T --> X[Notify Admin Token Expired]
+    R --> Y[Create Alert Token Refresh Failed]
+    S --> Z[Standard Error Handling]
+    
+    AA[Token Expiry Monitor] --> BB{Check Token Expiry}
+    BB -->|Expires Soon| CC[Proactive Refresh]
+    BB -->|Still Valid| DD[Continue Monitoring]
+    
+    CC --> EE{Refresh Success?}
+    EE -->|Success| FF[Update Tokens]
+    EE -->|Failed| GG[Schedule Re-authorization]
+    
+    FF --> DD
+    GG --> HH[Notify Admin Proactive Refresh Failed]
+    HH --> II[Mark Provider for Attention]
+    
+    classDef apiCall fill:#e3f2fd
+    classDef tokenCheck fill:#f3e5f5
+    classDef tokenRefresh fill:#e8f5e8
+    classDef errorHandle fill:#ffebee
+    classDef proactive fill:#fff3e0
+    classDef notification fill:#e1f5fe
+    
+    class A,C,N,O apiCall
+    class B,D,E,H,Q tokenCheck
+    class F,I,CC,EE,FF tokenRefresh
+    class J,K,L,G,T,X,Y,Z,R,S errorHandle
+    class AA,BB,DD,GG,HH,II proactive
+    class U,V,W notification
+```
+
+### Token Refresh Implementation Details
+
+1. **Automatic Detection**: API calls check token expiry before each request
+2. **Proactive Refresh**: Background process refreshes tokens 5 minutes before expiration
+3. **Fallback Logic**: If proactive refresh fails, on-demand refresh is attempted
+4. **Error Handling**: Distinguishes between temporary failures and permanent revocation
+5. **User Notification**: Alerts administrators when manual re-authorization is required
+
 ## Webhook Security
 
 ### Microsoft Graph Webhooks

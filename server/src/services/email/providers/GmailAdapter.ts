@@ -4,6 +4,7 @@ import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/em
 import { getSecretProviderInstance } from '@shared/core';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
+import { getAdminConnection } from '@shared/db/admin';
 
 /**
  * Gmail API adapter for email processing
@@ -42,33 +43,22 @@ export class GmailAdapter extends BaseEmailAdapter {
   }
 
   /**
-   * Load stored credentials from the secret provider
+   * Load stored credentials from the provider configuration
    */
   protected async loadCredentials(): Promise<void> {
     try {
-      const secretProvider = getSecretProviderInstance();
-      const secret = await secretProvider.getTenantSecret(
-        this.config.tenant, 
-        'email_provider_credentials'
-      );
+      const vendorConfig = this.config.provider_config || {};
 
-      if (!secret) {
-        throw new Error('No email provider credentials found');
+      // Check if OAuth tokens are available in provider config
+      if (!vendorConfig.access_token || !vendorConfig.refresh_token) {
+        throw new Error('OAuth tokens not found in provider configuration. Please complete OAuth authorization.');
       }
 
-      const allCredentials = JSON.parse(secret);
-      const credentials = allCredentials[this.config.id];
-
-      if (!credentials || credentials.provider !== 'google') {
-        throw new Error('Google credentials not found');
-      }
-
-      this.accessToken = credentials.accessToken;
-      this.refreshToken = credentials.refreshToken;
-      this.tokenExpiresAt = new Date(credentials.accessTokenExpiresAt);
+      this.accessToken = vendorConfig.access_token;
+      this.refreshToken = vendorConfig.refresh_token;
+      this.tokenExpiresAt = vendorConfig.token_expires_at ? new Date(vendorConfig.token_expires_at) : new Date();
 
       // Configure OAuth2 client with stored credentials
-      const vendorConfig = this.config.provider_config || {};
       this.oauth2Client.setCredentials({
         access_token: this.accessToken,
         refresh_token: this.refreshToken,
@@ -76,7 +66,7 @@ export class GmailAdapter extends BaseEmailAdapter {
         expiry_date: this.tokenExpiresAt.getTime()
       });
 
-      this.log('info', 'Credentials loaded successfully');
+      this.log('info', 'Credentials loaded successfully from provider configuration');
     } catch (error) {
       throw this.handleError(error, 'loadCredentials');
     }
@@ -91,9 +81,18 @@ export class GmailAdapter extends BaseEmailAdapter {
         throw new Error('No refresh token available');
       }
 
-      const secretProvider = getSecretProviderInstance();
-      const clientId = process.env.GOOGLE_CLIENT_ID || await secretProvider.getAppSecret('google_client_id');
-      const clientSecret = process.env.GOOGLE_CLIENT_SECRET || await secretProvider.getAppSecret('google_client_secret');
+      const vendorConfig = this.config.provider_config || {};
+      
+      // Get client credentials from provider config, environment, or tenant secrets
+      let clientId = vendorConfig.client_id || process.env.GOOGLE_CLIENT_ID;
+      let clientSecret = vendorConfig.client_secret || process.env.GOOGLE_CLIENT_SECRET;
+      
+      // Fall back to tenant secrets if not found in config or environment
+      if (!clientId || !clientSecret) {
+        const secretProvider = getSecretProviderInstance();
+        clientId = clientId || await secretProvider.getTenantSecret(this.config.tenant, 'google_client_id');
+        clientSecret = clientSecret || await secretProvider.getTenantSecret(this.config.tenant, 'google_client_secret');
+      }
 
       if (!clientId || !clientSecret) {
         throw new Error('Google OAuth credentials not configured');
@@ -138,35 +137,40 @@ export class GmailAdapter extends BaseEmailAdapter {
 
   /**
    * Update stored credentials with new tokens
+   * This method updates both in-memory config and persists changes to the database.
    */
   private async updateStoredCredentials(): Promise<void> {
     try {
-      const secretProvider = getSecretProviderInstance();
-      const secret = await secretProvider.getTenantSecret(
-        this.config.tenant, 
-        'email_provider_credentials'
-      );
-
-      const allCredentials = secret ? JSON.parse(secret) : {};
+      // Update the provider config with new tokens
+      if (this.config.provider_config) {
+        this.config.provider_config.access_token = this.accessToken;
+        this.config.provider_config.refresh_token = this.refreshToken;
+        this.config.provider_config.token_expires_at = this.tokenExpiresAt?.toISOString();
+      }
       
-      allCredentials[this.config.id] = {
-        provider: 'google',
-        accessToken: this.accessToken,
-        refreshToken: this.refreshToken,
-        accessTokenExpiresAt: this.tokenExpiresAt?.toISOString(),
-        refreshTokenExpiresAt: this.tokenExpiresAt ? 
-          new Date(this.tokenExpiresAt.getTime() + (30 * 24 * 60 * 60 * 1000)).toISOString() : // 30 days
-          undefined,
-        mailbox: this.config.mailbox,
-      };
+      this.log('info', 'Updated credentials in provider configuration');
 
-      await secretProvider.setTenantSecret(
-        this.config.tenant,
-        'email_provider_credentials',
-        JSON.stringify(allCredentials, null, 2)
-      );
+      // Persist updated credentials to database
+      try {
+        const knex = await getAdminConnection();
+        await knex('google_email_provider_config')
+          .where('email_provider_id', this.config.id)
+          .update({
+            access_token: this.accessToken,
+            refresh_token: this.refreshToken,
+            token_expires_at: this.tokenExpiresAt?.toISOString(),
+            updated_at: new Date().toISOString()
+          });
+        
+        this.log('info', 'Successfully persisted refreshed OAuth tokens to database');
+      } catch (dbError: any) {
+        this.log('error', `Failed to persist credentials to database: ${dbError.message}`, dbError);
+        // Don't throw here - we still have the tokens in memory, so the current operation can continue
+        // But log the error so we know there's a persistence issue
+      }
     } catch (error) {
       this.log('warn', 'Failed to update stored credentials', error);
+      throw error; // Re-throw for the calling method to handle
     }
   }
 
@@ -189,27 +193,85 @@ export class GmailAdapter extends BaseEmailAdapter {
   async registerWebhookSubscription(): Promise<void> {
     try {
       const vendorConfig = this.config.provider_config || {};
-      const topicName = vendorConfig.pubsubTopic;
+      const topicName = vendorConfig.pubsub_topic_name;
+      const projectId = vendorConfig.project_id;
       
       if (!topicName) {
         throw new Error('Pub/Sub topic name not configured');
       }
 
+      if (!projectId) {
+        throw new Error('Google Cloud project ID not configured');
+      }
+
+      console.log('📦 vendorConfig', vendorConfig);
+
+      // Check if user has completed OAuth authorization
+      if (!vendorConfig.access_token || !vendorConfig.refresh_token) {
+        const errorMsg = `Gmail watch subscription setup failed: OAuth tokens are missing. 
+Expected tokens to be saved after OAuth authorization but found:
+- access_token: ${vendorConfig.access_token ? '[PRESENT]' : '[MISSING]'}
+- refresh_token: ${vendorConfig.refresh_token ? '[PRESENT]' : '[MISSING]'}
+This indicates a problem with the OAuth token saving process.`;
+        
+        this.log('error', errorMsg);
+        throw new Error('Gmail OAuth tokens are missing. Please check the OAuth authorization flow.');
+      }
+
+      // Load credentials and ensure valid token
+      await this.ensureValidToken();
+
       // Enable Gmail push notifications
       const response = await this.gmail.users.watch({
         userId: 'me',
         requestBody: {
-          topicName: `projects/${vendorConfig.projectId}/topics/${topicName}`,
+          topicName: `projects/${projectId}/topics/${topicName}`,
           labelIds: ['INBOX'],
-          labelFilterAction: 'include'
+          labelFilterBehavior: 'include'
         }
       });
 
-      // Store the history ID for tracking changes
-      this.config.webhook_subscription_id = response.data.historyId;
-      this.config.webhook_expires_at = new Date(response.data.expiration).toISOString();
+      console.log('✅ Gmail watch response:', response.data);
 
-      this.log('info', `Gmail watch created with historyId: ${response.data.historyId}`);
+      // Store the history ID for tracking changes in provider config
+      if (!this.config.provider_config) {
+        this.config.provider_config = {};
+      }
+      this.config.provider_config.history_id = response.data.historyId;
+      
+      // Handle expiration date safely - Gmail API returns expiration as a string timestamp in milliseconds
+      let expirationISO: string | null = null;
+      if (response.data.expiration) {
+        try {
+          // Gmail API returns expiration as a string of milliseconds since epoch
+          const expirationMs = parseInt(response.data.expiration, 10);
+          if (!isNaN(expirationMs) && expirationMs > 0) {
+            expirationISO = new Date(expirationMs).toISOString();
+          }
+        } catch (err) {
+          this.log('warn', `Failed to parse expiration date: ${response.data.expiration}`, err);
+        }
+      }
+      
+      this.config.provider_config.watch_expiration = expirationISO || undefined;
+
+      // Save updated history_id and watch_expiration to database
+      try {
+        const knex = await getAdminConnection();
+        await knex('google_email_provider_config')
+          .where('email_provider_id', this.config.id)
+          .update({
+            history_id: response.data.historyId,
+            watch_expiration: expirationISO,
+            updated_at: new Date().toISOString()
+          });
+        this.log('info', 'Updated database with new watch subscription details');
+      } catch (dbError: any) {
+        this.log('error', 'Failed to update database with watch subscription details', dbError);
+        // Continue execution - the watch subscription is still valid even if DB update fails
+      }
+
+      this.log('info', `Gmail watch created with historyId: ${response.data.historyId}, expiration: ${expirationISO}`);
     } catch (error) {
       throw this.handleError(error, 'registerWebhookSubscription');
     }
@@ -219,8 +281,27 @@ export class GmailAdapter extends BaseEmailAdapter {
    * Renew webhook subscription
    */
   async renewWebhookSubscription(): Promise<void> {
-    // Gmail watch subscriptions last 7 days max, so we just re-register
-    await this.registerWebhookSubscription();
+    try {
+      // Load credentials and ensure valid token
+      await this.ensureValidToken();
+      
+      // Stop existing watch subscription first
+      try {
+        // await this.gmail.users.stop({ userId: 'me' });
+        this.log('info', 'Stopped existing Gmail watch subscription');
+      } catch (error: any) {
+        // It's okay if there's no existing watch to stop
+        this.log('warn', `No existing watch to stop: ${error.message}`);
+      }
+      
+      // Create new watch subscription
+      await this.registerWebhookSubscription();
+      
+      this.log('info', 'Successfully renewed Gmail watch subscription');
+    } catch (error) {
+      this.log('error', 'Failed to renew Gmail watch subscription', error);
+      throw error;
+    }
   }
 
   /**
@@ -233,7 +314,7 @@ export class GmailAdapter extends BaseEmailAdapter {
       
       // Extract historyId from the notification
       const historyId = payload.historyId;
-      const lastHistoryId = this.config.webhook_subscription_id;
+      const lastHistoryId = this.config.provider_config?.history_id;
 
       if (!historyId || !lastHistoryId) {
         this.log('warn', 'Missing history ID in webhook notification');
@@ -260,7 +341,10 @@ export class GmailAdapter extends BaseEmailAdapter {
 
       // Update last known historyId
       if (history.data.historyId) {
-        this.config.webhook_subscription_id = history.data.historyId;
+        if (!this.config.provider_config) {
+          this.config.provider_config = {};
+        }
+        this.config.provider_config.history_id = history.data.historyId;
       }
 
       return messageIds;

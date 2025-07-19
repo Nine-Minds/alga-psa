@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { getSecretProviderInstance } from '@shared/core';
+import { getAdminConnection } from '@shared/db/admin';
 import axios from 'axios';
 
 // make this dynamic
@@ -121,10 +122,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get OAuth client credentials from environment/secrets
+    // Get OAuth client credentials from environment/secrets - use tenant-specific secrets
     const secretProvider = getSecretProviderInstance();
-    const clientId = process.env.GOOGLE_CLIENT_ID || await secretProvider.getAppSecret('google_client_id');
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET || await secretProvider.getAppSecret('google_client_secret');
+    const clientId = process.env.GOOGLE_CLIENT_ID || await secretProvider.getTenantSecret(stateData.tenant, 'google_client_id');
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET || await secretProvider.getTenantSecret(stateData.tenant, 'google_client_secret');
     const redirectUri = stateData.redirectUri || `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google/callback`;
 
     if (!clientId || !clientSecret) {
@@ -180,6 +181,30 @@ export async function GET(request: NextRequest) {
 
       // Calculate expiration time
       const expiresAt = new Date(Date.now() + expires_in * 1000);
+
+      // Save tokens to database if provider ID is available
+      if (stateData.providerId) {
+        try {
+          console.log(`💾 Saving OAuth tokens to database for provider: ${stateData.providerId}`);
+          const knex = await getAdminConnection();
+          
+          await knex('google_email_provider_config')
+            .where('email_provider_id', stateData.providerId)
+            .update({
+              access_token: access_token,
+              refresh_token: refresh_token || null,
+              token_expires_at: expiresAt.toISOString(),
+              updated_at: new Date().toISOString()
+            });
+            
+          console.log(`✅ OAuth tokens saved successfully for provider: ${stateData.providerId}`);
+        } catch (dbError: any) {
+          console.error(`❌ Failed to save OAuth tokens to database: ${dbError.message}`, dbError);
+          // Don't fail the OAuth flow - tokens will still be returned to frontend
+        }
+      } else {
+        console.log('⚠️  No provider ID in state, skipping database token save');
+      }
 
       // Return success with tokens
       return new NextResponse(

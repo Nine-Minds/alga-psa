@@ -156,6 +156,109 @@ Create the Microsoft-specific adapter:
 
 Create the webhook service infrastructure:
 
+## Webhook Subscription Management
+
+The system manages webhook subscriptions with email providers to ensure continuous email processing and handle subscription lifecycle events.
+
+```mermaid
+flowchart TD
+    A[Provider Setup] --> B[Create Initial Subscription]
+    B --> C{Subscription Created}
+    C -->|Success| D[Store Subscription Details]
+    C -->|Failed| E[Retry with Backoff]
+    
+    D --> F[Schedule Renewal Check]
+    F --> G[Background Renewal Process]
+    
+    G --> H[Check Subscription Expiry]
+    H --> I{Expires Soon}
+    I -->|Yes| J[Attempt Renewal]
+    I -->|No| K[Continue Monitoring]
+    
+    J --> L{Renewal Success}
+    L -->|Success| M[Update Subscription Details]
+    L -->|Failed| N[Check Error Type]
+    
+    N --> O{Temporary Error}
+    O -->|Yes| P[Retry Renewal]
+    O -->|No| Q[Create Re-auth Task]
+    
+    M --> R[Reset Renewal Schedule]
+    R --> K
+    
+    S[Microsoft Graph] --> T[Create Webhook Subscription]
+    T --> U[Set Expiration Time]
+    U --> V[Store Subscription ID]
+    
+    W[Google Gmail] --> X[Setup Pub/Sub Topic]
+    X --> Y[Create Push Subscription]
+    Y --> Z[Configure Webhook URL]
+    
+    E --> AA{Max Retries}
+    AA -->|No| BB[Exponential Backoff]
+    BB --> B
+    AA -->|Yes| CC[Create Human Task]
+    
+    P --> DD{Max Retries}
+    DD -->|No| EE[Exponential Backoff]
+    EE --> J
+    DD -->|Yes| FF[Mark Provider Disconnected]
+    
+    Q --> GG[Update Provider Status]
+    GG --> HH[Send Admin Notification]
+    HH --> II[Create Reconnection Task]
+    
+    CC --> JJ[Manual Intervention Required]
+    FF --> KK[Provider Needs Attention]
+    
+    LL[Incoming Webhook] --> MM{Valid Request}
+    MM -->|Valid| NN[Process Notification]
+    MM -->|Invalid| OO[Log Security Event]
+    
+    NN --> PP[Extract Message IDs]
+    PP --> QQ[Queue for Processing]
+    
+    RR[Provider Deleted] --> SS[Delete Webhook Subscription]
+    SS --> TT{Deletion Success}
+    TT -->|Success| UU[Clean Up Resources]
+    TT -->|Failed| VV[Log Warning]
+    
+    classDef setup fill:#e3f2fd
+    classDef renewal fill:#f3e5f5
+    classDef provider fill:#e8f5e8
+    classDef error fill:#ffebee
+    classDef webhook fill:#fff3e0
+    classDef cleanup fill:#e1f5fe
+    
+    class A,B,C,D,F setup
+    class G,H,I,J,L,M,R,K renewal
+    class S,T,U,V,W,X,Y,Z provider
+    class E,N,O,P,Q,AA,BB,CC,DD,EE,FF,GG,HH,II,JJ,KK error
+    class LL,MM,NN,OO,PP,QQ webhook
+    class RR,SS,TT,UU,VV cleanup
+```
+
+### Webhook Subscription Lifecycle
+
+1. **Initial Setup**: Creates webhook subscription when provider is configured
+2. **Monitoring**: Continuously monitors subscription expiry times
+3. **Proactive Renewal**: Attempts renewal before expiration (Microsoft Graph: 24 hours early)
+4. **Error Recovery**: Handles temporary failures with exponential backoff
+5. **Re-authorization**: Creates human tasks when credentials need refreshing
+6. **Cleanup**: Properly removes subscriptions when providers are deleted
+
+### Provider-Specific Considerations
+
+**Microsoft Graph**:
+- Subscriptions expire after 4230 minutes (about 3 days)
+- Requires renewal before expiration
+- Uses validation tokens for security
+
+**Google Gmail**:
+- Uses persistent Pub/Sub subscriptions
+- No expiration management needed
+- Relies on GCP IAM for security
+
 **Key components:**
 - Next.js API routes for webhook endpoints
 - Provider-specific notification handlers

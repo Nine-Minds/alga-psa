@@ -31,7 +31,6 @@ export interface EmailProvider {
   status: 'connected' | 'disconnected' | 'error' | 'configuring';
   lastSyncAt?: string;
   errorMessage?: string;
-  inboundTicketDefaultsId?: string;
   createdAt: string;
   updatedAt: string;
   // Vendor-specific config will be loaded separately
@@ -42,8 +41,8 @@ export interface EmailProvider {
 export interface MicrosoftEmailProviderConfig {
   email_provider_id: string;
   tenant: string;
-  client_id: string;
-  client_secret: string;
+  client_id: string | null;
+  client_secret: string | null;
   tenant_id: string;
   redirect_uri: string;
   auto_process_emails: boolean;
@@ -59,12 +58,10 @@ export interface MicrosoftEmailProviderConfig {
 export interface GoogleEmailProviderConfig {
   email_provider_id: string;
   tenant: string;
-  client_id: string;
-  client_secret: string;
+  client_id: string | null;
+  client_secret: string | null;
   project_id: string;
   redirect_uri: string;
-  pubsub_topic_name?: string;
-  pubsub_subscription_name?: string;
   auto_process_emails: boolean;
   max_emails_per_sync: number;
   label_filters: string[];
@@ -152,6 +149,31 @@ export function EmailProviderConfiguration({
         handleProviderUpdated(updatedProvider);
       } else {
         setError(result.error || 'Connection test failed');
+      }
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  const handleRefreshWatchSubscription = async (provider: EmailProvider) => {
+    try {
+      setError(null);
+      
+      const response = await fetch('/api/email/refresh-watch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ providerId: provider.id }),
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        // Refresh the providers list to show updated status
+        await loadProviders();
+      } else {
+        setError(result.error || 'Failed to refresh watch subscription');
       }
     } catch (err: any) {
       setError(err.message);
@@ -268,6 +290,7 @@ export function EmailProviderConfiguration({
         onDelete={handleProviderDeleted}
         onTestConnection={handleTestConnection}
         onRefresh={loadProviders}
+        onRefreshWatchSubscription={handleRefreshWatchSubscription}
       />
 
       {/* Edit Provider Form */}
