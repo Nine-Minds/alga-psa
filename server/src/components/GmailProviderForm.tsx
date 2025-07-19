@@ -138,9 +138,10 @@ export function GmailProviderForm({
 
       console.log('📤 Final payload being sent:', JSON.stringify(payload, null, 2));
 
+      // For normal saves (not OAuth), skip automation to prevent duplicate Pub/Sub setup
       const result = isEditing 
-        ? await updateEmailProvider(provider.id, payload)
-        : await createEmailProvider(payload);
+        ? await updateEmailProvider(provider.id, payload, true) // skipAutomation: true
+        : await createEmailProvider(payload, true); // skipAutomation: true
 
       onSuccess(result.provider);
 
@@ -186,7 +187,8 @@ export function GmailProviderForm({
           }
         };
 
-        const result = await upsertEmailProvider(payload);
+        // OAuth flow - allow automation for initial setup
+        const result = await upsertEmailProvider(payload); // skipAutomation: false (default)
         providerId = result.provider.id;
       }
 
