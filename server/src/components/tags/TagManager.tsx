@@ -167,7 +167,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
     };
     
     fetchPermissions();
-  }, [passedPermissions, tagContext?.getPermissions, entityType]);
+  }, [passedPermissions, entityType]); // Remove tagContext?.getPermissions from dependencies
 
 
   const handleAddTag = async (tagText: string) => {
@@ -178,6 +178,12 @@ export const TagManager: React.FC<TagManagerProps> = ({
     
     if (isDuplicate) {
       toast.error(`Tag "${tagText}" already exists on this item`);
+      return;
+    }
+
+    if (!entityId) {
+      console.error('Entity ID is missing, cannot add tag');
+      toast.error('Cannot add tag: entity ID is missing');
       return;
     }
 

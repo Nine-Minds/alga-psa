@@ -194,9 +194,6 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
 
   return (
     <div className="p-4 w-full max-w-[480px] mx-auto">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Edit Project</h2>
-      </div>
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         {hasAttemptedSubmit && validationErrors.length > 0 && (
           <Alert variant="destructive">
@@ -371,9 +368,11 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               entityType="project"
               initialTags={projectTags}
               onTagsChange={(tags) => {
+                console.log('Tags changed in ProjectDetailsEdit:', tags);
                 setProjectTags(tags);
                 setHasChanges(true);
               }}
+              useInlineInput={true}
             />
           </div>
 
