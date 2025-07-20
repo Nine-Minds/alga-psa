@@ -19,16 +19,22 @@ COPY server/package.json ./server/
 COPY tsconfig.base.json ./
 COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/assemblyscript
 
-RUN npm install --include=optional sharp --workspaces
 
 # Builder stage for compiling the application
 FROM deps AS builder
 # Copy all project files and build the server
-COPY . .
 
 WORKDIR /app
-RUN npm install --workspace=shared
-RUN npm run build --workspace=shared
+
+COPY . .
+
+RUN npm install --include=optional sharp --workspaces
+RUN npm install --workspaces
+
+WORKDIR /app/server
+RUN npm install
+
+RUN npm run build
 
 WORKDIR /app/server
 
@@ -86,7 +92,7 @@ COPY --from=builder /app/server/index.ts ./server/
 COPY --from=builder /app/server/migrations/ ./server/migrations/
 COPY --from=builder /app/server/seeds/ ./server/seeds/
 COPY --from=builder /app/server/src/ ./server/src/
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=builder /app/node_modules ./node_modules
 
 COPY server/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
