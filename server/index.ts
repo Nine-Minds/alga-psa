@@ -38,8 +38,17 @@ async function createServer() {
     });
 
     // Handle all other requests with Next.js
-    // Next.js should handle everything that hasn't been handled above
-    server.use(handle);
+    // This catches any request that wasn't handled by explicit routes above
+    server.use((req, res, next) => {
+      // Don't let Next.js handle health endpoints
+      if (req.path === '/healthz' || req.path === '/readyz') {
+        // These should have been handled above, if we get here something is wrong
+        return next();
+      }
+      
+      // Let Next.js handle everything else
+      return handle(req, res);
+    });
 
     server.on('error', (err) => {
       console.error('Express server error:', err);
