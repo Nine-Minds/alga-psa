@@ -200,29 +200,44 @@ The list is ordered by dependency; a later item assumes all previous items are c
   - ✅ Covers override methods, environment-specific configs, troubleshooting
   - ✅ Added documentation references in Dockerfile comments
 
-### Phase 5 – Helm charts
+### Phase 5 – Helm charts ✅
 
-- [ ] **Analysis: Current Helm configuration** (completed analysis):
+- [x] **Analysis: Current Helm configuration** (completed analysis):
   - ✅ Main chart located at `helm/` with `values.yaml`, `prod.values.yaml`, `host.values.yaml`, `values-dev-env.yaml`
   - ✅ Multiple deployment templates including main `deployment.yaml` and specialized templates
-  - ❌ No current secret provider configuration in values files
-- [ ] **Add secret provider configuration to `values.yaml` files:**
+  - ❌ No current secret provider configuration in values files (before implementation)
+- [x] **Add secret provider configuration to `values.yaml` files:**
   ```yaml
   secrets:
     readChain: "env,filesystem,vault"
-    writeProvider: "vault"
+    writeProvider: "filesystem"
+    envPrefix: ""
+    vault:
+      addr: ""
+      token: ""
+      appSecretPath: "kv/data/app/secrets"
+      tenantSecretPathTemplate: "kv/data/tenants/{tenantId}/secrets"
   ```
-- [ ] **Template new values into Deployment environment lists:**
-  - Update `helm/templates/deployment.yaml` and other deployment templates
-  - Add `SECRET_READ_CHAIN` and `SECRET_WRITE_PROVIDER` to container env sections
-  - Reference values: `{{ .Values.secrets.readChain }}` and `{{ .Values.secrets.writeProvider }}`
-- [ ] **Preserve existing Vault integration:**
+  - ✅ Added comprehensive configuration structure to all values files
+  - ✅ Included vault configuration options with proper defaults
+- [x] **Template new values into Deployment environment lists:**
+  - ✅ Updated `helm/templates/deployment.yaml` with secret provider environment variables
+  - ✅ Updated `helm/templates/jobs.yaml` for setup job compatibility
+  - ✅ Added conditional vault configuration templating
+  - ✅ Reference values: `{{ .Values.secrets.readChain }}` and `{{ .Values.secrets.writeProvider }}`
+- [x] **Preserve existing Vault integration:**
   - ✅ Vault token file mounts remain unchanged (if they exist)
   - ✅ Only environment variable names change, not the underlying secret mounting
-- [ ] **Update all values files with appropriate defaults:**
-  - `values.yaml`: Development defaults (`env,filesystem` / `filesystem`)
-  - `prod.values.yaml`: Production defaults (`env,filesystem,vault` / `vault`)
-  - `host.values.yaml` and `values-dev-env.yaml`: Environment-specific configurations
+  - ✅ Conditional vault environment variables only when vault is used
+- [x] **Update all values files with appropriate defaults:**
+  - ✅ `values.yaml`: Development defaults (`env,filesystem` / `filesystem`)
+  - ✅ `prod.values.yaml`: Production defaults (`env,filesystem,vault` / `filesystem`)
+  - ✅ `host.values.yaml`: Host environment defaults (`env,filesystem,vault` / `filesystem`)
+  - ✅ `values-dev-env.yaml`: Development environment configuration (`env,filesystem` / `filesystem`)
+- [x] **Create comprehensive Helm documentation:**
+  - ✅ Created `docs/HELM_SECRET_PROVIDER_CONFIG.md`
+  - ✅ Covers deployment methods, vault integration, troubleshooting
+  - ✅ Documents environment-specific configurations and best practices
 
 ### Phase 6 – Documentation
 

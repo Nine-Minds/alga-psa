@@ -1,5 +1,5 @@
 import { Context } from '@temporalio/activity';
-import { getMainDatabase, getAdminDatabase, executeQuery, executeTransaction } from './connection.js';
+import { getAdminDatabase, executeTransaction } from './connection.js';
 import type {
   CreateAdminUserActivityInput,
   CreateAdminUserActivityResult
@@ -20,7 +20,7 @@ export async function createAdminUserInDB(
   });
 
   try {
-    const adminDb = getAdminDatabase();
+    const adminDb = await getAdminDatabase();
     
     const result = await executeTransaction(adminDb, async (client) => {
       // Check if user already exists in this tenant
@@ -114,7 +114,7 @@ export async function rollbackUserInDB(userId: string, tenantId: string): Promis
   log.info('Rolling back user creation', { userId, tenantId });
 
   try {
-    const adminDb = getAdminDatabase();
+    const adminDb = await getAdminDatabase();
 
     await executeTransaction(adminDb, async (client) => {
       // Delete user associations in reverse order

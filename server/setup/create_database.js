@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fs from 'fs';
 import path from 'path';
+import { getSecretProviderInstance } from '../../shared/core/index.js';
 
 // Enable long stack traces for async operations
 Error.stackTraceLimit = 50;
@@ -14,21 +15,26 @@ const DOCKER_SECRETS_PATH = '/run/secrets';
 const LOCAL_SECRETS_PATH = '../secrets';
 const SECRETS_PATH = fs.existsSync(DOCKER_SECRETS_PATH) ? DOCKER_SECRETS_PATH : LOCAL_SECRETS_PATH;
 
-function getSecret(secretName, envVar, defaultValue = '') {
-  const secretPath = path.join(SECRETS_PATH, secretName);
+async function getSecret(secretName, envVar, defaultValue = '') {
   try {
-    const secret = fs.readFileSync(secretPath, 'utf8').trim();
-    console.log(`Successfully read secret '${secretName}' from file: ${secretPath}`);
-    return secret;
-  } catch (error) {
-    console.warn(`Failed to read secret file ${secretPath}:`, error.message);
-    if (process.env[envVar]) {
-      console.warn(`Using ${envVar} environment variable instead of Docker secret`);
-      return process.env[envVar] || defaultValue;
+    const secretProvider = getSecretProviderInstance();
+    const secret = await secretProvider.getAppSecret(secretName);
+    if (secret) {
+      console.log(`Successfully read secret '${secretName}' from secret provider`);
+      return secret;
     }
-    console.warn(`Neither secret file ${secretPath} nor ${envVar} environment variable found, using default value`);
-    return defaultValue;
+  } catch (error) {
+    console.warn(`Failed to read secret '${secretName}' from secret provider:`, error.message);
   }
+  
+  // Fallback to environment variable
+  if (process.env[envVar]) {
+    console.warn(`Using ${envVar} environment variable instead of secret provider`);
+    return process.env[envVar] || defaultValue;
+  }
+  
+  console.warn(`Neither secret provider nor ${envVar} environment variable found, using default value`);
+  return defaultValue;
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -70,7 +76,7 @@ async function setupHocuspocusDatabase(client, postgresPassword) {
   process.env.DB_USER_HOCUSPOCUS = process.env.DB_USER_HOCUSPOCUS || 'hocuspocus';
 
   // Get hocuspocus password from secrets or env var
-  const hocuspocusPassword = getSecret('db_password_hocuspocus', 'DB_PASSWORD_HOCUSPOCUS', postgresPassword);
+  const hocuspocusPassword = await getSecret('db_password_hocuspocus', 'DB_PASSWORD_HOCUSPOCUS', postgresPassword);
 
   try {
     // Check if database exists
@@ -139,14 +145,14 @@ async function createDatabase(retryCount = 0) {
   }
 
   // Read passwords from secret files
-  const postgresPassword = getSecret('postgres_password', 'DB_PASSWORD_ADMIN');
+  const postgresPassword = await getSecret('postgres_password', 'DB_PASSWORD_ADMIN');
   if (!postgresPassword) {
     console.error('Error: No postgres password available');
     process.exit(1);
   }
 
   
-  const serverPassword = getSecret('db_password_server', 'DB_PASSWORD_SERVER');
+  const serverPassword = await getSecret('db_password_server', 'DB_PASSWORD_SERVER');
   if (!serverPassword) {
     console.error('Error: No server password available');
     process.exit(1);

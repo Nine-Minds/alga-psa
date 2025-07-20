@@ -42,6 +42,7 @@ import { PaginatedResponse, SuccessResponse } from '../../types/api';
 import { validateTenantAccess } from '../../utils/validation';
 import { EventBusService } from './EventBusService';
 import { AuditLogService } from './AuditLogService';
+import { getSecretProviderInstance } from '../../../../../shared/core/secretProvider.js';
 
 export class QuickBooksService {
   private readonly qboApiUrl = 'https://quickbooks-api.intuit.com';
@@ -65,7 +66,7 @@ export class QuickBooksService {
     await validateTenantAccess(tenantId);
 
     const state = crypto.randomUUID();
-    const authUrl = this.buildAuthorizationUrl(data, state);
+    const authUrl = await this.buildAuthorizationUrl(data, state);
 
     // Store OAuth state
     await this.db.insert('qbo_oauth_states', {
@@ -868,11 +869,15 @@ export class QuickBooksService {
   // PRIVATE HELPER METHODS
   // ============================================================================
 
-  private buildAuthorizationUrl(data: QboOAuthRequest, state: string): string {
+  private async buildAuthorizationUrl(data: QboOAuthRequest, state: string): Promise<string> {
+    const secretProvider = getSecretProviderInstance();
+    const clientId = await secretProvider.getAppSecret('QBO_CLIENT_ID') || process.env.QBO_CLIENT_ID!;
+    const redirectUri = await secretProvider.getAppSecret('QBO_REDIRECT_URI') || process.env.QBO_REDIRECT_URI!;
+    
     const params = new URLSearchParams({
-      client_id: process.env.QBO_CLIENT_ID!,
+      client_id: clientId,
       scope: data.scope,
-      redirect_uri: data.redirect_uri || process.env.QBO_REDIRECT_URI!,
+      redirect_uri: data.redirect_uri || redirectUri,
       response_type: 'code',
       access_type: 'offline',
       state

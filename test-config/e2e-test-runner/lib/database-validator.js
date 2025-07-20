@@ -3,7 +3,7 @@
  */
 
 import pg from 'pg';
-import { readFileSync } from 'fs';
+import { getSecretProviderInstance } from '../../../shared/core/index.js';
 
 const { Client } = pg;
 
@@ -26,10 +26,13 @@ export class DatabaseValidator {
     }
 
     try {
-      // Try to read password from secrets file (if running in container)
+      // Try to read password from secret provider system
+      const secretProvider = getSecretProviderInstance();
       let password;
       try {
-        password = readFileSync('/run/secrets/postgres_password', 'utf8').trim();
+        password = await secretProvider.getAppSecret('postgres_password') || 
+                   process.env.POSTGRES_PASSWORD || 
+                   'postpass123';
       } catch (error) {
         // Fallback for running outside container
         password = process.env.POSTGRES_PASSWORD || 'postpass123';

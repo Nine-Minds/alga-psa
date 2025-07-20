@@ -1,13 +1,14 @@
 import { OpenAIClient } from './openai-client';
 import { CustomOpenAIClient } from './custom-openai-client';
 import { LLMClient } from './types';
+import { getSecretProviderInstance } from '../../../../../shared/core/secretProvider.js';
 
 export type LLMProvider = 'openai' | 'custom-openai';
 
-export function getLLMClient(): LLMClient {
+export async function getLLMClient(): Promise<LLMClient> {
   const provider = process.env.LLM_PROVIDER as LLMProvider || 'openai';
-  const openaiApiKey = process.env.OPENAI_API_KEY;
-  const customOpenaiApiKey = process.env.CUSTOM_OPENAI_API_KEY;
+  const openaiApiKey = await getSecretProviderInstance().getAppSecret('OPENAI_API_KEY') || process.env.OPENAI_API_KEY;
+  const customOpenaiApiKey = await getSecretProviderInstance().getAppSecret('CUSTOM_OPENAI_API_KEY') || process.env.CUSTOM_OPENAI_API_KEY;
   const customOpenaiBaseURL = process.env.CUSTOM_OPENAI_BASE_URL;
   const customOpenaiModel = process.env.CUSTOM_OPENAI_MODEL;
 
