@@ -99,7 +99,10 @@ export async function sessionAuthMiddleware(
 
   try {
     // Get session token using NextAuth
-    const token = await getToken({ req: req as any });
+    const token = await getToken({ 
+      req: req as any, 
+      secret: globalThis.process.env.NEXTAUTH_SECRET 
+    });
     
     if (!token) {
       // No session token, redirect to login

@@ -1,5 +1,6 @@
 import express from 'express';
 import next from 'next';
+import cookieParser from 'cookie-parser';
 import { 
   apiKeyAuthMiddleware, 
   sessionAuthMiddleware, 
@@ -22,6 +23,9 @@ async function createServer() {
     console.log('Next.js application prepared successfully');
 
     const server = express();
+
+    // Enable cookie parsing for NextAuth compatibility
+    server.use(cookieParser() as any);
 
     // Apply authentication middleware in order
     server.use(apiKeyAuthMiddleware);      // Handle API key authentication for API routes
