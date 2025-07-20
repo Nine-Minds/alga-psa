@@ -89,6 +89,8 @@
     "@rjsf/validator-ajv8": "^6.0.0-beta.11",
     "@tailwindcss/postcss": "^4.0.6",
     "@tanstack/react-table": "^8.20.6",
+    "@tiptap/react": "^3.0.7",
+    "@tiptap/starter-kit": "^3.0.7",
     "@types/cookie-parser": "^1.4.9",
     "@types/express": "^5.0.3",
     "@types/nodemailer": "^6.4.17",
