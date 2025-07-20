@@ -8,7 +8,7 @@
     "npm": ">=10.0.0"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "tsx index.ts",
     "dev:ngrok": "node scripts/dev-with-ngrok-instructions.js",
     "ngrok:start": "ngrok http 3000 --subdomain=alga-psa-dev",
     "ngrok:tunnel": "ngrok http 3000",
@@ -17,7 +17,7 @@
     "build": "next build",
     "build:enterprise": "NEXT_PUBLIC_EDITION=enterprise next build",
     "build:enterprise-script": "../scripts/build-enterprise.sh",
-    "start": "next start",
+    "start": "node index.js",
     "lint": "next lint",
     "test": "vitest",
     "test:watch": "vitest --watch",

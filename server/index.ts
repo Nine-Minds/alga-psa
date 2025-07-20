@@ -7,9 +7,9 @@ import {
   authorizationMiddleware 
 } from './src/middleware/express/authMiddleware';
 
-const dev = process.env.NODE_ENV !== 'production';
-const hostname = process.env.HOSTNAME || 'localhost';
-const port = parseInt(process.env.PORT || '3000', 10);
+const dev = globalThis.process.env.NODE_ENV !== 'production';
+const hostname = globalThis.process.env.HOSTNAME || 'localhost';
+const port = parseInt(globalThis.process.env.PORT || '3000', 10);
 
 // Initialize Next.js
 const app = next({ dev, hostname, port });
