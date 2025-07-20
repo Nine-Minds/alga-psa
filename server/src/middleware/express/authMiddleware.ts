@@ -163,14 +163,68 @@ export function tenantHeaderMiddleware(
 
 /**
  * Middleware to handle authorization checks
- * TODO: Implement authorization logic from authorizationMiddleware.ts
+ * Ported from /server/src/middleware/authorizationMiddleware.ts
+ * Only handles token validation and tenant header setting - permission checking happens in controllers
  */
 export async function authorizationMiddleware(
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ) {
-  // TODO: Implement authorization checks
-  // For now, just pass through
-  return next();
+  try {
+    // Skip for health endpoints
+    if (req.path === '/healthz' || req.path === '/readyz') {
+      return next();
+    }
+
+    // Skip for auth endpoints  
+    if (req.path.startsWith('/auth/') || req.path.startsWith('/api/auth/')) {
+      return next();
+    }
+
+    // Skip for public assets (matches Next.js middleware config)
+    if (req.path.startsWith('/_next/static') || 
+        req.path.startsWith('/_next/image') || 
+        req.path === '/favicon.ico') {
+      return next();
+    }
+
+    // Get token for web routes (session-based)
+    const token = await getToken({ 
+      req: req as any, 
+      secret: globalThis.process.env.NEXTAUTH_SECRET 
+    }) as { error?: string; tenant?: string } | null;
+
+    // For API routes, authentication is handled by apiKeyAuthMiddleware
+    if (req.path.startsWith('/api/') && !req.path.startsWith('/api/auth/')) {
+      return next();
+    }
+
+    // For web routes, validate session token
+    if (!token) {
+      // No token found, redirect to sign in (for web routes)
+      return res.redirect('/auth/signin');
+    }
+
+    if (token.error === "TokenValidationError") {
+      // Token validation failed, redirect to sign in
+      return res.redirect('/auth/signin');
+    }
+
+    // Set the tenant based on the user's token (matching Next.js middleware behavior)
+    if (token && token.tenant) {
+      req.headers['x-tenant-id'] = token.tenant;
+      return next();
+    } else {
+      // Handle the case where tenant is not in the token
+      console.error('Tenant information not found in the token');
+      return res.redirect('/auth/signin');
+    }
+  } catch (error) {
+    console.error('Authorization middleware error:', error);
+    return res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Authorization check failed'
+    });
+  }
 }
