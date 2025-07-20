@@ -270,7 +270,7 @@ export class EmailProviderAutoWiring {
   }> {
     try {
       // Get OAuth client credentials
-      const secretProvider = getSecretProviderInstance();
+      const secretProvider = await getSecretProviderInstance();
       const clientId = process.env.MICROSOFT_CLIENT_ID || await secretProvider.getTenantSecret(config.tenant, 'microsoft_client_id');
       const clientSecret = process.env.MICROSOFT_CLIENT_SECRET || await secretProvider.getTenantSecret(config.tenant, 'microsoft_client_secret');
       
@@ -318,7 +318,7 @@ export class EmailProviderAutoWiring {
   }> {
     try {
       // Get OAuth client credentials
-      const secretProvider = getSecretProviderInstance();
+      const secretProvider = await getSecretProviderInstance();
       const clientId = process.env.GOOGLE_CLIENT_ID || await secretProvider.getTenantSecret(config.tenant, 'google_client_id');
       const clientSecret = process.env.GOOGLE_CLIENT_SECRET || await secretProvider.getTenantSecret(config.tenant, 'google_client_secret');
       

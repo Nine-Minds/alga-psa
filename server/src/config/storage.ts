@@ -27,7 +27,7 @@ async function buildStorageConfig(): Promise<StorageConfig> {
         return cachedConfig;
     }
 
-    const secretProvider = getSecretProviderInstance();
+    const secretProvider = await getSecretProviderInstance();
     
     // Get S3 credentials from secret provider with fallback to environment variables
     const s3AccessKey = await secretProvider.getAppSecret('STORAGE_S3_ACCESS_KEY') || process.env.STORAGE_S3_ACCESS_KEY;

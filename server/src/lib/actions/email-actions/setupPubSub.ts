@@ -29,7 +29,7 @@ export async function setupPubSub(request: SetupPubSubRequest) {
     console.log(`👤 Authenticated user: ${user.email || 'unknown'}`);
 
     // Get Google service account credentials
-    const secretProvider = getSecretProviderInstance();
+    const secretProvider = await getSecretProviderInstance();
     const serviceAccountKey = await secretProvider.getAppSecret('google_service_account_key');
     
     if (!serviceAccountKey) {

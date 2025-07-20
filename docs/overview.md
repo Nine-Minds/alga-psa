@@ -237,6 +237,53 @@ This document provides a high-level architectural overview of the open-source MS
   * Server actions are defined within the `server/src/lib/actions` directory.
   * **Workflows Backend:** Workflow-related services, actions, and utilities are located in `ee/server/src/services/flow/`. Server actions specific to workflows are in `ee/server/src/lib/actions/workflow.ts`.
 
+### Upcoming Runtime Change: Moving from the built-in Next.js server to an Express.js custom server
+
+Historically the application has been deployed by relying on the server that ships with Next.js.  While this works well for most SaaS workloads, there are two concrete limitations we keep running into:
+
+1. The built-in **Edge / Stand-alone runtime** used by Next.js middleware makes it difficult to
+   •  access long-lived Node primitives (database pools, Redis clients, etc.)
+   •  mount 3rd-party express/connect style middleware (Sentry, rate-limits, custom request-logging)
+2. The stock server offers very little configurability at the HTTP-layer (timeouts, keep-alive tuning, connection-handling, pre-warmed pools, etc.) which we need in bare-metal / Kubernetes clusters.
+
+Because SEO is *not* a concern for the product (login-gated SaaS) we do **not** depend on the Vercel edge-network or ISR.  That opens the door for us to run the application with the full Node runtime by embedding Next.js inside an **Express** server – a path explicitly documented by the framework team (see https://nextjs.org/docs/app/guides/custom-server).
+
+Key goals of the migration
+
+• Retain every developer-facing Next.js feature:  
+  – App routes (`/app/(.)`) and API routes (`/api/...`)  
+  – React Server Components + Server Actions  
+  – Hot-reloading / Fast-refresh in development  
+• Eliminate the edge-runtime from our middleware, so we can share ordinary `node-postgres`, `ioredis`, etc. connections.
+• Allow us to insert *traditional* express middleware – e.g. a single Sentry request handler rather than the current duplicated `initSentry()` helper in every route.
+• Provide a single place to fine-tune HTTP server behaviour (timeouts, compression, request-body limits, etc.).
+
+Proposed high-level design
+
+1. Create `server/index.ts` that:
+   • Calls `next({ dev: process.env.NODE_ENV !== 'production' })` to initialise the Next.js compiler/handler.  
+   • Spins up an `express()` instance and mounts:
+     – Health-check & readiness probes at `/healthz` and `/readyz` (needed by k8s).  
+     – Logging, Sentry, tracing and rate-limit middleware.  
+     – The Next.js request handler *last*, via `app.get('*', nextHandler)` – this keeps parity with Next’s routing precedence.
+2. Swap the `npm run start` script in `package.json` to `NODE_ENV=production node server/index.js` after the build step.
+3. Update the Docker image to expose `server/index.js` instead of `next start`.
+4. Keep the current `next dev` workflow untouched for local development – the express server only runs in `production` mode.
+
+Potential pitfalls & mitigations
+
+• Authentication callbacks (e.g. NextAuth.js) must be wrapped correctly so cookies are still parsed by their built-in utilities. *Mitigation*: run their API routes *through* the Next handler; do **not** move them to raw express.
+• `headers()` / `cookies()` helpers inside RSC still work because they ultimately read from the incoming `RequestLike` – which Next constructs for us. Our express server will forward the raw `req`/`res` objects untouched to the Next handler, so nothing breaks.
+• If we ever decide to re-enable ISR or the App Router cache we must ensure the underlying `fs` access is still available in the container. This is already the case today.
+
+Timeline
+
+• Phase 1 – prototype branch with side-by-side express server & CI checks (1-2 days).  
+• Phase 2 – Staging deploy behind feature flag (1 week).  
+• Phase 3 – Production cut-over & post-mortem (1 day).
+
+No code has been merged yet – this section serves as an architectural note so all contributors understand *why* we are switching away from the default runtime and what constraints we must preserve.
+
 * **Enterprise Edition (`ee`) Folder:**
   * The `ee` folder contains the server code for the Enterprise Edition of the application.
   * It mirrors the base server directory structure and includes its own migrations that are overlaid on top of the base server migrations.

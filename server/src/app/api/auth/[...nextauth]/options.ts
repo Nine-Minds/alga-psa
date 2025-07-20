@@ -32,7 +32,7 @@ interface ExtendedUser {
 
 // Helper function to get OAuth secrets from secret provider with env fallback
 async function getOAuthSecrets() {
-    const secretProvider = getSecretProviderInstance();
+    const secretProvider = await getSecretProviderInstance();
     
     const [googleClientId, googleClientSecret, keycloakClientId, keycloakClientSecret, keycloakUrl, keycloakRealm] = await Promise.all([
         secretProvider.getAppSecret('GOOGLE_OAUTH_CLIENT_ID'),
@@ -396,7 +396,7 @@ export const options: NextAuthOptions = {
             clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET as string,
             profile: async (profile): Promise<ExtendedUser> => {
                 // Use secret provider here with fallback to env
-                const secretProvider = getSecretProviderInstance();
+                const secretProvider = await getSecretProviderInstance();
                 const [googleClientId, googleClientSecret] = await Promise.all([
                     secretProvider.getAppSecret('GOOGLE_OAUTH_CLIENT_ID'),
                     secretProvider.getAppSecret('GOOGLE_OAUTH_CLIENT_SECRET')
@@ -560,7 +560,7 @@ export const options: NextAuthOptions = {
             issuer: `${process.env.KEYCLOAK_URL}/realms/${process.env.KEYCLOAK_REALM}`,
             profile: async (profile): Promise<ExtendedUser> => {
                 // Use secret provider here with fallback to env
-                const secretProvider = getSecretProviderInstance();
+                const secretProvider = await getSecretProviderInstance();
                 const [keycloakClientId, keycloakClientSecret, keycloakUrl, keycloakRealm] = await Promise.all([
                     secretProvider.getAppSecret('KEYCLOAK_CLIENT_ID'),
                     secretProvider.getAppSecret('KEYCLOAK_CLIENT_SECRET'),

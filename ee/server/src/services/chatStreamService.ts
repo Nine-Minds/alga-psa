@@ -38,7 +38,8 @@ const availableFunctions = [
 
 export class ChatStreamService {
   private static async getAnthropicModel() {
-    const apiKey = await getSecretProviderInstance().getAppSecret('ANTHROPIC_API_KEY') || process.env.ANTHROPIC_API_KEY;
+    const secretProvider = await getSecretProviderInstance();
+    const apiKey = await secretProvider.getAppSecret('ANTHROPIC_API_KEY') || process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       console.error('[ChatStreamService] Missing Anthropic API key');
       throw new Error('Anthropic API key is not configured');

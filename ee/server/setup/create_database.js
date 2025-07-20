@@ -17,7 +17,7 @@ const SECRETS_PATH = fs.existsSync(DOCKER_SECRETS_PATH) ? DOCKER_SECRETS_PATH : 
 
 async function getSecret(secretName, envVar, defaultValue = '') {
   try {
-    const secretProvider = getSecretProviderInstance();
+    const secretProvider = await getSecretProviderInstance();
     const secret = await secretProvider.getAppSecret(secretName);
     if (secret) {
       console.log(`Successfully read secret '${secretName}' from secret provider`);

@@ -9,7 +9,7 @@ const knexInstances: Map<string, KnexType> = new Map();
  */
 async function getDbConfig(): Promise<KnexType.Config> {
   // Get password from secret provider with fallback to environment variable
-  const secretProvider = getSecretProviderInstance();
+  const secretProvider = await getSecretProviderInstance();
   const password = await secretProvider.getAppSecret('DB_PASSWORD_SERVER') || process.env.DB_PASSWORD_SERVER;
 
   return {

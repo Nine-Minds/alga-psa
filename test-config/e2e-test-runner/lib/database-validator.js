@@ -27,7 +27,7 @@ export class DatabaseValidator {
 
     try {
       // Try to read password from secret provider system
-      const secretProvider = getSecretProviderInstance();
+      const secretProvider = await getSecretProviderInstance();
       let password;
       try {
         password = await secretProvider.getAppSecret('postgres_password') || 

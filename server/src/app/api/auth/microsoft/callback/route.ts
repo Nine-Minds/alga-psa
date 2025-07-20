@@ -121,7 +121,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get OAuth client credentials from environment/secrets - use tenant-specific secrets
-    const secretProvider = getSecretProviderInstance();
+    const secretProvider = await getSecretProviderInstance();
     const clientId = process.env.MICROSOFT_CLIENT_ID || await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_client_id');
     const clientSecret = process.env.MICROSOFT_CLIENT_SECRET || await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_client_secret');
     const redirectUri = stateData.redirectUri || `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/microsoft/callback`;

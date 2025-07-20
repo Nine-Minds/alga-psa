@@ -7,7 +7,7 @@ import { getSecretProviderInstance } from '@shared/core';
 
 
 async function getSecretKey(): Promise<Secret> {
-    const secretProvider = getSecretProviderInstance();
+    const secretProvider = await getSecretProviderInstance();
     const secretKey = await secretProvider.getAppSecret('SECRET_KEY');
     return secretKey || process.env.SECRET_KEY || 'default';
 }

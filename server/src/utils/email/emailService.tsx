@@ -78,7 +78,7 @@ export class EmailService {
       return this.transporter;
     }
 
-    const secretProvider = getSecretProviderInstance();
+    const secretProvider = await getSecretProviderInstance();
     
     // Get SMTP credentials from secret provider with fallback to environment variables
     const smtpUser = await secretProvider.getAppSecret('SMTP_USER') || process.env.SMTP_USER;

@@ -5,7 +5,7 @@ import logger from 'server/src/utils/logger';
 import { getSecretProviderInstance } from '@shared/core';
 
 async function getKeycloakConfig() {
-    const secretProvider = getSecretProviderInstance();
+    const secretProvider = await getSecretProviderInstance();
     
     const [url, realm, clientId, clientSecret] = await Promise.all([
         secretProvider.getAppSecret('KEYCLOAK_URL'),

@@ -15,7 +15,7 @@ import logger from '../../../../shared/core/logger.js'; // Corrected import path
  */
 export async function getSecret(secretName: string, envVar: string, defaultValue: string = ''): Promise<string> {
   // 1. Try the configured secret provider first
-  const secrets = getSecretProviderInstance();
+  const secrets = await getSecretProviderInstance();
   const providerSecret = await secrets.getAppSecret(secretName);
 
   if (providerSecret !== undefined && providerSecret !== '') {

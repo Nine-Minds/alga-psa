@@ -14,7 +14,7 @@ async function publishTestEvent() {
     console.log('Connecting to Redis...');
     
     // Get Redis password from secret provider with fallback to environment variable
-    const secretProvider = getSecretProviderInstance();
+    const secretProvider = await getSecretProviderInstance();
     const redisPassword = await secretProvider.getAppSecret('REDIS_PASSWORD') || process.env.REDIS_PASSWORD;
     
     // Create Redis client

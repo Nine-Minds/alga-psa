@@ -13,7 +13,7 @@ interface DatabaseConfig {
 // Get database configuration from environment variables (Alga PSA format)
 async function getDatabaseConfig(): Promise<DatabaseConfig> {
   // Get password from secret provider with fallback to environment variables
-  const secretProvider = getSecretProviderInstance();
+  const secretProvider = await getSecretProviderInstance();
   const password = await secretProvider.getAppSecret('DB_PASSWORD_SERVER') || 
                    process.env.ALGA_DB_PASSWORD || 
                    process.env.DB_PASSWORD_SERVER || 
@@ -47,7 +47,7 @@ export async function getAdminDatabase(): Promise<Pool> {
     const config = await getDatabaseConfig();
     
     // Get admin password from secret provider with fallbacks
-    const secretProvider = getSecretProviderInstance();
+    const secretProvider = await getSecretProviderInstance();
     const adminPassword = await secretProvider.getAppSecret('DB_PASSWORD_ADMIN') || 
                          process.env.ALGA_DB_ADMIN_PASSWORD || 
                          process.env.DB_PASSWORD_ADMIN || 

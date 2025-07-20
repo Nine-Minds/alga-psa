@@ -45,9 +45,9 @@ export class StorageService {
     const provider = await StorageProviderFactory.createProvider();
     return provider.getReadStream(file.storage_path, range);
   }
-    private static getTypedProviderConfig<T>(providerType: string): T {
-        const config = getStorageConfig();
-        const providerConfig = getProviderConfig(config.defaultProvider);
+    private static async getTypedProviderConfig<T>(providerType: string): Promise<T> {
+        const config = await getStorageConfig();
+        const providerConfig = await getProviderConfig(config.defaultProvider);
 
         switch (providerConfig.type) {
             case 'local':
@@ -218,8 +218,8 @@ export class StorageService {
                 throw new Error('File not found');
             }
 
-            const config = getStorageConfig();
-            const providerConfig = this.getTypedProviderConfig<LocalProviderConfig | S3ProviderConfig>(config.defaultProvider);
+            const config = await getStorageConfig();
+            const providerConfig = await this.getTypedProviderConfig<LocalProviderConfig | S3ProviderConfig>(config.defaultProvider);
 
             // Get storage provider
             const provider = await StorageProviderFactory.createProvider();

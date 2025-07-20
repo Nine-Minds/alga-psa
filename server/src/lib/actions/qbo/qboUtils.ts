@@ -32,7 +32,7 @@ export async function getTenantQboCredentials(tenantId: string, realmId: string)
       throw new Error('Placeholder getTenantQboCredentials called outside development');
   }
   // Replace with actual dev/test credentials or mock implementation
-  const secretProvider = getSecretProviderInstance();
+  const secretProvider = await getSecretProviderInstance();
   const accessToken = await secretProvider.getAppSecret('QBO_DEV_ACCESS_TOKEN') || process.env.QBO_DEV_ACCESS_TOKEN || 'dummy_access_token';
   const refreshToken = await secretProvider.getAppSecret('QBO_DEV_REFRESH_TOKEN') || process.env.QBO_DEV_REFRESH_TOKEN || 'dummy_refresh_token';
   
@@ -83,7 +83,7 @@ export async function getAppSecret(secretName: 'qbo'): Promise<{ clientId: strin
         throw new Error('Placeholder getAppSecret called outside development');
     }
     
-    const secretProvider = getSecretProviderInstance();
+    const secretProvider = await getSecretProviderInstance();
     const clientId = await secretProvider.getAppSecret('QBO_CLIENT_ID') || process.env.QBO_CLIENT_ID || 'dummy_client_id';
     const clientSecret = await secretProvider.getAppSecret('QBO_CLIENT_SECRET') || process.env.QBO_CLIENT_SECRET || 'dummy_client_secret';
     

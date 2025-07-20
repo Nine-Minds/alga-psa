@@ -7,8 +7,9 @@ export type LLMProvider = 'openai' | 'custom-openai';
 
 export async function getLLMClient(): Promise<LLMClient> {
   const provider = process.env.LLM_PROVIDER as LLMProvider || 'openai';
-  const openaiApiKey = await getSecretProviderInstance().getAppSecret('OPENAI_API_KEY') || process.env.OPENAI_API_KEY;
-  const customOpenaiApiKey = await getSecretProviderInstance().getAppSecret('CUSTOM_OPENAI_API_KEY') || process.env.CUSTOM_OPENAI_API_KEY;
+  const secretProvider = await getSecretProviderInstance();
+  const openaiApiKey = await secretProvider.getAppSecret('OPENAI_API_KEY') || process.env.OPENAI_API_KEY;
+  const customOpenaiApiKey = await secretProvider.getAppSecret('CUSTOM_OPENAI_API_KEY') || process.env.CUSTOM_OPENAI_API_KEY;
   const customOpenaiBaseURL = process.env.CUSTOM_OPENAI_BASE_URL;
   const customOpenaiModel = process.env.CUSTOM_OPENAI_MODEL;
 

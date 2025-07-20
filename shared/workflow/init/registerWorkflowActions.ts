@@ -1457,7 +1457,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       );
 
       try {
-        const secretProvider = getSecretProviderInstance();
+        const secretProvider = await getSecretProviderInstance();
         const secretString = await secretProvider.getTenantSecret(tenantId, currentSecretName);
 
         if (secretString === null || secretString === undefined || secretString.trim() === '') {

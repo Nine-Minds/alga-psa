@@ -363,7 +363,8 @@ export async function createEmailService(config?: {
       });
     
     case 'resend':
-      const apiKey = await getSecretProviderInstance().getAppSecret('RESEND_API_KEY') || process.env.RESEND_API_KEY;
+      const secretProvider = await getSecretProviderInstance();
+      const apiKey = await secretProvider.getAppSecret('RESEND_API_KEY') || process.env.RESEND_API_KEY;
       if (!apiKey) {
         throw new Error('RESEND_API_KEY environment variable is required for resend provider');
       }

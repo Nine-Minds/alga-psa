@@ -136,7 +136,7 @@ async function persistMicrosoftConfig(
   if (!tenant) throw new Error('Tenant is required');
 
   // Save secrets to tenant-specific secret store
-  const secretProvider = getSecretProviderInstance();
+  const secretProvider = await getSecretProviderInstance();
   if (config.client_id && typeof config.client_id === 'string') {
     await secretProvider.setTenantSecret(tenant, 'microsoft_client_id', config.client_id);
   }
@@ -191,7 +191,7 @@ async function persistGoogleConfig(
   if (!tenant) throw new Error('Tenant is required');
 
   // Save secrets to tenant-specific secret store
-  const secretProvider = getSecretProviderInstance();
+  const secretProvider = await getSecretProviderInstance();
   if (config.client_id && typeof config.client_id === 'string') {
     await secretProvider.setTenantSecret(tenant, 'google_client_id', config.client_id);
   }

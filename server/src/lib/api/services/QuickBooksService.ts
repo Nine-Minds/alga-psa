@@ -870,7 +870,7 @@ export class QuickBooksService {
   // ============================================================================
 
   private async buildAuthorizationUrl(data: QboOAuthRequest, state: string): Promise<string> {
-    const secretProvider = getSecretProviderInstance();
+    const secretProvider = await getSecretProviderInstance();
     const clientId = await secretProvider.getAppSecret('QBO_CLIENT_ID') || process.env.QBO_CLIENT_ID!;
     const redirectUri = await secretProvider.getAppSecret('QBO_REDIRECT_URI') || process.env.QBO_REDIRECT_URI!;
     

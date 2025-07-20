@@ -10,7 +10,7 @@ import { getSecretProviderInstance } from './index.js';
  */
 export async function getSecret(secretName: string, envVar: string, defaultValue: string = ''): Promise<string> {
   try {
-    const secretProvider = getSecretProviderInstance();
+    const secretProvider = await getSecretProviderInstance();
     const secret = await secretProvider.getAppSecret(secretName);
     if (secret) {
       return secret;

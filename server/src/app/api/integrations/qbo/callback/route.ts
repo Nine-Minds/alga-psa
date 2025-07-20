@@ -66,7 +66,7 @@ export async function GET(request: Request) {
 
   let tenantId: string | null = null;
   // Get the secret provider instance
-  const secretProvider = getSecretProviderInstance();
+  const secretProvider = await getSecretProviderInstance();
 
   try {
     // 1. Validate State Parameter (CSRF Protection - Task 83)
