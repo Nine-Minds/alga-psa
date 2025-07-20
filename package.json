@@ -12,7 +12,7 @@
     "seed": "knex seed:run",
     "test:local": "cd server && dotenv -e ../.env.localtest -- vitest \"$@\"",
     "generate:proto": "mkdir -p ee/server/src/generated && protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=ee/server/src/generated --ts_proto_opt=esModuleInterop=true,outputServices=false,useExactTypes=false --proto_path=ee/server/protos workflow.proto",
-    "dev": "cd server && NEXT_PUBLIC_EDITION=enterprise tsx index.ts",
+    "dev": "cd server && npm run dev",
     "build": "npm run build:assemblyscript && cd server && npm run build",
     "build:ce": "npm run build:assemblyscript && cd server && npm run build",
     "build:ee": "npm run build:assemblyscript && cd server && npm run build:enterprise",

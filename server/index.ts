@@ -27,7 +27,9 @@ async function createServer() {
     // Enable cookie parsing for NextAuth compatibility
     server.use(cookieParser() as any);
 
-    // Apply authentication middleware in order
+    // Next.js will handle its internal routes (/_next, HMR, static files) automatically
+
+    // Apply authentication middleware in order (after Next.js internal routes)
     server.use(apiKeyAuthMiddleware);      // Handle API key authentication for API routes
     server.use(sessionAuthMiddleware);     // Handle NextAuth sessions for web routes  
     server.use(authorizationMiddleware);   // Handle additional authorization checks
@@ -70,10 +72,12 @@ async function createServer() {
       console.error('Express server error:', err);
     });
 
-    server.listen(port, () => {
+    server.listen(port, '0.0.0.0', () => {
       console.log(`> Ready on http://${hostname}:${port}`);
       console.log(`> Environment: ${dev ? 'development' : 'production'}`);
     });
+
+    // Next.js handles WebSocket upgrades for HMR automatically
 
   } catch (error) {
     console.error('Error starting server:', error);
