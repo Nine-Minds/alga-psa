@@ -5,6 +5,10 @@ services:
     environment:
       NODE_ENV: production
       APP_ENV: production
+      # Production secret provider configuration
+      # Override defaults for production vault integration
+      SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem,vault}
+      SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -13,8 +17,14 @@ services:
     environment:
       NODE_ENV: production
       APP_ENV: production
+      # Production secret provider configuration for setup
+      SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem,vault}
+      SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
 
   hocuspocus:
     environment:
       NODE_ENV: production
       APP_ENV: production
+      # Production secret provider configuration for hocuspocus
+      SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem,vault}
+      SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
