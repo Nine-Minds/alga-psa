@@ -967,10 +967,10 @@ const handleClose = () => {
                             size="sm"
                             onClick={openTicketInNewWindow}
                             className="flex items-center gap-2"
-                            aria-label="Open in new window"
+                            aria-label="Open in new tab"
                         >
                             <ExternalLink className="h-4 w-4" />
-                            <span>Open in new window</span>
+                            <span>Open in new tab</span>
                         </Button>
                     )}
                 </div>
