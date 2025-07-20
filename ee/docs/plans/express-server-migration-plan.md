@@ -151,11 +151,13 @@ Note: Documentation below refers to adding documentary notes to THIS document in
 - [x] Test client portal vs MSP access control enforcement ✅
 
 ### Docker and Deployment Updates
-- [ ] Update `server/Dockerfile` to use `node server/index.js` (TODO: Phase 2)
+- [x] Update `server/Dockerfile` to use `node server/index.js` ✅ (Already compatible - uses entrypoint.sh → npm start → index.js)
+- [x] Verify enterprise edition Docker configuration works ✅ (Both Dockerfile and Dockerfile.dev use same entrypoint pattern)
+- [x] Review docker-compose configurations for both CE and EE ✅ (All configurations use entrypoint.sh with npm start)
+- [x] Investigate Helm charts and templates for Express server compatibility ✅ (All Helm deployments use entrypoint.sh, no changes needed)
+- [x] Investigate Argo Workflow deployment pipeline compatibility ✅ (All build processes compatible, no changes needed)
 - [ ] Test Docker build process works correctly (TODO: Phase 2)
-- [ ] Verify enterprise edition Docker configuration works (TODO: Phase 2)
 - [ ] Test docker-compose configurations for both CE and EE (TODO: Phase 2)
-- [ ] Update any deployment scripts that reference `next start` (TODO: Phase 2)
 
 ## Phase 2: Production Deployment
 
@@ -336,6 +338,21 @@ export function expressMiddleware(req: express.Request, res: express.Response, n
   - Scripts updated for development (`tsx index.ts`) and production (`node index.js`)
   - Performance improved with direct database calls vs HTTP round-trips
   - Development/production parity achieved with Express in both environments
+- **DOCKER COMPATIBILITY CONFIRMED**: All Docker configurations already compatible
+  - Both `Dockerfile` and `Dockerfile.dev` use `entrypoint.sh` → `npm start` → `node index.js`
+  - All docker-compose configurations use same entrypoint pattern
+  - No changes needed for Docker deployment - already works with Express server
+- **HELM COMPATIBILITY CONFIRMED**: All Kubernetes deployment configurations compatible
+  - Helm charts use `command: ["./entrypoint.sh"]` which calls our Express server
+  - Health check endpoints (`/healthz`, `/readyz`) implemented in Express server match K8s patterns
+  - Both development and production Helm values use same deployment approach
+  - Container port 3000 correctly configured for Express server
+- **ARGO WORKFLOW COMPATIBILITY CONFIRMED**: All CI/CD pipeline processes compatible
+  - Build workflows use `npm run build:ce` and `npm run build:ee` which build Next.js artifacts
+  - Docker builds use existing Dockerfile/entrypoint.sh approach compatible with Express
+  - Deployment workflows use Helm charts (already confirmed compatible)
+  - Pipeline produces same build artifacts (`.next` directory) that Express server serves
+  - No changes needed to build or deployment processes
 
 ### Testing Checklist
 - [x] Development hot reload functionality

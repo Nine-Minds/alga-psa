@@ -8,7 +8,7 @@
     "npm": ">=10.0.0"
   },
   "scripts": {
-    "dev": "tsx index.ts",
+    "dev": "NODE_ENV=development nodemon --watch src --watch index.ts --ext ts,tsx,js,jsx --exec tsx index.ts",
     "dev:ngrok": "node scripts/dev-with-ngrok-instructions.js",
     "ngrok:start": "ngrok http 3000 --subdomain=alga-psa-dev",
     "ngrok:tunnel": "ngrok http 3000",
@@ -182,6 +182,7 @@
     "eslint-plugin-react": "^7.37.3",
     "globals": "^15.14.0",
     "ngrok": "^4.3.3",
+    "nodemon": "^3.1.10",
     "null-loader": "^4.0.1",
     "ts-command-line-args": "^2.5.1",
     "tsx": "^4.7.0",
