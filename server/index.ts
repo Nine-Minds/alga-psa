@@ -1,5 +1,11 @@
 import express from 'express';
 import next from 'next';
+import { 
+  apiKeyAuthMiddleware, 
+  sessionAuthMiddleware, 
+  tenantHeaderMiddleware,
+  authorizationMiddleware 
+} from './src/middleware/express/authMiddleware';
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOSTNAME || 'localhost';
@@ -17,22 +23,28 @@ async function createServer() {
 
     const server = express();
 
+    // Apply authentication middleware in order
+    server.use(apiKeyAuthMiddleware);      // Handle API key authentication for API routes
+    server.use(sessionAuthMiddleware);     // Handle NextAuth sessions for web routes  
+    server.use(authorizationMiddleware);   // Handle additional authorization checks
+    server.use(tenantHeaderMiddleware);    // Add tenant headers to responses
+
     // Basic health check endpoints for Kubernetes
-    server.get('/healthz', (req, res) => {
+    server.get('/healthz', (_req, res) => {
       res.status(200).json({
         status: 'healthy',
         timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
+        uptime: globalThis.process.uptime(),
         version: '1.0.0'
       });
     });
 
-    server.get('/readyz', (req, res) => {
+    server.get('/readyz', (_req, res) => {
       // TODO: Add database and dependency checks
       res.status(200).json({
         status: 'ready',
         timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
+        uptime: globalThis.process.uptime(),
         version: '1.0.0'
       });
     });
@@ -61,9 +73,9 @@ async function createServer() {
 
   } catch (error) {
     console.error('Error starting server:', error);
-    process.exit(1);
+    globalThis.process.exit(1);
   }
 }
 
 // Start the server
-createServer();
+void createServer();
