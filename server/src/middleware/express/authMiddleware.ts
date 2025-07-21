@@ -154,6 +154,12 @@ export async function sessionAuthMiddleware(
     const secretProvider = await getSecretProviderInstance();
     const nextAuthSecret = await secretProvider.getAppSecret('NEXTAUTH_SECRET');
     
+    if (!nextAuthSecret) {
+      console.error('NEXTAUTH_SECRET not available from secret provider');
+      const callbackUrl = encodeURIComponent(req.originalUrl);
+      return res.redirect(`/auth/signin?callbackUrl=${callbackUrl}`);
+    }
+    
     // Try alternative token parsing first
     let token = await getNextAuthToken(req, nextAuthSecret);
     
@@ -259,6 +265,11 @@ export async function authorizationMiddleware(
     // Get secret from provider only - the provider handles env vars and fallbacks
     const secretProvider = await getSecretProviderInstance();
     const nextAuthSecret = await secretProvider.getAppSecret('NEXTAUTH_SECRET');
+    
+    if (!nextAuthSecret) {
+      console.error('NEXTAUTH_SECRET not available from secret provider');
+      return res.redirect('/auth/signin');
+    }
     
     // Get token for web routes (session-based) with adapted request
     const adaptedReq = adaptRequestForNextAuth(req);
