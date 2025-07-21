@@ -14,7 +14,7 @@ import {
   importReferenceData 
 } from 'server/src/lib/actions/referenceDataActions';
 import { getTenantTicketingData } from 'server/src/lib/actions/onboarding-actions/onboardingActions';
-import { IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
+import { IStandardPriority, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 import { IStandardStatus } from 'server/src/interfaces/status.interface';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Switch } from 'server/src/components/ui/Switch';
@@ -170,8 +170,12 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
           
           // Set categories and priorities in the form data if not already set
           if (data.categories.length === 0 && result.data.categories.length > 0) {
-            updateData({ categories: result.data.categories });
-            setImportedCategories(result.data.categories.map(cat => cat.category_name));
+            // Ensure we only store full category objects, no strings
+            const categoryObjects = result.data.categories.filter(cat => 
+              typeof cat === 'object' && cat.category_id
+            );
+            updateData({ categories: categoryObjects });
+            setImportedCategories(categoryObjects.map(cat => cat.category_name));
           }
           
           if (data.priorities.length === 0 && result.data.priorities.length > 0) {
@@ -245,7 +249,18 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       if (data.channelId || importedChannels.length > 0) {
         const channelId = data.channelId || importedChannels[0]?.channel_id;
         const categories = await getAvailableReferenceData('categories', { channel_id: channelId });
-        setAvailableCategories(categories);
+        
+        // Sort categories to ensure parents come before children
+        const sortedCategories = categories.sort((a, b) => {
+          // Parent categories first
+          if (!a.parent_category_uuid && b.parent_category_uuid) return -1;
+          if (a.parent_category_uuid && !b.parent_category_uuid) return 1;
+          
+          // Then by display order
+          return (a.display_order || 0) - (b.display_order || 0);
+        });
+        
+        setAvailableCategories(sortedCategories);
       }
     } catch (error) {
       console.error('Error loading available categories:', error);
@@ -317,10 +332,15 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       
       // Track imported categories
       if (result.imported?.length > 0) {
-        const importedNames = result.imported.map(cat => cat.category_name);
-        setImportedCategories(prev => [...new Set([...prev, ...importedNames])]);
+        // Store full category objects to preserve parent-child relationships
+        const importedCategoryObjects = result.imported;
+        setImportedCategories(prev => [...new Set([...prev, ...importedCategoryObjects.map(cat => cat.category_name)])]);
+        
+        // Update data with full category objects, not just names
+        const existingCategoryIds = data.categories.map(cat => cat.category_id);
+        const newCategories = importedCategoryObjects.filter(cat => !existingCategoryIds.includes(cat.category_id));
         updateData({ 
-          categories: [...new Set([...data.categories, ...importedNames])]
+          categories: [...data.categories, ...newCategories]
         });
       }
       
@@ -404,12 +424,33 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     }
     
     try {
+      // Calculate display order if not provided
+      let displayOrder = categoryForm.displayOrder;
+      if (!displayOrder || displayOrder === 0) {
+        // Get the max display order for categories in the same channel
+        const channelCategories = data.categories.filter(c => c.channel_id === categoryForm.channelId);
+        
+        if (categoryForm.parentCategory) {
+          // For subcategories, get max order within the parent
+          const siblingCategories = channelCategories.filter(c => c.parent_category === categoryForm.parentCategory);
+          displayOrder = siblingCategories.length > 0 
+            ? Math.max(...siblingCategories.map(cat => cat.display_order || 0)) + 1 
+            : 1;
+        } else {
+          // For parent categories in this channel
+          const parentCategories = channelCategories.filter(c => !c.parent_category);
+          displayOrder = parentCategories.length > 0 
+            ? Math.max(...parentCategories.map(cat => cat.display_order || 0)) + 1 
+            : 1;
+        }
+      }
+      
       // Create actual category in database
       const createdCategory = await createCategory({
         category_name: categoryForm.name,
         channel_id: categoryForm.channelId,
         parent_category: categoryForm.parentCategory || undefined,
-        display_order: categoryForm.displayOrder || data.categories.filter(c => c.channel_id === categoryForm.channelId).length + 1
+        display_order: displayOrder
       });
       
       // Update wizard data with the created category
@@ -651,7 +692,11 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       type="number"
                       value={channelForm.displayOrder}
                       onChange={(e) => setChannelForm(prev => ({ ...prev, displayOrder: parseInt(e.target.value) || 0 }))}
+                      placeholder="Leave empty for auto-generate"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Controls the order in which boards appear in dropdown menus throughout the platform. Lower numbers appear first.
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center space-x-3">
@@ -990,7 +1035,11 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       type="number"
                       value={categoryForm.displayOrder}
                       onChange={(e) => setCategoryForm(prev => ({ ...prev, displayOrder: parseInt(e.target.value) || 0 }))}
+                      placeholder="Leave empty for auto-generate"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Controls the order in which categories appear in dropdown menus throughout the platform. Lower numbers appear first.
+                    </p>
                   </div>
                 </div>
 
@@ -1076,27 +1125,38 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         </tr>
                       </thead>
                       <tbody className="divide-y">
-                        {availableCategories.map(category => (
-                          <tr key={category.id} className="hover:bg-gray-50">
-                            <td className="px-3 py-2">
-                              <Checkbox
-                                checked={selectedCategories.includes(category.id)}
-                                onChange={() => {
-                                  if (selectedCategories.includes(category.id)) {
-                                    setSelectedCategories(selectedCategories.filter(id => id !== category.id));
-                                  } else {
-                                    setSelectedCategories([...selectedCategories, category.id]);
-                                  }
-                                }}
-                              />
-                            </td>
-                            <td className="px-3 py-2 text-sm">
-                              {category.parent_category_uuid && <span className="ml-4">→ </span>}
-                              {category.category_name}
-                            </td>
-                            <td className="px-3 py-2 text-sm text-gray-600">{category.display_order || 0}</td>
-                          </tr>
-                        ))}
+                        {availableCategories.map(category => {
+                          // Find parent category name if this is a subcategory
+                          const parentCategory = category.parent_category_uuid 
+                            ? availableCategories.find(c => c.id === category.parent_category_uuid)
+                            : null;
+                          
+                          return (
+                            <tr key={category.id} className="hover:bg-gray-50">
+                              <td className="px-3 py-2">
+                                <Checkbox
+                                  checked={selectedCategories.includes(category.id)}
+                                  onChange={() => {
+                                    if (selectedCategories.includes(category.id)) {
+                                      setSelectedCategories(selectedCategories.filter(id => id !== category.id));
+                                    } else {
+                                      setSelectedCategories([...selectedCategories, category.id]);
+                                    }
+                                  }}
+                                />
+                              </td>
+                              <td className="px-3 py-2 text-sm">
+                                {category.parent_category_uuid && (
+                                  <span className="ml-4 text-gray-500">
+                                    {parentCategory ? `${parentCategory.category_name} → ` : '→ '}
+                                  </span>
+                                )}
+                                {category.category_name}
+                              </td>
+                              <td className="px-3 py-2 text-sm text-gray-600">{category.display_order || 0}</td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -1132,7 +1192,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             {/* Existing Categories */}
             {data.categories.length > 0 && (
               <div>
-                <Label className="mb-2 block">Current Categories</Label>
+                <Label className="mb-2 block">Current Categories ({data.categories.filter(c => typeof c === 'object' && c.category_id).length} total)</Label>
                 <div className="border rounded-lg overflow-hidden">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50 border-b">
@@ -1142,18 +1202,76 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       </tr>
                     </thead>
                     <tbody className="bg-white">
-                      {data.categories.map((category, index) => {
-                        const isSubcategory = category.parent_category ? true : false;
-                        return (
-                          <tr key={category.category_id || category}>
-                            <td className="px-2 py-1 text-xs">
-                              {isSubcategory && <span className="ml-4 text-gray-400">→ </span>}
-                              {typeof category === 'string' ? category : category.category_name}
-                            </td>
-                            <td className="px-2 py-1 text-center text-xs text-gray-600">{category.display_order || index + 1}</td>
-                          </tr>
-                        );
-                      })}
+                      {(() => {
+                        // Log to help debug
+                        const stringCategories = data.categories.filter(cat => typeof cat === 'string');
+                        const invalidCategories = data.categories.filter(cat => typeof cat === 'object' && !cat.category_id);
+                        
+                        if (stringCategories.length > 0) {
+                          console.warn('Found string categories:', stringCategories);
+                        }
+                        if (invalidCategories.length > 0) {
+                          console.warn('Found categories without IDs:', invalidCategories);
+                        }
+                        
+                        // First, filter out any string entries and deduplicate categories
+                        const uniqueCategories: ITicketCategory[] = data.categories
+                          .filter(cat => typeof cat === 'object' && cat !== null && cat.category_id)
+                          .reduce((acc: ITicketCategory[], category) => {
+                            // Check for duplicates by category_id
+                            const existingIndex = acc.findIndex((c: ITicketCategory) => 
+                              c.category_id === category.category_id
+                            );
+                            
+                            if (existingIndex === -1) {
+                              acc.push(category);
+                            }
+                            return acc;
+                          }, [] as ITicketCategory[]);
+                        
+                        // Sort categories hierarchically: parents first, then their children
+                        const sortedCategories = [...uniqueCategories].sort((a, b) => {
+                          // Parent categories first
+                          if (!a.parent_category && b.parent_category) return -1;
+                          if (a.parent_category && !b.parent_category) return 1;
+                          
+                          // If both are parents or both are children, sort by display order
+                          return (a.display_order || 0) - (b.display_order || 0);
+                        });
+                        
+                        // Create a hierarchical list
+                        const hierarchicalCategories: ITicketCategory[] = [];
+                        const parentCategories = sortedCategories.filter(c => !c.parent_category);
+                        
+                        parentCategories.forEach(parent => {
+                          hierarchicalCategories.push(parent);
+                          // Add children of this parent
+                          const children = sortedCategories.filter(c => c.parent_category === parent.category_id);
+                          hierarchicalCategories.push(...children);
+                        });
+                        
+                        return hierarchicalCategories.map((category, index) => {
+                          const isSubcategory = category.parent_category ? true : false;
+                          // Find parent category name if this is a subcategory
+                          const parentCategory = isSubcategory 
+                            ? data.categories.find(c => c.category_id === category.parent_category)
+                            : null;
+                          
+                          return (
+                            <tr key={category.category_id}>
+                              <td className="px-2 py-1 text-xs">
+                                {isSubcategory && (
+                                  <span className="ml-4 text-gray-400">
+                                    {parentCategory ? `${parentCategory.category_name} → ` : '→ '}
+                                  </span>
+                                )}
+                                {category.category_name}
+                              </td>
+                              <td className="px-2 py-1 text-center text-xs text-gray-600">{category.display_order || '-'}</td>
+                            </tr>
+                          );
+                        });
+                      })()}
                     </tbody>
                   </table>
                 </div>
@@ -1236,7 +1354,11 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       type="number"
                       value={statusForm.displayOrder}
                       onChange={(e) => setStatusForm(prev => ({ ...prev, displayOrder: parseInt(e.target.value) || 0 }))}
+                      placeholder="Leave empty for auto-generate"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Controls the order in which statuses appear in dropdown menus throughout the platform. Lower numbers appear first.
+                    </p>
                   </div>
                   <div className="col-span-2">
                     <div className="flex items-center space-x-6">
@@ -1525,7 +1647,11 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       type="number"
                       value={priorityForm.displayOrder}
                       onChange={(e) => setPriorityForm(prev => ({ ...prev, displayOrder: parseInt(e.target.value) || 0 }))}
+                      placeholder="Leave empty for auto-generate"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Controls the order in which priorities appear in dropdown menus throughout the platform. Lower numbers appear first.
+                    </p>
                   </div>
                   <div className="col-span-2">
                     <Label>Priority Color</Label>

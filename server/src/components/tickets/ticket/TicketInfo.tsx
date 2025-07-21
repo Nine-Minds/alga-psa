@@ -266,7 +266,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               />
             </div>
             <div>
-              <h5 className="font-bold mb-2">Channel</h5>
+              <h5 className="font-bold mb-2">Board</h5>
               <CustomSelect
                 value={ticket.channel_id || ''}
                 options={channelOptions}

@@ -475,9 +475,20 @@ export async function getAllCompaniesPaginated(params: CompanyPaginationParams =
         const sortColumn = sortColumnMap[sortBy] || 'c.company_name';
         // Validate sortDirection to prevent SQL injection
         const validSortDirection = sortDirection === 'desc' ? 'desc' : 'asc';
-        companiesQuery = companiesQuery.orderBy(sortColumn, validSortDirection);
+        
+        // Use case-insensitive sorting with LOWER() function
+        // This is compatible with both PostgreSQL and Citus distributed tables
+        const textColumns = ['company_name', 'client_type', 'address', 'account_manager_full_name', 'url'];
+        if (textColumns.includes(sortBy)) {
+          // Using LOWER() is Citus-compatible and provides case-insensitive sorting
+          companiesQuery = companiesQuery.orderByRaw(`LOWER(${sortColumn}) ${validSortDirection}`);
+        } else {
+          // Non-text columns use standard ordering
+          companiesQuery = companiesQuery.orderBy(sortColumn, validSortDirection);
+        }
       } else {
-        companiesQuery = companiesQuery.orderBy('c.company_name', 'asc');
+        // Default case-insensitive sorting by company name
+        companiesQuery = companiesQuery.orderByRaw('LOWER(c.company_name) asc');
       }
 
       const companies = await companiesQuery

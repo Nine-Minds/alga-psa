@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { IProjectPhase, IProjectTask, ITaskChecklistItem, ProjectStatus, IProjectTicketLinkWithDetails, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IPriority } from 'server/src/interfaces/ticket.interfaces';
@@ -39,7 +39,7 @@ import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTask
 import { ITaskType } from 'server/src/interfaces/project.interfaces';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import TaskTicketLinks from './TaskTicketLinks';
-import { TaskDependencies } from './TaskDependencies';
+import { TaskDependencies, TaskDependenciesRef } from './TaskDependencies';
 import TaskDocumentsSimple from './TaskDocumentsSimple';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from 'server/src/components/ui/TreeSelect';
@@ -82,6 +82,9 @@ export default function TaskForm({
   inDrawer = false,
   projectTreeData = []
 }: TaskFormProps): JSX.Element {
+  const dependenciesRef = useRef<TaskDependenciesRef>(null);
+  const [showDependencyConfirmation, setShowDependencyConfirmation] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState<React.FormEvent | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [taskName, setTaskName] = useState(task?.task_name || '');
   const [description, setDescription] = useState(task?.description || '');
@@ -409,6 +412,17 @@ export default function TaskForm({
     
     setValidationErrors([]);
 
+    // Check for unsaved dependencies
+    if (dependenciesRef.current?.hasPendingChanges()) {
+      setPendingSubmit(e);
+      setShowDependencyConfirmation(true);
+      return;
+    }
+
+    await performSubmit();
+  };
+
+  const performSubmit = async () => {
     setIsSubmitting(true);
 
     try {
@@ -509,6 +523,21 @@ export default function TaskForm({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleDependencyConfirm = async () => {
+    if (dependenciesRef.current) {
+      await dependenciesRef.current.savePendingDependency();
+    }
+    setShowDependencyConfirmation(false);
+    await performSubmit();
+  };
+
+  const handleDependencyCancel = async () => {
+    setShowDependencyConfirmation(false);
+    setPendingSubmit(null);
+    // Proceed with submit without saving dependency
+    await performSubmit();
   };
 
   const handlePhaseChange = (phaseId: string) => {
@@ -1207,6 +1236,7 @@ export default function TaskForm({
           {/* Full width Dependencies section */}
           {mode === 'edit' && task && (
             <TaskDependencies
+              ref={dependenciesRef}
               task={task}
               allTasksInProject={allProjectTasks}
               taskTypes={taskTypes}
@@ -1384,6 +1414,16 @@ export default function TaskForm({
           }}
         />
       )}
+
+      <ConfirmationDialog
+        isOpen={showDependencyConfirmation}
+        onClose={handleDependencyCancel}
+        onConfirm={handleDependencyConfirm}
+        title="Unsaved Dependency Changes"
+        message="You have unsaved dependency changes. Would you like to save them before updating the task?"
+        confirmLabel="Save & Continue"
+        cancelLabel="Discard & Continue"
+      />
 
     </>
   );
