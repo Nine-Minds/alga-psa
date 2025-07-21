@@ -9,7 +9,7 @@ interface TagInputInlineProps {
   id?: string;
   existingTags: ITag[];
   currentTags: ITag[];
-  onAddTag: (tagText: string) => void;
+  onAddTag: (tagText: string) => Promise<void>;
   placeholder?: string;
   className?: string;
 }
@@ -43,13 +43,14 @@ export const TagInputInline: React.FC<TagInputInlineProps> = ({
     }
   };
 
-  const handleSave = (tagText?: string) => {
+  const handleSave = async (tagText?: string) => {
     const textToSave = tagText || inputValue.trim();
+    console.log('TagInputInline handleSave called with:', textToSave);
     if (!textToSave || isSaving) return;
 
     setIsSaving(true);
     try {
-      onAddTag(textToSave);
+      await onAddTag(textToSave);
       setInputValue('');
       setIsEditing(false);
     } catch (error) {
@@ -144,6 +145,7 @@ export const TagInputInline: React.FC<TagInputInlineProps> = ({
                 type="button"
                 className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center"
                 onMouseDown={(e) => {
+                  console.log('TagInputInline suggestion clicked:', suggestion.tag_text);
                   e.preventDefault();
                   handleSave(suggestion.tag_text);
                 }}

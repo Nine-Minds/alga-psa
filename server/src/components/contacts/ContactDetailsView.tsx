@@ -307,6 +307,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
                   entityId={contact.contact_name_id}
                   entityType="contact"
                   initialTags={contact.tags || []}
+                  useInlineInput={isInDrawer}
                 />
               </td>
             </tr>

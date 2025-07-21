@@ -248,6 +248,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
       <ContactDetailsEdit
         initialContact={contact}
         companies={companies}
+        isInDrawer={true}
         onSave={(updatedContact) => {
           // Update the contact in the list with the new data
           setContacts(prevContacts => {

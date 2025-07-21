@@ -46,7 +46,7 @@ export const createTagSchema = z.object({
     .min(1, 'Tag text is required')
     .max(50, 'Tag text too long')
     .trim()
-    .transform(val => val.toLowerCase()), // Consistent lowercase tags
+    .regex(/^[a-zA-Z0-9\-_\s!@#$%^&*()+=\[\]{};':",./<>?]+$/, 'Tag contains invalid characters'),
   tagged_id: uuidSchema,
   tagged_type: taggedEntityTypeSchema,
   channel_id: uuidSchema.optional(),

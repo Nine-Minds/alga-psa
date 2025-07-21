@@ -411,6 +411,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               entityType="contact"
               initialTags={tags}
               onTagsChange={handleTagsChange}
+              useInlineInput={isInDrawer}
             />
           </div>
 
