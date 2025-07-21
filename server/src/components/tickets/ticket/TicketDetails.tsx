@@ -1031,6 +1031,7 @@ const handleClose = () => {
                                     tags={tags}
                                     allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
                                     onTagsChange={handleTagsChange}
+                                    isInDrawer={isInDrawer}
                                 />
                             </div>
                         </Suspense>

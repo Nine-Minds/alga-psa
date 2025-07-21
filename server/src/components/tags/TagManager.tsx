@@ -205,7 +205,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
       toast.success(`Tag "${tagText}" added successfully`);
     } catch (error) {
       console.error('Failed to add tag:', error);
-      handleError(error, 'Failed to add tag');
+      handleError(error);
     }
   };
 
@@ -219,7 +219,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
       // Skip TagContext updates to prevent circular updates
       // Global syncing is handled by the parent component through onTagsChange
     } catch (error) {
-      handleError(error, 'Failed to remove tag');
+      handleError(error);
     }
   };
 
@@ -272,7 +272,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
       }
     } catch (error) {
       console.error('TagManager update error:', error);
-      handleError(error, 'Failed to update tag');
+      handleError(error);
       // Revert optimistic update on error
       setTags(tags);
       onTagsChange?.(tags);

@@ -69,7 +69,7 @@ const TagDefinition = {
         throw new Error('Tenant context is required for tag operations');
       }
       const definition = await knexOrTrx<ITagDefinition>('tag_definitions')
-        .whereRaw('LOWER(tag_text) = LOWER(?)', [tag_text.trim()])
+        .where('tag_text', tag_text.trim())
         .where('tagged_type', tagged_type)
         .where('tenant', tenant)
         .first();
@@ -148,9 +148,9 @@ const TagDefinition = {
         throw new Error('Tenant context is required for tag operations');
       }
       
-      // Normalize tag text if provided
+      // Preserve case but trim whitespace
       if (updates.tag_text) {
-        updates.tag_text = updates.tag_text.toLowerCase().trim();
+        updates.tag_text = updates.tag_text.trim();
       }
 
       await knexOrTrx<ITagDefinition>('tag_definitions')
@@ -202,12 +202,25 @@ const TagDefinition = {
       let definition = await TagDefinition.findByTextAndType(knexOrTrx, tag_text, tagged_type);
       
       if (!definition) {
-        // Create new
-        definition = await TagDefinition.insert(knexOrTrx, {
-          tag_text,
-          tagged_type,
-          ...defaults
-        });
+        try {
+          // Create new
+          definition = await TagDefinition.insert(knexOrTrx, {
+            tag_text,
+            tagged_type,
+            ...defaults
+          });
+        } catch (insertError: any) {
+          // Handle unique constraint violation (race condition)
+          if (insertError.code === '23505' || insertError.message?.includes('duplicate')) {
+            // Another request created it, fetch the existing one
+            definition = await TagDefinition.findByTextAndType(knexOrTrx, tag_text, tagged_type);
+            if (!definition) {
+              throw insertError; // Re-throw if still not found
+            }
+          } else {
+            throw insertError;
+          }
+        }
       }
       
       return definition;
