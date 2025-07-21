@@ -1239,17 +1239,29 @@ export async function addTaskDependency(
     return await withTransaction(db, async (trx) => {
         await checkPermission(currentUser, 'project', 'update', trx);
         
-        if (!dependencyType) {
+        // Handle 'blocked_by' by swapping the tasks and using 'blocks' instead
+        let actualPredecessorId = predecessorTaskId;
+        let actualSuccessorId = successorTaskId;
+        let actualDependencyType = dependencyType;
+        
+        if (dependencyType === 'blocked_by') {
+            // Swap the tasks: "A blocked_by B" becomes "B blocks A"
+            actualPredecessorId = successorTaskId;
+            actualSuccessorId = predecessorTaskId;
+            actualDependencyType = 'blocks';
+        }
+        
+        if (!actualDependencyType) {
             const [predecessor, successor] = await Promise.all([
-                trx('project_tasks').where({ task_id: predecessorTaskId, tenant }).first(),
-                trx('project_tasks').where({ task_id: successorTaskId, tenant }).first()
+                trx('project_tasks').where({ task_id: actualPredecessorId, tenant }).first(),
+                trx('project_tasks').where({ task_id: actualSuccessorId, tenant }).first()
             ]);
             
             if (!predecessor || !successor) {
                 throw new Error('One or both tasks not found');
             }
             
-            dependencyType = TaskDependencyModel.suggestDependencyType(
+            actualDependencyType = TaskDependencyModel.suggestDependencyType(
                 predecessor.task_type_key || 'task',
                 successor.task_type_key || 'task'
             );
@@ -1257,9 +1269,9 @@ export async function addTaskDependency(
         
         return await TaskDependencyModel.addDependency(
             trx,
-            predecessorTaskId, 
-            successorTaskId, 
-            dependencyType, 
+            actualPredecessorId, 
+            actualSuccessorId, 
+            actualDependencyType, 
             leadLagDays, 
             notes
         );
