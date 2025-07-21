@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
 # Copy setup files
 COPY setup/entrypoint.sh ./
 COPY setup/config.ini ./config.ini
-COPY shared/dist/ ../shared
+COPY shared/ ../shared
 
 # Copy server files
 COPY server/package.json /app/server/
