@@ -29,7 +29,7 @@ COPY .env.example /app/.env
 COPY .env.example /app/server/.env  
 
 # Copy pre-built shared workspace (must exist locally)
-COPY ./shared/dist ./shared/dist
+COPY ./shared/dist/ ./shared
 COPY ./shared/package.json ./shared/package.json
 
 # Copy pre-built artifacts (must exist locally)
