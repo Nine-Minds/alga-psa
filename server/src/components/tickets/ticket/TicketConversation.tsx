@@ -201,6 +201,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         id={`${id}-comment-${conversation.comment_id}`}
         conversation={conversation}
         user={getAuthorInfo(conversation)}
+        currentUserId={currentUser?.id}
         isEditing={isEditing && currentComment?.comment_id === conversation.comment_id}
         currentComment={currentComment}
         ticketId={ticket.ticket_id || ''}
