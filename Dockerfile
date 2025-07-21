@@ -29,7 +29,7 @@ COPY .env.example /app/.env
 COPY .env.example /app/server/.env  
 
 # Copy pre-built shared workspace (must exist locally)
-COPY ./shared/dist ./shared/dist
+COPY ./shared/dist/ ./shared
 COPY ./shared/package.json ./shared/package.json
 
 # Copy pre-built artifacts (must exist locally)
@@ -41,6 +41,8 @@ COPY ./server/dist ./server/dist
 COPY ./server/public ./server/public
 COPY ./server/next.config.mjs ./server/
 COPY ./server/knexfile.cjs ./server/
+COPY ./server/tsconfig.json ./server/
+COPY ./server/index.ts ./server/
 COPY ./server/migrations/ ./server/migrations/
 COPY ./server/seeds/ ./server/seeds/
 COPY ./server/src/ ./server/src/
