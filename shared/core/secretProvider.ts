@@ -24,22 +24,6 @@ let vaultProviderInstance: ISecretProvider | null = null;
 const SUPPORTED_PROVIDER_TYPES = ['env', 'filesystem', 'vault'] as const;
 type ProviderType = typeof SUPPORTED_PROVIDER_TYPES[number];
 
-/**
- * Checks if we're running in an Edge Runtime environment
- */
-function isEdgeRuntime(): boolean {
-  // Check for Edge Runtime global (safer approach)
-  if (typeof globalThis !== 'undefined' && 'EdgeRuntime' in globalThis) {
-    return true;
-  }
-  
-  // Check environment variable with safe access
-  if (getEnvVar('NEXT_RUNTIME') === 'edge') {
-    return true;
-  }
-  
-  return false;
-}
 
 /**
  * Gets or creates a cached instance of the specified provider type.
@@ -64,22 +48,14 @@ async function getProviderInstance(providerType: ProviderType): Promise<ISecretP
     
     case 'vault':
       if (!vaultProviderInstance) {
-        if (isEdgeRuntime()) {
-          // Use proxy vault provider in Edge Runtime
-          const { ProxyVaultSecretProvider } = await import('./ProxyVaultSecretProvider.js');
-          vaultProviderInstance = new ProxyVaultSecretProvider();
-          logger.info('Using ProxyVaultSecretProvider for Edge Runtime');
-        } else {
-          // Use direct vault provider in Node.js runtime
-          // Dynamically import the vault loader to avoid Edge Runtime bundle analysis
-          try {
-            const { loadVaultSecretProvider } = await import(/* webpackIgnore: true */ './vaultLoader.js');
-            vaultProviderInstance = await loadVaultSecretProvider();
-            logger.info('Using VaultSecretProvider for Node.js runtime');
-          } catch (error) {
-            logger.error('Failed to load VaultSecretProvider:', error);
-            throw new Error('VaultSecretProvider unavailable in current runtime');
-          }
+        // Use direct vault provider
+        try {
+          const { loadVaultSecretProvider } = await import(/* webpackIgnore: true */ './vaultLoader.js');
+          vaultProviderInstance = await loadVaultSecretProvider();
+          logger.info('Using VaultSecretProvider for Node.js runtime');
+        } catch (error) {
+          logger.error('Failed to load VaultSecretProvider:', error);
+          throw new Error('VaultSecretProvider unavailable in current runtime');
         }
       }
       if (!vaultProviderInstance) {
@@ -189,22 +165,14 @@ export async function getSecretProviderInstance(): Promise<ISecretProvider> {
       logger.info('Initializing composite secret provider system');
       secretProviderInstance = await buildSecretProviders();
     } else {
-      // Fall back to legacy single provider configuration
-      const providerType = getEnvVar('SECRET_PROVIDER_TYPE')?.toLowerCase() || 'filesystem';
-      logger.info(`Initializing secret provider (legacy mode). Type selected: ${providerType}`);
-
-      switch (providerType) {
-        case 'vault':
-          secretProviderInstance = await getProviderInstance('vault');
-          break;
-        case 'filesystem':
-        default:
-          if (providerType !== 'filesystem') {
-            logger.warn(`Invalid SECRET_PROVIDER_TYPE '${getEnvVar('SECRET_PROVIDER_TYPE')}'. Defaulting to 'filesystem'.`);
-          }
-          secretProviderInstance = await getProviderInstance('filesystem');
-          break;
-      }
+      // Legacy mode: always default to sensible composite behavior (env,filesystem)
+      logger.info('Initializing secret provider (legacy mode with composite fallback). Using env,filesystem chain');
+      const readProviders = await Promise.all([
+        getProviderInstance('env'),
+        getProviderInstance('filesystem')
+      ]);
+      const writeProvider = await getProviderInstance('filesystem');
+      secretProviderInstance = new CompositeSecretProvider(readProviders, writeProvider);
     }
 
     // Ensure a provider instance was created

@@ -57,7 +57,12 @@ async function getOAuthSecrets() {
 export async function buildAuthOptions(): Promise<NextAuthOptions> {
     const secrets = await getOAuthSecrets();
     
+    // Get NextAuth secret from provider
+    const secretProvider = await getSecretProviderInstance();
+    const nextAuthSecret = await secretProvider.getAppSecret('NEXTAUTH_SECRET');
+    
     return {
+    secret: nextAuthSecret,
     providers: [
         GoogleProvider({
             clientId: secrets.googleClientId,
@@ -390,6 +395,7 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
 
 // Synchronous fallback that uses environment variables
 export const options: NextAuthOptions = {
+    secret: process.env.NEXTAUTH_SECRET,
     providers: [
         GoogleProvider({
             clientId: process.env.GOOGLE_OAUTH_CLIENT_ID as string,

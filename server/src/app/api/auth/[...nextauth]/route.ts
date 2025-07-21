@@ -1,8 +1,12 @@
 import NextAuth from "next-auth";
 
-import { options } from "./options";
+import { getAuthOptions } from "./options";
 
-const handler = NextAuth(options);
+const handler = async (req: any, res: any) => {
+  const options = await getAuthOptions();
+  return NextAuth(options)(req, res);
+};
+
 export { handler as GET, handler as POST };
 
 export const runtime = 'nodejs';
