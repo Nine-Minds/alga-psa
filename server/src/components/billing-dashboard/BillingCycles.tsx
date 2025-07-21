@@ -1,5 +1,5 @@
 // BillingCycles.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardContent } from 'server/src/components/ui/Card';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
@@ -36,6 +36,8 @@ const BillingCycles: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize] = useState<number>(10);
   const [totalCount, setTotalCount] = useState<number>(0);
+  const [sortBy, setSortBy] = useState<string>('company_name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [cycleStatus, setCycleStatus] = useState<{
     [companyId: string]: {
       canCreate: boolean;
@@ -64,7 +66,7 @@ const BillingCycles: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, [currentPage, debouncedSearchTerm]);
+  }, [currentPage, debouncedSearchTerm, sortBy, sortDirection]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -75,7 +77,9 @@ const BillingCycles: React.FC = () => {
           page: currentPage,
           pageSize,
           searchTerm: debouncedSearchTerm,
-          includeInactive: true
+          includeInactive: true,
+          sortBy,
+          sortDirection
         })
       ]);
 
@@ -216,6 +220,12 @@ const BillingCycles: React.FC = () => {
     setCurrentPage(page);
   };
 
+  const handleSortChange = useCallback((newSortBy: string, newSortDirection: 'asc' | 'desc') => {
+    setSortBy(newSortBy);
+    setSortDirection(newSortDirection);
+    setCurrentPage(1); // Reset to first page when sorting changes
+  }, []);
+
   return (
     <Card>
       <CardHeader className="flex flex-col gap-4">
@@ -258,6 +268,10 @@ const BillingCycles: React.FC = () => {
             pageSize={pageSize}
             totalItems={totalCount}
             onPageChange={handlePageChange}
+            manualSorting={true}
+            sortBy={sortBy}
+            sortDirection={sortDirection}
+            onSortChange={handleSortChange}
           />
         )}
 

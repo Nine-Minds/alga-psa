@@ -34,6 +34,7 @@ interface TicketInfoProps {
   tags?: ITag[];
   allTagTexts?: string[];
   onTagsChange?: (tags: ITag[]) => void;
+  isInDrawer?: boolean;
 }
 
 const TicketInfo: React.FC<TicketInfoProps> = ({
@@ -51,6 +52,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   tags = [],
   allTagTexts = [],
   onTagsChange,
+  isInDrawer = false,
 }) => {
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -264,7 +266,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               />
             </div>
             <div>
-              <h5 className="font-bold mb-2">Channel</h5>
+              <h5 className="font-bold mb-2">Board</h5>
               <CustomSelect
                 value={ticket.channel_id || ''}
                 options={channelOptions}
@@ -368,6 +370,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 entityType="ticket"
                 initialTags={tags}
                 onTagsChange={onTagsChange}
+                useInlineInput={isInDrawer}
               />
             ) : (
               <p className="text-sm text-gray-500">Tags cannot be managed</p>

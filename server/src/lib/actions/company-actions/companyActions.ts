@@ -42,8 +42,8 @@ export async function getCompanyById(companyId: string): Promise<ICompanyWithLoc
     throw new Error('No authenticated user found');
   }
 
-  // Check permission for company reading
-  if (!await hasPermission(currentUser, 'company', 'read')) {
+  // Check permission for client reading (in MSP, companies are managed via 'client' resource)
+  if (!await hasPermission(currentUser, 'client', 'read')) {
     throw new Error('Permission denied: Cannot read companies');
   }
 
@@ -95,7 +95,7 @@ export async function updateCompany(companyId: string, updateData: Partial<Omit<
   }
 
   // Check permission for company updating
-  if (!await hasPermission(currentUser, 'company', 'update')) {
+  if (!await hasPermission(currentUser, 'client', 'update')) {
     throw new Error('Permission denied: Cannot update companies');
   }
 
@@ -231,7 +231,7 @@ export async function createCompany(company: Omit<ICompany, 'company_id' | 'crea
   }
 
   // Check permission for company creation
-  if (!await hasPermission(currentUser, 'company', 'create')) {
+  if (!await hasPermission(currentUser, 'client', 'create')) {
     throw new Error('Permission denied: Cannot create companies');
   }
 
@@ -344,6 +344,8 @@ export interface CompanyPaginationParams {
    *  - 'all'      -> include both active and inactive
    */
   statusFilter?: 'all' | 'active' | 'inactive';
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
 }
 
 export interface PaginatedCompaniesResponse {
@@ -360,8 +362,8 @@ export async function getAllCompaniesPaginated(params: CompanyPaginationParams =
     throw new Error('No authenticated user found');
   }
 
-  // Check permission for company reading
-  if (!await hasPermission(currentUser, 'company', 'read')) {
+  // Check permission for client reading (in MSP, companies are managed via 'client' resource)
+  if (!await hasPermission(currentUser, 'client', 'read')) {
     throw new Error('Permission denied: Cannot read companies');
   }
 
@@ -373,7 +375,9 @@ export async function getAllCompaniesPaginated(params: CompanyPaginationParams =
     clientTypeFilter = 'all',
     loadLogos = true,
     statusFilter,
-    selectedTags
+    selectedTags,
+    sortBy = 'company_name',
+    sortDirection = 'asc'
   } = params;
 
   const {knex: db, tenant} = await createTenantKnex();
@@ -442,7 +446,7 @@ export async function getAllCompaniesPaginated(params: CompanyPaginationParams =
       const totalCount = parseInt(countResult?.count as string || '0', 10);
 
       // Get paginated companies with location data
-      const companies = await baseQuery
+      let companiesQuery = baseQuery
         .select(
           'c.*',
           trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`),
@@ -454,8 +458,40 @@ export async function getAllCompaniesPaginated(params: CompanyPaginationParams =
           'cl.state_province',
           'cl.postal_code',
           'cl.country_name'
-        )
-        .orderBy('c.company_name', 'asc')
+        );
+
+      // Apply sorting based on the column name
+      if (sortBy) {
+        // Map frontend column names to database column names
+        const sortColumnMap: Record<string, string> = {
+          'company_name': 'c.company_name',
+          'client_type': 'c.client_type',
+          'phone_no': 'cl.phone',
+          'address': 'cl.address_line1',
+          'account_manager_full_name': 'account_manager_full_name',
+          'url': 'c.url'
+        };
+        
+        const sortColumn = sortColumnMap[sortBy] || 'c.company_name';
+        // Validate sortDirection to prevent SQL injection
+        const validSortDirection = sortDirection === 'desc' ? 'desc' : 'asc';
+        
+        // Use case-insensitive sorting with LOWER() function
+        // This is compatible with both PostgreSQL and Citus distributed tables
+        const textColumns = ['company_name', 'client_type', 'address', 'account_manager_full_name', 'url'];
+        if (textColumns.includes(sortBy)) {
+          // Using LOWER() is Citus-compatible and provides case-insensitive sorting
+          companiesQuery = companiesQuery.orderByRaw(`LOWER(${sortColumn}) ${validSortDirection}`);
+        } else {
+          // Non-text columns use standard ordering
+          companiesQuery = companiesQuery.orderBy(sortColumn, validSortDirection);
+        }
+      } else {
+        // Default case-insensitive sorting by company name
+        companiesQuery = companiesQuery.orderByRaw('LOWER(c.company_name) asc');
+      }
+
+      const companies = await companiesQuery
         .limit(pageSize)
         .offset(offset);
 
@@ -502,8 +538,8 @@ export async function getAllCompanies(includeInactive: boolean = true): Promise<
     throw new Error('No authenticated user found');
   }
 
-  // Check permission for company reading
-  if (!await hasPermission(currentUser, 'company', 'read')) {
+  // Check permission for client reading (in MSP, companies are managed via 'client' resource)
+  if (!await hasPermission(currentUser, 'client', 'read')) {
     throw new Error('Permission denied: Cannot read companies');
   }
 
@@ -600,7 +636,7 @@ export async function deleteCompany(companyId: string): Promise<{
   }
 
   // Check permission for company deletion
-  if (!await hasPermission(currentUser, 'company', 'delete')) {
+  if (!await hasPermission(currentUser, 'client', 'delete')) {
     throw new Error('Permission denied: Cannot delete companies');
   }
 
@@ -822,7 +858,7 @@ export async function exportCompaniesToCSV(companies: ICompany[]): Promise<strin
   }
 
   // Check permission for company reading (export is a read operation)
-  if (!await hasPermission(currentUser, 'company', 'read')) {
+  if (!await hasPermission(currentUser, 'client', 'read')) {
     throw new Error('Permission denied: Cannot export companies');
   }
 
@@ -960,8 +996,8 @@ export async function getAllCompanyIds(params: {
     throw new Error('No authenticated user found');
   }
 
-  // Check permission for company reading
-  if (!await hasPermission(currentUser, 'company', 'read')) {
+  // Check permission for client reading (in MSP, companies are managed via 'client' resource)
+  if (!await hasPermission(currentUser, 'client', 'read')) {
     throw new Error('Permission denied: Cannot read companies');
   }
 
@@ -1048,8 +1084,8 @@ export async function checkExistingCompanies(
     throw new Error('No authenticated user found');
   }
 
-  // Check permission for company reading
-  if (!await hasPermission(currentUser, 'company', 'read')) {
+  // Check permission for client reading (in MSP, companies are managed via 'client' resource)
+  if (!await hasPermission(currentUser, 'client', 'read')) {
     throw new Error('Permission denied: Cannot read companies');
   }
 
@@ -1086,11 +1122,11 @@ export async function importCompaniesFromCSV(
   }
 
   // Check permissions for both create and update operations since import can do both
-  if (!await hasPermission(currentUser, 'company', 'create')) {
+  if (!await hasPermission(currentUser, 'client', 'create')) {
     throw new Error('Permission denied: Cannot create companies');
   }
   
-  if (updateExisting && !await hasPermission(currentUser, 'company', 'update')) {
+  if (updateExisting && !await hasPermission(currentUser, 'client', 'update')) {
     throw new Error('Permission denied: Cannot update companies');
   }
 
@@ -1277,7 +1313,7 @@ export async function uploadCompanyLogo(
   }
 
   // Check permission for company updating (logo upload is an update operation)
-  if (!await hasPermission(currentUser, 'company', 'update')) {
+  if (!await hasPermission(currentUser, 'client', 'update')) {
     return { success: false, message: 'Permission denied: Cannot update company logo' };
   }
 
@@ -1327,7 +1363,7 @@ export async function deleteCompanyLogo(
   }
 
   // Check permission for company deletion (logo deletion is a delete operation)
-  if (!await hasPermission(currentUser, 'company', 'delete')) {
+  if (!await hasPermission(currentUser, 'client', 'delete')) {
     return { success: false, message: 'Permission denied: Cannot delete company logo' };
   }
 

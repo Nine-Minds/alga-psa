@@ -1,237 +1,215 @@
 exports.seed = async function (knex) {
-    // Get the tenant ID from environment or use the first tenant
-    let tenant;
+    // Get the tenant ID from environment or use all tenants
+    let tenants;
     if (process.env.TENANT_ID) {
-        tenant = { tenant: process.env.TENANT_ID };
+        tenants = [{ tenant: process.env.TENANT_ID }];
     } else {
-        tenant = await knex('tenants').select('tenant').first();
-        if (!tenant) {
-            console.log('No tenant found, skipping role_permissions seed');
+        tenants = await knex('tenants').select('tenant');
+        if (!tenants.length) {
+            console.log('No tenants found, skipping role permissions seed');
             return;
         }
     }
 
-    console.log(`Seeding role permissions for tenant ${tenant.tenant}`);
+    // Process each tenant
+    for (const { tenant } of tenants) {
+        console.log(`Seeding role permissions for tenant ${tenant}`);
 
-    // Get all roles for this tenant
-    const roles = await knex('roles').where({ tenant: tenant.tenant });
-    
-    // Get all permissions for this tenant
-    const permissions = await knex('permissions').where({ tenant: tenant.tenant });
-    
-    // Create permission map for easy lookup
-    const permissionMap = new Map();
-    permissions.forEach(p => {
-        permissionMap.set(`${p.resource}:${p.action}`, p.permission_id);
-    });
-    
-    for (const role of roles) {
-        let rolePermissionIds = [];
+        // Get all roles for this tenant
+        const roles = await knex('roles').where({ tenant });
         
-        // MSP Admin - Full access to all MSP permissions
-        if (role.role_name === 'Admin' && role.msp === true) {
-            rolePermissionIds = permissions
-                .filter(p => p.msp === true)
-                .map(p => p.permission_id);
-        }
+        // Get all permissions for this tenant
+        const permissions = await knex('permissions').where({ tenant });
         
-        // MSP Finance - Specific financial permissions
-        else if (role.role_name === 'Finance' && role.msp === true) {
-            const financePermissions = [
-                'asset:read',
-                'billing:create', 'billing:read', 'billing:update', 'billing:delete', 'billing:reconcile',
-                'client:create', 'client:read', 'client:update', 'client:delete',
-                'contact:create', 'contact:read', 'contact:update', 'contact:delete',
-                'credit:create', 'credit:read', 'credit:update', 'credit:delete', 'credit:transfer', 'credit:apply',
-                'document:create', 'document:read', 'document:update', 'document:delete',
-                'invoice:create', 'invoice:read', 'invoice:update', 'invoice:delete', 'invoice:generate', 'invoice:finalize',
-                'profile:create', 'profile:read', 'profile:update', 'profile:delete',
-                'project:read', 'project:update',
-                'tag:create', 'tag:read',
-                'technician_dispatch:read',
-                'ticket:read', 'ticket:update',
-                'timeentry:create', 'timeentry:read', 'timeentry:update', 'timeentry:delete',
-                'timesheet:create', 'timesheet:read', 'timesheet:update', 'timesheet:delete', 'timesheet:submit',
-                'user:read',
-                'user_schedule:read',
-                'billing_settings:create', 'billing_settings:read', 'billing_settings:update', 'billing_settings:delete'
-            ];
+        // Create permission map for easy lookup
+        const permissionMap = new Map();
+        permissions.forEach(p => {
+            const key = `${p.resource}:${p.action}:${p.msp ? 'msp' : 'client'}`;
+            permissionMap.set(key, p.permission_id);
+        });
+        
+        // Clear existing role permissions
+        await knex('role_permissions').where({ tenant }).del();
+        console.log('Cleared existing role permissions');
+        
+        for (const role of roles) {
+            let rolePermissionIds = [];
             
-            rolePermissionIds = financePermissions
-                .map(key => permissionMap.get(key))
-                .filter(id => id !== undefined);
-        }
-        
-        // MSP Technician - Technical support focused
-        else if (role.role_name === 'Technician' && role.msp === true) {
-            const technicianPermissions = [
-                'asset:read',
-                'contact:read',
-                'document:create', 'document:read', 'document:update',
-                'profile:read', 'profile:update',
-                'project:read',
-                'tag:read',
-                'ticket:create', 'ticket:read', 'ticket:update',
-                'timeentry:create', 'timeentry:read', 'timeentry:update',
-                'timesheet:create', 'timesheet:read', 'timesheet:update', 'timesheet:submit',
-                'user:read',
-                'user_schedule:read',
-                'user_settings:read', 'user_settings:update',
-                'category:read',
-                'priority:read',
-                'comment:create', 'comment:read', 'comment:update'
-            ];
+            // MSP Admin - Full access to all MSP permissions
+            if (role.role_name === 'Admin' && role.msp === true) {
+                rolePermissionIds = permissions
+                    .filter(p => p.msp === true)
+                    .map(p => p.permission_id);
+            }
             
-            rolePermissionIds = technicianPermissions
-                .map(key => permissionMap.get(key))
-                .filter(id => id !== undefined);
-        }
-        
-        // MSP Project Manager - Project oversight
-        else if (role.role_name === 'Project Manager' && role.msp === true) {
-            const projectManagerPermissions = [
-                'asset:read',
-                'client:read',
-                'contact:create', 'contact:read', 'contact:update',
-                'document:create', 'document:read', 'document:update', 'document:delete',
-                'invoice:read',
-                'profile:read',
-                'project:create', 'project:read', 'project:update', 'project:delete',
-                'tag:create', 'tag:read', 'tag:update',
-                'technician_dispatch:read',
-                'ticket:create', 'ticket:read', 'ticket:update',
-                'timeentry:read',
-                'timesheet:read', 'timesheet:approve',
-                'user:read',
-                'user_schedule:read',
-                'team:create', 'team:read', 'team:update', 'team:manage',
-                'comment:create', 'comment:read', 'comment:update',
-                'category:read',
-                'priority:read'
-            ];
+            // MSP Finance - Based on permissions_list.md
+            else if (role.role_name === 'Finance' && role.msp === true) {
+                const financePermissions = [
+                    'asset:read:msp',
+                    'billing:create:msp', 'billing:read:msp', 'billing:update:msp', 'billing:delete:msp',
+                    'client:create:msp', 'client:read:msp', 'client:update:msp', 'client:delete:msp',
+                    'contact:create:msp', 'contact:read:msp', 'contact:update:msp', 'contact:delete:msp',
+                    'credit:create:msp', 'credit:read:msp', 'credit:update:msp', 'credit:delete:msp', 'credit:transfer:msp', 'credit:reconcile:msp',
+                    'document:create:msp', 'document:read:msp', 'document:update:msp', 'document:delete:msp',
+                    'invoice:create:msp', 'invoice:read:msp', 'invoice:update:msp', 'invoice:delete:msp', 'invoice:generate:msp', 'invoice:finalize:msp', 'invoice:send:msp', 'invoice:void:msp',
+                    'profile:create:msp', 'profile:read:msp', 'profile:update:msp',
+                    'project:read:msp', 'project:update:msp',
+                    'project_task:read:msp', 'project_task:update:msp',
+                    'tag:create:msp', 'tag:read:msp',
+                    'technician_dispatch:read:msp',
+                    'ticket:read:msp', 'ticket:update:msp',
+                    'timeentry:create:msp', 'timeentry:read:msp', 'timeentry:update:msp', 'timeentry:delete:msp',
+                    'timesheet:read:msp', 'timesheet:read_all:msp', 'timesheet:submit:msp',
+                    'user:read:msp',
+                    'user_schedule:read:msp',
+                    'billing_settings:create:msp', 'billing_settings:read:msp', 'billing_settings:update:msp', 'billing_settings:delete:msp'
+                ];
+                
+                rolePermissionIds = financePermissions
+                    .map(key => permissionMap.get(key))
+                    .filter(id => id !== undefined);
+            }
             
-            rolePermissionIds = projectManagerPermissions
-                .map(key => permissionMap.get(key))
-                .filter(id => id !== undefined);
-        }
-        
-        // MSP Dispatcher - Scheduling and dispatch
-        else if (role.role_name === 'Dispatcher' && role.msp === true) {
-            const dispatcherPermissions = [
-                'contact:read',
-                'profile:read',
-                'technician_dispatch:create', 'technician_dispatch:read', 'technician_dispatch:update', 'technician_dispatch:delete',
-                'ticket:read', 'ticket:update',
-                'user:read',
-                'user_schedule:create', 'user_schedule:read', 'user_schedule:update', 'user_schedule:delete'
-            ];
+            // MSP Technician - Based on permissions_list.md
+            else if (role.role_name === 'Technician' && role.msp === true) {
+                const technicianPermissions = [
+                    'asset:create:msp', 'asset:read:msp', 'asset:update:msp',
+                    'client:read:msp', 'client:delete:msp',
+                    'contact:read:msp', 'contact:delete:msp',
+                    'document:create:msp', 'document:read:msp', 'document:update:msp',
+                    'profile:read:msp', 'profile:update:msp',
+                    'project:read:msp',
+                    'project_task:create:msp', 'project_task:read:msp', 'project_task:update:msp',
+                    'tag:create:msp', 'tag:read:msp', 'tag:update:msp',
+                    'technician_dispatch:read:msp',
+                    'ticket:create:msp', 'ticket:read:msp', 'ticket:update:msp',
+                    'timeentry:create:msp', 'timeentry:read:msp', 'timeentry:update:msp',
+                    'timesheet:read:msp', 'timesheet:update:msp', 'timesheet:read_all:msp', 'timesheet:submit:msp',
+                    'user_schedule:read:msp',
+                    'ticket_settings:read:msp'
+                ];
+                
+                rolePermissionIds = technicianPermissions
+                    .map(key => permissionMap.get(key))
+                    .filter(id => id !== undefined);
+            }
             
-            rolePermissionIds = dispatcherPermissions
-                .map(key => permissionMap.get(key))
-                .filter(id => id !== undefined);
-        }
-        
-        // MSP Manager - Legacy role support
-        else if (role.role_name === 'Manager' && role.msp === true) {
-            const managerPermissions = [
-                'ticket:create', 'ticket:read', 'ticket:update', 'ticket:delete',
-                'user:create', 'user:read', 'user:update',
-                'project:create', 'project:read', 'project:update', 'project:delete',
-                'company:read',
-                'team:create', 'team:read', 'team:update', 'team:manage',
-                'timeentry:read', 'timeentry:update',
-                'timesheet:read', 'timesheet:approve',
-                'contact:create', 'contact:read', 'contact:update',
-                'document:create', 'document:read', 'document:update',
-                'asset:read',
-                'category:read',
-                'priority:read',
-                'notification:create', 'notification:read', 'notification:update',
-                'comment:create', 'comment:read', 'comment:update',
-                'service:read',
-                'tag:create', 'tag:read', 'tag:update',
-                'user_schedule:read', 'user_schedule:update',
-                'registration:approve'
-            ];
+            // MSP Project Manager - Based on permissions_list.md
+            else if (role.role_name === 'Project Manager' && role.msp === true) {
+                const projectManagerPermissions = [
+                    'asset:read:msp',
+                    'billing:read:msp',
+                    'client:create:msp', 'client:read:msp', 'client:update:msp',
+                    'contact:create:msp', 'contact:read:msp', 'contact:update:msp',
+                    'document:create:msp', 'document:read:msp', 'document:update:msp',
+                    'invoice:read:msp',
+                    'profile:read:msp', 'profile:update:msp',
+                    'project:create:msp', 'project:read:msp', 'project:update:msp', 'project:delete:msp',
+                    'project_task:create:msp', 'project_task:read:msp', 'project_task:update:msp', 'project_task:delete:msp',
+                    'tag:create:msp', 'tag:read:msp', 'tag:update:msp',
+                    'technician_dispatch:read:msp',
+                    'ticket:create:msp', 'ticket:read:msp', 'ticket:update:msp',
+                    'timeentry:create:msp', 'timeentry:read:msp', 'timeentry:update:msp',
+                    'timesheet:read:msp', 'timesheet:update:msp', 'timesheet:read_all:msp', 'timesheet:submit:msp', 'timesheet:approve:msp', 'timesheet:reverse:msp',
+                    'user:read:msp', 'user:invite:msp',
+                    'user_schedule:read:msp',
+                    'user_settings:read:msp',
+                    'billing_settings:read:msp'
+                ];
+                
+                rolePermissionIds = projectManagerPermissions
+                    .map(key => permissionMap.get(key))
+                    .filter(id => id !== undefined);
+            }
             
-            rolePermissionIds = managerPermissions
-                .map(key => permissionMap.get(key))
-                .filter(id => id !== undefined);
-        }
-        
-        // Client Admin - Full access to client permissions
-        else if (role.role_name === 'Admin' && role.client === true) {
-            rolePermissionIds = permissions
-                .filter(p => p.client === true)
-                .map(p => p.permission_id);
-        }
-        
-        // Client Finance - Financial visibility
-        else if (role.role_name === 'Finance' && role.client === true) {
-            const clientFinancePermissions = [
-                'billing:read',
-                'client:read',
-                'contact:read',
-                'credit:read',
-                'document:read',
-                'invoice:read',
-                'profile:read',
-                'user_settings:read', 'user_settings:update'
-            ];
+            // MSP Dispatcher - Based on permissions_list.md
+            else if (role.role_name === 'Dispatcher' && role.msp === true) {
+                const dispatcherPermissions = [
+                    'asset:read:msp',
+                    'client:read:msp',
+                    'contact:read:msp',
+                    'document:read:msp',
+                    'profile:read:msp',
+                    'project:read:msp',
+                    'project_task:read:msp',
+                    'tag:create:msp', 'tag:read:msp', 'tag:update:msp',
+                    'technician_dispatch:create:msp', 'technician_dispatch:read:msp', 'technician_dispatch:update:msp',
+                    'ticket:create:msp', 'ticket:read:msp', 'ticket:update:msp',
+                    'timeentry:read:msp',
+                    'timesheet:read:msp',
+                    'user:read:msp',
+                    'user_schedule:create:msp', 'user_schedule:read:msp', 'user_schedule:update:msp',
+                    'user_settings:read:msp'
+                ];
+                
+                rolePermissionIds = dispatcherPermissions
+                    .map(key => permissionMap.get(key))
+                    .filter(id => id !== undefined);
+            }
             
-            rolePermissionIds = clientFinancePermissions
-                .map(key => permissionMap.get(key))
-                .filter(id => id !== undefined);
-        }
-        
-        // Client User - Basic client access
-        else if (role.role_name === 'User' && role.client === true) {
-            const clientUserPermissions = [
-                'asset:read',
-                'contact:create', 'contact:read', 'contact:update',
-                'document:create', 'document:read',
-                'profile:read', 'profile:update',
-                'project:read',
-                'tag:read',
-                'ticket:create', 'ticket:read', 'ticket:update',
-                'user_settings:read', 'user_settings:update',
-                'user:read',
-                'comment:create', 'comment:read', 'comment:update',
-                'category:read',
-                'priority:read',
-                'notification:read', 'notification:update'
-            ];
+            // Client Admin - Based on permissions_list.md
+            else if (role.role_name === 'Admin' && role.client === true) {
+                const clientAdminPermissions = [
+                    'billing:create:client', 'billing:read:client', 'billing:update:client',
+                    'client:create:client', 'client:read:client', 'client:update:client', 'client:delete:client',
+                    'project:create:client', 'project:read:client', 'project:update:client', 'project:delete:client',
+                    'ticket:create:client', 'ticket:read:client', 'ticket:update:client',
+                    'time_management:create:client', 'time_management:read:client', 'time_management:update:client', 'time_management:delete:client',
+                    'user:create:client', 'user:read:client', 'user:update:client', 'user:delete:client', 'user:reset_password:client',
+                    'settings:create:client', 'settings:read:client', 'settings:update:client', 'settings:delete:client',
+                    'documents:create:client', 'documents:read:client', 'documents:update:client'
+                ];
+                
+                rolePermissionIds = clientAdminPermissions
+                    .map(key => permissionMap.get(key))
+                    .filter(id => id !== undefined);
+            }
             
-            rolePermissionIds = clientUserPermissions
-                .map(key => permissionMap.get(key))
-                .filter(id => id !== undefined);
-        }
-        
-        if (rolePermissionIds.length > 0) {
-            // Get existing role permissions to avoid duplicates
-            const existingRolePerms = await knex('role_permissions')
-                .where({
-                    tenant: tenant.tenant,
-                    role_id: role.role_id
-                })
-                .select('permission_id');
-
-            const existingPermIds = new Set(existingRolePerms.map(rp => rp.permission_id));
-
-            // Filter out existing permissions
-            const rolePermissionsToAdd = rolePermissionIds
-                .filter(permId => !existingPermIds.has(permId))
-                .map(permId => ({
-                    tenant: tenant.tenant,
+            // Client Finance - Based on permissions_list.md
+            else if (role.role_name === 'Finance' && role.client === true) {
+                const clientFinancePermissions = [
+                    'billing:read:client',
+                    'client:create:client', 'client:read:client', 'client:update:client',
+                    'project:read:client',
+                    'ticket:create:client', 'ticket:read:client', 'ticket:update:client',
+                    'time_management:read:client',
+                    'user:read:client',
+                    'settings:read:client',
+                    'documents:create:client', 'documents:read:client', 'documents:update:client'
+                ];
+                
+                rolePermissionIds = clientFinancePermissions
+                    .map(key => permissionMap.get(key))
+                    .filter(id => id !== undefined);
+            }
+            
+            // Client User - Based on permissions_list.md
+            else if (role.role_name === 'User' && role.client === true) {
+                const clientUserPermissions = [
+                    'client:create:client', 'client:read:client', 'client:update:client',
+                    'project:read:client',
+                    'ticket:create:client', 'ticket:read:client', 'ticket:update:client',
+                    'time_management:read:client',
+                    'documents:create:client', 'documents:read:client', 'documents:update:client'
+                ];
+                
+                rolePermissionIds = clientUserPermissions
+                    .map(key => permissionMap.get(key))
+                    .filter(id => id !== undefined);
+            }
+            
+            if (rolePermissionIds.length > 0) {
+                // Insert role permissions
+                const rolePermissionsToAdd = rolePermissionIds.map(permId => ({
+                    tenant,
                     role_id: role.role_id,
                     permission_id: permId
                 }));
 
-            if (rolePermissionsToAdd.length > 0) {
                 await knex('role_permissions').insert(rolePermissionsToAdd);
-                console.log(`Added ${rolePermissionsToAdd.length} permissions to ${role.role_name} role (${role.msp ? 'MSP' : 'Client'}) for tenant ${tenant.tenant}`);
+                console.log(`Added ${rolePermissionsToAdd.length} permissions to ${role.role_name} role (${role.msp ? 'MSP' : 'Client'}) for tenant ${tenant}`);
             } else {
-                console.log(`${role.role_name} role (${role.msp ? 'MSP' : 'Client'}) already has all permissions`);
+                console.log(`No permissions found for ${role.role_name} role (${role.msp ? 'MSP' : 'Client'})`);
             }
         }
     }

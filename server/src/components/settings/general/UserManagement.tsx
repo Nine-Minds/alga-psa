@@ -3,8 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import UserList from './UserList';
-import { getAllUsers, addUser, getUserWithRoles, deleteUser } from 'server/src/lib/actions/user-actions/userActions';
-import { getAllRoles } from 'server/src/lib/actions/user-actions/userActions';
+import { getAllUsers, addUser, getUserWithRoles, deleteUser, getMSPRoles } from 'server/src/lib/actions/user-actions/userActions';
 import { IUser, IRole } from 'server/src/interfaces/auth.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
@@ -45,7 +44,7 @@ const UserManagement = (): JSX.Element => {
 
   const fetchRoles = async (): Promise<void> => {
     try {
-      const fetchedRoles = await getAllRoles();
+      const fetchedRoles = await getMSPRoles();
       setRoles(fetchedRoles);
 
       // Set default role to the first role in the list

@@ -967,10 +967,10 @@ const handleClose = () => {
                             size="sm"
                             onClick={openTicketInNewWindow}
                             className="flex items-center gap-2"
-                            aria-label="Open in new window"
+                            aria-label="Open in new tab"
                         >
                             <ExternalLink className="h-4 w-4" />
-                            <span>Open in new window</span>
+                            <span>Open in new tab</span>
                         </Button>
                     )}
                 </div>
@@ -1031,6 +1031,7 @@ const handleClose = () => {
                                     tags={tags}
                                     allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
                                     onTagsChange={handleTagsChange}
+                                    isInDrawer={isInDrawer}
                                 />
                             </div>
                         </Suspense>

@@ -14,6 +14,7 @@ import {
   ColumnDef,
   Row,
   SortingFn,
+  SortingState,
 } from '@tanstack/react-table';
 import { ColumnDefinition, DataTableProps } from 'server/src/interfaces/dataTable.interfaces';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
@@ -143,7 +144,11 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     onPageChange,
     pageSize = 10,
     totalItems,
-    editableConfig
+    editableConfig,
+    manualSorting = false,
+    sortBy,
+    sortDirection,
+    onSortChange
   } = props;
   
   // Reference to the table container for measuring available width
@@ -329,22 +334,56 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   const total = totalItems ?? data.length;
   const totalPages = Math.ceil(total / pageSize);
 
+  // Manage sorting state
+  const [sorting, setSorting] = React.useState<SortingState>(() => {
+    if (manualSorting && sortBy) {
+      return [{
+        id: sortBy,
+        desc: sortDirection === 'desc'
+      }];
+    }
+    return [];
+  });
+
+  // Update sorting state when props change (for manual sorting)
+  React.useEffect(() => {
+    if (manualSorting && sortBy) {
+      setSorting([{
+        id: sortBy,
+        desc: sortDirection === 'desc'
+      }]);
+    }
+  }, [manualSorting, sortBy, sortDirection]);
+
   const table = useReactTable({
     data,
     columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
+    getSortedRowModel: manualSorting ? undefined : getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     pageCount: totalPages,
     enableSortingRemoval: false,
+    manualSorting,
     state: {
       pagination: {
         pageIndex,
         pageSize: currentPageSize,
       },
+      sorting,
     },
     onPaginationChange: setPagination,
+    onSortingChange: (updater) => {
+      if (manualSorting && onSortChange) {
+        const newSorting = typeof updater === 'function' ? updater(sorting) : updater;
+        if (newSorting.length > 0) {
+          const { id, desc } = newSorting[0];
+          onSortChange(id, desc ? 'desc' : 'asc');
+        }
+      } else {
+        setSorting(updater);
+      }
+    },
     manualPagination: totalItems !== undefined,
     meta: {
       editableConfig: props.editableConfig,

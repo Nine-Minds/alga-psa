@@ -83,13 +83,17 @@ export const TagInput: React.FC<TagInputProps> = ({
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         // Also check if the dropdown exists and if click is outside it
         if (!dropdownRef.current || !dropdownRef.current.contains(event.target as Node)) {
+          console.log('Click outside detected, canceling edit');
           cancelEdit();
         }
       }
     };
 
     if (isEditing) {
-      document.addEventListener('mousedown', handleClickOutside);
+      // Use a slight delay to prevent immediate closure
+      setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+      }, 100);
     }
 
     return () => {
@@ -98,12 +102,14 @@ export const TagInput: React.FC<TagInputProps> = ({
   }, [isEditing]);
 
   const handleSave = async (tagText: string = inputValue.trim()) => {
+    console.log('TagInput handleSave called with:', tagText);
     if (tagText && !isSaving) {
       setIsSaving(true);
       try {
         await onAddTag(tagText);
         setInputValue('');
         setIsEditing(false);
+        setSuggestions([]);
       } catch (error) {
         console.error('Error adding tag:', error);
       } finally {
@@ -164,7 +170,7 @@ export const TagInput: React.FC<TagInputProps> = ({
         createPortal(
           <div 
             ref={containerRef}
-            className="fixed z-[10001] flex items-center"
+            className="fixed z-[100001] flex items-center"
             style={{ 
               top: `${buttonPosition.top}px`,
               left: `${buttonPosition.left}px`
@@ -205,13 +211,14 @@ export const TagInput: React.FC<TagInputProps> = ({
         createPortal(
           <div 
             ref={dropdownRef}
-            className="fixed z-[10000] bg-white border border-gray-200 rounded-md shadow-lg"
+            className="fixed z-[100000] bg-white border border-gray-200 rounded-md shadow-lg"
             style={{ 
               top: `${dropdownPosition.top}px`,
               left: `${dropdownPosition.left}px`,
               minWidth: '200px',
               maxHeight: '200px',
-              overflowY: 'auto'
+              overflowY: 'auto',
+              pointerEvents: 'auto'
             }}
             onClick={(e) => {
               e.preventDefault();
@@ -229,7 +236,13 @@ export const TagInput: React.FC<TagInputProps> = ({
                   key={index}
                   type="button"
                   className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center border-b border-gray-100 last:border-b-0 transition-colors"
+                  onClick={(e) => {
+                    console.log('Tag suggestion clicked:', suggestion.tag_text);
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
                   onMouseDown={(e) => {
+                    console.log('Tag suggestion mousedown:', suggestion.tag_text);
                     e.preventDefault();
                     e.stopPropagation();
                     // Handle the save on mousedown to prevent click outside from firing

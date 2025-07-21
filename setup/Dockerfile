@@ -14,7 +14,16 @@ RUN apt-get update && apt-get install -y \
 COPY setup/entrypoint.sh ./
 COPY setup/config.ini ./config.ini
 
-# Copy server files
+# Copy and build shared dependencies
+COPY tsconfig.base.json ../tsconfig.base.json
+COPY shared/package.json ../shared/package.json
+COPY shared/tsconfig.json ../shared/tsconfig.json
+COPY shared/ ../shared
+WORKDIR /app/shared
+RUN npm install && npm run build
+
+# Return to setup workdir and copy server files
+WORKDIR /app/setup
 COPY server/package.json /app/server/
 COPY server/setup/create_database.js /app/server/setup/
 COPY server/knexfile.cjs /app/server/

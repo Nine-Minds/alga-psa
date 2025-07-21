@@ -3,14 +3,20 @@ import jwt, { TokenExpiredError, JsonWebTokenError, NotBeforeError, SignOptions,
 import { IUserRegister, TokenResponse } from 'server/src/interfaces'; 
 
 import logger from 'server/src/utils/logger';
+import { getSecretProviderInstance } from '@shared/core';
 
 
-const secretKey: Secret = process.env.SECRET_KEY || 'default';
+async function getSecretKey(): Promise<Secret> {
+    const secretProvider = await getSecretProviderInstance();
+    const secretKey = await secretProvider.getAppSecret('SECRET_KEY');
+    return secretKey || process.env.SECRET_KEY || 'default';
+}
 
 
-export function createToken(userRegister: IUserRegister) {
+export async function createToken(userRegister: IUserRegister) {
     logger.system('Creating token');
     const { username, email, password, companyName } = userRegister;
+    const secretKey = await getSecretKey();
 
     const token = jwt.sign(
         { username, email, password, companyName },
@@ -24,9 +30,10 @@ export function createToken(userRegister: IUserRegister) {
 }
 
 
-export function getInfoFromToken(token: string): TokenResponse {
+export async function getInfoFromToken(token: string): Promise<TokenResponse> {
     try {
         logger.system('Getting user info from token');
+        const secretKey = await getSecretKey();
         const decoded = jwt.verify(token, secretKey) as IUserRegister;
         return {
             errorType: null, 

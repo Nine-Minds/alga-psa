@@ -604,6 +604,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                   entityType="company"
                   initialTags={tags}
                   onTagsChange={handleTagsChange}
+                  useInlineInput={isInDrawer}
                 />
               </div>
             </div>

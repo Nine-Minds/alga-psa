@@ -4,10 +4,63 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
-import { IUser } from 'server/src/interfaces/auth.interfaces';;
+import { IUser, IRole } from 'server/src/interfaces/auth.interfaces';;
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser, getUserRolesWithPermissions, getUserCompanyId } from 'server/src/lib/actions/user-actions/userActions';
 import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/EntityImageService';
+import { hasPermission } from 'server/src/lib/auth/rbac';
+import { getRoles, assignRoleToUser, removeRoleFromUser, getUserRoles } from 'server/src/lib/actions/policyActions';
+
+/**
+ * Get available client portal roles
+ */
+export async function getClientPortalRoles(): Promise<IRole[]> {
+  try {
+    const allRoles = await getRoles();
+    // Filter to only client portal roles
+    return allRoles.filter(role => role.client && !role.msp);
+  } catch (error) {
+    console.error('Error fetching client portal roles:', error);
+    return [];
+  }
+}
+
+/**
+ * Assign a role to a client user
+ */
+export async function assignClientUserRole(userId: string, roleId: string): Promise<void> {
+  try {
+    await assignRoleToUser(userId, roleId);
+  } catch (error) {
+    console.error('Error assigning role to client user:', error);
+    throw error;
+  }
+}
+
+/**
+ * Remove a role from a client user
+ */
+export async function removeClientUserRole(userId: string, roleId: string): Promise<void> {
+  try {
+    await removeRoleFromUser(userId, roleId);
+  } catch (error) {
+    console.error('Error removing role from client user:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get roles for a specific client user
+ */
+export async function getClientUserRoles(userId: string): Promise<IRole[]> {
+  try {
+    return await getUserRoles(userId);
+  } catch (error) {
+    console.error('Error getting client user roles:', error);
+    return [];
+  }
+}
+
 /**
  * Update a client user
  */
@@ -112,7 +165,8 @@ export async function createClientUser({
   contactId,
   companyId,
   firstName,
-  lastName
+  lastName,
+  roleId
 }: {
   email: string;
   password: string;
@@ -120,6 +174,7 @@ export async function createClientUser({
   companyId: string;
   firstName?: string;
   lastName?: string;
+  roleId?: string;
 }): Promise<{ success: boolean; error?: string }> {
   try {
     const { knex, tenant } = await createTenantKnex();
@@ -128,27 +183,61 @@ export async function createClientUser({
     }
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Get the client portal user role
-      // After migration, look for "User" role in client portal
-      let clientRole = await trx('roles')
-        .where({ 
-          tenant,
-          client: true,
-          msp: false
-        })
-        .whereRaw('LOWER(role_name) = ?', ['user'])
-        .first();
+      let roleToAssign: { role_id: string } | null = null;
 
-      // Fallback: try to find any role with "client" in name for backwards compatibility
-      if (!clientRole) {
-        const roles = await trx('roles').where({ tenant });
-        clientRole = roles.find(role => 
-          role.role_name && role.role_name.toLowerCase().includes('client')
-        );
-      }
+      // If roleId is provided, use it (for backward compatibility)
+      if (roleId) {
+        // Verify the provided role exists and is a client portal role
+        roleToAssign = await trx('roles')
+          .where({ 
+            role_id: roleId,
+            tenant,
+            client: true
+          })
+          .first();
+        
+        if (!roleToAssign) {
+          throw new Error('Invalid role ID or role is not a client portal role');
+        }
+      } else {
+        // Get the contact to check is_client_admin flag
+        const contact = await trx('contacts')
+          .where({ 
+            contact_name_id: contactId,
+            tenant
+          })
+          .first();
 
-      if (!clientRole) {
-        throw new Error(`Client portal user role not found for tenant`);
+        if (!contact) {
+          throw new Error('Contact not found');
+        }
+
+        // Determine role based on is_client_admin flag
+        const roleName = contact.is_client_admin ? 'admin' : 'user';
+        
+        // Get the appropriate client portal role
+        let clientRole = await trx('roles')
+          .where({ 
+            tenant,
+            client: true,
+            msp: false
+          })
+          .whereRaw('LOWER(role_name) = ?', [roleName])
+          .first();
+
+        // Fallback for User role: try to find any role with "client" in name for backwards compatibility
+        if (!clientRole && roleName === 'user') {
+          const roles = await trx('roles').where({ tenant });
+          clientRole = roles.find(role => 
+            role.role_name && role.role_name.toLowerCase().includes('client')
+          );
+        }
+
+        if (!clientRole) {
+          throw new Error(`Client portal ${roleName} role not found for tenant`);
+        }
+        
+        roleToAssign = clientRole;
       }
 
       // Hash the password
@@ -182,13 +271,15 @@ export async function createClientUser({
         .insert(userData)
         .returning('*');
 
-      // Assign the client role
-      await trx('user_roles')
-        .insert({
-          user_id: user.user_id,
-          role_id: clientRole.role_id,
-          tenant
-        });
+      // Assign the role
+      if (roleToAssign) {
+        await trx('user_roles')
+          .insert({
+            user_id: user.user_id,
+            role_id: roleToAssign.role_id,
+            tenant
+          });
+      }
     });
 
     return { success: true };
@@ -200,6 +291,7 @@ export async function createClientUser({
     };
   }
 }
+
 
 /**
  * Upload a contact avatar image
@@ -443,5 +535,46 @@ export async function deleteContactAvatar(
     });
     const message = error instanceof Error ? error.message : 'Failed to delete contact avatar';
     return { success: false, message };
+  }
+}
+
+/**
+ * Check client portal permissions for navigation
+ * Returns permissions for billing, user management, and company settings
+ */
+export async function checkClientPortalPermissions(): Promise<{
+  hasBillingAccess: boolean;
+  hasUserManagementAccess: boolean;
+  hasCompanySettingsAccess: boolean;
+}> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return {
+        hasBillingAccess: false,
+        hasUserManagementAccess: false,
+        hasCompanySettingsAccess: false
+      };
+    }
+
+    // Check permissions using the hasPermission function from rbac
+    const [hasBilling, hasUser, hasCompany] = await Promise.all([
+      hasPermission(currentUser, 'billing', 'read'),
+      hasPermission(currentUser, 'user', 'read'),
+      hasPermission(currentUser, 'client', 'read')
+    ]);
+
+    return {
+      hasBillingAccess: hasBilling,
+      hasUserManagementAccess: hasUser,
+      hasCompanySettingsAccess: hasCompany
+    };
+  } catch (error) {
+    console.error('Error checking client portal permissions:', error);
+    return {
+      hasBillingAccess: false,
+      hasUserManagementAccess: false,
+      hasCompanySettingsAccess: false
+    };
   }
 }

@@ -10,6 +10,7 @@ import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/do
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
 import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
+import { getContactPortalPermissions } from 'server/src/lib/actions/permission-actions';
 
 const ContactDetailPage = ({ params }: { params: Promise<{ id: string }> }) => {
   const [contact, setContact] = useState<IContact | null>(null);
@@ -19,6 +20,11 @@ const ContactDetailPage = ({ params }: { params: Promise<{ id: string }> }) => {
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [currentUser, setCurrentUser] = useState<IUserWithRoles | null>(null);
   const [contactId, setContactId] = useState<string | null>(null);
+  const [userPermissions, setUserPermissions] = useState({
+    canInvite: false,
+    canUpdateRoles: false,
+    canRead: false
+  });
 
   useEffect(() => {
     const initializeParams = async () => {
@@ -38,6 +44,10 @@ const ContactDetailPage = ({ params }: { params: Promise<{ id: string }> }) => {
         // Fetch user data first
         const userData = await getCurrentUser();
         setCurrentUser(userData);
+
+        // Fetch permissions
+        const permissions = await getContactPortalPermissions();
+        setUserPermissions(permissions);
 
         // Fetch companies using server action
         const companiesData = await getAllCompanies();
@@ -80,6 +90,9 @@ const ContactDetailPage = ({ params }: { params: Promise<{ id: string }> }) => {
                 try {
                   const userData = await getCurrentUser();
                   setCurrentUser(userData);
+                  
+                  const permissions = await getContactPortalPermissions();
+                  setUserPermissions(permissions);
                   
                   const companiesData = await getAllCompanies();
                   setCompanies(companiesData);
@@ -153,6 +166,7 @@ const ContactDetailPage = ({ params }: { params: Promise<{ id: string }> }) => {
         documents={documents}
         userId={currentUser.user_id}
         onDocumentCreated={handleDocumentCreated}
+        userPermissions={userPermissions}
       />
     </div>
   );

@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
+import { getSecretProviderInstance } from '../../../../shared/core/secretProvider.js';
 
 interface EmailAttachment {
   filename: string;
@@ -65,26 +66,42 @@ async function getEmailTemplate(templateName: string, data: Record<string, any>)
 }
 
 export class EmailService {
-  private transporter: nodemailer.Transporter;
+  private transporter: nodemailer.Transporter | null = null;
   private storageService: StorageService;
 
   constructor() {
     this.storageService = new StorageService();
+  }
+
+  private async getTransporter(): Promise<nodemailer.Transporter> {
+    if (this.transporter) {
+      return this.transporter;
+    }
+
+    const secretProvider = await getSecretProviderInstance();
+    
+    // Get SMTP credentials from secret provider with fallback to environment variables
+    const smtpUser = await secretProvider.getAppSecret('SMTP_USER') || process.env.SMTP_USER;
+    const smtpPass = await secretProvider.getAppSecret('SMTP_PASS') || process.env.SMTP_PASS;
+
     this.transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: parseInt(process.env.SMTP_PORT || '587'),
       secure: process.env.SMTP_SECURE === 'true',
       auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
+        user: smtpUser,
+        pass: smtpPass
       }
     });
+
+    return this.transporter;
   }
 
   async send(options: EmailOptions) {
     const user = await getCurrentUser();
+    const transporter = await this.getTransporter();
     
-    return this.transporter.sendMail({
+    return transporter.sendMail({
       from: `"${user?.email}" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
       ...options
     });

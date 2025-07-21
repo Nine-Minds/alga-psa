@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get OAuth credentials - use tenant-specific secrets
-    const secretProvider = getSecretProviderInstance();
+    const secretProvider = await getSecretProviderInstance();
     const clientId = provider === 'microsoft'
       ? process.env.MICROSOFT_CLIENT_ID || await secretProvider.getTenantSecret(user.tenant, 'microsoft_client_id')
       : process.env.GOOGLE_CLIENT_ID || await secretProvider.getTenantSecret(user.tenant, 'google_client_id');

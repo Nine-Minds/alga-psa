@@ -89,7 +89,7 @@ export class GmailAdapter extends BaseEmailAdapter {
       
       // Fall back to tenant secrets if not found in config or environment
       if (!clientId || !clientSecret) {
-        const secretProvider = getSecretProviderInstance();
+        const secretProvider = await getSecretProviderInstance();
         clientId = clientId || await secretProvider.getTenantSecret(this.config.tenant, 'google_client_id');
         clientSecret = clientSecret || await secretProvider.getTenantSecret(this.config.tenant, 'google_client_secret');
       }

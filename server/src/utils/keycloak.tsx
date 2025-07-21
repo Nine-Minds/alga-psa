@@ -2,16 +2,29 @@
 import axios from 'axios';
 import qs from 'querystring';
 import logger from 'server/src/utils/logger';
+import { getSecretProviderInstance } from '@shared/core';
 
-const keycloakConfig = {
-    url: process.env.KEYCLOAK_URL,
-    realm: process.env.KEYCLOAK_REALM,
-    clientId: process.env.KEYCLOAK_CLIENT_ID,
-    clientSecret: process.env.KEYCLOAK_CLIENT_SECRET,
-  };
+async function getKeycloakConfig() {
+    const secretProvider = await getSecretProviderInstance();
+    
+    const [url, realm, clientId, clientSecret] = await Promise.all([
+        secretProvider.getAppSecret('KEYCLOAK_URL'),
+        secretProvider.getAppSecret('KEYCLOAK_REALM'),
+        secretProvider.getAppSecret('KEYCLOAK_CLIENT_ID'),
+        secretProvider.getAppSecret('KEYCLOAK_CLIENT_SECRET')
+    ]);
+
+    return {
+        url: url || process.env.KEYCLOAK_URL,
+        realm: realm || process.env.KEYCLOAK_REALM,
+        clientId: clientId || process.env.KEYCLOAK_CLIENT_ID,
+        clientSecret: clientSecret || process.env.KEYCLOAK_CLIENT_SECRET,
+    };
+}
 
 
 export async function getKeycloakToken(username: string, password: string) {
+    const keycloakConfig = await getKeycloakConfig();
     const tokenEndpoint = `${keycloakConfig.url}/realms/${keycloakConfig.realm}/protocol/openid-connect/token`;
     logger.info("Token Endpoint:", tokenEndpoint);
     const data = qs.stringify({

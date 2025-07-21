@@ -221,6 +221,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
                   entityType="contact"
                   initialTags={tags}
                   onTagsChange={handleTagsChange}
+                  useInlineInput={isInDrawer}
                 />
               </td>
             </tr>

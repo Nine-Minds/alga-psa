@@ -33,7 +33,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
     }
     
     posthog.init(posthogConfig.apiKey, {
-      api_host: "/ingest",
+      api_host: posthogConfig.apiHost,
       ui_host: posthogConfig.uiHost,
       ...posthogConfig.defaultConfig,
       debug: process.env.NODE_ENV === "development",

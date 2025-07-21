@@ -561,7 +561,7 @@ async function updateManualInvoiceItemsInternal(
     // Fetch realmId from qbo_credentials secret
     let realmId: string | null = null;
     try {
-      const secretProvider = getSecretProviderInstance();
+      const secretProvider = await getSecretProviderInstance();
       const secretString = await secretProvider.getTenantSecret(tenant, 'qbo_credentials'); // Read the whole secret
 
       if (secretString) {

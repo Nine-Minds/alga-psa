@@ -58,7 +58,7 @@ export class PDFDocumentHandler extends BaseDocumentHandler {
         const pageCount = pdfDoc.getPages().length;
 
         // Set up temporary directory for PDF conversion
-        const config = getStorageConfig();
+        const config = await getStorageConfig();
         const tempDir = join(config.providers[config.defaultProvider!].basePath!, 'pdf-previews');
         await mkdir(tempDir, { recursive: true }).catch(err => { 
           if (err.code !== 'EEXIST') throw err; 

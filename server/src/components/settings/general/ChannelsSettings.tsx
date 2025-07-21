@@ -378,6 +378,9 @@ const ChannelsSettings: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })}
                 placeholder="Enter display order"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Controls the order in which boards appear in dropdown menus throughout the platform. Lower numbers appear first.
+              </p>
             </div>
             <div className="flex items-center justify-between">
               <Label htmlFor="is_inactive">Inactive</Label>

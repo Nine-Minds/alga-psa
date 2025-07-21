@@ -26,7 +26,7 @@ interface VerifyResponse {
 
 export async function verifyRegisterUser(token: string): Promise<VerifyResponse> {
   logger.system('Verifying user registration');
-  const { errorType, userInfo } = getInfoFromToken(token);
+  const { errorType, userInfo } = await getInfoFromToken(token);
   logger.info(`User info got for email: ${userInfo?.email}`);
   if (userInfo) {
     try {
@@ -82,7 +82,7 @@ export async function verifyRegisterUser(token: string): Promise<VerifyResponse>
 }
 
 export async function setNewPassword(password: string, token: string): Promise<boolean> {
-  const { errorType, userInfo } = getInfoFromToken(token);
+  const { errorType, userInfo } = await getInfoFromToken(token);
   if (errorType) {
     logger.error(`Error decoding token: ${errorType}`);
     return false;

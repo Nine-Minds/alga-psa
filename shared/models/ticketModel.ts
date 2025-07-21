@@ -633,18 +633,30 @@ export class TicketModel {
       channel_id: cleanedInput.channel_id || null,
       source: cleanedInput.source || null,
       entered_by: cleanedInput.entered_by || null,
-      entered_at: now,
-      updated_at: now,
+      entered_at: now.toISOString(),
+      updated_at: now.toISOString(),
       // Store attributes and email_metadata as JSON
       attributes: Object.keys(attributes).length > 0 ? JSON.stringify(attributes) : null,
       email_metadata: cleanedInput.email_metadata ? JSON.stringify(cleanedInput.email_metadata) : null
     };
 
+    // Create validation data with object attributes
+    const validationData = {
+      ...ticketData,
+      attributes: Object.keys(attributes).length > 0 ? attributes : null
+    };
+
     // Final validation of complete ticket data
-    const completeValidation = validateData(ticketSchema.partial(), ticketData);
+    const completeValidation = validateData(ticketSchema.partial(), validationData);
+
+    // Prepare data for database insertion with stringified attributes
+    const dbData = {
+      ...completeValidation,
+      attributes: completeValidation.attributes ? JSON.stringify(completeValidation.attributes) : null
+    };
 
     // Insert the ticket
-    await trx('tickets').insert(completeValidation);
+    await trx('tickets').insert(dbData);
 
     // Publish event if publisher provided
     if (eventPublisher) {

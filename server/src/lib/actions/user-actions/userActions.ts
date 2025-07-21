@@ -72,6 +72,19 @@ export async function addUser(userData: { firstName: string; lastName: string; e
         throw new Error("Role is required");
       }
 
+      // Validate that the role exists and is an MSP role
+      const role = await trx('roles')
+        .where({ role_id: userData.roleId, tenant: tenant || undefined })
+        .first();
+        
+      if (!role) {
+        throw new Error("Invalid role");
+      }
+      
+      if (!role.msp) {
+        throw new Error("Cannot assign client portal role to MSP user");
+      }
+
       // Check if email already exists globally
       const emailExists = await checkEmailExistsGlobally(userData.email);
       if (emailExists) {
@@ -86,7 +99,8 @@ export async function addUser(userData: { firstName: string; lastName: string; e
           username: userData.email.toLowerCase(),
           is_inactive: false,
           hashed_password: await hashPassword(userData.password),
-          tenant: tenant || undefined
+          tenant: tenant || undefined,
+          user_type: 'internal' // Explicitly set user_type for MSP users
         }).returning('*');
 
       await trx('user_roles').insert({
@@ -335,6 +349,27 @@ export async function getAllRoles(): Promise<IRole[]> {
   } catch (error) {
     console.error('Failed to fetch all roles:', error);
     throw new Error('Failed to fetch all roles');
+  }
+}
+
+/**
+ * Get MSP roles only (roles with msp flag = true)
+ */
+export async function getMSPRoles(): Promise<IRole[]> {
+  try {
+    const {knex: db, tenant} = await createTenantKnex();
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const roles = await trx('roles')
+        .where({ 
+          tenant: tenant || undefined,
+          msp: true 
+        })
+        .select('*');
+      return roles;
+    });
+  } catch (error) {
+    console.error('Failed to fetch MSP roles:', error);
+    throw new Error('Failed to fetch MSP roles');
   }
 }
 
@@ -712,7 +747,9 @@ export async function getUserCompanyId(userId: string): Promise<string | null> {
     }
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      if (!await hasPermission(currentUser, 'user', 'read', trx)) {
+      // For client users accessing their own company ID, no permission check needed
+      // For other users, check user:read permission
+      if (currentUser.user_id !== userId && !await hasPermission(currentUser, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot read user company ID');
       }
 
