@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fs from 'fs';
 import path from 'path';
-import { getSecretProviderInstance } from '../../shared/core/index.js';
+import { getSecretProviderInstance } from '../../shared/dist/core/index.js';
 
 // Enable long stack traces for async operations
 Error.stackTraceLimit = 50;
