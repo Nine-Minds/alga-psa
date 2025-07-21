@@ -56,5 +56,15 @@ RUN echo "BUILD_TIME=$(date)" > /app/build-info.txt && \
     echo "BUILD_EPOCH=$(date +%s)" >> /app/build-info.txt
 
 EXPOSE 3000
+
+# Environment configuration
 ENV NODE_ENV=production
+
+# Secret provider configuration
+# Default configuration for composite secret system
+# Can be overridden in docker-compose or deployment environments
+# See docs/DOCKER_SECRET_PROVIDER_CONFIG.md for details
+ENV SECRET_READ_CHAIN="env,filesystem"
+ENV SECRET_WRITE_PROVIDER="filesystem"
+
 ENTRYPOINT ["/app/entrypoint.sh"]

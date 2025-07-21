@@ -89,6 +89,10 @@ jobs:
 
           # Optional Configuration
           REQUIRE_HOCUSPOCUS=false
+          
+          # Secret Provider Configuration (override production defaults)
+          SECRET_READ_CHAIN=env,filesystem
+          SECRET_WRITE_PROVIDER=filesystem
           EOL
         shell: bash
 

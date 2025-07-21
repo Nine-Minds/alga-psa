@@ -1,5 +1,5 @@
 import { Context } from '@temporalio/activity';
-import { getMainDatabase, getAdminDatabase, executeQuery, executeTransaction } from './connection.js';
+import { getAdminDatabase, executeTransaction } from './connection.js';
 import type {
   CreateTenantActivityInput,
   CreateTenantActivityResult,
@@ -19,7 +19,7 @@ export async function createTenantInDB(
   log.info('Creating tenant in database', { tenantName: input.tenantName });
 
   try {
-    const adminDb = getAdminDatabase();
+    const adminDb = await getAdminDatabase();
     
     const result = await executeTransaction(adminDb, async (client) => {
       // Create tenant first (include admin email since it's required)
@@ -74,7 +74,7 @@ export async function setupTenantDataInDB(
   log.info('Setting up tenant data', { tenantId: input.tenantId });
 
   try {
-    const adminDb = getAdminDatabase();
+    const adminDb = await getAdminDatabase();
     const setupSteps: string[] = [];
 
     await executeTransaction(adminDb, async (client) => {
@@ -146,7 +146,7 @@ export async function rollbackTenantInDB(tenantId: string): Promise<void> {
   log.info('Rolling back tenant creation', { tenantId });
 
   try {
-    const adminDb = getAdminDatabase();
+    const adminDb = await getAdminDatabase();
 
     await executeTransaction(adminDb, async (client) => {
       // Delete in proper order to avoid foreign key violations

@@ -1,34 +1,30 @@
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
-
-// Calculate secrets directory path once at module load
-const DOCKER_SECRETS_PATH = '/run/secrets';
-const LOCAL_SECRETS_PATH = '../secrets';
-
-// Cache the secrets path promise
-const SECRETS_PATH_PROMISE = fs.access(DOCKER_SECRETS_PATH)
-  .then(() => DOCKER_SECRETS_PATH)
-  .catch(() => LOCAL_SECRETS_PATH);
+import { getSecretProviderInstance } from './index.js';
 
 /**
- * Gets a secret value from either a Docker secret file or environment variable
+ * Gets a secret value from the secret provider system or environment variable
  * @param secretName - Name of the secret (e.g. 'postgres_password')
  * @param envVar - Name of the fallback environment variable
  * @param defaultValue - Optional default value if neither source exists
  * @returns The secret value as a string
+ * @deprecated Use getSecretProviderInstance().getAppSecret() directly for better type safety and consistency
  */
 export async function getSecret(secretName: string, envVar: string, defaultValue: string = ''): Promise<string> {
   try {
-    const secretsPath = await SECRETS_PATH_PROMISE;
-    const secretPath = path.join(secretsPath, secretName);
-    const value = await fs.readFile(secretPath, 'utf8');
-    return value.trim();
-  } catch (error) {
-    if (process.env[envVar]) {
-      console.warn(`Using ${envVar} environment variable instead of Docker secret`);
-      return process.env[envVar] || defaultValue;
+    const secretProvider = await getSecretProviderInstance();
+    const secret = await secretProvider.getAppSecret(secretName);
+    if (secret) {
+      return secret;
     }
-    console.warn(`Neither secret file nor ${envVar} environment variable found, using default value`);
-    return defaultValue;
+  } catch (error) {
+    console.warn(`Failed to read secret '${secretName}' from secret provider:`, error instanceof Error ? error.message : 'Unknown error');
   }
+  
+  // Fallback to environment variable
+  if (process.env[envVar]) {
+    console.warn(`Using ${envVar} environment variable instead of secret provider`);
+    return process.env[envVar] || defaultValue;
+  }
+  
+  console.warn(`Neither secret provider nor ${envVar} environment variable found, using default value`);
+  return defaultValue;
 }

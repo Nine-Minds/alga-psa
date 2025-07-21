@@ -126,7 +126,7 @@ export async function getQboItems(): Promise<QboItem[]> {
     return [];
   }
   const tenantId = user.tenant;
-  const secretProvider = getSecretProviderInstance();
+  const secretProvider = await getSecretProviderInstance();
 
   try {
     const secret = await secretProvider.getTenantSecret(tenantId, QBO_CREDENTIALS_SECRET_NAME);
@@ -184,7 +184,7 @@ export async function getQboItems(): Promise<QboItem[]> {
  * Corresponds to Task 82.
  */
 export async function getQboConnectionStatus(): Promise<QboConnectionStatus> {
-  const secretProvider = getSecretProviderInstance();
+  const secretProvider = await getSecretProviderInstance();
   const { tenant: tenantId } = await createTenantKnex();
 
   if (!tenantId) {
@@ -291,7 +291,7 @@ export async function getQboConnectionStatus(): Promise<QboConnectionStatus> {
 export async function disconnectQbo(): Promise<{ success: boolean; error?: string }> {
   let tenantId: string | null = null;
   // Get the secret provider instance
-  const secretProvider = getSecretProviderInstance();
+  const secretProvider = await getSecretProviderInstance();
 
   try {
     const currentUser = await getCurrentUser();
@@ -409,7 +409,7 @@ export async function getQboTaxCodes(): Promise<QboTaxCode[]> {
     return [];
   }
   const tenantId = user.tenant;
-  const secretProvider = getSecretProviderInstance();
+  const secretProvider = await getSecretProviderInstance();
 
   try {
     const secret = await secretProvider.getTenantSecret(tenantId, QBO_CREDENTIALS_SECRET_NAME);
@@ -488,7 +488,7 @@ export async function getQboTerms(): Promise<QboTerm[]> {
     return [];
   }
   const tenantId = user.tenant;
-  const secretProvider = getSecretProviderInstance();
+  const secretProvider = await getSecretProviderInstance();
 
   try {
     const secret = await secretProvider.getTenantSecret(tenantId, QBO_CREDENTIALS_SECRET_NAME);

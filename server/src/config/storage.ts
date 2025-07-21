@@ -1,3 +1,5 @@
+import { getSecretProviderInstance } from '../../../shared/core/secretProvider.js';
+
 interface StorageProviderConfig {
     type: 'local' | 's3';
     basePath?: string;  // for local provider
@@ -16,36 +18,54 @@ interface StorageConfig {
     providers: Record<string, StorageProviderConfig>;
 }
 
-// Parse environment variables or use defaults
-const config: StorageConfig = {
-    defaultProvider: process.env.STORAGE_DEFAULT_PROVIDER || 'local',
-    providers: {
-        local: {
-            type: 'local',
-            basePath: process.env.STORAGE_LOCAL_BASE_PATH || '/data/files',
-            maxFileSize: Number(process.env.STORAGE_S3_MAX_FILE_SIZE || '524288000'), // 500MB
-            allowedMimeTypes: (process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES || 'image/*,application/pdf,text/plain,application/zip,video/*').split(','),
-            retentionDays: parseInt(process.env.STORAGE_LOCAL_RETENTION_DAYS || '30'),
-        },
-        s3: {
-            type: 's3',
-            region: process.env.STORAGE_S3_REGION,
-            bucket: process.env.STORAGE_S3_BUCKET,
-            accessKey: process.env.STORAGE_S3_ACCESS_KEY,
-            secretKey: process.env.STORAGE_S3_SECRET_KEY,
-            endpoint: process.env.STORAGE_S3_ENDPOINT,
-            maxFileSize: Number(process.env.STORAGE_S3_MAX_FILE_SIZE || '524288000'), // 500MB
-            allowedMimeTypes: (process.env.STORAGE_S3_ALLOWED_MIME_TYPES || 'image/*,application/pdf,text/plain,video/*').split(','),
-            retentionDays: parseInt(process.env.STORAGE_S3_RETENTION_DAYS || '30'),
-        },
-    },
-};
+// Cached configuration to avoid multiple async calls
+let cachedConfig: StorageConfig | null = null;
 
-export function getStorageConfig(): StorageConfig {
-    return config;
+// Parse environment variables or use defaults with async secret retrieval
+async function buildStorageConfig(): Promise<StorageConfig> {
+    if (cachedConfig) {
+        return cachedConfig;
+    }
+
+    const secretProvider = await getSecretProviderInstance();
+    
+    // Get S3 credentials from secret provider with fallback to environment variables
+    const s3AccessKey = await secretProvider.getAppSecret('STORAGE_S3_ACCESS_KEY') || process.env.STORAGE_S3_ACCESS_KEY;
+    const s3SecretKey = await secretProvider.getAppSecret('STORAGE_S3_SECRET_KEY') || process.env.STORAGE_S3_SECRET_KEY;
+
+    cachedConfig = {
+        defaultProvider: process.env.STORAGE_DEFAULT_PROVIDER || 'local',
+        providers: {
+            local: {
+                type: 'local',
+                basePath: process.env.STORAGE_LOCAL_BASE_PATH || '/data/files',
+                maxFileSize: Number(process.env.STORAGE_S3_MAX_FILE_SIZE || '524288000'), // 500MB
+                allowedMimeTypes: (process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES || 'image/*,application/pdf,text/plain,application/zip,video/*').split(','),
+                retentionDays: parseInt(process.env.STORAGE_LOCAL_RETENTION_DAYS || '30'),
+            },
+            s3: {
+                type: 's3',
+                region: process.env.STORAGE_S3_REGION,
+                bucket: process.env.STORAGE_S3_BUCKET,
+                accessKey: s3AccessKey,
+                secretKey: s3SecretKey,
+                endpoint: process.env.STORAGE_S3_ENDPOINT,
+                maxFileSize: Number(process.env.STORAGE_S3_MAX_FILE_SIZE || '524288000'), // 500MB
+                allowedMimeTypes: (process.env.STORAGE_S3_ALLOWED_MIME_TYPES || 'image/*,application/pdf,text/plain,video/*').split(','),
+                retentionDays: parseInt(process.env.STORAGE_S3_RETENTION_DAYS || '30'),
+            },
+        },
+    };
+
+    return cachedConfig;
 }
 
-export function getProviderConfig(providerId: string): StorageProviderConfig {
+export async function getStorageConfig(): Promise<StorageConfig> {
+    return await buildStorageConfig();
+}
+
+export async function getProviderConfig(providerId: string): Promise<StorageProviderConfig> {
+    const config = await buildStorageConfig();
     const provider = config.providers[providerId];
     if (!provider) {
         throw new Error(`Storage provider not found: ${providerId}`);
@@ -53,8 +73,9 @@ export function getProviderConfig(providerId: string): StorageProviderConfig {
     return provider;
 }
 
-export function validateFileUpload(mimeType: string, fileSize: number): void {
-    const provider = getProviderConfig(config.defaultProvider);
+export async function validateFileUpload(mimeType: string, fileSize: number): Promise<void> {
+    const config = await buildStorageConfig();
+    const provider = config.providers[config.defaultProvider];
     
     if (fileSize > provider.maxFileSize) {
         throw new Error(`File size exceeds limit of ${provider.maxFileSize} bytes`);

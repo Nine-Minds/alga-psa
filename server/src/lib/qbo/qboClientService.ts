@@ -23,7 +23,7 @@ const QBO_CREDENTIALS_SECRET_NAME = 'qbo_credentials';
 
 // Helper functions using proper secret provider
 async function getTenantQboCredentials(tenantId: string, realmId: string): Promise<QboTenantCredentials | null> {
-  const secretProvider = getSecretProviderInstance();
+  const secretProvider = await getSecretProviderInstance();
   const secret = await secretProvider.getTenantSecret(tenantId, QBO_CREDENTIALS_SECRET_NAME);
   if (!secret) {
     logger.warn(`QBO credentials secret not found for tenant ${tenantId}`);
@@ -51,7 +51,7 @@ async function getTenantQboCredentials(tenantId: string, realmId: string): Promi
 }
 
 async function storeTenantQboCredentials(tenantId: string, credentials: QboTenantCredentials): Promise<void> {
-  const secretProvider = getSecretProviderInstance();
+  const secretProvider = await getSecretProviderInstance();
   
   // Get existing credentials to preserve other realms
   let allCredentials: Record<string, QboTenantCredentials> = {};
@@ -73,7 +73,7 @@ async function storeTenantQboCredentials(tenantId: string, credentials: QboTenan
 }
 
 async function getAppSecret(secretName: 'qbo'): Promise<{ clientId: string; clientSecret: string } | null> {
-  const secretProvider = getSecretProviderInstance();
+  const secretProvider = await getSecretProviderInstance();
   try {
     const clientId = await secretProvider.getAppSecret('qbo_client_id');
     const clientSecret = await secretProvider.getAppSecret('qbo_client_secret');

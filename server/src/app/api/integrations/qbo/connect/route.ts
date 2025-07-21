@@ -23,7 +23,7 @@ export async function GET(
 ) {
   let tenantId: string | null = null;
   // Get the secret provider instance
-  const secretProvider = getSecretProviderInstance();
+  const secretProvider = await getSecretProviderInstance();
 
   try {
     // Get tenant ID from knex

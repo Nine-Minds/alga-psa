@@ -1641,7 +1641,7 @@ async function getImageUrlCore(file_id: string, useTransaction: boolean = true):
     }
 
     // Determine storage provider type
-    const config = getStorageConfig();
+    const config = await getStorageConfig();
     const providerType = config.defaultProvider;
 
     if (providerType === 'local') {

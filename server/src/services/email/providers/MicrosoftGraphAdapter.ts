@@ -38,7 +38,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
    */
   protected async loadCredentials(): Promise<void> {
     try {
-      const secretProvider = getSecretProviderInstance();
+      const secretProvider = await getSecretProviderInstance();
       const secret = await secretProvider.getTenantSecret(
         this.config.tenant, 
         'email_provider_credentials'
@@ -74,7 +74,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         throw new Error('No refresh token available');
       }
 
-      const secretProvider = getSecretProviderInstance();
+      const secretProvider = await getSecretProviderInstance();
       const clientId = await secretProvider.getTenantSecret(this.config.tenant, 'microsoft_client_id');
       const clientSecret = await secretProvider.getTenantSecret(this.config.tenant, 'microsoft_client_secret');
 
@@ -126,7 +126,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
    */
   private async updateStoredCredentials(): Promise<void> {
     try {
-      const secretProvider = getSecretProviderInstance();
+      const secretProvider = await getSecretProviderInstance();
       const secret = await secretProvider.getTenantSecret(
         this.config.tenant, 
         'email_provider_credentials'

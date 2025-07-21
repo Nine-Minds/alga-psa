@@ -81,11 +81,11 @@ describe('Auth Functions', () => {
     });
 
     describe('createToken', () => {
-        it('should create a valid JWT token', () => {
+        it('should create a valid JWT token', async () => {
             const mockToken = 'mockToken';
             (jwt.sign as Mock).mockReturnValue(mockToken);
 
-            const token = createToken(mockUser);
+            const token = await createToken(mockUser);
 
             expect(jwt.sign).toHaveBeenCalledWith({
                 username: mockUser.username,
@@ -99,58 +99,58 @@ describe('Auth Functions', () => {
     });
 
     describe('getInfoFromToken', () => {
-        it('should return user info when token is valid', () => {
+        it('should return user info when token is valid', async () => {
             (jwt.verify as Mock).mockReturnValue(mockUser);
 
-            const result = getInfoFromToken('validToken');
+            const result = await getInfoFromToken('validToken');
 
             expect(jwt.verify).toHaveBeenCalledWith('validToken', expect.any(String));
             expect(result.userInfo).toEqual(mockUser);
             expect(result.errorType).toBeNull();
         });
 
-        it('should handle TokenExpiredError', () => {
+        it('should handle TokenExpiredError', async () => {
             const error = new jwt.TokenExpiredError('jwt expired', new Date());
             (jwt.verify as Mock).mockImplementation(() => {
                 throw error;
             });
 
-            const result = getInfoFromToken('expiredToken');
+            const result = await getInfoFromToken('expiredToken');
 
             expect(result.errorType).toBe('Token Expired Error');
             expect(result.userInfo).toBeNull();
         });
 
-        it('should handle JsonWebTokenError', () => {
+        it('should handle JsonWebTokenError', async () => {
             const error = new jwt.JsonWebTokenError('invalid token');
             (jwt.verify as Mock).mockImplementation(() => {
                 throw error;
             });
 
-            const result = getInfoFromToken('invalidToken');
+            const result = await getInfoFromToken('invalidToken');
 
             expect(result.errorType).toBe('Json Web Token Error');
             expect(result.userInfo).toBeNull();
         });
 
-        it('should handle NotBeforeError', () => {
+        it('should handle NotBeforeError', async () => {
             const error = new jwt.NotBeforeError('jwt not active', new Date());
             (jwt.verify as Mock).mockImplementation(() => {
                 throw error;
             });
 
-            const result = getInfoFromToken('notBeforeToken');
+            const result = await getInfoFromToken('notBeforeToken');
 
             expect(result.errorType).toBe('Not Before Error');
             expect(result.userInfo).toBeNull();
         });
 
-        it('should handle unknown errors', () => {
+        it('should handle unknown errors', async () => {
             (jwt.verify as Mock).mockImplementation(() => {
                 throw new Error('Unknown error');
             });
 
-            const result = getInfoFromToken('unknownErrorToken');
+            const result = await getInfoFromToken('unknownErrorToken');
 
             expect(result.errorType).toBe('Unknown Error');
             expect(result.userInfo).toBeNull();

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { getToken } from 'next-auth/jwt';
+import { getToken, decode } from 'next-auth/jwt';
 import { ApiKeyServiceForApi } from '../../lib/services/apiKeyServiceForApi';
+import { getSecretProviderInstance } from '@shared/core/secretProvider';
 
 // Extend Express Request type to include Next.js-style properties
 interface AuthenticatedRequest extends Request {
@@ -14,6 +15,57 @@ interface AuthenticatedRequest extends Request {
     userId: string;
     tenant: string;
   };
+}
+
+/**
+ * Helper function to adapt Express request for NextAuth getToken compatibility
+ * NextAuth's getToken expects a Next.js-style request with cookies in a specific format
+ */
+function adaptRequestForNextAuth(expressReq: Request): any {
+  const cookies = expressReq.cookies || {};
+  
+  // Create a minimal request object that NextAuth can understand
+  // NextAuth primarily needs: cookies, headers, url, and method
+  return {
+    cookies,
+    headers: expressReq.headers,
+    url: expressReq.url,
+    method: expressReq.method,
+    // Add full URL for NextAuth token validation
+    nextUrl: {
+      pathname: expressReq.path,
+      origin: `${expressReq.protocol}://${expressReq.get('host')}`,
+      href: `${expressReq.protocol}://${expressReq.get('host')}${expressReq.originalUrl}`
+    }
+  };
+}
+
+/**
+ * Alternative token parsing using NextAuth's decode function directly
+ * This bypasses the getToken function and works directly with the JWT cookie
+ */
+async function getNextAuthToken(expressReq: Request, secret: string): Promise<any> {
+  const cookies = expressReq.cookies || {};
+  
+  // Get the session token cookie
+  const sessionToken = cookies['next-auth.session-token'] || cookies['__Secure-next-auth.session-token'];
+  
+  if (!sessionToken) {
+    return null;
+  }
+  
+  try {
+    // Decode the JWT token directly
+    const decoded = await decode({
+      token: sessionToken,
+      secret: secret
+    });
+    
+    return decoded;
+  } catch (error) {
+    // Token decryption failed (likely wrong secret or corrupted token)
+    return null;
+  }
 }
 
 /**
@@ -98,11 +150,27 @@ export async function sessionAuthMiddleware(
   }
 
   try {
-    // Get session token using NextAuth
-    const token = await getToken({ 
-      req: req as any, 
-      secret: globalThis.process.env.NEXTAUTH_SECRET 
-    });
+    // Get secret from provider only - the provider handles env vars and fallbacks
+    const secretProvider = await getSecretProviderInstance();
+    const nextAuthSecret = await secretProvider.getAppSecret('NEXTAUTH_SECRET');
+    
+    if (!nextAuthSecret) {
+      console.error('NEXTAUTH_SECRET not available from secret provider');
+      const callbackUrl = encodeURIComponent(req.originalUrl);
+      return res.redirect(`/auth/signin?callbackUrl=${callbackUrl}`);
+    }
+    
+    // Try alternative token parsing first
+    let token = await getNextAuthToken(req, nextAuthSecret);
+    
+    // Fallback to original method if direct parsing fails
+    if (!token) {
+      const adaptedReq = adaptRequestForNextAuth(req);
+      token = await getToken({ 
+        req: adaptedReq, 
+        secret: nextAuthSecret 
+      });
+    }
     
     if (!token) {
       // No session token, redirect to login
@@ -189,16 +257,26 @@ export async function authorizationMiddleware(
       return next();
     }
 
-    // Get token for web routes (session-based)
-    const token = await getToken({ 
-      req: req as any, 
-      secret: globalThis.process.env.NEXTAUTH_SECRET 
-    }) as { error?: string; tenant?: string } | null;
-
     // For API routes, authentication is handled by apiKeyAuthMiddleware
     if (req.path.startsWith('/api/') && !req.path.startsWith('/api/auth/')) {
       return next();
     }
+
+    // Get secret from provider only - the provider handles env vars and fallbacks
+    const secretProvider = await getSecretProviderInstance();
+    const nextAuthSecret = await secretProvider.getAppSecret('NEXTAUTH_SECRET');
+    
+    if (!nextAuthSecret) {
+      console.error('NEXTAUTH_SECRET not available from secret provider');
+      return res.redirect('/auth/signin');
+    }
+    
+    // Get token for web routes (session-based) with adapted request
+    const adaptedReq = adaptRequestForNextAuth(req);
+    const token = await getToken({ 
+      req: adaptedReq, 
+      secret: nextAuthSecret 
+    }) as { error?: string; tenant?: string } | null;
 
     // For web routes, validate session token
     if (!token) {
