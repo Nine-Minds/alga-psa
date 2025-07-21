@@ -56,10 +56,6 @@ RUN mkdir -p /app/secrets && \
 COPY .env.example /app/.env   
 COPY .env.example /app/server/.env  
 
-
-WORKDIR /app
-RUN npm run build
-
 # Final production image with minimal runtime artifacts
 FROM node:alpine
 RUN apk add --no-cache bash \
@@ -93,6 +89,8 @@ COPY --from=builder /app/server/migrations/ ./server/migrations/
 COPY --from=builder /app/server/seeds/ ./server/seeds/
 COPY --from=builder /app/server/src/ ./server/src/
 COPY --from=builder /app/node_modules ./node_modules
+
+RUN npm install -g tsx
 
 COPY server/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
