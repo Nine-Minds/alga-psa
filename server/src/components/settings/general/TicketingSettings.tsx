@@ -1418,6 +1418,9 @@ const TicketingSettings = (): JSX.Element => {
                     required
                   />
                   <p className="text-xs text-gray-500 mt-1">
+                    Controls the order in which priorities appear in dropdown menus throughout the platform. Higher numbers appear first for priorities.
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
                     {(() => {
                       const prioritiesOfType = priorities.filter(p => 
                         'item_type' in p && p.item_type === selectedPriorityType
@@ -1735,6 +1738,9 @@ const TicketingSettings = (): JSX.Element => {
                   })()}
                   required
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Controls the order in which statuses appear in dropdown menus throughout the platform. Lower numbers appear first.
+                </p>
                 <p className="text-xs text-gray-500 mt-1">
                   {(() => {
                     const statusesOfType = statuses.filter(s => s.status_type === selectedStatusType);

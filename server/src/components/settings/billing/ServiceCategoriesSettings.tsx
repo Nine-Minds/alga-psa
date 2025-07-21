@@ -308,6 +308,9 @@ const ServiceCategoriesSettings: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })}
                 placeholder="Enter display order"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Controls the order in which service categories appear in dropdown menus throughout the platform. Lower numbers appear first.
+              </p>
             </div>
           </div>
         </DialogContent>

@@ -461,7 +461,7 @@ const ServiceTypeSettings: React.FC = () => {
                 className={hasAttemptedSubmit && !editingType?.order_number ? 'border-red-500' : ''}
               />
               <p className="text-sm text-muted-foreground mt-1">
-                Order number for display sorting
+                Controls the order in which service types appear in dropdown menus throughout the platform. Lower numbers appear first.
                 {tenantTypes.length > 0 && (
                   <span className="block">
                     Used orders: {tenantTypes

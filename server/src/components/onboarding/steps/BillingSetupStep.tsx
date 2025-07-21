@@ -235,8 +235,11 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
                       type="number"
                       value={serviceTypeForm.displayOrder}
                       onChange={(e) => setServiceTypeForm(prev => ({ ...prev, displayOrder: parseInt(e.target.value) || 0 }))}
-                      placeholder="1"
+                      placeholder="Leave empty for auto-generate"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Controls the order in which service types appear in dropdown menus throughout the platform. Lower numbers appear first.
+                    </p>
                   </div>
 
                   <div className="flex items-center gap-2">
