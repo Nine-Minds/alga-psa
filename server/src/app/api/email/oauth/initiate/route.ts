@@ -27,10 +27,15 @@ export async function POST(request: NextRequest) {
     let clientId: string | null = null;
     let effectiveRedirectUri = redirectUri;
 
-    if (provider === 'google' && hosted && process.env.NEXT_PUBLIC_EDITION === 'enterprise') {
-      // Use hosted Gmail configuration for Enterprise Edition
-      clientId = await secretProvider.getAppSecret('EE_GMAIL_CLIENT_ID') || null;
-      effectiveRedirectUri = await secretProvider.getAppSecret('EE_GMAIL_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/google/callback';
+    if (hosted && process.env.NEXT_PUBLIC_EDITION === 'enterprise') {
+      // Use hosted configuration for Enterprise Edition
+      if (provider === 'google') {
+        clientId = await secretProvider.getAppSecret('EE_GMAIL_CLIENT_ID') || null;
+        effectiveRedirectUri = await secretProvider.getAppSecret('EE_GMAIL_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/google/callback';
+      } else if (provider === 'microsoft') {
+        clientId = await secretProvider.getAppSecret('EE_MICROSOFT_CLIENT_ID') || null;
+        effectiveRedirectUri = await secretProvider.getAppSecret('EE_MICROSOFT_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/microsoft/callback';
+      }
     } else {
       // Use tenant-specific or fallback credentials
       clientId = provider === 'microsoft'
