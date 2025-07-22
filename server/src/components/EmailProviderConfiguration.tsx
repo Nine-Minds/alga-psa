@@ -9,11 +9,11 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
 import { Button } from './ui/Button';
 import { Alert, AlertDescription } from './ui/Alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/Tabs';
 import { Plus, Settings, Trash2, CheckCircle, Clock } from 'lucide-react';
-import { MicrosoftProviderForm } from './MicrosoftProviderForm';
+import { MicrosoftProviderForm } from '@ee/components/MicrosoftProviderForm';
 import { EmailProviderList } from './EmailProviderList';
 import { GmailProviderForm } from '@ee/components/GmailProviderForm';
+import { EmailProviderSelector } from './EmailProviderSelector';
 import { InboundTicketDefaultsManager } from './admin/InboundTicketDefaultsManager';
 import { 
   getEmailProviders, 
@@ -91,15 +91,23 @@ export function EmailProviderConfiguration({
   const [providers, setProviders] = useState<EmailProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [showProviderSelector, setShowProviderSelector] = useState(false);
+  const [isSetupMode, setIsSetupMode] = useState(false);
+  const [setupProviderType, setSetupProviderType] = useState<'microsoft' | 'google' | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<EmailProvider | null>(null);
-  const [selectedProviderType, setSelectedProviderType] = useState<'microsoft' | 'gmail'>('microsoft');
   const [showDefaultsManager, setShowDefaultsManager] = useState(false);
 
   // Load existing providers on component mount
   useEffect(() => {
     loadProviders();
   }, [tenant]);
+
+  // Update UI state based on providers
+  useEffect(() => {
+    if (!loading) {
+      setShowProviderSelector(providers.length === 0 && !isSetupMode);
+    }
+  }, [providers, loading, isSetupMode]);
 
   const loadProviders = async () => {
     try {
@@ -117,7 +125,9 @@ export function EmailProviderConfiguration({
 
   const handleProviderAdded = (provider: EmailProvider) => {
     setProviders(prev => [...prev, provider]);
-    setShowAddForm(false);
+    setIsSetupMode(false);
+    setSetupProviderType(null);
+    setShowProviderSelector(false);
     onProviderAdded?.(provider);
   };
 
@@ -132,6 +142,13 @@ export function EmailProviderConfiguration({
       await deleteEmailProvider(providerId);
       
       setProviders(prev => prev.filter(p => p.id !== providerId));
+      
+      // After deletion, show provider selector if no providers remain
+      const remainingProviders = providers.filter(p => p.id !== providerId);
+      if (remainingProviders.length === 0) {
+        setShowProviderSelector(true);
+      }
+      
       onProviderDeleted?.(providerId);
     } catch (err: any) {
       setError(err.message);
@@ -181,6 +198,26 @@ export function EmailProviderConfiguration({
     }
   };
 
+  const handleProviderSelected = (providerType: 'google' | 'microsoft') => {
+    setSetupProviderType(providerType);
+    setIsSetupMode(true);
+    setShowProviderSelector(false);
+  };
+
+  const handleSetupCancel = () => {
+    setIsSetupMode(false);
+    setSetupProviderType(null);
+    // Return to selector if no providers exist, otherwise to list
+    if (providers.length === 0) {
+      setShowProviderSelector(true);
+    }
+  };
+
+  const handleEditCancel = () => {
+    setSelectedProvider(null);
+    // Always return to provider list when editing
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -188,6 +225,72 @@ export function EmailProviderConfiguration({
           <Clock className="h-4 w-4 animate-spin" />
           <span>Loading email providers...</span>
         </div>
+      </div>
+    );
+  }
+
+  // Show provider selector when no providers exist and not in setup mode
+  if (showProviderSelector) {
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="text-center">
+          <h2 className="text-2xl font-bold tracking-tight">Email Provider Configuration</h2>
+          <p className="text-muted-foreground mt-2">
+            Set up inbound email processing to automatically create tickets from emails
+          </p>
+        </div>
+
+        {/* Error Alert */}
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <EmailProviderSelector onProviderSelected={handleProviderSelected} />
+      </div>
+    );
+  }
+
+  // Show setup form when in setup mode
+  if (isSetupMode && setupProviderType) {
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="text-center">
+          <h2 className="text-2xl font-bold tracking-tight">
+            Set up {setupProviderType === 'google' ? 'Gmail' : 'Microsoft 365'} Provider
+          </h2>
+          <p className="text-muted-foreground mt-2">
+            Configure your {setupProviderType === 'google' ? 'Gmail' : 'Microsoft 365'} account for inbound email processing
+          </p>
+        </div>
+
+        {/* Error Alert */}
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <Card>
+          <CardContent className="pt-6">
+            {setupProviderType === 'microsoft' ? (
+              <MicrosoftProviderForm
+                tenant={tenant}
+                onSuccess={handleProviderAdded}
+                onCancel={handleSetupCancel}
+              />
+            ) : (
+              <GmailProviderForm
+                tenant={tenant}
+                onSuccess={handleProviderAdded}
+                onCancel={handleSetupCancel}
+              />
+            )}
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -204,8 +307,8 @@ export function EmailProviderConfiguration({
         </div>
         <Button 
           id="add-provider-btn"
-          onClick={() => setShowAddForm(true)}
-          disabled={showAddForm}
+          onClick={() => setShowProviderSelector(true)}
+          disabled={providers.length > 0}
         >
           <Plus className="h-4 w-4 mr-2" />
           Add Email Provider
@@ -248,51 +351,18 @@ export function EmailProviderConfiguration({
         </Card>
       )}
 
-      {/* Add Provider Form */}
-      {showAddForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Add New Email Provider</CardTitle>
-            <CardDescription>
-              Configure a new email provider to start receiving inbound emails
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs value={selectedProviderType} onValueChange={(value) => setSelectedProviderType(value as 'microsoft' | 'gmail')} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="microsoft">Microsoft 365</TabsTrigger>
-                <TabsTrigger value="gmail">Gmail</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="microsoft" className="space-y-4">
-                <MicrosoftProviderForm
-                  tenant={tenant}
-                  onSuccess={handleProviderAdded}
-                  onCancel={() => setShowAddForm(false)}
-                />
-              </TabsContent>
-              
-              <TabsContent value="gmail" className="space-y-4">
-                <GmailProviderForm
-                  tenant={tenant}
-                  onSuccess={handleProviderAdded}
-                  onCancel={() => setShowAddForm(false)}
-                />
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Provider List */}
-      <EmailProviderList
-        providers={providers}
-        onEdit={setSelectedProvider}
-        onDelete={handleProviderDeleted}
-        onTestConnection={handleTestConnection}
-        onRefresh={loadProviders}
-        onRefreshWatchSubscription={handleRefreshWatchSubscription}
-      />
+      {/* Provider List - only show when providers exist */}
+      {providers.length > 0 && (
+        <EmailProviderList
+          providers={providers}
+          onEdit={setSelectedProvider}
+          onDelete={handleProviderDeleted}
+          onTestConnection={handleTestConnection}
+          onRefresh={loadProviders}
+          onRefreshWatchSubscription={handleRefreshWatchSubscription}
+        />
+      )}
 
       {/* Edit Provider Form */}
       {selectedProvider && (
@@ -309,14 +379,14 @@ export function EmailProviderConfiguration({
                 tenant={tenant}
                 provider={selectedProvider}
                 onSuccess={handleProviderUpdated}
-                onCancel={() => setSelectedProvider(null)}
+                onCancel={handleEditCancel}
               />
             ) : (
               <GmailProviderForm
                 tenant={tenant}
                 provider={selectedProvider}
                 onSuccess={handleProviderUpdated}
-                onCancel={() => setSelectedProvider(null)}
+                onCancel={handleEditCancel}
               />
             )}
           </CardContent>
