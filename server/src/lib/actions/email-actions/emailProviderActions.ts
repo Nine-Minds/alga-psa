@@ -47,6 +47,26 @@ export async function getHostedGmailConfig() {
 }
 
 /**
+ * Get hosted Microsoft configuration for Enterprise Edition
+ */
+export async function getHostedMicrosoftConfig() {
+  const isEnterprise = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+  
+  if (!isEnterprise) {
+    return null;
+  }
+  
+  const secretProvider = await getSecretProviderInstance();
+  
+  return {
+    client_id: await secretProvider.getAppSecret('EE_MICROSOFT_CLIENT_ID'),
+    client_secret: await secretProvider.getAppSecret('EE_MICROSOFT_CLIENT_SECRET'),
+    tenant_id: await secretProvider.getAppSecret('EE_MICROSOFT_TENANT_ID') || 'common',
+    redirect_uri: await secretProvider.getAppSecret('EE_MICROSOFT_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/microsoft/callback'
+  };
+}
+
+/**
  * Shared column list for provider queries
  */
 const PROVIDER_COLUMNS = [
@@ -156,13 +176,33 @@ async function persistMicrosoftConfig(
   if (!config) return null;
   if (!tenant) throw new Error('Tenant is required');
 
+  // Check if we should use hosted configuration for Enterprise Edition
+  const hostedConfig = await getHostedMicrosoftConfig();
+
   // Save secrets to tenant-specific secret store
   const secretProvider = await getSecretProviderInstance();
-  if (config.client_id && typeof config.client_id === 'string') {
-    await secretProvider.setTenantSecret(tenant, 'microsoft_client_id', config.client_id);
+  
+  // Use hosted credentials if available, otherwise use user-provided credentials
+  const effectiveClientId = hostedConfig?.client_id || config.client_id;
+  const effectiveClientSecret = hostedConfig?.client_secret || config.client_secret;
+  const effectiveTenantId = hostedConfig?.tenant_id || config.tenant_id;
+  const effectiveRedirectUri = hostedConfig?.redirect_uri || config.redirect_uri;
+  
+  // Ensure required fields are not undefined
+  if (!effectiveTenantId) {
+    throw new Error('Tenant ID is required for Microsoft configuration');
   }
-  if (config.client_secret && typeof config.client_secret === 'string') {
-    await secretProvider.setTenantSecret(tenant, 'microsoft_client_secret', config.client_secret);
+  if (!effectiveRedirectUri) {
+    throw new Error('Redirect URI is required for Microsoft configuration');
+  }
+  
+  if (effectiveClientId && typeof effectiveClientId === 'string' && !hostedConfig) {
+    // Only store user-provided secrets, not hosted ones
+    await secretProvider.setTenantSecret(tenant, 'microsoft_client_id', effectiveClientId);
+  }
+  if (effectiveClientSecret && typeof effectiveClientSecret === 'string' && !hostedConfig) {
+    // Only store user-provided secrets, not hosted ones
+    await secretProvider.setTenantSecret(tenant, 'microsoft_client_secret', effectiveClientSecret);
   }
   
   // Delete existing config if any
@@ -175,10 +215,10 @@ async function persistMicrosoftConfig(
     .insert({
       email_provider_id: providerId,
       tenant,
-      client_id: config.client_id || null,
-      client_secret: config.client_secret || null,
-      tenant_id: config.tenant_id,
-      redirect_uri: config.redirect_uri,
+      client_id: effectiveClientId || null,
+      client_secret: effectiveClientSecret || null,
+      tenant_id: effectiveTenantId,
+      redirect_uri: effectiveRedirectUri,
       auto_process_emails: config.auto_process_emails,
       max_emails_per_sync: config.max_emails_per_sync,
       folder_filters: JSON.stringify(config.folder_filters || []),

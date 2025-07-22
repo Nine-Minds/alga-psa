@@ -120,11 +120,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get OAuth client credentials from environment/secrets - use tenant-specific secrets
+    // Get OAuth client credentials from environment/secrets
     const secretProvider = await getSecretProviderInstance();
-    const clientId = process.env.MICROSOFT_CLIENT_ID || await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_client_id');
-    const clientSecret = process.env.MICROSOFT_CLIENT_SECRET || await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_client_secret');
-    const redirectUri = stateData.redirectUri || `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/microsoft/callback`;
+    
+    // Check if this is a hosted flow (EE with hosted redirect URI)
+    const isHostedFlow = stateData.redirectUri && stateData.redirectUri.includes('api.algapsa.com');
+    
+    let clientId: string | null = null;
+    let clientSecret: string | null = null;
+    
+    if (isHostedFlow) {
+      // Use hosted configuration for Enterprise Edition
+      clientId = await secretProvider.getAppSecret('EE_MICROSOFT_CLIENT_ID') || null;
+      clientSecret = await secretProvider.getAppSecret('EE_MICROSOFT_CLIENT_SECRET') || null;
+    } else {
+      // Use tenant-specific or fallback credentials
+      clientId = await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID') || await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_client_id') || null;
+      clientSecret = await secretProvider.getAppSecret('MICROSOFT_CLIENT_SECRET') || await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_client_secret') || null;
+    }
+    
+    const redirectUri = stateData.redirectUri || `${await secretProvider.getAppSecret('NEXT_PUBLIC_APP_URL')}/api/auth/microsoft/callback`;
 
     if (!clientId || !clientSecret) {
       console.error('Microsoft OAuth credentials not configured');

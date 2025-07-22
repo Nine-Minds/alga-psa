@@ -52,6 +52,7 @@ RUN mkdir -p /app/secrets && \
     echo "secure-oauth-client-id-placeholder" > /app/secrets/google_oauth_client_id && \
     echo "secure-oauth-client-secret-placeholder" > /app/secrets/google_oauth_client_secret && \
     echo "secure-ee-gmail-client-secret-placeholder" > /app/secrets/EE_GMAIL_CLIENT_SECRET && \
+    echo "secure-ee-microsoft-client-secret-placeholder" > /app/secrets/EE_MICROSOFT_CLIENT_SECRET && \
     chmod 600 /app/secrets/*
 
 # Copy example environment file and set Enterprise Edition

@@ -11,7 +11,7 @@ import { Button } from './ui/Button';
 import { Alert, AlertDescription } from './ui/Alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/Tabs';
 import { Plus, Settings, Trash2, CheckCircle, Clock } from 'lucide-react';
-import { MicrosoftProviderForm } from './MicrosoftProviderForm';
+import { MicrosoftProviderForm } from '@ee/components/MicrosoftProviderForm';
 import { EmailProviderList } from './EmailProviderList';
 import { GmailProviderForm } from '@ee/components/GmailProviderForm';
 import { InboundTicketDefaultsManager } from './admin/InboundTicketDefaultsManager';
