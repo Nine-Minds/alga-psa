@@ -335,10 +335,11 @@ spec:
           - name: VAULT_ADDR
             value: "{{ .Values.secrets.vault.addr }}"
           {{- end }}
-          {{- if .Values.secrets.vault.token }}
           - name: VAULT_TOKEN
-            value: "{{ .Values.secrets.vault.token }}"
-          {{- end }}
+            valueFrom:
+              secretKeyRef:
+                name: vault-credentials
+                key: VAULT_TOKEN
           {{- if .Values.secrets.vault.appSecretPath }}
           - name: VAULT_APP_SECRET_PATH
             value: "{{ .Values.secrets.vault.appSecretPath }}"
