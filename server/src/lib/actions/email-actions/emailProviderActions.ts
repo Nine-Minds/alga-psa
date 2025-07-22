@@ -11,17 +11,38 @@ import { configureGmailProvider } from './configureGmailProvider';
 /**
  * Generate standardized Pub/Sub topic and subscription names for a tenant
  */
-function generatePubSubNames(tenantId: string) {
+async function generatePubSubNames(tenantId: string) {
   // Use ngrok URL in development if available
-  const baseUrl = process.env.NGROK_URL || 
-                  process.env.NEXT_PUBLIC_APP_URL || 
-                  process.env.NEXTAUTH_URL ||
+  const secretProvider = await getSecretProviderInstance();
+  const baseUrl = await secretProvider.getAppSecret('NGROK_URL') || 
+                  await secretProvider.getAppSecret('NEXT_PUBLIC_APP_URL') || 
+                  await secretProvider.getAppSecret('NEXTAUTH_URL') ||
                   'http://localhost:3000';
   
   return {
     topicName: `gmail-notifications-${tenantId}`,
     subscriptionName: `gmail-webhook-${tenantId}`,
     webhookUrl: `${baseUrl}/api/email/webhooks/google`
+  };
+}
+
+/**
+ * Get hosted Gmail configuration for Enterprise Edition
+ */
+export async function getHostedGmailConfig() {
+  const isEnterprise = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+  
+  if (!isEnterprise) {
+    return null;
+  }
+  
+  const secretProvider = await getSecretProviderInstance();
+  
+  return {
+    client_id: await secretProvider.getAppSecret('EE_GMAIL_CLIENT_ID'),
+    client_secret: await secretProvider.getAppSecret('EE_GMAIL_CLIENT_SECRET'),
+    project_id: await secretProvider.getAppSecret('EE_GMAIL_PROJECT_ID'),
+    redirect_uri: await secretProvider.getAppSecret('EE_GMAIL_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/google/callback'
   };
 }
 
@@ -190,27 +211,47 @@ async function persistGoogleConfig(
   if (!config) return null;
   if (!tenant) throw new Error('Tenant is required');
 
+  // Check if we should use hosted configuration for Enterprise Edition
+  const hostedConfig = await getHostedGmailConfig();
+
   // Save secrets to tenant-specific secret store
   const secretProvider = await getSecretProviderInstance();
-  if (config.client_id && typeof config.client_id === 'string') {
-    await secretProvider.setTenantSecret(tenant, 'google_client_id', config.client_id);
+  
+  // Use hosted credentials if available, otherwise use user-provided credentials
+  const effectiveClientId = hostedConfig?.client_id || config.client_id;
+  const effectiveClientSecret = hostedConfig?.client_secret || config.client_secret;
+  const effectiveProjectId = hostedConfig?.project_id || config.project_id;
+  const effectiveRedirectUri = hostedConfig?.redirect_uri || config.redirect_uri;
+  
+  // Ensure required fields are not undefined
+  if (!effectiveProjectId) {
+    throw new Error('Project ID is required for Gmail configuration');
   }
-  if (config.client_secret && typeof config.client_secret === 'string') {
-    await secretProvider.setTenantSecret(tenant, 'google_client_secret', config.client_secret);
+  if (!effectiveRedirectUri) {
+    throw new Error('Redirect URI is required for Gmail configuration');
+  }
+  
+  if (effectiveClientId && typeof effectiveClientId === 'string' && !hostedConfig) {
+    // Only store user-provided secrets, not hosted ones
+    await secretProvider.setTenantSecret(tenant, 'google_client_id', effectiveClientId);
+  }
+  if (effectiveClientSecret && typeof effectiveClientSecret === 'string' && !hostedConfig) {
+    // Only store user-provided secrets, not hosted ones
+    await secretProvider.setTenantSecret(tenant, 'google_client_secret', effectiveClientSecret);
   }
   
   // Generate standardized Pub/Sub names
-  const pubsubNames = generatePubSubNames(tenant);
+  const pubsubNames = await generatePubSubNames(tenant);
   
   // Prepare config payload
   const labelFiltersArray = config.label_filters || [];
   const configPayload = {
     email_provider_id: providerId,
     tenant,
-    client_id: config.client_id || null,
-    client_secret: config.client_secret || null,
-    project_id: config.project_id,
-    redirect_uri: config.redirect_uri,
+    client_id: effectiveClientId || null,
+    client_secret: effectiveClientSecret || null,
+    project_id: effectiveProjectId,
+    redirect_uri: effectiveRedirectUri,
     pubsub_topic_name: pubsubNames.topicName,
     pubsub_subscription_name: pubsubNames.subscriptionName,
     auto_process_emails: config.auto_process_emails,
@@ -385,12 +426,18 @@ export async function upsertEmailProvider(data: {
       return base;
     });
     
-    if (!skipAutomation && data.providerType === 'google' && data.googleConfig && provider.googleConfig && data.googleConfig.project_id) {
-      await configureGmailProvider({
-        tenant,
-        providerId: provider.id,
-        projectId: data.googleConfig.project_id
-      });
+    if (!skipAutomation && data.providerType === 'google' && provider.googleConfig) {
+      // Use hosted project ID if in EE mode, otherwise use provided project ID
+      const hostedConfig = await getHostedGmailConfig();
+      const effectiveProjectId = hostedConfig?.project_id || data.googleConfig?.project_id;
+      
+      if (effectiveProjectId) {
+        await configureGmailProvider({
+          tenant,
+          providerId: provider.id,
+          projectId: effectiveProjectId
+        });
+      }
     }
     
     return { provider };
@@ -443,12 +490,18 @@ export async function updateEmailProvider(
       return base;
     });
     
-    if (!skipAutomation && data.providerType === 'google' && data.googleConfig && provider.googleConfig && data.googleConfig.project_id) {
-      await configureGmailProvider({
-        tenant,
-        providerId: provider.id,
-        projectId: data.googleConfig.project_id
-      });
+    if (!skipAutomation && data.providerType === 'google' && provider.googleConfig) {
+      // Use hosted project ID if in EE mode, otherwise use provided project ID
+      const hostedConfig = await getHostedGmailConfig();
+      const effectiveProjectId = hostedConfig?.project_id || data.googleConfig?.project_id;
+      
+      if (effectiveProjectId) {
+        await configureGmailProvider({
+          tenant,
+          providerId: provider.id,
+          projectId: effectiveProjectId
+        });
+      }
     }
     
     return { provider };
