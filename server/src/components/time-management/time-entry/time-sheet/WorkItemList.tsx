@@ -139,7 +139,10 @@ export function WorkItemList({
                   <li
                     key={item.work_item_id}
                     className="bg-[rgb(var(--color-border-50))] hover:bg-[rgb(var(--color-border-100))] cursor-pointer transition-colors duration-150"
-                    onClick={() => onSelect(item)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelect(item);
+                    }}
                   >
                     <div className="px-4 py-3">
                       {renderItemContent(item)}
