@@ -122,11 +122,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get OAuth client credentials from environment/secrets - use tenant-specific secrets
+    // Get OAuth client credentials - check if this is a hosted EE flow
     const secretProvider = await getSecretProviderInstance();
-    const clientId = process.env.GOOGLE_CLIENT_ID || await secretProvider.getTenantSecret(stateData.tenant, 'google_client_id');
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET || await secretProvider.getTenantSecret(stateData.tenant, 'google_client_secret');
-    const redirectUri = stateData.redirectUri || `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google/callback`;
+    const isHostedFlow = process.env.NEXT_PUBLIC_EDITION === 'enterprise' && 
+                        stateData.redirectUri && 
+                        stateData.redirectUri.includes('api.algapsa.com');
+    
+    let clientId: string | null = null;
+    let clientSecret: string | null = null;
+    
+    if (isHostedFlow) {
+      // Use hosted configuration for Enterprise Edition
+      clientId = await secretProvider.getAppSecret('EE_GMAIL_CLIENT_ID') || null;
+      clientSecret = await secretProvider.getAppSecret('EE_GMAIL_CLIENT_SECRET') || null;
+    } else {
+      // Use tenant-specific or fallback credentials
+      clientId = await secretProvider.getAppSecret('GOOGLE_CLIENT_ID') || await secretProvider.getTenantSecret(stateData.tenant, 'google_client_id') || null;
+      clientSecret = await secretProvider.getAppSecret('GOOGLE_CLIENT_SECRET') || await secretProvider.getTenantSecret(stateData.tenant, 'google_client_secret') || null;
+    }
+    
+    const redirectUri = stateData.redirectUri || `${await secretProvider.getAppSecret('NEXT_PUBLIC_APP_URL')}/api/auth/google/callback`;
 
     if (!clientId || !clientSecret) {
       console.error('Google OAuth credentials not configured');

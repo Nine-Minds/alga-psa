@@ -16,17 +16,27 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { provider, redirectUri } = body;
+    const { provider, redirectUri, hosted } = body;
 
     if (!provider || !['microsoft', 'google'].includes(provider)) {
       return NextResponse.json({ error: 'Invalid provider' }, { status: 400 });
     }
 
-    // Get OAuth credentials - use tenant-specific secrets
+    // Get OAuth credentials - use hosted credentials for EE or tenant-specific secrets for CE
     const secretProvider = await getSecretProviderInstance();
-    const clientId = provider === 'microsoft'
-      ? process.env.MICROSOFT_CLIENT_ID || await secretProvider.getTenantSecret(user.tenant, 'microsoft_client_id')
-      : process.env.GOOGLE_CLIENT_ID || await secretProvider.getTenantSecret(user.tenant, 'google_client_id');
+    let clientId: string | null = null;
+    let effectiveRedirectUri = redirectUri;
+
+    if (provider === 'google' && hosted && process.env.NEXT_PUBLIC_EDITION === 'enterprise') {
+      // Use hosted Gmail configuration for Enterprise Edition
+      clientId = await secretProvider.getAppSecret('EE_GMAIL_CLIENT_ID') || null;
+      effectiveRedirectUri = await secretProvider.getAppSecret('EE_GMAIL_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/google/callback';
+    } else {
+      // Use tenant-specific or fallback credentials
+      clientId = provider === 'microsoft'
+        ? await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID') || await secretProvider.getTenantSecret(user.tenant, 'microsoft_client_id') || null
+        : await secretProvider.getAppSecret('GOOGLE_CLIENT_ID') || await secretProvider.getTenantSecret(user.tenant, 'google_client_id') || null;
+    }
 
     if (!clientId) {
       return NextResponse.json({ 
@@ -39,7 +49,7 @@ export async function POST(request: NextRequest) {
       tenant: user.tenant,
       userId: user.user_id,
       providerId: body.providerId,
-      redirectUri: redirectUri || `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/${provider}/callback`,
+      redirectUri: effectiveRedirectUri || `${await secretProvider.getAppSecret('NEXT_PUBLIC_APP_URL')}/api/auth/${provider}/callback`,
       timestamp: Date.now(),
       nonce: generateNonce()
     };

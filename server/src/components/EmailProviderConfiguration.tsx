@@ -12,8 +12,8 @@ import { Alert, AlertDescription } from './ui/Alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/Tabs';
 import { Plus, Settings, Trash2, CheckCircle, Clock } from 'lucide-react';
 import { MicrosoftProviderForm } from './MicrosoftProviderForm';
-import { GmailProviderForm } from './GmailProviderForm';
 import { EmailProviderList } from './EmailProviderList';
+import { GmailProviderForm } from '@ee/components/GmailProviderForm';
 import { InboundTicketDefaultsManager } from './admin/InboundTicketDefaultsManager';
 import { 
   getEmailProviders, 
@@ -365,10 +365,21 @@ export function EmailProviderConfiguration({
           <div>
             <h4 className="font-medium mb-2">Gmail Setup</h4>
             <p className="text-sm text-muted-foreground">
-              1. Create a project in Google Cloud Console<br/>
-              2. Enable Gmail API and create OAuth2 credentials<br/>
-              3. Set up Pub/Sub topic for push notifications<br/>
-              4. Configure the OAuth consent screen and add test users
+              {process.env.NEXT_PUBLIC_EDITION === 'enterprise' ? (
+                <>
+                  1. Enter your Gmail address and provider name<br/>
+                  2. Click "Connect Gmail" to authorize access<br/>
+                  3. Configure email processing preferences<br/>
+                  4. Save to complete setup
+                </>
+              ) : (
+                <>
+                  1. Create a project in Google Cloud Console<br/>
+                  2. Enable Gmail API and create OAuth2 credentials<br/>
+                  3. Set up Pub/Sub topic for push notifications<br/>
+                  4. Configure the OAuth consent screen and add test users
+                </>
+              )}
             </p>
           </div>
         </CardContent>
