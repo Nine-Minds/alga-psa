@@ -272,6 +272,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    clearErrorIfSubmitted();
     setEntryData((prev) => ({
       ...prev,
       [name]: name === 'scheduled_start' || name === 'scheduled_end' ? new Date(value) : value,
@@ -279,6 +280,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   };
 
   const handleWorkItemSelect = (workItem: IWorkItem | null) => {
+    clearErrorIfSubmitted();
     setSelectedWorkItem(workItem);
     setEntryData(prev => ({
       ...prev,
@@ -301,6 +303,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   };
 
   const handleAssignedUsersChange = (userIds: string[]) => {
+    clearErrorIfSubmitted();
     setEntryData(prev => {
       // If the selected user is not the current user, set is_private to false
       const isPrivate = userIds.length === 1 && userIds[0] === currentUserId ? prev.is_private : false;
