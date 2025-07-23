@@ -576,7 +576,7 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
         .select(
           'i.interaction_id as work_item_id',
           'i.title as name',
-          'i.notes as description',
+          db.raw("'' as description"), // Don't copy interaction notes to time entry
           db.raw("'interaction' as type"),
           db.raw('NULL::text as ticket_number'),
           'i.title',
@@ -924,7 +924,7 @@ export async function getWorkItemById(workItemId: string, workItemType: WorkItem
         .select(
           'i.interaction_id as work_item_id',
           'i.title as name',
-          'i.notes as description',
+          db.raw("'' as description"), // Don't copy interaction notes to time entry
           db.raw("'interaction' as type"),
           db.raw('NULL::text as ticket_number'),
           'i.title',

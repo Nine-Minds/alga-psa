@@ -34,6 +34,8 @@ export interface TimeEntryFormProps {
   onUpdateTimeInputs: (inputs: TimeInputs) => void;
   lastNoteInputRef?: React.RefObject<HTMLInputElement>;
   timePeriod?: ITimePeriodView;
+  date?: Date;
+  isNewEntry?: boolean;
 }
 
 export interface TimeEntryReadOnlyProps {
