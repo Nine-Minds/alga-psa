@@ -24,6 +24,7 @@ interface TimeEntryListProps {
   onUpdateEntry: (index: number, entry: ITimeEntryWithNew) => void;
   onUpdateTimeInputs: (inputs: TimeInputs) => void;
   onAddEntry: () => void;
+  date?: Date;
 }
 
 const TimeEntryList = memo(function TimeEntryList({
@@ -41,7 +42,8 @@ const TimeEntryList = memo(function TimeEntryList({
   onEdit,
   onUpdateEntry,
   onUpdateTimeInputs,
-  onAddEntry
+  onAddEntry,
+  date
 }: TimeEntryListProps) {
   return (
     <div className="space-y-4">
@@ -62,6 +64,8 @@ const TimeEntryList = memo(function TimeEntryList({
               onUpdateEntry={onUpdateEntry}
               onUpdateTimeInputs={onUpdateTimeInputs}
               lastNoteInputRef={lastNoteInputRef}
+              date={date}
+              isNewEntry={entry.isNew || false}
             />
           ) : (
             <TimeEntryReadOnly
