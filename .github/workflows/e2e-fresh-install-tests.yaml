@@ -135,6 +135,21 @@ jobs:
           docker-compose --version # Verify installation
         shell: bash
 
+      - name: Set up Node.js for building shared module
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Build shared module
+        run: |
+          echo "Building shared module..."
+          cd shared
+          npm install
+          npm run build
+          echo "Shared module built successfully"
+          ls -la dist/
+        shell: bash
+
       - name: Start foundational services (postgres and redis)
         if: steps.install_docker_compose.outcome == 'success'
         run: |
