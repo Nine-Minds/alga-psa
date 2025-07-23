@@ -317,9 +317,10 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [pendingUpdateData, setPendingUpdateData] = useState<Omit<IScheduleEntry, 'tenant'>>();
 
-  const handleDeleteConfirm = (scope?: IEditScope) => {
+  const handleDeleteConfirm = (selectedValue?: string) => {
     if (event && onDelete) {
-      onDelete(event.entry_id, event.is_recurring ? scope as IEditScope : undefined);
+      const scope = selectedValue as IEditScope;
+      onDelete(event.entry_id, event.is_recurring ? scope : undefined);
     }
     setShowDeleteDialog(false);
     onClose();
