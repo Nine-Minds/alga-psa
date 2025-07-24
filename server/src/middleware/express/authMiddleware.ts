@@ -88,11 +88,38 @@ export async function apiKeyAuthMiddleware(
   }
 
   const apiKey = req.headers['x-api-key'] as string;
-  
+
   if (!apiKey) {
-    return res.status(401).json({
-      error: 'Unauthorized: API key missing'
-    });
+    try {
+      const secretProvider = await getSecretProviderInstance();
+      const nextAuthSecret = await secretProvider.getAppSecret('NEXTAUTH_SECRET');
+
+      let token = await getNextAuthToken(req, nextAuthSecret);
+      if (!token) {
+        const adaptedReq = adaptRequestForNextAuth(req);
+        token = await getToken({ req: adaptedReq, secret: nextAuthSecret });
+      }
+
+      if (token && token.sub && token.tenant) {
+        req.user = {
+          id: token.sub as string,
+          tenant: token.tenant as string,
+          userType: token.user_type as string,
+        };
+        req.headers['x-auth-user-id'] = token.sub as string;
+        req.headers['x-auth-tenant'] = token.tenant as string;
+        return next();
+      }
+
+      return res.status(401).json({
+        error: 'Unauthorized: API key or session required'
+      });
+    } catch (error) {
+      console.error('Error validating session:', error);
+      return res.status(500).json({
+        error: 'Internal Server Error'
+      });
+    }
   }
 
   try {
