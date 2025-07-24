@@ -6,6 +6,7 @@ nameOverride: ""
 fullnameOverride: ""
 host: "localhost"
 #env: "development"
+edition: "community"  # Set to "enterprise" for enterprise deployments
 
 #FIXME: In image change nineminds to public when we we make image public 
 setup:

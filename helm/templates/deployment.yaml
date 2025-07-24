@@ -66,6 +66,8 @@ spec:
             value: "{{ .Values.host }}"
           - name: VERIFY_EMAIL_ENABLED
             value: "{{ .Values.server.verify_email}}"
+          - name: NEXT_PUBLIC_EDITION
+            value: "{{ .Values.edition | default "community" }}"
 
           # ----------- REDIS ----------------
           {{- if .Values.redis.enabled }}
