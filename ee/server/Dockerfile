@@ -39,6 +39,7 @@ COPY ./server/.next ./server/.next
 COPY ./server/dist ./server/dist
 
 # Copy runtime files
+COPY ./server/index.ts ./server/
 COPY ./server/public ./server/public
 COPY ./server/next.config.mjs ./server/
 COPY ./server/knexfile.cjs ./server/
