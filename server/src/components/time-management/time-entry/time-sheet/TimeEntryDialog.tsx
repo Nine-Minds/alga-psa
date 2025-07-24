@@ -364,6 +364,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
           onUpdateEntry={updateEntry}
           onUpdateTimeInputs={updateTimeInputs}
           onAddEntry={handleAddEntry}
+          date={date}
         />
       ) : (
         <SingleTimeEntryForm
@@ -379,6 +380,8 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
           onDelete={handleDeleteEntry}
           onUpdateEntry={updateEntry}
           onUpdateTimeInputs={updateTimeInputs}
+          date={date}
+          isNewEntry={!existingEntries || existingEntries.length === 0}
         />
       )}
 

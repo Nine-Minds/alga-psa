@@ -129,7 +129,7 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
           .select(
             'interactions.interaction_id as work_item_id',
             'interactions.title as name',
-            'interactions.notes as description',
+            db.raw("'' as description"), // Don't copy interaction notes to time entry
             'companies.company_name',
             'contacts.full_name as contact_name',
             'interaction_types.type_name as interaction_type'
@@ -701,7 +701,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
           .select(
             'interactions.interaction_id as work_item_id',
             'interactions.title as name',
-            'interactions.notes as description',
+            db.raw("'' as description"), // Don't copy interaction notes to time entry
             'companies.company_name',
             'contacts.full_name as contact_name',
             'interaction_types.type_name as interaction_type'
@@ -1020,7 +1020,7 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
             .select(
               'interactions.interaction_id as work_item_id',
               'interactions.title as name',
-              'interactions.notes as description',
+              db.raw("'' as description"), // Don't copy interaction notes to time entry
               'companies.company_name',
               'contacts.full_name as contact_name',
               'interaction_types.type_name as interaction_type'
