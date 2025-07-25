@@ -25,6 +25,7 @@ RUN npm install --omit=dev
 
 # Copy base files
 COPY tsconfig.base.json ./
+COPY server/tsconfig.json ./server/
 COPY server/setup /app/server/setup
 COPY .env.example /app/.env   
 COPY .env.example /app/server/.env  
