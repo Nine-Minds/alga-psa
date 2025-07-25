@@ -5,7 +5,7 @@ import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog'
 import { IDocument } from 'server/src/interfaces/document.interface';
 import Spinner from 'server/src/components/ui/Spinner';
 import { getDocumentPreview } from 'server/src/lib/actions/document-actions/documentActions';
-import { getDocumentDownloadUrl } from 'server/src/lib/utils/documentUtils';
+import { getDocumentDownloadUrl, downloadDocument } from 'server/src/lib/utils/documentUtils';
 import { Button } from 'server/src/components/ui/Button';
 import {
     Download,
@@ -135,9 +135,15 @@ function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoMo
                 </p>
                 <Button
                     id={`download-video-${fileId}`}
-                    onClick={() => {
+                    onClick={async () => {
                         const downloadUrl = getDocumentDownloadUrl(documentId);
-                        window.open(downloadUrl, '_blank');
+                        const filename = fileName || 'download';
+                        try {
+                            // Try using File System Access API for modern browsers
+                            await downloadDocument(downloadUrl, filename, true);
+                        } catch (error) {
+                            console.error('Download failed:', error);
+                        }
                     }}
                     className="mb-2"
                 >
@@ -260,7 +266,7 @@ export default function DocumentStorageCard({
         }
     };
 
-    const handleView = () => {
+    const handleView = async () => {
         if (!document.file_id) return;
         
         // For images, videos, and PDFs, show in modal
@@ -271,7 +277,12 @@ export default function DocumentStorageCard({
         } else {
             // For other files, download
             const downloadUrl = getDocumentDownloadUrl(document.file_id);
-            window.open(downloadUrl, '_blank');
+            const filename = document.document_name || 'download';
+            try {
+                await downloadDocument(downloadUrl, filename, true);
+            } catch (error) {
+                console.error('Download failed:', error);
+            }
         }
     };
 
@@ -425,7 +436,7 @@ export default function DocumentStorageCard({
                             id={`download-document-${document.document_id}-button`}
                             variant="ghost"
                             size="sm"
-                            onClick={(e) => {
+                            onClick={async (e) => {
                                 e.stopPropagation();
                                 const isPdfTarget = document.type_name === 'text/plain' ||
                                                     document.type_name === 'text/markdown' ||
@@ -439,7 +450,14 @@ export default function DocumentStorageCard({
                                 }
                                 
                                 if (downloadUrl !== '#') {
-                                    window.open(downloadUrl, '_blank');
+                                    const filename = isPdfTarget ? 
+                                        `${document.document_name || 'document'}.pdf` : 
+                                        (document.document_name || 'download');
+                                    try {
+                                        await downloadDocument(downloadUrl, filename, true);
+                                    } catch (error) {
+                                        console.error('Download failed:', error);
+                                    }
                                 }
                             }}
                             disabled={isLoading}
@@ -563,9 +581,14 @@ export default function DocumentStorageCard({
                                     <p className="text-[rgb(var(--color-text-500))]">Preview not available for this file type.</p>
                                     <Button
                                         id={`${id}-download-modal-button`}
-                                        onClick={() => {
+                                        onClick={async () => {
                                             const downloadUrl = getDocumentDownloadUrl(document.file_id!);
-                                            window.open(downloadUrl, '_blank');
+                                            const filename = document.document_name || 'download';
+                                            try {
+                                                await downloadDocument(downloadUrl, filename, true);
+                                            } catch (error) {
+                                                console.error('Download failed:', error);
+                                            }
                                         }}
                                         className="mt-4"
                                     >
