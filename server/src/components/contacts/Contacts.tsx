@@ -13,7 +13,7 @@ import { Pen, Eye, CloudDownload, MoreVertical, Upload, Trash2, XCircle, Externa
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import QuickAddContact from './QuickAddContact';
 import { useDrawer } from "server/src/context/DrawerContext";
-import ContactDetailsView from './ContactDetailsView';
+import ContactDetails from './ContactDetails';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import ContactsImportDialog from './ContactsImportDialog';
 import CompanyDetails from '../companies/CompanyDetails';
@@ -211,8 +211,8 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
         }
 
         openDrawer(
-          <ContactDetailsView
-            initialContact={contact}
+          <ContactDetails
+            contact={contact}
             companies={companies}
             documents={documents[contact.contact_name_id] || []}
             userId={currentUser}
@@ -268,8 +268,8 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
         }
 
         openDrawer(
-          <ContactDetailsView
-            initialContact={contact}
+          <ContactDetails
+            contact={contact}
             companies={companies}
             documents={documents[contact.contact_name_id] || []}
             userId={currentUser}
@@ -394,11 +394,11 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
           <div
             role="button"
             tabIndex={0}
-            onClick={() => handleQuickView(record)}
+            onClick={() => handleEditContact(record)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                handleQuickView(record);
+                handleEditContact(record);
               }
             }}
             className="text-blue-600 hover:underline cursor-pointer"

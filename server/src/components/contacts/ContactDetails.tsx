@@ -123,6 +123,7 @@ interface ContactDetailsProps {
   companies: ICompany[];
   documents?: IDocument[];
   isInDrawer?: boolean;
+  quickView?: boolean;
   userId?: string;
   onDocumentCreated?: () => Promise<void>;
   userPermissions?: {
@@ -138,6 +139,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   companies,
   documents = [],
   isInDrawer = false,
+  quickView = false,
   userId,
   onDocumentCreated,
   userPermissions = {
@@ -546,7 +548,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       {/* Content Area */}
       <div>
         <CustomTabs
-          tabs={tabContent}
+          tabs={quickView ? [tabContent[0]] : tabContent}
           defaultTab={findTabLabel(searchParams?.get('tab'))}
           onTabChange={handleTabChange}
         />
