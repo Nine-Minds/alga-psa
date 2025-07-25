@@ -68,6 +68,8 @@ spec:
             value: "{{ .Values.server.verify_email}}"
           - name: NEXT_PUBLIC_EDITION
             value: "{{ .Values.edition | default "community" }}"
+          - name: TSX_TSCONFIG_PATH
+            value: "/app/tsconfig.base.json"
 
           # ----------- REDIS ----------------
           {{- if .Values.redis.enabled }}
