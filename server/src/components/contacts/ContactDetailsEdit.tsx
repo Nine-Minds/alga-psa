@@ -21,6 +21,7 @@ import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContain
 import { ButtonComponent, FormFieldComponent } from '../../types/ui-reflection/types';
 import ContactAvatarUpload from 'server/src/components/client-portal/contacts/ContactAvatarUpload';
 import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
+import { toast } from 'react-hot-toast';
 
 interface ContactDetailsEditProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -94,6 +95,14 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
       }
       
       const updatedContact = await updateContact(contact);
+      
+      // Show success toast instead of navigating
+      toast.success('Contact updated successfully');
+      
+      // Update the local state with the saved contact
+      setContact(updatedContact);
+      
+      // Call onSave to update parent components but don't navigate
       onSave(updatedContact);
     } catch (err) {
       console.error('Error updating contact:', err);

@@ -224,11 +224,12 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
             return updatedContacts;
           });
           
-          // After updating the list, view the contact details
-          setTimeout(() => handleViewDetails(updatedContact), 0);
+          // Don't navigate - just update the data
         }}
         onCancel={() => handleViewDetails(contact)}
-      />
+      />,
+      undefined,
+      { hideBackButton: true, isContactEdit: true }
     );
   };
 

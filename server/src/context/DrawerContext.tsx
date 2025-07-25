@@ -30,8 +30,8 @@ interface DrawerContentProps {
 
 interface DrawerContextType {
   // Original methods
-  openDrawer: (content: ReactNode, onMount?: () => Promise<void>) => void;
-  replaceDrawer: (content: ReactNode, onMount?: () => Promise<void>) => void;
+  openDrawer: (content: ReactNode, onMount?: () => Promise<void>, metadata?: Record<string, any>) => void;
+  replaceDrawer: (content: ReactNode, onMount?: () => Promise<void>, metadata?: Record<string, any>) => void;
   closeDrawer: () => void;
   goBack: () => void;
   
@@ -68,8 +68,8 @@ interface DrawerContextType {
 
 // Define the drawer actions
 type DrawerAction =
-  | { type: 'OPEN_DRAWER'; payload: { content: ReactNode; onMount?: () => Promise<void> } }
-  | { type: 'REPLACE_DRAWER'; payload: { content: ReactNode; onMount?: () => Promise<void> } }
+  | { type: 'OPEN_DRAWER'; payload: { content: ReactNode; onMount?: () => Promise<void>; metadata?: Record<string, any> } }
+  | { type: 'REPLACE_DRAWER'; payload: { content: ReactNode; onMount?: () => Promise<void>; metadata?: Record<string, any> } }
   | { type: 'OPEN_LIST_DRAWER'; payload: { activityType: ActivityType; title: string; content: ReactNode; onMount?: () => Promise<void>; metadata?: Record<string, any> } }
   | { type: 'OPEN_DETAIL_DRAWER'; payload: { activity: Activity; content: ReactNode; title?: string; onMount?: () => Promise<void> } }
   | { type: 'OPEN_FORM_DRAWER'; payload: { activity: Activity; formId: string; content: ReactNode; title?: string; onMount?: () => Promise<void> } }
@@ -95,13 +95,14 @@ const initialState: DrawerState = {
 function drawerReducer(state: DrawerState, action: DrawerAction): DrawerState {
   switch (action.type) {
     case 'OPEN_DRAWER': {
-      const { content, onMount } = action.payload;
+      const { content, onMount, metadata } = action.payload;
       const newEntry: DrawerHistoryEntry = {
         id: `drawer-${Date.now()}`,
         type: 'custom',
         title: '',
         content,
         onMount,
+        metadata,
       };
       
       // If we're not at the end of the history, truncate it
@@ -117,13 +118,14 @@ function drawerReducer(state: DrawerState, action: DrawerAction): DrawerState {
     }
     
     case 'REPLACE_DRAWER': {
-      const { content, onMount } = action.payload;
+      const { content, onMount, metadata } = action.payload;
       const newEntry: DrawerHistoryEntry = {
         id: `drawer-${Date.now()}`,
         type: 'custom',
         title: '',
         content,
         onMount,
+        metadata,
       };
       
       return {
@@ -248,12 +250,12 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const currentEntry = state.currentIndex >= 0 ? state.history[state.currentIndex] : null;
   
   // Original methods (for backward compatibility)
-  const openDrawer = useCallback((content: ReactNode, onMount?: () => Promise<void>) => {
-    dispatch({ type: 'OPEN_DRAWER', payload: { content, onMount } });
+  const openDrawer = useCallback((content: ReactNode, onMount?: () => Promise<void>, metadata?: Record<string, any>) => {
+    dispatch({ type: 'OPEN_DRAWER', payload: { content, onMount, metadata } });
   }, []);
 
-  const replaceDrawer = useCallback((content: ReactNode, onMount?: () => Promise<void>) => {
-    dispatch({ type: 'REPLACE_DRAWER', payload: { content, onMount } });
+  const replaceDrawer = useCallback((content: ReactNode, onMount?: () => Promise<void>, metadata?: Record<string, any>) => {
+    dispatch({ type: 'REPLACE_DRAWER', payload: { content, onMount, metadata } });
   }, []);
 
   const closeDrawer = useCallback(() => {
@@ -353,7 +355,7 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             {(canGoBack || canGoForward || currentEntry.title) && (
               <div className="flex items-center justify-between mb-6 border-b pb-4">
                 <div className="flex items-center">
-                  {canGoBack && (
+                  {canGoBack && !currentEntry.metadata?.hideBackButton && (
                     <Button
                       id="drawer-back-button"
                       variant="ghost"

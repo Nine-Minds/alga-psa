@@ -145,18 +145,8 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
         companies={companies}
         isInDrawer={true}
         onSave={(updatedContact) => {
+          // Just update the local state, don't navigate
           setContact(updatedContact);
-          openDrawer(
-            <ContactDetailsView 
-              id={id}
-              initialContact={updatedContact} 
-              companies={companies}
-              isInDrawer={true}
-              userId={userId}
-              documents={documents}
-              onDocumentCreated={onDocumentCreated}
-            />
-          );
         }}
         onCancel={() => openDrawer(
           <ContactDetailsView 
@@ -169,7 +159,9 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
             onDocumentCreated={onDocumentCreated}
           />
         )}
-      />
+      />,
+      undefined,
+      { hideBackButton: true, isContactEdit: true }
     );
   };
 
@@ -249,16 +241,6 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
             </div>
             {!isInDrawer && (
               <div className="flex items-center space-x-2">
-                <Button
-                  id={`${id}-back-button`}
-                  onClick={goBack}
-                  variant="ghost"
-                  size="sm"
-                  className="flex items-center"
-                >
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back
-                </Button>
                 <Button
                   id={`${id}-edit-button`}
                   variant="soft"
