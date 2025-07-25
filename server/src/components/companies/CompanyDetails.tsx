@@ -830,22 +830,12 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           <h4 className="text-md font-semibold text-gray-800 pt-2">Formatted Notes</h4>
 
           {/* Note metadata */}
-          {noteDocument && (
+          {noteDocument && noteDocument.updated_at && (
             <div className="bg-gray-50 p-3 rounded-md border border-gray-200 text-xs text-gray-600">
               <div className="flex justify-between items-center flex-wrap gap-2"> 
                 <div>
-                  <span className="font-medium">Created by:</span> {noteDocument.created_by_full_name || "Unknown"}
-                  {noteDocument.entered_at && (
-                    <span className="ml-2">
-                      on {new Date(noteDocument.entered_at).toLocaleDateString()} at {new Date(noteDocument.entered_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} {/* Formatted time */}
-                    </span>
-                  )}
+                  <span className="font-medium">Last updated:</span> {new Date(noteDocument.updated_at).toLocaleDateString()} at {new Date(noteDocument.updated_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
                 </div>
-                {noteDocument.updated_at && noteDocument.updated_at !== noteDocument.entered_at && (
-                  <div>
-                    <span className="font-medium">Last updated:</span> {new Date(noteDocument.updated_at).toLocaleDateString()} at {new Date(noteDocument.updated_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} {/* Formatted time */}
-                  </div>
-                )}
               </div>
             </div>
           )}
