@@ -466,24 +466,28 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       // Convert blocks to JSON string
       const blockData = JSON.stringify(currentContent);
       
-      if (company.notes_document_id) {
+      if (editedCompany.notes_document_id) {
         // Update existing note document
-        await updateBlockContent(company.notes_document_id, {
+        await updateBlockContent(editedCompany.notes_document_id, {
           block_data: blockData,
           user_id: currentUser.user_id
         });
+        
+        // Refresh document metadata to show updated timestamp
+        const updatedDocument = await getDocument(editedCompany.notes_document_id);
+        setNoteDocument(updatedDocument);
       } else {
         // Create new note document
         const { document_id } = await createBlockDocument({
-          document_name: `${company.company_name} Notes`,
+          document_name: `${editedCompany.company_name} Notes`,
           user_id: currentUser.user_id,
           block_data: blockData,
-          entityId: company.company_id,
+          entityId: editedCompany.company_id,
           entityType: 'company'
         });
         
         // Update company with the new notes_document_id
-        await updateCompany(company.company_id, {
+        await updateCompany(editedCompany.company_id, {
           notes_document_id: document_id
         });
         
@@ -492,11 +496,25 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           ...prev,
           notes_document_id: document_id
         }));
+        
+        // Get the newly created document metadata
+        const newDocument = await getDocument(document_id);
+        setNoteDocument(newDocument);
       }
       
       setHasUnsavedNoteChanges(false);
+      toast({
+        title: "Success",
+        description: "Note saved successfully.",
+        variant: "default"
+      });
     } catch (error) {
       console.error('Error saving note:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save note. Please try again.",
+        variant: "destructive"
+      });
     }
   };
   
