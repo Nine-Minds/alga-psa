@@ -33,6 +33,7 @@ export async function getHostedGmailConfig() {
   const isEnterprise = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
   
   if (!isEnterprise) {
+    console.log('Skipping hosted Gmail config for non-enterprise edition');
     return null;
   }
   

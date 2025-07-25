@@ -149,11 +149,15 @@ export function GmailProviderForm({
       if (!providerId) {
         // Get hosted Gmail configuration
         const hostedConfig = await getHostedGmailConfig();
-        if (!hostedConfig || !hostedConfig.project_id || !hostedConfig.redirect_uri) {
-          throw new Error('Hosted Gmail configuration not available or incomplete');
-        }
-        if (!hostedConfig.client_id || !hostedConfig.client_secret) {
+        if (!hostedConfig || !hostedConfig.client_id || !hostedConfig.client_secret) {
           throw new Error('Hosted Gmail client credentials not available');
+        }
+        // Set defaults for missing optional configuration
+        if (!hostedConfig.project_id) {
+          hostedConfig.project_id = hostedConfig.client_id.split('-')[0] || 'default-project';
+        }
+        if (!hostedConfig.redirect_uri) {
+          hostedConfig.redirect_uri = 'https://api.algapsa.com/api/auth/google/callback';
         }
 
         const payload = {

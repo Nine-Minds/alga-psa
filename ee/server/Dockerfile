@@ -25,6 +25,7 @@ RUN npm install --omit=dev
 
 # Copy base files
 COPY tsconfig.base.json ./
+COPY server/tsconfig.json ./server/
 COPY server/setup /app/server/setup
 COPY .env.example /app/.env   
 COPY .env.example /app/server/.env  
@@ -39,6 +40,7 @@ COPY ./server/.next ./server/.next
 COPY ./server/dist ./server/dist
 
 # Copy runtime files
+COPY ./server/index.ts ./server/
 COPY ./server/public ./server/public
 COPY ./server/next.config.mjs ./server/
 COPY ./server/knexfile.cjs ./server/
