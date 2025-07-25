@@ -61,6 +61,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [changesSavedInDrawer, setChangesSavedInDrawer] = useState(false);
 
   const statusOptions = [
     { value: 'all', label: 'All contacts' },
@@ -71,6 +72,17 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
   const refreshContacts = async () => {
     // Force refresh by changing a key to trigger re-render
     setRefreshKey(prev => prev + 1);
+  };
+
+  const handleChangesSaved = () => {
+    setChangesSavedInDrawer(true);
+  };
+
+  const handleDrawerClose = () => {
+    if (changesSavedInDrawer) {
+      refreshContacts();
+      setChangesSavedInDrawer(false);
+    }
   };
 
   // Fetch contacts and companies when filter status changes
@@ -239,8 +251,10 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
                 console.error('Error refreshing documents:', err);
               }
             }}
-            onContactUpdated={refreshContacts}
-          />
+            onChangesSaved={handleChangesSaved}
+          />,
+          undefined, // onMount
+          handleDrawerClose // onClose
         );
       } catch (error) {
         console.error('Error fetching contact documents:', error);
@@ -297,8 +311,10 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
                 console.error('Error refreshing documents:', err);
               }
             }}
-            onContactUpdated={refreshContacts}
-          />
+            onChangesSaved={handleChangesSaved}
+          />,
+          undefined, // onMount
+          handleDrawerClose // onClose
         );
       } catch (error) {
         console.error('Error fetching contact documents:', error);

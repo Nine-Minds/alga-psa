@@ -128,6 +128,7 @@ interface ContactDetailsProps {
   userId?: string;
   onDocumentCreated?: () => Promise<void>;
   onContactUpdated?: () => Promise<void>;
+  onChangesSaved?: () => void;
   userPermissions?: {
     canInvite: boolean;
     canUpdateRoles: boolean;
@@ -145,6 +146,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   userId,
   onDocumentCreated,
   onContactUpdated,
+  onChangesSaved,
   userPermissions = {
     canInvite: false,
     canUpdateRoles: false,
@@ -280,13 +282,13 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
         description: "Contact details have been saved successfully.",
       });
       
-      // Call the callback to refresh the parent component's data
-      if (onContactUpdated) {
+      // In quick view mode, mark that changes were saved (for refresh on drawer close)
+      // In regular mode, refresh immediately to maintain existing behavior
+      if (quickView && onChangesSaved) {
+        onChangesSaved();
+      } else if (!quickView && onContactUpdated) {
         await onContactUpdated();
       }
-      
-      // In quick view mode, we don't navigate anywhere - just show the toast
-      // In regular mode, the existing behavior is maintained
     } catch (error) {
       console.error('Error saving contact:', error);
       toast({
