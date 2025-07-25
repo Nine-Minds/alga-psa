@@ -60,12 +60,18 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
   const [contactToDelete, setContactToDelete] = useState<IContact | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const statusOptions = [
     { value: 'all', label: 'All contacts' },
     { value: 'active', label: 'Active contacts' },
     { value: 'inactive', label: 'Inactive contacts' }
   ];
+
+  const refreshContacts = async () => {
+    // Force refresh by changing a key to trigger re-render
+    setRefreshKey(prev => prev + 1);
+  };
 
   // Fetch contacts and companies when filter status changes
   useEffect(() => {
@@ -111,7 +117,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
       }
     };
     fetchContactsAndCompanies();
-  }, [companyId, filterStatus]);
+  }, [companyId, filterStatus, refreshKey]);
 
   // Fetch tags separately - only fetch contact-specific tags when contacts change
   useEffect(() => {
@@ -233,6 +239,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
                 console.error('Error refreshing documents:', err);
               }
             }}
+            onContactUpdated={refreshContacts}
           />
         );
       } catch (error) {
@@ -290,6 +297,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
                 console.error('Error refreshing documents:', err);
               }
             }}
+            onContactUpdated={refreshContacts}
           />
         );
       } catch (error) {

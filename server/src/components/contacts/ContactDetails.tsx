@@ -9,6 +9,7 @@ import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Button } from '../ui/Button';
+import { ExternalLink } from 'lucide-react';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Input } from 'server/src/components/ui/Input';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
@@ -126,6 +127,7 @@ interface ContactDetailsProps {
   quickView?: boolean;
   userId?: string;
   onDocumentCreated?: () => Promise<void>;
+  onContactUpdated?: () => Promise<void>;
   userPermissions?: {
     canInvite: boolean;
     canUpdateRoles: boolean;
@@ -142,6 +144,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   quickView = false,
   userId,
   onDocumentCreated,
+  onContactUpdated,
   userPermissions = {
     canInvite: false,
     canUpdateRoles: false,
@@ -276,6 +279,11 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
         title: "Contact Updated",
         description: "Contact details have been saved successfully.",
       });
+      
+      // Call the callback to refresh the parent component's data
+      if (onContactUpdated) {
+        await onContactUpdated();
+      }
       
       // In quick view mode, we don't navigate anywhere - just show the toast
       // In regular mode, the existing behavior is maintained
@@ -559,6 +567,19 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
         </div>
         
         <Heading size="6">{editedContact.full_name}</Heading>
+        
+        {isInDrawer && (
+          <Button
+            id={`${id}-go-to-contact-button`}
+            onClick={() => window.open(`/msp/contacts/${editedContact.contact_name_id}`, '_blank')}
+            variant="soft"
+            size="sm"
+            className="flex items-center ml-4 mr-8"
+          >
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Go to contact
+          </Button>
+        )}
       </div>
 
       {/* Content Area */}
