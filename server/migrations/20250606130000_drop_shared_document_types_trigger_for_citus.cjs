@@ -8,6 +8,7 @@
       ) as is_reference_table
     `);
 
+    console.log('hey! I\'m here!');
     if (result.rows[0].is_reference_table) {
       console.log('shared_document_types is a reference table - skipping trigger drop');
       return;
