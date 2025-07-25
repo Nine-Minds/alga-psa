@@ -269,11 +269,16 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       
       const updatedContact = await updateContact(dataToUpdate);
       setEditedContact(updatedContact);
+      setOriginalContact(updatedContact);
       setHasUnsavedChanges(false);
+      
       toast({
         title: "Contact Updated",
         description: "Contact details have been saved successfully.",
       });
+      
+      // In quick view mode, we don't navigate anywhere - just show the toast
+      // In regular mode, the existing behavior is maintained
     } catch (error) {
       console.error('Error saving contact:', error);
       toast({
@@ -293,12 +298,16 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       try {
         const company = await getCompanyById(editedContact.company_id);
         if (company) {
-          // Use router to temporarily set tab to details for the drawer
-          const params = new URLSearchParams(searchParams?.toString() || '');
-          params.set('tab', 'details');
-          router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+          // In quick view mode, avoid URL manipulation to prevent navigation issues
+          if (!quickView) {
+            // Use router to temporarily set tab to details for the drawer
+            const params = new URLSearchParams(searchParams?.toString() || '');
+            params.set('tab', 'details');
+            router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+          }
           
-          // Small delay to ensure the URL is updated before opening drawer
+          // Small delay to ensure the URL is updated before opening drawer (only in non-quick view)
+          const delay = quickView ? 0 : 10;
           setTimeout(() => {
             drawer.openDrawer(
               <CompanyDetails 
@@ -308,7 +317,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
                 isInDrawer={true}
               />
             );
-          }, 10);
+          }, delay);
         } else {
           console.error('Company not found');
         }
@@ -330,6 +339,11 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   };
 
   const handleTabChange = async (tabValue: string) => {
+    // In quick view mode, we don't need to handle tab changes since only Details tab is shown
+    if (quickView) {
+      return;
+    }
+    
     const params = new URLSearchParams(searchParams?.toString() || '');
     params.set('tab', tabValue);
     router.push(`${pathname}?${params.toString()}`);
@@ -524,9 +538,11 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   return (
     <ReflectionContainer id={id} label="Contact Details">
       <div className="flex items-center space-x-5 mb-4 pt-2">
-        <BackNav href={!isInDrawer ? "/msp/contacts" : undefined}>
-          {isInDrawer ? 'Back' : 'Back to Contacts'}
-        </BackNav>
+        {!quickView && (
+          <BackNav href={!isInDrawer ? "/msp/contacts" : undefined}>
+            {isInDrawer ? 'Back' : 'Back to Contacts'}
+          </BackNav>
+        )}
         
         {/* Contact Avatar Upload */}
         <div className="mr-4">
