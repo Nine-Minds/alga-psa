@@ -15,6 +15,7 @@ interface DrawerHistoryEntry {
   title: string;
   content: ReactNode;
   onMount?: () => Promise<void>;
+  onClose?: () => void;
   metadata?: Record<string, any>;
 }
 
@@ -30,7 +31,7 @@ interface DrawerContentProps {
 
 interface DrawerContextType {
   // Original methods
-  openDrawer: (content: ReactNode, onMount?: () => Promise<void>) => void;
+  openDrawer: (content: ReactNode, onMount?: () => Promise<void>, onClose?: () => void) => void;
   replaceDrawer: (content: ReactNode, onMount?: () => Promise<void>) => void;
   closeDrawer: () => void;
   goBack: () => void;
@@ -68,7 +69,7 @@ interface DrawerContextType {
 
 // Define the drawer actions
 type DrawerAction =
-  | { type: 'OPEN_DRAWER'; payload: { content: ReactNode; onMount?: () => Promise<void> } }
+  | { type: 'OPEN_DRAWER'; payload: { content: ReactNode; onMount?: () => Promise<void>; onClose?: () => void } }
   | { type: 'REPLACE_DRAWER'; payload: { content: ReactNode; onMount?: () => Promise<void> } }
   | { type: 'OPEN_LIST_DRAWER'; payload: { activityType: ActivityType; title: string; content: ReactNode; onMount?: () => Promise<void>; metadata?: Record<string, any> } }
   | { type: 'OPEN_DETAIL_DRAWER'; payload: { activity: Activity; content: ReactNode; title?: string; onMount?: () => Promise<void> } }
@@ -95,13 +96,14 @@ const initialState: DrawerState = {
 function drawerReducer(state: DrawerState, action: DrawerAction): DrawerState {
   switch (action.type) {
     case 'OPEN_DRAWER': {
-      const { content, onMount } = action.payload;
+      const { content, onMount, onClose } = action.payload;
       const newEntry: DrawerHistoryEntry = {
         id: `drawer-${Date.now()}`,
         type: 'custom',
         title: '',
         content,
         onMount,
+        onClose,
       };
       
       // If we're not at the end of the history, truncate it
@@ -248,8 +250,8 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const currentEntry = state.currentIndex >= 0 ? state.history[state.currentIndex] : null;
   
   // Original methods (for backward compatibility)
-  const openDrawer = useCallback((content: ReactNode, onMount?: () => Promise<void>) => {
-    dispatch({ type: 'OPEN_DRAWER', payload: { content, onMount } });
+  const openDrawer = useCallback((content: ReactNode, onMount?: () => Promise<void>, onClose?: () => void) => {
+    dispatch({ type: 'OPEN_DRAWER', payload: { content, onMount, onClose } });
   }, []);
 
   const replaceDrawer = useCallback((content: ReactNode, onMount?: () => Promise<void>) => {
@@ -257,8 +259,12 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   }, []);
 
   const closeDrawer = useCallback(() => {
+    // Call onClose callback for the current entry before closing
+    if (currentEntry?.onClose) {
+      currentEntry.onClose();
+    }
     dispatch({ type: 'CLOSE_DRAWER' });
-  }, []);
+  }, [currentEntry]);
 
   const goBack = useCallback(() => {
     dispatch({ type: 'GO_BACK' });
