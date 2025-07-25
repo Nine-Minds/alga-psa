@@ -10,6 +10,7 @@ exports.up = async function(knex) {
   
   try {
     // Check if the table is a Citus distributed/reference table
+    console.log('Checking if system_interaction_types is a Citus distributed/reference table...');
     const result = await knex.raw(`
       SELECT EXISTS (
         SELECT 1 
@@ -25,8 +26,10 @@ exports.up = async function(knex) {
   }
   
   if (isDistributed) {
-    console.log('Table system_interaction_types is a Citus distributed/reference table - skipping trigger operations');
+    console.log('Table system_interaction_types is a Citus distributed/reference table - skipping trigger drop and function cleanup');
   } else {
+    console.log('Table system_interaction_types is not a distributed table - proceeding with trigger removal');
+    
     // Only drop trigger and function if table is not distributed
     await knex.raw(`
       DROP TRIGGER IF EXISTS prevent_system_interaction_type_modification ON system_interaction_types;
