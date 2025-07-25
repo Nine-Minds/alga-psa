@@ -87,6 +87,11 @@ export async function apiKeyAuthMiddleware(
     return next();
   }
 
+  // Skip authentication for document download endpoints (they use session auth)
+  if (req.path.startsWith('/api/documents/download/')) {
+    return next();
+  }
+
   const apiKey = req.headers['x-api-key'] as string;
   
   if (!apiKey) {
