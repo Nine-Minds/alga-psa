@@ -5,7 +5,7 @@
   "main": "dist/worker.js",
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json && tsc-alias",
+    "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
     "dev": "tsx watch src/worker.ts",
     "start": "node dist/worker.js",
     "start:worker": "node dist/worker.js",
@@ -44,6 +44,7 @@
     "@types/pg": "^8.11.6",
     "@types/uuid": "^10.0.0",
     "tsc-alias": "^1.8.11",
+    "tsconfig-paths": "^4.2.0",
     "tsx": "^4.19.3",
     "typescript": "^5.3.3",
     "vitest": "^1.0.0"

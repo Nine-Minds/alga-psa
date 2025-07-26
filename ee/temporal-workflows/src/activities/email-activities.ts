@@ -173,6 +173,9 @@ export async function sendWelcomeEmail(
   });
 
   try {
+    // Get the email service instance
+    const emailServiceInstance = await emailService;
+    
     // Create email content
     const { subject, htmlBody, textBody } = createWelcomeEmailContent(input);
     
@@ -192,12 +195,12 @@ export async function sendWelcomeEmail(
     };
 
     // Validate email before sending
-    if (!emailService.validateEmail(input.adminUser.email)) {
+    if (!emailServiceInstance.validateEmail(input.adminUser.email)) {
       throw new Error(`Invalid email address: ${input.adminUser.email}`);
     }
 
     // Send the email
-    const emailResult = await emailService.sendEmail(emailParams);
+    const emailResult = await emailServiceInstance.sendEmail(emailParams);
 
     log.info('Welcome email sent successfully', {
       tenantId: input.tenantId,

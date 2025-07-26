@@ -1,15 +1,15 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "ES2020",
+    "target": "ES2022",
+    "module": "ES2022",
     "moduleResolution": "node",
     "outDir": "./dist",
-    "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    "allowJs": true,
     "resolveJsonModule": true,
     "declaration": true,
     "declarationMap": true,
@@ -17,7 +17,7 @@
     "noEmit": false,
     "baseUrl": "./src",
     "paths": {
-      "@shared/*": ["../../shared/*"],
+      "@shared/*": ["../../../shared/dist/*"],
       "@/*": ["./"]
     }
   },

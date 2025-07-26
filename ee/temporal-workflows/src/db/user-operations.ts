@@ -1,5 +1,6 @@
 import { Context } from '@temporalio/activity';
-import { getAdminDatabase, executeTransaction } from './connection.js';
+import { getAdminConnection } from '../../../../shared/dist/db/admin.js';
+import type { Knex } from 'knex';
 import type {
   CreateAdminUserActivityInput,
   CreateAdminUserActivityResult
@@ -20,16 +21,16 @@ export async function createAdminUserInDB(
   });
 
   try {
-    const adminDb = await getAdminDatabase();
+    const knex = await getAdminConnection();
     
-    const result = await executeTransaction(adminDb, async (client) => {
+    const result = await knex.transaction(async (trx: Knex.Transaction) => {
       // Check if user already exists in this tenant
-      const existingUser = await client.query(
-        'SELECT user_id FROM users WHERE email = $1 AND tenant = $2',
-        [input.email, input.tenantId]
-      );
+      const existingUser = await trx('users')
+        .select('user_id')
+        .where({ email: input.email, tenant: input.tenantId })
+        .first();
 
-      if (existingUser.rows.length > 0) {
+      if (existingUser) {
         throw new Error(`User with email ${input.email} already exists`);
       }
 
@@ -37,50 +38,49 @@ export async function createAdminUserInDB(
       const temporaryPassword = generateSecurePassword(12);
       
       // Create user (matching actual Alga schema)
-      const userResult = await client.query(
-        `INSERT INTO users (
-          first_name, last_name, email, tenant, user_type, username, hashed_password
-        ) VALUES ($1, $2, $3, $4, 'internal', $5, $6) 
-        RETURNING user_id`,
-        [
-          input.firstName,
-          input.lastName, 
-          input.email,
-          input.tenantId,
-          input.email, // use email as username
-          await hashPassword(temporaryPassword) // hash the temporary password
-        ]
-      );
+      const userResult = await trx('users')
+        .insert({
+          first_name: input.firstName,
+          last_name: input.lastName,
+          email: input.email,
+          tenant: input.tenantId,
+          user_type: 'internal',
+          username: input.email, // use email as username
+          hashed_password: await hashPassword(temporaryPassword) // hash the temporary password
+        })
+        .returning('user_id');
       
-      const userId = userResult.rows[0].user_id;
+      const userId = userResult[0].user_id;
 
       // Find or create Admin role
-      let adminRoleResult = await client.query(
-        'SELECT role_id FROM roles WHERE role_name = $1 AND tenant = $2',
-        ['Admin', input.tenantId]
-      );
+      let adminRole = await trx('roles')
+        .select('role_id')
+        .where({ role_name: 'Admin', tenant: input.tenantId })
+        .first();
 
       let roleId: string;
-      if (adminRoleResult.rows.length === 0) {
+      if (!adminRole) {
         // Create Admin role for this tenant
-        const newRoleResult = await client.query(
-          `INSERT INTO roles (role_name, tenant, description)
-           VALUES ($1, $2, $3)
-           RETURNING role_id`,
-          ['Admin', input.tenantId, 'Administrator role with full access']
-        );
-        roleId = newRoleResult.rows[0].role_id;
+        const newRoleResult = await trx('roles')
+          .insert({
+            role_name: 'Admin',
+            tenant: input.tenantId,
+            description: 'Administrator role with full access'
+          })
+          .returning('role_id');
+        roleId = newRoleResult[0].role_id;
         log.info('Created Admin role', { roleId, tenantId: input.tenantId });
       } else {
-        roleId = adminRoleResult.rows[0].role_id;
+        roleId = adminRole.role_id;
       }
 
       // Associate user with tenant and role (using correct table name)
-      await client.query(
-        `INSERT INTO user_roles (user_id, tenant, role_id)
-         VALUES ($1, $2, $3)`,
-        [userId, input.tenantId, roleId]
-      );
+      await trx('user_roles')
+        .insert({
+          user_id: userId,
+          tenant: input.tenantId,
+          role_id: roleId
+        });
 
       // Note: Skipping company association for now - table structure unknown
 
@@ -114,24 +114,21 @@ export async function rollbackUserInDB(userId: string, tenantId: string): Promis
   log.info('Rolling back user creation', { userId, tenantId });
 
   try {
-    const adminDb = await getAdminDatabase();
+    const knex = await getAdminConnection();
 
-    await executeTransaction(adminDb, async (client) => {
+    await knex.transaction(async (trx: Knex.Transaction) => {
       // Delete user associations in reverse order
-      await client.query(
-        'DELETE FROM user_companies WHERE user_id = $1',
-        [userId]
-      );
+      await trx('user_companies')
+        .where({ user_id: userId })
+        .delete();
       
-      await client.query(
-        'DELETE FROM user_tenant_roles WHERE user_id = $1 AND tenant_id = $2',
-        [userId, tenantId]
-      );
+      await trx('user_tenant_roles')
+        .where({ user_id: userId, tenant_id: tenantId })
+        .delete();
       
-      await client.query(
-        'DELETE FROM users WHERE user_id = $1',
-        [userId]
-      );
+      await trx('users')
+        .where({ user_id: userId })
+        .delete();
     });
 
     log.info('User rollback completed', { userId, tenantId });

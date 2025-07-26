@@ -17,7 +17,19 @@ RUN npm ci --only=production
 # Development stage
 FROM base AS development
 RUN npm ci
-COPY . .
+
+# First, we need to copy and build shared
+# Note: This assumes the Docker build context is set to project root
+# with -f ee/temporal-workflows/Dockerfile
+WORKDIR /app/shared
+COPY shared/package.json ./
+RUN npm ci
+COPY shared/ ./
+RUN npm run build
+
+# Now build temporal-workflows
+WORKDIR /app
+COPY ee/temporal-workflows/ ./
 RUN npm run build
 
 # Production stage
@@ -25,6 +37,7 @@ FROM base AS production
 
 # Copy built application
 COPY --from=development /app/dist ./dist
+COPY --from=development /app/shared/dist ./shared
 COPY --from=development /app/package*.json ./
 
 # Create non-root user

@@ -122,8 +122,9 @@ build_image() {
         return
     fi
     
-    cd "$PROJECT_DIR"
-    docker build -t "${REGISTRY}/${IMAGE_NAME}:${TAG}" .
+    # Build from project root to include shared directory
+    cd "$PROJECT_DIR/../.."
+    docker build -t "${REGISTRY}/${IMAGE_NAME}:${TAG}" -f ee/temporal-workflows/Dockerfile .
     
     log_info "Image built successfully"
 }
