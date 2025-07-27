@@ -1,0 +1,231 @@
+{{- if .Values.temporalWorker.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sebastian.fullname" . }}-temporal-worker
+  namespace: {{ include "sebastian.namespace" . }}
+  labels:
+    {{- include "sebastian.labels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal-worker
+spec:
+  replicas: {{ .Values.temporalWorker.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: {{ .Values.temporalWorker.rollingUpdate.maxSurge | default 1 }}
+      maxUnavailable: {{ .Values.temporalWorker.rollingUpdate.maxUnavailable | default 0 }}
+  selector:
+    matchLabels:
+      {{- include "sebastian.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: temporal-worker
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/temporal-worker/configmap.yaml") . | sha256sum }}
+        {{- if .Values.temporalWorker.vault.enabled }}
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "{{ .Values.temporalWorker.vault.role }}"
+        vault.hashicorp.com/agent-inject-secret-internal-api: "{{ .Values.temporalWorker.vault.secretPath }}"
+        vault.hashicorp.com/agent-inject-template-internal-api: |
+          {{`{{- with secret "`}}{{ .Values.temporalWorker.vault.secretPath }}{{`" -}}
+          export INTERNAL_API_SHARED_SECRET="{{ .Data.data.internal_api_shared_secret }}"
+          {{- end }}`}}
+        vault.hashicorp.com/agent-inject-secret-auth-key: "{{ .Values.temporalWorker.vault.sharedSecretPath }}"
+        vault.hashicorp.com/agent-inject-template-auth-key: |
+          {{`{{- with secret "`}}{{ .Values.temporalWorker.vault.sharedSecretPath }}{{`" -}}
+          export ALGA_AUTH_KEY="{{ .Data.data.alga_auth_key }}"
+          {{- end }}`}}
+        {{- end }}
+        {{- with .Values.temporalWorker.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "sebastian.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: temporal-worker
+        {{- with .Values.temporalWorker.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "sebastian.fullname" . }}-temporal-worker
+      {{- if .Values.temporalWorker.image.is_private }}
+      imagePullSecrets:
+        - name: "{{ .Values.temporalWorker.image.credentials }}"
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.temporalWorker.podSecurityContext | nindent 8 }}
+      {{- if .Values.temporalWorker.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.temporalWorker.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.temporalWorker.affinity }}
+      affinity:
+        {{- toYaml .Values.temporalWorker.affinity | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                  - temporal-worker
+              topologyKey: kubernetes.io/hostname
+      {{- end }}
+      {{- if .Values.temporalWorker.tolerations }}
+      tolerations:
+        {{- toYaml .Values.temporalWorker.tolerations | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: temporal-worker
+          securityContext:
+            {{- toYaml .Values.temporalWorker.securityContext | nindent 12 }}
+          image: "{{ .Values.temporalWorker.image.repository }}:{{ .Values.temporalWorker.image.tag }}"
+          imagePullPolicy: {{ .Values.temporalWorker.image.pullPolicy }}
+          {{- if .Values.temporalWorker.vault.enabled }}
+          command: ["/bin/sh"]
+          args:
+            - -c
+            - |
+              source /vault/secrets/internal-api
+              source /vault/secrets/auth-key
+              exec npm run start
+          {{- end }}
+          env:
+            # Core Temporal Configuration
+            - name: TEMPORAL_ADDRESS
+              value: "{{ .Values.temporalWorker.temporal.address }}"
+            - name: TEMPORAL_NAMESPACE
+              value: "{{ .Values.temporalWorker.temporal.namespace }}"
+            - name: TEMPORAL_TASK_QUEUE
+              value: "{{ .Values.temporalWorker.temporal.taskQueue }}"
+            
+            # Database Configuration (matching alga-psa)
+            - name: DB_HOST
+              {{- if .Values.db.enabled }}
+              value: "db.{{ include "sebastian.namespace" . }}.svc.cluster.local"
+              {{- else }}
+              value: "{{ .Values.config.db.host }}"
+              {{- end }}
+            - name: DB_PORT
+              value: "{{ .Values.config.db.port }}"
+            - name: DB_NAME_SERVER
+              value: "{{ .Values.config.db.server_database }}"
+            - name: DB_USER_SERVER
+              value: "{{ .Values.config.db.user }}"
+            - name: DB_PASSWORD_SERVER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.db.server_password_secret.name }}
+                  key: {{ .Values.config.db.server_password_secret.key }}
+            - name: DB_USER_ADMIN
+              value: "postgres"
+            - name: DB_PASSWORD_ADMIN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.db.server_password_admin_secret.name }}
+                  key: {{ .Values.config.db.server_password_admin_secret.key }}
+            
+            # Application Configuration
+            - name: NODE_ENV
+              value: "{{ .Values.env }}"
+            - name: LOG_LEVEL
+              value: "{{ .Values.temporalWorker.logLevel }}"
+            - name: APPLICATION_URL
+              value: "https://{{ .Values.host }}"
+            - name: NMSTORE_BASE_URL
+              value: "{{ .Values.temporalWorker.nmstore.baseUrl }}"
+            
+            # Email Configuration
+            - name: RESEND_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sebastian.fullname" . }}-secrets
+                  key: RESEND_API_KEY
+                  optional: true
+            
+            # Encryption Configuration
+            - name: SALT_BYTES
+              value: "{{ .Values.temporalWorker.encryption.saltBytes }}"
+            - name: ITERATIONS
+              value: "{{ .Values.temporalWorker.encryption.iterations }}"
+            - name: KEY_LENGTH
+              value: "{{ .Values.temporalWorker.encryption.keyLength }}"
+            - name: ALGORITHM
+              value: "{{ .Values.temporalWorker.encryption.algorithm }}"
+            
+            # Health Check Configuration
+            - name: ENABLE_HEALTH_CHECK
+              value: "true"
+            - name: HEALTH_CHECK_PORT
+              value: "8080"
+            
+            {{- if not .Values.temporalWorker.vault.enabled }}
+            # Local development secrets (when Vault is not enabled)
+            - name: INTERNAL_API_SHARED_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sebastian.fullname" . }}-temporal-worker-secrets
+                  key: INTERNAL_API_SHARED_SECRET
+            - name: ALGA_AUTH_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sebastian.fullname" . }}-temporal-worker-secrets
+                  key: ALGA_AUTH_KEY
+            {{- end }}
+            
+            # Additional environment variables
+            {{- range $key, $value := .Values.temporalWorker.extraEnv }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          
+          ports:
+            - name: health
+              containerPort: 8080
+              protocol: TCP
+          
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: health
+            initialDelaySeconds: {{ .Values.temporalWorker.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.temporalWorker.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.temporalWorker.livenessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.temporalWorker.livenessProbe.successThreshold }}
+            failureThreshold: {{ .Values.temporalWorker.livenessProbe.failureThreshold }}
+          
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: health
+            initialDelaySeconds: {{ .Values.temporalWorker.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.temporalWorker.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.temporalWorker.readinessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.temporalWorker.readinessProbe.successThreshold }}
+            failureThreshold: {{ .Values.temporalWorker.readinessProbe.failureThreshold }}
+          
+          resources:
+            {{- toYaml .Values.temporalWorker.resources | nindent 12 }}
+          
+          volumeMounts:
+            {{- if .Values.temporalWorker.vault.enabled }}
+            - name: vault-secrets
+              mountPath: /vault/secrets
+              readOnly: true
+            {{- end }}
+            {{- with .Values.temporalWorker.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      
+      volumes:
+        {{- if .Values.temporalWorker.vault.enabled }}
+        - name: vault-secrets
+          emptyDir: {}
+        {{- end }}
+        {{- with .Values.temporalWorker.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+{{- end }}
