@@ -5,7 +5,7 @@
   "main": "dist/worker.js",
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && node scripts/fix-imports.js",
+    "build": "tsc -p tsconfig.build.json",
     "dev": "tsx watch src/worker.ts",
     "start": "node dist/worker.js",
     "start:worker": "node dist/worker.js",
@@ -24,6 +24,7 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
+    "@alga-psa/shared": "file:../../shared",
     "@temporalio/activity": "^1.8.0",
     "@temporalio/client": "^1.8.0",
     "@temporalio/worker": "^1.8.0",

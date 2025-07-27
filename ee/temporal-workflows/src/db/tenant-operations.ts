@@ -1,5 +1,5 @@
 import { Context } from '@temporalio/activity';
-import { getAdminConnection } from '../../../../shared/dist/db/admin.js';
+import { getAdminConnection } from '../../../../shared/db/admin.js';
 import type { Knex } from 'knex';
 import type {
   CreateTenantActivityInput,

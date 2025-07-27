@@ -1,7 +1,7 @@
 import { Context } from '@temporalio/activity';
-import { getAdminConnection } from '@shared/db/admin.js';
+import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
 import type { Knex } from 'knex';
-import { hashPassword, generateSecurePassword } from '@shared/utils/encryption.js';
+import { hashPassword, generateSecurePassword } from '@alga-psa/shared/utils/encryption.js';
 import type {
   CreateAdminUserActivityInput,
   CreateAdminUserActivityResult
@@ -140,4 +140,3 @@ export async function rollbackUserInDB(userId: string, tenantId: string): Promis
     // Don't throw here - rollback failures shouldn't mask the original error
   }
 }
-
