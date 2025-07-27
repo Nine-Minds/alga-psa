@@ -33,7 +33,7 @@ FROM base AS production
 # Copy the shared module and install its production dependencies
 COPY --from=development /app/shared /app/shared
 WORKDIR /app/shared
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 # Copy temporal-workflows with its dependencies
 COPY --from=development /app/ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
