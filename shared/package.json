@@ -6,16 +6,17 @@
   "main": "index.js",
   "types": "index.d.ts",
   "exports": {
-    "./types": "./types/index.js",
-    "./core": "./core/index.js",
-    "./db": "./db/index.js",
-    "./db/admin.js": "./db/admin.js",
-    "./utils/encryption.js": "./utils/encryption.js",
-    "./workflow": "./workflow/index.js",
-    "./workflow/core": "./workflow/core/index.js",
-    "./workflow/persistence": "./workflow/persistence/index.js",
-    "./workflow/streams": "./workflow/streams/index.js",
-    "./extension-utils": "./extension-utils/index.js"
+    "./types": "./dist/types/index.js",
+    "./core": "./dist/core/index.js",
+    "./core/secretProvider.js": "./dist/core/secretProvider.js",
+    "./db": "./dist/db/index.js",
+    "./db/admin.js": "./dist/db/admin.js",
+    "./utils/encryption.js": "./dist/utils/encryption.js",
+    "./workflow": "./dist/workflow/index.js",
+    "./workflow/core": "./dist/workflow/core/index.js",
+    "./workflow/persistence": "./dist/workflow/persistence/index.js",
+    "./workflow/streams": "./dist/workflow/streams/index.js",
+    "./extension-utils": "./dist/extension-utils/index.js"
   },
   "scripts": {
     "build": "tsc",

@@ -40,7 +40,7 @@ WORKDIR /app/ee/temporal-workflows
 
 # Copy the shared module directly into node_modules instead of using symlinks
 # This avoids module resolution issues in production
-COPY --from=development /app/shared/dist ./node_modules/@alga-psa/shared/
+COPY --from=development /app/shared/dist ./node_modules/@alga-psa/shared/dist
 COPY --from=development /app/shared/package.json ./node_modules/@alga-psa/shared/
 
 # Create non-root user
