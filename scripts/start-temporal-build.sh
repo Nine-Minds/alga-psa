@@ -107,8 +107,8 @@ submit_workflow() {
     
     echo -e "${GREEN}Submitting workflow...${NC}"
     
-    # Submit workflow and capture output
-    if output=$(kubectl apply -f "$workflow_file" 2>&1); then
+    # Submit workflow and capture output (use create for generateName)
+    if output=$(kubectl create -f "$workflow_file" 2>&1); then
         local workflow_name=$(echo "$output" | grep -o 'workflow.argoproj.io/[^ ]*' | cut -d'/' -f2)
         echo -e "${GREEN}Workflow submitted successfully: ${workflow_name}${NC}"
         echo ""
@@ -116,6 +116,9 @@ submit_workflow() {
         echo "  Watch logs:    kubectl logs -n argo -f ${workflow_name}"
         echo "  Check status:  kubectl get workflow -n argo ${workflow_name}"
         echo "  View details:  kubectl describe workflow -n argo ${workflow_name}"
+        echo ""
+        echo "To see real-time build progress:"
+        echo "  kubectl logs -n argo -f ${workflow_name} -c main"
         return 0
     else
         echo -e "${RED}Failed to submit workflow${NC}" >&2
