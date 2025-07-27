@@ -20,7 +20,14 @@ const emailLimiter = new RateLimiterMemory({
   duration: 3600, // per hour
 });
 
-interface RateLimitResult {
+// Add new auth verification limiter
+const authVerificationLimiter = new RateLimiterMemory({
+  points: 5, // 5 attempts
+  duration: 60, // per 60 seconds
+  blockDuration: 300, // Block for 5 minutes after limit exceeded
+});
+
+export interface RateLimitResult {
   success: boolean;
   remainingPoints?: number;
   msBeforeNext?: number;
@@ -67,6 +74,26 @@ export async function checkVerificationLimit(token: string): Promise<RateLimitRe
 export async function checkEmailLimit(email: string): Promise<RateLimitResult> {
   try {
     const rateLimitInfo = await emailLimiter.consume(email);
+    return {
+      success: true,
+      remainingPoints: rateLimitInfo.remainingPoints,
+      msBeforeNext: rateLimitInfo.msBeforeNext,
+    };
+  } catch (error) {
+    if (error instanceof Error) {
+      return {
+        success: false,
+        msBeforeNext: error.message ? parseInt(error.message) : undefined,
+      };
+    }
+    return { success: false };
+  }
+}
+
+// Add new function for auth verification rate limiting
+export async function checkAuthVerificationLimit(identifier: string): Promise<RateLimitResult> {
+  try {
+    const rateLimitInfo = await authVerificationLimiter.consume(identifier);
     return {
       success: true,
       remainingPoints: rateLimitInfo.remainingPoints,
