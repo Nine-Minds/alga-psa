@@ -38,13 +38,11 @@ COPY --from=development /app/ee/temporal-workflows/node_modules ./ee/temporal-wo
 # Set working directory to temporal-workflows
 WORKDIR /app/ee/temporal-workflows
 
-# Copy the shared module and install its dependencies in the correct location
+# Copy the entire shared module from development stage
+# This includes the already-installed node_modules with all dependencies
 COPY --from=development /app/shared/dist ./node_modules/@alga-psa/shared/dist
 COPY --from=development /app/shared/package.json ./node_modules/@alga-psa/shared/
-COPY --from=development /app/shared/package-lock.json ./node_modules/@alga-psa/shared/
-
-# Install production dependencies for the shared module
-RUN cd ./node_modules/@alga-psa/shared && npm ci --omit=dev
+COPY --from=development /app/shared/node_modules ./node_modules/@alga-psa/shared/node_modules
 
 # Create non-root user
 RUN groupadd -r temporal && useradd -r -g temporal temporal
