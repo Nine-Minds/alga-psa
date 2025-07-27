@@ -15,10 +15,10 @@
     "declarationMap": true,
     "sourceMap": true,
     "noEmit": false,
-    "baseUrl": "./src",
+    "baseUrl": ".",
     "paths": {
-      "@shared/*": ["../../../shared/dist/*"],
-      "@/*": ["./"]
+      "@shared/*": ["../../shared/dist/*"],
+      "@/*": ["./src/*"]
     }
   },
   "include": [
