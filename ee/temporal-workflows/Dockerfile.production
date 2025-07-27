@@ -34,16 +34,14 @@ FROM base AS production
 COPY --from=development /app/ee/temporal-workflows/dist ./ee/temporal-workflows/dist
 COPY --from=development /app/ee/temporal-workflows/package*.json ./ee/temporal-workflows/
 COPY --from=development /app/ee/temporal-workflows/node_modules ./ee/temporal-workflows/node_modules
-COPY --from=development /app/shared ./shared
 
 # Set working directory to temporal-workflows
 WORKDIR /app/ee/temporal-workflows
 
-# CRITICAL: Re-create the symlink for the shared module
-# This is necessary because npm's symlink for local file dependencies is not preserved when copying
-RUN mkdir -p node_modules/@alga-psa && \
-    ln -s /app/shared node_modules/@alga-psa/shared && \
-    ls -la node_modules/@alga-psa/
+# Copy the shared module directly into node_modules instead of using symlinks
+# This avoids module resolution issues in production
+COPY --from=development /app/shared/dist ./node_modules/@alga-psa/shared/
+COPY --from=development /app/shared/package.json ./node_modules/@alga-psa/shared/
 
 # Create non-root user
 RUN groupadd -r temporal && useradd -r -g temporal temporal
