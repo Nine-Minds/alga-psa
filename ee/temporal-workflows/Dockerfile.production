@@ -7,38 +7,34 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Copy package files from the correct paths when building from project root
-COPY ee/temporal-workflows/package*.json ./
-COPY ee/temporal-workflows/tsconfig.json ./
-
-# We need to skip the initial npm ci because it requires @alga-psa/shared
-# which will be built in the development stage
-
-# Development stage
+# Development stage - build everything
 FROM base AS development
+
+# First, copy root package files to install shared dependencies
+COPY package*.json ./
+COPY tsconfig.base.json ./
 RUN npm ci
 
-# First, we need to copy and build shared
-# Note: This assumes the Docker build context is set to project root
+# Build shared packages
+COPY shared ./shared
 WORKDIR /app/shared
-COPY shared/package.json ./
-RUN npm ci
-COPY shared/ ./
-RUN npm run build
+RUN npm ci && npm run build
 
 # Now build temporal-workflows
-WORKDIR /app
+WORKDIR /app/ee/temporal-workflows
+COPY ee/temporal-workflows/package*.json ./
+RUN npm ci
 COPY ee/temporal-workflows/ ./
 RUN npm run build
 
 # Production stage
 FROM base AS production
 
-# Copy built application
-COPY --from=development /app/dist ./dist
+# Copy only what's needed from development stage
+COPY --from=development /app/ee/temporal-workflows/dist ./dist
+COPY --from=development /app/ee/temporal-workflows/package*.json ./
+COPY --from=development /app/ee/temporal-workflows/node_modules ./node_modules
 COPY --from=development /app/shared ./shared
-COPY --from=development /app/package*.json ./
-COPY --from=development /app/node_modules ./node_modules
 
 # Create non-root user
 RUN groupadd -r temporal && useradd -r -g temporal temporal
