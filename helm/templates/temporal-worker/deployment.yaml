@@ -89,11 +89,15 @@ spec:
           args:
             - -c
             - |
-              source /vault/secrets/internal-api
-              source /vault/secrets/auth-key
-              exec npm run start
+              . /vault/secrets/internal-api
+              . /vault/secrets/auth-key
+              exec node dist/ee/temporal-workflows/src/worker.js
           {{- end }}
           env:
+            # Node.js module resolution
+            - name: NODE_PATH
+              value: "/app:/app/node_modules"
+            
             # Core Temporal Configuration
             - name: TEMPORAL_ADDRESS
               value: "{{ .Values.temporalWorker.temporal.address }}"
@@ -211,20 +215,11 @@ spec:
             {{- toYaml .Values.temporalWorker.resources | nindent 12 }}
           
           volumeMounts:
-            {{- if .Values.temporalWorker.vault.enabled }}
-            - name: vault-secrets
-              mountPath: /vault/secrets
-              readOnly: true
-            {{- end }}
             {{- with .Values.temporalWorker.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
       
       volumes:
-        {{- if .Values.temporalWorker.vault.enabled }}
-        - name: vault-secrets
-          emptyDir: {}
-        {{- end }}
         {{- with .Values.temporalWorker.extraVolumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
