@@ -44,12 +44,31 @@ check_working_directory() {
 # Function to check if commit is pushed
 check_commit_pushed() {
     local sha=$1
-    local remote_sha=$(git ls-remote origin HEAD | cut -f1)
+    local current_branch=$(git branch --show-current)
     
-    if [ "$sha" != "$remote_sha" ]; then
+    # Check if commit exists on remote
+    if ! git branch -r --contains "$sha" | grep -q "origin/"; then
         echo -e "${RED}Error: Local commit $sha is not pushed to remote${NC}" >&2
         echo "The Kubernetes build needs the commit to be available on GitHub."
-        echo "Please push your changes first: git push origin $(git branch --show-current)"
+        echo "Please push your changes first: git push origin $current_branch"
+        exit 1
+    fi
+    
+    # Double-check by fetching and comparing
+    git fetch origin "$current_branch" --quiet
+    local remote_sha=$(git rev-parse "origin/$current_branch" 2>/dev/null || echo "")
+    
+    if [ -z "$remote_sha" ]; then
+        echo -e "${RED}Error: Branch $current_branch doesn't exist on remote${NC}" >&2
+        echo "Please push your branch first: git push -u origin $current_branch"
+        exit 1
+    fi
+    
+    # Check if our commit is an ancestor of the remote branch
+    if ! git merge-base --is-ancestor "$sha" "$remote_sha"; then
+        echo -e "${RED}Error: Local commit $sha is not on remote branch $current_branch${NC}" >&2
+        echo "The Kubernetes build needs the commit to be available on GitHub."
+        echo "Please push your changes first: git push origin $current_branch"
         exit 1
     fi
 }
