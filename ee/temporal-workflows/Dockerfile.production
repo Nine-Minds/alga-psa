@@ -15,10 +15,11 @@ COPY package*.json ./
 COPY tsconfig.base.json ./
 RUN npm ci
 
-# Build shared packages
+# Build shared packages with production dependencies
 COPY shared ./shared
 WORKDIR /app/shared
-RUN npm ci && npm run build
+# Install production dependencies only for shared module
+RUN npm ci --omit=dev && npm run build
 
 # Now build temporal-workflows
 WORKDIR /app/ee/temporal-workflows
@@ -38,11 +39,13 @@ COPY --from=development /app/ee/temporal-workflows/node_modules ./ee/temporal-wo
 # Set working directory to temporal-workflows
 WORKDIR /app/ee/temporal-workflows
 
-# Copy the shared module directly into node_modules instead of using symlinks
-# This avoids module resolution issues in production
+# Copy the shared module and install its dependencies in the correct location
 COPY --from=development /app/shared/dist ./node_modules/@alga-psa/shared/dist
 COPY --from=development /app/shared/package.json ./node_modules/@alga-psa/shared/
-COPY --from=development /app/shared/node_modules ./node_modules/@alga-psa/shared/node_modules
+COPY --from=development /app/shared/package-lock.json ./node_modules/@alga-psa/shared/
+
+# Install production dependencies for the shared module
+RUN cd ./node_modules/@alga-psa/shared && npm ci --omit=dev
 
 # Create non-root user
 RUN groupadd -r temporal && useradd -r -g temporal temporal
