@@ -42,6 +42,7 @@ WORKDIR /app/ee/temporal-workflows
 # This avoids module resolution issues in production
 COPY --from=development /app/shared/dist ./node_modules/@alga-psa/shared/dist
 COPY --from=development /app/shared/package.json ./node_modules/@alga-psa/shared/
+COPY --from=development /app/shared/node_modules ./node_modules/@alga-psa/shared/node_modules
 
 # Create non-root user
 RUN groupadd -r temporal && useradd -r -g temporal temporal
