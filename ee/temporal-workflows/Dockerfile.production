@@ -11,8 +11,8 @@ WORKDIR /app
 COPY ee/temporal-workflows/package*.json ./
 COPY ee/temporal-workflows/tsconfig.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# We need to skip the initial npm ci because it requires @alga-psa/shared
+# which will be built in the development stage
 
 # Development stage
 FROM base AS development
@@ -36,8 +36,9 @@ FROM base AS production
 
 # Copy built application
 COPY --from=development /app/dist ./dist
-COPY --from=development /app/shared/dist ./shared
+COPY --from=development /app/shared ./shared
 COPY --from=development /app/package*.json ./
+COPY --from=development /app/node_modules ./node_modules
 
 # Create non-root user
 RUN groupadd -r temporal && useradd -r -g temporal temporal
