@@ -30,17 +30,18 @@ RUN npm run build
 # Production stage
 FROM base AS production
 
-# Copy only what's needed from development stage
-COPY --from=development /app/ee/temporal-workflows/dist ./ee/temporal-workflows/dist
-COPY --from=development /app/ee/temporal-workflows/package*.json ./ee/temporal-workflows/
-COPY --from=development /app/ee/temporal-workflows/node_modules ./ee/temporal-workflows/node_modules
+# Copy the shared module and install its production dependencies
+COPY --from=development /app/shared /app/shared
+WORKDIR /app/shared
+RUN npm ci --omit=dev
+
+# Copy temporal-workflows with its dependencies
+COPY --from=development /app/ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
+COPY --from=development /app/ee/temporal-workflows/package*.json /app/ee/temporal-workflows/
+COPY --from=development /app/ee/temporal-workflows/node_modules /app/ee/temporal-workflows/node_modules
 
 # Set working directory to temporal-workflows
 WORKDIR /app/ee/temporal-workflows
-
-# Copy only the built shared module files (not node_modules since temporal-workflows has all deps)
-COPY --from=development /app/shared/dist ./node_modules/@alga-psa/shared/dist
-COPY --from=development /app/shared/package.json ./node_modules/@alga-psa/shared/
 
 # Create non-root user
 RUN groupadd -r temporal && useradd -r -g temporal temporal
