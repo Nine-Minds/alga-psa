@@ -15,11 +15,10 @@ COPY package*.json ./
 COPY tsconfig.base.json ./
 RUN npm ci
 
-# Build shared packages with production dependencies
+# Build shared packages
 COPY shared ./shared
 WORKDIR /app/shared
-# Install production dependencies only for shared module
-RUN npm ci --omit=dev && npm run build
+RUN npm ci && npm run build
 
 # Now build temporal-workflows
 WORKDIR /app/ee/temporal-workflows
