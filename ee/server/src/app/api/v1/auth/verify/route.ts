@@ -3,9 +3,9 @@ import {
   checkAuthVerificationLimit, 
   formatRateLimitError,
   logSecurityEvent 
-} from '@/lib/security/rateLimiting';
-import { observability, observabilityLogger, observabilityMetrics } from '@/lib/observability';
-import { verifyPassword } from '@/utils/encryption/encryption';
+} from 'server/src/lib/security/rateLimiting';
+import { observability, observabilityLogger, observabilityMetrics } from 'server/src/lib/observability';
+import { verifyPassword } from 'server/src/utils/encryption/encryption';
 import { withAdminTransaction } from '@shared/db';
 import { getSecretProviderInstance } from '@shared/core/secretProvider';
 
@@ -40,8 +40,12 @@ let API_SECRET: string | null = null;
 async function getApiSecret(): Promise<string> {
   if (API_SECRET) return API_SECRET;
   
-  const secretProvider = getSecretProviderInstance();
-  API_SECRET = await secretProvider.getSecret('alga_auth_api_key');
+  const secretProvider = await getSecretProviderInstance();
+  const secret = await secretProvider.getAppSecret('nm_store_api_key');
+  if (!secret) {
+    throw new Error('API secret not found');
+  }
+  API_SECRET = secret;
   return API_SECRET;
 }
 
@@ -134,6 +138,7 @@ async function verifyTenantCredentials(email: string, password: string) {
 }
 
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
   const clientIp = req.headers.get('x-forwarded-for') || req.ip || 'unknown';
   const apiKey = req.headers.get('x-api-key');
   
@@ -224,7 +229,7 @@ export async function POST(req: NextRequest) {
         });
         
         // Track auth pattern using business metrics
-        observabilityMetrics.recordTicketOperation('auth_login_success', authResult.tenantId);
+        observabilityMetrics.recordAuthAttempt('credentials', true, Date.now() - startTime, undefined, authResult.tenantId);
         
         const response: AuthVerifyResponse = {
           success: true,
@@ -242,7 +247,7 @@ export async function POST(req: NextRequest) {
         });
         
         // Track auth pattern
-        use authentication metrics from metrics.ts instead
+        observabilityMetrics.recordAuthAttempt('credentials', false, Date.now() - startTime, authResult.reason);
         
         // Log security event for failed attempts
         await logSecurityEvent('production', 'auth_failed', {

@@ -2,29 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { setupTestDatabase, type TestDatabase } from '../../test-utils/database';
 import { withAdminTransaction } from '@shared/db/index.js';
 import { v4 as uuidv4 } from 'uuid';
-import * as crypto from 'crypto';
+import { hashPassword, generateSecurePassword } from '@shared/utils/encryption.js';
 import type { Knex } from 'knex';
-
-// Generate temporary password function (mirrored from email-activities)
-function generateTemporaryPassword(length: number = 12): string {
-  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-  let password = '';
-  for (let i = 0; i < length; i++) {
-    password += charset.charAt(Math.floor(Math.random() * charset.length));
-  }
-  return password;
-}
-
-// Hash password function (mirrored from user-activities)
-async function hashPassword(password: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const salt = crypto.randomBytes(16).toString('hex');
-    crypto.pbkdf2(password, salt, 10000, 64, 'sha512', (err, derivedKey) => {
-      if (err) reject(err);
-      resolve(salt + ':' + derivedKey.toString('hex'));
-    });
-  });
-}
 
 // Simple database operations that mirror the user activity logic without Temporal context
 async function createAdminUserInDB(
@@ -49,7 +28,7 @@ async function createAdminUserInDB(
 
     // Generate user ID and temporary password
     const userId = uuidv4();
-    const temporaryPassword = generateTemporaryPassword(12);
+    const temporaryPassword = generateSecurePassword();
 
     // Hash the temporary password
     const hashedPassword = await hashPassword(temporaryPassword);
@@ -385,11 +364,11 @@ describe('User Activities Database Logic', () => {
 
   describe('password handling', () => {
     it('should generate secure temporary passwords', async () => {
-      const password1 = generateTemporaryPassword(12);
-      const password2 = generateTemporaryPassword(12);
+      const password1 = generateSecurePassword();
+      const password2 = generateSecurePassword();
       
-      expect(password1).toHaveLength(12);
-      expect(password2).toHaveLength(12);
+      expect(password1).toHaveLength(16);
+      expect(password2).toHaveLength(16);
       expect(password1).not.toBe(password2); // Should be random
       
       // Should contain mix of characters

@@ -1,6 +1,7 @@
 import { Context } from '@temporalio/activity';
-import { getAdminConnection } from '../../../../shared/dist/db/admin.js';
+import { getAdminConnection } from '@shared/db/admin.js';
 import type { Knex } from 'knex';
+import { hashPassword, generateSecurePassword } from '@shared/utils/encryption.js';
 import type {
   CreateAdminUserActivityInput,
   CreateAdminUserActivityResult
@@ -35,7 +36,7 @@ export async function createAdminUserInDB(
       }
 
       // Generate temporary password
-      const temporaryPassword = generateSecurePassword(12);
+      const temporaryPassword = generateSecurePassword();
       
       // Create user (matching actual Alga schema)
       const userResult = await trx('users')
@@ -140,38 +141,3 @@ export async function rollbackUserInDB(userId: string, tenantId: string): Promis
   }
 }
 
-/**
- * Generate a secure temporary password
- */
-function generateSecurePassword(length: number = 12): string {
-  const charset = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*';
-  let password = '';
-  
-  // Ensure at least one character from each category
-  const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-  const lowercase = 'abcdefghijkmnpqrstuvwxyz';
-  const numbers = '23456789';
-  const special = '!@#$%^&*';
-  
-  password += uppercase[Math.floor(Math.random() * uppercase.length)];
-  password += lowercase[Math.floor(Math.random() * lowercase.length)];
-  password += numbers[Math.floor(Math.random() * numbers.length)];
-  password += special[Math.floor(Math.random() * special.length)];
-  
-  // Fill remaining length
-  for (let i = 4; i < length; i++) {
-    password += charset[Math.floor(Math.random() * charset.length)];
-  }
-  
-  // Shuffle the password
-  return password.split('').sort(() => Math.random() - 0.5).join('');
-}
-
-/**
- * Hash password (placeholder - in real implementation use bcrypt or similar)
- */
-async function hashPassword(password: string): Promise<string> {
-  // In a real implementation, use bcrypt or another secure hashing library
-  // For now, return a placeholder hash
-  return `hashed_${password}_${Date.now()}`;
-}
