@@ -6,6 +6,7 @@ import logger from '@shared/core/logger';
 import { initializeServerWorkflows } from '@shared/workflow/init/serverInit';
 import { syncStandardTemplates } from './startupTasks';
 import { validateEnv } from 'server/src/config/envConfig';
+import { validateCriticalConfiguration, validateDatabaseConnectivity } from 'server/src/config/criticalEnvValidation';
 import { config } from 'dotenv';
 import User from 'server/src/lib/models/user';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
@@ -33,6 +34,26 @@ export async function initializeApp() {
   try {
     // Load environment configuration
     config();
+    
+    // Validate critical configuration first (must succeed)
+    try {
+      await validateCriticalConfiguration();
+      logger.info('Critical configuration validation passed');
+    } catch (error) {
+      logger.error('Critical configuration validation failed:', error);
+      throw error; // Cannot continue without critical configuration
+    }
+    
+    // Validate database connectivity (critical - must succeed)
+    try {
+      await validateDatabaseConnectivity();
+      logger.info('Database connectivity validation passed');
+    } catch (error) {
+      logger.error('Database connectivity validation failed:', error);
+      throw error; // Cannot continue without database
+    }
+    
+    // Run general environment validation
     validateEnv();
 
     // Initialize event bus (critical - must succeed)
@@ -198,7 +219,6 @@ function logConfiguration() {
 // Helper function to initialize job scheduler
 async function initializeJobScheduler(storageService: StorageService) {
   // Initialize job scheduler and register jobs
-  const rootKnex = await getConnection(null);
   const jobService = await JobService.create();
   const jobScheduler: IJobScheduler = await JobScheduler.getInstance(jobService, storageService);
   
