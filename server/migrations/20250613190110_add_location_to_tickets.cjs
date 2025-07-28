@@ -7,17 +7,33 @@ exports.up = async function(knex) {
 
   // Check if company_locations is a distributed table
   let isDistributed = false;
+  let hasCitus = false;
+  
   try {
-    const result = await knex.raw(`
+    const citusCheck = await knex.raw(`
       SELECT EXISTS (
-        SELECT 1 FROM pg_dist_partition 
-        WHERE logicalrelid = 'company_locations'::regclass
-      ) as is_distributed
+        SELECT 1 FROM pg_extension WHERE extname = 'citus'
+      ) as has_citus
     `);
-    isDistributed = result.rows[0].is_distributed;
+    hasCitus = citusCheck.rows[0].has_citus;
+    
+    if (hasCitus) {
+      try {
+        const result = await knex.raw(`
+          SELECT EXISTS (
+            SELECT 1 FROM pg_dist_partition 
+            WHERE logicalrelid = 'company_locations'::regclass
+          ) as is_distributed
+        `);
+        isDistributed = result.rows[0].is_distributed;
+      } catch (error) {
+        console.log('Error checking distribution status:', error.message);
+      }
+    } else {
+      console.log('Citus extension not installed - proceeding with foreign key');
+    }
   } catch (error) {
-    // pg_dist_partition doesn't exist, not using Citus
-    console.log('Citus not detected, proceeding with foreign key');
+    console.log('Error checking for Citus extension - proceeding with foreign key');
   }
 
   if (!isDistributed) {

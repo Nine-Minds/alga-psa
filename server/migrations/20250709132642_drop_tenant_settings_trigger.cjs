@@ -5,20 +5,34 @@
  * logic to application code for better control and Citus compatibility.
  */
 exports.up = async function(knex) {
-  // Check if tenant_settings is a distributed/reference table
   let isDistributed = false;
   
+  // First check if Citus extension exists
   try {
-    const result = await knex.raw(`
+    const citusCheck = await knex.raw(`
       SELECT EXISTS (
-        SELECT 1 FROM pg_dist_partition 
-        WHERE logicalrelid = 'tenant_settings'::regclass
-      ) as is_distributed
+        SELECT 1 FROM pg_extension WHERE extname = 'citus'
+      ) as has_citus
     `);
-    isDistributed = result.rows[0].is_distributed;
+    
+    if (citusCheck.rows[0].has_citus) {
+      // Only check for distributed table if Citus is installed
+      try {
+        const result = await knex.raw(`
+          SELECT EXISTS (
+            SELECT 1 FROM pg_dist_partition 
+            WHERE logicalrelid = 'tenant_settings'::regclass
+          ) as is_distributed
+        `);
+        isDistributed = result.rows[0].is_distributed;
+      } catch (error) {
+        console.log('Error checking distribution status:', error.message);
+      }
+    } else {
+      console.log('Citus extension not installed - proceeding with trigger drop');
+    }
   } catch (error) {
-    // pg_dist_partition doesn't exist, not using Citus
-    console.log('Citus not detected, proceeding with trigger drop');
+    console.log('Error checking for Citus extension - proceeding with trigger drop');
   }
   
   if (isDistributed) {
@@ -30,20 +44,34 @@ exports.up = async function(knex) {
 };
 
 exports.down = async function(knex) {
-  // Check if tenant_settings is a distributed/reference table
   let isDistributed = false;
   
+  // First check if Citus extension exists
   try {
-    const result = await knex.raw(`
+    const citusCheck = await knex.raw(`
       SELECT EXISTS (
-        SELECT 1 FROM pg_dist_partition 
-        WHERE logicalrelid = 'tenant_settings'::regclass
-      ) as is_distributed
+        SELECT 1 FROM pg_extension WHERE extname = 'citus'
+      ) as has_citus
     `);
-    isDistributed = result.rows[0].is_distributed;
+    
+    if (citusCheck.rows[0].has_citus) {
+      // Only check for distributed table if Citus is installed
+      try {
+        const result = await knex.raw(`
+          SELECT EXISTS (
+            SELECT 1 FROM pg_dist_partition 
+            WHERE logicalrelid = 'tenant_settings'::regclass
+          ) as is_distributed
+        `);
+        isDistributed = result.rows[0].is_distributed;
+      } catch (error) {
+        console.log('Error checking distribution status:', error.message);
+      }
+    } else {
+      console.log('Citus extension not installed - proceeding with trigger recreation');
+    }
   } catch (error) {
-    // pg_dist_partition doesn't exist, not using Citus
-    console.log('Citus not detected, proceeding with trigger recreation');
+    console.log('Error checking for Citus extension - proceeding with trigger recreation');
   }
   
   if (isDistributed) {

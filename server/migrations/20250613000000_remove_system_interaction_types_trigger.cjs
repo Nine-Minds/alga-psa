@@ -8,21 +8,35 @@
 exports.up = async function(knex) {
   let isDistributed = false;
   
+  // First check if Citus extension exists
   try {
-    // Check if the table is a Citus distributed/reference table
-    console.log('Checking if system_interaction_types is a Citus distributed/reference table...');
-    const result = await knex.raw(`
+    const citusCheck = await knex.raw(`
       SELECT EXISTS (
-        SELECT 1 
-        FROM pg_dist_partition 
-        WHERE logicalrelid = 'system_interaction_types'::regclass
-      ) as is_distributed
+        SELECT 1 FROM pg_extension WHERE extname = 'citus'
+      ) as has_citus
     `);
     
-    isDistributed = result.rows[0].is_distributed;
+    if (citusCheck.rows[0].has_citus) {
+      console.log('Checking if system_interaction_types is a Citus distributed/reference table...');
+      // Only check for distributed table if Citus is installed
+      try {
+        const result = await knex.raw(`
+          SELECT EXISTS (
+            SELECT 1 
+            FROM pg_dist_partition 
+            WHERE logicalrelid = 'system_interaction_types'::regclass
+          ) as is_distributed
+        `);
+        
+        isDistributed = result.rows[0].is_distributed;
+      } catch (error) {
+        console.log('Error checking distribution status:', error.message);
+      }
+    } else {
+      console.log('Citus extension not installed - proceeding with standard PostgreSQL');
+    }
   } catch (error) {
-    // If pg_dist_partition doesn't exist, Citus is not installed
-    console.log('Citus extension not detected - proceeding with standard PostgreSQL');
+    console.log('Error checking for Citus extension - proceeding with standard PostgreSQL');
   }
   
   if (isDistributed) {
