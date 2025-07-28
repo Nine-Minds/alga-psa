@@ -33,7 +33,15 @@ export async function validateCriticalConfiguration(): Promise<void> {
   // Check each critical configuration
   for (const [key, description] of Object.entries(CRITICAL_CONFIGS)) {
     try {
-      const value = await secretProvider.getSecret(key);
+      // Try uppercase first (environment variables)
+      let value = await secretProvider.getAppSecret(key);
+      
+      // If not found, try lowercase (Docker secrets convention)
+      if (!value || value.trim() === '') {
+        const lowercaseKey = key.toLowerCase();
+        value = await secretProvider.getAppSecret(lowercaseKey);
+      }
+      
       if (!value || value.trim() === '') {
         missingConfigs.push(`${key}: ${description}`);
       } else {
