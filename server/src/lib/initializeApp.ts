@@ -6,7 +6,7 @@ import logger from '@shared/core/logger';
 import { initializeServerWorkflows } from '@shared/workflow/init/serverInit';
 import { syncStandardTemplates } from './startupTasks';
 import { validateEnv } from 'server/src/config/envConfig';
-import { validateCriticalConfiguration, validateDatabaseConnectivity } from 'server/src/config/criticalEnvValidation';
+import { validateCriticalConfiguration, validateDatabaseConnectivity, validateSecretUniqueness } from 'server/src/config/criticalEnvValidation';
 import { config } from 'dotenv';
 import User from 'server/src/lib/models/user';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
@@ -35,7 +35,16 @@ export async function initializeApp() {
     // Load environment configuration
     config();
     
-    // Validate critical configuration first (must succeed)
+    // Validate secret uniqueness first (must succeed)
+    try {
+      await validateSecretUniqueness();
+      logger.info('Secret uniqueness validation passed');
+    } catch (error) {
+      logger.error('Secret uniqueness validation failed:', error);
+      throw error; // Cannot continue with conflicting secrets
+    }
+    
+    // Validate critical configuration (must succeed)
     try {
       await validateCriticalConfiguration();
       logger.info('Critical configuration validation passed');

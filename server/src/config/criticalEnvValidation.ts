@@ -1,5 +1,8 @@
 import logger from '@shared/core/logger';
 import { getSecretProviderInstance } from '@shared/core/secretProvider';
+import { CompositeSecretProvider } from '@shared/core/CompositeSecretProvider';
+import { EnvSecretProvider } from '@shared/core/EnvSecretProvider';
+import { FileSystemSecretProvider } from '@shared/core/FileSystemSecretProvider';
 
 /**
  * Critical configuration keys required for application startup
@@ -107,4 +110,95 @@ export async function validateDatabaseConnectivity(): Promise<void> {
       '  3. Network connectivity to database server'
     );
   }
+}
+
+/**
+ * Validates that each secret is provided by exactly one provider
+ * to prevent configuration conflicts.
+ */
+export async function validateSecretUniqueness(): Promise<void> {
+  logger.info('Validating secret provider uniqueness...');
+  
+  // Get individual providers to test
+  const envProvider = new EnvSecretProvider();
+  const fileProvider = new FileSystemSecretProvider();
+  
+  const duplicateSecrets: string[] = [];
+  const secretSources: Record<string, string[]> = {};
+  
+  // Check all critical configs and common secrets
+  const secretsToCheck = [
+    ...Object.keys(CRITICAL_CONFIGS),
+    // Add lowercase variants
+    ...Object.keys(CRITICAL_CONFIGS).map(k => k.toLowerCase()),
+    // Add other common secrets that might conflict
+    'ALGA_AUTH_KEY',
+    'alga_auth_key',
+    'SECRET_KEY',
+    'secret_key'
+  ];
+  
+  // Check each secret across providers
+  for (const secretName of secretsToCheck) {
+    const sources: string[] = [];
+    
+    try {
+      const envValue = await envProvider.getAppSecret(secretName);
+      if (envValue && envValue.trim() !== '') {
+        sources.push('environment');
+      }
+    } catch (error) {
+      // Provider error, skip
+    }
+    
+    try {
+      const fileValue = await fileProvider.getAppSecret(secretName);
+      if (fileValue && fileValue.trim() !== '') {
+        sources.push('filesystem');
+      }
+    } catch (error) {
+      // Provider error, skip
+    }
+    
+    // Check if Vault provider is configured
+    if (process.env.VAULT_ADDR && process.env.VAULT_TOKEN) {
+      try {
+        const { loadVaultSecretProvider } = await import('@shared/core/vaultLoader');
+        const vaultProvider = await loadVaultSecretProvider();
+        const vaultValue = await vaultProvider.getAppSecret(secretName);
+        if (vaultValue && vaultValue.trim() !== '') {
+          sources.push('vault');
+        }
+      } catch (error) {
+        // Vault not available or error, skip
+      }
+    }
+    
+    if (sources.length > 1) {
+      secretSources[secretName] = sources;
+      duplicateSecrets.push(secretName);
+    }
+  }
+  
+  // Report conflicts
+  if (duplicateSecrets.length > 0) {
+    const errorMessage = [
+      '\n⚠️  Secret Configuration Conflict Detected ⚠️\n',
+      'The following secrets are defined in multiple providers:',
+      ...duplicateSecrets.map(secret => 
+        `  • ${secret}: found in ${secretSources[secret].join(', ')}`
+      ),
+      '\nEach secret should be defined in exactly one provider to avoid conflicts.',
+      'Please remove duplicate definitions and keep secrets in only one location.',
+      '\nRecommended approach:',
+      '  - Use environment variables for local development',
+      '  - Use Docker secrets for containerized deployments',
+      '  - Use Vault for production environments'
+    ].join('\n');
+    
+    logger.error(errorMessage);
+    throw new Error('Secret provider conflict detected');
+  }
+  
+  logger.info('✅ No secret conflicts detected - each secret has a unique source');
 }
