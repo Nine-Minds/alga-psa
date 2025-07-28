@@ -30,11 +30,31 @@ exports.up = async function(knex) {
 };
 
 exports.down = async function(knex) {
-  // Recreate the trigger if rolling back
-  await knex.raw(`
-    CREATE TRIGGER update_tenant_settings_updated_at
-    BEFORE UPDATE ON tenant_settings
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-  `);
+  // Check if tenant_settings is a distributed/reference table
+  let isDistributed = false;
+  
+  try {
+    const result = await knex.raw(`
+      SELECT EXISTS (
+        SELECT 1 FROM pg_dist_partition 
+        WHERE logicalrelid = 'tenant_settings'::regclass
+      ) as is_distributed
+    `);
+    isDistributed = result.rows[0].is_distributed;
+  } catch (error) {
+    // pg_dist_partition doesn't exist, not using Citus
+    console.log('Citus not detected, proceeding with trigger recreation');
+  }
+  
+  if (isDistributed) {
+    console.log('Table tenant_settings is a Citus distributed/reference table - skipping trigger recreation');
+  } else {
+    // Recreate the trigger if rolling back
+    await knex.raw(`
+      CREATE TRIGGER update_tenant_settings_updated_at
+      BEFORE UPDATE ON tenant_settings
+      FOR EACH ROW
+      EXECUTE FUNCTION update_updated_at_column();
+    `);
+  }
 };
