@@ -1,0 +1,6 @@
+dependencies:
+- name: temporal-worker
+  repository: file://../ee/helm/temporal-worker
+  version: 0.1.0
+digest: sha256:7858c38bc2e9e48ce7f84013b356afafeb8995207b2217d6672623050b4ab1b8
+generated: "2025-07-28T07:24:24.788341-04:00"

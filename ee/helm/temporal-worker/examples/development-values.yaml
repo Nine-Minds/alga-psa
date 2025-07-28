@@ -1,0 +1,67 @@
+# Development values for temporal-worker
+# This configuration is suitable for local development and testing
+
+enabled: true
+
+# Single replica for development
+replicaCount: 1
+
+# Development logging
+logLevel: debug
+
+# Local development database
+db:
+  host: "localhost"
+  port: "5432"
+  serverDatabase: "alga_psa_dev"
+  user: "alga_dev"
+  serverPasswordSecret:
+    name: "dev-db-secrets"
+    key: "password"
+  adminPasswordSecret:
+    name: "dev-db-secrets"
+    key: "admin-password"
+
+# Local Temporal server
+temporal:
+  address: "localhost:7233"
+  namespace: "default"
+  taskQueue: "dev-workflows"
+  maxConcurrentActivityExecutions: 5
+  maxConcurrentWorkflowTaskExecutions: 5
+
+# Disable Vault for development
+vault:
+  enabled: false
+
+# Development secrets (DO NOT use in production)
+secrets:
+  internalApiSharedSecret: "dev-secret-123"
+  algaAuthKey: "dev-auth-key-456"
+
+# Minimal resources for development
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+# Disable autoscaling for development
+autoscaling:
+  enabled: false
+
+# Disable PDB for development
+podDisruptionBudget:
+  enabled: false
+
+# Development application URL
+applicationUrl: "http://localhost:3000"
+
+# Additional development environment variables
+extraEnv:
+  - name: NODE_ENV
+    value: "development"
+  - name: DEBUG
+    value: "temporal:*"

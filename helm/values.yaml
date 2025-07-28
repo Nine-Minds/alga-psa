@@ -30,6 +30,14 @@ server:
   service:
     type: "ClusterIP"
     port: 3000
+  persistence:
+    enabled: false
+    size: 10Gi
+    accessModes:
+      - ReadWriteOnce
+    storageClass: ""
+    existingClaim: ""
+    annotations: {}
 
 
 hocuspocus:
@@ -317,154 +325,8 @@ logging:
     level: 'info'
     token: 'abcd1234'
 
-# Temporal Worker Configuration
-temporalWorker:
-  enabled: false  # Set to true to deploy temporal worker
-  
-  # Image configuration
-  image:
-    repository: harbor.nineminds.com/nineminds/temporal-worker
-    tag: latest
-    pullPolicy: Always
-    is_private: true
-    credentials: harbor-credentials
-  
-  # Replica configuration
-  replicaCount: 2
-  
-  # Rolling update configuration
-  rollingUpdate:
-    maxSurge: 1
-    maxUnavailable: 0
-  
-  # Service configuration
-  service:
-    type: ClusterIP
-    port: 8080
-  
-  # Temporal configuration
-  temporal:
-    address: temporal-frontend.temporal.svc.cluster.local:7233
-    namespace: default
-    taskQueue: tenant-workflows
-    maxConcurrentActivityExecutions: 10
-    maxConcurrentWorkflowTaskExecutions: 10
-  
-  # NM Store configuration
-  nmstore:
-    baseUrl: https://www.nineminds.com
-  
-  # Logging configuration
-  logLevel: info
-  
-  # Encryption configuration (matching main app)
-  encryption:
-    saltBytes: "12"
-    iterations: "10000"
-    keyLength: "64"
-    algorithm: sha512
-  
-  # Vault configuration
-  vault:
-    enabled: false  # Set to true in production
-    role: temporal-worker
-    secretPath: secret/data/alga-psa/temporal-worker
-    sharedSecretPath: secret/data/alga-psa/shared
-  
-  # Local secrets (used when Vault is disabled)
-  secrets:
-    internalApiSharedSecret: "change-me-in-production"
-    algaAuthKey: "change-me-in-production"
-  
-  # Service Account configuration
-  serviceAccount:
-    annotations: {}
-    automountServiceAccountToken: true
-  
-  # Resource limits and requests
-  resources:
-    limits:
-      cpu: 1000m
-      memory: 1Gi
-    requests:
-      cpu: 200m
-      memory: 512Mi
-  
-  # Autoscaling configuration
-  autoscaling:
-    enabled: true
-    minReplicas: 2
-    maxReplicas: 10
-    targetCPUUtilizationPercentage: 70
-    targetMemoryUtilizationPercentage: 80
-    behavior:
-      scaleDown:
-        stabilizationWindowSeconds: 300
-        percent: 10
-        pods: 1
-        periodSeconds: 60
-      scaleUp:
-        stabilizationWindowSeconds: 60
-        percent: 100
-        pods: 2
-        periodSeconds: 60
-  
-  # Pod Disruption Budget
-  podDisruptionBudget:
-    enabled: true
-    minAvailable: 1
-  
-  # Health check probes
-  livenessProbe:
-    initialDelaySeconds: 60
-    periodSeconds: 30
-    timeoutSeconds: 10
-    successThreshold: 1
-    failureThreshold: 3
-  
-  readinessProbe:
-    initialDelaySeconds: 30
-    periodSeconds: 10
-    timeoutSeconds: 5
-    successThreshold: 1
-    failureThreshold: 3
-  
-  # Pod annotations
-  podAnnotations: {}
-  
-  # Pod labels
-  podLabels: {}
-  
-  # Pod security context
-  podSecurityContext:
-    runAsNonRoot: true
-    runAsUser: 1000
-    fsGroup: 1000
-  
-  # Container security context
-  securityContext:
-    allowPrivilegeEscalation: false
-    readOnlyRootFilesystem: true
-    runAsNonRoot: true
-    runAsUser: 1000
-    capabilities:
-      drop:
-        - ALL
-  
-  # Node selector
-  nodeSelector: {}
-  
-  # Tolerations
-  tolerations: []
-  
-  # Affinity (if not specified, anti-affinity will be used)
-  affinity: {}
-  
-  # Extra environment variables
-  extraEnv: {}
-  
-  # Extra volumes
-  extraVolumes: []
-  
-  # Extra volume mounts
-  extraVolumeMounts: []
+# Development environment configuration
+devEnv:
+  enabled: false
+  namespace: msp-dev
+

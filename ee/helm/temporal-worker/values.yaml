@@ -1,0 +1,213 @@
+# Default values for temporal-worker.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Enable/disable the temporal worker deployment
+enabled: true
+
+# Image configuration
+image:
+  repository: harbor.nineminds.com/nineminds/temporal-worker
+  tag: latest
+  pullPolicy: Always
+  is_private: true
+  credentials: harbor-credentials
+
+# Number of replicas
+replicaCount: 2
+
+# Rolling update configuration
+rollingUpdate:
+  maxSurge: 1
+  maxUnavailable: 0
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8080
+
+# Temporal configuration
+temporal:
+  # Address of the Temporal frontend service
+  address: temporal-frontend.temporal.svc.cluster.local:7233
+  # Temporal namespace to use
+  namespace: default
+  # Task queue name
+  taskQueue: tenant-workflows
+  # Maximum concurrent activity executions
+  maxConcurrentActivityExecutions: 10
+  # Maximum concurrent workflow task executions
+  maxConcurrentWorkflowTaskExecutions: 10
+
+# NM Store configuration
+nmstore:
+  baseUrl: https://www.nineminds.com
+
+# Logging configuration
+logLevel: info
+
+# Encryption configuration (should match main application)
+encryption:
+  saltBytes: "12"
+  iterations: "10000"
+  keyLength: "64"
+  algorithm: sha512
+
+# Vault configuration for secret management
+vault:
+  enabled: false  # Enable in production
+  role: temporal-worker
+  secretPath: secret/data/alga-psa/temporal-worker
+  sharedSecretPath: secret/data/alga-psa/shared
+
+# Local secrets (used when Vault is disabled)
+# IMPORTANT: Change these in production!
+secrets:
+  internalApiSharedSecret: "change-me-in-production"
+  algaAuthKey: "change-me-in-production"
+
+# Service Account configuration
+serviceAccount:
+  # Annotations to add to the service account
+  annotations: {}
+  # Automatically mount service account token
+  automountServiceAccountToken: true
+
+# Resource limits and requests
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 200m
+    memory: 512Mi
+
+# Horizontal Pod Autoscaler configuration
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+      - type: Pods
+        value: 1
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 60
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+
+# Pod Disruption Budget configuration
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Health check probe configuration
+livenessProbe:
+  initialDelaySeconds: 60
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+  successThreshold: 1
+
+readinessProbe:
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+  successThreshold: 1
+
+# Pod annotations
+podAnnotations: {}
+
+# Pod security context
+podSecurityContext: {}
+  # fsGroup: 2000
+
+# Security context
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+# Node selector for pod assignment
+nodeSelector: {}
+
+# Tolerations for pod assignment
+tolerations: []
+
+# Affinity rules for pod assignment
+affinity: {}
+
+# Additional environment variables
+extraEnv: []
+  # - name: EXTRA_VAR
+  #   value: "extra-value"
+
+# Additional volumes
+extraVolumes: []
+  # - name: extra-volume
+  #   configMap:
+  #     name: extra-configmap
+
+# Additional volume mounts
+extraVolumeMounts: []
+  # - name: extra-volume
+  #   mountPath: /extra
+  #   readOnly: true
+
+# Database configuration
+# These values should be provided by the parent chart or overridden in production
+db:
+  host: "postgresql.default.svc.cluster.local"
+  port: "5432"
+  serverDatabase: "msp_server"
+  user: "msp_server"
+  # Secret references for passwords
+  serverPasswordSecret:
+    name: "db-secrets"
+    key: "server-password"
+  adminPasswordSecret:
+    name: "db-secrets"
+    key: "admin-password"
+
+# Email configuration
+email:
+  resendApiKeySecret:
+    name: "app-secrets"
+    key: "RESEND_API_KEY"
+
+# Application configuration
+applicationUrl: "https://app.algapsa.com"
+
+# Namespace override (optional)
+namespace: ""
+
+# Name overrides
+nameOverride: ""
+fullnameOverride: ""
+
+# Pod labels
+podLabels: {}
+
+# Service account creation
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # The name of the service account to use
+  name: ""

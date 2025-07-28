@@ -4,3 +4,9 @@ description: Open-source Managed Service Provider (MSP) solution developed by Ni
 type: application
 version: 0.0.1
 appVersion: 0.0.0
+
+dependencies:
+  - name: temporal-worker
+    version: "0.1.0"
+    repository: "file://../ee/helm/temporal-worker"
+    condition: temporal-worker.enabled
