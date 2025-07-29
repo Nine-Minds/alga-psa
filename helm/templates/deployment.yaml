@@ -364,9 +364,16 @@ spec:
           - name: VAULT_ADDR
             value: "{{ .Values.secrets.vault.addr }}"
           {{- end }}
-          {{- if .Values.secrets.vault.token }}
+          {{- if or .Values.secrets.vault.token (or (contains "vault" .Values.secrets.readChain) (eq .Values.secrets.writeProvider "vault")) }}
           - name: VAULT_TOKEN
+            {{- if .Values.secrets.vault.token }}
             value: "{{ .Values.secrets.vault.token }}"
+            {{- else }}
+            valueFrom:
+              secretKeyRef:
+                name: vault-credentials
+                key: VAULT_TOKEN
+            {{- end }}
           {{- end }}
           {{- if .Values.secrets.vault.appSecretPath }}
           - name: VAULT_APP_SECRET_PATH
