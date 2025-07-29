@@ -266,9 +266,9 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
         </div>
       )}
 
-      <div className="rounded-md bg-amber-50 p-4">
-        <p className="text-sm text-amber-800">
-          <span className="font-semibold">Tip:</span> You can skip this step and invite team members later from the settings page.
+      <div className="rounded-md bg-blue-50 p-4 space-y-2">
+        <p className="text-sm text-blue-800">
+          <span className="font-semibold">Optional:</span> You can skip this step and invite team members later from the settings page.
         </p>
       </div>
     </div>

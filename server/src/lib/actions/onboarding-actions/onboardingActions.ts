@@ -409,7 +409,7 @@ export async function addClientContact(data: ClientContactData): Promise<Onboard
       // Contact already exists, update it if details have changed
       const needsUpdate = 
         existingContact.full_name !== data.contactName ||
-        existingContact.job_title !== data.contactRole;
+        existingContact.role !== data.contactRole;
 
       if (needsUpdate) {
         await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -420,7 +420,7 @@ export async function addClientContact(data: ClientContactData): Promise<Onboard
             })
             .update({
               full_name: data.contactName,
-              job_title: data.contactRole,
+              role: data.contactRole,
               updated_at: new Date()
             });
         });
