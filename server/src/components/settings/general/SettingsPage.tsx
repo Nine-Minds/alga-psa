@@ -9,32 +9,32 @@ import CustomTabs, { TabContent } from "server/src/components/ui/CustomTabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
 import { Input } from "server/src/components/ui/Input";
 import { Button } from "server/src/components/ui/Button";
-import GeneralSettings from './GeneralSettings';
-import UserManagement from './UserManagement';
+import GeneralSettings from 'server/src/components/settings/general/GeneralSettings';
+import UserManagement from 'server/src/components/settings/general/UserManagement';
 import SettingsTabSkeleton from 'server/src/components/ui/skeletons/SettingsTabSkeleton';
 
 // Dynamic imports for heavy settings components
-const TicketingSettings = dynamic(() => import('./TicketingSettings'), {
+const TicketingSettings = dynamic(() => import('server/src/components/settings/general/TicketingSettings'), {
   loading: () => <SettingsTabSkeleton title="Ticketing Settings" description="Loading ticketing configuration..." />,
   ssr: false
 });
 
-const TeamManagement = dynamic(() => import('./TeamManagement'), {
+const TeamManagement = dynamic(() => import('server/src/components/settings/general/TeamManagement'), {
   loading: () => <SettingsTabSkeleton title="Team Management" description="Loading team configuration..." showTabs={false} />,
   ssr: false
 });
-import InteractionTypesSettings from './InteractionTypeSettings';
-import TimePeriodSettings from '../billing/TimePeriodSettings';
-import BillingSettings from '../billing/BillingSettings'; // Import the new component
-import NumberingSettings from './NumberingSettings';
-import NotificationsTab from './NotificationsTab';
-import { TaxRegionsManager } from '../tax/TaxRegionsManager'; // Import the new component
+import InteractionTypesSettings from 'server/src/components/settings/general/InteractionTypeSettings';
+import TimePeriodManagement from 'server/src/components/settings/time-entry/TimePeriodManagement';
+import BillingSettings from 'server/src/components/settings/billing/BillingSettings'; // Import the new component
+import NumberingSettings from 'server/src/components/settings/general/NumberingSettings';
+import NotificationsTab from 'server/src/components/settings/general/NotificationsTab';
+import { TaxRegionsManager } from 'server/src/components/settings/tax/TaxRegionsManager'; // Import the new component
 // Removed import: import IntegrationsTabLoader from './IntegrationsTabLoader';
-import QboIntegrationSettings from '../integrations/QboIntegrationSettings'; // Import the actual settings component
+import QboIntegrationSettings from 'server/src/components/settings/integrations/QboIntegrationSettings'; // Import the actual settings component
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 // Extensions are only available in Enterprise Edition
-import { EmailSettings } from '../../admin/EmailSettings';
+import { EmailSettings } from 'server/src/components/admin/EmailSettings';
 // Removed import: import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
 // Revert to standard function component
@@ -136,10 +136,10 @@ const SettingsPage = (): JSX.Element =>  {
         <Card>
           <CardHeader>
             <CardTitle>Time Entry Settings</CardTitle>
-            <CardDescription>Manage your time entry settings</CardDescription>
+            <CardDescription>Manage your time entry settings and time periods</CardDescription>
           </CardHeader>
           <CardContent>
-            <TimePeriodSettings />
+            <TimePeriodManagement />
           </CardContent>
         </Card>
       ),

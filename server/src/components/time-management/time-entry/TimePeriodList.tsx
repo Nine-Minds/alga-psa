@@ -3,6 +3,8 @@ import { ITimePeriodWithStatusView, TimeSheetStatus } from 'server/src/interface
 import { Button } from '@radix-ui/themes';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { Settings } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface TimePeriodListProps {
   timePeriods: ITimePeriodWithStatusView[];
@@ -25,9 +27,26 @@ const getStatusDisplay = (status: TimeSheetStatus): { text: string; color: strin
 };
 
 export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodListProps) {
+  const router = useRouter();
+
+  const navigateToTimeSettings = () => {
+    router.push('/msp/settings?tab=time-entry');
+  };
+
   return (
     <div className="space-y-4 w-full">
-      <h2 className="text-2xl font-bold mb-4">Select a Time Period</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-bold">Select a Time Period</h2>
+        <Button
+          onClick={navigateToTimeSettings}
+          variant="soft"
+          color="gray"
+          className="flex items-center gap-2"
+        >
+          <Settings className="h-4 w-4" />
+          Manage Time Periods
+        </Button>
+      </div>
       <DataTable
         data={timePeriods}
         columns={[
