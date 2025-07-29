@@ -41,7 +41,7 @@ temporal:
 
 # NM Store configuration
 nmstore:
-  baseUrl: https://www.nineminds.com
+  baseUrl: http://nm-store-release.msp.svc.cluster.local:3000
 
 # Logging configuration
 logLevel: info
@@ -193,7 +193,7 @@ email:
     key: "RESEND_API_KEY"
 
 # Application configuration
-applicationUrl: "https://app.algapsa.com"
+applicationUrl: "https://algapsa.com"
 
 # Namespace override (optional)
 namespace: ""
@@ -204,10 +204,3 @@ fullnameOverride: ""
 
 # Pod labels
 podLabels: {}
-
-# Service account creation
-serviceAccount:
-  # Specifies whether a service account should be created
-  create: true
-  # The name of the service account to use
-  name: ""

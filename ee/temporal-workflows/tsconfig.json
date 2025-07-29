@@ -17,8 +17,7 @@
     "noEmit": false,
     "baseUrl": ".",
     "paths": {
-      "@alga-psa/shared/*": ["../../shared/dist/*"],
-      "@/*": ["./src/*"]
+      "@alga-psa/shared/*": ["../../shared/*"]
     }
   },
   "include": [
