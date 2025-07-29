@@ -330,3 +330,10 @@ devEnv:
   enabled: false
   namespace: msp-dev
 
+# Vault Agent configuration for secret injection
+vaultAgent:
+  enabled: false
+  role: alga-psa
+  secretPath: secret/data/alga-psa/server
+  sharedSecretPath: secret/data/alga-psa/shared
+
