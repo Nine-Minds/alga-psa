@@ -1,8 +1,7 @@
 import React from 'react';
 import { ITimePeriodWithStatusView, TimeSheetStatus } from 'server/src/interfaces/timeEntry.interfaces';
-import { Button } from '@radix-ui/themes';
+import { Button } from 'server/src/components/ui/Button';
 import { DataTable } from 'server/src/components/ui/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { Settings } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -38,9 +37,9 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold">Select a Time Period</h2>
         <Button
+          id="manage-time-periods-button"
           onClick={navigateToTimeSettings}
           variant="soft"
-          color="gray"
           className="flex items-center gap-2"
         >
           <Settings className="h-4 w-4" />
@@ -84,7 +83,6 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
                 id={`view-period-${record.period_id}`}
                 onClick={() => onSelectTimePeriod(record)}
                 variant="soft"
-                color="purple"
               >
                 View
               </Button>
