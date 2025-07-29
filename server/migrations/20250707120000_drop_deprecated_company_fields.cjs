@@ -15,59 +15,52 @@ exports.up = async function(knex) {
     const tenants = await knex('companies').distinct('tenant').pluck('tenant');
     
     for (const tenant of tenants) {
-      await knex.raw(`
-        INSERT INTO company_locations (
-          location_id,
-          company_id,
-          tenant,
-          location_name,
-          address_line1,
-          city,
-          state_province,
-          postal_code,
-          country_code,
-          country_name,
-          phone,
-          email,
-          is_default,
-          is_billing_address,
-          is_shipping_address,
-          is_active,
-          created_at,
-          updated_at
-        )
-        SELECT 
-          gen_random_uuid() as location_id,
-          c.company_id,
-          c.tenant,
-          'Main Location' as location_name,
-          COALESCE(c.address, 'N/A') as address_line1,
-          'N/A' as city,
-          NULL as state_province,
-          NULL as postal_code,
-          'XX' as country_code,
-          'Unknown' as country_name,
-          c.phone_no as phone,
-          c.email as email,
-          true as is_default,
-          true as is_billing_address,
-          true as is_shipping_address,
-          true as is_active,
-          NOW() as created_at,
-          NOW() as updated_at
-        FROM companies c
-        WHERE c.tenant = ?
-        AND NOT EXISTS (
-          SELECT 1 FROM company_locations cl 
-          WHERE cl.company_id = c.company_id 
-          AND cl.tenant = c.tenant 
-          AND cl.is_default = true
-        )
-        AND ((c.address IS NOT NULL AND c.address != '') 
-          OR (c.phone_no IS NOT NULL AND c.phone_no != '')
-          OR (c.email IS NOT NULL AND c.email != ''))
-        ON CONFLICT DO NOTHING;
-      `, [tenant]);
+      // First, get companies that need migration for this tenant
+      const companiesNeedingMigration = await knex('companies')
+        .select('company_id', 'address', 'phone_no', 'email')
+        .where('tenant', tenant)
+        .andWhere(function() {
+          this.whereNotNull('address').andWhere('address', '!=', '')
+              .orWhereNotNull('phone_no').andWhere('phone_no', '!=', '')
+              .orWhereNotNull('email').andWhere('email', '!=', '');
+        });
+      
+      // Then check which ones already have default locations
+      const existingDefaultLocations = await knex('company_locations')
+        .select('company_id')
+        .where('tenant', tenant)
+        .andWhere('is_default', true);
+      
+      const existingCompanyIds = new Set(existingDefaultLocations.map(loc => loc.company_id));
+      
+      // Filter out companies that already have default locations
+      const companiesToMigrate = companiesNeedingMigration.filter(
+        company => !existingCompanyIds.has(company.company_id)
+      );
+      
+      // Now insert locations for companies that don't have them
+      for (const company of companiesToMigrate) {
+        await knex('company_locations').insert({
+          location_id: knex.raw('gen_random_uuid()'),
+          company_id: company.company_id,
+          tenant: tenant,
+          location_name: 'Main Location',
+          address_line1: company.address || 'N/A',
+          city: 'N/A',
+          state_province: null,
+          postal_code: null,
+          country_code: 'XX',
+          country_name: 'Unknown',
+          phone: company.phone_no,
+          email: company.email,
+          is_default: true,
+          is_billing_address: true,
+          is_shipping_address: true,
+          is_active: true,
+          created_at: knex.fn.now(),
+          updated_at: knex.fn.now()
+        });
+      }
     }
     
     // Now drop the deprecated columns

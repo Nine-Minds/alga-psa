@@ -11,7 +11,18 @@ RUN apk add --no-cache \
     imagemagick \
     ghostscript \
     curl \
-    nano
+    nano \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
+
+# Tell Puppeteer to skip installing Chrome. We'll use the installed chromium.
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 WORKDIR /app
 
@@ -42,6 +53,8 @@ COPY ./server/dist ./server/dist
 COPY ./server/public ./server/public
 COPY ./server/next.config.mjs ./server/
 COPY ./server/knexfile.cjs ./server/
+COPY ./server/tsconfig.json ./server/
+COPY ./server/index.ts ./server/
 COPY ./server/migrations/ ./server/migrations/
 COPY ./server/seeds/ ./server/seeds/
 COPY ./server/src/ ./server/src/

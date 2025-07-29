@@ -31,7 +31,6 @@ interface CompaniesListProps {
     companyTags?: Record<string, ITag[]>;
     allUniqueTags?: ITag[];
     onTagsChange?: (companyId: string, tags: ITag[]) => void;
-    editingId?: string | null;
     sortBy?: string;
     sortDirection?: 'asc' | 'desc';
     onSortChange?: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
@@ -110,7 +109,6 @@ const CompaniesList = ({
   companyTags = {},
   allUniqueTags = [],
   onTagsChange,
-  editingId,
   sortBy,
   sortDirection,
   onSortChange
@@ -289,9 +287,7 @@ const CompaniesList = ({
                 pageSize={pageSize}
                 totalItems={totalCount}
                 onPageChange={onPageChange}
-                rowClassName={(company: ICompany) => 
-                    editingId === company.company_id ? 'bg-purple-50 border-l-4 border-l-purple-500' : ''
-                }
+                rowClassName={() => ''}
                 manualSorting={true}
                 sortBy={sortBy}
                 sortDirection={sortDirection}

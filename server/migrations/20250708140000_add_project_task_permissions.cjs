@@ -79,12 +79,32 @@ exports.up = async function(knex) {
     }
 
     // Find all roles that have project permissions and grant them project_task permissions too
-    const rolesWithProjectPerms = await knex('role_permissions as rp')
-      .join('permissions as p', 'rp.permission_id', 'p.permission_id')
-      .where('p.tenant', tenant)
-      .where('p.resource', 'project')
-      .select('rp.role_id', 'p.action')
-      .distinct();
+    // Split the join to avoid Citus repartitioning issues
+    const projectPermissions = await knex('permissions')
+      .where('tenant', tenant)
+      .where('resource', 'project')
+      .select('permission_id', 'action');
+    
+    const projectPermissionIds = projectPermissions.map(p => p.permission_id);
+    
+    let rolesWithProjectPerms = [];
+    if (projectPermissionIds.length > 0) {
+      const rolePermissions = await knex('role_permissions')
+        .where('tenant', tenant)
+        .whereIn('permission_id', projectPermissionIds)
+        .select('role_id', 'permission_id')
+        .distinct();
+      
+      // Map back to actions
+      const permissionIdToAction = new Map(
+        projectPermissions.map(p => [p.permission_id, p.action])
+      );
+      
+      rolesWithProjectPerms = rolePermissions.map(rp => ({
+        role_id: rp.role_id,
+        action: permissionIdToAction.get(rp.permission_id)
+      }));
+    }
 
     console.log(`Found ${rolesWithProjectPerms.length} role-permission combinations for projects`);
 
@@ -111,15 +131,33 @@ exports.up = async function(knex) {
     permissionMap.set('read', clientReadPermission.permission_id);
     
     // Find client roles that have project:read permission and grant them project_task:read
-    const clientRolesWithProjectRead = await knex('role_permissions as rp')
-      .join('permissions as p', 'rp.permission_id', 'p.permission_id')
-      .join('roles as r', 'rp.role_id', 'r.role_id')
-      .where('p.tenant', tenant)
-      .where('p.resource', 'project')
-      .where('p.action', 'read')
-      .where('r.client', true)
-      .select('r.role_id', 'r.role_name')
-      .distinct();
+    // Split the joins to avoid Citus repartitioning issues
+    const projectReadPermission = await knex('permissions')
+      .where('tenant', tenant)
+      .where('resource', 'project')
+      .where('action', 'read')
+      .first();
+    
+    let clientRolesWithProjectRead = [];
+    if (projectReadPermission) {
+      // Get role permissions for this permission
+      const rolePerms = await knex('role_permissions')
+        .where('tenant', tenant)
+        .where('permission_id', projectReadPermission.permission_id)
+        .select('role_id');
+      
+      const roleIds = rolePerms.map(rp => rp.role_id);
+      
+      if (roleIds.length > 0) {
+        // Get client roles from those role IDs
+        clientRolesWithProjectRead = await knex('roles')
+          .where('tenant', tenant)
+          .whereIn('role_id', roleIds)
+          .where('client', true)
+          .select('role_id', 'role_name')
+          .distinct();
+      }
+    }
 
     for (const role of clientRolesWithProjectRead) {
       await assignPermissionToRole(tenant, role.role_id, clientReadPermission.permission_id);

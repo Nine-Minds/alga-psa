@@ -23,6 +23,7 @@ import {
 } from 'server/src/lib/actions/document-actions/documentBlockContentActions';
 import { updateDocument } from 'server/src/lib/actions/document-actions/documentActions';
 import { downloadDocumentInBrowser } from 'server/src/lib/actions/document-download/downloadHelpers';
+import { downloadDocument } from 'server/src/lib/utils/documentUtils';
 import { toast } from 'react-hot-toast';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 
@@ -309,13 +310,14 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
     try {
       // For in-app documents, download as PDF
       if (!document.file_id) {
-        window.open(`/api/documents/download/${document.document_id}?format=pdf`, '_blank');
+        const downloadUrl = `/api/documents/download/${document.document_id}?format=pdf`;
+        const filename = `${document.document_name || 'document'}.pdf`;
+        await downloadDocument(downloadUrl, filename, true);
       } else {
-        // For uploaded files, download the original file
-        const result = await downloadDocumentInBrowser(document.document_id, document.document_name);
-        if (!result.success) {
-          throw new Error(result.error || 'Download failed');
-        }
+        // For uploaded files, use the enhanced download with file picker
+        const downloadUrl = `/api/documents/download/${document.document_id}`;
+        const filename = document.document_name || 'download';
+        await downloadDocument(downloadUrl, filename, true);
       }
     } catch (error) {
       console.error('Error downloading document:', error);
@@ -325,9 +327,9 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
 
   const handlePDFExport = async (document: IDocument) => {
     try {
-      // For PDF export, we need to use the API route directly for now
-      // TODO: Update downloadDocumentInBrowser to support format parameter
-      window.open(`/api/documents/download/${document.document_id}?format=pdf`, '_blank');
+      const downloadUrl = `/api/documents/download/${document.document_id}?format=pdf`;
+      const filename = `${document.document_name || 'document'}.pdf`;
+      await downloadDocument(downloadUrl, filename, true);
     } catch (error) {
       console.error('Error exporting PDF:', error);
       toast.error('Failed to export PDF');

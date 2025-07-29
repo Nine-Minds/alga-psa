@@ -19,7 +19,6 @@ interface CompaniesGridProps {
     companyTags?: Record<string, ITag[]>;
     allUniqueTags?: ITag[];
     onTagsChange?: (companyId: string, tags: ITag[]) => void;
-    editingId?: string | null;
 }
 
 type ItemsPerPage = 9 | 18 | 27 | 36;
@@ -38,8 +37,7 @@ const CompaniesGrid = ({
     onPageSizeChange,
     companyTags = {},
     allUniqueTags = [],
-    onTagsChange,
-    editingId
+    onTagsChange
 }: CompaniesGridProps) => {
     
     const itemsPerPageOptions = [
@@ -64,7 +62,6 @@ const CompaniesGrid = ({
                             tags={companyTags[company.company_id] || []}
                             allUniqueTags={allUniqueTags.map(tag => tag.tag_text)}
                             onTagsChange={onTagsChange}
-                            isEditing={editingId === company.company_id}
                         />
                     </div>
                 ))}

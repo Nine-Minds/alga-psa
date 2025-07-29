@@ -83,7 +83,6 @@ interface CompanyResultsProps {
   // Add props to receive parent's tag state
   companyTags?: Record<string, ITag[]>;
   allUniqueTagsFromParent?: ITag[];
-  editingId?: string | null;
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
   onSortChange?: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
@@ -108,7 +107,6 @@ const CompanyResults = memo(({
   onCompanyTagsLoaded,
   companyTags: parentCompanyTags,
   allUniqueTagsFromParent,
-  editingId,
   sortBy,
   sortDirection,
   onSortChange
@@ -222,7 +220,6 @@ const CompanyResults = memo(({
           companyTags={effectiveCompanyTags}
           allUniqueTags={effectiveAllUniqueTags}
           onTagsChange={onTagsChange}
-          editingId={editingId}
         />
       ) : (
         <CompaniesList
@@ -240,7 +237,6 @@ const CompanyResults = memo(({
           companyTags={effectiveCompanyTags}
           allUniqueTags={effectiveAllUniqueTags}
           onTagsChange={onTagsChange}
-          editingId={editingId}
           sortBy={sortBy}
           sortDirection={sortDirection}
           onSortChange={onSortChange}
@@ -331,10 +327,7 @@ const Companies: React.FC = () => {
   const [quickViewCompany, setQuickViewCompany] = useState<ICompany | null>(null);
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
   
-  // Edit state
-  const [editingCompany, setEditingCompany] = useState<ICompany | null>(null);
-  const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  // Edit state - removed since edit now navigates directly
   
   // Tag-related state
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -460,20 +453,8 @@ const Companies: React.FC = () => {
   
 
   const handleEditCompany = async (companyId: string) => {
-    try {
-      // First, fetch the company data
-      const companies = await getAllCompanies(true);
-      const company = companies.find(c => c.company_id === companyId);
-      
-      if (company) {
-        setEditingCompany(company);
-        setEditingId(companyId);
-        setIsEditDrawerOpen(true);
-      }
-    } catch (error) {
-      console.error('Error fetching company for edit:', error);
-      toast.error("Failed to load company details");
-    }
+    // Navigate directly to the company page for editing
+    router.push(`/msp/companies/${companyId}`);
   };
 
   const handleQuickView = (company: ICompany) => {
@@ -481,13 +462,7 @@ const Companies: React.FC = () => {
     setIsQuickViewOpen(true);
   };
 
-  const handleEditDrawerClose = () => {
-    setIsEditDrawerOpen(false);
-    setEditingCompany(null);
-    setEditingId(null);
-    // Refresh companies to show any updates
-    refreshCompanies();
-  };
+
 
   const handleDeleteCompany = async (company: ICompany) => {
     setCompanyToDelete(company);
@@ -924,7 +899,6 @@ const Companies: React.FC = () => {
         onCompanyTagsLoaded={handleCompanyTagsLoaded}
         companyTags={companyTags}
         allUniqueTagsFromParent={allUniqueTags}
-        editingId={editingId}
         sortBy={sortBy}
         sortDirection={sortDirection}
         onSortChange={handleSortChange}
@@ -1036,20 +1010,7 @@ const Companies: React.FC = () => {
         )}
       </Drawer>
 
-      {/* Edit Drawer */}
-      <Drawer
-        id="company-edit-drawer"
-        isOpen={isEditDrawerOpen}
-        onClose={handleEditDrawerClose}
-      >
-        {editingCompany && (
-          <CompanyDetails
-            company={editingCompany}
-            isInDrawer={true}
-            quickView={false}
-          />
-        )}
-      </Drawer>
+
     </div>
   );
 };
