@@ -21,8 +21,8 @@ import {
   Calendar,
   Settings,
   Building2,
-  CreditCard,
   ClipboardList,
+  UserCheck,
 } from 'lucide-react';
 
 const FeatureCard = ({ icon: Icon, title, description }: { icon: any, title: string, description: string }) => {
@@ -137,11 +137,11 @@ const WelcomeDashboard = () => {
             href="/msp/companies?create=true"
           />
           <QuickStartCard
-            icon={CreditCard}
+            icon={UserCheck}
             step="2"
-            title="Set Up Billing Plans" 
-            description="Define your service offerings, rates, and billing cycles."
-            href="/msp/billing?tab=overview"
+            title="Set up team for time approvals" 
+            description="Configure your team members and set up time approval workflows."
+            href="/msp/settings?tab=users"
           />
           <QuickStartCard
             icon={Users}
