@@ -25,10 +25,23 @@ export async function createTeam(teamData: Omit<ITeam, 'members'> & { members?: 
       // Create the team first
       const team = await Team.create(trx, teamDataWithoutMembers);
       
-      // If members were provided, add them to the team
+      // Collect all member IDs including the manager
+      const allMemberIds = new Set<string>();
+      
+      // Add provided members
       if (members && members.length > 0) {
+        members.forEach(member => allMemberIds.add(member.user_id));
+      }
+      
+      // Add manager as a member if specified
+      if (teamDataWithoutMembers.manager_id) {
+        allMemberIds.add(teamDataWithoutMembers.manager_id);
+      }
+      
+      // Add all members to the team
+      if (allMemberIds.size > 0) {
         await Promise.all(
-          members.map((member): Promise<void> => Team.addMember(trx, team.team_id, member.user_id))
+          Array.from(allMemberIds).map((userId): Promise<void> => Team.addMember(trx, team.team_id, userId))
         );
       }
       
@@ -123,7 +136,22 @@ export async function getTeams(): Promise<ITeam[]> {
 export const assignManagerToTeam = async (teamId: string, userId: string): Promise<ITeam> => {
   try {
     const {knex} = await createTenantKnex();
-    await Team.update(knex, teamId, { manager_id: userId });
+    
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Update team manager
+      await Team.update(trx, teamId, { manager_id: userId });
+      
+      // Check if manager is already a team member
+      const existingMember = await trx('team_members')
+        .where({ team_id: teamId, user_id: userId })
+        .first();
+      
+      // Add manager as team member if they're not already a member
+      if (!existingMember) {
+        await Team.addMember(trx, teamId, userId);
+      }
+    });
+    
     return await getTeamById(teamId);
   } catch (error) {
     console.error(error);
