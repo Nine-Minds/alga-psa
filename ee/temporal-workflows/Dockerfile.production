@@ -7,47 +7,46 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-COPY shared/ /app/shared
-COPY ee/temporal-workflows/ /app/ee/temporal-workflows
-COPY tsconfig.base.json /app/tsconfig.base.json
-
-WORKDIR /app/ee/temporal-workflows
-# Install dependencies
-RUN npm install
-
-# Development stage
+# Development stage - build everything
 FROM base AS development
 
-# First, we need to copy and build shared
-# Note: This assumes the Docker build context is set to project root
-# with -f ee/temporal-workflows/Dockerfile
+# First, copy root package files to install shared dependencies
+COPY package*.json ./
+COPY tsconfig.base.json ./
+RUN npm ci --omit=dev
+
+# Build shared packages
+COPY shared ./shared
 WORKDIR /app/shared
-RUN npm install
-RUN npm run build
+RUN npm install --omit=dev
 
 # Now build temporal-workflows
-WORKDIR /app
-COPY ee/temporal-workflows/ ./
-
 WORKDIR /app/ee/temporal-workflows
+COPY ee/temporal-workflows/package*.json ./
+RUN npm install --omit=dev
+COPY ee/temporal-workflows/ ./
 RUN npm run build
 
 # Production stage
 FROM base AS production
 
-# Copy built shared module
+# Copy the shared module and install its production dependencies
 COPY --from=development /app/shared /app/shared
+WORKDIR /app/shared
+RUN npm install --omit=dev
 
-# Copy built temporal-workflows
+# Copy temporal-workflows with its dependencies
 COPY --from=development /app/ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
+COPY --from=development /app/ee/temporal-workflows/package*.json /app/ee/temporal-workflows/
 COPY --from=development /app/ee/temporal-workflows/node_modules /app/ee/temporal-workflows/node_modules
+
+# Set working directory to temporal-workflows
+WORKDIR /app/ee/temporal-workflows
 
 # Create non-root user
 RUN groupadd -r temporal && useradd -r -g temporal temporal
 RUN chown -R temporal:temporal /app
 USER temporal
-
-WORKDIR /app/ee/temporal-workflows
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
@@ -57,4 +56,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 EXPOSE 8080
 
 # Default command runs the worker
-CMD ["node", "dist/ee/temporal-workflows/src/worker.js"]
+CMD ["npm", "run", "start"]

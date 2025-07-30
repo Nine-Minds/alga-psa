@@ -9,8 +9,7 @@ import { validateEnv } from 'server/src/config/envConfig';
 import { validateRequiredConfiguration, validateDatabaseConnectivity, validateSecretUniqueness } from 'server/src/config/criticalEnvValidation';
 import { config } from 'dotenv';
 import User from 'server/src/lib/models/user';
-import { hashPassword } from 'server/src/utils/encryption/encryption';
-import crypto from 'crypto';
+import { hashPassword, generateSecurePassword } from 'server/src/utils/encryption/encryption';
 import { JobScheduler, IJobScheduler } from 'server/src/lib/jobs/jobScheduler';
 import { JobService } from 'server/src/services/job.service';
 import { InvoiceZipJobHandler } from 'server/src/lib/jobs/handlers/invoiceZipHandler';
@@ -336,15 +335,6 @@ async function initializeJobScheduler(storageService: StorageService) {
 
 // Helper function to setup development environment
 async function setupDevelopmentEnvironment() {
-  const generateSecurePassword = () => {
-    const length = 16;
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-    return Array.from(
-      { length },
-      () => chars[crypto.randomInt(chars.length)]
-    ).join('');
-  };
-
   let newPassword;
   const glinda = await User.findUserByEmail("glinda@emeraldcity.oz");
   if (glinda) {

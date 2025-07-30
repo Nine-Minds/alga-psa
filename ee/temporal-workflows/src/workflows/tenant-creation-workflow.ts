@@ -5,7 +5,8 @@ import {
   setHandler, 
   log, 
   condition,
-  sleep
+  sleep,
+  workflowInfo
 } from '@temporalio/workflow';
 import type {
   TenantCreationInput,
@@ -39,6 +40,12 @@ const activities = proxyActivities<{
   sendWelcomeEmail(input: SendWelcomeEmailActivityInput): Promise<SendWelcomeEmailActivityResult>;
   rollbackTenant(tenantId: string): Promise<void>;
   rollbackUser(userId: string, tenantId: string): Promise<void>;
+  updateCheckoutSessionStatus(input: {
+    checkoutSessionId: string;
+    workflowStatus: 'pending' | 'started' | 'in_progress' | 'completed' | 'failed';
+    workflowId?: string;
+    error?: string;
+  }): Promise<void>;
 }>({
   startToCloseTimeout: '5m',
   retry: {
@@ -101,6 +108,23 @@ export async function tenantCreationWorkflow(
 
   try {
     log.info('Starting tenant creation workflow', { input });
+    
+    // Update checkout session status to in_progress if we have a sessionId
+    if (input.checkoutSessionId) {
+      try {
+        await activities.updateCheckoutSessionStatus({
+          checkoutSessionId: input.checkoutSessionId,
+          workflowStatus: 'in_progress',
+          workflowId: workflowInfo().workflowId,
+        });
+      } catch (statusError) {
+        // Log but don't fail the workflow if status update fails
+        log.warn('Failed to update checkout session status to in_progress', {
+          error: statusError instanceof Error ? statusError.message : 'Unknown error',
+          checkoutSessionId: input.checkoutSessionId,
+        });
+      }
+    }
     
     // Step 1: Create tenant
     workflowState.step = 'creating_tenant';
@@ -208,6 +232,23 @@ export async function tenantCreationWorkflow(
       emailSent,
     });
 
+    // Update checkout session status to completed if we have a sessionId
+    if (input.checkoutSessionId) {
+      try {
+        await activities.updateCheckoutSessionStatus({
+          checkoutSessionId: input.checkoutSessionId,
+          workflowStatus: 'completed',
+          workflowId: workflowInfo().workflowId,
+        });
+      } catch (statusError) {
+        // Log but don't fail the workflow if status update fails
+        log.warn('Failed to update checkout session status to completed', {
+          error: statusError instanceof Error ? statusError.message : 'Unknown error',
+          checkoutSessionId: input.checkoutSessionId,
+        });
+      }
+    }
+
     return {
       tenantId: tenantResult.tenantId,
       adminUserId: userResult.userId,
@@ -227,6 +268,24 @@ export async function tenantCreationWorkflow(
       tenantCreated,
       userCreated 
     });
+
+    // Update checkout session status to failed if we have a sessionId
+    if (input.checkoutSessionId) {
+      try {
+        await activities.updateCheckoutSessionStatus({
+          checkoutSessionId: input.checkoutSessionId,
+          workflowStatus: 'failed',
+          workflowId: workflowInfo().workflowId,
+          error: workflowState.error,
+        });
+      } catch (statusError) {
+        // Log but don't fail the workflow if status update fails
+        log.warn('Failed to update checkout session status to failed', {
+          error: statusError instanceof Error ? statusError.message : 'Unknown error',
+          checkoutSessionId: input.checkoutSessionId,
+        });
+      }
+    }
 
     // Rollback operations in reverse order
     try {

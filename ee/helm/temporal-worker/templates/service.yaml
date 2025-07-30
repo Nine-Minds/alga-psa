@@ -1,0 +1,20 @@
+{{- if .Values.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "temporal-worker.fullname" . }}
+  namespace: {{ include "temporal-worker.namespace" . }}
+  labels:
+    {{- include "temporal-worker.labels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal-worker
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: health
+      protocol: TCP
+      name: health
+  selector:
+    {{- include "temporal-worker.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal-worker
+{{- end }}

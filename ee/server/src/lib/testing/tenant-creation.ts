@@ -5,7 +5,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
-import { hashPassword } from '../../../../../server/src/utils/encryption/encryption';
+import { hashPassword, generateSecurePassword } from '../../../../../server/src/utils/encryption/encryption';
 
 export interface TenantCreationInput {
   tenantName: string;
@@ -103,7 +103,7 @@ export async function createAdminUser(
     }
 
     // Generate temporary password
-    const temporaryPassword = generateSecurePassword(12);
+    const temporaryPassword = generateSecurePassword();
     const hashedPassword = await hashPassword(temporaryPassword);
     
     // Create user
@@ -278,31 +278,4 @@ export async function rollbackTenant(db: Knex, tenantId: string): Promise<void> 
   });
 }
 
-/**
- * Generate a secure temporary password
- */
-function generateSecurePassword(length: number = 12): string {
-  const charset = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*';
-  let password = '';
-  
-  // Ensure at least one character from each category
-  const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-  const lowercase = 'abcdefghijkmnpqrstuvwxyz';
-  const numbers = '23456789';
-  const special = '!@#$%^&*';
-  
-  password += uppercase[Math.floor(Math.random() * uppercase.length)];
-  password += lowercase[Math.floor(Math.random() * lowercase.length)];
-  password += numbers[Math.floor(Math.random() * numbers.length)];
-  password += special[Math.floor(Math.random() * special.length)];
-  
-  // Fill remaining length
-  for (let i = 4; i < length; i++) {
-    password += charset[Math.floor(Math.random() * charset.length)];
-  }
-  
-  // Shuffle the password
-  return password.split('').sort(() => Math.random() - 0.5).join('');
-}
-
-// Password hashing is now imported from the main encryption utility
+// Password generation and hashing are now imported from the shared encryption utility
