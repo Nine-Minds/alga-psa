@@ -31,7 +31,6 @@ import NotificationsTab from './NotificationsTab';
 import { TaxRegionsManager } from '../tax/TaxRegionsManager'; // Import the new component
 // Removed import: import IntegrationsTabLoader from './IntegrationsTabLoader';
 import QboIntegrationSettings from '../integrations/QboIntegrationSettings'; // Import the actual settings component
-import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 // Extensions are only available in Enterprise Edition
 import { EmailSettings } from '../../admin/EmailSettings';
@@ -39,12 +38,20 @@ import { EmailSettings } from '../../admin/EmailSettings';
 
 // Revert to standard function component
 const SettingsPage = (): JSX.Element =>  {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
   // Extensions are conditionally available based on edition
   // The webpack alias will resolve to either the EE component or empty component
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+
+  // Dynamically load the Extensions component only if EE is available
+  const DynamicExtensionsComponent = isEEAvailable ? dynamic(() => 
+    import('@ee/lib/extensions/ExtensionComponentLoader').then(mod => mod.DynamicExtensionsComponent),
+    {
+      loading: () => <div className="text-center py-8 text-gray-500">Loading extensions...</div>,
+      ssr: false
+    }
+  ) : () => <div className="text-center py-8 text-gray-500">Extensions not available in this edition</div>;
 
   // Map URL slugs (kebab-case) to Tab Labels
   const slugToLabelMap: Record<string, string> = {
@@ -207,7 +214,7 @@ const SettingsPage = (): JSX.Element =>  {
               </CardHeader>
               <CardContent>
                 <div className="text-center py-8 text-gray-500">
-                  <p>Extension management is only available in Enterprise Edition.</p>
+                  <DynamicExtensionsComponent />
                 </div>
               </CardContent>
             </Card>

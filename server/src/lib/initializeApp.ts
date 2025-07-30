@@ -6,7 +6,7 @@ import logger from '@shared/core/logger';
 import { initializeServerWorkflows } from '@shared/workflow/init/serverInit';
 import { syncStandardTemplates } from './startupTasks';
 import { validateEnv } from 'server/src/config/envConfig';
-import { validateCriticalConfiguration, validateDatabaseConnectivity, validateSecretUniqueness } from 'server/src/config/criticalEnvValidation';
+import { validateRequiredConfiguration, validateDatabaseConnectivity, validateSecretUniqueness } from 'server/src/config/criticalEnvValidation';
 import { config } from 'dotenv';
 import User from 'server/src/lib/models/user';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
@@ -21,6 +21,9 @@ import { createNextTimePeriod } from './actions/timePeriodsActions';
 import { TimePeriodSettings } from './models/timePeriodSettings';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { initializeScheduler } from 'server/src/lib/jobs';
+import { CompositeSecretProvider } from '@shared/core/CompositeSecretProvider';
+import { FileSystemSecretProvider, getSecretProviderInstance, ISecretProvider } from '@shared/core';
+import { EnvSecretProvider } from '@shared/core/EnvSecretProvider';
 
 let isFunctionExecuted = false;
 
@@ -46,13 +49,17 @@ export async function initializeApp() {
     
     // Validate critical configuration (must succeed)
     try {
-      await validateCriticalConfiguration();
+      await validateRequiredConfiguration();
       logger.info('Critical configuration validation passed');
     } catch (error) {
       logger.error('Critical configuration validation failed:', error);
       throw error; // Cannot continue without critical configuration
     }
-    
+
+    let secretProvider: ISecretProvider = await getSecretProviderInstance();
+    let nextAuthSecret: string | undefined = await secretProvider.getAppSecret('NEXTAUTH_SECRET');
+    process.env.NEXTAUTH_SECRET = nextAuthSecret || process.env.NEXTAUTH_SECRET;    
+
     // Validate database connectivity (critical - must succeed)
     try {
       await validateDatabaseConnectivity();
