@@ -267,6 +267,109 @@ describe('Teams API E2E Tests', () => {
     });
   });
 
+  describe('Team Manager Assignment', () => {
+    let testTeam: any;
+    let testUser: any;
+
+    beforeEach(async () => {
+      testTeam = await createTestTeam(env.db, env.tenant, {
+        team_name: 'Team for Manager Tests'
+      });
+      
+      // Create a test user to use as manager
+      const { createUserTestData } = await import('../utils/userTestData');
+      const newUserData = createUserTestData();
+      const userResponse = await env.apiClient.post('/api/v1/users', newUserData);
+      
+      if (userResponse.status !== 201) {
+        throw new Error('Failed to create test user');
+      }
+      
+      testUser = userResponse.data.data;
+    });
+
+    describe('Assign Team Manager (PUT /api/v1/teams/:id/manager)', () => {
+      it('should assign manager and automatically add them as team member', async () => {
+        const response = await env.apiClient.put(
+          `${API_BASE}/${testTeam.team_id}/manager`,
+          { manager_id: testUser.user_id }
+        );
+        
+        assertSuccess(response);
+        expect(response.data.data.manager_id).toBe(testUser.user_id);
+        
+        // Verify manager is also a team member
+        const membersResponse = await env.apiClient.get(`${API_BASE}/${testTeam.team_id}/members`);
+        assertSuccess(membersResponse);
+        
+        const members = membersResponse.data.data || [];
+        const managerAsMember = members.find((m: any) => m.user_id === testUser.user_id);
+        expect(managerAsMember).toBeDefined();
+        expect(managerAsMember.user_id).toBe(testUser.user_id);
+      });
+
+      it('should not duplicate member if manager is already a team member', async () => {
+        // First add user as team member
+        await env.apiClient.post(
+          `${API_BASE}/${testTeam.team_id}/members`,
+          { user_id: testUser.user_id }
+        );
+        
+        // Then assign as manager
+        const response = await env.apiClient.put(
+          `${API_BASE}/${testTeam.team_id}/manager`,
+          { manager_id: testUser.user_id }
+        );
+        
+        assertSuccess(response);
+        expect(response.data.data.manager_id).toBe(testUser.user_id);
+        
+        // Verify user appears only once in members list
+        const membersResponse = await env.apiClient.get(`${API_BASE}/${testTeam.team_id}/members`);
+        assertSuccess(membersResponse);
+        
+        const members = membersResponse.data.data || [];
+        const managerEntries = members.filter((m: any) => m.user_id === testUser.user_id);
+        expect(managerEntries.length).toBe(1);
+      });
+    });
+  });
+
+  describe('Team Creation with Manager', () => {
+    it('should automatically add manager as team member when creating team', async () => {
+      // Create a test user to use as manager
+      const { createUserTestData } = await import('../utils/userTestData');
+      const newUserData = createUserTestData();
+      const userResponse = await env.apiClient.post('/api/v1/users', newUserData);
+      
+      if (userResponse.status !== 201) {
+        throw new Error('Failed to create test user');
+      }
+      
+      const testUser = userResponse.data.data;
+      
+      // Create team with manager
+      const newTeam = createTeamTestData({ manager_id: testUser.user_id });
+      const response = await env.apiClient.post(API_BASE, newTeam);
+      assertSuccess(response, 201);
+      
+      expect(response.data.data).toMatchObject({
+        team_name: newTeam.team_name,
+        manager_id: testUser.user_id,
+        tenant: env.tenant
+      });
+      
+      // Verify manager is also a team member
+      const membersResponse = await env.apiClient.get(`${API_BASE}/${response.data.data.team_id}/members`);
+      assertSuccess(membersResponse);
+      
+      const members = membersResponse.data.data || [];
+      const managerAsMember = members.find((m: any) => m.user_id === testUser.user_id);
+      expect(managerAsMember).toBeDefined();
+      expect(managerAsMember.user_id).toBe(testUser.user_id);
+    });
+  });
+
   describe('Team Members', () => {
     let testTeam: any;
 
