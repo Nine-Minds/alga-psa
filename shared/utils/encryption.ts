@@ -15,6 +15,10 @@ export async function hashPassword(password: string): Promise<string> {
 
   const salt = crypto.randomBytes(saltBytes).toString('hex');
   const hash = crypto.pbkdf2Sync(password, key + salt, iterations, keyLength, digest).toString('hex');
+
+  console.log(`Hashed password with salt: ${salt}, iterations: ${iterations}, keyLength: ${keyLength}, digest: ${digest}`);
+  console.log(`Key used for hashing: ${key}`);
+
   return `${salt}:${hash}`;
 }
 
