@@ -227,7 +227,7 @@ export function TicketList() {
     {
       title: 'Title',
       dataIndex: 'title',
-      width: '250px',
+      width: '25%',
       render: (value: string, record: ITicketListItem) => (
         <div 
           className="font-medium cursor-pointer hover:text-blue-600"
@@ -245,7 +245,7 @@ export function TicketList() {
     {
       title: 'Status',
       dataIndex: 'status_name',
-      width: '150px',
+      width: '20%',
       render: (value: string, record: ITicketListItem) => (
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
@@ -287,7 +287,7 @@ export function TicketList() {
     {
       title: 'Priority',
       dataIndex: 'priority_name',
-      width: '150px',
+      width: '15%',
       render: (value: string) => (
         <div className="capitalize">{value}</div>
       ),
@@ -295,7 +295,7 @@ export function TicketList() {
     {
       title: 'Assigned To',
       dataIndex: 'assigned_to_name',
-      width: '150px',
+      width: '15%',
       render: (value: string) => (
         <div className="text-sm">{value || '-'}</div>
       ),
@@ -303,7 +303,7 @@ export function TicketList() {
     {
       title: 'Created',
       dataIndex: 'entered_at',
-      width: '180px',
+      width: '15%',
       render: (value: string | null) => (
         <div className="text-sm text-gray-500">
           {value ? format(new Date(value), 'MMM d, yyyy h:mm a') : '-'}
@@ -313,7 +313,7 @@ export function TicketList() {
     {
       title: 'Updated',
       dataIndex: 'updated_at',
-      width: '180px',
+      width: '15%',
       render: (value: string | null) => (
         <div className="text-sm text-gray-500">
           {value ? format(new Date(value), 'MMM d, yyyy h:mm a') : '-'}
@@ -396,7 +396,7 @@ export function TicketList() {
       </h2>
 
       <div className="w-full overflow-x-auto">
-        <div className="min-w-[1200px]">
+        <div className="min-w-full">
           <DataTable
             data={tickets}
             columns={columns}
