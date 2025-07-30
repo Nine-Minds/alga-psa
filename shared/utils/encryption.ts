@@ -7,7 +7,7 @@ import { getSecret } from '../core/getSecret.js';
  * @returns A string in the format "salt:hash"
  */
 export async function hashPassword(password: string): Promise<string> {
-  const key = await getSecret('alga_auth_key', 'ALGA_AUTH_KEY', 'defaultKey');
+  const key = await getSecret('nextauth_secret', 'NEXTAUTH_SECRET', 'defaultKey');
   const saltBytes = Number(process.env.SALT_BYTES) || 12;
   const iterations = Number(process.env.ITERATIONS) || 10000;
   const keyLength = Number(process.env.KEY_LENGTH) || 64;
@@ -25,7 +25,7 @@ export async function hashPassword(password: string): Promise<string> {
  * @returns True if the password matches, false otherwise
  */
 export async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
-  const key = await getSecret('alga_auth_key', 'ALGA_AUTH_KEY', 'defaultKey');
+  const key = await getSecret('nextauth_secret', 'NEXTAUTH_SECRET', 'defaultKey');
   const iterations = Number(process.env.ITERATIONS) || 10000;
   const keyLength = Number(process.env.KEY_LENGTH) || 64;
   const digest = process.env.ALGORITHM || 'sha512';
