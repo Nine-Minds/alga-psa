@@ -3,12 +3,11 @@ version: '3.8'
 services:
   server:
     extends:
-      file: ./server/docker-compose.yaml
+      file: ./server/docker-compose.prebuilt.yaml
       service: server
     container_name: ${APP_NAME:-sebastian}_server_ee
-    build:
-      context: .
-      dockerfile: ee/server/Dockerfile
+    image: ghcr.io/nine-minds/alga-psa-ee:latest
+    platform: linux/amd64
     environment:
       EDITION: enterprise
       DB_NAME: server
@@ -18,8 +17,8 @@ services:
       DB_USER_ADMIN: ${DB_USER_ADMIN:-postgres}
       VERSION: ${VERSION}
       APP_NAME: ${APP_NAME}
-      APP_ENV: ${APP_ENV:-development}
-      NODE_ENV: ${APP_ENV:-development}
+      APP_ENV: ${APP_ENV:-production}
+      NODE_ENV: ${APP_ENV:-production}
       HOST: ${HOST}
       VERIFY_EMAIL_ENABLED: ${VERIFY_EMAIL_ENABLED:-false}
       REDIS_HOST: ${REDIS_HOST:-redis}
@@ -37,8 +36,7 @@ services:
       EMAIL_USERNAME: ${EMAIL_USERNAME:-noreply@example.com}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
-      # Secret provider configuration (EE edition - supports vault)
-      SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem,vault}
+      SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem}
       SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
       # Workflow configuration
       WORKFLOW_DISTRIBUTED_MODE: "true"
@@ -65,6 +63,8 @@ services:
     networks:
       - app-network
     depends_on:
+      setup:
+        condition: service_completed_successfully
       postgres:
         condition: service_started
       pgbouncer:
@@ -73,14 +73,13 @@ services:
         condition: service_started
       hocuspocus:
         condition: service_started
-      setup:
-        condition: service_completed_successfully
+        required: false
 
   setup:
-    build:
-      context: .
-      dockerfile: ee/setup/Dockerfile
+    image: ghcr.io/nine-minds/alga-psa-ee:latest
+    platform: linux/amd64
     container_name: ${APP_NAME:-sebastian}_setup_ee
+    restart: "no"
     environment:
       EDITION: enterprise
       NODE_OPTIONS: --experimental-vm-modules
@@ -114,7 +113,7 @@ services:
         target: /app/setup/config.ini
         read_only: true
       - type: bind
-        source: ./ee/setup/entrypoint.sh
+        source: ./setup/entrypoint.sh
         target: /app/setup/entrypoint.sh
         read_only: true
       - type: bind
@@ -138,9 +137,8 @@ services:
     entrypoint: ["/app/setup/entrypoint.sh"]
 
   workflow-worker:
-    build:
-      context: .
-      dockerfile: services/workflow-worker/Dockerfile
+    image: ghcr.io/nine-minds/alga-psa-ee:latest
+    platform: linux/amd64
     environment:
       EDITION: enterprise
       DB_NAME: server
@@ -150,8 +148,8 @@ services:
       DB_USER_ADMIN: ${DB_USER_ADMIN:-postgres}
       VERSION: ${VERSION}
       APP_NAME: ${APP_NAME}
-      APP_ENV: ${APP_ENV:-development}
-      NODE_ENV: ${APP_ENV:-development}
+      APP_ENV: ${APP_ENV:-production}
+      NODE_ENV: ${APP_ENV:-production}
       HOST: ${HOST}
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
@@ -222,8 +220,8 @@ services:
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
       DB_TYPE: ${DB_TYPE:-postgres}
-      DB_HOST: postgres
-      DB_PORT: ${DB_PORT:-5432}
+      DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
+      DB_PORT: ${PGBOUNCER_PORT:-6432}
     secrets:
       - db_password_hocuspocus
       - redis_password
@@ -244,8 +242,8 @@ services:
       APP_ENV: ${APP_ENV:-development}
       NODE_ENV: ${APP_ENV:-development}
       HOST: ${HOST}
-      DB_TYPE: ${DB_TYPE:-postgres}
-      DB_HOST: postgres
+      DB_TYPE: postgres
+      DB_HOST: ${DB_HOST:-postgres}
       DB_PORT: ${DB_PORT:-5432}
     secrets:
       - postgres_password
