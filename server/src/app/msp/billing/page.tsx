@@ -1,7 +1,6 @@
-"use server";
-
 import React from 'react';
 import BillingDashboard from '../../../components/billing-dashboard/BillingDashboard';
+import BillingPageWrapper from '../../../components/billing/BillingPageWrapper';
 import { getServices } from '../../../lib/actions/serviceActions';
 
 const BillingPage = async () => {
@@ -14,9 +13,11 @@ const BillingPage = async () => {
     : (servicesResponse.services || []);
 
   return (
-    <BillingDashboard
-      initialServices={services}
-    />
+    <BillingPageWrapper>
+      <BillingDashboard
+        initialServices={services}
+      />
+    </BillingPageWrapper>
   );
 };
 

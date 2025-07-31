@@ -8,6 +8,8 @@ import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { TagManager } from 'server/src/components/tags';
+import { useFeatureFlag } from '@/hooks/useFeatureFlag';
+import { FeaturePlaceholder } from '../FeaturePlaceholder';
 import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
 import { useTags } from 'server/src/context/TagContext';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
@@ -152,6 +154,8 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   isInDrawer = false,
   quickView = false
 }) => {
+  const featureFlag = useFeatureFlag('billing-enabled');
+  const isBillingEnabled = typeof featureFlag === 'boolean' ? featureFlag : featureFlag?.enabled;
   const [editedCompany, setEditedCompany] = useState<ICompany>(company);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
@@ -699,7 +703,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     // },
     {
       label: "Billing",
-      content: (
+      content: isBillingEnabled ? (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <BillingConfiguration
             company={editedCompany}
@@ -707,13 +711,25 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             contacts={contacts}
           />
         </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div style={{ height: 'calc(100vh - 300px)', minHeight: '600px' }}>
+            <FeaturePlaceholder />
+          </div>
+        </div>
       )
     },
     {
       label: "Billing Dashboard",
-      content: (
+      content: isBillingEnabled ? (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <ClientBillingDashboard companyId={company.company_id} />
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div style={{ height: 'calc(100vh - 300px)', minHeight: '600px' }}>
+            <FeaturePlaceholder />
+          </div>
         </div>
       )
     },
@@ -752,9 +768,15 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     },
     {
       label: "Tax Settings",
-      content: (
+      content: isBillingEnabled ? (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <TaxSettingsForm companyId={company.company_id} />
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div style={{ height: 'calc(100vh - 300px)', minHeight: '600px' }}>
+            <FeaturePlaceholder />
+          </div>
         </div>
       )
     },

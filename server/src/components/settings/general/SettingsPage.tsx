@@ -12,6 +12,8 @@ import { Button } from "server/src/components/ui/Button";
 import GeneralSettings from 'server/src/components/settings/general/GeneralSettings';
 import UserManagement from 'server/src/components/settings/general/UserManagement';
 import SettingsTabSkeleton from 'server/src/components/ui/skeletons/SettingsTabSkeleton';
+import { useFeatureFlag } from '@/hooks/useFeatureFlag';
+import { FeaturePlaceholder } from 'server/src/components/FeaturePlaceholder';
 
 // Dynamic imports for heavy settings components
 const TicketingSettings = dynamic(() => import('server/src/components/settings/general/TicketingSettings'), {
@@ -40,6 +42,8 @@ import { EmailSettings } from 'server/src/components/admin/EmailSettings';
 const SettingsPage = (): JSX.Element =>  {
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
+  const featureFlag = useFeatureFlag('billing-enabled');
+  const isBillingEnabled = typeof featureFlag === 'boolean' ? featureFlag : featureFlag?.enabled;
   // Extensions are conditionally available based on edition
   // The webpack alias will resolve to either the EE component or empty component
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
@@ -167,7 +171,7 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Tax",
-      content: (
+      content: isBillingEnabled ? (
         <Card>
           <CardHeader>
             <CardTitle>Tax Settings</CardTitle>
@@ -177,6 +181,8 @@ const SettingsPage = (): JSX.Element =>  {
             <TaxRegionsManager />
           </CardContent>
         </Card>
+      ) : (
+        <FeaturePlaceholder />
       ),
     },
     {
