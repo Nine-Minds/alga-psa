@@ -4,6 +4,7 @@ import { FileSystemSecretProvider } from './FileSystemSecretProvider.js';
 import { EnvSecretProvider } from './EnvSecretProvider.js';
 import { CompositeSecretProvider } from './CompositeSecretProvider.js';
 import logger from './logger.js';
+import { loadVaultSecretProvider } from './vaultLoader.js';
 
 // Safe process.env access
 const getEnvVar = (name: string): string | undefined => {
@@ -50,7 +51,6 @@ async function getProviderInstance(providerType: ProviderType): Promise<ISecretP
       if (!vaultProviderInstance) {
         // Use direct vault provider
         try {
-          const { loadVaultSecretProvider } = await import(/* webpackIgnore: true */ './vaultLoader.js');
           vaultProviderInstance = await loadVaultSecretProvider();
           logger.info('Using VaultSecretProvider for Node.js runtime');
         } catch (error) {

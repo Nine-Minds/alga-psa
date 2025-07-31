@@ -4,14 +4,15 @@ import React, { useState, useEffect } from 'react';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, Package, ChevronDown, ChevronUp, CheckCircle, Settings, Palette } from 'lucide-react';
+import { Plus, Package, ChevronDown, ChevronUp, CheckCircle, Settings, Palette, Trash2 } from 'lucide-react';
 import { StepProps } from '../types';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import ColorPicker from 'server/src/components/ui/ColorPicker';
 import { useSession } from 'next-auth/react';
 import { 
   getAvailableReferenceData, 
-  importReferenceData 
+  importReferenceData,
+  deleteReferenceDataItem
 } from 'server/src/lib/actions/referenceDataActions';
 import { getTenantTicketingData } from 'server/src/lib/actions/onboarding-actions/onboardingActions';
 import { IStandardPriority, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
@@ -22,6 +23,7 @@ import { createChannel } from 'server/src/lib/actions/channel-actions/channelAct
 import { createCategory } from 'server/src/lib/actions/ticketCategoryActions';
 import { createStatus } from 'server/src/lib/actions/status-actions/statusActions';
 import { createPriority } from 'server/src/lib/actions/priorityActions';
+import toast from 'react-hot-toast';
 
 interface SectionState {
   numbering: boolean;
@@ -156,11 +158,10 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
   const [importedCategories, setImportedCategories] = useState<string[]>([]);
   const [importedPriorities, setImportedPriorities] = useState<any[]>([]);
 
-  // Load existing ticketing data on mount
-  useEffect(() => {
-    const loadExistingData = async () => {
-      try {
-        const result = await getTenantTicketingData();
+  // Function to load existing ticketing data
+  const loadExistingData = async () => {
+    try {
+      const result = await getTenantTicketingData();
         
         if (result.success && result.data) {
           // Set imported items from existing data
@@ -204,8 +205,10 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       } finally {
         setIsLoadingData(false);
       }
-    };
-    
+  };
+
+  // Load existing ticketing data on mount
+  useEffect(() => {
     loadExistingData();
   }, []); // Only run once on mount
 
@@ -239,7 +242,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       const channels = await getAvailableReferenceData('channels');
       setAvailableChannels(channels);
     } catch (error) {
-      console.error('Error loading available channels:', error);
+      console.error('Error loading available boards:', error);
     }
   };
 
@@ -313,7 +316,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       setShowImportDialogs(prev => ({ ...prev, channels: false }));
       await loadAvailableChannels();
     } catch (error) {
-      console.error('Error importing channels:', error);
+      console.error('Error importing boards:', error);
     } finally {
       setIsImporting(prev => ({ ...prev, channels: false }));
     }
@@ -370,7 +373,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         setImportedStatuses(prev => [...prev, ...result.imported]);
         updateData({ 
           statusesImported: true,
-          statuses: [...importedStatuses, ...result.imported]
+          statuses: [...(data.statuses || []), ...result.imported]
         });
       }
       
@@ -419,29 +422,35 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     
     // Check if category already exists
     if (data.categories.some(cat => cat.category_name === categoryForm.name && cat.channel_id === categoryForm.channelId)) {
-      alert('Category already exists in this channel');
+      toast.error('Category already exists in this board');
       return;
     }
     
     try {
-      // Calculate display order if not provided
+      // Calculate display order if not provided or if already in use
       let displayOrder = categoryForm.displayOrder;
+      const channelCategories = data.categories.filter(c => c.channel_id === categoryForm.channelId);
+      
+      let relevantCategories;
+      if (categoryForm.parentCategory) {
+        // For subcategories, consider siblings under the same parent
+        relevantCategories = channelCategories.filter(c => c.parent_category === categoryForm.parentCategory);
+      } else {
+        // For parent categories in this channel
+        relevantCategories = channelCategories.filter(c => !c.parent_category);
+      }
+      
+      const maxOrder = relevantCategories.length > 0 
+        ? Math.max(...relevantCategories.map(cat => cat.display_order || 0))
+        : 0;
+      
       if (!displayOrder || displayOrder === 0) {
-        // Get the max display order for categories in the same channel
-        const channelCategories = data.categories.filter(c => c.channel_id === categoryForm.channelId);
-        
-        if (categoryForm.parentCategory) {
-          // For subcategories, get max order within the parent
-          const siblingCategories = channelCategories.filter(c => c.parent_category === categoryForm.parentCategory);
-          displayOrder = siblingCategories.length > 0 
-            ? Math.max(...siblingCategories.map(cat => cat.display_order || 0)) + 1 
-            : 1;
-        } else {
-          // For parent categories in this channel
-          const parentCategories = channelCategories.filter(c => !c.parent_category);
-          displayOrder = parentCategories.length > 0 
-            ? Math.max(...parentCategories.map(cat => cat.display_order || 0)) + 1 
-            : 1;
+        displayOrder = maxOrder + 1;
+      } else {
+        // Check if the provided order is already in use
+        const isOrderInUse = relevantCategories.some(cat => cat.display_order === displayOrder);
+        if (isOrderInUse) {
+          displayOrder = maxOrder + 1;
         }
       }
       
@@ -462,7 +471,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       setShowAddForms(prev => ({ ...prev, category: false }));
     } catch (error) {
       console.error('Error creating category:', error);
-      alert('Failed to create category. Please try again.');
+      toast.error('Failed to create category. Please try again.');
     }
   };
 
@@ -472,7 +481,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     
     // Check if priority already exists
     if (data.priorities.some(p => (typeof p === 'string' ? p : p.priority_name) === priorityForm.name)) {
-      alert('Priority already exists');
+      toast.error('Priority already exists');
       return;
     }
     
@@ -480,15 +489,32 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       // Get current user ID
       const userId = session?.user?.id;
       if (!userId) {
-        alert('User session not found. Please refresh and try again.');
+        toast.error('User session not found. Please refresh and try again.');
         return;
+      }
+      
+      // Calculate the next order number if not provided or if already in use
+      let orderNumber = priorityForm.displayOrder;
+      const allPriorities = [...importedPriorities, ...data.priorities.filter(p => typeof p === 'object')];
+      const maxOrder = allPriorities.reduce((max, priority) => 
+        Math.max(max, priority.order_number || 0), 0
+      );
+      
+      if (!orderNumber || orderNumber === 0) {
+        orderNumber = maxOrder + 1;
+      } else {
+        // Check if the provided order is already in use
+        const isOrderInUse = allPriorities.some(p => p.order_number === orderNumber);
+        if (isOrderInUse) {
+          orderNumber = maxOrder + 1;
+        }
       }
       
       // Create actual priority in database
       const createdPriority = await createPriority({
         priority_name: priorityForm.name,
         color: priorityForm.color,
-        order_number: priorityForm.displayOrder || (importedPriorities.length + data.priorities.length + 1),
+        order_number: orderNumber,
         item_type: 'ticket',
         created_by: userId,
         created_at: new Date()
@@ -505,7 +531,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       setShowAddForms(prev => ({ ...prev, priority: false }));
     } catch (error) {
       console.error('Error creating priority:', error);
-      alert('Failed to create priority. Please try again.');
+      toast.error('Failed to create priority. Please try again.');
     }
   };
 
@@ -520,6 +546,115 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
 
   const hasChannel = () => {
     return !!(data.channelId || data.channelName || importedChannels.length > 0);
+  };
+
+  // Remove functions for each type
+  const removeChannel = async (channelId: string) => {
+    try {
+      const result = await deleteReferenceDataItem('channels', channelId);
+      if (result.success) {
+        // Remove from imported channels
+        setImportedChannels(prev => prev.filter(ch => ch.channel_id !== channelId));
+        
+        // If this was the selected channel, clear it
+        if (data.channelId === channelId) {
+          updateData({ channelId: undefined, channelName: '' });
+        }
+        
+        // Refresh data from server
+        loadExistingData();
+        toast.success('Board deleted successfully');
+      } else {
+        toast.error(result.error || 'Failed to delete board');
+      }
+    } catch (error) {
+      console.error('Error deleting board:', error);
+      toast.error('Failed to delete board');
+    }
+  };
+
+  const removeCategory = async (categoryId: string) => {
+    try {
+      const result = await deleteReferenceDataItem('categories', categoryId);
+      if (result.success) {
+        // Remove from data.categories
+        updateData({ 
+          categories: data.categories.filter(cat => cat.category_id !== categoryId) 
+        });
+        
+        // Remove from imported categories tracking
+        const category = data.categories.find(cat => cat.category_id === categoryId);
+        if (category) {
+          setImportedCategories(prev => prev.filter(name => name !== category.category_name));
+        }
+        
+        // Refresh data from server
+        loadExistingData();
+        toast.success('Category deleted successfully');
+      } else {
+        toast.error(result.error || 'Failed to delete category');
+      }
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      toast.error('Failed to delete category');
+    }
+  };
+
+  const removeStatus = async (statusId: string) => {
+    try {
+      const result = await deleteReferenceDataItem('statuses', statusId);
+      if (result.success) {
+        // Remove from imported statuses
+        setImportedStatuses(prev => prev.filter(s => s.status_id !== statusId));
+        
+        // Remove from data.statuses
+        updateData({ 
+          statuses: (data.statuses || []).filter(s => s.status_id !== statusId) 
+        });
+        
+        // Refresh data from server
+        loadExistingData();
+        toast.success('Status deleted successfully');
+      } else {
+        toast.error(result.error || 'Failed to delete status');
+      }
+    } catch (error) {
+      console.error('Error deleting status:', error);
+      toast.error('Failed to delete status');
+    }
+  };
+
+  const removePriority = async (priorityId: string) => {
+    try {
+      const result = await deleteReferenceDataItem('priorities', priorityId);
+      if (result.success) {
+        // Find the priority to remove
+        const priorityToRemove = data.priorities.find(p => 
+          (typeof p === 'object' && p.priority_id === priorityId)
+        );
+        
+        if (priorityToRemove && typeof priorityToRemove === 'object') {
+          // Remove from imported priorities
+          setImportedPriorities(prev => prev.filter(p => p.priority_id !== priorityId));
+          
+          // Remove from data.priorities
+          updateData({ 
+            priorities: data.priorities.filter(p => 
+              !(typeof p === 'object' && p.priority_id === priorityId)
+            ) 
+          });
+        }
+        
+        // Refresh data from server
+        loadExistingData();
+        toast.success('Priority deleted successfully');
+      } else {
+        toast.error(result.error || 'Failed to delete priority');
+      }
+    } catch (error) {
+      console.error('Error deleting priority:', error);
+      toast.error('Failed to delete priority');
+    }
   };
 
   if (isLoadingData) {
@@ -737,18 +872,25 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       
                       // Check if channel already exists
                       if (importedChannels.some(ch => ch.channel_name === channelForm.name)) {
-                        alert('Board already exists');
+                        toast.error('Board already exists');
                         return;
                       }
                       
                       try {
-                        // Calculate the next display order if not provided
+                        // Calculate the next display order if not provided or if already in use
                         let displayOrder = channelForm.displayOrder;
+                        const maxOrder = importedChannels.reduce((max, ch) => 
+                          Math.max(max, ch.display_order || 0), 0
+                        );
+                        
                         if (!displayOrder || displayOrder === 0) {
-                          const maxOrder = importedChannels.reduce((max, ch) => 
-                            Math.max(max, ch.display_order || 0), 0
-                          );
                           displayOrder = maxOrder + 1;
+                        } else {
+                          // Check if the provided order is already in use
+                          const isOrderInUse = importedChannels.some(ch => ch.display_order === displayOrder);
+                          if (isOrderInUse) {
+                            displayOrder = maxOrder + 1;
+                          }
                         }
                         
                         // Create actual channel in database
@@ -779,13 +921,13 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         await loadAvailableChannels();
                       } catch (error) {
                         console.error('Error creating channel:', error);
-                        alert('Failed to create board. Please try again.');
+                        toast.error('Failed to create board. Please try again.');
                       }
                     }}
                     disabled={!channelForm.name.trim()}
                     className="flex-1"
                   >
-                    Add Channel
+                    Add Board
                   </Button>
                 </div>
               </div>
@@ -893,6 +1035,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         <th className="px-2 py-1 text-left text-xs font-medium text-gray-700">Name</th>
                         <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Default</th>
                         <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Order</th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white">
@@ -905,6 +1048,19 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                             ) : '-'}
                           </td>
                           <td className="px-2 py-1 text-center text-xs text-gray-600">{channel.display_order || 0}</td>
+                          <td className="px-2 py-1 text-center">
+                            <Button
+                              id={`remove-channel-${channel.channel_id}`}
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeChannel(channel.channel_id)}
+                              className="p-1 h-6 w-6"
+                              title="Remove board"
+                            >
+                              <Trash2 className="h-3 w-3 text-gray-500 hover:text-red-600" />
+                            </Button>
+                          </td>
                         </tr>
                       ))}
                       {data.channelName && !importedChannels.some(c => c.channel_name === data.channelName) && (
@@ -912,6 +1068,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           <td className="px-2 py-1 text-xs">{data.channelName}</td>
                           <td className="px-2 py-1 text-center text-xs">-</td>
                           <td className="px-2 py-1 text-center text-xs text-gray-600">1</td>
+                          <td className="px-2 py-1 text-center">-</td>
                         </tr>
                       )}
                     </tbody>
@@ -1199,6 +1356,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       <tr>
                         <th className="px-2 py-1 text-left text-xs font-medium text-gray-700">Name</th>
                         <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Order</th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white">
@@ -1250,7 +1408,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           hierarchicalCategories.push(...children);
                         });
                         
-                        return hierarchicalCategories.map((category, index) => {
+                        return hierarchicalCategories.map((category) => {
                           const isSubcategory = category.parent_category ? true : false;
                           // Find parent category name if this is a subcategory
                           const parentCategory = isSubcategory 
@@ -1268,6 +1426,19 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                                 {category.category_name}
                               </td>
                               <td className="px-2 py-1 text-center text-xs text-gray-600">{category.display_order || '-'}</td>
+                              <td className="px-2 py-1 text-center">
+                                <Button
+                                  id={`remove-category-${category.category_id}`}
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeCategory(category.category_id)}
+                                  className="p-1 h-6 w-6"
+                                  title="Remove category"
+                                >
+                                  <Trash2 className="h-3 w-3 text-gray-500 hover:text-red-600" />
+                                </Button>
+                              </td>
                             </tr>
                           );
                         });
@@ -1404,18 +1575,34 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       
                       // Check if status already exists
                       if (importedStatuses.some(s => s.name === statusForm.name)) {
-                        alert('Status already exists');
+                        toast.error('Status already exists');
                         return;
                       }
                       
                       try {
+                        // Calculate the next order number if not provided or if already in use
+                        let orderNumber = statusForm.displayOrder;
+                        const maxOrder = importedStatuses.reduce((max, status) => 
+                          Math.max(max, status.order_number || 0), 0
+                        );
+                        
+                        if (!orderNumber || orderNumber === 0) {
+                          orderNumber = maxOrder + 1;
+                        } else {
+                          // Check if the provided order is already in use
+                          const isOrderInUse = importedStatuses.some(s => s.order_number === orderNumber);
+                          if (isOrderInUse) {
+                            orderNumber = maxOrder + 1;
+                          }
+                        }
+                        
                         // Create actual status in database
                         const createdStatus = await createStatus({
                           name: statusForm.name,
                           is_closed: statusForm.isClosed,
                           is_default: statusForm.isDefault,
                           status_type: 'ticket',
-                          order_number: statusForm.displayOrder || importedStatuses.length + 1
+                          order_number: orderNumber
                         });
                         
                         // Add to imported statuses list
@@ -1430,7 +1617,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         setShowAddForms(prev => ({ ...prev, status: false }));
                       } catch (error) {
                         console.error('Error creating status:', error);
-                        alert('Failed to create status. Please try again.');
+                        toast.error('Failed to create status. Please try again.');
                       }
                     }}
                     disabled={!statusForm.name.trim()}
@@ -1545,6 +1732,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Type</th>
                         <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Default</th>
                         <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Order</th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white">
@@ -1560,6 +1748,19 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                             ) : '-'}
                           </td>
                           <td className="px-2 py-1 text-center text-xs text-gray-600">{status.order_number || 0}</td>
+                          <td className="px-2 py-1 text-center">
+                            <Button
+                              id={`remove-status-${status.status_id}`}
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeStatus(status.status_id)}
+                              className="p-1 h-6 w-6"
+                              title="Remove status"
+                            >
+                              <Trash2 className="h-3 w-3 text-gray-500 hover:text-red-600" />
+                            </Button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1816,6 +2017,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         <th className="px-2 py-1 text-left text-xs font-medium text-gray-700">Name</th>
                         <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Color</th>
                         <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Order</th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white">
@@ -1835,6 +2037,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           'Normal': '#6b7280'
                         };
                         const color = priorityObj?.color || defaultColors[priorityName] || '#6b7280';
+                        const priorityId = priorityObj?.priority_id;
                         
                         return (
                           <tr key={priorityName}>
@@ -1849,6 +2052,21 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                             </td>
                             <td className="px-2 py-1 text-center text-xs text-gray-600">
                               {priorityObj?.order_number || index + 1}
+                            </td>
+                            <td className="px-2 py-1 text-center">
+                              {priorityId ? (
+                                <Button
+                                  id={`remove-priority-${priorityId}`}
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removePriority(priorityId)}
+                                  className="p-1 h-6 w-6"
+                                  title="Remove priority"
+                                >
+                                  <Trash2 className="h-3 w-3 text-gray-500 hover:text-red-600" />
+                                </Button>
+                              ) : '-'}
                             </td>
                           </tr>
                         );

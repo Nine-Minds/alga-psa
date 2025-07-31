@@ -77,8 +77,8 @@ export function ClientContactStep({ data, updateData }: StepProps) {
         </div>
       </div>
 
-      <div className="rounded-md bg-gray-50 p-4">
-        <p className="text-sm text-gray-700">
+      <div className="rounded-md bg-blue-50 p-4 space-y-2">
+        <p className="text-sm text-blue-700">
           <span className="font-semibold">Optional:</span> You can skip this step and add contacts later from the client's profile.
         </p>
       </div>

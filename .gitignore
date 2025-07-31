@@ -136,3 +136,5 @@ venv/
 OpenCode.md
 opencode.md
 .opencode
+shared/core/*.d.ts
+shared/core/*.js

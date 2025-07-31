@@ -1,0 +1,31 @@
+{{- if .Values.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "temporal-worker.fullname" . }}
+  namespace: {{ include "temporal-worker.namespace" . }}
+  labels:
+    {{- include "temporal-worker.labels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal-worker
+data:
+  # Worker configuration
+  worker-config.json: |
+    {
+      "temporal": {
+        "address": "{{ .Values.temporal.address }}",
+        "namespace": "{{ .Values.temporal.namespace }}",
+        "taskQueue": "{{ .Values.temporal.taskQueue }}",
+        "maxConcurrentActivityExecutions": {{ .Values.temporal.maxConcurrentActivityExecutions | default 10 }},
+        "maxConcurrentWorkflowTaskExecutions": {{ .Values.temporal.maxConcurrentWorkflowTaskExecutions | default 10 }}
+      },
+      "logging": {
+        "level": "{{ .Values.logLevel }}",
+        "format": "json"
+      },
+      "healthCheck": {
+        "enabled": true,
+        "port": 8080,
+        "path": "/health"
+      }
+    }
+{{- end }}

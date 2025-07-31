@@ -10,6 +10,7 @@ export interface TenantCreationInput {
   };
   companyName?: string;
   billingPlan?: string;
+  checkoutSessionId?: string; // Stripe checkout session ID for status updates
 }
 
 export interface TenantCreationResult {

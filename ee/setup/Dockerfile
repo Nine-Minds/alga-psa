@@ -5,6 +5,7 @@ WORKDIR /app/setup
 # Install database clients and utilities
 RUN apt-get update && apt-get install -y \
     postgresql-client \
+    default-mysql-client \
     sqlite3 \
     curl \
     && rm -rf /var/lib/apt/lists/*
@@ -13,18 +14,30 @@ RUN apt-get update && apt-get install -y \
 COPY setup/entrypoint.sh ./
 COPY setup/config.ini ./config.ini
 COPY ee/setup/entrypoint.sh ./ee-entrypoint.sh
-COPY ee/setup/config.ini ./ee-config.ini
 
-# Copy server files
+# Copy and build shared dependencies
+COPY tsconfig.base.json ../tsconfig.base.json
+COPY shared/package.json ../shared/package.json
+COPY shared/tsconfig.json ../shared/tsconfig.json
+COPY shared/ ../shared
+WORKDIR /app/shared
+RUN npm install && npm run build
+
+# Return to setup workdir and copy server files
+WORKDIR /app/setup
 COPY server/package.json /app/server/
 COPY server/setup/create_database.js /app/server/setup/
 COPY server/knexfile.cjs /app/server/
-COPY server/migrations /app/server/migrations
-COPY server/seeds /app/server/seeds
 
-# Copy EE server files and overlay them
-COPY ee/server/migrations /app/server/migrations
-COPY ee/server/seeds /app/server/seeds
+# Copy CE migrations and seeds to separate directories
+COPY server/migrations /app/server/migrations-ce
+COPY server/seeds /app/server/seeds-ce
+
+# Copy EE migrations to separate directory
+COPY ee/server/migrations /app/server/migrations-ee
+
+# Create empty EE seeds directory (EE currently has no custom seeds)
+RUN mkdir -p /app/server/seeds-ee
 
 # Make entrypoint scripts executable
 RUN chmod +x ./entrypoint.sh
@@ -48,5 +61,5 @@ RUN node -e "const pkg=require('./package.json'); pkg.type='module'; require('fs
 
 WORKDIR /app/setup
 
-# Set the EE entrypoint script (uses ee-entrypoint.sh which handles EE-specific setup)
+# Set the EE entrypoint script
 ENTRYPOINT ["./ee-entrypoint.sh"]

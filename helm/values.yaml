@@ -30,6 +30,14 @@ server:
   service:
     type: "ClusterIP"
     port: 3000
+  persistence:
+    enabled: false
+    size: 10Gi
+    accessModes:
+      - ReadWriteOnce
+    storageClass: ""
+    existingClaim: ""
+    annotations: {}
 
 
 hocuspocus:
@@ -316,3 +324,16 @@ logging:
     path: '/print_info'
     level: 'info'
     token: 'abcd1234'
+
+# Development environment configuration
+devEnv:
+  enabled: false
+  namespace: msp-dev
+
+# Vault Agent configuration for secret injection
+vaultAgent:
+  enabled: false
+  role: alga-psa
+  secretPath: secret/data/alga-psa/server
+  sharedSecretPath: secret/data/alga-psa/shared
+

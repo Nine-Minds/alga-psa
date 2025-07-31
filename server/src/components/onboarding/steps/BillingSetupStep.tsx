@@ -6,7 +6,7 @@ import { Label } from 'server/src/components/ui/Label';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { StepProps } from '../types';
-import { CheckCircle, ChevronDown, ChevronUp, Package } from 'lucide-react';
+import { CheckCircle, ChevronDown, ChevronUp, Package, Trash2 } from 'lucide-react';
 import { Button } from 'server/src/components/ui/Button';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { 
@@ -14,10 +14,12 @@ import {
   importServiceTypes, 
   getTenantServiceTypes 
 } from 'server/src/lib/actions/onboarding-actions/serviceTypeActions';
+import { deleteReferenceDataItem } from 'server/src/lib/actions/referenceDataActions';
 import { createServiceType } from 'server/src/lib/actions/serviceActions';
 import { useSession } from 'next-auth/react';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Plus } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export function BillingSetupStep({ data, updateData }: StepProps) {
   const { data: session } = useSession();
@@ -43,6 +45,8 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
 
   useEffect(() => {
     loadTenantServiceTypes();
+    // Test toast to verify it's working
+    toast.success('Service types loaded', { duration: 2000 });
   }, []);
 
   useEffect(() => {
@@ -105,6 +109,30 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
     value: type.id,
     label: `${type.name} (${type.billing_method})`
   }));
+
+  const removeServiceType = async (typeId: string) => {
+    try {
+      const result = await deleteReferenceDataItem('service_types', typeId);
+      if (result.success) {
+        // Remove from tenant types
+        setTenantTypes(prev => prev.filter(t => t.id !== typeId));
+        
+        // If this was the selected type, clear it
+        if (data.serviceTypeId === typeId) {
+          updateData({ serviceTypeId: undefined });
+        }
+        
+        // Refresh data from server
+        loadTenantServiceTypes();
+        toast.success('Service type deleted successfully');
+      } else {
+        toast.error(result.error || 'Failed to delete service type');
+      }
+    } catch (error) {
+      console.error('Error deleting service type:', error);
+      toast.error('Failed to delete service type');
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -275,7 +303,7 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
                     type="button"
                     onClick={async () => {
                       if (!serviceTypeForm.name.trim()) {
-                        alert('Service type name is required');
+                        toast.error('Service type name is required');
                         return;
                       }
 
@@ -285,6 +313,16 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
                         let latestTypes: any[] = [];
                         if (result.success && result.data) {
                           latestTypes = result.data;
+                        }
+
+                        // Check if service type already exists using latest data
+                        const nameExists = latestTypes.some(type => 
+                          type.name.toLowerCase() === serviceTypeForm.name.trim().toLowerCase()
+                        );
+                        
+                        if (nameExists) {
+                          toast.error('Service type with this name already exists');
+                          return;
                         }
                         
                         // Calculate the actual next order number to avoid conflicts
@@ -330,7 +368,7 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
                         setShowAddForm(false);
                       } catch (error) {
                         console.error('Error creating service type:', error);
-                        alert('Failed to create service type. Please try again.');
+                        toast.error('Failed to create service type. Please try again.');
                       }
                     }}
                     disabled={!serviceTypeForm.name.trim()}
@@ -419,6 +457,59 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
                 >
                   {isImporting ? 'Importing...' : `Import Selected (${selectedTypes.length})`}
                 </Button>
+              </div>
+            )}
+
+            {/* Current Service Types */}
+            {tenantTypes.length > 0 && (
+              <div className="mt-4">
+                <Label className="mb-2 block">Current Service Types</Label>
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b">
+                      <tr>
+                        <th className="px-2 py-1 text-left text-xs font-medium text-gray-700">Name</th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Billing Method</th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Status</th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Order</th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white">
+                      {tenantTypes.map((type) => (
+                        <tr key={type.id}>
+                          <td className="px-2 py-1 text-xs">{type.name}</td>
+                          <td className="px-2 py-1 text-center text-xs text-gray-600">
+                            {type.billing_method === 'fixed' ? 'Fixed' : 'Per Unit'}
+                          </td>
+                          <td className="px-2 py-1 text-center text-xs">
+                            {(type as any).is_active !== false ? (
+                              <span className="text-xs bg-green-100 text-green-800 px-1.5 py-0.5 rounded">Active</span>
+                            ) : (
+                              <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">Inactive</span>
+                            )}
+                          </td>
+                          <td className="px-2 py-1 text-center text-xs text-gray-600">
+                            {(type as any).order_number || (type as any).display_order || '-'}
+                          </td>
+                          <td className="px-2 py-1 text-center">
+                            <Button
+                              id={`remove-service-type-${type.id}`}
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeServiceType(type.id)}
+                              className="p-1 h-6 w-6"
+                              title="Remove service type"
+                            >
+                              <Trash2 className="h-3 w-3 text-gray-500 hover:text-red-600" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>

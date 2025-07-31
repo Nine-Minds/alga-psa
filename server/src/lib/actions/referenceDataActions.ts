@@ -290,7 +290,7 @@ export async function checkImportConflicts(
     if (dataType === 'priorities' || dataType === 'statuses' || dataType === 'service_types' || 
         dataType === 'interaction_types' || dataType === 'service_categories' || 
         dataType === 'categories' || dataType === 'channels') {
-      const orderField = dataType === 'priorities' ? 'order_number' : 'display_order';
+      const orderField = (dataType === 'priorities' || dataType === 'service_types' || dataType === 'statuses') ? 'order_number' : 'display_order';
       const orderValue = mappedData[orderField];
       
       if (orderValue && !hasNameConflict) { // Only check order if no name conflict
@@ -400,7 +400,7 @@ export async function importReferenceData(
     }
     
     if (resolution?.action === 'reorder' && resolution.newOrder !== undefined) {
-      const orderField = dataType === 'priorities' ? 'order_number' : 'display_order';
+      const orderField = (dataType === 'priorities' || dataType === 'service_types' || dataType === 'statuses') ? 'order_number' : 'display_order';
       mappedData[orderField] = resolution.newOrder;
     }
     
@@ -418,7 +418,7 @@ export async function importReferenceData(
     }
     
     // Check for order conflicts proactively for data types with orders
-    const orderField = dataType === 'priorities' ? 'order_number' : 'display_order';
+    const orderField = (dataType === 'priorities' || dataType === 'service_types' || dataType === 'statuses') ? 'order_number' : 'display_order';
     const hasOrderField = dataType === 'priorities' || dataType === 'statuses' || 
                           dataType === 'service_types' || dataType === 'interaction_types' || 
                           dataType === 'service_categories' || dataType === 'categories' || 
@@ -555,4 +555,111 @@ export async function getAvailableReferenceData(dataType: ReferenceDataType, fil
     
     return availableItems;
   });
+}
+
+export async function deleteReferenceDataItem(
+  dataType: ReferenceDataType,
+  itemId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.user_id || !currentUser?.tenant) {
+      throw new Error('User not authenticated or tenant not found');
+    }
+
+    const config = referenceDataConfigs[dataType];
+    const { knex: db } = await createTenantKnex();
+
+    // Define the ID field name for each data type
+    const idFieldMap: Record<ReferenceDataType, string> = {
+      priorities: 'priority_id',
+      statuses: 'status_id',
+      service_types: 'id',
+      task_types: 'id',
+      interaction_types: 'id',
+      service_categories: 'id',
+      categories: 'category_id',
+      channels: 'channel_id'
+    };
+
+    const idField = idFieldMap[dataType];
+    if (!idField) {
+      throw new Error(`Unknown ID field for data type: ${dataType}`);
+    }
+
+    await withTransaction(db, async (trx) => {
+      // Check if the item exists and belongs to the tenant
+      const existing = await trx(config.targetTable)
+        .where({
+          [idField]: itemId,
+          tenant: currentUser.tenant
+        })
+        .first();
+
+      if (!existing) {
+        throw new Error('Item not found or access denied');
+      }
+
+      // Special handling for channels - check if it has categories
+      if (dataType === 'channels') {
+        const categoryCount = await trx('categories')
+          .where({
+            channel_id: itemId,
+            tenant: currentUser.tenant
+          })
+          .count('* as count')
+          .first();
+
+        if (categoryCount && parseInt(categoryCount.count as string) > 0) {
+          throw new Error('Cannot delete board with existing categories. Please delete all categories first.');
+        }
+      }
+
+      // Special handling for categories - check if it has subcategories
+      if (dataType === 'categories') {
+        const subcategoryCount = await trx('categories')
+          .where({
+            parent_category: itemId,
+            tenant: currentUser.tenant
+          })
+          .count('* as count')
+          .first();
+
+        if (subcategoryCount && parseInt(subcategoryCount.count as string) > 0) {
+          throw new Error('Cannot delete category with existing subcategories. Please delete all subcategories first.');
+        }
+      }
+
+      // Special handling for service_types - check if it has service catalog entries
+      if (dataType === 'service_types') {
+        const serviceCount = await trx('service_catalog')
+          .where({
+            custom_service_type_id: itemId,
+            tenant: currentUser.tenant
+          })
+          .count('* as count')
+          .first();
+
+        if (serviceCount && parseInt(serviceCount.count as string) > 0) {
+          throw new Error('Cannot delete service type that is being used by services. Please update or delete the services first.');
+        }
+      }
+
+      // Delete the item
+      await trx(config.targetTable)
+        .where({
+          [idField]: itemId,
+          tenant: currentUser.tenant
+        })
+        .delete();
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting reference data item:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
 }
