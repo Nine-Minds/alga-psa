@@ -16,7 +16,6 @@ import type {
 import type { DebugSession } from '../types/session.js';
 
 import { AuthenticationProvider, type AuthConfig } from '../security/AuthenticationProvider.js';
-import { RateLimiter, type RateLimiterConfig, RateLimitPresets } from '../security/RateLimiter.js';
 import { Sandbox, type ResourceLimits } from '../security/Sandbox.js';
 import { SessionManager } from './SessionManager.js';
 import { ToolManager } from '../tools/ToolManager.js';
@@ -26,7 +25,6 @@ export interface MCPDebuggerServerConfig {
   name: string;
   version: string;
   auth: AuthConfig;
-  rateLimiting: RateLimiterConfig;
   sandbox: ResourceLimits;
   session: {
     maxConcurrentSessions: number;
@@ -39,7 +37,6 @@ export interface MCPDebuggerServerConfig {
 export class MCPDebuggerServer {
   private readonly server: Server;
   private readonly authProvider: AuthenticationProvider;
-  private readonly rateLimiter: RateLimiter;
   private readonly sandbox: Sandbox;
   private readonly sessionManager: SessionManager;
   private readonly toolManager: ToolManager;
@@ -68,7 +65,6 @@ export class MCPDebuggerServer {
 
     // Initialize security components
     this.authProvider = new AuthenticationProvider(config.auth);
-    this.rateLimiter = new RateLimiter(config.rateLimiting);
     this.sandbox = new Sandbox(config.sandbox);
 
     // Initialize core components
@@ -124,7 +120,6 @@ export class MCPDebuggerServer {
       // Cleanup components
       await this.sessionManager.shutdown();
       await this.sandbox.shutdown();
-      this.rateLimiter.shutdown();
       
       // Close server
       await this.server.close();
@@ -145,7 +140,6 @@ export class MCPDebuggerServer {
     startTime: Date;
     uptimeMs: number;
     sessions: number;
-    rateLimitStats: any;
     sandboxStats: any;
   } {
     const now = new Date();
@@ -155,7 +149,6 @@ export class MCPDebuggerServer {
       startTime: this.startTime,
       uptimeMs: now.getTime() - this.startTime.getTime(),
       sessions: this.sessionManager.getActiveSessions().length,
-      rateLimitStats: this.rateLimiter.getStats(),
       sandboxStats: this.sandbox.getStats(),
     };
   }
@@ -198,14 +191,6 @@ export class MCPDebuggerServer {
           throw new McpError(ErrorCode.InvalidRequest, 'Invalid credentials');
         }
 
-        // Rate limiting check
-        const rateLimitResult = this.rateLimiter.isAllowed(session.id, 'debug');
-        if (!rateLimitResult.allowed) {
-          throw new McpError(
-            ErrorCode.InvalidRequest, 
-            `Rate limit exceeded. Try again after ${rateLimitResult.info.resetTime.toISOString()}`
-          );
-        }
 
         // Validate tool request
         const toolRequest: MCPToolRequest = {
@@ -272,8 +257,6 @@ export class MCPDebuggerServer {
       operation: async () => {
         return this.toolManager.executeTool(toolRequest, debugSession, mcpSession);
       },
-      timeout: 30000, // 30 second timeout for tool execution
-      retries: 1, // Allow one retry for transient failures
     });
   }
 
@@ -351,28 +334,15 @@ export const DEFAULT_CONFIG: MCPDebuggerServerConfig = {
   auth: {
     apiKeyLength: 32,
     sessionTimeoutMs: 30 * 60 * 1000, // 30 minutes
-    maxSessionsPerKey: 5,
+    maxSessionsPerKey: 10,
     keyRotationIntervalMs: 24 * 60 * 60 * 1000, // 24 hours
   },
-  rateLimiting: {
-    defaultRule: RateLimitPresets.DEBUG_OPERATIONS,
-    rules: new Map([
-      ['debug', RateLimitPresets.DEBUG_OPERATIONS],
-      ['hotpatch', RateLimitPresets.HOT_PATCH],
-      ['evaluation', RateLimitPresets.EVALUATION],
-      ['session', RateLimitPresets.SESSION_CREATION],
-    ]),
-    cleanupIntervalMs: 5 * 60 * 1000, // 5 minutes
-  },
   sandbox: {
-    maxExecutionTimeMs: 30000,
-    maxMemoryMB: 128,
-    maxCpuPercent: 80,
-    maxConcurrentOperations: 10,
+    maxConcurrentOperations: 20, // Allow parallel debugging operations
   },
   session: {
-    maxConcurrentSessions: 20,
-    sessionTimeoutMs: 30 * 60 * 1000, // 30 minutes
+    maxConcurrentSessions: 50, // Increased from 20 to 50 for internal use
+    sessionTimeoutMs: 60 * 60 * 1000, // Increased from 30 minutes to 1 hour
     cleanupIntervalMs: 5 * 60 * 1000, // 5 minutes
   },
   logging: {

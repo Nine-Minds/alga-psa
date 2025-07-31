@@ -2,7 +2,6 @@
 
 import { MCPDebuggerServer, DEFAULT_CONFIG, type MCPDebuggerServerConfig } from './server/MCPDebuggerServer.js';
 import { AuthenticationProvider } from './security/AuthenticationProvider.js';
-import { RateLimitPresets } from './security/RateLimiter.js';
 
 /**
  * Main entry point for the Node.js Debugger MCP Server
@@ -176,13 +175,7 @@ async function generateInitialApiKey(server: MCPDebuggerServer): Promise<void> {
     // For now, create a temporary one
     const authProvider = new AuthenticationProvider(DEFAULT_CONFIG.auth);
     
-    const apiKey = authProvider.generateApiKey([
-      'debug:attach',
-      'debug:breakpoint',
-      'debug:evaluate',
-      'debug:step',
-      'session:create',
-    ], {
+    const apiKey = authProvider.generateApiKey({
       purpose: 'development',
       createdBy: 'cli',
     });
@@ -214,10 +207,10 @@ Options:
   -h, --help               Show this help message
 
 Environment Variables:
-  MCP_DEBUG_API_KEY         API key for authentication
+  MCP_DEBUG_API_KEY         API key for authentication (optional)
   MCP_DEBUG_LOG_LEVEL       Log level (debug, info, warn, error)
-  MCP_DEBUG_SESSION_TIMEOUT Session timeout in milliseconds
-  MCP_DEBUG_MAX_SESSIONS    Maximum concurrent sessions
+  MCP_DEBUG_SESSION_TIMEOUT Session timeout in milliseconds (default: 1 hour)
+  MCP_DEBUG_MAX_SESSIONS    Maximum concurrent sessions (default: 50)
 
 Examples:
   # Start server with default configuration
@@ -246,12 +239,12 @@ MCP Protocol:
   - listScripts: List loaded scripts
   - getScriptSource: Get script source code
 
-Security:
-  - All connections are localhost-only for security
-  - API key authentication required
-  - Rate limiting prevents abuse
-  - Session isolation between clients
-  - Resource limits prevent DoS attacks
+Simplified for Internal Use:
+  - Basic API key authentication for protocol compliance
+  - Direct execution without sandboxing restrictions
+  - Optimized for trusted internal environments
+  - Session tracking for concurrent connections
+  - Full debugging capabilities without limitations
 
 For more information, see: https://github.com/your-org/node-debugger-mcp
 `);

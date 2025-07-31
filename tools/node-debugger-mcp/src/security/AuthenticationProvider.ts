@@ -12,24 +12,11 @@ export interface ApiKeyInfo {
   readonly id: string;
   readonly key: string;
   readonly createdAt: Date;
-  readonly expiresAt?: Date;
-  readonly permissions: Permission[];
   readonly metadata: Record<string, any>;
   isActive: boolean;
   lastUsed?: Date;
   usageCount: number;
 }
-
-export type Permission = 
-  | 'debug:attach'
-  | 'debug:breakpoint'
-  | 'debug:evaluate'
-  | 'debug:step'
-  | 'debug:hotpatch'
-  | 'debug:profile'
-  | 'session:create'
-  | 'session:list'
-  | 'session:delete';
 
 export class AuthenticationProvider {
   private readonly apiKeys = new Map<string, ApiKeyInfo>();
@@ -41,9 +28,9 @@ export class AuthenticationProvider {
   }
 
   /**
-   * Generate a new API key with specified permissions
+   * Generate a new API key for debugging access
    */
-  generateApiKey(permissions: Permission[], metadata: Record<string, any> = {}): ApiKeyInfo {
+  generateApiKey(metadata: Record<string, any> = {}): ApiKeyInfo {
     const keyId = crypto.randomUUID();
     const key = this.generateSecureKey();
     
@@ -51,7 +38,6 @@ export class AuthenticationProvider {
       id: keyId,
       key,
       createdAt: new Date(),
-      permissions,
       metadata,
       isActive: true,
       usageCount: 0,
@@ -70,12 +56,6 @@ export class AuthenticationProvider {
     const keyInfo = this.apiKeys.get(apiKey);
     
     if (!keyInfo || !keyInfo.isActive) {
-      return null;
-    }
-    
-    // Check expiration
-    if (keyInfo.expiresAt && keyInfo.expiresAt < new Date()) {
-      keyInfo.isActive = false;
       return null;
     }
     
@@ -118,7 +98,6 @@ export class AuthenticationProvider {
       lastActivity: new Date(),
       isActive: true,
       metadata: {
-        permissions: keyInfo.permissions,
         keyId: keyInfo.id,
         requestId: request.requestId,
       },
@@ -155,13 +134,6 @@ export class AuthenticationProvider {
     return session;
   }
 
-  /**
-   * Check if session has required permission
-   */
-  hasPermission(session: MCPSession, permission: Permission): boolean {
-    const permissions = session.metadata?.permissions as Permission[] || [];
-    return permissions.includes(permission);
-  }
 
   /**
    * Invalidate a specific session
