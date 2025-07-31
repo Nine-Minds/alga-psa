@@ -21,6 +21,7 @@ export interface DebugSession {
   breakpoints: Map<string, BreakpointInfo>;
   watchExpressions: WatchExpression[];
   scripts: Map<string, ScriptInfo>;
+  scriptCache?: Map<string, any>; // Cache for script parsing events
   
   // Configuration
   settings: SessionSettings;
@@ -35,9 +36,11 @@ export interface BreakpointInfo {
   readonly lineNumber: number;
   readonly columnNumber?: number;
   readonly condition?: string;
-  readonly hitCount: number;
-  readonly enabled: boolean;
+  readonly logMessage?: string;
+  readonly hitCount?: number;
+  readonly enabled?: boolean;
   readonly createdAt: Date;
+  readonly actualLocations?: any[];
 }
 
 export interface WatchExpression {

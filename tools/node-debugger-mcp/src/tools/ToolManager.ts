@@ -9,11 +9,19 @@ import type { SessionManager } from '../server/SessionManager.js';
 // Import tool base class (to be created)
 import { DebuggerTool } from './base/DebuggerTool.js';
 
-// Tool implementations (to be created in Phase 2)
-// import { ListProcessesTool } from './discovery/ListProcessesTool.js';
-// import { AttachDebuggerTool } from './discovery/AttachDebuggerTool.js';
-// import { SetBreakpointAndWaitTool } from './execution/SetBreakpointAndWaitTool.js';
-// import { EvaluateExpressionTool } from './execution/EvaluateExpressionTool.js';
+// Tool implementations (Phase 2 complete)
+import { ListProcessesTool } from './discovery/ListProcessesTool.js';
+import { AttachDebuggerTool } from './discovery/AttachDebuggerTool.js';
+import { ListScriptsTool } from './inspection/ListScriptsTool.js';
+import { GetScriptSourceTool } from './inspection/GetScriptSourceTool.js';
+import { SetBreakpointAndWaitTool } from './execution/SetBreakpointAndWaitTool.js';
+import { RemoveBreakpointTool } from './execution/RemoveBreakpointTool.js';
+import { ResumeExecutionTool } from './execution/ResumeExecutionTool.js';
+import { StepOverTool } from './execution/StepOverTool.js';
+import { StepIntoTool } from './execution/StepIntoTool.js';
+import { StepOutTool } from './execution/StepOutTool.js';
+import { EvaluateExpressionTool } from './inspection/EvaluateExpressionTool.js';
+import { GetStackTraceTool } from './inspection/GetStackTraceTool.js';
 
 export class ToolManager {
   private readonly tools = new Map<string, DebuggerTool>();
@@ -26,190 +34,39 @@ export class ToolManager {
    * Register all available debugging tools
    */
   private registerTools(): void {
-    // Phase 1: Register placeholder tools for now
-    // In Phase 2, we'll implement these tools
+    // Phase 2: Register all implemented tools
     
-    const placeholderTools = [
-      {
-        name: 'listProcesses',
-        description: 'Discover Node.js processes with debugging enabled',
-        inputSchema: {
-          type: 'object' as const,
-          properties: {},
-          required: [],
-        },
-      },
-      {
-        name: 'attachDebugger',
-        description: 'Connect to a Node.js process inspector port',
-        inputSchema: {
-          type: 'object' as const,
-          properties: {
-            processId: {
-              type: 'number' as const,
-              description: 'Process ID to attach to',
-            },
-          },
-          required: ['processId'],
-        },
-      },
-      {
-        name: 'setBreakpointAndWait',
-        description: 'Set a breakpoint and wait for it to be hit (combines set + wait)',
-        inputSchema: {
-          type: 'object' as const,
-          properties: {
-            url: {
-              type: 'string' as const,
-              description: 'Script URL or path',
-            },
-            lineNumber: {
-              type: 'number' as const,
-              description: 'Line number for breakpoint (1-based)',
-            },
-            columnNumber: {
-              type: 'number' as const,
-              description: 'Optional column number',
-              optional: true,
-            },
-            condition: {
-              type: 'string' as const,
-              description: 'Optional conditional expression',
-              optional: true,
-            },
-            timeout: {
-              type: 'number' as const,
-              description: 'Max wait time in milliseconds',
-              default: 30000,
-              optional: true,
-            },
-          },
-          required: ['url', 'lineNumber'],
-        },
-      },
-      {
-        name: 'removeBreakpoint',
-        description: 'Remove a previously set breakpoint',
-        inputSchema: {
-          type: 'object' as const,
-          properties: {
-            breakpointId: {
-              type: 'string' as const,
-              description: 'ID of breakpoint to remove',
-            },
-          },
-          required: ['breakpointId'],
-        },
-      },
-      {
-        name: 'resumeExecution',
-        description: 'Resume paused execution',
-        inputSchema: {
-          type: 'object' as const,
-          properties: {},
-          required: [],
-        },
-      },
-      {
-        name: 'stepOver',
-        description: 'Step over current line (requires paused)',
-        inputSchema: {
-          type: 'object' as const,
-          properties: {},
-          required: [],
-        },
-      },
-      {
-        name: 'stepInto',
-        description: 'Step into function call (requires paused)',
-        inputSchema: {
-          type: 'object' as const,
-          properties: {},
-          required: [],
-        },
-      },
-      {
-        name: 'stepOut',
-        description: 'Step out of current function (requires paused)',
-        inputSchema: {
-          type: 'object' as const,
-          properties: {},
-          required: [],
-        },
-      },
-      {
-        name: 'evaluateExpression',
-        description: 'Evaluate JS expression in current paused context (requires paused)',
-        inputSchema: {
-          type: 'object' as const,
-          properties: {
-            expression: {
-              type: 'string' as const,
-              description: 'JavaScript expression to evaluate',
-            },
-            objectGroup: {
-              type: 'string' as const,
-              description: 'Optional object group for cleanup',
-              optional: true,
-            },
-          },
-          required: ['expression'],
-        },
-      },
-      {
-        name: 'getStackTrace',
-        description: 'Get current call stack when paused (requires paused)',
-        inputSchema: {
-          type: 'object' as const,
-          properties: {
-            maxDepth: {
-              type: 'number' as const,
-              description: 'Maximum stack depth to return',
-              default: 50,
-              optional: true,
-            },
-          },
-          required: [],
-        },
-      },
-      {
-        name: 'listScripts',
-        description: 'List all loaded JS scripts with scriptId and URL',
-        inputSchema: {
-          type: 'object' as const,
-          properties: {
-            filter: {
-              type: 'string' as const,
-              description: 'Optional filter pattern for script URLs',
-              optional: true,
-            },
-          },
-          required: [],
-        },
-      },
-      {
-        name: 'getScriptSource',
-        description: 'Fetch current source for a scriptId',
-        inputSchema: {
-          type: 'object' as const,
-          properties: {
-            scriptId: {
-              type: 'string' as const,
-              description: 'Script ID to fetch source for',
-            },
-          },
-          required: ['scriptId'],
-        },
-      },
+    const toolInstances = [
+      // Process discovery tools
+      new ListProcessesTool(),
+      new AttachDebuggerTool(),
+      
+      // Script management tools
+      new ListScriptsTool(),
+      new GetScriptSourceTool(),
+      
+      // Execution control tools
+      new SetBreakpointAndWaitTool(),
+      new RemoveBreakpointTool(),
+      new ResumeExecutionTool(),
+      
+      // Stepping tools
+      new StepOverTool(),
+      new StepIntoTool(),
+      new StepOutTool(),
+      
+      // Runtime inspection tools
+      new EvaluateExpressionTool(),
+      new GetStackTraceTool(),
     ];
 
-    // Create placeholder tool instances
-    for (const toolDef of placeholderTools) {
-      const tool = new PlaceholderTool(toolDef);
+    // Register all tools
+    for (const tool of toolInstances) {
       this.tools.set(tool.name, tool);
     }
 
-    console.info(`Registered ${this.tools.size} debugging tools`);
+    console.info(`Registered ${this.tools.size} debugging tools:`, 
+      Array.from(this.tools.keys()).join(', '));
   }
 
   /**
@@ -305,47 +162,3 @@ export class ToolManager {
   }
 }
 
-/**
- * Placeholder tool implementation for Phase 1
- * In Phase 2, we'll replace these with real implementations
- */
-class PlaceholderTool extends DebuggerTool {
-  constructor(private definition: MCPToolDefinition & { inputSchema: any }) {
-    super();
-  }
-
-  get name(): string {
-    return this.definition.name;
-  }
-
-  get description(): string {
-    return this.definition.description;
-  }
-
-  get inputSchema(): any {
-    return this.definition.inputSchema;
-  }
-
-  async execute(
-    session: DebugSession, 
-    args: any, 
-    mcpSession?: MCPSession
-  ): Promise<any> {
-    // Placeholder implementation
-    console.info(`Executing placeholder tool: ${this.name}`);
-    
-    // Simulate some basic validation
-    await this.validateArgs(args);
-
-    // Return a placeholder response indicating the tool is not yet implemented
-    return {
-      success: false,
-      error: 'Tool not yet implemented',
-      message: `The '${this.name}' tool is a placeholder and will be implemented in Phase 2`,
-      toolName: this.name,
-      arguments: args,
-      sessionId: session.id,
-      timestamp: new Date().toISOString(),
-    };
-  }
-}
