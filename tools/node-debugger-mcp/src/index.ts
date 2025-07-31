@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { MCPDebuggerServer, DEFAULT_CONFIG, type MCPDebuggerServerConfig } from './server/MCPDebuggerServer.js';
-import { AuthenticationProvider } from './security/AuthenticationProvider.js';
 
 /**
  * Main entry point for the Node.js Debugger MCP Server
@@ -23,10 +22,6 @@ async function main(): Promise<void> {
     // Start the server
     await server.start();
     
-    // Generate initial API key for development/testing
-    if (args.generateApiKey) {
-      await generateInitialApiKey(server);
-    }
     
     console.info('Node.js Debugger MCP Server is ready');
     console.info('Send MCP requests via stdin/stdout');
@@ -42,14 +37,11 @@ async function main(): Promise<void> {
  */
 function parseCommandLineArgs(): {
   configFile?: string;
-  generateApiKey: boolean;
   logLevel?: string;
   port?: number;
 } {
   const args = process.argv.slice(2);
-  const parsed: ReturnType<typeof parseCommandLineArgs> = {
-    generateApiKey: false,
-  };
+  const parsed: ReturnType<typeof parseCommandLineArgs> = {};
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -58,11 +50,6 @@ function parseCommandLineArgs(): {
       case '--config':
       case '-c':
         parsed.configFile = args[++i];
-        break;
-        
-      case '--generate-api-key':
-      case '-g':
-        parsed.generateApiKey = true;
         break;
         
       case '--log-level':
@@ -166,30 +153,6 @@ function setupGracefulShutdown(server: MCPDebuggerServer): void {
   });
 }
 
-/**
- * Generate an initial API key for development/testing
- */
-async function generateInitialApiKey(server: MCPDebuggerServer): Promise<void> {
-  try {
-    // Access the auth provider through the server (this would require exposing it)
-    // For now, create a temporary one
-    const authProvider = new AuthenticationProvider(DEFAULT_CONFIG.auth);
-    
-    const apiKey = authProvider.generateApiKey({
-      purpose: 'development',
-      createdBy: 'cli',
-    });
-
-    console.info('Generated API key for development:');
-    console.info(`API Key: ${apiKey.key}`);
-    console.info(`Key ID: ${apiKey.id}`);
-    console.info('Set MCP_DEBUG_API_KEY environment variable to use this key');
-    console.info(`export MCP_DEBUG_API_KEY="${apiKey.key}"`);
-    
-  } catch (error) {
-    console.error('Failed to generate API key:', error);
-  }
-}
 
 /**
  * Print usage information
@@ -202,12 +165,10 @@ Usage: node-debugger-mcp [options]
 
 Options:
   -c, --config <file>       Load configuration from file
-  -g, --generate-api-key    Generate an API key for development
   -l, --log-level <level>   Set log level (debug, info, warn, error)
   -h, --help               Show this help message
 
 Environment Variables:
-  MCP_DEBUG_API_KEY         API key for authentication (optional)
   MCP_DEBUG_LOG_LEVEL       Log level (debug, info, warn, error)
   MCP_DEBUG_SESSION_TIMEOUT Session timeout in milliseconds (default: 1 hour)
   MCP_DEBUG_MAX_SESSIONS    Maximum concurrent sessions (default: 50)
@@ -215,9 +176,6 @@ Environment Variables:
 Examples:
   # Start server with default configuration
   node-debugger-mcp
-
-  # Generate API key for development
-  node-debugger-mcp --generate-api-key
 
   # Start with custom log level
   node-debugger-mcp --log-level debug

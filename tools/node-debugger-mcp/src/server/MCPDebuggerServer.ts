@@ -6,6 +6,7 @@ import {
   ListToolsRequestSchema, 
   McpError 
 } from '@modelcontextprotocol/sdk/types.js';
+import crypto from 'crypto';
 
 import type { 
   MCPToolDefinition, 
@@ -169,27 +170,16 @@ export class MCPDebuggerServer {
       const startTime = Date.now();
       
       try {
-        // Extract authentication from request metadata or arguments
-        const apiKey = this.extractApiKey(request);
-        if (!apiKey) {
-          throw new McpError(ErrorCode.InvalidRequest, 'API key required');
-        }
-
-        // Authenticate and get/create session
-        let session: MCPSession;
-        try {
-          session = await this.authProvider.authenticate({
-            apiKey,
-            clientId: request.params.arguments?.clientId,
-            requestId: request.params.arguments?.requestId,
-          });
-        } catch (error) {
-          throw new McpError(ErrorCode.InvalidRequest, 'Authentication failed');
-        }
-
-        if (!session) {
-          throw new McpError(ErrorCode.InvalidRequest, 'Invalid credentials');
-        }
+        // Create a simple session without authentication
+        // Since this is a local MCP server, we don't need API keys
+        const session: MCPSession = {
+          id: crypto.randomUUID(),
+          clientId: 'claude-local',
+          apiKey: 'no-auth-required',
+          createdAt: new Date(),
+          lastActivity: new Date(),
+          isActive: true,
+        };
 
 
         // Validate tool request
@@ -258,28 +248,6 @@ export class MCPDebuggerServer {
         return this.toolManager.executeTool(toolRequest, debugSession, mcpSession);
       },
     });
-  }
-
-  /**
-   * Extract API key from request
-   */
-  private extractApiKey(request: any): string | null {
-    // Try to get API key from arguments first
-    if (request.params.arguments?.apiKey) {
-      return request.params.arguments.apiKey;
-    }
-
-    // Try to get from metadata/headers (implementation specific)
-    if (request.meta?.apiKey) {
-      return request.meta.apiKey;
-    }
-
-    // Try environment variable as fallback (for development)
-    if (process.env.MCP_DEBUG_API_KEY) {
-      return process.env.MCP_DEBUG_API_KEY;
-    }
-
-    return null;
   }
 
   /**

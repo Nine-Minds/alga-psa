@@ -125,7 +125,7 @@ export class ProcessDiscovery {
       if (platform === 'win32') {
         return this.parseWindowsProcesses(stdout);
       } else {
-        return this.parseUnixProcesses(stdout);
+        return await this.parseUnixProcesses(stdout);
       }
 
     } catch (error) {
@@ -137,7 +137,7 @@ export class ProcessDiscovery {
   /**
    * Parse Unix/Linux process list
    */
-  private parseUnixProcesses(output: string): Array<Omit<ProcessInfo, 'inspectorPort' | 'inspectorURL' | 'isDebuggable'>> {
+  private async parseUnixProcesses(output: string): Promise<Array<Omit<ProcessInfo, 'inspectorPort' | 'inspectorURL' | 'isDebuggable'>>> {
     const processes: Array<Omit<ProcessInfo, 'inspectorPort' | 'inspectorURL' | 'isDebuggable'>> = [];
     const lines = output.trim().split('\n').filter(line => line.trim());
 

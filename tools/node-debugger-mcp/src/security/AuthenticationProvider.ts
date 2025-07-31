@@ -50,6 +50,28 @@ export class AuthenticationProvider {
   }
 
   /**
+   * Load API key from environment variable
+   */
+  loadApiKeyFromEnvironment(apiKey: string): void {
+    if (!apiKey || this.apiKeys.has(apiKey)) {
+      return;
+    }
+    
+    const apiKeyInfo: ApiKeyInfo = {
+      id: 'env-key',
+      key: apiKey,
+      createdAt: new Date(),
+      metadata: { source: 'environment' },
+      isActive: true,
+      usageCount: 0,
+    };
+    
+    this.apiKeys.set(apiKey, apiKeyInfo);
+    this.keyToSessions.set(apiKey, new Set());
+    logger.info('Loaded API key from environment', { keyId: 'env-key' });
+  }
+
+  /**
    * Validate API key and return key info if valid
    */
   async validateApiKey(apiKey: string): Promise<ApiKeyInfo | null> {
