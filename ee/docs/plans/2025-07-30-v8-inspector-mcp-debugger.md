@@ -1076,6 +1076,22 @@ flowchart TD
 - **Production Scenarios**: Test with production-like applications
 - **Failure Recovery**: Test recovery from various failure modes
 
+## Implementation Guidelines
+
+### IMPORTANT: Commit Frequently
+**Commit your work after each logical unit is completed:**
+- After implementing each tool
+- After completing each major section
+- When tests pass for a component
+- Before moving to the next phase
+- Use descriptive commit messages that explain what was accomplished
+
+### Git Workflow
+1. Stage changes: `git add -A` or specific files
+2. Commit with descriptive message: `git commit -m "feat: Implement setBreakpointAndWait tool"`
+3. Push to remote: `git push origin branch-name`
+4. Commit early and often - don't wait until the end of a phase!
+
 ## Implementer's Scratch Pad
 
 ### Progress Tracking
