@@ -68,16 +68,3 @@ export interface MCPSession {
   metadata?: Record<string, any>;
 }
 
-// Rate limiting types
-export interface RateLimitInfo {
-  limit: number;
-  remaining: number;
-  resetTime: Date;
-  windowStart: Date;
-}
-
-export interface RateLimitRule {
-  windowMs: number;
-  maxRequests: number;
-  keyGenerator?: (request: any) => string;
-}
