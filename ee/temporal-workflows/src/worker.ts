@@ -3,6 +3,7 @@ import { createLogger, format, transports } from 'winston';
 import * as activities from './activities/index.js';
 import * as dotenv from 'dotenv';
 import express from 'express';
+import { validateStartup, logConfiguration } from './config/startupValidation.js';
 
 // Load environment variables
 dotenv.config();
@@ -158,14 +159,18 @@ async function main(): Promise<void> {
   try {
     logger.info('Starting Temporal worker for tenant workflows');
 
+    // Run startup validations
+    try {
+      await validateStartup();
+      logConfiguration();
+    } catch (error) {
+      logger.error('Startup validation failed:', error);
+      process.exit(1);
+    }
+
     // Get configuration
     const config = getWorkerConfig();
     logger.info('Worker configuration', config);
-
-    // Validate required environment variables
-    if (!process.env.DATABASE_URL && !process.env.DB_HOST) {
-      throw new Error('Database configuration missing. Set DATABASE_URL or DB_* environment variables.');
-    }
 
     // Create and start worker
     const worker = await createWorker(config);

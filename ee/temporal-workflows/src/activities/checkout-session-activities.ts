@@ -25,7 +25,10 @@ export async function updateCheckoutSessionStatus(
   try {
     // Make HTTP request to the nm-store API to update the status
     const baseUrl = process.env.NMSTORE_BASE_URL || 'http://localhost:3000';
-    const apiSecret = process.env.INTERNAL_API_SHARED_SECRET || 'temp-secret';
+    const apiSecret = process.env.ALGA_AUTH_KEY;
+    if (!apiSecret) {
+      throw new Error('ALGA_AUTH_KEY environment variable is required for authentication');
+    }
     
     const response = await fetch(`${baseUrl}/api/internal/checkout-session-status`, {
       method: 'POST',
