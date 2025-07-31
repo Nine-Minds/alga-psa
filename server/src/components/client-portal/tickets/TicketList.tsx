@@ -207,6 +207,24 @@ export function TicketList() {
 
   const columns: ColumnDefinition<ITicketListItem>[] = [
     {
+      title: 'Ticket Number',
+      dataIndex: 'ticket_number',
+      width: '75px',
+      render: (value: string, record: ITicketListItem) => (
+        <div
+          className="font-medium cursor-pointer hover:text-blue-600"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (record.ticket_id) {
+              setSelectedTicketId(record.ticket_id);
+            }
+          }}
+        >
+          {value}
+        </div>
+      ),
+    },
+    {
       title: 'Title',
       dataIndex: 'title',
       width: '25%',
