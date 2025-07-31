@@ -1,0 +1,52 @@
+{
+  "name": "node-debugger-mcp",
+  "version": "1.0.0",
+  "description": "V8 Inspector-powered Node.js debugger MCP server",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "NODE_NO_WARNINGS=1 node --experimental-specifier-resolution=node --loader ts-node/esm src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write 'src/**/*.ts'"
+  },
+  "keywords": [
+    "mcp",
+    "debugger",
+    "nodejs",
+    "v8-inspector",
+    "ai",
+    "llm"
+  ],
+  "author": "Alga PSA",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "joi": "^17.13.3",
+    "uuid": "^10.0.0",
+    "winston": "^3.17.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.10.2",
+    "@types/uuid": "^10.0.0",
+    "@types/ws": "^8.5.13",
+    "@typescript-eslint/eslint-plugin": "^8.18.1",
+    "@typescript-eslint/parser": "^8.18.1",
+    "eslint": "^9.18.0",
+    "jest": "^29.7.0",
+    "prettier": "^3.4.2",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
