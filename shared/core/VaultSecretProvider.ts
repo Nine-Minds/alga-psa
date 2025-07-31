@@ -22,15 +22,26 @@ export class VaultSecretProvider implements ISecretProvider {
   constructor() {
     const vaultAddr = process.env.VAULT_ADDR;
     const vaultToken = process.env.VAULT_TOKEN;
-
-    this.appSecretPath = process.env.VAULT_APP_SECRET_PATH || 'kv/data/app/secrets';
-    this.tenantSecretPathTemplate = process.env.VAULT_TENANT_SECRET_PATH_TEMPLATE || 'kv/data/tenants/{tenantId}/secrets';
+    const appSecretPath = process.env.VAULT_APP_SECRET_PATH;
+    const tenantSecretPathTemplate = process.env.VAULT_TENANT_SECRET_PATH_TEMPLATE;
 
     if (!vaultAddr || !vaultToken) {
       logger.error('VaultSecretProvider: VAULT_ADDR and VAULT_TOKEN environment variables are required.');
-      // Provider will not be initialized and methods will return undefined.
-      return;
+      throw new Error('VAULT_ADDR and VAULT_TOKEN are required for VaultSecretProvider');
     }
+
+    if (!appSecretPath) {
+      logger.error('VaultSecretProvider: VAULT_APP_SECRET_PATH environment variable is required.');
+      throw new Error('VAULT_APP_SECRET_PATH is required for VaultSecretProvider');
+    }
+
+    if (!tenantSecretPathTemplate) {
+      logger.error('VaultSecretProvider: VAULT_TENANT_SECRET_PATH_TEMPLATE environment variable is required.');
+      throw new Error('VAULT_TENANT_SECRET_PATH_TEMPLATE is required for VaultSecretProvider');
+    }
+
+    this.appSecretPath = appSecretPath;
+    this.tenantSecretPathTemplate = tenantSecretPathTemplate;
 
     try {
       this.client = vault({
