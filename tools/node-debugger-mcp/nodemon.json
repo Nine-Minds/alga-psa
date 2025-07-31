@@ -1,9 +1,16 @@
 {
   "watch": ["src"],
   "ext": "ts",
-  "exec": "npm run build && node dist/index.js",
+  "exec": "npm run build && node dist/index.js || true",
   "delay": 1000,
   "env": {
     "NODE_ENV": "development"
-  }
+  },
+  "restartable": "rs",
+  "ignore": ["dist/*", "node_modules/*"],
+  "verbose": false,
+  "events": {
+    "crash": "echo 'App crashed, restarting in 2 seconds...' && sleep 2"
+  },
+  "legacyWatch": true
 }

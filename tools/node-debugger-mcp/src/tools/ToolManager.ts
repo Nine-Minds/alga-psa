@@ -25,6 +25,9 @@ import { GetStackTraceTool } from './inspection/GetStackTraceTool.js';
 
 // Phase 3: Hot patching tools
 import { HotPatchTool } from './patching/HotPatchTool.js';
+import { WrapModuleFunctionTool } from './patching/WrapModuleFunctionTool.js';
+import { RevertPatchTool } from './patching/RevertPatchTool.js';
+import { ListPatchesTool } from './patching/ListPatchesTool.js';
 
 export class ToolManager {
   private readonly tools = new Map<string, DebuggerTool>();
@@ -64,6 +67,9 @@ export class ToolManager {
       
       // Phase 3: Hot patching tools
       new HotPatchTool(),
+      new WrapModuleFunctionTool(),
+      new RevertPatchTool(),
+      new ListPatchesTool(),
     ];
 
     // Register all tools

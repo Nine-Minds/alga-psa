@@ -100,6 +100,10 @@ export class InspectorClient extends EventEmitter {
           throw new Error('No WebSocket debugger URL available');
         }
       } catch (error) {
+        // Handle connection refused errors more gracefully
+        if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
+          throw new Error(`No debugger listening on port ${port}. Make sure the target process is running with --inspect flag.`);
+        }
         throw new Error(`Failed to get debugger info from inspector: ${error instanceof Error ? error.message : String(error)}`);
       }
     } else {

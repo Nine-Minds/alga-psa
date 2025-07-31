@@ -3,7 +3,7 @@ import { ProcessDiscovery } from '../../utils/ProcessDiscovery.js';
 import { ListScriptsTool } from '../inspection/ListScriptsTool.js';
 import type { DebugSession } from '../../types/session.js';
 import type { MCPSession } from '../../types/mcp.js';
-import { createSession, getActiveSession } from '../../utils/globalSession.js';
+import { createSession, getActiveSession, clearActiveSession } from '../../utils/globalSession.js';
 
 /**
  * Tool to attach debugger to a Node.js process
@@ -100,11 +100,29 @@ export class AttachDebuggerTool extends DebuggerTool {
 
       // Check if already connected
       const existingSession = getActiveSession();
-      if (existingSession && existingSession.inspectorClient.isConnected()) {
-        return this.createErrorResponse(
-          `Already connected to process ${existingSession.processId}. Only one debug session is supported.`,
-          'ALREADY_CONNECTED'
-        );
+      if (existingSession) {
+        // Check if the connection is still alive
+        const isConnected = existingSession.inspectorClient.isConnected();
+        
+        if (isConnected) {
+          // Verify the connection is actually working
+          try {
+            await existingSession.inspectorClient.sendCommand('Runtime.getIsolateId');
+            // Connection is healthy
+            return this.createErrorResponse(
+              `Already connected to process ${existingSession.processId}. Only one debug session is supported.`,
+              'ALREADY_CONNECTED'
+            );
+          } catch (error) {
+            // Connection is broken, clean up and continue
+            await existingSession.cleanup();
+            clearActiveSession();
+          }
+        } else {
+          // Connection is closed, clean up
+          await existingSession.cleanup();
+          clearActiveSession();
+        }
       }
 
       // Create a new debug session
@@ -122,8 +140,24 @@ export class AttachDebuggerTool extends DebuggerTool {
       try {
         await session.connect(timeoutMs);
       } catch (error) {
+        // Clean up the session
+        clearActiveSession();
+        
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        
+        // Provide helpful guidance for common errors
+        if (errorMessage.includes('No debugger listening')) {
+          return this.createErrorResponse(
+            `No debugger found on port ${targetPort}. Please ensure:\n` +
+            `1. The target process is running with --inspect flag\n` +
+            `2. The process is using port ${targetPort}\n` +
+            `3. No firewall is blocking the connection`,
+            'NO_DEBUGGER_FOUND'
+          );
+        }
+        
         return this.createErrorResponse(
-          `Failed to connect to inspector on port ${targetPort}: ${error instanceof Error ? error.message : String(error)}`,
+          `Failed to connect to inspector on port ${targetPort}: ${errorMessage}`,
           'CONNECTION_FAILED'
         );
       }

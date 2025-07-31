@@ -18,6 +18,7 @@
     "build:enterprise": "NEXT_PUBLIC_EDITION=enterprise next build",
     "build:enterprise-script": "../scripts/build-enterprise.sh",
     "start": "tsx index.ts",
+    "start:debug": "tsx --inspect=9229 index.ts",
     "lint": "next lint",
     "test": "vitest",
     "test:watch": "vitest --watch",
