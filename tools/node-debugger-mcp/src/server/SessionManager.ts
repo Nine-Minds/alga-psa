@@ -12,6 +12,7 @@ import type { MCPSession } from '../types/mcp.js';
 import type { AuthenticationProvider } from '../security/AuthenticationProvider.js';
 import { InspectorClient } from '../inspector/InspectorClient.js';
 import { ProcessDiscovery } from '../utils/ProcessDiscovery.js';
+import { ListScriptsTool } from '../tools/inspection/ListScriptsTool.js';
 
 export interface SessionManagerConfig {
   maxConcurrentSessions: number;
@@ -89,6 +90,7 @@ export class SessionManager {
       breakpoints: new Map(),
       watchExpressions: [],
       scripts: new Map(),
+      scriptCache: new Map(), // Cache for script parsing events
       settings: this.getDefaultSessionSettings(),
       cleanup: async () => {
         await this.cleanupSession(sessionId);
@@ -139,6 +141,9 @@ export class SessionManager {
       // Connect to the inspector
       await session.inspectorClient.connect(processInfo.inspectorPort);
       
+      // Initialize script tracking for the session
+      ListScriptsTool.initializeScriptTracking(session);
+      
       // Update session
       (session as any).processId = processId; // Cast to bypass readonly
       session.lastActivity = new Date();
@@ -183,6 +188,9 @@ export class SessionManager {
       session.breakpoints.clear();
       session.watchExpressions.length = 0;
       session.scripts.clear();
+      if (session.scriptCache) {
+        session.scriptCache.clear();
+      }
 
       session.lastActivity = new Date();
 
@@ -322,6 +330,9 @@ export class SessionManager {
       session.breakpoints.clear();
       session.watchExpressions.length = 0;
       session.scripts.clear();
+      if (session.scriptCache) {
+        session.scriptCache.clear();
+      }
 
       await this.logSessionEvent(sessionId, 'destroyed');
 
