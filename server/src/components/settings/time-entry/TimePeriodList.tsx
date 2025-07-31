@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardContent } from 'server/src/components/ui/Card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { ITimePeriodSettings, ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
 import TimePeriodForm from 'server/src/components/billing-dashboard/TimePeriodForm';
@@ -15,9 +15,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from 'server/src/components/ui/DropdownMenu';
-import TimePeriodSettings from 'server/src/components/settings/billing/TimePeriodSettings';
 
-const TimePeriodManagement: React.FC = () => {
+const TimePeriodList: React.FC = () => {
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
   const [timePeriods, setTimePeriods] = useState<ITimePeriodView[]>([]);
   const [settings, setSettings] = useState<ITimePeriodSettings[] | null>(null);
@@ -100,9 +99,9 @@ const TimePeriodManagement: React.FC = () => {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
+              id={`time-period-actions-menu-${record.period_id}`}
               variant="ghost"
               className="h-8 w-8 p-0"
-              id={`time-period-actions-menu-${record.period_id}`}
               onClick={(e) => e.stopPropagation()}
             >
               <span className="sr-only">Open menu</span>
@@ -130,52 +129,46 @@ const TimePeriodManagement: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Time Period Settings Section */}
-      <TimePeriodSettings />
-      
-      {/* Time Periods List Section */}
-      <Card>
-        <CardHeader>
-          <h3 className="text-lg font-semibold">Time Periods</h3>
-          <p className="text-sm text-gray-500">View and manage billing time periods</p>
-        </CardHeader>
-        <CardContent>
-          <Button
-            id="create-time-period-button"
-            className="mb-4"
-            onClick={() => {
-              setMode('create');
-              setSelectedPeriod(null);
-              setIsFormOpen(true);
-            }}
-          >
-            Create New Time Period
-          </Button>
-          <TimePeriodForm
-            isOpen={isFormOpen}
-            onClose={handleClose}
-            onTimePeriodCreated={handleTimePeriodCreated}
-            onTimePeriodDeleted={handleTimePeriodDeleted}
-            settings={settings}
-            existingTimePeriods={timePeriods}
-            selectedPeriod={selectedPeriod}
-            mode={mode}
-          />
-          <DataTable
-            id="time-periods-table"
-            data={timePeriods}
-            columns={columns}
-            onRowClick={handleRowClick}
-            pagination={true}
-            currentPage={currentPage}
-            onPageChange={handlePageChange}
-            pageSize={pageSize}
-          />
-        </CardContent>
-      </Card>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Time Periods</CardTitle>
+        <CardDescription>View and manage time entry periods for time tracking</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Button
+          id="create-time-period-button"
+          className="mb-4"
+          onClick={() => {
+            setMode('create');
+            setSelectedPeriod(null);
+            setIsFormOpen(true);
+          }}
+        >
+          Create New Time Period
+        </Button>
+        <TimePeriodForm
+          isOpen={isFormOpen}
+          onClose={handleClose}
+          onTimePeriodCreated={handleTimePeriodCreated}
+          onTimePeriodDeleted={handleTimePeriodDeleted}
+          settings={settings}
+          existingTimePeriods={timePeriods}
+          selectedPeriod={selectedPeriod}
+          mode={mode}
+        />
+        <DataTable
+          id="time-periods-table"
+          data={timePeriods}
+          columns={columns}
+          onRowClick={handleRowClick}
+          pagination={true}
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
+          pageSize={pageSize}
+        />
+      </CardContent>
+    </Card>
   );
 };
 
-export default TimePeriodManagement;
+export default TimePeriodList;

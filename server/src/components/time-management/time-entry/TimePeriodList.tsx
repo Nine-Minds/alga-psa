@@ -29,7 +29,8 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
   const router = useRouter();
 
   const navigateToTimeSettings = () => {
-    router.push('/msp/settings?tab=time-entry');
+    // Navigate to Time Entry tab and then to Time Periods nested tab
+    router.push('/msp/settings?tab=time-entry&subtab=time-periods');
   };
 
   return (
