@@ -23,6 +23,9 @@ import { StepOutTool } from './execution/StepOutTool.js';
 import { EvaluateExpressionTool } from './inspection/EvaluateExpressionTool.js';
 import { GetStackTraceTool } from './inspection/GetStackTraceTool.js';
 
+// Phase 3: Hot patching tools
+import { HotPatchTool } from './patching/HotPatchTool.js';
+
 export class ToolManager {
   private readonly tools = new Map<string, DebuggerTool>();
 
@@ -58,6 +61,9 @@ export class ToolManager {
       // Runtime inspection tools
       new EvaluateExpressionTool(),
       new GetStackTraceTool(),
+      
+      // Phase 3: Hot patching tools
+      new HotPatchTool(),
     ];
 
     // Register all tools

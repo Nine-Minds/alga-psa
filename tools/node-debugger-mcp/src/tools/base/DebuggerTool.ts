@@ -64,16 +64,91 @@ export abstract class DebuggerTool {
 
   /**
    * Handle errors in a consistent way with context
+   * Phase 3: Improved error handling with user-friendly messages
    */
   protected handleError(error: Error, context: string, sessionId?: string): never {
-    const message = `${context}: ${error.message}`;
-    
     if (error instanceof DebuggerToolError) {
       // Re-throw tool errors as-is
       throw error;
     }
     
-    throw new DebuggerToolError(message, 'EXECUTION_ERROR', this.name, sessionId, error);
+    // Create user-friendly error message
+    const friendlyMessage = this.getFriendlyErrorMessage(error, context);
+    
+    throw new DebuggerToolError(friendlyMessage, this.getErrorCode(error), this.name, sessionId, error);
+  }
+
+  /**
+   * Get user-friendly error message for common errors
+   * Phase 3: Clear error messages for common failure modes
+   */
+  private getFriendlyErrorMessage(error: Error, context: string): string {
+    const contextPrefix = context ? `${context}: ` : '';
+    
+    // Common error patterns and their user-friendly messages
+    if (error.message.includes('ECONNREFUSED')) {
+      return `${contextPrefix}Cannot connect to Node.js process. Ensure the process is running with --inspect flag.`;
+    }
+    
+    if (error.message.includes('Not connected to inspector')) {
+      return `${contextPrefix}Not connected to a debug session. Use attachDebugger tool first to connect to a Node.js process.`;
+    }
+    
+    if (error.message.includes('requires the debugger to be paused')) {
+      return `${contextPrefix}Operation requires the debugger to be paused. Use setBreakpointAndWait to pause execution first.`;
+    }
+    
+    if (error.message.includes('Connection timeout') || error.message.includes('timed out')) {
+      return `${contextPrefix}Operation timed out. The Node.js process may be unresponsive or overloaded.`;
+    }
+    
+    if (error.message.includes('Script') && error.message.includes('not found')) {
+      return `${contextPrefix}Script not found. Use listScripts to see available scripts, or ensure the script has been loaded.`;
+    }
+    
+    if (error.message.includes('Breakpoint') && error.message.includes('not found')) {
+      return `${contextPrefix}Breakpoint not found. It may have been removed or the script reloaded.`;
+    }
+    
+    if (error.message.includes('Compilation failed') || error.message.includes('SyntaxError')) {
+      return `${contextPrefix}JavaScript syntax error. Check your code for syntax issues.`;
+    }
+    
+    if (error.message.includes('Cannot set source')) {
+      return `${contextPrefix}Cannot modify this script. Native modules and some system scripts cannot be hot patched.`;
+    }
+
+    // Return original message with context if no pattern matches
+    return `${contextPrefix}${error.message}`;
+  }
+
+  /**
+   * Get appropriate error code based on error type
+   */
+  private getErrorCode(error: Error): string {
+    if (error.message.includes('ECONNREFUSED')) {
+      return 'CONNECTION_REFUSED';
+    }
+    if (error.message.includes('Not connected')) {
+      return 'NOT_CONNECTED';
+    }
+    if (error.message.includes('requires the debugger to be paused')) {
+      return 'DEBUGGER_NOT_PAUSED';
+    }
+    if (error.message.includes('timeout') || error.message.includes('timed out')) {
+      return 'TIMEOUT';
+    }
+    if (error.message.includes('not found')) {
+      return 'NOT_FOUND';
+    }
+    if (error.message.includes('SyntaxError') || error.message.includes('Compilation failed')) {
+      return 'SYNTAX_ERROR';
+    }
+    if (error.message.includes('Cannot set source')) {
+      return 'UNSUPPORTED_OPERATION';
+    }
+    
+    return 'EXECUTION_ERROR';
   }
 
   /**
