@@ -15,8 +15,8 @@ import { ITaxRate } from 'server/src/interfaces/tax.interfaces'; // Removed ITax
 // Note: getServiceCategories might be removable if categories are fully replaced by service types
 import { getServiceCategories } from 'server/src/lib/actions/categoryActions'
 import { IService, IServiceCategory, IServiceType } from 'server/src/interfaces/billing.interfaces' // Added IServiceType
-import { UnitOfMeasureInput } from './UnitOfMeasureInput'
-import { useTenant } from '../TenantProvider'
+import { UnitOfMeasureInput } from 'server/src/components/ui/UnitOfMeasureInput'
+import { useTenant } from 'server/src/components/TenantProvider'
 
 interface QuickAddServiceProps {
   onServiceAdded: () => void;
@@ -33,6 +33,7 @@ interface ServiceFormData {
   unit_of_measure: string;
   tax_rate_id?: string | null;
   description?: string | null;
+  category_id?: string | null; // Added category field
   // Additional fields for form
   sku?: string;
   inventory_count?: number;
@@ -42,17 +43,7 @@ interface ServiceFormData {
 
 // Removed old SERVICE_TYPE_OPTIONS
 
-// Define service category options (as per plan) - This might become obsolete or used differently
-const SERVICE_CATEGORY_OPTIONS = [
-  { value: 'Labor - Support', label: 'Labor - Support' },
-  { value: 'Labor - Project', label: 'Labor - Project' },
-  { value: 'Managed Service - Server', label: 'Managed Service - Server' },
-  { value: 'Managed Service - Workstation', label: 'Managed Service - Workstation' },
-  { value: 'Software License', label: 'Software License' },
-  { value: 'Hardware', label: 'Hardware' },
-  { value: 'Hosting', label: 'Hosting' },
-  { value: 'Consulting', label: 'Consulting' },
-];
+// Removed hardcoded SERVICE_CATEGORY_OPTIONS - will use fetched categories instead
 
 const LICENSE_TERM_OPTIONS = [
   { value: 'monthly', label: 'Monthly' },
@@ -89,6 +80,7 @@ export function QuickAddService({ onServiceAdded, allServiceTypes }: QuickAddSer
     // is_taxable and region_code removed
     tax_rate_id: null, // Added
     description: '',
+    category_id: null, // Added
     sku: '',
     inventory_count: 0,
     seat_limit: 0,
@@ -193,7 +185,7 @@ const baseData = {
   unit_of_measure: serviceData.unit_of_measure,
   // is_taxable and region_code removed
   tax_rate_id: serviceData.tax_rate_id || null, // Added tax_rate_id
-  category_id: null, // Explicitly set optional category_id to null
+  category_id: serviceData.category_id || null, // Use selected category_id from form
   description: serviceData.description || '', // Include description field
 };
 
@@ -221,6 +213,7 @@ console.log('[QuickAddService] Service created successfully');
         description: '',
         // is_taxable and region_code removed
         tax_rate_id: null, // Added
+        category_id: null, // Reset category
         // Reset optional fields too
         sku: '',
         inventory_count: 0,

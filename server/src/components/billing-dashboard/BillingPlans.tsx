@@ -12,7 +12,7 @@ import {
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { BillingPlanDialog } from './BillingPlanDialog';
-import { UnitOfMeasureInput } from './UnitOfMeasureInput';
+import { UnitOfMeasureInput } from 'server/src/components/ui/UnitOfMeasureInput';
 import { getBillingPlans, getBillingPlanById, updateBillingPlan, deleteBillingPlan } from 'server/src/lib/actions/billingPlanAction';
 import { getPlanServices, addServiceToPlan, updatePlanService, removeServiceFromPlan } from 'server/src/lib/actions/planServiceActions';
 // Import new action and type
@@ -267,7 +267,7 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
         return (
           <UnitOfMeasureInput
             value={service?.unit_of_measure || ''}
-            onChange={(value) => {
+            onChange={(value: string) => {
               if (service) {
                 // Update the service's unit of measure in the database
                 // This would typically update the service itself, not the plan-service relationship

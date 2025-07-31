@@ -1,12 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardContent } from 'server/src/components/ui/Card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { ITimePeriodSettings, ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
 import TimePeriodForm from './TimePeriodForm';
-import { getTimePeriodSettings } from 'server/src/lib/actions/timePeriodsActions';
-import { ISO8601String } from 'server/src/types/types.d';
+import { getTimePeriodSettings, fetchAllTimePeriods } from 'server/src/lib/actions/timePeriodsActions';
 import { MoreVertical } from 'lucide-react';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
@@ -17,18 +16,15 @@ import {
   DropdownMenuItem,
 } from 'server/src/components/ui/DropdownMenu';
 
-interface TimePeriodsProps {
-  initialTimePeriods: ITimePeriodView[];
-}
-
-const TimePeriods: React.FC<TimePeriodsProps> = ({ initialTimePeriods }) => {
+const TimePeriodList: React.FC = () => {
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
-  const [timePeriods, setTimePeriods] = useState<ITimePeriodView[]>(initialTimePeriods);
+  const [timePeriods, setTimePeriods] = useState<ITimePeriodView[]>([]);
   const [settings, setSettings] = useState<ITimePeriodSettings[] | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<ITimePeriodView | null>(null);
   const [mode, setMode] = useState<'create' | 'edit'>('create');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize] = useState<number>(10);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const handleTimePeriodCreated = (newPeriod: ITimePeriodView) => {
     if (mode === 'edit') {
@@ -67,14 +63,21 @@ const TimePeriods: React.FC<TimePeriodsProps> = ({ initialTimePeriods }) => {
   };
 
   useEffect(() => {
-    console.log('initial time periods', initialTimePeriods);
-
-    async function fetchSettings() {
-      const timePeriodSettings = await getTimePeriodSettings();
-      // Assuming we only have one active setting
-      setSettings(timePeriodSettings);
+    async function fetchData() {
+      try {
+        const [timePeriodSettings, allTimePeriods] = await Promise.all([
+          getTimePeriodSettings(),
+          fetchAllTimePeriods()
+        ]);
+        setSettings(timePeriodSettings);
+        setTimePeriods(allTimePeriods);
+      } catch (error) {
+        console.error('Error fetching time period data:', error);
+      } finally {
+        setIsLoading(false);
+      }
     }
-    fetchSettings();
+    fetchData();
   }, []);
 
   // Define column definitions for the DataTable
@@ -96,9 +99,9 @@ const TimePeriods: React.FC<TimePeriodsProps> = ({ initialTimePeriods }) => {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
+              id={`time-period-actions-menu-${record.period_id}`}
               variant="ghost"
               className="h-8 w-8 p-0"
-              id={`time-period-actions-menu-${record.period_id}`}
               onClick={(e) => e.stopPropagation()}
             >
               <span className="sr-only">Open menu</span>
@@ -121,49 +124,51 @@ const TimePeriods: React.FC<TimePeriodsProps> = ({ initialTimePeriods }) => {
     },
   ];
 
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
   return (
-    <>
-      <Button
-        id="create-time-period-button"
-        className="mb-4"
-        onClick={() => {
-          setMode('create');
-          setSelectedPeriod(null);
-          setIsFormOpen(true);
-        }}
-      >
-        Create New Time Period
-      </Button>
-      <TimePeriodForm
-        isOpen={isFormOpen}
-        onClose={handleClose}
-        onTimePeriodCreated={handleTimePeriodCreated}
-        onTimePeriodDeleted={handleTimePeriodDeleted}
-        settings={settings}
-        existingTimePeriods={timePeriods}
-        selectedPeriod={selectedPeriod}
-        mode={mode}
-      />
-      <Card>
-        <CardHeader>
-          <h3 className="text-lg font-semibold">Time Period Management</h3>
-          <p className="text-sm text-gray-500">Manage billing cycles and time periods</p>
-        </CardHeader>
-        <CardContent>
-          <DataTable
-            id="time-periods-table"
-            data={timePeriods}
-            columns={columns}
-            onRowClick={handleRowClick}
-            pagination={true}
-            currentPage={currentPage}
-            onPageChange={handlePageChange}
-            pageSize={pageSize}
-          />
-        </CardContent>
-      </Card>
-    </>
+    <Card>
+      <CardHeader>
+        <CardTitle>Time Periods</CardTitle>
+        <CardDescription>View and manage time entry periods for time tracking</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Button
+          id="create-time-period-button"
+          className="mb-4"
+          onClick={() => {
+            setMode('create');
+            setSelectedPeriod(null);
+            setIsFormOpen(true);
+          }}
+        >
+          Create New Time Period
+        </Button>
+        <TimePeriodForm
+          isOpen={isFormOpen}
+          onClose={handleClose}
+          onTimePeriodCreated={handleTimePeriodCreated}
+          onTimePeriodDeleted={handleTimePeriodDeleted}
+          settings={settings}
+          existingTimePeriods={timePeriods}
+          selectedPeriod={selectedPeriod}
+          mode={mode}
+        />
+        <DataTable
+          id="time-periods-table"
+          data={timePeriods}
+          columns={columns}
+          onRowClick={handleRowClick}
+          pagination={true}
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
+          pageSize={pageSize}
+        />
+      </CardContent>
+    </Card>
   );
 };
 
-export default TimePeriods;
+export default TimePeriodList;

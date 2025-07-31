@@ -5,7 +5,7 @@ import React from 'react';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Switch } from 'server/src/components/ui/Switch';
-import { UnitOfMeasureInput } from '../UnitOfMeasureInput';
+import { UnitOfMeasureInput } from 'server/src/components/ui/UnitOfMeasureInput';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { Info } from 'lucide-react';
 import { ServiceTierEditor, TierConfig } from './ServiceTierEditor'; // Import the tier editor and its config type

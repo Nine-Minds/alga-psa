@@ -4,9 +4,9 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { UnitOfMeasureInput } from './UnitOfMeasureInput';
+import { UnitOfMeasureInput } from 'server/src/components/ui/UnitOfMeasureInput';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
-import { ConfirmationDialog } from '../ui/ConfirmationDialog';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 // Import new action and types
 import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse } from 'server/src/lib/actions/serviceActions';
 import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions';
@@ -15,8 +15,7 @@ import { getTaxRates } from 'server/src/lib/actions/taxSettingsActions';
 import { IService, IServiceCategory, IServiceType } from 'server/src/interfaces/billing.interfaces'; // Added IServiceType
 // Import ITaxRate interface
 import { ITaxRate } from 'server/src/interfaces/tax.interfaces'; // Corrected import path if needed
-import { Card, CardContent, CardHeader } from '../ui/Card';
-import { Switch } from '../ui/Switch';
+import { Card, CardContent, CardHeader } from 'server/src/components/ui/Card';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { QuickAddService } from './QuickAddService';
@@ -36,18 +35,7 @@ const BILLING_METHOD_OPTIONS = [
   { value: 'per_unit', label: 'Per Unit' }
 ];
 
-// Define service category options (as per plan)
-const SERVICE_CATEGORY_OPTIONS = [
-  { value: 'Labor - Support', label: 'Labor - Support' },
-  { value: 'Labor - Project', label: 'Labor - Project' },
-  { value: 'Managed Service - Server', label: 'Managed Service - Server' },
-  { value: 'Managed Service - Workstation', label: 'Managed Service - Workstation' },
-  { value: 'Software License', label: 'Software License' },
-  { value: 'Hardware', label: 'Hardware' },
-  { value: 'Hosting', label: 'Hosting' },
-  { value: 'Consulting', label: 'Consulting' },
-  // Add others if needed, ensure these match backend expectations
-];
+// Removed hardcoded SERVICE_CATEGORY_OPTIONS - will use fetched categories instead
 
 const LICENSE_TERM_OPTIONS = [
   { value: 'monthly', label: 'Monthly' },
@@ -57,6 +45,7 @@ const LICENSE_TERM_OPTIONS = [
 
 const ServiceCatalogManager: React.FC = () => {
   const [services, setServices] = useState<IService[]>([]);
+  // Note: Categories are currently hidden in favor of using Service Types for organization
   const [categories, setCategories] = useState<IServiceCategory[]>([]);
   // Update state type to match what getServiceTypesForSelection returns
   const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]>([]);
@@ -71,7 +60,8 @@ const ServiceCatalogManager: React.FC = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  // Using Service Type filter instead of categories
+  const [selectedServiceType, setSelectedServiceType] = useState<string>('all');
   const [selectedBillingMethod, setSelectedBillingMethod] = useState<string>('all');
   // State for tax rates - Use full ITaxRate
   const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
@@ -81,10 +71,10 @@ const ServiceCatalogManager: React.FC = () => {
   const [pageSize, setPageSize] = useState(10); // Default page size
   const [totalCount, setTotalCount] = useState(0);
   const filteredServices = services.filter(service => {
-    // Match based on the custom service type ID
-    const categoryMatch = selectedCategory === 'all' || service.custom_service_type_id === selectedCategory;
+    // Filter by Service Type
+    const serviceTypeMatch = selectedServiceType === 'all' || service.custom_service_type_id === selectedServiceType;
     const billingMethodMatch = selectedBillingMethod === 'all' || service.billing_method === selectedBillingMethod;
-    return categoryMatch && billingMethodMatch;
+    return serviceTypeMatch && billingMethodMatch;
   });
 
   // Track when page changes are from user interaction vs. programmatic updates
@@ -107,7 +97,7 @@ const ServiceCatalogManager: React.FC = () => {
       setCurrentPage(1); // Reset to page 1 when filters change
       fetchServices(false);
     }
-  }, [selectedCategory, selectedBillingMethod]);
+  }, [selectedServiceType, selectedBillingMethod]);
 
   useEffect(() => {
     fetchServices(false); // Initial fetch starts at page 1
@@ -154,22 +144,22 @@ const ServiceCatalogManager: React.FC = () => {
   const fetchServices = async (preservePage = false) => {
     try {
       const pageToFetch = preservePage ? currentPage : 1;
-      console.log(`Fetching services for page: ${pageToFetch}, preserve page: ${preservePage}, filters: category=${selectedCategory}, billingMethod=${selectedBillingMethod}`);
+      console.log(`Fetching services for page: ${pageToFetch}, preserve page: ${preservePage}, filters: serviceType=${selectedServiceType}, billingMethod=${selectedBillingMethod}`);
       
       // If we're filtering, we need to fetch all services and filter client-side
       // Otherwise, we can use server-side pagination
       let response;
       
-      if (selectedCategory !== 'all' || selectedBillingMethod !== 'all') {
+      if (selectedServiceType !== 'all' || selectedBillingMethod !== 'all') {
         // When filtering, fetch all services (with a large page size)
         console.log("Using client-side filtering - fetching all services");
         response = await getServices(1, 1000);
         
         // Update total count based on filtered results
         const filteredCount = response.services.filter(service => {
-          const categoryMatch = selectedCategory === 'all' || service.custom_service_type_id === selectedCategory;
+          const serviceTypeMatch = selectedServiceType === 'all' || service.custom_service_type_id === selectedServiceType;
           const billingMethodMatch = selectedBillingMethod === 'all' || service.billing_method === selectedBillingMethod;
-          return categoryMatch && billingMethodMatch;
+          return serviceTypeMatch && billingMethodMatch;
         }).length;
         
         setTotalCount(filteredCount);
@@ -342,11 +332,12 @@ const ServiceCatalogManager: React.FC = () => {
         dataIndex: 'default_rate',
         render: (value) => `$${(value / 100).toFixed(2)}`,
       },
-      {
-        title: 'Category',
-        dataIndex: 'category_id',
-        render: (value, record) => categories.find(cat => cat.category_id === value)?.category_name || 'N/A',
-      },
+      // Category column hidden - using Service Types for organization
+      // {
+      //   title: 'Category',
+      //   dataIndex: 'category_id',
+      //   render: (value, record) => categories.find(cat => cat.category_id === value)?.category_name || 'N/A',
+      // },
       {
         title: 'Unit', // Shortened title
         dataIndex: 'unit_of_measure',
@@ -467,11 +458,18 @@ const ServiceCatalogManager: React.FC = () => {
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <div className="flex space-x-2">
+                {/* Service Type filter */}
                 <CustomSelect
-                  options={[{ value: 'all', label: 'All Categories' }, ...SERVICE_CATEGORY_OPTIONS]}
-                  value={selectedCategory}
-                  onValueChange={setSelectedCategory}
-                  placeholder="Filter by category..."
+                  options={[
+                    { value: 'all', label: 'All Service Types' },
+                    ...allServiceTypes.map(type => ({
+                      value: type.id,
+                      label: type.name
+                    }))
+                  ]}
+                  value={selectedServiceType}
+                  onValueChange={setSelectedServiceType}
+                  placeholder="Filter by service type..."
                   className="w-[200px]"
                 />
                 <CustomSelect
@@ -519,83 +517,95 @@ const ServiceCatalogManager: React.FC = () => {
       >
         <DialogContent>
           <div className="space-y-4">
-            <Input
-              placeholder="Service Name"
-              value={editingService?.service_name || ''}
-              onChange={(e) => setEditingService({ ...editingService!, service_name: e.target.value })}
-            />
+            <div>
+              <label htmlFor="service-name" className="block text-sm font-medium text-gray-700 mb-1">Service Name</label>
+              <Input
+                id="service-name"
+                placeholder="Service Name"
+                value={editingService?.service_name || ''}
+                onChange={(e) => setEditingService({ ...editingService!, service_name: e.target.value })}
+              />
+            </div>
             {/* Updated CustomSelect to use custom_service_type_id */}
-            <CustomSelect
-              options={allServiceTypes.map(type => ({ value: type.id, label: type.name }))} // Use fetched types
-              value={editingService?.custom_service_type_id || ''}
-              onValueChange={(value) => {
-                setEditingService({
-                  ...editingService!,
-                  custom_service_type_id: value
-                });
-              }}
-              placeholder="Select service type..."
-            />
+            <div>
+              <label htmlFor="service-type" className="block text-sm font-medium text-gray-700 mb-1">Service Type</label>
+              <CustomSelect
+                id="service-type"
+                options={allServiceTypes.map(type => ({ value: type.id, label: type.name }))} // Use fetched types
+                value={editingService?.custom_service_type_id || ''}
+                onValueChange={(value) => {
+                  setEditingService({
+                    ...editingService!,
+                    custom_service_type_id: value
+                  });
+                }}
+                placeholder="Select service type..."
+              />
+            </div>
             {/* Added Billing Method dropdown */}
-            <CustomSelect
-              options={BILLING_METHOD_OPTIONS}
-              value={editingService?.billing_method || 'fixed'}
-              onValueChange={(value) => setEditingService({ ...editingService!, billing_method: value as 'fixed' | 'per_unit' })}
-              placeholder="Select billing method..."
-            />
+            <div>
+              <label htmlFor="billing-method" className="block text-sm font-medium text-gray-700 mb-1">Billing Method</label>
+              <CustomSelect
+                id="billing-method"
+                options={BILLING_METHOD_OPTIONS}
+                value={editingService?.billing_method || 'fixed'}
+                onValueChange={(value) => setEditingService({ ...editingService!, billing_method: value as 'fixed' | 'per_unit' })}
+                placeholder="Select billing method..."
+              />
+            </div>
             
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
               <Input
+                id="description"
                 placeholder="Description"
                 value={editingService?.description || ''}
                 onChange={(e) => setEditingService({ ...editingService!, description: e.target.value })}
               />
             </div>
-            <Input
-              type="number"
-              placeholder="Default Rate"
-              // Display dollars, allow user to type decimals freely.
-              // The browser's number input might still show trailing zeros based on step, but typing isn't blocked.
-              value={(editingService?.default_rate ?? 0) / 100}
-              step="0.01" // Hint to the browser about expected precision
-              onChange={(e) => {
-                const rawValue = e.target.value;
-                // Allow empty string -> 0 cents
-                if (rawValue === '') {
-                  // Ensure editingService is not null before updating
-                  if (editingService) {
-                    setEditingService({ ...editingService, default_rate: 0 });
+            <div>
+              <label htmlFor="default-rate" className="block text-sm font-medium text-gray-700 mb-1">Default Rate ($)</label>
+              <Input
+                id="default-rate"
+                type="number"
+                placeholder="Default Rate"
+                // Display dollars, allow user to type decimals freely.
+                // The browser's number input might still show trailing zeros based on step, but typing isn't blocked.
+                value={(editingService?.default_rate ?? 0) / 100}
+                step="0.01" // Hint to the browser about expected precision
+                onChange={(e) => {
+                  const rawValue = e.target.value;
+                  // Allow empty string -> 0 cents
+                  if (rawValue === '') {
+                    // Ensure editingService is not null before updating
+                    if (editingService) {
+                      setEditingService({ ...editingService, default_rate: 0 });
+                    }
+                    return;
                   }
-                  return;
-                }
-                // Try parsing, update cents only if valid number
-                const dollarValue = parseFloat(rawValue);
-                if (!isNaN(dollarValue) && editingService) {
-                  const centsValue = Math.round(dollarValue * 100);
-                  setEditingService({ ...editingService, default_rate: centsValue });
-                }
-                // If input is invalid (e.g., "abc", "1..2"), do nothing to the cents state.
-                // The input field itself might show the invalid input temporarily depending on browser behavior.
-              }}
-            />
-            <CustomSelect
-              options={categories.map((cat): { value: string; label: string } => ({
-                value: cat.category_id || 'None',
-                label: cat.category_name
-              }))}
-              onValueChange={(value) => setEditingService({ ...editingService!, category_id: value })}
-              value={editingService?.category_id || 'unassigned'}
-              placeholder="Select category..."
-            />
+                  // Try parsing, update cents only if valid number
+                  const dollarValue = parseFloat(rawValue);
+                  if (!isNaN(dollarValue) && editingService) {
+                    const centsValue = Math.round(dollarValue * 100);
+                    setEditingService({ ...editingService, default_rate: centsValue });
+                  }
+                  // If input is invalid (e.g., "abc", "1..2"), do nothing to the cents state.
+                  // The input field itself might show the invalid input temporarily depending on browser behavior.
+                }}
+              />
+            </div>
+            {/* Category dropdown removed - using Service Types for organization */}
             {/* Conditional Unit of Measure */}
             {editingService?.billing_method === 'per_unit' && (
-              <UnitOfMeasureInput
-                value={editingService?.unit_of_measure || ''}
-                onChange={(value) => setEditingService({ ...editingService!, unit_of_measure: value })}
-                placeholder="Unit of Measure"
-                className="w-full"
-              />
+              <div>
+                <label htmlFor="unit-of-measure" className="block text-sm font-medium text-gray-700 mb-1">Unit of Measure</label>
+                <UnitOfMeasureInput
+                  value={editingService?.unit_of_measure || ''}
+                  onChange={(value) => setEditingService({ ...editingService!, unit_of_measure: value })}
+                  placeholder="Unit of Measure"
+                  className="w-full"
+                />
+              </div>
             )}
             {/* Replaced Tax Region/Is Taxable with Tax Rate Selector */}
             <CustomSelect
@@ -627,62 +637,78 @@ const ServiceCatalogManager: React.FC = () => {
             {/* Get the service type for conditional rendering */}
             {allServiceTypes.find(t => t.id === editingService?.custom_service_type_id)?.name === 'Hardware' && (
               <>
-                <Input
-                  placeholder="SKU"
-                  value={editingService?.sku || ''}
-                  onChange={(e) => {
-                    if (editingService) {
-                      setEditingService({
-                        ...editingService,
-                        sku: e.target.value
-                      });
-                    }
-                  }}
-                />
-                <Input
-                  type="number"
-                  placeholder="Inventory Count"
-                  value={editingService?.inventory_count ?? ''} // Use ?? for 0
-                  onChange={(e) => {
-                    if (editingService) {
-                      setEditingService({
-                        ...editingService,
-                        inventory_count: parseInt(e.target.value) || 0
-                      });
-                    }
-                  }}
-                />
+                <div>
+                  <label htmlFor="sku" className="block text-sm font-medium text-gray-700 mb-1">SKU</label>
+                  <Input
+                    id="sku"
+                    placeholder="SKU"
+                    value={editingService?.sku || ''}
+                    onChange={(e) => {
+                      if (editingService) {
+                        setEditingService({
+                          ...editingService,
+                          sku: e.target.value
+                        });
+                      }
+                    }}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="inventory-count" className="block text-sm font-medium text-gray-700 mb-1">Inventory Count</label>
+                  <Input
+                    id="inventory-count"
+                    type="number"
+                    placeholder="Inventory Count"
+                    value={editingService?.inventory_count ?? ''} // Use ?? for 0
+                    onChange={(e) => {
+                      if (editingService) {
+                        setEditingService({
+                          ...editingService,
+                          inventory_count: parseInt(e.target.value) || 0
+                        });
+                      }
+                    }}
+                  />
+                </div>
               </>
             )}
             {/* Get the service type for conditional rendering */}
             {allServiceTypes.find(t => t.id === editingService?.custom_service_type_id)?.name === 'Software License' && (
               <>
-                <Input
-                  type="number"
-                  placeholder="Seat Limit"
-                  value={editingService?.seat_limit ?? ''} // Use ?? for 0
-                  onChange={(e) => {
-                    if (editingService) {
-                      setEditingService({
-                        ...editingService,
-                        seat_limit: parseInt(e.target.value) || 0
-                      });
-                    }
-                  }}
-                />
-                <CustomSelect
-                  options={LICENSE_TERM_OPTIONS}
-                  value={editingService?.license_term || 'monthly'}
-                  onValueChange={(value) => {
-                    if (editingService) {
-                      setEditingService({
-                        ...editingService,
-                        license_term: value
-                      });
-                    }
-                  }}
-                  placeholder="Select license term..."
-                />
+                <div>
+                  <label htmlFor="seat-limit" className="block text-sm font-medium text-gray-700 mb-1">Seat Limit</label>
+                  <Input
+                    id="seat-limit"
+                    type="number"
+                    placeholder="Seat Limit"
+                    value={editingService?.seat_limit ?? ''} // Use ?? for 0
+                    onChange={(e) => {
+                      if (editingService) {
+                        setEditingService({
+                          ...editingService,
+                          seat_limit: parseInt(e.target.value) || 0
+                        });
+                      }
+                    }}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="license-term" className="block text-sm font-medium text-gray-700 mb-1">License Term</label>
+                  <CustomSelect
+                    id="license-term"
+                    options={LICENSE_TERM_OPTIONS}
+                    value={editingService?.license_term || 'monthly'}
+                    onValueChange={(value) => {
+                      if (editingService) {
+                        setEditingService({
+                          ...editingService,
+                          license_term: value
+                        });
+                      }
+                    }}
+                    placeholder="Select license term..."
+                  />
+                </div>
               </>
             )}
           </div>
