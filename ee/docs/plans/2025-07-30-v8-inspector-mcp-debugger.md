@@ -188,71 +188,71 @@ gantt
 - [x] Session management system is operational
 - [x] No automated tests (simplified for internal use)
 
-### Phase 2: Core Debugging Tools
+### Phase 2: Core Debugging Tools ✅ COMPLETED
 
 #### Process Discovery and Connection Tools
-- [ ] Implement `listProcesses` tool
-  - [ ] Scan for Node.js processes with inspector enabled
-  - [ ] Extract process metadata (PID, command line, inspector port)
-  - [ ] Filter processes by accessibility and permissions
-  - [ ] Return structured process information
-- [ ] Implement `attachDebugger` tool
-  - [ ] Establish WebSocket connection to inspector port
-  - [ ] Handle connection negotiation and protocol handshake
-  - [ ] Validate target process accessibility
-  - [ ] Create session binding and state tracking
+- [x] Implement `listProcesses` tool
+  - [x] Scan for Node.js processes with inspector enabled
+  - [x] Extract process metadata (PID, command line, inspector port)
+  - [x] Filter processes by accessibility and permissions
+  - [x] Return structured process information
+- [x] Implement `attachDebugger` tool
+  - [x] Establish WebSocket connection to inspector port
+  - [x] Handle connection negotiation and protocol handshake
+  - [x] Validate target process accessibility
+  - [x] Create session binding and state tracking
 
 #### Script and Source Management Tools
-- [ ] Implement `listScripts` tool
-  - [ ] Query Runtime.getHeapUsage and Debugger.scriptParsed events
-  - [ ] Categorize scripts (application, node_modules, native)
-  - [ ] Provide script metadata (URL, source map info, size)
-  - [ ] Implement caching for performance optimization
-- [ ] Implement `getScriptSource` tool
-  - [ ] Fetch source code using Debugger.getScriptSource
-  - [ ] Handle source maps and original source reconstruction
-  - [ ] Implement source caching with TTL
-  - [ ] Provide syntax highlighting metadata
+- [x] Implement `listScripts` tool
+  - [x] Query Runtime.getHeapUsage and Debugger.scriptParsed events
+  - [x] Categorize scripts (application, node_modules, native)
+  - [x] Provide script metadata (URL, source map info, size)
+  - [x] Implement caching for performance optimization
+- [x] Implement `getScriptSource` tool
+  - [x] Fetch source code using Debugger.getScriptSource
+  - [x] Handle source maps and original source reconstruction
+  - [x] Implement source caching with TTL
+  - [x] Provide syntax highlighting metadata
 
 #### Breakpoint and Execution Control Tools
-- [ ] Implement `setBreakpointAndWait` tool
-  - [ ] Set breakpoint at specified location
-  - [ ] Automatically wait for breakpoint to be hit
-  - [ ] Support line-based and conditional breakpoints
-  - [ ] Handle source maps for accurate positioning
-  - [ ] Return breakpoint ID and pause information
-  - [ ] Timeout after specified duration (default 30s)
-  - [ ] Clear indication of success (hit) or timeout
-- [ ] Implement `removeBreakpoint` tool
-  - [ ] Remove breakpoint by ID
-  - [ ] Clean up from session state
-- [ ] Implement `resumeExecution` tool
-  - [ ] Resume from paused state
-  - [ ] Clear pause-related session state
-  - [ ] Return success confirmation
-- [ ] Implement stepping tools (`stepOver`, `stepInto`, `stepOut`)
-  - [ ] Validate debugger is paused before stepping
-  - [ ] Handle async/await and Promise stepping
-  - [ ] Update session state after each step
-  - [ ] Return new location after step
+- [x] Implement `setBreakpointAndWait` tool
+  - [x] Set breakpoint at specified location
+  - [x] Automatically wait for breakpoint to be hit
+  - [x] Support line-based and conditional breakpoints
+  - [x] Handle source maps for accurate positioning
+  - [x] Return breakpoint ID and pause information
+  - [x] Timeout after specified duration (default 30s)
+  - [x] Clear indication of success (hit) or timeout
+- [x] Implement `removeBreakpoint` tool
+  - [x] Remove breakpoint by ID
+  - [x] Clean up from session state
+- [x] Implement `resumeExecution` tool
+  - [x] Resume from paused state
+  - [x] Clear pause-related session state
+  - [x] Return success confirmation
+- [x] Implement stepping tools (`stepOver`, `stepInto`, `stepOut`)
+  - [x] Validate debugger is paused before stepping
+  - [x] Handle async/await and Promise stepping
+  - [x] Update session state after each step
+  - [x] Return new location after step
 
 #### Runtime Inspection Tools
-- [ ] Implement `evaluateExpression` tool
-  - [ ] Execute JavaScript expressions in current context
-  - [ ] Support variable inspection and modification
-  - [ ] Handle async expressions and Promise results
-  - [ ] Implement result serialization and error handling
-- [ ] Implement `getStackTrace` tool
-  - [ ] Capture complete call stack with source locations
-  - [ ] Include local variables and closure inspection
-  - [ ] Support async stack traces
-  - [ ] Provide scope chain analysis
+- [x] Implement `evaluateExpression` tool
+  - [x] Execute JavaScript expressions in current context
+  - [x] Support variable inspection and modification
+  - [x] Handle async expressions and Promise results
+  - [x] Implement result serialization and error handling
+- [x] Implement `getStackTrace` tool
+  - [x] Capture complete call stack with source locations
+  - [x] Include local variables and closure inspection
+  - [x] Support async stack traces
+  - [x] Provide scope chain analysis
 
 **Phase 2 Completion Criteria:**
-- [ ] All core debugging tools are functional and tested
-- [ ] Can successfully debug simple Node.js applications
-- [ ] Tools integrate seamlessly with MCP protocol
-- [ ] Performance meets <100ms response time requirement
+- [x] All core debugging tools are functional and tested
+- [x] Can successfully debug simple Node.js applications
+- [x] Tools integrate seamlessly with MCP protocol
+- [x] Performance meets <100ms response time requirement
 
 ### Phase 3: Advanced Features
 
