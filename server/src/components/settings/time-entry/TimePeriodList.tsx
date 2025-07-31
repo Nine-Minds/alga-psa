@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { ITimePeriodSettings, ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
-import TimePeriodForm from 'server/src/components/billing-dashboard/TimePeriodForm';
+import TimePeriodForm from './TimePeriodForm';
 import { getTimePeriodSettings, fetchAllTimePeriods } from 'server/src/lib/actions/timePeriodsActions';
 import { MoreVertical } from 'lucide-react';
 import { DataTable } from 'server/src/components/ui/DataTable';

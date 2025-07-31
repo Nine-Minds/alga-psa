@@ -2,11 +2,12 @@
 
 import React from 'react';
 import CustomTabs, { TabContent } from "server/src/components/ui/CustomTabs";
-import NumberingSettings from '../general/NumberingSettings';
+import NumberingSettings from 'server/src/components/settings/general/NumberingSettings';
 import ZeroDollarInvoiceSettings from './ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from './CreditExpirationSettings';
 import ServiceTypeSettings from './ServiceTypeSettings';
 import ServiceCategoriesSettings from './ServiceCategoriesSettings';
+import ServiceCatalogManager from './ServiceCatalogManager';
 
 const BillingSettings: React.FC = () => {
   const tabContent: TabContent[] = [
@@ -24,9 +25,14 @@ const BillingSettings: React.FC = () => {
       label: "Service Types",
       content: <ServiceTypeSettings />,
     },
+    // Service Categories tab hidden - we're using Service Types for categorization
+    // {
+    //   label: "Service Categories",
+    //   content: <ServiceCategoriesSettings />,
+    // },
     {
-      label: "Service Categories",
-      content: <ServiceCategoriesSettings />,
+      label: "Service Catalog",
+      content: <ServiceCatalogManager />,
     },
   ];
 

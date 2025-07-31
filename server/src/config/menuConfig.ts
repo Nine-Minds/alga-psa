@@ -132,19 +132,9 @@ export const menuItems: MenuItem[] = [
         href: '/msp/billing?tab=plan-bundles'
       },
       {
-        name: 'Service Catalog',
-        icon: Layers3,
-        href: '/msp/billing?tab=service-catalog'
-      },
-      {
         name: 'Billing Cycles',
         icon: Calendar,
         href: '/msp/billing?tab=billing-cycles'
-      },
-      {
-        name: 'Time Periods',
-        icon: Clock,
-        href: '/msp/billing?tab=time-periods'
       },
       {
         name: 'Usage Tracking',

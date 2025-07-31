@@ -53,6 +53,7 @@ export async function getServices(page: number = 1, pageSize: number = 999): Pro
                 'sc.tax_rate_id', // Corrected: Use tax_rate_id based on schema
                 'st.name as service_type_name' // Add service type name
             )
+            .orderBy('sc.service_name', 'asc') // Sort by service name alphabetically
             .limit(pageSize)
             .offset(offset);
 
