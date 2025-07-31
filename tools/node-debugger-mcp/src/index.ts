@@ -238,6 +238,7 @@ MCP Protocol:
   - getStackTrace: Inspect call stack
   - listScripts: List loaded scripts
   - getScriptSource: Get script source code
+  - hotPatch: Replace script source code on the fly (Phase 3)
 
 Simplified for Internal Use:
   - Basic API key authentication for protocol compliance
