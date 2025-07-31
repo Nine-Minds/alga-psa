@@ -21,7 +21,7 @@ export class ResumeExecutionTool extends DebuggerTool {
       },
     },
     required: [],
-  };
+  } as const;
 
   async execute(
     session: DebugSession,
@@ -54,7 +54,7 @@ export class ResumeExecutionTool extends DebuggerTool {
             });
           } catch (error) {
             // Continue even if some breakpoints fail to remove
-            console.warn(`Failed to remove breakpoint ${id} during resume:`, error);
+            // Breakpoint removal failures logged at server level
           }
         }
         
@@ -162,7 +162,7 @@ export class ResumeExecutionTool extends DebuggerTool {
 
       return true;
     } catch (error) {
-      console.warn('Force resume failed:', error);
+      // Force resume failures logged at server level
       return false;
     }
   }

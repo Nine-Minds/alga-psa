@@ -7,15 +7,15 @@ export interface MCPToolDefinition {
 }
 
 export interface MCPInputSchema {
-  type: 'object';
+  type: string;
   properties: Record<string, MCPPropertySchema>;
-  required?: string[];
+  required?: readonly string[];
 }
 
 export interface MCPPropertySchema {
   type: 'string' | 'number' | 'boolean' | 'array' | 'object';
   description: string;
-  enum?: string[];
+  enum?: readonly string[];
   items?: MCPPropertySchema;
   properties?: Record<string, MCPPropertySchema>;
   default?: any;

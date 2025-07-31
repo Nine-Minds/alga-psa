@@ -64,7 +64,7 @@ export class ListScriptsTool extends DebuggerTool {
       },
     },
     required: [],
-  };
+  } as const;
 
   async execute(
     session: DebugSession,
@@ -83,32 +83,62 @@ export class ListScriptsTool extends DebuggerTool {
         limit = 100,
       } = args;
 
-      // Get all scripts from the debugger
-      const scriptsResult = await session.inspectorClient.sendCommand('Debugger.getScriptSource', {});
-      
-      // Since we can't directly get all scripts, we need to collect them from events
-      // For now, let's use a different approach - get scripts via Runtime
+      // Get all scripts that have been parsed
+      // Scripts are collected via Debugger.scriptParsed events
       let allScripts: ScriptInfo[] = [];
 
       try {
-        // First try to get scripts that have been parsed
-        // This is tricky because there's no direct "list all scripts" command
-        // We'll use a combination of approaches
-
-        // Method 1: Check if we have collected scripts from events
+        // First check if we have collected scripts from events
         if (session.scriptCache && session.scriptCache.size > 0) {
           allScripts = Array.from(session.scriptCache.values());
-        } else {
-          // Method 2: Trigger script collection by running a small eval
-          // This will cause script events to be fired
-          await session.inspectorClient.sendCommand('Runtime.evaluate', {
-            expression: 'Object.keys(require.cache)',
-            returnByValue: true,
-          });
+        }
+        
+        // If we don't have many scripts, try to enumerate them
+        if (allScripts.length < 2) {
+          // Method 1: Get the main script
+          try {
+            const mainScriptResult = await session.inspectorClient.sendCommand('Runtime.evaluate', {
+              expression: 'process.mainModule ? process.mainModule.filename : require.main ? require.main.filename : ""',
+              returnByValue: true,
+            });
+            
+            if (mainScriptResult.result?.value) {
+              // Force debugger to enumerate scripts by setting a dummy breakpoint
+              try {
+                await session.inspectorClient.sendCommand('Debugger.setBreakpointByUrl', {
+                  url: `file://${mainScriptResult.result.value}`,
+                  lineNumber: 1,
+                });
+                
+                // Remove the dummy breakpoint immediately
+                await session.inspectorClient.sendCommand('Debugger.removeBreakpoint', {
+                  breakpointId: 'dummy',
+                });
+              } catch (e) {
+                // Ignore errors from dummy breakpoint
+              }
+            }
+          } catch (e) {
+            // Ignore errors
+          }
 
-          // Wait a bit for script events to be processed
-          await this.delay(100);
+          // Method 2: Force script enumeration by evaluating in each context
+          try {
+            const contexts = await session.inspectorClient.sendCommand('Runtime.enable');
+            
+            // Evaluate something to trigger script parsing events
+            await session.inspectorClient.sendCommand('Runtime.evaluate', {
+              expression: '(function(){return 1})()',
+              includeCommandLineAPI: true,
+            });
+          } catch (e) {
+            // Ignore errors
+          }
 
+          // Wait for script events to be processed
+          await this.delay(200);
+
+          // Check cache again
           if (session.scriptCache && session.scriptCache.size > 0) {
             allScripts = Array.from(session.scriptCache.values());
           }
@@ -325,7 +355,7 @@ export class ListScriptsTool extends DebuggerTool {
     }
 
     // Listen for script parsing events
-    session.inspectorClient.on('Debugger.scriptParsed', (params: any) => {
+    session.inspectorClient.on('scriptParsed', (params: any) => {
       const scriptInfo: ScriptInfo = {
         scriptId: params.scriptId,
         url: params.url,

@@ -15,7 +15,7 @@ export abstract class DebuggerTool {
    * Execute the tool with the given session and arguments
    */
   abstract execute(
-    session: DebugSession, 
+    session: DebugSession | null, 
     args: any, 
     mcpSession?: MCPSession
   ): Promise<any>;
@@ -46,6 +46,24 @@ export abstract class DebuggerTool {
         'DEBUGGER_NOT_PAUSED',
         this.name
       );
+    }
+  }
+
+  /**
+   * Ensure the Debugger domain is enabled
+   */
+  protected async ensureDebuggerEnabled(session: DebugSession): Promise<void> {
+    try {
+      // Try a simple debugger command to check if it's enabled
+      await session.inspectorClient.sendCommand('Debugger.enable');
+    } catch (error) {
+      // If it fails, we might need to re-enable
+      if (error instanceof Error && error.message.includes('Debugger agent is not enabled')) {
+        // Re-enable the debugger
+        await session.inspectorClient.sendCommand('Debugger.enable');
+      } else {
+        throw error;
+      }
     }
   }
 

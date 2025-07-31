@@ -33,8 +33,16 @@ export class GetScriptSourceTool extends DebuggerTool {
         type: 'object',
         description: 'Specific line range to retrieve',
         properties: {
-          start: { type: 'number', minimum: 1 },
-          end: { type: 'number', minimum: 1 },
+          start: { 
+            type: 'number', 
+            description: 'Starting line number (1-based)',
+            minimum: 1 
+          },
+          end: { 
+            type: 'number', 
+            description: 'Ending line number (inclusive)',
+            minimum: 1 
+          },
         },
         optional: true,
       },
@@ -46,7 +54,7 @@ export class GetScriptSourceTool extends DebuggerTool {
       },
     },
     additionalProperties: false,
-  };
+  } as const;
 
   async execute(
     session: DebugSession,
@@ -56,6 +64,9 @@ export class GetScriptSourceTool extends DebuggerTool {
     try {
       await this.validateArgs(args);
       this.requiresConnection(session);
+      
+      // Ensure debugger is enabled before trying to get script source
+      await this.ensureDebuggerEnabled(session);
 
       const {
         scriptId,
@@ -179,7 +190,7 @@ export class GetScriptSourceTool extends DebuggerTool {
       }
 
       // Prepare metadata
-      const metadata = {
+      const metadata: any = {
         scriptId: targetScriptId,
         url: scriptInfo?.url || url || 'unknown',
         category: scriptInfo?.category || 'unknown',

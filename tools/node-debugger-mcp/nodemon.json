@@ -1,0 +1,9 @@
+{
+  "watch": ["src"],
+  "ext": "ts",
+  "exec": "npm run build && node dist/index.js",
+  "delay": 1000,
+  "env": {
+    "NODE_ENV": "development"
+  }
+}

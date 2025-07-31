@@ -15,13 +15,16 @@ export class StepIntoTool extends DebuggerTool {
     properties: {
       skipList: {
         type: 'array',
-        items: { type: 'string' },
+        items: { 
+          type: 'string',
+          description: 'URL pattern to skip'
+        },
         description: 'Array of URL patterns to skip when stepping into (e.g., node_modules)',
         optional: true,
       },
     },
     required: [],
-  };
+  } as const;
 
   async execute(
     session: DebugSession,

@@ -48,7 +48,7 @@ export class SetBreakpointAndWaitTool extends DebuggerTool {
       },
     },
     required: ['url', 'lineNumber'],
-  };
+  } as const;
 
   async execute(
     session: DebugSession,

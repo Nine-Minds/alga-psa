@@ -16,7 +16,7 @@ export class StepOverTool extends DebuggerTool {
       // No parameters needed for basic step over
     },
     required: [],
-  };
+  } as const;
 
   async execute(
     session: DebugSession,

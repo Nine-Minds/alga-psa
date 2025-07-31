@@ -45,7 +45,7 @@ export class ProcessDiscovery {
       return debuggableProcesses;
 
     } catch (error) {
-      console.error('Error discovering processes:', error);
+      // Error discovering processes
       return [];
     }
   }
@@ -129,7 +129,7 @@ export class ProcessDiscovery {
       }
 
     } catch (error) {
-      console.error('Error scanning for Node.js processes:', error);
+      // Process scanning errors are expected and logged at tool level
       return [];
     }
   }

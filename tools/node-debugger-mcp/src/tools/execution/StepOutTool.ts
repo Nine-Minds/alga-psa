@@ -16,7 +16,7 @@ export class StepOutTool extends DebuggerTool {
       // No parameters needed for basic step out
     },
     required: [],
-  };
+  } as const;
 
   async execute(
     session: DebugSession,

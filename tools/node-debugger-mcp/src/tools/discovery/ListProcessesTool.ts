@@ -28,12 +28,12 @@ export class ListProcessesTool extends DebuggerTool {
       },
     },
     required: [],
-  };
+  } as const;
 
   private readonly processDiscovery = new ProcessDiscovery();
 
   async execute(
-    session: DebugSession,
+    session: DebugSession | null,
     args: any,
     mcpSession?: MCPSession
   ): Promise<any> {

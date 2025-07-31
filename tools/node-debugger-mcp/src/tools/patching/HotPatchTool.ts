@@ -16,6 +16,12 @@ export class HotPatchTool extends DebuggerTool {
       scriptId: {
         type: 'string',
         description: 'Script ID to patch (from listScripts)',
+        optional: true,
+      },
+      url: {
+        type: 'string',
+        description: 'Script URL to patch (alternative to scriptId)',
+        optional: true,
       },
       newSource: {
         type: 'string',
@@ -35,13 +41,14 @@ export class HotPatchTool extends DebuggerTool {
         default: false,
       },
     },
-    required: ['scriptId', 'newSource'],
+    required: ['newSource'],
   };
 
   async execute(
     session: DebugSession,
     args: {
-      scriptId: string;
+      scriptId?: string;
+      url?: string;
       newSource: string;
       dryRun?: boolean;
       skipSyntaxCheck?: boolean;
@@ -55,8 +62,35 @@ export class HotPatchTool extends DebuggerTool {
       // Ensure we're connected to the inspector
       this.requiresConnection(session);
 
-      const { scriptId, newSource, dryRun = false, skipSyntaxCheck = false } = args;
+      const { scriptId: providedScriptId, url, newSource, dryRun = false, skipSyntaxCheck = false } = args;
 
+      // Validate that either scriptId or url is provided
+      if (!providedScriptId && !url) {
+        throw new DebuggerToolError(
+          'Either scriptId or url must be provided',
+          'INVALID_ARGUMENTS',
+          this.name,
+          session.id
+        );
+      }
+
+      // If URL is provided, find the scriptId
+      let scriptId = providedScriptId;
+      if (!scriptId && url) {
+        scriptId = await this.findScriptIdByUrl(session, url);
+        if (!scriptId) {
+          throw new DebuggerToolError(
+            `Script with URL '${url}' not found. Use listScripts to see available scripts.`,
+            'SCRIPT_NOT_FOUND',
+            this.name,
+            session.id
+          );
+        }
+      }
+
+      // Ensure debugger is enabled before hot patching
+      await this.ensureDebuggerEnabled(session);
+      
       // Step 1: Get current script info
       const currentScript = await this.getCurrentScriptInfo(session, scriptId);
       if (!currentScript) {
@@ -172,6 +206,43 @@ export class HotPatchTool extends DebuggerTool {
         error instanceof Error ? error : undefined
       );
     }
+  }
+
+  /**
+   * Find script ID by URL
+   */
+  private async findScriptIdByUrl(session: DebugSession, url: string): Promise<string | null> {
+    // Check script cache first
+    if (session.scriptCache) {
+      for (const [scriptId, script] of session.scriptCache) {
+        if (script.url === url) {
+          return scriptId;
+        }
+      }
+    }
+
+    // If not in cache, try to get it from the debugger
+    // This is a fallback mechanism
+    try {
+      // Force script enumeration by evaluating something
+      await session.inspectorClient.sendCommand('Runtime.evaluate', {
+        expression: '1',
+        returnByValue: true,
+      });
+
+      // Check cache again after evaluation
+      if (session.scriptCache) {
+        for (const [scriptId, script] of session.scriptCache) {
+          if (script.url === url) {
+            return scriptId;
+          }
+        }
+      }
+    } catch (error) {
+      // Ignore errors in fallback mechanism
+    }
+
+    return null;
   }
 
   /**

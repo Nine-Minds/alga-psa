@@ -1,0 +1,2 @@
+function testFunction(e){return console.log("In testFunction with x =",e),2*e}console.log("Test debug simple starting...");let e=0;setInterval(()=>{e++;const n=testFunction(e);console.log(`Counter: ${e}, Result: ${n}`)},3e3),console.log("Test app is running. PID:",process.pid);
+//# sourceMappingURL=test-debug-minified.js.map

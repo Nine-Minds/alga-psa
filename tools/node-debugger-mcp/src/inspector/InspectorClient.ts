@@ -78,11 +78,39 @@ export class InspectorClient extends EventEmitter {
       throw new Error(`Connection to ${host} not allowed. Only localhost connections permitted.`);
     }
 
+    // Get the debugger session ID from the inspector HTTP endpoint
+    let wsUrl: string;
+    let actualSessionId: string | undefined = sessionId;
+    
+    if (!sessionId) {
+      try {
+        const response = await fetch(`http://${host}:${port}/json/list`);
+        const targets = await response.json();
+        
+        if (!Array.isArray(targets) || targets.length === 0) {
+          throw new Error('No debug targets available');
+        }
+        
+        // Use the first target's WebSocket URL
+        const target = targets[0];
+        wsUrl = target.webSocketDebuggerUrl;
+        actualSessionId = target.id;
+        
+        if (!wsUrl) {
+          throw new Error('No WebSocket debugger URL available');
+        }
+      } catch (error) {
+        throw new Error(`Failed to get debugger info from inspector: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    } else {
+      wsUrl = `ws://${host}:${port}/${sessionId}`;
+    }
+
     this.connectionInfo = {
       host,
       port,
-      sessionId,
-      wsUrl: `ws://${host}:${port}/${sessionId || ''}`,
+      sessionId: actualSessionId,
+      wsUrl,
     };
 
     await this.doConnect();
@@ -255,7 +283,7 @@ export class InspectorClient extends EventEmitter {
         const message: InspectorMessage = JSON.parse(data.toString());
         this.handleMessage(message);
       } catch (error) {
-        console.error('Failed to parse inspector message:', error);
+        // Failed to parse inspector message
         this.emit('error', error);
       }
     });
@@ -354,15 +382,15 @@ export class InspectorClient extends EventEmitter {
     this.reconnectAttempts++;
     const delay = this.config.reconnectDelayMs * Math.pow(2, this.reconnectAttempts - 1);
 
-    console.info(`Scheduling reconnect attempt ${this.reconnectAttempts} in ${delay}ms`);
+    // Scheduling reconnect attempt
 
     setTimeout(async () => {
       if (this.connectionInfo && !this.isConnected()) {
         try {
           await this.doConnect();
-          console.info('Reconnected to inspector');
+          // Reconnected to inspector
         } catch (error) {
-          console.error('Reconnection failed:', error);
+          // Reconnection failed
           
           if (this.reconnectAttempts >= this.config.reconnectAttempts) {
             this.emit('error', new Error('Max reconnection attempts exceeded'));
@@ -387,7 +415,7 @@ export class InspectorClient extends EventEmitter {
         // Check if we haven't received a pong in too long
         const now = Date.now();
         if (this.lastPongTime > 0 && now - this.lastPongTime > this.config.heartbeatIntervalMs * 2) {
-          console.warn('Inspector heartbeat failed, reconnecting...');
+          // Inspector heartbeat failed, reconnecting...
           this.ws!.close();
         }
       }

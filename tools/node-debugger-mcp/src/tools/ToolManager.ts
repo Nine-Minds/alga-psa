@@ -4,7 +4,7 @@ import type {
   MCPSession 
 } from '../types/mcp.js';
 import type { DebugSession } from '../types/session.js';
-import type { SessionManager } from '../server/SessionManager.js';
+import { getActiveSession } from '../utils/globalSession.js';
 
 // Import tool base class (to be created)
 import { DebuggerTool } from './base/DebuggerTool.js';
@@ -29,7 +29,7 @@ import { HotPatchTool } from './patching/HotPatchTool.js';
 export class ToolManager {
   private readonly tools = new Map<string, DebuggerTool>();
 
-  constructor(private readonly sessionManager: SessionManager) {
+  constructor() {
     this.registerTools();
   }
 
@@ -71,8 +71,7 @@ export class ToolManager {
       this.tools.set(tool.name, tool);
     }
 
-    console.info(`Registered ${this.tools.size} debugging tools:`, 
-      Array.from(this.tools.keys()).join(', '));
+    // Tool registration logged at server level
   }
 
   /**
@@ -91,7 +90,6 @@ export class ToolManager {
    */
   async executeTool(
     request: MCPToolRequest, 
-    debugSession: DebugSession,
     mcpSession: MCPSession
   ): Promise<any> {
     const tool = this.tools.get(request.name);
@@ -100,27 +98,20 @@ export class ToolManager {
       throw new Error(`Tool '${request.name}' not found`);
     }
 
-    // Update session activity
-    debugSession.lastActivity = new Date();
+    // Get active session for tools that need it
+    const debugSession = getActiveSession();
+
+    // Update session activity if we have a session
+    if (debugSession) {
+      debugSession.lastActivity = new Date();
+    }
 
     // Execute the tool
-    const startTime = Date.now();
     try {
       const result = await tool.execute(debugSession, request.arguments, mcpSession);
-      
-      // Update metrics
-      const executionTime = Date.now() - startTime;
-      await this.sessionManager.updateSessionMetrics(
-        debugSession.id, 
-        'command', 
-        executionTime
-      );
-
       return result;
-      
     } catch (error) {
-      const executionTime = Date.now() - startTime;
-      console.error(`Tool '${request.name}' failed after ${executionTime}ms:`, error);
+      // Error will be logged by caller
       throw error;
     }
   }
@@ -144,7 +135,7 @@ export class ToolManager {
    */
   addTool(tool: DebuggerTool): void {
     this.tools.set(tool.name, tool);
-    console.info(`Added custom tool: ${tool.name}`);
+    // Tool addition logged at server level
   }
 
   /**
@@ -153,7 +144,7 @@ export class ToolManager {
   removeTool(toolName: string): boolean {
     const removed = this.tools.delete(toolName);
     if (removed) {
-      console.info(`Removed tool: ${toolName}`);
+      // Tool removal logged at server level
     }
     return removed;
   }

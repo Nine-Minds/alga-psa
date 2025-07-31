@@ -63,7 +63,7 @@ export class GetStackTraceTool extends DebuggerTool {
       },
     },
     required: [],
-  };
+  } as const;
 
   async execute(
     session: DebugSession,

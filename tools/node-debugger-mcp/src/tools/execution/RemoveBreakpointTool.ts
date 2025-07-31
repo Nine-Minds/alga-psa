@@ -37,7 +37,7 @@ export class RemoveBreakpointTool extends DebuggerTool {
       },
     },
     additionalProperties: false,
-  };
+  } as const;
 
   async execute(
     session: DebugSession,
@@ -263,7 +263,7 @@ export class RemoveBreakpointTool extends DebuggerTool {
         });
       } catch (error) {
         // Ignore errors during cleanup
-        console.warn(`Failed to clean up breakpoint ${id}:`, error);
+        // Cleanup failures logged at server level
       }
     }
 

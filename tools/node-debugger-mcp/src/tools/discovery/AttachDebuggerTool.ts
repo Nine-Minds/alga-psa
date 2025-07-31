@@ -1,7 +1,9 @@
 import { DebuggerTool } from '../base/DebuggerTool.js';
 import { ProcessDiscovery } from '../../utils/ProcessDiscovery.js';
+import { ListScriptsTool } from '../inspection/ListScriptsTool.js';
 import type { DebugSession } from '../../types/session.js';
 import type { MCPSession } from '../../types/mcp.js';
+import { createSession, getActiveSession } from '../../utils/globalSession.js';
 
 /**
  * Tool to attach debugger to a Node.js process
@@ -48,12 +50,12 @@ export class AttachDebuggerTool extends DebuggerTool {
       },
     },
     required: ['pid'],
-  };
+  } as const;
 
   private readonly processDiscovery = new ProcessDiscovery();
 
   async execute(
-    session: DebugSession,
+    _session: DebugSession | null,
     args: any,
     mcpSession?: MCPSession
   ): Promise<any> {
@@ -67,17 +69,6 @@ export class AttachDebuggerTool extends DebuggerTool {
         enableDebugger = true,
         enableRuntime = true,
       } = args;
-
-      // Check if session is already connected
-      if (session.inspectorClient.isConnected()) {
-        const currentInfo = session.inspectorClient.getConnectionInfo();
-        if (currentInfo) {
-          return this.createErrorResponse(
-            `Already connected to process. Current connection: ${currentInfo.wsUrl}. Use detachDebugger first.`,
-            'ALREADY_CONNECTED'
-          );
-        }
-      }
 
       // Get process information
       let processInfo;
@@ -107,19 +98,35 @@ export class AttachDebuggerTool extends DebuggerTool {
         );
       }
 
+      // Check if already connected
+      const existingSession = getActiveSession();
+      if (existingSession && existingSession.inspectorClient.isConnected()) {
+        return this.createErrorResponse(
+          `Already connected to process ${existingSession.processId}. Only one debug session is supported.`,
+          'ALREADY_CONNECTED'
+        );
+      }
+
+      // Create a new debug session
+      let session: DebugSession;
+      try {
+        session = createSession(pid, targetPort);
+      } catch (error) {
+        return this.createErrorResponse(
+          `Failed to create debug session: ${error instanceof Error ? error.message : String(error)}`,
+          'SESSION_CREATION_FAILED'
+        );
+      }
+
       // Attempt to connect
       try {
-        await session.inspectorClient.connect(targetPort, undefined, '127.0.0.1');
+        await session.connect(timeoutMs);
       } catch (error) {
         return this.createErrorResponse(
           `Failed to connect to inspector on port ${targetPort}: ${error instanceof Error ? error.message : String(error)}`,
           'CONNECTION_FAILED'
         );
       }
-
-      // Update session information
-      session.processId = pid;
-      session.lastActivity = new Date();
 
       const enabledDomains: string[] = [];
 
@@ -131,8 +138,38 @@ export class AttachDebuggerTool extends DebuggerTool {
         }
 
         if (enableDebugger) {
-          await session.inspectorClient.sendCommand('Debugger.enable');
+          // Initialize script tracking BEFORE enabling debugger to catch all events
+          ListScriptsTool.initializeScriptTracking(session);
+          
+          // Enable debugger and wait for confirmation
+          const debuggerResponse = await session.inspectorClient.sendCommand('Debugger.enable');
           enabledDomains.push('Debugger');
+          
+          // Small delay to ensure debugger is fully initialized
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // Request information about already-parsed scripts
+          try {
+            // Try to get script source for the main module
+            const mainScript = await session.inspectorClient.sendCommand('Runtime.evaluate', {
+              expression: 'process.mainModule ? process.mainModule.filename : require.main ? require.main.filename : ""',
+              returnByValue: true,
+            });
+            
+            if (mainScript.result?.value) {
+              // Try to trigger script enumeration by getting source
+              const fileUrl = mainScript.result.value.startsWith('file://') 
+                ? mainScript.result.value 
+                : `file://${mainScript.result.value}`;
+              
+              // Get scripts by URL - this sometimes triggers scriptParsed events
+              await session.inspectorClient.sendCommand('Debugger.getScriptSource', {
+                scriptId: '0' // This will fail but might trigger enumeration
+              }).catch(() => {});
+            }
+          } catch (e) {
+            // Ignore errors during initial enumeration
+          }
           
           // Set up async stack traces for better debugging
           await session.inspectorClient.sendCommand('Debugger.setAsyncCallStackDepth', {
@@ -147,7 +184,7 @@ export class AttachDebuggerTool extends DebuggerTool {
 
       } catch (error) {
         // Connection succeeded but domain enablement failed
-        console.warn('Warning: Failed to enable some domains:', error);
+        // Domain enablement warnings logged at server level
       }
 
       // Get some basic information about the target

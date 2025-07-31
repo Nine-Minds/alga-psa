@@ -25,7 +25,7 @@ export class EvaluateExpressionTool extends DebuggerTool {
     properties: {
       expression: {
         type: 'string',
-        description: 'JavaScript expression to evaluate (e.g., "request.body", "myVar + 10", "console.log(data)")',
+        description: 'JavaScript expression to evaluate (e.g., "request.body", "myVar + 10", "console.error(data)")',
       },
       callFrameId: {
         type: 'string',
@@ -70,7 +70,7 @@ export class EvaluateExpressionTool extends DebuggerTool {
       },
     },
     required: ['expression'],
-  };
+  } as const;
 
   async execute(
     session: DebugSession,
