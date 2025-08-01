@@ -9,7 +9,7 @@ test-results/
 playwright-test-results/
 playwright-report/
 screenshots/
-# *.png
+*.png
 *.jpg
 *.jpeg
 *.gif
