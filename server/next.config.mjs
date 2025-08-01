@@ -13,7 +13,6 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   reactStrictMode: true,
-  output: 'standalone',
   transpilePackages: ['@blocknote/core', '@blocknote/react', '@blocknote/mantine'],
   // Rewrites required for PostHog
   async rewrites() {
