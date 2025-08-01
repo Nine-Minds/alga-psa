@@ -81,6 +81,7 @@ export async function getClientTickets(status: string): Promise<ITicketListItem[
         't.tenant',
         's.name as status_name',
         'p.priority_name',
+        'p.color as priority_color',
         'c.channel_name',
         'cat.category_name',
         db.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
@@ -186,7 +187,8 @@ export async function getClientTicketDetails(ticketId: string): Promise<ITicket>
         .select(
           't.*',
           's.name as status_name',
-          'p.priority_name'
+          'p.priority_name',
+          'p.color as priority_color'
         )
         .leftJoin('statuses as s', function() {
           this.on('t.status_id', '=', 's.status_id')
