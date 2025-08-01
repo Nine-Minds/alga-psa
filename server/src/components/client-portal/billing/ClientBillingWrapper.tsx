@@ -2,21 +2,15 @@
 
 import React from 'react';
 import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
-import { FeaturePlaceholder } from '../FeaturePlaceholder';
+import { FeaturePlaceholder } from 'server/src/components/FeaturePlaceholder';
 
-interface BillingPageWrapperProps {
+interface ClientBillingWrapperProps {
   children: React.ReactNode;
 }
 
-export default function BillingPageWrapper({ children }: BillingPageWrapperProps) {
+export default function ClientBillingWrapper({ children }: ClientBillingWrapperProps) {
   const featureFlag = useFeatureFlag('billing-enabled');
   const isBillingEnabled = typeof featureFlag === 'boolean' ? featureFlag : featureFlag?.enabled;
-  
-  // Debug logging
-  if (typeof window !== 'undefined') {
-    console.log('BillingPageWrapper - Feature flag response:', featureFlag);
-    console.log('BillingPageWrapper - Is billing enabled:', isBillingEnabled);
-  }
 
   if (!isBillingEnabled) {
     return (

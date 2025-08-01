@@ -8,7 +8,7 @@ import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { TagManager } from 'server/src/components/tags';
-import { useFeatureFlag } from '@/hooks/useFeatureFlag';
+import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
 import { FeaturePlaceholder } from '../FeaturePlaceholder';
 import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
 import { useTags } from 'server/src/context/TagContext';

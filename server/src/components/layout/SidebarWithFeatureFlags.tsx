@@ -1,10 +1,9 @@
 'use client';
 
 import React from 'react';
-import { useFeatureFlag } from '@/hooks/useFeatureFlag';
+import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
 import Sidebar from './Sidebar';
 import { menuItems as originalMenuItems, bottomMenuItems, MenuItem } from '../../config/menuConfig';
-import { Construction } from 'lucide-react';
 
 interface SidebarWithFeatureFlagsProps {
   sidebarOpen: boolean;

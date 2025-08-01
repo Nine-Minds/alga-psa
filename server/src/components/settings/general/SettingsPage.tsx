@@ -12,7 +12,7 @@ import { Button } from "server/src/components/ui/Button";
 import GeneralSettings from 'server/src/components/settings/general/GeneralSettings';
 import UserManagement from 'server/src/components/settings/general/UserManagement';
 import SettingsTabSkeleton from 'server/src/components/ui/skeletons/SettingsTabSkeleton';
-import { useFeatureFlag } from '@/hooks/useFeatureFlag';
+import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
 import { FeaturePlaceholder } from 'server/src/components/FeaturePlaceholder';
 
 // Dynamic imports for heavy settings components

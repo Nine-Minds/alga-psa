@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useFeatureFlag, useActiveFeatureFlags } from '@/hooks/useFeatureFlag';
+import { useFeatureFlag, useActiveFeatureFlags } from 'server/src/hooks/useFeatureFlag';
 import { FeaturePlaceholder } from './FeaturePlaceholder';
 
 interface FeatureFlagWrapperProps {

@@ -8,7 +8,7 @@ import CreditExpirationSettings from './CreditExpirationSettings';
 import ServiceTypeSettings from './ServiceTypeSettings';
 import ServiceCategoriesSettings from './ServiceCategoriesSettings';
 import ServiceCatalogManager from './ServiceCatalogManager';
-import { useFeatureFlag } from '@/hooks/useFeatureFlag';
+import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
 import { FeaturePlaceholder } from 'server/src/components/FeaturePlaceholder';
 
 const BillingSettings: React.FC = () => {
