@@ -61,13 +61,24 @@ spec:
           persistentVolumeClaim:
             claimName: {{ include "sebastian.fullname" . }}-storage
           {{- end }}
-        {{- end }}        
-        # Mount source code for development
-        {{- if .Values.devPod.sourceMount.enabled }}
-        - name: source-code
-          persistentVolumeClaim:
-            claimName: {{ .Values.devPod.sourceMount.claimName }}
         {{- end }}
+        # Source code volume (emptyDir for fresh clone each pod start)
+        - name: source-code
+          emptyDir: {}
+      initContainers:
+        - name: clone-source
+          image: alpine/git:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Cloning source code..."
+              git clone https://github.com/Nine-Minds/alga-psa.git /app
+              cd /app
+              git checkout {{ .Values.devPod.gitCommit | default .Values.server.image.tag | default "main" }}
+              echo "Source code ready at commit: $(git rev-parse HEAD)"
+          volumeMounts:
+            - name: source-code
+              mountPath: /app
       containers:
         - name: {{ .Chart.Name }}-dev
           securityContext:
@@ -400,10 +411,9 @@ spec:
           - name: storage-volume
             mountPath: {{ .Values.server.persistence.mountPath }}
           {{- end }}
-          {{- if .Values.devPod.sourceMount.enabled }}
+          # Always mount source code for dev pod
           - name: source-code
-            mountPath: {{ .Values.devPod.sourceMount.mountPath | default "/app" }}
-          {{- end }}
+            mountPath: /app
           ports:
             - name: http
               containerPort: {{ .Values.devPod.service.port | default 3001 }}
