@@ -84,20 +84,35 @@ spec:
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.server.image.name }}:{{ .Values.devPod.image.tag | default .Values.server.image.tag }}"
-          {{- if .Values.vaultAgent.enabled }}
           command: ["/bin/sh", "-c"]
           args: 
             - |
+              echo "Development pod started successfully"
+              echo "This pod is configured for debugging and inspection"
+              echo ""
+              echo "To run the application manually:"
+              echo "  npm run dev"
+              echo ""
+              echo "Environment information:"
+              echo "  Node version: $(node --version)"
+              echo "  NPM version: $(npm --version)"
+              echo "  Working directory: $(pwd)"
+              echo "  Source code commit: $(cd /app && git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
+              echo ""
+              {{- if .Values.vaultAgent.enabled }}
               if [ -f /vault/secrets/alga-auth-key ]; then
                 source /vault/secrets/alga-auth-key
+                echo "Vault secrets loaded from /vault/secrets/"
               fi
               if [ -f /vault/secrets/server-secrets ]; then
                 source /vault/secrets/server-secrets
               fi
-              exec npm run dev
-          {{- else }}
-          command: ["npm", "run", "dev"]
-          {{- end }}
+              {{- end }}
+              echo "Dev pod is ready for debugging. Keeping container alive..."
+              # Keep container running
+              while true; do
+                sleep 3600
+              done
           imagePullPolicy: {{ .Values.devPod.pullPolicy | default .Values.server.pullPolicy }}
           env:
           # ----------- APP ----------------
