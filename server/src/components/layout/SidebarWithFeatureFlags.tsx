@@ -11,8 +11,11 @@ interface SidebarWithFeatureFlagsProps {
 }
 
 export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsProps) {
-  const featureFlag = useFeatureFlag('billing-enabled');
-  const isBillingEnabled = typeof featureFlag === 'boolean' ? featureFlag : featureFlag?.enabled;
+  const billingFeatureFlag = useFeatureFlag('billing-enabled');
+  const isBillingEnabled = typeof billingFeatureFlag === 'boolean' ? billingFeatureFlag : billingFeatureFlag?.enabled;
+  
+  const advancedFeatureFlag = useFeatureFlag('advanced-features-enabled');
+  const isAdvancedFeaturesEnabled = typeof advancedFeatureFlag === 'boolean' ? advancedFeatureFlag : advancedFeatureFlag?.enabled;
 
   // Filter and modify menu items based on feature flags
   const menuItems = React.useMemo(() => {
@@ -29,9 +32,30 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
           underConstruction: true
         } as MenuItem & { underConstruction?: boolean };
       }
+      
+      // For Automation Hub menu item, check advanced features flag
+      if (item.name === 'Automation Hub' && !isAdvancedFeaturesEnabled) {
+        return {
+          ...item,
+          href: '/msp/automation-hub',
+          subItems: undefined,
+          underConstruction: true
+        } as MenuItem & { underConstruction?: boolean };
+      }
+      
+      // For System menu item, check advanced features flag
+      if (item.name === 'System' && !isAdvancedFeaturesEnabled) {
+        return {
+          ...item,
+          href: '/msp/jobs',
+          subItems: undefined,
+          underConstruction: true
+        } as MenuItem & { underConstruction?: boolean };
+      }
+      
       return item;
     });
-  }, [isBillingEnabled]);
+  }, [isBillingEnabled, isAdvancedFeaturesEnabled]);
 
   return <Sidebar {...props} menuItems={menuItems} bottomMenuItems={bottomMenuItems} />;
 }

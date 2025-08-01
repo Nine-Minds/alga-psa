@@ -1,10 +1,14 @@
+import { FeatureFlagWrapper } from 'server/src/components/FeatureFlagWrapper';
 import BillingOverview from 'server/src/components/client-portal/billing/BillingOverview';
-import ClientBillingWrapper from 'server/src/components/client-portal/billing/ClientBillingWrapper';
+import { FeaturePlaceholder } from 'server/src/components/FeaturePlaceholder';
 
 export default function BillingPage() {
   return (
-    <ClientBillingWrapper>
+    <FeatureFlagWrapper
+      flagKey="billing-enabled"
+      fallback={<div className="flex-1 flex"><FeaturePlaceholder /></div>}
+    >
       <BillingOverview />
-    </ClientBillingWrapper>
+    </FeatureFlagWrapper>
   );
 }

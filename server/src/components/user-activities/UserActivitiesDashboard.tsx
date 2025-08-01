@@ -7,15 +7,20 @@ import { WorkflowTasksSection } from './WorkflowTasksSection';
 import { ActivitiesDataTableSection } from './ActivitiesDataTableSection';
 import { Button } from '../ui/Button';
 import { LayoutGrid, List } from 'lucide-react';
-import { ActivityFilters as ActivityFiltersType, ActivityType } from '../../interfaces/activity.interfaces';
+import { ActivityFilters as ActivityFiltersType, ActivityType } from 'server/src/interfaces/activity.interfaces';
 import { CustomTabs } from '../ui/CustomTabs';
-import { DrawerProvider } from '../../context/DrawerContext';
+import { DrawerProvider } from 'server/src/context/DrawerContext';
 import { ActivityDrawerProvider } from './ActivityDrawerProvider';
-import { useUserPreference } from '../../hooks/useUserPreference';
+import { useUserPreference } from 'server/src/hooks/useUserPreference';
+import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
 
 export function UserActivitiesDashboard() {
   // Define view mode type
   type UserActivitiesViewMode = 'cards' | 'table';
+  
+  // Check if advanced features are enabled
+  const advancedFeatureFlag = useFeatureFlag('advanced-features-enabled');
+  const isAdvancedFeaturesEnabled = typeof advancedFeatureFlag === 'boolean' ? advancedFeatureFlag : advancedFeatureFlag?.enabled;
   
   // Use the custom hook for view mode preference
   const { 
@@ -84,13 +89,15 @@ export function UserActivitiesDashboard() {
         onViewAll={handleViewAllProjects}
       />
 
-      {/* Workflow Tasks Section */}
-      <WorkflowTasksSection
-        limit={5}
-        onViewAll={handleViewAllWorkflowTasks}
-      />
+      {/* Workflow Tasks Section - Only show if advanced features are enabled */}
+      {isAdvancedFeaturesEnabled && (
+        <WorkflowTasksSection
+          limit={5}
+          onViewAll={handleViewAllWorkflowTasks}
+        />
+      )}
     </div>
-  ), [handleViewAllSchedule, handleViewAllTickets, handleViewAllProjects, handleViewAllWorkflowTasks]
+  ), [handleViewAllSchedule, handleViewAllTickets, handleViewAllProjects, handleViewAllWorkflowTasks, isAdvancedFeaturesEnabled]
   );
 
   // Define options for the ViewSwitcher with explicit type

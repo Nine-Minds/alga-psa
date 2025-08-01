@@ -712,10 +712,8 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           />
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div style={{ height: 'calc(100vh - 300px)', minHeight: '600px' }}>
-            <FeaturePlaceholder />
-          </div>
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden h-full">
+          <FeaturePlaceholder />
         </div>
       )
     },
@@ -726,10 +724,8 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           <ClientBillingDashboard companyId={company.company_id} />
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div style={{ height: 'calc(100vh - 300px)', minHeight: '600px' }}>
-            <FeaturePlaceholder />
-          </div>
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden h-full">
+          <FeaturePlaceholder />
         </div>
       )
     },
@@ -773,10 +769,8 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           <TaxSettingsForm companyId={company.company_id} />
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div style={{ height: 'calc(100vh - 300px)', minHeight: '600px' }}>
-            <FeaturePlaceholder />
-          </div>
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden h-full">
+          <FeaturePlaceholder />
         </div>
       )
     },

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useFeatureFlag, useActiveFeatureFlags } from 'server/src/hooks/useFeatureFlag';
+import { useFeatureFlag, useFeatureFlags } from 'server/src/hooks/useFeatureFlag';
 import { FeaturePlaceholder } from './FeaturePlaceholder';
 
 interface FeatureFlagWrapperProps {
@@ -26,10 +26,10 @@ export function FeatureFlagWrapper({
 }: FeatureFlagWrapperProps) {
   const featureFlag = useFeatureFlag(flagKey);
   const isEnabled = typeof featureFlag === 'boolean' ? featureFlag : featureFlag?.enabled;
-  const activeFlags = useActiveFeatureFlags();
+  const { flags, loading } = useFeatureFlags();
   
   // Check if feature flags have been loaded
-  const isLoading = activeFlags === undefined;
+  const isLoading = loading;
   
   if (isLoading && loadingFallback !== undefined) {
     return <>{loadingFallback}</>;

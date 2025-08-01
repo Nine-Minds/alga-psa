@@ -12,7 +12,6 @@ import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { useRouter } from 'next/navigation';
 import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { checkClientPortalPermissions } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
-import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
 
 interface ClientPortalLayoutProps {
   children: ReactNode;

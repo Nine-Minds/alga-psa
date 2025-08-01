@@ -42,8 +42,10 @@ import { EmailSettings } from 'server/src/components/admin/EmailSettings';
 const SettingsPage = (): JSX.Element =>  {
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
-  const featureFlag = useFeatureFlag('billing-enabled');
-  const isBillingEnabled = typeof featureFlag === 'boolean' ? featureFlag : featureFlag?.enabled;
+  const billingFeatureFlag = useFeatureFlag('billing-enabled');
+  const isBillingEnabled = typeof billingFeatureFlag === 'boolean' ? billingFeatureFlag : billingFeatureFlag?.enabled;
+  const advancedFeatureFlag = useFeatureFlag('advanced-features-enabled');
+  const isAdvancedFeaturesEnabled = typeof advancedFeatureFlag === 'boolean' ? advancedFeatureFlag : advancedFeatureFlag?.enabled;
   // Extensions are conditionally available based on edition
   // The webpack alias will resolve to either the EE component or empty component
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
@@ -202,7 +204,7 @@ const SettingsPage = (): JSX.Element =>  {
     { // Add the new Integrations tab definition
       label: "Integrations",
       // Render the QBO settings client component directly
-      content: <QboIntegrationSettings />,
+      content: isAdvancedFeaturesEnabled ? <QboIntegrationSettings /> : <FeaturePlaceholder />,
     }
   ];
 
