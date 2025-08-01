@@ -27,6 +27,13 @@ const authVerificationLimiter = new RateLimiterMemory({
   blockDuration: 300, // Block for 5 minutes after limit exceeded
 });
 
+// Portal invitation limiter
+const portalInvitationLimiter = new RateLimiterMemory({
+  points: 3, // 3 invitations
+  duration: 3600, // per hour
+  blockDuration: 3600, // Block for 1 hour after limit exceeded
+});
+
 export interface RateLimitResult {
   success: boolean;
   remainingPoints?: number;
@@ -94,6 +101,26 @@ export async function checkEmailLimit(email: string): Promise<RateLimitResult> {
 export async function checkAuthVerificationLimit(identifier: string): Promise<RateLimitResult> {
   try {
     const rateLimitInfo = await authVerificationLimiter.consume(identifier);
+    return {
+      success: true,
+      remainingPoints: rateLimitInfo.remainingPoints,
+      msBeforeNext: rateLimitInfo.msBeforeNext,
+    };
+  } catch (error) {
+    if (error instanceof Error) {
+      return {
+        success: false,
+        msBeforeNext: error.message ? parseInt(error.message) : undefined,
+      };
+    }
+    return { success: false };
+  }
+}
+
+// Portal invitation rate limiting
+export async function checkPortalInvitationLimit(contactId: string): Promise<RateLimitResult> {
+  try {
+    const rateLimitInfo = await portalInvitationLimiter.consume(contactId);
     return {
       success: true,
       remainingPoints: rateLimitInfo.remainingPoints,
