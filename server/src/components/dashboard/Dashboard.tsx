@@ -141,7 +141,7 @@ const WelcomeDashboard = () => {
             step="2"
             title="Set up team for time approvals" 
             description="Configure your team members and set up time approval workflows."
-            href="/msp/settings?tab=users"
+            href="/msp/settings?tab=teams"
           />
           <QuickStartCard
             icon={Users}
