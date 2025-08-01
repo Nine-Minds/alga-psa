@@ -381,7 +381,7 @@ spec:
           {{- end }}
           {{- if .Values.secrets_provider.vault.appSecretPath }}
           - name: VAULT_APP_SECRET_PATH
-            value: "{{ .Values.secrets_provider.vault.appSecretPath.value }}"
+            value: "{{ .Values.secrets_provider.vault.appSecretPath }}"
           {{- end }}
           {{- if .Values.secrets_provider.vault.tenantSecretPathTemplate }}
           - name: VAULT_TENANT_SECRET_PATH_TEMPLATE
