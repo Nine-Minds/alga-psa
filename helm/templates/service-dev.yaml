@@ -1,0 +1,24 @@
+{{- if .Values.devPod.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "sebastian.fullname" . }}-dev
+  namespace: {{ include "sebastian.namespace" . }}
+  labels:
+    {{- include "sebastian.labels" . | nindent 4 }}
+    app.kubernetes.io/component: dev
+spec:
+  type: {{ .Values.devPod.service.type | default .Values.server.service.type }}
+  ports:
+    - port: {{ .Values.devPod.service.port | default 3001 }}
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: 9229
+      targetPort: debug
+      protocol: TCP
+      name: debug
+  selector:
+    {{- include "sebastian.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: dev
+{{- end }}

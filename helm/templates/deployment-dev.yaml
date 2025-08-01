@@ -1,18 +1,20 @@
-{{- if not .Values.devEnv.enabled }}
+{{- if .Values.devPod.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "sebastian.fullname" . }}
+  name: {{ include "sebastian.fullname" . }}-dev
   namespace: {{ include "sebastian.namespace" . }}
   labels:
     {{- include "sebastian.labels" . | nindent 4 }}
+    app.kubernetes.io/component: dev
 spec:
-  replicas: {{ .Values.server.replicaCount }}
+  replicas: {{ .Values.devPod.replicaCount | default 1 }}
   strategy:
     type: Recreate
   selector:
     matchLabels:
       {{- include "sebastian.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: dev
   template:
     metadata:
       annotations:
@@ -37,12 +39,11 @@ spec:
         {{- end }}
       labels:
         {{- include "sebastian.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: dev
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-        {{- if .Values.devEnv.enabled }}
         alga.dev/environment: "true"
-        {{- end }}
     spec:    
       {{- if .Values.server.image.is_private }}
       imagePullSecrets:
@@ -61,11 +62,17 @@ spec:
             claimName: {{ include "sebastian.fullname" . }}-storage
           {{- end }}
         {{- end }}        
+        # Mount source code for development
+        {{- if .Values.devPod.sourceMount.enabled }}
+        - name: source-code
+          persistentVolumeClaim:
+            claimName: {{ .Values.devPod.sourceMount.claimName }}
+        {{- end }}
       containers:
-        - name: {{ .Chart.Name }}
+        - name: {{ .Chart.Name }}-dev
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.server.image.name }}:{{ .Values.server.image.tag }}"
+          image: "{{ .Values.server.image.name }}:{{ .Values.devPod.image.tag | default .Values.server.image.tag }}"
           {{- if .Values.vaultAgent.enabled }}
           command: ["/bin/sh", "-c"]
           args: 
@@ -76,23 +83,23 @@ spec:
               if [ -f /vault/secrets/server-secrets ]; then
                 source /vault/secrets/server-secrets
               fi
-              exec ./entrypoint.sh
+              exec npm run dev
           {{- else }}
-          command: ["./entrypoint.sh"]
+          command: ["npm", "run", "dev"]
           {{- end }}
-          imagePullPolicy: {{ .Values.server.pullPolicy }}
+          imagePullPolicy: {{ .Values.devPod.pullPolicy | default .Values.server.pullPolicy }}
           env:
           # ----------- APP ----------------
           - name: VERSION
             value: "{{ .Values.version }}"
           - name: APP_NAME
-            value: "{{ .Values.nameOverride }}"
+            value: "{{ .Values.nameOverride }}-dev"
           - name: APP_ENV
-            value: "{{ .Values.env }}"
+            value: "development"
           - name: NODE_ENV
-            value: "{{ .Values.env }}"
+            value: "development"
           - name: HOST
-            value: "{{ .Values.host }}"
+            value: "{{ .Values.devPod.host | default .Values.host }}"
           - name: VERIFY_EMAIL_ENABLED
             value: "{{ .Values.server.verify_email}}"
 
@@ -103,7 +110,7 @@ spec:
           - name: REDIS_PORT
             value: "6379"
           - name: REDIS_DB
-            value: "0"
+            value: "0"  # Use same Redis DB as production
           - name: REDIS_PASSWORD
             valueFrom:
               secretKeyRef:
@@ -115,7 +122,7 @@ spec:
           - name: REDIS_PORT
             value: "{{ .Values.config.redis.port }}"
           - name: REDIS_DB
-            value: "{{ .Values.config.redis.db }}"
+            value: "0"  # Use same Redis DB as production
           - name: REDIS_PASSWORD
             value: "{{ .Values.config.redis.password }}"
           {{- end }}
@@ -131,7 +138,7 @@ spec:
           - name: DB_PORT
             value: "5432"
           - name: DB_NAME_SERVER
-            value: "server"
+            value: "server"  # Use same database as production
           - name: DB_USER_ADMIN
             value: "postgres"
           - name: DB_PASSWORD_ADMIN
@@ -161,7 +168,7 @@ spec:
           - name: DB_PORT
             value: "{{ .Values.config.db.port }}"
           - name: DB_NAME_SERVER
-            value: "{{ .Values.config.db.server_database }}"
+            value: "{{ .Values.config.db.server_database }}"  # Use same database as production
           - name: DB_PASSWORD_ADMIN
             {{- if and .Values.config.db.server_password_admin_secret.name .Values.config.db.server_password_admin_secret.key }}
             valueFrom:
@@ -251,11 +258,11 @@ spec:
 
           # ----------- LOGGING ----------------
           - name: LOG_LEVEL
-            value: "{{ .Values.logging.level }}"
+            value: "DEBUG"  # More verbose logging for dev
           - name: LOG_IS_FORMAT_JSON
             value: "{{ .Values.logging.is_format_json }}"
           - name: LOG_IS_FULL_DETAILS
-            value: "{{ .Values.logging.is_full_details }}"
+            value: "true"  # Full details for dev
           - name: LOG_ENABLED_FILE_LOGGING
             value: "{{ .Values.logging.file.enabled }}"
           - name: LOG_DIR_PATH
@@ -326,11 +333,8 @@ spec:
             value: "{{ .Values.token.expire }}"
 
           # ----------- AUTH ----------------
-          # NEXTAUTH_URL is configured via .env file to allow dynamic updates during port forwarding
-          {{- if not .Values.devEnv.enabled }}
           - name: NEXTAUTH_URL
-            value: "https://{{ .Values.host }}"
-          {{- end }}
+            value: "https://{{ .Values.devPod.host | default .Values.host }}"
           - name: NEXTAUTH_SECRET
             valueFrom:
               secretKeyRef:
@@ -385,32 +389,30 @@ spec:
           {{- end }}
           {{- end }}
 
-          # ----------- EXTERNAL PORTS (DEV ENV) ----------------
-          {{- if and .Values.devEnv.enabled .Values.devEnv.externalPorts }}
-          - name: EXTERNAL_APP_PORT
-            value: "{{ .Values.devEnv.externalPorts.app }}"
-          - name: EXTERNAL_CODE_SERVER_PORT
-            value: "{{ .Values.devEnv.externalPorts.codeServer }}"
-          - name: EXTERNAL_CODE_APP_PORT
-            value: "{{ .Values.devEnv.externalPorts.codeApp }}"
-          {{- end }}
-         {{- if .Values.server.persistence.enabled }}
+          # Dev-specific environment variables
+          - name: WATCH_MODE
+            value: "true"
+          - name: HOT_RELOAD
+            value: "true"
+            
           volumeMounts:
-            - name: storage-volume
-              mountPath: {{ .Values.server.persistence.mountPath }}
+          {{- if .Values.server.persistence.enabled }}
+          - name: storage-volume
+            mountPath: {{ .Values.server.persistence.mountPath }}
+          {{- end }}
+          {{- if .Values.devPod.sourceMount.enabled }}
+          - name: source-code
+            mountPath: {{ .Values.devPod.sourceMount.mountPath | default "/app" }}
           {{- end }}
           ports:
             - name: http
-              containerPort: {{ .Values.server.service.port }}
+              containerPort: {{ .Values.devPod.service.port | default 3001 }}
+              protocol: TCP
+            - name: debug
+              containerPort: 9229
               protocol: TCP
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
-      {{- if .Values.devEnv.enabled }}
-      {{- with .Values.devEnv.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- else }}
+            {{- toYaml .Values.devPod.resources | default .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -418,7 +420,6 @@ spec:
       {{- with .Values.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
-      {{- end }}
       {{- end }}
       {{- with .Values.tolerations }}
       tolerations:
