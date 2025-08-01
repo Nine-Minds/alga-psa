@@ -24,8 +24,8 @@ exports.up = async function(knex) {
     table.index(['tenant', 'expires_at'], 'idx_portal_invitations_expires');
     table.index(['tenant', 'email'], 'idx_portal_invitations_email');
     
-    // Unique constraint on token across all tenants for security
-    table.unique('token', 'unique_portal_invitation_token');
+    // Unique constraint on token per tenant for CitusDB compatibility
+    table.unique(['tenant', 'token'], 'unique_portal_invitation_tenant_token');
   });
 
   // Create automatic cleanup function for expired tokens
