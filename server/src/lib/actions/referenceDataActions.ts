@@ -1,7 +1,7 @@
 'use server';
 
 import { createTenantKnex } from '../db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { IStandardPriority, IPriority } from 'server/src/interfaces/ticket.interfaces';
 import { IStandardStatus, IStatus } from 'server/src/interfaces/status.interface';

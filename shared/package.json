@@ -11,6 +11,7 @@
     "./core/secretProvider.js": "./dist/core/secretProvider.js",
     "./db": "./dist/db/index.js",
     "./db/admin.js": "./dist/db/admin.js",
+    "./events/publisher.js": "./dist/events/publisher.js",
     "./utils/encryption.js": "./dist/utils/encryption.js",
     "./workflow": "./dist/workflow/index.js",
     "./workflow/core": "./dist/workflow/core/index.js",

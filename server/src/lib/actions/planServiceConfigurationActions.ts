@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod'; // Add Zod import
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import {
   IPlanServiceConfiguration,
   IPlanServiceFixedConfig,
