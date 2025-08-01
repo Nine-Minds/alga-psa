@@ -37,6 +37,7 @@ interface TicketDetailsProps {
 interface TicketWithDetails extends ITicket {
   status_name?: string;
   priority_name?: string;
+  priority_color?: string;
   conversations?: IComment[];
   documents?: IDocument[];
   userMap?: Record<string, { first_name: string; last_name: string; user_id: string; email?: string; user_type: string; avatarUrl: string | null }>;
@@ -313,7 +314,13 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
                       </DropdownMenu.Content>
                     </DropdownMenu.Root>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      {ticket.priority_name || 'Unknown Priority'}
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full border border-gray-300" 
+                          style={{ backgroundColor: ticket.priority_color || '#6B7280' }}
+                        />
+                        <span>{ticket.priority_name || 'Unknown Priority'}</span>
+                      </div>
                     </span>
                   </div>
                   <p className="text-sm text-gray-500">
