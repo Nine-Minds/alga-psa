@@ -19,11 +19,13 @@ export default function SignOutDialog({ isOpen, onClose }: SignOutDialogProps) {
   const handleSignOut = async () => {
     setIsLoading(true);
     
-    // Track logout event
+    // Track logout event and reset user
     if (posthog && session?.user) {
       posthog.capture('user_logged_out', {
         user_type: (session.user as any).user_type || 'unknown',
       });
+      // Reset PostHog to clear user identification
+      posthog.reset();
     }
     
     await signOut({ callbackUrl: '/auth/signin?callbackUrl=/client-portal/dashboard' });
