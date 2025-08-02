@@ -8,7 +8,7 @@ import { revalidatePath } from 'next/cache';
 import { getTicketAttributes } from 'server/src/lib/actions/policyActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { deleteEntityTags } from '../../utils/tagCleanup';
 import { 
@@ -29,7 +29,7 @@ import {
 } from '../../../lib/eventBus/events';
 import { analytics } from '../../analytics/posthog';
 import { AnalyticsEvents } from '../../analytics/events';
-import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
+import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel.js';
 import { ServerEventPublisher } from '../../adapters/serverEventPublisher';
 import { ServerAnalyticsTracker } from '../../adapters/serverAnalyticsTracker';
 

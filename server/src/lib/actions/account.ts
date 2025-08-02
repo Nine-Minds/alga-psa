@@ -4,7 +4,7 @@ import { createTenantKnex } from '../db';
 import { getServerSession } from 'next-auth';
 import { options as authOptions } from '../../app/api/auth/[...nextauth]/options';
 import { Knex } from 'knex';
-import { withTransaction } from '../../../../shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 
 export interface CompanyProfile {
   name: string;

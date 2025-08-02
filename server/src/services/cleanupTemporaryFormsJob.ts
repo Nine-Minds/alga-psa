@@ -5,8 +5,8 @@
  * that were created for inline workflow tasks
  */
 
-import { withAdminTransaction } from '@shared/db';
-import { getTaskInboxService } from '@shared/workflow/core/taskInboxService.js';
+import { withAdminTransaction } from '@alga-psa/shared/db';
+import { getTaskInboxService } from '@alga-psa/shared/workflow/core/taskInboxService.js';
 
 /**
  * Execute the cleanup job

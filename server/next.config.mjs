@@ -6,6 +6,10 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+});
+
 const nextConfig = {
   eslint: {
     // Warning: This allows production builds to successfully complete even if
@@ -13,7 +17,6 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   reactStrictMode: true,
-  output: 'standalone',
   transpilePackages: ['@blocknote/core', '@blocknote/react', '@blocknote/mantine'],
   // Rewrites required for PostHog
   async rewrites() {
@@ -35,8 +38,8 @@ const nextConfig = {
   // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,
   webpack: (config, { isServer }) => {
-    // Disable webpack cache
-    config.cache = false;
+    // Enable webpack cache for faster builds
+    config.cache = true;
 
     // Add support for importing from ee/server/src using absolute paths
     // and ensure packages from root workspace are resolved
@@ -159,4 +162,4 @@ const nextConfig = {
   }
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);

@@ -16,6 +16,7 @@ FROM base AS deps
 # Copy package files for both root and server parts of the project
 COPY package.json package-lock.json ./
 COPY server/package.json ./server/
+COPY shared/package.json ./shared/
 COPY tsconfig.base.json ./
 COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/assemblyscript
 
@@ -28,11 +29,28 @@ WORKDIR /app
 
 COPY . .
 
-RUN npm install --include=optional sharp --workspaces
-RUN npm install --workspaces
+# Remove ee directory for CE build to ensure stub implementations are used
+RUN rm -rf /app/ee
+
+# Create a dummy file for the relative import that webpack tries to resolve
+RUN mkdir -p /app/ee/server/src/lib/extensions && \
+    echo "export const initializeExtensions = async () => { console.log('CE build - extensions not available'); };" > /app/ee/server/src/lib/extensions/initialize.js
+
+# Remove EE-specific scripts that shouldn't be in CE build
+RUN rm -f /app/server/src/scripts/check-extension.ts
+
+RUN npm install --include=optional sharp --workspace=shared --workspace=server
+RUN npm install --workspace=shared --workspace=server
+
+# Build shared module first
+WORKDIR /app/shared
+RUN npm run build
 
 WORKDIR /app/server
 RUN npm install
+
+# Increase Node.js memory limit for the build process
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 RUN npm run build
 
@@ -91,6 +109,7 @@ COPY --from=builder /app/server/migrations/ ./server/migrations/
 COPY --from=builder /app/server/seeds/ ./server/seeds/
 COPY --from=builder /app/server/src/ ./server/src/
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/server/node_modules ./server/node_modules
 
 RUN npm install -g tsx
 

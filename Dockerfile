@@ -18,6 +18,9 @@ WORKDIR /app
 # Copy package files for dependency installation
 COPY package.json package-lock.json ./
 COPY server/package.json ./server/
+COPY shared/package.json ./shared/
+COPY ee/server/package.json ./ee/server/
+COPY services/workflow-worker/package.json ./services/workflow-worker/
 
 # Install only production dependencies
 RUN npm install --omit=dev
@@ -29,7 +32,7 @@ COPY .env.example /app/.env
 COPY .env.example /app/server/.env  
 
 # Copy pre-built shared workspace (must exist locally)
-COPY ./shared/dist/ ./shared
+COPY ./shared/dist/ ./shared/dist/
 COPY ./shared/package.json ./shared/package.json
 
 # Copy pre-built artifacts (must exist locally)

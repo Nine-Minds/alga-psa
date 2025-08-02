@@ -9,7 +9,7 @@ import { Button } from "server/src/components/ui/Button";
 import { ReflectionContainer } from "server/src/types/ui-reflection/ReflectionContainer";
 import { Play, Code2, AlertTriangle } from "lucide-react";
 import { getRegisteredWorkflowActions } from "server/src/lib/actions/workflow-actions/workflowActionRegistry";
-import { ActionParameterDefinition } from "@shared/workflow/core/actionRegistry.js";
+import { ActionParameterDefinition } from "@alga-psa/shared/workflow/core";
 import EditorSkeleton from "server/src/components/ui/skeletons/EditorSkeleton";
 
 // Dynamic import for Monaco Editor

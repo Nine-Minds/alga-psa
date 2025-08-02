@@ -7,7 +7,7 @@ import { options as authOptions } from 'server/src/app/api/auth/[...nextauth]/op
 import { revalidatePath } from 'next/cache';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getAdminConnection } from 'server/src/lib/db/admin';
-import { withAdminTransaction, withTransaction } from '@shared/db';
+import { withAdminTransaction, withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
 import Tenant from 'server/src/lib/models/tenant';

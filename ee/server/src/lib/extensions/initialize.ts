@@ -1,6 +1,6 @@
 import path from 'path';
 import { getExtensionLoader } from './loader';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/shared/core/logger.js';
 
 export async function initializeExtensions(): Promise<void> {
   try {

@@ -1,9 +1,9 @@
 'use server';
 // server/src/lib/actions/externalMappingActions.ts
 
-import { getActionRegistry, ActionParameterDefinition, ActionExecutionContext } from '@shared/workflow/core/actionRegistry';
+import { getActionRegistry, ActionParameterDefinition, ActionExecutionContext } from '@alga-psa/shared/workflow/core';
 import { createTenantKnex } from 'server/src/lib/db'; // Assuming path based on coding standards
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'; // For tenant context
 import { Knex } from 'knex'; // Import Knex type
 

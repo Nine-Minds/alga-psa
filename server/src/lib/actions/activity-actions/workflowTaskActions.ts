@@ -7,10 +7,10 @@ import {
 import { createTenantKnex } from "../../db";
 import { getCurrentUser } from "../user-actions/userActions";
 import { revalidatePath } from "next/cache";
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { fetchWorkflowTaskActivities } from "./activityAggregationActions";
-import { IWorkflowExecution } from "@shared/workflow/persistence/workflowInterfaces";
+import { IWorkflowExecution } from "@alga-psa/shared/workflow/persistence/workflowInterfaces";
 
 /**
  * Server action to fetch a workflow task by ID

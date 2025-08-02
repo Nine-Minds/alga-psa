@@ -5,7 +5,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex } from 'server/src/lib/db';
 import { ISO8601String } from 'server/src/types/types.d';
 import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
-import { withTransaction } from '../../../../shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import {
     IBillingCharge,
     IBucketCharge,

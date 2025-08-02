@@ -4,8 +4,8 @@
  * server dependencies in the shared package
  */
 
-import { ActionRegistry, ActionExecutionContext } from '@shared/workflow/core/index.js';
-import logger from '@shared/core/logger.js';
+import { ActionRegistry, ActionExecutionContext } from '@alga-psa/shared/workflow/core';
+import logger from '@alga-psa/shared/core/logger.js';
 
 /**
  * Register email workflow actions with the action registry
@@ -27,7 +27,7 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
         console.log(`[TENANT-DEBUG] find_contact_by_email action: tenant=${context.tenant}, email=${params.email}`);
         
         // Use shared database utilities directly
-        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin.js');
         const knex = await getAdminConnection();
         
         const contact = await knex('contacts')
@@ -92,8 +92,8 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
         console.log(`[TENANT-DEBUG] create_ticket_from_email action: tenant=${context.tenant}, title=${params.title}, companyId=${params.company_id}, contactId=${params.contact_id}`);
         
         // Use shared database utilities directly
-        const { getAdminConnection } = await import('@shared/db/admin.js');
-        const { withTransaction } = await import('@shared/db/index.js');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin.js');
+        const { withTransaction } = await import('@alga-psa/shared/db');
         const { v4: uuidv4 } = await import('uuid');
         const knex = await getAdminConnection();
         
@@ -164,8 +164,8 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
         logger.info(`[ACTION] create_comment_from_email called for ticket: ${params.ticket_id}, tenant: ${context.tenant}`);
         
         // Use shared database utilities directly
-        const { getAdminConnection } = await import('@shared/db/admin.js');
-        const { withTransaction } = await import('@shared/db/index.js');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin.js');
+        const { withTransaction } = await import('@alga-psa/shared/db');
         const knex = await getAdminConnection();
         
         const comment_id = await withTransaction(knex, async (trx) => {
@@ -219,8 +219,8 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
         logger.info(`[ACTION] process_email_attachment called for attachment: ${params.attachmentId}, tenant: ${context.tenant}`);
         
         // Use shared database utilities directly
-        const { getAdminConnection } = await import('@shared/db/admin.js');
-        const { withTransaction } = await import('@shared/db/index.js');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin.js');
+        const { withTransaction } = await import('@alga-psa/shared/db');
         const { v4: uuidv4 } = await import('uuid');
         const knex = await getAdminConnection();
         
@@ -312,7 +312,7 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
         });
         
         // Use proper transaction wrapper to avoid nesting transactions
-        const { withAdminTransaction } = await import('@shared/db/index.js');
+        const { withAdminTransaction } = await import('@alga-psa/shared/db');
         
         // Search for ticket by various email thread identifiers using comprehensive strategy
         const ticket = await withAdminTransaction(async (trx) => {
@@ -460,8 +460,8 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
         console.log(`[TENANT-DEBUG] create_or_find_contact action: tenant=${context.tenant}, email=${params.email}, name=${params.name}`);
         
         // Use shared database utilities directly
-        const { getAdminConnection } = await import('@shared/db/admin.js');
-        const { withTransaction } = await import('@shared/db/index.js');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin.js');
+        const { withTransaction } = await import('@alga-psa/shared/db');
         const { v4: uuidv4 } = await import('uuid');
         const knex = await getAdminConnection();
         
@@ -550,8 +550,8 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
         logger.info(`[ACTION] save_email_client_association called for email: ${params.email}, tenant: ${context.tenant}`);
         
         // Use shared database utilities directly
-        const { getAdminConnection } = await import('@shared/db/admin.js');
-        const { withTransaction } = await import('@shared/db/index.js');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin.js');
+        const { withTransaction } = await import('@alga-psa/shared/db');
         const { v4: uuidv4 } = await import('uuid');
         const knex = await getAdminConnection();
         
@@ -631,8 +631,8 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
         logger.info(`[ACTION] create_company_from_email called for company: ${params.company_name}, tenant: ${context.tenant}`);
         
         // Use shared database utilities directly
-        const { getAdminConnection } = await import('@shared/db/admin.js');
-        const { withTransaction } = await import('@shared/db/index.js');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin.js');
+        const { withTransaction } = await import('@alga-psa/shared/db');
         const { v4: uuidv4 } = await import('uuid');
         const knex = await getAdminConnection();
         
@@ -685,7 +685,7 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
         logger.info(`[ACTION] get_company_by_id_for_email called for company: ${params.company_id}, tenant: ${context.tenant}`);
         
         // Use shared database utilities directly
-        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin.js');
         const knex = await getAdminConnection();
         
         const company = await knex('companies')
@@ -731,8 +731,8 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
         logger.info(`[ACTION] create_channel_from_email called for channel: ${params.channel_name}, tenant: ${context.tenant}`);
         
         // Use shared database utilities directly
-        const { getAdminConnection } = await import('@shared/db/admin.js');
-        const { withTransaction } = await import('@shared/db/index.js');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin.js');
+        const { withTransaction } = await import('@alga-psa/shared/db');
         const { v4: uuidv4 } = await import('uuid');
         const knex = await getAdminConnection();
         
@@ -786,7 +786,7 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
         logger.info(`[ACTION] find_channel_by_name called for channel: ${params.name}, tenant: ${context.tenant}`);
         
         // Use shared database utilities directly
-        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin.js');
         const knex = await getAdminConnection();
         
         const channel = await knex('channels')
@@ -843,7 +843,7 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
         logger.info(`[ACTION] create_channel_from_email called for channel: ${params.channel_name}, tenant: ${context.tenant}`);
         
         // Use shared database utilities directly
-        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin.js');
         const knex = await getAdminConnection();
         const { v4: uuidv4 } = await import('uuid');
         
@@ -888,7 +888,7 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
         logger.info(`[ACTION] find_status_by_name called for status: ${params.name}, tenant: ${context.tenant}`);
         
         // Use shared database utilities directly
-        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin.js');
         const knex = await getAdminConnection();
         
         const status = await knex('statuses')
@@ -943,7 +943,7 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
         logger.info(`[ACTION] find_priority_by_name called for priority: ${params.name}, tenant: ${context.tenant}`);
         
         // Use shared database utilities directly
-        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin.js');
         const knex = await getAdminConnection();
         
         const priority = await knex('priorities')
