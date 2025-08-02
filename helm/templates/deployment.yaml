@@ -13,6 +13,7 @@ spec:
   selector:
     matchLabels:
       {{- include "sebastian.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "main"
   template:
     metadata:
       annotations:
@@ -37,6 +38,7 @@ spec:
         {{- end }}
       labels:
         {{- include "sebastian.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: "main"
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
