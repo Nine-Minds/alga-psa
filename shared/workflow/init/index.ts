@@ -3,6 +3,9 @@ import logger from '@alga-psa/shared/core/logger.js';
 
 export * from './serverInit.js';
 
+// Export workflow action registration function
+export { registerWorkflowActions } from './registerWorkflowActions.js';
+
 /**
  * Register example workflows for testing and demonstration
  */

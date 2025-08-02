@@ -14,3 +14,6 @@ export { default as logger } from '@alga-psa/shared/core/logger.js';
 
 // Re-export utilities
 export * from './utils/index.js';
+
+// Re-export types
+export * from './types/index.js';

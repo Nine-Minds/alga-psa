@@ -20,6 +20,12 @@ export const EventTypeEnum = z.enum([
   'TIME_ENTRY_APPROVED',
   'INVOICE_GENERATED',
   'INVOICE_FINALIZED',
+  'CUSTOM_EVENT', // Added for test events
+  'INVOICE_CREATED', // QBO Invoice Created
+  'INVOICE_UPDATED', // QBO Invoice Updated
+  'COMPANY_CREATED', // QBO Company Created
+  'COMPANY_UPDATED', // QBO Company Updated
+  'INBOUND_EMAIL_RECEIVED', // Inbound email processing
   'UNKNOWN'
 ]);
 
