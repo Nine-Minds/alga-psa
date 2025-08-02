@@ -5,7 +5,7 @@ import { verifyPassword } from 'server/src/utils/encryption/encryption';
 import logger from "server/src/utils/logger";
 
 import { IUser } from 'server/src/interfaces/auth.interfaces';
-import { withTransaction } from '../../../../shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { analytics } from '../analytics/posthog';
 import { AnalyticsEvents } from '../analytics/events';

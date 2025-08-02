@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getTenantSettings } from '../actions/tenant-settings-actions/tenantSettingsActions';
 import { createTenantKnex } from '../db';
 import { getTenantForCurrentRequest } from '../tenant';
-import { withTransaction } from '../../../../shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 
 interface AnalyticsSettings {
