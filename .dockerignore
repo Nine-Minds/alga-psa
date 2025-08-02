@@ -50,9 +50,6 @@ volumes
 docs
 tests
 
-# Enterprise Edition (use stub implementations in CE builds)
-ee
-
 *draft*
 #.next
 node_modules

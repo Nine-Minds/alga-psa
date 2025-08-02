@@ -29,6 +29,9 @@ WORKDIR /app
 
 COPY . .
 
+# Remove ee directory for CE build to ensure stub implementations are used
+RUN rm -rf /app/ee
+
 RUN npm install --include=optional sharp --workspace=shared --workspace=server
 RUN npm install --workspace=shared --workspace=server
 
