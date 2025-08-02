@@ -10,7 +10,7 @@ export * from './init/index.js';
 // Re-export stream handling
 export * from './streams/index.js';
 
-export { default as logger } from '@shared/core/logger.js';
+export { default as logger } from '@alga-psa/shared/core/logger.js';
 
 // Re-export utilities
 export * from './utils/index.js';

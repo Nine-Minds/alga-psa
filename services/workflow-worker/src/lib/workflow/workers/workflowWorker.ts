@@ -1,12 +1,12 @@
 import { v4 as uuidv4 } from 'uuid';
 import os from 'os';
-import logger from '@shared/core/logger.js';
-import { getRedisStreamClient } from '@shared/workflow/streams/redisStreamClient.js';
-import { TypeScriptWorkflowRuntime, ProcessQueuedEventParams } from '@shared/workflow/core/index.js';
-import WorkflowEventProcessingModel from '@shared/workflow/persistence/workflowEventProcessingModel.js';
-import { withRetry, classifyError, RecoveryStrategy, ErrorCategory } from '@shared/utils/retryUtils.js';
+import logger from '@alga-psa/shared/core/logger.js';
+import { getRedisStreamClient } from '@alga-psa/shared/workflow/streams/redisStreamClient.js';
+import { TypeScriptWorkflowRuntime, ProcessQueuedEventParams } from '@alga-psa/shared/workflow/core/index.js';
+import WorkflowEventProcessingModel from '@alga-psa/shared/workflow/persistence/workflowEventProcessingModel.js';
+import { withRetry, classifyError, RecoveryStrategy, ErrorCategory } from '@alga-psa/shared/utils/retryUtils.js';
 import knex, { Knex } from 'knex';
-import { getConnection } from '@shared/db/connection.js';
+import { getConnection } from '@alga-psa/shared/db/connection.js';
 
 /**
  * Configuration options for the workflow worker

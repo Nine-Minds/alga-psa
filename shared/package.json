@@ -8,6 +8,7 @@
   "exports": {
     "./types": "./dist/types/index.js",
     "./core": "./dist/core/index.js",
+    "./core/logger.js": "./dist/core/logger.js",
     "./core/secretProvider.js": "./dist/core/secretProvider.js",
     "./db": "./dist/db/index.js",
     "./db/admin.js": "./dist/db/admin.js",
@@ -15,8 +16,13 @@
     "./utils/encryption.js": "./dist/utils/encryption.js",
     "./workflow": "./dist/workflow/index.js",
     "./workflow/core": "./dist/workflow/core/index.js",
+    "./workflow/core/index.js": "./dist/workflow/core/index.js",
     "./workflow/persistence": "./dist/workflow/persistence/index.js",
+    "./workflow/persistence/workflowEventProcessingModel.js": "./dist/workflow/persistence/workflowEventProcessingModel.js",
     "./workflow/streams": "./dist/workflow/streams/index.js",
+    "./workflow/streams/redisStreamClient.js": "./dist/workflow/streams/redisStreamClient.js",
+    "./utils/retryUtils.js": "./dist/utils/retryUtils.js",
+    "./db/connection.js": "./dist/db/connection.js",
     "./extension-utils": "./dist/extension-utils/index.js"
   },
   "scripts": {

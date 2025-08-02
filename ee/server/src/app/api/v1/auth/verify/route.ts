@@ -6,8 +6,8 @@ import {
 } from 'server/src/lib/security/rateLimiting';
 import { observability, observabilityLogger, observabilityMetrics } from 'server/src/lib/observability';
 import { verifyPassword } from 'server/src/utils/encryption/encryption';
-import { withAdminTransaction } from '@shared/db';
-import { getSecretProviderInstance } from '@shared/core/secretProvider';
+import { withAdminTransaction } from '@alga-psa/shared/db';
+import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider.js';
 
 // Interface definitions
 interface AuthVerifyRequest {

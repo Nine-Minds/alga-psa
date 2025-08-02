@@ -1,10 +1,10 @@
 import axios, { AxiosInstance } from 'axios';
 import { BaseEmailAdapter } from './base/BaseEmailAdapter';
 import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/email.interfaces';
-import { getSecretProviderInstance } from '@shared/core';
+import { getSecretProviderInstance } from '@alga-psa/shared/core';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
-import { getAdminConnection } from '@shared/db/admin';
+import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
 
 /**
  * Gmail API adapter for email processing

@@ -10,12 +10,11 @@ import dotenv from 'dotenv';
 // Load environment variables from .env file
 dotenv.config();
 
-import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime.js';
-import { getActionRegistry } from '@shared/workflow/core/actionRegistry.js';
+import { getWorkflowRuntime, getActionRegistry } from '@alga-psa/shared/workflow/core';
 import { WorkflowWorker } from './WorkflowWorker.js';
 import { WorkerServer } from './server.js';
-import logger from '@shared/core/logger.js';
-import { initializeServerWorkflows } from '@shared/workflow/init/serverInit.js';
+import logger from '@alga-psa/shared/core/logger.js';
+import { initializeServerWorkflows } from '@alga-psa/shared/workflow';
 import { registerEmailActions } from './emailActionRegistrations.js';
 
 async function startServices() {
