@@ -18,11 +18,14 @@ COPY shared/package.json ./shared/
 COPY server/package.json ./server/
 
 # Copy shared source and build it
+# Copy shared source and build it
 COPY shared/ ./shared/
 WORKDIR /app/shared
 RUN npm install && npm run build
 
-# Copy server setup files
+WORKDIR /app
+
+# Copy server setup files (must be executed from /app)
 COPY server/setup/create_database.js ./server/setup/
 COPY server/knexfile.cjs ./server/
 COPY server/migrations ./server/migrations
