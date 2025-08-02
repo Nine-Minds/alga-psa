@@ -20,8 +20,8 @@ COPY package.json package-lock.json ./
 COPY shared/package.json ./shared/
 COPY services/workflow-worker/package.json ./services/workflow-worker/
 
-# Install all dependencies at the root level - this will properly link workspaces
-RUN npm install --workspaces
+# Install dependencies for specific workspaces (exclude ee/server)
+RUN npm install --workspace=shared --workspace=services/workflow-worker
 
 # Copy shared source code and build it first
 COPY shared/ ./shared/
