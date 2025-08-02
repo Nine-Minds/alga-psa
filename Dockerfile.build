@@ -36,6 +36,9 @@ RUN rm -rf /app/ee
 RUN mkdir -p /app/ee/server/src/lib/extensions && \
     echo "export const initializeExtensions = async () => { console.log('CE build - extensions not available'); };" > /app/ee/server/src/lib/extensions/initialize.js
 
+# Remove EE-specific scripts that shouldn't be in CE build
+RUN rm -f /app/server/src/scripts/check-extension.ts
+
 RUN npm install --include=optional sharp --workspace=shared --workspace=server
 RUN npm install --workspace=shared --workspace=server
 
