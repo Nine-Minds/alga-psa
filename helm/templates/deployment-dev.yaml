@@ -52,16 +52,6 @@ spec:
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       volumes:
-        {{- if .Values.server.persistence.enabled }}
-        - name: storage-volume
-          {{- if .Values.server.persistence.existingClaim }}
-          persistentVolumeClaim:
-            claimName: {{ .Values.server.persistence.existingClaim }}
-          {{- else }}
-          persistentVolumeClaim:
-            claimName: {{ include "sebastian.fullname" . }}-storage
-          {{- end }}
-        {{- end }}
         # Source code volume (emptyDir for fresh clone each pod start)
         - name: source-code
           emptyDir: {}
@@ -422,10 +412,7 @@ spec:
             value: "true"
             
           volumeMounts:
-          {{- if .Values.server.persistence.enabled }}
-          - name: storage-volume
-            mountPath: {{ .Values.server.persistence.mountPath }}
-          {{- end }}
+          # Volume for persistent file storage intentionally omitted in dev pods
           # Always mount source code for dev pod
           - name: source-code
             mountPath: /app
