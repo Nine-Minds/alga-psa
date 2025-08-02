@@ -40,9 +40,6 @@ spec:
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-        {{- if .Values.devEnv.enabled }}
-        alga.dev/environment: "true"
-        {{- end }}
     spec:    
       {{- if .Values.server.image.is_private }}
       imagePullSecrets:
@@ -327,10 +324,8 @@ spec:
 
           # ----------- AUTH ----------------
           # NEXTAUTH_URL is configured via .env file to allow dynamic updates during port forwarding
-          {{- if not .Values.devEnv.enabled }}
           - name: NEXTAUTH_URL
             value: "https://{{ .Values.host }}"
-          {{- end }}
           - name: NEXTAUTH_SECRET
             valueFrom:
               secretKeyRef:
@@ -384,16 +379,6 @@ spec:
             value: "{{ .Values.secrets_provider.vault.tenantSecretPathTemplate }}"
           {{- end }}
           {{- end }}
-
-          # ----------- EXTERNAL PORTS (DEV ENV) ----------------
-          {{- if and .Values.devEnv.enabled .Values.devEnv.externalPorts }}
-          - name: EXTERNAL_APP_PORT
-            value: "{{ .Values.devEnv.externalPorts.app }}"
-          - name: EXTERNAL_CODE_SERVER_PORT
-            value: "{{ .Values.devEnv.externalPorts.codeServer }}"
-          - name: EXTERNAL_CODE_APP_PORT
-            value: "{{ .Values.devEnv.externalPorts.codeApp }}"
-          {{- end }}
          {{- if .Values.server.persistence.enabled }}
           volumeMounts:
             - name: storage-volume
@@ -405,12 +390,6 @@ spec:
               protocol: TCP
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-      {{- if .Values.devEnv.enabled }}
-      {{- with .Values.devEnv.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- else }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -418,7 +397,6 @@ spec:
       {{- with .Values.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
-      {{- end }}
       {{- end }}
       {{- with .Values.tolerations }}
       tolerations:
