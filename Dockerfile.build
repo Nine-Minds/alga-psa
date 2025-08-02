@@ -32,6 +32,10 @@ COPY . .
 # Remove ee directory for CE build to ensure stub implementations are used
 RUN rm -rf /app/ee
 
+# Create a dummy file for the relative import that webpack tries to resolve
+RUN mkdir -p /app/ee/server/src/lib/extensions && \
+    echo "export const initializeExtensions = async () => { console.log('CE build - extensions not available'); };" > /app/ee/server/src/lib/extensions/initialize.js
+
 RUN npm install --include=optional sharp --workspace=shared --workspace=server
 RUN npm install --workspace=shared --workspace=server
 
