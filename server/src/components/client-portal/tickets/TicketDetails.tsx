@@ -316,8 +316,8 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                       <div className="flex items-center gap-2">
                         <div 
-                          className="w-3 h-3 rounded-full border border-gray-300" 
-                          style={{ backgroundColor: ticket.priority_color || '#6B7280' }}
+                          className={`w-3 h-3 rounded-full border border-gray-300 ${!ticket.priority_color ? 'bg-gray-500' : ''}`}
+                          style={ticket.priority_color ? { backgroundColor: ticket.priority_color } : undefined}
                         />
                         <span>{ticket.priority_name || 'Unknown Priority'}</span>
                       </div>
