@@ -16,6 +16,7 @@ FROM base AS deps
 # Copy package files for both root and server parts of the project
 COPY package.json package-lock.json ./
 COPY server/package.json ./server/
+COPY shared/package.json ./shared/
 COPY tsconfig.base.json ./
 COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/assemblyscript
 
@@ -30,6 +31,10 @@ COPY . .
 
 RUN npm install --include=optional sharp --workspaces
 RUN npm install --workspaces
+
+# Build shared module first
+WORKDIR /app/shared
+RUN npm run build
 
 WORKDIR /app/server
 RUN npm install
@@ -79,6 +84,7 @@ COPY .env.example /app/server/.env
 # Copy built application and node_modules from earlier stages -- minimalist approach
 COPY --from=builder /app/shared ./shared
 COPY --from=builder /app/server/.next ./server/.next
+COPY --from=builder /app/server/dist ./server/dist
 COPY --from=builder /app/server/public ./server/public
 COPY --from=builder /app/server/next.config.mjs ./server/
 COPY --from=builder /app/server/package.json ./server/
