@@ -29,8 +29,8 @@ WORKDIR /app
 
 COPY . .
 
-RUN npm install --include=optional sharp --workspaces
-RUN npm install --workspaces
+RUN npm install --include=optional sharp --workspace=shared --workspace=server
+RUN npm install --workspace=shared --workspace=server
 
 # Build shared module first
 WORKDIR /app/shared
