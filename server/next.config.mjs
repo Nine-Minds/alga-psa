@@ -34,8 +34,8 @@ const nextConfig = {
   // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,
   webpack: (config, { isServer }) => {
-    // Disable webpack cache
-    config.cache = false;
+    // Enable webpack cache for faster builds
+    config.cache = true;
 
     // Add support for importing from ee/server/src using absolute paths
     // and ensure packages from root workspace are resolved
