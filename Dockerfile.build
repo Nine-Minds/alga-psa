@@ -39,6 +39,9 @@ RUN npm run build
 WORKDIR /app/server
 RUN npm install
 
+# Increase Node.js memory limit for the build process
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
 RUN npm run build
 
 WORKDIR /app/server
