@@ -16,3 +16,8 @@ export { default as WorkflowTimerModel } from './workflowTimerModel.js';
 export { default as WorkflowEventProcessingModel } from './workflowEventProcessingModel.js';
 export { default as WorkflowSnapshotModel } from './workflowSnapshotModel.js';
 export { default as WorkflowRegistrationModel } from './workflowRegistrationModel.js';
+
+// Export task-related types and model
+export { default as WorkflowTaskModel } from './workflowTaskModel.js';
+export type { TaskDetails } from './taskInboxInterfaces.js';
+export { WorkflowTaskStatus } from './workflowTaskModel.js';

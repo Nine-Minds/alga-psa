@@ -7,7 +7,7 @@ import { EmailProviderService } from './EmailProviderService';
 import { EmailProviderConfig } from '../../interfaces/email.interfaces';
 import { MicrosoftGraphAdapter } from './providers/MicrosoftGraphAdapter';
 import { GmailAdapter } from './providers/GmailAdapter';
-import { getSecretProviderInstance } from '@shared/core';
+import { getSecretProviderInstance } from '@alga-psa/shared/core';
 import axios from 'axios';
 
 export interface AutoWiringResult {

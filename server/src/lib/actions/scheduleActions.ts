@@ -3,7 +3,7 @@ import ScheduleEntry from '../models/scheduleEntry';
 import { IScheduleEntry, IEditScope } from 'server/src/interfaces/schedule.interfaces';
 import { WorkItemType } from 'server/src/interfaces/workItem.interfaces';
 import { getCurrentUser, getCurrentUserPermissions } from './user-actions/userActions';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 

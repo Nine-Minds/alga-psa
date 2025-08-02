@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { createClient } from 'redis';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/shared/core/logger.js';
 import { getSecret } from '../lib/utils/getSecret';
 
 // Construct Redis URL from environment variables

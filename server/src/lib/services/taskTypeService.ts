@@ -1,6 +1,6 @@
 import { createTenantKnex } from 'server/src/lib/db';
 import { IStandardTaskType, ICustomTaskType, ITaskType } from 'server/src/interfaces/project.interfaces';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 
 export class TaskTypeService {
     static async getAllTaskTypes(): Promise<ITaskType[]> {

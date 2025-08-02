@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
-import { getSecretProviderInstance } from '@shared/core';
+import { getSecretProviderInstance } from '@alga-psa/shared/core';
 import axios from 'axios';
 
 export const dynamic = 'force-dynamic';

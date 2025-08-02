@@ -2,8 +2,8 @@ import { isEnterprise } from './features';
 import { parsePolicy } from './auth/ee';
 import { initializeEventBus, cleanupEventBus } from './eventBus/initialize';
 import { initializeScheduledJobs } from './jobs/initializeScheduledJobs';
-import logger from '@shared/core/logger';
-import { initializeServerWorkflows } from '@shared/workflow/init/serverInit';
+import { logger } from '@alga-psa/shared/core';
+import { initializeServerWorkflows } from '@alga-psa/shared/workflow';
 import { syncStandardTemplates } from './startupTasks';
 import { validateEnv } from 'server/src/config/envConfig';
 import { validateRequiredConfiguration, validateDatabaseConnectivity, validateSecretUniqueness } from 'server/src/config/criticalEnvValidation';
@@ -20,9 +20,7 @@ import { createNextTimePeriod } from './actions/timePeriodsActions';
 import { TimePeriodSettings } from './models/timePeriodSettings';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { initializeScheduler } from 'server/src/lib/jobs';
-import { CompositeSecretProvider } from '@shared/core/CompositeSecretProvider';
-import { FileSystemSecretProvider, getSecretProviderInstance, ISecretProvider } from '@shared/core';
-import { EnvSecretProvider } from '@shared/core/EnvSecretProvider';
+import { CompositeSecretProvider, FileSystemSecretProvider, getSecretProviderInstance, ISecretProvider, EnvSecretProvider } from '@alga-psa/shared/core';
 
 let isFunctionExecuted = false;
 

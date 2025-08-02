@@ -7,11 +7,11 @@ import { authenticateUser } from "server/src/lib/actions/auth";
 import { getKeycloakToken } from "server/src/utils/keycloak";
 import { decodeToken } from "server/src/utils/tokenizer";
 import User from "server/src/lib/models/user";
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/shared/dist/core/logger.js';
 import "server/src/types/next-auth";
 import { analytics } from "server/src/lib/analytics/posthog";
 import { AnalyticsEvents } from "server/src/lib/analytics/events";
-import { getSecretProviderInstance } from '@shared/core';
+import { getSecretProviderInstance } from '@alga-psa/shared/core';
 // import { getAdminConnection } from "server/src/lib/db/admin";
 
 const NEXTAUTH_SESSION_EXPIRES = Number(process.env.NEXTAUTH_SESSION_EXPIRES) || 60 * 60 * 24; // 1 day

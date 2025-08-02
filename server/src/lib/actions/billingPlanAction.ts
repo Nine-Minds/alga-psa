@@ -7,7 +7,7 @@ import { Knex } from 'knex'; // Import Knex type
 import { PlanServiceConfigurationService } from 'server/src/lib/services/planServiceConfigurationService';
 import { IPlanServiceFixedConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces'; // This might be removable if not used elsewhere after refactor
 import BillingPlanFixedConfig from 'server/src/lib/models/billingPlanFixedConfig'; // Added import for new model
-import { withTransaction } from '../../../../shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { getCurrentUser } from './user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { analytics } from '../analytics/posthog';

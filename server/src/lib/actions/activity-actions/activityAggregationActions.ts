@@ -14,8 +14,8 @@ import {
 } from "../../../interfaces/activity.interfaces";
 import ScheduleEntry from "../../models/scheduleEntry";
 import { getCurrentUser } from "../user-actions/userActions";
-import { ISO8601String } from "@shared/types/temporal";
-import { IWorkflowExecution } from "@shared/workflow/persistence/workflowInterfaces";
+import { ISO8601String } from "@alga-psa/shared/types/temporal";
+import { IWorkflowExecution } from "@alga-psa/shared/workflow/persistence/workflowInterfaces";
 import { IProjectTask } from "../../../interfaces/project.interfaces";
 
 // Enhanced in-memory cache implementation with different TTLs and invalidation

@@ -2,7 +2,7 @@
 import { createTenantKnex } from 'server/src/lib/db';
 import { IServiceCategory } from 'server/src/interfaces/billing.interfaces';
 import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
-import { withTransaction } from '../../../../shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 
 export async function getServiceCategories(): Promise<IServiceCategory[]> {

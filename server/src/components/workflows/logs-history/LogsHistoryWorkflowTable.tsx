@@ -3,7 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import WorkflowExecutionsTable from 'server/src/components/workflows/WorkflowExecutionsTable';
-import { IWorkflowExecution } from '@shared/workflow/persistence/workflowInterfaces';
+import { IWorkflowExecution } from '@alga-psa/shared/workflow/persistence';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 
 export default function LogsHistoryWorkflowTable() {

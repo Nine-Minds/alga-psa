@@ -1,6 +1,6 @@
 'use server'
 
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { ITaxRate, IService } from 'server/src/interfaces/billing.interfaces';
 import { TaxService } from 'server/src/lib/services/taxService';
 import { v4 as uuid4 } from 'uuid';

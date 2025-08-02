@@ -1,6 +1,6 @@
 'use server'
 
-import { withTransaction } from '../../../../shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { exec } from 'child_process';
 import fs from 'fs/promises';

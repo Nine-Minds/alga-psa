@@ -3,10 +3,10 @@
  * This file should only be imported in server components or server actions
  */
 
-import { getWorkflowRuntime } from '@shared/workflow/core/index.js';
-import { registerExampleWorkflows } from '@shared/workflow/init/index.js';
-import logger from '@shared/core/logger.js';
-import { registerWorkflowActions } from '@shared/workflow/init/registerWorkflowActions.js';
+import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core/index.js';
+import { registerExampleWorkflows } from '@alga-psa/shared/workflow';
+import logger from '@alga-psa/shared/core/logger.js';
+import { registerWorkflowActions } from '@alga-psa/shared/workflow';
 
 // Track initialization state
 let initialized = false;

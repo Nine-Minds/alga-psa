@@ -2,7 +2,7 @@
 
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '../../../../shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 
 export async function getClients(): Promise<Omit<IClient, "tenant">[]> {

@@ -5,7 +5,7 @@ import { ITicketResource } from 'server/src/interfaces/ticketResource.interfaces
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import TicketResource from 'server/src/lib/models/ticketResource';
 import { hasPermission } from 'server/src/lib/auth/rbac';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 import { getEventBus } from '../../lib/eventBus';

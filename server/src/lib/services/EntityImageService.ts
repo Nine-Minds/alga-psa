@@ -4,7 +4,7 @@ import { getEntityImageUrl } from 'server/src/lib/utils/avatarUtils';
 import Document from 'server/src/lib/models/document';
 import DocumentAssociation from 'server/src/lib/models/document-association';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 

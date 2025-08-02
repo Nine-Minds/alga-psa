@@ -2,11 +2,11 @@
 import { createTenantKnex } from "server/src/lib/db";
 import { getCurrentUser } from "./user-actions/userActions";
 import { z } from "zod";
-import logger from "@shared/core/logger.js";
+import { logger } from "@alga-psa/shared/core";
 import { v4 as uuidv4 } from 'uuid';
 
-import { serializeWorkflowDefinition, deserializeWorkflowDefinition } from "@shared/workflow/core/workflowDefinition";
-import { getWorkflowRuntime } from "@shared/workflow/core/workflowRuntime";
+import { serializeWorkflowDefinition, deserializeWorkflowDefinition } from "@alga-psa/shared/workflow";
+import { getWorkflowRuntime } from "@alga-psa/shared/workflow";
 import { submitWorkflowEventAction } from "./workflow-event-actions";
 import { createWorkflowEventAttachment, deleteWorkflowEventAttachment } from "./workflow-event-attachment-actions";
 import { EventCatalogModel } from "../../models/eventCatalog";
@@ -14,8 +14,8 @@ import {
   validateWorkflowCode,
   checkWorkflowSecurity,
 } from "../utils/workflowValidation";
-import { EventType, EventTypeEnum, ICreateEventCatalogEntry } from "@shared/workflow/types/eventCatalog";
-import { WorkflowRegistrationModel } from "@shared/workflow/persistence";
+import { EventType, EventTypeEnum, ICreateEventCatalogEntry } from "@alga-psa/shared/workflow";
+import { WorkflowRegistrationModel } from "@alga-psa/shared/workflow";
 
 // Zod schema for workflow data
 

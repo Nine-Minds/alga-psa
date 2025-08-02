@@ -1,7 +1,7 @@
 import { getConnection } from '../db/db';
 import { EmailProviderManager } from 'server/src/services/email/EmailProviderManager';
 import { TenantEmailSettings, EmailMessage } from 'server/src/types/email.types';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/shared/core/logger.js';
 
 export interface SendEmailParams {
   tenantId: string;

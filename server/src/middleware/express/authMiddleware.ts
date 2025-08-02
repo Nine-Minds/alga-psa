@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { getToken, decode } from 'next-auth/jwt';
 import { ApiKeyServiceForApi } from '../../lib/services/apiKeyServiceForApi';
-import { getSecretProviderInstance } from '@shared/core/secretProvider';
+import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider.js';
 
 // Extend Express Request type to include Next.js-style properties
 interface AuthenticatedRequest extends Request {

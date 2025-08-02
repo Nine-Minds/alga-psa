@@ -1,5 +1,5 @@
 import { error } from 'console';
-import { WorkflowContext, CreateTaskAndWaitForResultParams, CreateTaskAndWaitForResultReturn } from '../../../../shared/workflow/core';
+import { WorkflowContext, CreateTaskAndWaitForResultParams, CreateTaskAndWaitForResultReturn } from '@alga-psa/shared/workflow/core';
 
 // Define WorkflowState as a const to ensure it's available
 const WorkflowState = {

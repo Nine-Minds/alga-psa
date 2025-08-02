@@ -3,7 +3,7 @@ import path from 'path';
 import { ExtensionManifest } from './types';
 import { ExtensionRegistry } from './registry';
 import { createTenantKnex } from '@/lib/db';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/shared/core/logger.js';
 
 export class ExtensionLoader {
   private extensionsDir: string;

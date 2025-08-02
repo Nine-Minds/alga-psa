@@ -1,6 +1,6 @@
 'use server'
 
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { NumberingService } from 'server/src/lib/services/numberingService';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';

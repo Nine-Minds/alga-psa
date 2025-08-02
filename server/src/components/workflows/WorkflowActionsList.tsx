@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { IWorkflowActionResult } from '@shared/workflow/persistence/workflowInterfaces';
+import { IWorkflowActionResult } from '@alga-psa/shared/workflow/persistence';
 import { Button } from 'server/src/components/ui/Button';
 import { retryWorkflowActionAction } from 'server/src/lib/actions/workflow-actions';
 import { CheckCircle, XCircle, Clock, AlertTriangle, RefreshCw } from 'lucide-react';

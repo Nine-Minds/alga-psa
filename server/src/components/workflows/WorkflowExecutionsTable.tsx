@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { IWorkflowExecution } from '@shared/workflow/persistence/workflowInterfaces';
+import { IWorkflowExecution } from '@alga-psa/shared/workflow/persistence';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { getWorkflowExecutionsWithDetails } from 'server/src/lib/actions/workflow-actions';

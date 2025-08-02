@@ -13,6 +13,7 @@ spec:
   selector:
     matchLabels:
       {{- include "sebastian.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "main"
   template:
     metadata:
       annotations:
@@ -37,11 +38,9 @@ spec:
         {{- end }}
       labels:
         {{- include "sebastian.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: "main"
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
-        {{- end }}
-        {{- if .Values.devEnv.enabled }}
-        alga.dev/environment: "true"
         {{- end }}
     spec:    
       {{- if .Values.server.image.is_private }}
@@ -327,10 +326,8 @@ spec:
 
           # ----------- AUTH ----------------
           # NEXTAUTH_URL is configured via .env file to allow dynamic updates during port forwarding
-          {{- if not .Values.devEnv.enabled }}
           - name: NEXTAUTH_URL
             value: "https://{{ .Values.host }}"
-          {{- end }}
           - name: NEXTAUTH_SECRET
             valueFrom:
               secretKeyRef:
@@ -350,24 +347,24 @@ spec:
           # ----------- SECRET PROVIDER ----------------
           # Composite secret provider configuration
           - name: SECRET_READ_CHAIN
-            value: "{{ .Values.secrets.readChain | default "env,filesystem" }}"
+            value: "{{ .Values.secrets_provider.readChain | default "env,filesystem" }}"
           - name: SECRET_WRITE_PROVIDER
-            value: "{{ .Values.secrets.writeProvider | default "filesystem" }}"
-          {{- if .Values.secrets.envPrefix }}
+            value: "{{ .Values.secrets_provider.writeProvider | default "filesystem" }}"
+          {{- if .Values.secrets_provider.envPrefix }}
           - name: SECRET_ENV_PREFIX
-            value: "{{ .Values.secrets.envPrefix }}"
+            value: "{{ .Values.secrets_provider.envPrefix }}"
           {{- end }}
           
           # Vault configuration (only if vault is used)
-          {{- if or (contains "vault" .Values.secrets.readChain) (eq .Values.secrets.writeProvider "vault") }}
-          {{- if .Values.secrets.vault.addr }}
+          {{- if or (contains "vault" .Values.secrets_provider.readChain) (eq .Values.secrets_provider.writeProvider "vault") }}
+          {{- if .Values.secrets_provider.vault.addr }}
           - name: VAULT_ADDR
-            value: "{{ .Values.secrets.vault.addr }}"
+            value: "{{ .Values.secrets_provider.vault.addr }}"
           {{- end }}
-          {{- if or .Values.secrets.vault.token (or (contains "vault" .Values.secrets.readChain) (eq .Values.secrets.writeProvider "vault")) }}
+          {{- if or .Values.secrets_provider.vault.token (or (contains "vault" .Values.secrets_provider.readChain) (eq .Values.secrets_provider.writeProvider "vault")) }}
           - name: VAULT_TOKEN
-            {{- if .Values.secrets.vault.token }}
-            value: "{{ .Values.secrets.vault.token }}"
+            {{- if .Values.secrets_provider.vault.token }}
+            value: "{{ .Values.secrets_provider.vault.token }}"
             {{- else }}
             valueFrom:
               secretKeyRef:
@@ -375,24 +372,14 @@ spec:
                 key: VAULT_TOKEN
             {{- end }}
           {{- end }}
-          {{- if .Values.secrets.vault.appSecretPath }}
+          {{- if .Values.secrets_provider.vault.appSecretPath }}
           - name: VAULT_APP_SECRET_PATH
-            value: "{{ .Values.secrets.vault.appSecretPath.value }}"
+            value: "{{ .Values.secrets_provider.vault.appSecretPath }}"
           {{- end }}
-          {{- if .Values.secrets.vault.tenantSecretPathTemplate }}
+          {{- if .Values.secrets_provider.vault.tenantSecretPathTemplate }}
           - name: VAULT_TENANT_SECRET_PATH_TEMPLATE
-            value: "{{ .Values.secrets.vault.tenantSecretPathTemplate }}"
+            value: "{{ .Values.secrets_provider.vault.tenantSecretPathTemplate }}"
           {{- end }}
-          {{- end }}
-
-          # ----------- EXTERNAL PORTS (DEV ENV) ----------------
-          {{- if and .Values.devEnv.enabled .Values.devEnv.externalPorts }}
-          - name: EXTERNAL_APP_PORT
-            value: "{{ .Values.devEnv.externalPorts.app }}"
-          - name: EXTERNAL_CODE_SERVER_PORT
-            value: "{{ .Values.devEnv.externalPorts.codeServer }}"
-          - name: EXTERNAL_CODE_APP_PORT
-            value: "{{ .Values.devEnv.externalPorts.codeApp }}"
           {{- end }}
          {{- if .Values.server.persistence.enabled }}
           volumeMounts:
@@ -405,12 +392,6 @@ spec:
               protocol: TCP
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-      {{- if .Values.devEnv.enabled }}
-      {{- with .Values.devEnv.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- else }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -418,7 +399,6 @@ spec:
       {{- with .Values.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
-      {{- end }}
       {{- end }}
       {{- with .Values.tolerations }}
       tolerations:

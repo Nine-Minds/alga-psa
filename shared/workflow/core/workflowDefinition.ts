@@ -1,5 +1,5 @@
 import { WorkflowFunction } from './workflowContext.js';
-import logger from '@shared/core/logger.js';
+import logger from '@alga-psa/shared/core/logger.js';
 import * as ts from 'typescript';
 
 /**

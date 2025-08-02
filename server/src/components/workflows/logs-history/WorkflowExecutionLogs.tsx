@@ -22,7 +22,7 @@ import {
   XCircle,
   Clock
 } from 'lucide-react';
-import { IWorkflowEvent, IWorkflowActionResult } from '@shared/workflow/persistence/workflowInterfaces';
+import { IWorkflowEvent, IWorkflowActionResult } from '@alga-psa/shared/workflow/persistence';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 interface LogEntry {

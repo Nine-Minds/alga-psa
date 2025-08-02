@@ -1,6 +1,6 @@
 'use server';
 
-import { withTransaction } from '../../../../shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { createTenantKnex } from '../db';
 import { EventCatalogModel } from '../../models/eventCatalog';
@@ -8,7 +8,7 @@ import {
   IEventCatalogEntry,
   ICreateEventCatalogEntry, 
   IUpdateEventCatalogEntry 
-} from '@shared/workflow/types/eventCatalog';
+} from '../../../../shared/workflow/types/eventCatalog';
 import { z } from 'zod';
 
 /**

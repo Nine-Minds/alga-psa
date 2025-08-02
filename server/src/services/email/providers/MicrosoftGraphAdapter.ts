@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { BaseEmailAdapter } from './base/BaseEmailAdapter';
 import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/email.interfaces';
-import { getSecretProviderInstance } from '@shared/core';
+import { getSecretProviderInstance } from '@alga-psa/shared/core';
 
 /**
  * Microsoft Graph API adapter for email processing

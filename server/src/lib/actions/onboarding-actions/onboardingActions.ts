@@ -4,7 +4,7 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { createTenantKnex } from 'server/src/lib/db';
 import { getTenantForCurrentRequest } from 'server/src/lib/tenant';
 import { revalidatePath } from 'next/cache';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
 import { createCompany } from 'server/src/lib/actions/company-actions/companyActions';

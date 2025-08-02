@@ -10,7 +10,7 @@ import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 import { ITicketResource } from 'server/src/interfaces/ticketResource.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache';
 import { hasPermission } from 'server/src/lib/auth/rbac';

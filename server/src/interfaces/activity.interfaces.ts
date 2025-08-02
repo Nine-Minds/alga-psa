@@ -1,9 +1,9 @@
 import { TenantEntity } from ".";
-import { ISO8601String } from "@shared/types/temporal";
+import { ISO8601String } from "@alga-psa/shared/types/temporal";
 import { IScheduleEntry } from "./schedule.interfaces";
 import { IProjectTask } from "./project.interfaces";
 import { ITimeEntry } from "./timeEntry.interfaces";
-import { IWorkflowExecution } from "@shared/workflow/persistence/workflowInterfaces";
+import { IWorkflowExecution } from "@alga-psa/shared/workflow/persistence/workflowInterfaces";
 
 /**
  * Types of activities that can be displayed in the User Activities Dashboard

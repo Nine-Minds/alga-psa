@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
-import { getSecretProviderInstance } from '@shared/core';
-import { getAdminConnection } from '@shared/db/admin';
+import { getSecretProviderInstance } from '@alga-psa/shared/core';
+import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
 import axios from 'axios';
 
 // make this dynamic

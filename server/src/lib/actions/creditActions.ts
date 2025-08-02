@@ -1,6 +1,6 @@
 'use server'
 
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { auditLog } from 'server/src/lib/logging/auditLog';
 import { createTenantKnex } from 'server/src/lib/db';
 import CompanyBillingPlan from 'server/src/lib/models/clientBilling';

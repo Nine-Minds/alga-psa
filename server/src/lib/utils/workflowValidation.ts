@@ -3,7 +3,7 @@
  */
 
 import { z } from 'zod';
-import logger from '@shared/core/logger.js';
+import logger from '@alga-psa/shared/core/logger.js';
 import * as ts from 'typescript';
 import { Project, Node, SyntaxKind, ObjectLiteralExpression } from 'ts-morph';
 
@@ -81,7 +81,7 @@ export function extractWorkflowMetadata(code: string): z.infer<typeof WorkflowMe
     // Add type definitions for shared modules
     project.createSourceFile(
       "shared-workflow-definition.d.ts",
-      `declare module '@shared/workflow/core/workflowDefinition' {
+      `declare module '@alga-psa/shared/workflow/core/workflowDefinition' {
         export interface WorkflowMetadata {
           name: string;
           description?: string;
@@ -92,14 +92,14 @@ export function extractWorkflowMetadata(code: string): z.infer<typeof WorkflowMe
 
         export interface WorkflowDefinition {
           metadata: WorkflowMetadata;
-          execute: (context: import('@shared/workflow/core/workflowContext').WorkflowContext) => Promise<void>;
+          execute: (context: import('@alga-psa/shared/workflow/core/workflowContext').WorkflowContext) => Promise<void>;
         }
       }`
     );
 
     project.createSourceFile(
       "shared-workflow-context.d.ts",
-      `declare module '@shared/workflow/core/workflowContext' {
+      `declare module '@alga-psa/shared/workflow/core/workflowContext' {
         export interface WorkflowDataManager {
           get<T>(key: string): T;
           set<T>(key: string, value: T): void;
@@ -266,7 +266,7 @@ export function validateWorkflowCode(code: string): {
     // Add type definitions for shared modules
     project.createSourceFile(
       "shared-workflow-definition.d.ts",
-      `declare module '@shared/workflow/core/workflowDefinition' {
+      `declare module '@alga-psa/shared/workflow/core/workflowDefinition' {
         export interface WorkflowMetadata {
           name: string;
           description?: string;
@@ -277,14 +277,14 @@ export function validateWorkflowCode(code: string): {
 
         export interface WorkflowDefinition {
           metadata: WorkflowMetadata;
-          execute: (context: import('@shared/workflow/core/workflowContext').WorkflowContext) => Promise<void>;
+          execute: (context: import('@alga-psa/shared/workflow/core/workflowContext').WorkflowContext) => Promise<void>;
         }
       }`
     );
 
     project.createSourceFile(
       "shared-workflow-context.d.ts",
-      `declare module '@shared/workflow/core/workflowContext' {
+      `declare module '@alga-psa/shared/workflow/core/workflowContext' {
         export interface WorkflowDataManager {
           get<T>(key: string): T;
           set<T>(key: string, value: T): void;
@@ -471,7 +471,7 @@ export function checkWorkflowSecurity(code: string): string[] {
     // Add type definitions for shared modules
     project.createSourceFile(
       "shared-workflow-definition.d.ts",
-      `declare module '@shared/workflow/core/workflowDefinition' {
+      `declare module '@alga-psa/shared/workflow/core/workflowDefinition' {
         export interface WorkflowMetadata {
           name: string;
           description?: string;
@@ -482,14 +482,14 @@ export function checkWorkflowSecurity(code: string): string[] {
 
         export interface WorkflowDefinition {
           metadata: WorkflowMetadata;
-          execute: (context: import('@shared/workflow/core/workflowContext').WorkflowContext) => Promise<void>;
+          execute: (context: import('@alga-psa/shared/workflow/core/workflowContext').WorkflowContext) => Promise<void>;
         }
       }`
     );
 
     project.createSourceFile(
       "shared-workflow-context.d.ts",
-      `declare module '@shared/workflow/core/workflowContext' {
+      `declare module '@alga-psa/shared/workflow/core/workflowContext' {
         export interface WorkflowDataManager {
           get<T>(key: string): T;
           set<T>(key: string, value: T): void;

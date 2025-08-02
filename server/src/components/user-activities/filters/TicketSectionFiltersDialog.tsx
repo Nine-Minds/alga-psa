@@ -19,7 +19,7 @@ import { IStatus } from "server/src/interfaces/status.interface";
 import { ICompany } from "server/src/interfaces/company.interfaces";
 import { IContact } from "server/src/interfaces/contact.interfaces";
 import { DateRange } from 'react-day-picker';
-import { ISO8601String } from '@shared/types/temporal';
+import { ISO8601String } from '@alga-psa/shared/types';
 import { CompanyPicker } from "server/src/components/companies/CompanyPicker";
 import { ContactPicker } from "server/src/components/ui/ContactPicker";
 import CustomSelect from "server/src/components/ui/CustomSelect";

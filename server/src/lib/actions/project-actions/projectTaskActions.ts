@@ -12,7 +12,7 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { validateData, validateArray } from 'server/src/lib/utils/validation';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { omit } from 'lodash';
 import { 
     createTaskSchema, 

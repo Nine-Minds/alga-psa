@@ -1,10 +1,10 @@
 'use server';
 
-import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
-import { getActionRegistry } from '@shared/workflow/core/actionRegistry';
+import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core';
+import { getActionRegistry } from '@alga-psa/shared/workflow/core';
 import { workflowConfig } from '../../config/workflowConfig';
 import { getCurrentUser } from './user-actions/userActions';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/shared/core/logger.js';
 import { createTenantKnex } from '../db';
 import { getEventBus } from '../eventBus';
 import { EventCatalogModel } from '../../models/eventCatalog'; // Added import

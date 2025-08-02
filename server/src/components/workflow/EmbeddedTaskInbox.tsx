@@ -3,7 +3,7 @@ import { TaskList } from './TaskList';
 import { TaskDetailsComponent } from './TaskDetails';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { WorkflowTaskStatus } from '@shared/workflow/persistence/workflowTaskModel';
+import { WorkflowTaskStatus } from '@alga-psa/shared/workflow/persistence/workflowTaskModel.js';
 
 interface EmbeddedTaskInboxProps {
   maxItems?: number;

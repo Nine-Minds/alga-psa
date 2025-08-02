@@ -42,7 +42,7 @@ import { PaginatedResponse, SuccessResponse } from '../../types/api';
 import { validateTenantAccess } from '../../utils/validation';
 import { EventBusService } from './EventBusService';
 import { AuditLogService } from './AuditLogService';
-import { getSecretProviderInstance } from '../../../../../shared/core/secretProvider.js';
+import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider.js';
 
 export class QuickBooksService {
   private readonly qboApiUrl = 'https://quickbooks-api.intuit.com';

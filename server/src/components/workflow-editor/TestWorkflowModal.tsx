@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from 'server/src/components/
 import { toast } from 'react-hot-toast';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { getEventCatalogEntries, getEventCatalogEntryByEventType } from 'server/src/lib/actions/event-catalog-actions';
-import { IEventCatalogEntry } from '@shared/workflow/types/eventCatalog';
+import { IEventCatalogEntry } from '@alga-psa/shared/workflow';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import *  as workflowEditorActions from 'server/src/lib/actions/workflow-editor-actions';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';

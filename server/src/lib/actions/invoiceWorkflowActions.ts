@@ -1,11 +1,11 @@
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { createTenantKnex } from 'server/src/lib/db';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { getCurrentUser } from './user-actions/userActions';
-import { getActionRegistry, TransactionIsolationLevel } from '@shared/workflow/core/actionRegistry';
-import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
+import { getActionRegistry, TransactionIsolationLevel } from '@alga-psa/shared/workflow/core';
+import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core';
 import { submitWorkflowEventAction } from './workflow-event-actions';
 
 

@@ -6,7 +6,7 @@
 'use client';
 
 import React from 'react';
-import { logger, ExtensionErrorBoundaryProps, ExtensionErrorBoundaryState } from '@shared/extension-utils';
+import { logger, ExtensionErrorBoundaryProps, ExtensionErrorBoundaryState } from '@alga-psa/shared/extension-utils';
 
 /**
  * Default fallback UI for extension errors

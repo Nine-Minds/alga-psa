@@ -5,7 +5,7 @@
 
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import logger from '@shared/core/logger.js';
+import logger from '@alga-psa/shared/core/logger.js';
 
 // =============================================================================
 // INTERFACES
