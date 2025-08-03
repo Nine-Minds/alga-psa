@@ -17,6 +17,7 @@
     "build": "next build",
     "build:enterprise": "NEXT_PUBLIC_EDITION=enterprise next build",
     "build:enterprise-script": "../scripts/build-enterprise.sh",
+    "analyze": "ANALYZE=true next build",
     "start": "tsx index.ts",
     "lint": "next lint",
     "test": "vitest",

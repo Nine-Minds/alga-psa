@@ -2,7 +2,7 @@
 
 import posthog from "posthog-js"
 import { PostHogProvider as PHProvider, usePostHog } from "posthog-js/react"
-import { Suspense, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { usePathname, useSearchParams } from "next/navigation"
 // Removed PrivacyHelper - PostHog handles data privacy natively
 import { posthogConfig, isPostHogEnabled } from '../config/posthog.config'
@@ -44,6 +44,12 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
           posthog.identify(anonymousId)
         }
         setIsInitialized(true)
+      },
+      // Bootstrap feature flags to make them available immediately
+      bootstrap: {
+        distinctID: undefined,
+        isIdentifiedID: false,
+        featureFlags: {}
       },
       // Disable session recording for privacy
       disable_session_recording: posthogConfig.features.sessionRecording === false,

@@ -16,7 +16,7 @@ import { Input } from "server/src/components/ui/Input";
 import { DateRangePicker } from "server/src/components/ui/DateRangePicker";
 import { ActivityFilters, ActivityPriority } from "server/src/interfaces/activity.interfaces";
 import { DateRange } from 'react-day-picker';
-import { ISO8601String } from '@shared/types/temporal';
+import { ISO8601String } from '@alga-psa/shared/types';
 import CustomSelect from "server/src/components/ui/CustomSelect";
 
 interface WorkflowExecution {

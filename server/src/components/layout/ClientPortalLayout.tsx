@@ -24,6 +24,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
   const [hasUserManagementAccess, setHasUserManagementAccess] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const router = useRouter();
+  
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/auth/signin?callbackUrl=/client-portal/dashboard' });

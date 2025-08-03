@@ -1,0 +1,440 @@
+{{- if .Values.devPod.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sebastian.fullname" . }}-dev
+  namespace: {{ include "sebastian.namespace" . }}
+  labels:
+    {{- include "sebastian.labels" . | nindent 4 }}
+    app.kubernetes.io/component: dev
+spec:
+  replicas: {{ .Values.devPod.replicaCount | default 1 }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "sebastian.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: dev
+  template:
+    metadata:
+      annotations:
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if .Values.vaultAgent.enabled }}
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "{{ .Values.vaultAgent.role }}"
+        vault.hashicorp.com/agent-inject-secret-alga-auth-key: "{{ .Values.vaultAgent.sharedSecretPath }}"
+        vault.hashicorp.com/agent-inject-template-alga-auth-key: |
+          {{`{{- with secret "`}}{{ .Values.vaultAgent.sharedSecretPath }}{{`" -}}
+          export ALGA_AUTH_KEY="{{ .Data.data.alga_auth_key }}"
+          {{- end }}`}}
+        vault.hashicorp.com/agent-inject-secret-server-secrets: "{{ .Values.vaultAgent.secretPath }}"
+        vault.hashicorp.com/agent-inject-template-server-secrets: |
+          {{`{{- with secret "`}}{{ .Values.vaultAgent.secretPath }}{{`" -}}
+          {{- range $k, $v := .Data.data -}}
+          export {{ $k }}="{{ $v }}"
+          {{- end -}}
+          {{- end }}`}}
+        {{- end }}
+      labels:
+        {{- include "sebastian.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: dev
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        alga.dev/environment: "true"
+    spec:    
+      {{- if .Values.server.image.is_private }}
+      imagePullSecrets:
+        - name: "{{ .Values.server.image.credentials }}"
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      volumes:
+        # Source code volume (emptyDir for fresh clone each pod start)
+        - name: source-code
+          emptyDir: {}
+      initContainers:
+        - name: clone-source
+          image: alpine/git:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Cloning source code..."
+              git clone https://github.com/Nine-Minds/alga-psa.git /app
+              cd /app
+              git checkout {{ .Values.devPod.gitCommit | default .Values.server.image.tag | default "main" }}
+              echo "Source code ready at commit: $(git rev-parse HEAD)"
+          volumeMounts:
+            - name: source-code
+              mountPath: /app
+      containers:
+        - name: {{ .Chart.Name }}-dev
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.server.image.name }}:{{ .Values.devPod.image.tag | default .Values.server.image.tag }}"
+          command: ["/bin/sh", "-c"]
+          args: 
+            - |
+              echo "Development pod started successfully"
+              echo "This pod is configured for debugging and inspection"
+              echo ""
+              echo "To run the application manually:"
+              echo "  npm run dev"
+              echo ""
+              echo "Environment information:"
+              echo "  Node version: $(node --version)"
+              echo "  NPM version: $(npm --version)"
+              echo "  Working directory: $(pwd)"
+              echo "  Source code commit: $(cd /app && git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
+              echo ""
+              {{- if .Values.vaultAgent.enabled }}
+              if [ -f /vault/secrets/alga-auth-key ]; then
+                source /vault/secrets/alga-auth-key
+                echo "Vault secrets loaded from /vault/secrets/"
+              fi
+              if [ -f /vault/secrets/server-secrets ]; then
+                source /vault/secrets/server-secrets
+              fi
+              {{- end }}
+              echo "Dev pod is ready for debugging. Keeping container alive..."
+              # Keep container running
+              while true; do
+                sleep 3600
+              done
+          imagePullPolicy: {{ .Values.devPod.pullPolicy | default .Values.server.pullPolicy }}
+          env:
+          # ----------- APP ----------------
+          - name: VERSION
+            value: "{{ .Values.version }}"
+          - name: APP_NAME
+            value: "{{ .Values.nameOverride }}-dev"
+          - name: APP_ENV
+            value: "development"
+          - name: NODE_ENV
+            value: "development"
+          - name: HOST
+            value: "{{ .Values.devPod.host | default .Values.host }}"
+          - name: VERIFY_EMAIL_ENABLED
+            value: "{{ .Values.server.verify_email}}"
+
+          # ----------- REDIS ----------------
+          {{- if .Values.redis.enabled }}
+          - name: REDIS_HOST
+            value: "redis.{{ include "sebastian.namespace" . }}.svc.cluster.local"
+          - name: REDIS_PORT
+            value: "6379"
+          - name: REDIS_DB
+            value: "0"  # Use same Redis DB as production
+          - name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: redis-credentials
+                key: REDIS_PASSWORD
+          {{- else }}
+          - name: REDIS_HOST
+            value: "{{ .Values.config.redis.host }}.{{ include "sebastian.namespace" . }}.svc.cluster.local"
+          - name: REDIS_PORT
+            value: "{{ .Values.config.redis.port }}"
+          - name: REDIS_DB
+            value: "0"  # Use same Redis DB as production
+          - name: REDIS_PASSWORD
+            value: "{{ .Values.config.redis.password }}"
+          {{- end }}
+
+          # ----------- DB ----------------
+          {{- if .Values.db.enabled }}
+          - name: DB_TYPE
+            value: "postgres"
+          - name: DB_HOST
+            value: "db.{{ include "sebastian.namespace" . }}.svc.cluster.local"
+          - name: DB_USER_SERVER
+            value: "app_user"
+          - name: DB_PORT
+            value: "5432"
+          - name: DB_NAME_SERVER
+            value: "server"  # Use same database as production
+          - name: DB_USER_ADMIN
+            value: "postgres"
+          - name: DB_PASSWORD_ADMIN
+            valueFrom:
+              secretKeyRef:
+                name: db-credentials
+                key: DB_PASSWORD_SUPERUSER
+          - name: DB_PASSWORD_SUPERUSER
+            valueFrom:
+              secretKeyRef:
+                name: db-credentials
+                key: DB_PASSWORD_SUPERUSER                
+          - name: DB_PASSWORD_SERVER
+            valueFrom:
+              secretKeyRef:
+                name: db-credentials
+                key: DB_PASSWORD_SERVER
+          {{- else }}
+          - name: DB_TYPE
+            value: "postgres"          
+          - name: DB_HOST
+            value: "{{ .Values.config.db.host }}"
+          - name: DB_USER_SERVER
+            value: "{{ .Values.config.db.user }}"          
+          - name: DB_USER_ADMIN
+            value: "postgres"
+          - name: DB_PORT
+            value: "{{ .Values.config.db.port }}"
+          - name: DB_NAME_SERVER
+            value: "{{ .Values.config.db.server_database }}"  # Use same database as production
+          - name: DB_PASSWORD_ADMIN
+            {{- if and .Values.config.db.server_password_admin_secret.name .Values.config.db.server_password_admin_secret.key }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.config.db.server_password_admin_secret.name | quote }}
+                key: {{ .Values.config.db.server_password_admin_secret.key | quote }}
+                namespace: {{ .Values.config.db.server_password_admin_secret.namespace | quote }}
+            {{- else }}
+            value: {{ .Values.config.db.server_admin_password | quote }}
+            {{- end }}
+          - name: DB_PASSWORD_SERVER
+            {{- if and .Values.config.db.server_password_secret.name .Values.config.db.server_password_secret.key }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.config.db.server_password_secret.name | quote }}
+                key: {{ .Values.config.db.server_password_secret.key | quote }}
+                namespace: {{ .Values.config.db.server_password_admin_secret.namespace | quote }}
+            {{- else }}
+            value: {{ .Values.config.db.server_password | quote }}
+            {{- end }}
+          {{- end }}
+
+          # ----------- STORAGE ----------------
+          # Local Storage Provider (Community Edition)
+          {{- if not .Values.config.storage.providers.s3.enabled }}
+          - name: STORAGE_DEFAULT_PROVIDER
+            value: "local"
+          - name: STORAGE_LOCAL_BASE_PATH
+            value: "{{ .Values.config.storage.providers.local.base_path | default "/data/files" }}"
+          - name: STORAGE_LOCAL_MAX_FILE_SIZE
+            value: "{{ .Values.config.storage.providers.local.max_file_size | default 104857600 }}"
+          - name: STORAGE_LOCAL_ALLOWED_MIME_TYPES
+            value: "{{ join "," .Values.config.storage.providers.local.allowed_mime_types | default "image/*,application/pdf,text/plain" }}"
+          - name: STORAGE_LOCAL_RETENTION_DAYS
+            value: "{{ .Values.config.storage.providers.local.retention_days | default "30" }}"
+          {{- end }}
+
+          # S3 Storage Provider (Enterprise Edition)
+          {{- if .Values.config.storage.providers.s3.enabled }}
+          - name: STORAGE_DEFAULT_PROVIDER
+            value: "s3"
+          - name: STORAGE_S3_REGION
+            value: "{{ .Values.config.storage.providers.s3.region }}"
+          - name: STORAGE_S3_BUCKET
+            value: "{{ .Values.config.storage.providers.s3.bucket }}"
+          - name: STORAGE_S3_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: storage-credentials
+                key: S3_ACCESS_KEY
+          - name: STORAGE_S3_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: storage-credentials
+                key: S3_SECRET_KEY
+          {{- if .Values.config.storage.providers.s3.endpoint }}
+          - name: STORAGE_S3_ENDPOINT
+            value: "{{ .Values.config.storage.providers.s3.endpoint }}"
+          {{- end }}
+          - name: STORAGE_S3_MAX_FILE_SIZE
+            value: "{{ .Values.config.storage.providers.s3.max_file_size | default "104857600" }}"
+          - name: STORAGE_S3_ALLOWED_MIME_TYPES
+            value: "{{ join "," .Values.config.storage.providers.s3.allowed_mime_types | default "image/*,application/pdf,text/plain" }}"
+          - name: STORAGE_S3_RETENTION_DAYS
+            value: "{{ .Values.config.storage.providers.s3.retention_days | default "30" }}"
+          {{- end }}
+
+          # ----------- STORAGE UPLOAD ----------------
+          - name: STORAGE_UPLOAD_TEMP_DIR
+            value: "{{ .Values.config.storage.upload.temp_dir }}"
+          - name: STORAGE_UPLOAD_MAX_CONCURRENT
+            value: "{{ .Values.config.storage.upload.max_concurrent }}"
+          - name: STORAGE_UPLOAD_CHUNK_SIZE
+            value: "{{ .Values.config.storage.upload.chunk_size }}"
+
+          # ----------- STORAGE BACKUP ----------------
+          {{- if .Values.config.storage.backup.enabled }}
+          - name: STORAGE_BACKUP_ENABLED
+            value: "true"
+          - name: STORAGE_BACKUP_SCHEDULE
+            value: "{{ .Values.config.storage.backup.schedule }}"
+          - name: STORAGE_BACKUP_RETENTION_DAYS
+            value: "{{ .Values.config.storage.backup.retention.days }}"
+          - name: STORAGE_BACKUP_RETENTION_COPIES
+            value: "{{ .Values.config.storage.backup.retention.copies }}"
+          {{- end }}
+
+          # ----------- LOGGING ----------------
+          - name: LOG_LEVEL
+            value: "DEBUG"  # More verbose logging for dev
+          - name: LOG_IS_FORMAT_JSON
+            value: "{{ .Values.logging.is_format_json }}"
+          - name: LOG_IS_FULL_DETAILS
+            value: "true"  # Full details for dev
+          - name: LOG_ENABLED_FILE_LOGGING
+            value: "{{ .Values.logging.file.enabled }}"
+          - name: LOG_DIR_PATH
+            value: "{{ .Values.logging.file.path }}"
+          - name: LOG_ENABLED_EXTERNAL_LOGGING
+            value: "{{ .Values.logging.external.enabled }}"
+          - name: LOG_EXTERNAL_HTTP_HOST
+            value: "{{ .Values.logging.external.host }}"
+          - name: LOG_EXTERNAL_HTTP_PORT
+            value: "{{ .Values.logging.external.port }}"
+          - name: LOG_EXTERNAL_HTTP_PATH
+            value: "{{ .Values.logging.external.path }}"
+          - name: LOG_EXTERNAL_HTTP_LEVEL
+            value: "{{ .Values.logging.external.level }}"
+          - name: LOG_EXTERNAL_HTTP_TOKEN
+            value: "{{ .Values.logging.external.token }}"
+
+          # ----------- HOCUPOCUS ----------------
+          - name: HOCUSPOCUS_URL
+            value: "ws://houcspocus.{{ include "sebastian.namespace" . }}.svc.cluster.local:{{ .Values.hocuspocus.service.port }}"
+
+          # ----------- EMAIL ----------------
+          - name: EMAIL_ENABLE
+            value: "{{ .Values.email.enabled }}"
+          - name: EMAIL_FROM
+            value: "{{ .Values.email.from }}"
+          - name: EMAIL_HOST
+            value: "{{ .Values.email.host }}"
+          - name: EMAIL_PORT
+            value: "{{ .Values.email.port }}"
+          - name: EMAIL_USERNAME
+            value: "{{ .Values.email.user }}"
+          - name: EMAIL_PASSWORD
+            value: "{{ .Values.email.password }}"
+
+          # ----------- LLM ----------------
+          - name: OPENAI_API_KEY
+            value: "{{ .Values.config.llm.openai }}"
+          - name: ANTHROPIC_API_KEY
+            value: "{{ .Values.config.llm.anthropic }}"
+
+          # ----------- CRYPTO ----------------
+          - name: CRYPTO_KEY
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: CRYPTR_KEY
+          - name: SALT_BYTES
+            value: "{{ .Values.crypto.salt_bytes }}"
+          - name: ITERATIONS
+            value: "{{ .Values.crypto.iteration }}"
+          - name: KEY_LENGTH
+            value: "{{ .Values.crypto.key_length }}"
+          - name: ALGORITHM
+            value: "{{ .Values.crypto.algorithm }}"
+          - name: ALGA_AUTH_KEY
+            value: "{{ .Values.crypto.alga_auth_key }}"
+          - name: SECRET_KEY
+            value: "{{ .Values.crypto.secret_key }}"
+            
+          # ----------- TOKEN ----------------
+          - name: TOKEN_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: TOKEN_SECRET_KEY
+          - name: TOKEN_EXPIRE  
+            value: "{{ .Values.token.expire }}"
+
+          # ----------- AUTH ----------------
+          - name: NEXTAUTH_URL
+            value: "https://{{ .Values.devPod.host | default .Values.host }}"
+          - name: NEXTAUTH_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: NEXTAUTH_SECRET
+          - name: NEXTAUTH_SESSION_EXPIRES
+            value: "{{ .Values.auth.nextauth_session_expires }}"
+
+          # ----------- GOOGLE AUTH ----------------
+          {{- if .Values.google_auth.enabled }}
+          - name: GOOGLE_OAUTH_CLIENT_ID
+            value: "{{ .Values.google_auth.client_id }}"
+          - name: GOOGLE_OAUTH_CLIENT_SECRET
+            value: "{{ .Values.google_auth.client_secret }}"
+          {{- end }}
+
+          # ----------- SECRET PROVIDER ----------------
+          # Composite secret provider configuration
+          - name: SECRET_READ_CHAIN
+            value: "{{ .Values.secrets_provider.readChain | default "env,filesystem" }}"
+          - name: SECRET_WRITE_PROVIDER
+            value: "{{ .Values.secrets_provider.writeProvider | default "filesystem" }}"
+          {{- if .Values.secrets_provider.envPrefix }}
+          - name: SECRET_ENV_PREFIX
+            value: "{{ .Values.secrets_provider.envPrefix }}"
+          {{- end }}
+          
+          # Vault configuration (only if vault is used)
+          {{- if or (contains "vault" .Values.secrets_provider.readChain) (eq .Values.secrets_provider.writeProvider "vault") }}
+          {{- if .Values.secrets_provider.vault.addr }}
+          - name: VAULT_ADDR
+            value: "{{ .Values.secrets_provider.vault.addr }}"
+          {{- end }}
+          {{- if or .Values.secrets_provider.vault.token (or (contains "vault" .Values.secrets_provider.readChain) (eq .Values.secrets_provider.writeProvider "vault")) }}
+          - name: VAULT_TOKEN
+            {{- if .Values.secrets_provider.vault.token }}
+            value: "{{ .Values.secrets_provider.vault.token }}"
+            {{- else }}
+            valueFrom:
+              secretKeyRef:
+                name: vault-credentials
+                key: VAULT_TOKEN
+            {{- end }}
+          {{- end }}
+          {{- if .Values.secrets_provider.vault.appSecretPath }}
+          - name: VAULT_APP_SECRET_PATH
+            value: "{{ .Values.secrets_provider.vault.appSecretPath }}"
+          {{- end }}
+          {{- if .Values.secrets_provider.vault.tenantSecretPathTemplate }}
+          - name: VAULT_TENANT_SECRET_PATH_TEMPLATE
+            value: "{{ .Values.secrets_provider.vault.tenantSecretPathTemplate }}"
+          {{- end }}
+          {{- end }}
+
+          # Dev-specific environment variables
+          - name: WATCH_MODE
+            value: "true"
+          - name: HOT_RELOAD
+            value: "true"
+            
+          volumeMounts:
+          # Volume for persistent file storage intentionally omitted in dev pods
+          # Always mount source code for dev pod
+          - name: source-code
+            mountPath: /app
+          ports:
+            - name: http
+              containerPort: {{ .Values.devPod.service.port | default 3001 }}
+              protocol: TCP
+            - name: debug
+              containerPort: 9229
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.devPod.resources | default .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

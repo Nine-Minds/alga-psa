@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getSecretProviderInstance } from '@shared/core';
+import { getSecretProviderInstance } from '@alga-psa/shared/core';
 import { QboTenantCredentials } from '../actions/qbo/types'; // Correct path for type
 import { AppError } from '../errors'; // Re-applying the seemingly correct path for AppError
 

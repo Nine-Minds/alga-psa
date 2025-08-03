@@ -1,5 +1,5 @@
-import { getSecretProviderInstance } from '@shared/core/secretProvider';
-import logger from '@shared/core/logger';
+import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider.js';
+import { logger } from '@alga-psa/shared/core';
 
 /**
  * Gets a secret value using the configured secret provider, with fallbacks.

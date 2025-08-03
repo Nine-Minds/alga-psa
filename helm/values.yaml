@@ -52,6 +52,9 @@ hocuspocus:
     type: "ClusterIP"
     port: 1234
 
+# Development Pod Configuration
+devPod:
+  enabled: false
 
 podLabels: {}
 

@@ -4,7 +4,7 @@ import * as RadixIcons from '@radix-ui/react-icons';
 import { ChevronRightIcon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
 import Image from 'next/image';
 import * as Tooltip from '@radix-ui/react-tooltip';
-import { menuItems, bottomMenuItems, MenuItem } from '../../config/menuConfig';
+import { menuItems as defaultMenuItems, bottomMenuItems as defaultBottomMenuItems, MenuItem } from '../../config/menuConfig';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSubMenuItem from './SidebarSubMenuItem';
@@ -15,9 +15,16 @@ import { DynamicNavigationSlot } from '../extensions/DynamicNavigationSlot';
 interface SidebarProps {
   sidebarOpen: boolean;
   setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  menuItems?: MenuItem[];
+  bottomMenuItems?: MenuItem[];
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }): JSX.Element => {
+const Sidebar: React.FC<SidebarProps> = ({ 
+  sidebarOpen, 
+  setSidebarOpen,
+  menuItems = defaultMenuItems,
+  bottomMenuItems = defaultBottomMenuItems
+}): JSX.Element => {
   const pathname = usePathname();
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
 

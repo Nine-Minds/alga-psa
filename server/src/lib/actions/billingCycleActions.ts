@@ -10,7 +10,7 @@ import { getNextBillingDate } from './billingAndTax';
 import { hardDeleteInvoice } from './invoiceModification';
 import { ISO8601String } from 'server/src/types/types.d';
 import { BillingCycleCreationResult } from "../billing/createBillingCycles";
-import { withTransaction } from '../../../../shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 
 export async function getBillingCycle(companyId: string): Promise<BillingCycleType> {

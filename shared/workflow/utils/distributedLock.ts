@@ -1,5 +1,5 @@
 import { getRedisStreamClient } from '../streams/redisStreamClient.js';
-import logger from '@shared/core/logger.js';
+import logger from '@alga-psa/shared/core/logger.js';
 
 /**
  * Error types for distributed lock operations

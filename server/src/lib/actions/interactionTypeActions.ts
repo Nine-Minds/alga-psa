@@ -2,7 +2,7 @@
 
 'use server'
 
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { IInteractionType, ISystemInteractionType } from 'server/src/interfaces/interaction.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';

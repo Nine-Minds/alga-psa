@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminConnection } from '@shared/db/admin';
-import { withTransaction } from '@shared/db';
-import { publishEvent } from '@shared/events/publisher';
+import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
+import { withTransaction } from '@alga-psa/shared/db';
+import { publishEvent } from '@alga-psa/shared/events/publisher.js';
 import { OAuth2Client } from 'google-auth-library';
 
 interface GooglePubSubMessage {
