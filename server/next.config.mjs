@@ -6,9 +6,6 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
-  enabled: process.env.ANALYZE === 'true',
-});
 
 const nextConfig = {
   eslint: {
@@ -162,4 +159,4 @@ const nextConfig = {
   }
 };
 
-export default withBundleAnalyzer(nextConfig);
+export default nextConfig;
