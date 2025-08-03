@@ -64,8 +64,6 @@ spec:
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.server.image.name }}:{{ .Values.server.image.tag }}"
-          {{- if .Values.vaultAgent.enabled }}
-          command: ["/bin/sh", "-c"]
           command: ["./entrypoint.sh"]
           imagePullPolicy: {{ .Values.server.pullPolicy }}
           env:
@@ -393,3 +391,4 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
 {{- end }}
+
