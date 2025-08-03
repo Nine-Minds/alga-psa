@@ -25,7 +25,7 @@ spec:
         vault.hashicorp.com/agent-inject-secret-alga_auth_key: "{{ .Values.vaultAgent.sharedSecretPath }}"
         vault.hashicorp.com/agent-inject-template-alga_auth_key: |
           {{`{{- with secret "`}}{{ .Values.vaultAgent.sharedSecretPath }}{{`" -}}
-          {{ .Data.data.alga_auth_key }}
+          {{- .Data.data.alga_auth_key -}}
           {{- end }}`}}        
         vault.hashicorp.com/agent-inject-secret-server-secrets: "{{ .Values.vaultAgent.secretPath }}"
         vault.hashicorp.com/agent-inject-template-server-secrets: |
@@ -66,7 +66,6 @@ spec:
           image: "{{ .Values.server.image.name }}:{{ .Values.server.image.tag }}"
           {{- if .Values.vaultAgent.enabled }}
           command: ["/bin/sh", "-c"]
-          args: 
           command: ["./entrypoint.sh"]
           imagePullPolicy: {{ .Values.server.pullPolicy }}
           env:
