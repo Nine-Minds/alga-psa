@@ -7,7 +7,7 @@ import { authenticateUser } from "server/src/lib/actions/auth";
 import { getKeycloakToken } from "server/src/utils/keycloak";
 import { decodeToken } from "server/src/utils/tokenizer";
 import User from "server/src/lib/models/user";
-import logger from '@alga-psa/shared/dist/core/logger.js';
+import logger from '@alga-psa/shared/core/logger.js';
 import "server/src/types/next-auth";
 import { analytics } from "server/src/lib/analytics/posthog";
 import { AnalyticsEvents } from "server/src/lib/analytics/events";
