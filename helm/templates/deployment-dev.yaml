@@ -24,8 +24,8 @@ spec:
         {{- if .Values.vaultAgent.enabled }}
         vault.hashicorp.com/agent-inject: "true"
         vault.hashicorp.com/role: "{{ .Values.vaultAgent.role }}"
-        vault.hashicorp.com/agent-inject-secret-alga-auth-key: "{{ .Values.vaultAgent.sharedSecretPath }}"
-        vault.hashicorp.com/agent-inject-template-alga-auth-key: |
+        vault.hashicorp.com/agent-inject-secret-alga_auth_key: "{{ .Values.vaultAgent.sharedSecretPath }}"
+        vault.hashicorp.com/agent-inject-template-alga_auth_key: |
           {{`{{- with secret "`}}{{ .Values.vaultAgent.sharedSecretPath }}{{`" -}}
           export ALGA_AUTH_KEY="{{ .Data.data.alga_auth_key }}"
           {{- end }}`}}
@@ -88,16 +88,6 @@ spec:
               echo "  NPM version: $(npm --version)"
               echo "  Working directory: $(pwd)"
               echo "  Source code commit: $(cd /app && git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
-              echo ""
-              {{- if .Values.vaultAgent.enabled }}
-              if [ -f /vault/secrets/alga-auth-key ]; then
-                source /vault/secrets/alga-auth-key
-                echo "Vault secrets loaded from /vault/secrets/"
-              fi
-              if [ -f /vault/secrets/server-secrets ]; then
-                source /vault/secrets/server-secrets
-              fi
-              {{- end }}
               echo "Dev pod is ready for debugging. Keeping container alive..."
               # Keep container running
               while true; do
