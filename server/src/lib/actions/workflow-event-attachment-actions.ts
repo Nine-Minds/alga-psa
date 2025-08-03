@@ -7,7 +7,7 @@ import {
   IWorkflowEventAttachment,
   ICreateWorkflowEventAttachment, // Will need update in shared types
   IUpdateWorkflowEventAttachment
-} from '@alga-psa/shared/dist/workflow/types/eventCatalog.js';
+} from '@alga-psa/shared/workflow/types/eventCatalog.js';
 import { getWorkflowRegistration, startWorkflowFromEvent } from './workflow-runtime-actions';
 import { getEventBus } from '../eventBus';
 // import { WorkflowTriggerModel } from 'server/src/models/workflowTrigger'; // Trigger logic might need review later

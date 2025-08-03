@@ -444,6 +444,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                       
                       {invitation.status === 'pending' && currentUserPermissions.canInvite && (
                         <Button
+                          id={`revoke-invitation-${invitation.invitation_id}`}
                           variant="ghost"
                           size="sm"
                           onClick={() => handleRevokeInvitation(invitation.invitation_id)}

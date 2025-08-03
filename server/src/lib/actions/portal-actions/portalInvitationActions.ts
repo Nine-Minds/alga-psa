@@ -5,6 +5,7 @@ import { getCurrentUser } from '../user-actions/userActions';
 import { PortalInvitationService } from '../../services/PortalInvitationService';
 import { sendPortalInvitationEmail } from '../../email/sendPortalInvitationEmail';
 import { checkPortalInvitationLimit, formatRateLimitError } from '../../security/rateLimiting';
+import { TenantEmailService } from '../../services/TenantEmailService';
 
 export interface SendInvitationResult {
   success: boolean;
@@ -56,15 +57,13 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
       throw new Error('Tenant is requried');
     }
 
-    // Check if email settings are configured for this tenant
-    const emailSettings = await knex('tenant_email_settings')
-      .where({ tenant_id: tenant })
-      .first();
+    // Validate email settings are configured for this tenant
+    const emailValidation = await TenantEmailService.validateEmailSettings(tenant);
     
-    if (!emailSettings) {
+    if (!emailValidation.valid) {
       return { 
         success: false, 
-        error: 'Email settings are not configured for your organization. Please contact your administrator to set up email services.' 
+        error: emailValidation.error || 'Email settings are not properly configured.'
       };
     }
 
@@ -105,26 +104,21 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
         .first();
 
       // Generate portal setup URL
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
       const portalSetupUrl = `${baseUrl}/auth/portal/setup?token=${invitationResult.token}`;
 
       // Calculate expiration time for display
       const expirationTime = '24 hours';
 
       // Send portal invitation email - if this fails, transaction will rollback
-      try {
-        await sendPortalInvitationEmail({
-          email: contact.email,
-          contactName: contact.full_name,
-          companyName: company?.company_name || 'Your Company',
-          portalLink: portalSetupUrl,
-          expirationTime: expirationTime,
-          tenant: tenant
-        });
-      } catch (emailError) {
-        console.error('Failed to send invitation email:', emailError);
-        throw new Error(`Failed to send invitation email: ${emailError instanceof Error ? emailError.message : 'Unknown error'}`);
-      }
+      await sendPortalInvitationEmail({
+        email: contact.email,
+        contactName: contact.full_name,
+        companyName: company?.company_name || 'Your Company',
+        portalLink: portalSetupUrl,
+        expirationTime: expirationTime,
+        tenant: tenant
+      });
 
       return {
         success: true,

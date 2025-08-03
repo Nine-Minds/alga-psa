@@ -165,6 +165,7 @@ export default function PortalSetupPage() {
             </Alert>
             <Button 
               onClick={() => router.push('/auth/signin')}
+              id='btn=signin'
               className="w-full"
             >
               Go to Sign In
@@ -298,6 +299,7 @@ export default function PortalSetupPage() {
             </div>
 
             <Button
+              id="btn-create-account"
               type="submit"
               className="w-full"
               disabled={!isPasswordValid() || isSubmitting}
