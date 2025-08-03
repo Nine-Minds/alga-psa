@@ -61,7 +61,7 @@ export async function sendPortalInvitationEmail({
       const tenantSettings = await getTenantEmailSettings(tenant, knex);
       
       if (!tenantSettings) {
-        throw new Error(`No email settings configured for tenant ${tenant}`);
+        throw new Error('Email service is not configured. Please contact your administrator to set up email settings.');
       }
       
       const emailProviderManager = new EmailProviderManager();

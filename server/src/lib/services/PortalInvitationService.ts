@@ -1,9 +1,8 @@
-'use server'
-
-import { createTenantKnex } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth';
-import { checkPortalInvitationLimit, formatRateLimitError } from '@/lib/security/rateLimiting';
+import { createTenantKnex } from '../db';
+import { getCurrentUser } from '../actions/user-actions/userActions';
+import { checkPortalInvitationLimit, formatRateLimitError } from '../security/rateLimiting';
 import crypto from 'crypto';
+import { Knex } from 'knex';
 
 export interface PortalInvitation {
   invitation_id: string;
@@ -37,7 +36,96 @@ export class PortalInvitationService {
   }
 
   /**
-   * Create a new portal invitation for a contact
+   * Create a new portal invitation for a contact with transaction support
+   */
+  static async createInvitationWithTransaction(
+    contactId: string,
+    trx: Knex.Transaction
+  ): Promise<{
+    success: boolean;
+    invitationId?: string;
+    token?: string;
+    error?: string;
+  }> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        return { success: false, error: 'Unauthorized' };
+      }
+
+      const { tenant } = await createTenantKnex();
+
+      // Check rate limit
+      const rateLimitResult = await checkPortalInvitationLimit(contactId);
+      if (!rateLimitResult.success) {
+        const errorMessage = await formatRateLimitError(rateLimitResult.msBeforeNext);
+        return { success: false, error: errorMessage };
+      }
+
+      // Verify contact exists and is a portal admin (using transaction)
+      const contact = await trx('contacts')
+        .where({ tenant, contact_name_id: contactId })
+        .first();
+
+      if (!contact) {
+        return { success: false, error: 'Contact not found' };
+      }
+
+      if (!contact.is_client_admin) {
+        return { success: false, error: 'Contact must be marked as a client admin to receive portal invitations' };
+      }
+
+      // Generate secure token
+      const token = this.generateSecureToken();
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24); // 24 hours from now
+
+      // Check if there's already an active invitation (using transaction)
+      const existingInvitation = await trx('portal_invitations')
+        .where({
+          tenant,
+          contact_id: contactId,
+          used_at: null
+        })
+        .where('expires_at', '>', trx.fn.now())
+        .first();
+
+      if (existingInvitation) {
+        return { 
+          success: false, 
+          error: 'An active invitation already exists for this contact. Please wait for it to expire or be used before sending another.' 
+        };
+      }
+
+      // Create invitation record (using transaction)
+      const [invitation] = await trx('portal_invitations')
+        .insert({
+          tenant,
+          contact_id: contactId,
+          token,
+          email: contact.email,
+          expires_at: expiresAt,
+          metadata: {
+            created_by: user.user_id,
+            contact_name: contact.full_name
+          }
+        })
+        .returning(['invitation_id', 'token']);
+
+      return {
+        success: true,
+        invitationId: invitation.invitation_id,
+        token: invitation.token
+      };
+
+    } catch (error) {
+      console.error('Error creating portal invitation:', error);
+      return { success: false, error: 'Failed to create invitation' };
+    }
+  }
+
+  /**
+   * Create a new portal invitation for a contact (non-transactional version)
    */
   static async createInvitation(contactId: string): Promise<{
     success: boolean;
@@ -136,11 +224,11 @@ export class PortalInvitationService {
       const invitation = await knex('portal_invitations as pi')
         .join('contacts as c', function() {
           this.on('pi.tenant', '=', 'c.tenant')
-              .andOn('pi.contact_id', '=', 'c.contact_name_id');
+              .andOn('pi.contact_id', '=', 'c.contact_id');
         })
         .join('companies as comp', function() {
           this.on('c.tenant', '=', 'comp.tenant')
-              .andOn('c.company_name_id', '=', 'comp.company_name_id');
+              .andOn('c.company_id', '=', 'comp.company_id');
         })
         .where({
           'pi.tenant': tenant,

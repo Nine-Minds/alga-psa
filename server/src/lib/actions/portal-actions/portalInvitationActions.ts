@@ -1,10 +1,10 @@
 'use server'
 
-import { createTenantKnex } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth';
-import { PortalInvitationService } from '@/lib/services/PortalInvitationService';
-import { sendPortalInvitationEmail } from '@/lib/email/sendPortalInvitationEmail';
-import { checkPortalInvitationLimit, formatRateLimitError } from '@/lib/security/rateLimiting';
+import { createTenantKnex } from '../../db';
+import { getCurrentUser } from '../user-actions/userActions';
+import { PortalInvitationService } from '../../services/PortalInvitationService';
+import { sendPortalInvitationEmail } from '../../email/sendPortalInvitationEmail';
+import { checkPortalInvitationLimit, formatRateLimitError } from '../../security/rateLimiting';
 
 export interface SendInvitationResult {
   success: boolean;
@@ -52,6 +52,22 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
 
     const { knex, tenant } = await createTenantKnex();
 
+    if (!tenant) {
+      throw new Error('Tenant is requried');
+    }
+
+    // Check if email settings are configured for this tenant
+    const emailSettings = await knex('tenant_email_settings')
+      .where({ tenant_id: tenant })
+      .first();
+    
+    if (!emailSettings) {
+      return { 
+        success: false, 
+        error: 'Email settings are not configured for your organization. Please contact your administrator to set up email services.' 
+      };
+    }
+
     // Check rate limits first
     const rateLimitResult = await checkPortalInvitationLimit(contactId);
     if (!rateLimitResult.success) {
@@ -75,60 +91,55 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
       };
     }
 
-    // Create invitation using service
-    const invitationResult = await PortalInvitationService.createInvitation(contactId);
-    if (!invitationResult.success) {
-      return { success: false, error: invitationResult.error };
-    }
+    // Use a transaction to ensure atomicity
+    const result = await knex.transaction(async (trx) => {
+      // Create invitation within transaction
+      const invitationResult = await PortalInvitationService.createInvitationWithTransaction(contactId, trx);
+      if (!invitationResult.success) {
+        throw new Error(invitationResult.error || 'Failed to create invitation');
+      }
 
-    // Get company information for email template
-    const company = await knex('companies')
-      .where({ tenant, company_name_id: contact.company_name_id })
-      .first();
+      // Get company information for email template
+      const company = await trx('companies')
+        .where({ tenant, company_id: contact.company_id })
+        .first();
 
-    // Generate portal setup URL
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-    const portalSetupUrl = `${baseUrl}/auth/portal/setup?token=${invitationResult.token}`;
+      // Generate portal setup URL
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+      const portalSetupUrl = `${baseUrl}/auth/portal/setup?token=${invitationResult.token}`;
 
-    // Calculate expiration time for display
-    const expirationTime = '24 hours';
+      // Calculate expiration time for display
+      const expirationTime = '24 hours';
 
-    // Send portal invitation email
-    try {
-      await sendPortalInvitationEmail({
-        email: contact.email,
-        contactName: contact.full_name,
-        companyName: company?.company_name || 'Your Company',
-        portalLink: portalSetupUrl,
-        expirationTime: expirationTime,
-        tenant: tenant
-      });
+      // Send portal invitation email - if this fails, transaction will rollback
+      try {
+        await sendPortalInvitationEmail({
+          email: contact.email,
+          contactName: contact.full_name,
+          companyName: company?.company_name || 'Your Company',
+          portalLink: portalSetupUrl,
+          expirationTime: expirationTime,
+          tenant: tenant
+        });
+      } catch (emailError) {
+        console.error('Failed to send invitation email:', emailError);
+        throw new Error(`Failed to send invitation email: ${emailError instanceof Error ? emailError.message : 'Unknown error'}`);
+      }
 
       return {
         success: true,
         invitationId: invitationResult.invitationId,
         message: `Portal invitation sent successfully to ${contact.email}`
       };
-
-    } catch (emailError) {
-      console.error('Failed to send invitation email:', emailError);
-      
-      // Mark invitation as failed in metadata
-      await knex('portal_invitations')
-        .where({ tenant, invitation_id: invitationResult.invitationId })
-        .update({
-          metadata: knex.raw('metadata || ?', [JSON.stringify({ 
-            email_failed: true, 
-            email_error: String(emailError),
-            failed_at: new Date().toISOString()
-          })])
-        });
-
-      return { 
-        success: false, 
-        error: 'Invitation created but failed to send email. Please try again.' 
+    }).catch((error) => {
+      console.error('Transaction failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to send invitation'
       };
-    }
+    });
+
+    return result;
 
   } catch (error) {
     console.error('Error sending portal invitation:', error);
