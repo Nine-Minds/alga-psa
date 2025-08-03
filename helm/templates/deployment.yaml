@@ -23,10 +23,6 @@ spec:
         vault.hashicorp.com/agent-inject: "true"
         vault.hashicorp.com/role: "{{ .Values.vaultAgent.role }}"
         vault.hashicorp.com/agent-inject-secret-alga-auth-key: "{{ .Values.vaultAgent.sharedSecretPath }}"
-        vault.hashicorp.com/agent-inject-template-alga-auth-key: |
-          {{`{{- with secret "`}}{{ .Values.vaultAgent.sharedSecretPath }}{{`" -}}
-          export ALGA_AUTH_KEY="{{ .Data.data.alga_auth_key }}"
-          {{- end }}`}}
         vault.hashicorp.com/agent-inject-secret-server-secrets: "{{ .Values.vaultAgent.secretPath }}"
         vault.hashicorp.com/agent-inject-template-server-secrets: |
           {{`{{- with secret "`}}{{ .Values.vaultAgent.secretPath }}{{`" -}}
