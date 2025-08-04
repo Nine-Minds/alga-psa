@@ -21,7 +21,7 @@ import { Switch } from 'server/src/components/ui/Switch';
 import { Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-export function BillingSetupStep({ data, updateData }: StepProps) {
+export function BillingSetupStep({ data, updateData, attemptedToProceed = false }: StepProps) {
   const { data: session } = useSession();
   const isServiceCreated = !!data.serviceId;
   const [showServiceTypes, setShowServiceTypes] = useState(false);
@@ -165,7 +165,7 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
           <div className="flex items-center gap-2">
             <Package className="w-5 h-5 text-gray-500" />
             <span className="font-medium">Service Types</span>
-            {tenantTypes.length === 0 && (
+            {tenantTypes.length === 0 && attemptedToProceed && (
               <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">Required</span>
             )}
           </div>
@@ -346,7 +346,7 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
 
                         console.log('Creating service type with order:', finalOrder, 'Existing orders:', allOrders);
 
-                        const createdType = await createServiceType({
+                        await createServiceType({
                           name: serviceTypeForm.name,
                           description: serviceTypeForm.description || null,
                           billing_method: serviceTypeForm.billingMethod,
