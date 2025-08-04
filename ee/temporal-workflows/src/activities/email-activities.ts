@@ -35,6 +35,37 @@ export async function generateTemporaryPassword(length: number = 12): Promise<st
   return password.split('').sort(() => Math.random() - 0.5).join('');
 }
 
+// Email template color scheme
+const COLORS = {
+  // Brand colors
+  primary: '#8a4dea',
+  primaryDark: '#7c3aed',
+  primaryLight: '#a366f0',
+  primarySubtle: '#faf8ff',
+  primaryAccent: '#f3f0ff',
+  
+  // Neutral colors
+  textPrimary: '#0f172a',
+  textSecondary: '#334155',
+  textMuted: '#64748b',
+  textLight: '#94a3b8',
+  textOnDark: '#cbd5e1',
+  
+  // Background colors
+  bgPrimary: '#ffffff',
+  bgSecondary: '#f8fafc',
+  bgDark: '#1e293b',
+  
+  // Border colors
+  borderLight: '#e2e8f0',
+  borderSubtle: '#e9e5f5',
+  
+  // State colors
+  warning: '#f59e0b',
+  warningBg: '#fffbeb',
+  warningText: '#92400e',
+};
+
 /**
  * Create welcome email content
  */
@@ -45,6 +76,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
 } {
   const { tenantName, adminUser, temporaryPassword } = input;
   const defaultLoginUrl = process.env.APPLICATION_URL;
+  const currentYear = new Date().getFullYear();
   
   const subject = `Welcome to Alga PSA - Your Account is Ready`;
   
@@ -59,14 +91,14 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
       body { 
         font-family: Inter, system-ui, sans-serif; 
         line-height: 1.6; 
-        color: #0f172a; 
+        color: ${COLORS.textPrimary}; 
         max-width: 600px; 
         margin: 0 auto; 
         padding: 20px; 
-        background-color: #f8fafc; 
+        background-color: ${COLORS.bgSecondary}; 
       }
       .header { 
-        background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%); 
+        background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%); 
         color: white; 
         padding: 32px 24px; 
         border-radius: 12px 12px 0 0; 
@@ -85,15 +117,15 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
         color: rgba(255, 255, 255, 0.95);
       }
       .content { 
-        background: white; 
+        background: ${COLORS.bgPrimary}; 
         padding: 32px; 
-        border: 1px solid #e2e8f0; 
+        border: 1px solid ${COLORS.borderLight}; 
         border-top: none; 
         border-bottom: none; 
       }
       .footer { 
-        background: #1e293b; 
-        color: #cbd5e1; 
+        background: ${COLORS.bgDark}; 
+        color: ${COLORS.textOnDark}; 
         padding: 24px; 
         border-radius: 0 0 12px 12px; 
         text-align: center; 
@@ -102,35 +134,36 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
       }
       .footer p {
         margin: 6px 0;
-        color: #cbd5e1;
+        color: ${COLORS.textOnDark};
       }
       .footer p:last-child {
-        color: #94a3b8;
+        color: ${COLORS.textLight};
         font-size: 13px;
         margin-top: 16px;
       }
       .credentials { 
-        background: #faf8ff; 
+        background: ${COLORS.primarySubtle}; 
         padding: 24px; 
         border-radius: 8px; 
-        border: 1px solid #e9e5f5;
+        border: 1px solid ${COLORS.borderSubtle};
+        border-left: 4px solid ${COLORS.primary};
         margin: 24px 0; 
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
       }
       .credentials h3 {
-        color: #0f172a;
+        color: ${COLORS.textPrimary};
         margin: 0 0 16px 0;
         font-size: 18px;
         font-weight: 600;
       }
       .credentials p {
         margin: 8px 0;
-        color: #334155;
+        color: ${COLORS.textSecondary};
       }
       .login-button { 
         display: inline-block; 
-        background: #8a4dea; 
-        color: #ffffff !important; 
+        background: ${COLORS.primary}; 
+        color: ${COLORS.bgPrimary} !important; 
         padding: 14px 32px; 
         text-decoration: none; 
         border-radius: 8px; 
@@ -142,20 +175,20 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
       .login-button:hover {
-        background: #7c3aed;
-        color: #ffffff !important;
+        background: ${COLORS.primaryDark};
+        color: ${COLORS.bgPrimary} !important;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
         transform: translateY(-1px);
       }
       .warning { 
-        background: #fffbeb; 
-        border: 1px solid #f59e0b; 
+        background: ${COLORS.warningBg}; 
+        border: 1px solid ${COLORS.warning}; 
         border-radius: 8px; 
         padding: 20px; 
         margin: 24px 0; 
       }
       .warning h4 {
-        color: #92400e;
+        color: ${COLORS.warningText};
         margin: 0 0 12px 0;
         font-size: 16px;
         font-weight: 600;
@@ -163,43 +196,43 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
       .warning ul {
         margin: 0;
         padding-left: 20px;
-        color: #92400e;
+        color: ${COLORS.warningText};
       }
       .warning li {
         margin: 4px 0;
       }
       .code { 
         font-family: 'Courier New', monospace; 
-        background: #e2e8f0; 
+        background: ${COLORS.borderLight}; 
         padding: 4px 8px; 
         border-radius: 4px; 
-        color: #0f172a; 
+        color: ${COLORS.textPrimary}; 
         font-size: 14px;
         font-weight: 600;
       }
       .brand-highlight { 
-        color: #8a4dea; 
+        color: ${COLORS.primary}; 
         font-weight: 600;
       }
       h2 {
-        color: #0f172a;
+        color: ${COLORS.textPrimary};
         font-family: Poppins, system-ui, sans-serif;
         font-size: 24px;
         font-weight: 600;
         margin: 0 0 16px 0;
       }
       h3 {
-        color: #0f172a;
+        color: ${COLORS.textPrimary};
         font-size: 18px;
         font-weight: 600;
         margin: 24px 0 12px 0;
       }
       p {
-        color: #334155;
+        color: ${COLORS.textSecondary};
         margin: 0 0 16px 0;
       }
       ol {
-        color: #334155;
+        color: ${COLORS.textSecondary};
         margin: 0 0 16px 0;
         padding-left: 24px;
       }
@@ -207,25 +240,25 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
         margin: 8px 0;
       }
       a {
-        color: #8a4dea;
+        color: ${COLORS.primary};
         text-decoration: underline;
       }
       a:hover {
-        color: #7c3aed;
+        color: ${COLORS.primaryDark};
       }
       .tagline {
-        background: #faf8ff;
-        border-left: 3px solid #8a4dea;
+        background: ${COLORS.primarySubtle};
+        border-left: 3px solid ${COLORS.primary};
         padding: 20px 24px;
         margin: 24px 0;
         font-style: normal;
-        color: #334155;
+        color: ${COLORS.textSecondary};
         border-radius: 6px;
         line-height: 1.7;
       }
       .divider {
         height: 1px;
-        background: #e2e8f0;
+        background: ${COLORS.borderLight};
         margin: 32px 0;
       }
     </style>
@@ -273,7 +306,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
       <li>Click the login button above or visit: <a href="${defaultLoginUrl}">${defaultLoginUrl}</a></li>
       <li>Enter your email and temporary password</li>
       <li>Complete the onboarding wizard, including changing your password, setting up your profile, and configuring your ticketing and billing settings</li>
-      <li>Transform your business with Alga PSA</li>
+      <li>Start transforming your business with Alga PSA</li>
     </ol>
     
     <h3>Need Help?</h3>
@@ -285,7 +318,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
   <div class="footer">
     <p>This email was sent automatically as part of your tenant creation process.</p>
     <p>If you did not request this account, please contact support.</p>
-    <p>© ${new Date().getFullYear()} Nine Minds. All rights reserved.</p>
+    <p>© ${currentYear} Nine Minds. All rights reserved.</p>
   </div>
 </body>
 </html>`;
@@ -325,7 +358,7 @@ Welcome aboard!
 This email was sent automatically as part of your tenant creation process.
 If you did not request this account, please contact support.
 
-© ${new Date().getFullYear()} Nine Minds. All rights reserved.
+© ${currentYear} Nine Minds. All rights reserved.
 `;
 
   return { subject, htmlBody, textBody };
