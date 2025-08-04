@@ -65,6 +65,7 @@ export interface OnboardingState {
 export interface StepProps {
   data: WizardData;
   updateData: (data: Partial<WizardData>) => void;
+  attemptedToProceed?: boolean;
 }
 
 export const STEPS = [
