@@ -80,8 +80,9 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
       }
       .header p {
         margin: 0;
-        opacity: 0.9;
+        opacity: 1;
         font-size: 16px;
+        color: rgba(255, 255, 255, 0.95);
       }
       .content { 
         background: white; 
@@ -100,11 +101,12 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
         line-height: 1.5;
       }
       .credentials { 
-        background: #f3f0ff; 
+        background: #faf8ff; 
         padding: 24px; 
         border-radius: 8px; 
-        border-left: 4px solid #8a4dea; 
+        border: 1px solid #e9e5f5;
         margin: 24px 0; 
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
       }
       .credentials h3 {
         color: #0f172a;
@@ -199,13 +201,19 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
         color: #7c3aed;
       }
       .tagline {
-        background: #f3f0ff;
+        background: #faf8ff;
         border-left: 3px solid #8a4dea;
-        padding: 16px 20px;
+        padding: 20px 24px;
         margin: 24px 0;
-        font-style: italic;
+        font-style: normal;
         color: #334155;
-        border-radius: 4px;
+        border-radius: 6px;
+        line-height: 1.7;
+      }
+      .divider {
+        height: 1px;
+        background: #e2e8f0;
+        margin: 32px 0;
       }
     </style>
   </head>
@@ -244,6 +252,8 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
     <div style="text-align: center;">
       <a href="${defaultLoginUrl}" class="login-button">Login Now</a>
     </div>
+    
+    <div class="divider"></div>
     
     <h3>What's Next?</h3>
     <ol>
