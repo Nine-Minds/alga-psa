@@ -130,7 +130,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
       .login-button { 
         display: inline-block; 
         background: #8a4dea; 
-        color: white; 
+        color: #ffffff !important; 
         padding: 14px 32px; 
         text-decoration: none; 
         border-radius: 8px; 
@@ -138,10 +138,14 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
         margin: 24px 0; 
         font-family: Poppins, system-ui, sans-serif; 
         font-size: 16px;
-        transition: background-color 0.2s ease;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
       .login-button:hover {
         background: #7c3aed;
+        color: #ffffff !important;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        transform: translateY(-1px);
       }
       .warning { 
         background: #fffbeb; 
