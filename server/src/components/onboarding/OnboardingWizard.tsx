@@ -44,6 +44,7 @@ export function OnboardingWizard({
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<number, string>>({});
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  const [attemptedSteps, setAttemptedSteps] = useState<Set<number>>(new Set());
   const [wizardData, setWizardData] = useState<WizardData>({
     // Company Info
     firstName: '',
@@ -212,6 +213,9 @@ export function OnboardingWizard({
   };
 
   const handleNext = async () => {
+    // Mark the current step as attempted
+    setAttemptedSteps(prev => new Set([...prev, currentStep]));
+    
     if (currentStep < STEPS.length - 1) {
       const saved = await saveStepData(currentStep);
       if (saved) {
@@ -361,7 +365,7 @@ export function OnboardingWizard({
       case 3:
         return <ClientContactStep data={wizardData} updateData={updateData} />;
       case 4:
-        return <BillingSetupStep data={wizardData} updateData={updateData} />;
+        return <BillingSetupStep data={wizardData} updateData={updateData} attemptedToProceed={attemptedSteps.has(4)} />;
       case 5:
         return <TicketingConfigStep data={wizardData} updateData={updateData} />;
       default:
