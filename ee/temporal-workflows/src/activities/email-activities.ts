@@ -92,13 +92,22 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
         border-bottom: none; 
       }
       .footer { 
-        background: #334155; 
-        color: #e2e8f0; 
-        padding: 20px 24px; 
+        background: #1e293b; 
+        color: #cbd5e1; 
+        padding: 24px; 
         border-radius: 0 0 12px 12px; 
         text-align: center; 
-        font-size: 13px; 
-        line-height: 1.5;
+        font-size: 14px; 
+        line-height: 1.6;
+      }
+      .footer p {
+        margin: 6px 0;
+        color: #cbd5e1;
+      }
+      .footer p:last-child {
+        color: #94a3b8;
+        font-size: 13px;
+        margin-top: 16px;
       }
       .credentials { 
         background: #faf8ff; 
@@ -273,7 +282,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
   <div class="footer">
     <p>This email was sent automatically as part of your tenant creation process.</p>
     <p>If you did not request this account, please contact support immediately.</p>
-    <p style="margin-top: 12px; opacity: 0.8;">© ${new Date().getFullYear()} Nine Minds. All rights reserved.</p>
+    <p>© ${new Date().getFullYear()} Nine Minds. All rights reserved.</p>
   </div>
 </body>
 </html>`;
