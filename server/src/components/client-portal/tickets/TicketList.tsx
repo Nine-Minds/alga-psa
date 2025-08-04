@@ -291,8 +291,8 @@ export function TicketList() {
       render: (value: string, record: ITicketListItem) => (
         <div className="flex items-center gap-2">
           <div 
-            className="w-3 h-3 rounded-full border border-gray-300" 
-            style={{ backgroundColor: record.priority_color || '#6B7280' }}
+            className={`w-3 h-3 rounded-full border border-gray-300 ${!record.priority_color ? 'bg-gray-500' : ''}`}
+            style={record.priority_color ? { backgroundColor: record.priority_color } : undefined}
           />
           <span className="capitalize">{value}</span>
         </div>
