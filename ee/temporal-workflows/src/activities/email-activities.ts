@@ -239,7 +239,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
   <div class="content">
     <h2>Hello ${adminUser.firstName} ${adminUser.lastName},</h2>
     
-    <p>Congratulations! Your new account for <strong>${tenantName}</strong> has been successfully set up on Alga PSA. You have been designated as the administrator and can now access your management portal.</p>
+    <p>Congratulations! Your new account for <strong>${tenantName}</strong> has been successfully set up on Alga PSA. You have been designated as the administrator and can now access both Alga PSA and your management portal.</p>
     
     <div class="tagline">
       Say goodbye to scattered tools, manual workarounds, and overly complex systems. Alga PSA by Nine Minds brings everything together in one powerful platform — intuitive, user-focused, and built to grow with your business.
@@ -272,9 +272,8 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
     <ol>
       <li>Click the login button above or visit: <a href="${defaultLoginUrl}">${defaultLoginUrl}</a></li>
       <li>Enter your email and temporary password</li>
-      <li>Create a new secure password when prompted</li>
-      <li>Complete your profile setup</li>
-      <li>Start configuring your tenant settings</li>
+      <li>Complete the onboarding wizard, including changing your password, setting up your profile, and configuring your ticketing and billing settings</li>
+      <li>Transform your business with Alga PSA</li>
     </ol>
     
     <h3>Need Help?</h3>
@@ -285,7 +284,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
   
   <div class="footer">
     <p>This email was sent automatically as part of your tenant creation process.</p>
-    <p>If you did not request this account, please contact support immediately.</p>
+    <p>If you did not request this account, please contact support.</p>
     <p>© ${new Date().getFullYear()} Nine Minds. All rights reserved.</p>
   </div>
 </body>
