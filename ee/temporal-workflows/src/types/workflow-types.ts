@@ -69,8 +69,6 @@ export interface SendWelcomeEmailActivityInput {
     email: string;
   };
   temporaryPassword: string;
-  companyName?: string;
-  loginUrl?: string;
 }
 
 export interface SendWelcomeEmailActivityResult {
