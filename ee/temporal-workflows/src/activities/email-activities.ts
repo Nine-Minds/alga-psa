@@ -56,29 +56,173 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome to Alga PSA</title>
     <style>
-      body { font-family: Inter, system-ui, sans-serif; line-height: 1.6; color: #0f172a; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc; }
-      .header { background: #8a4dea; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
-      .content { background: white; padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-bottom: none; }
-      .footer { background: #8a4dea; color: white; padding: 15px; border-radius: 0 0 8px 8px; text-align: center; font-size: 12px; }
-      .credentials { background: #f3f0ff; padding: 20px; border-radius: 6px; border-left: 4px solid #8a4dea; margin: 20px 0; }
-      .login-button { display: inline-block; background: #8a4dea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0; font-family: Poppins, system-ui, sans-serif; }
-      .warning { background: #fffbeb; border: 1px solid #f59e0b; border-radius: 6px; padding: 15px; margin: 20px 0; color: #92400e; }
-      .code { font-family: 'Courier New', monospace; background: #f1f5f9; padding: 2px 6px; border-radius: 3px; color: #0f172a; }
-      .brand-highlight { color: #8a4dea; }
+      body { 
+        font-family: Inter, system-ui, sans-serif; 
+        line-height: 1.6; 
+        color: #0f172a; 
+        max-width: 600px; 
+        margin: 0 auto; 
+        padding: 20px; 
+        background-color: #f8fafc; 
+      }
+      .header { 
+        background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%); 
+        color: white; 
+        padding: 32px 24px; 
+        border-radius: 12px 12px 0 0; 
+        text-align: center; 
+      }
+      .header h1 {
+        font-family: Poppins, system-ui, sans-serif;
+        font-weight: 700;
+        font-size: 28px;
+        margin: 0 0 8px 0;
+      }
+      .header p {
+        margin: 0;
+        opacity: 0.9;
+        font-size: 16px;
+      }
+      .content { 
+        background: white; 
+        padding: 32px; 
+        border: 1px solid #e2e8f0; 
+        border-top: none; 
+        border-bottom: none; 
+      }
+      .footer { 
+        background: #334155; 
+        color: #e2e8f0; 
+        padding: 20px 24px; 
+        border-radius: 0 0 12px 12px; 
+        text-align: center; 
+        font-size: 13px; 
+        line-height: 1.5;
+      }
+      .credentials { 
+        background: #f3f0ff; 
+        padding: 24px; 
+        border-radius: 8px; 
+        border-left: 4px solid #8a4dea; 
+        margin: 24px 0; 
+      }
+      .credentials h3 {
+        color: #0f172a;
+        margin: 0 0 16px 0;
+        font-size: 18px;
+        font-weight: 600;
+      }
+      .credentials p {
+        margin: 8px 0;
+        color: #334155;
+      }
+      .login-button { 
+        display: inline-block; 
+        background: #8a4dea; 
+        color: white; 
+        padding: 14px 32px; 
+        text-decoration: none; 
+        border-radius: 8px; 
+        font-weight: 600; 
+        margin: 24px 0; 
+        font-family: Poppins, system-ui, sans-serif; 
+        font-size: 16px;
+        transition: background-color 0.2s ease;
+      }
+      .login-button:hover {
+        background: #7c3aed;
+      }
+      .warning { 
+        background: #fffbeb; 
+        border: 1px solid #f59e0b; 
+        border-radius: 8px; 
+        padding: 20px; 
+        margin: 24px 0; 
+      }
+      .warning h4 {
+        color: #92400e;
+        margin: 0 0 12px 0;
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .warning ul {
+        margin: 0;
+        padding-left: 20px;
+        color: #92400e;
+      }
+      .warning li {
+        margin: 4px 0;
+      }
+      .code { 
+        font-family: 'Courier New', monospace; 
+        background: #e2e8f0; 
+        padding: 4px 8px; 
+        border-radius: 4px; 
+        color: #0f172a; 
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .brand-highlight { 
+        color: #8a4dea; 
+        font-weight: 600;
+      }
+      h2 {
+        color: #0f172a;
+        font-family: Poppins, system-ui, sans-serif;
+        font-size: 24px;
+        font-weight: 600;
+        margin: 0 0 16px 0;
+      }
+      h3 {
+        color: #0f172a;
+        font-size: 18px;
+        font-weight: 600;
+        margin: 24px 0 12px 0;
+      }
+      p {
+        color: #334155;
+        margin: 0 0 16px 0;
+      }
+      ol {
+        color: #334155;
+        margin: 0 0 16px 0;
+        padding-left: 24px;
+      }
+      ol li {
+        margin: 8px 0;
+      }
+      a {
+        color: #8a4dea;
+        text-decoration: underline;
+      }
+      a:hover {
+        color: #7c3aed;
+      }
+      .tagline {
+        background: #f3f0ff;
+        border-left: 3px solid #8a4dea;
+        padding: 16px 20px;
+        margin: 24px 0;
+        font-style: italic;
+        color: #334155;
+        border-radius: 4px;
+      }
     </style>
   </head>
   <body>
     <div class="header">
-      <h1>Welcome to <span class="brand-highlight">Alga PSA</span>!</h1>
+      <h1>Welcome to Alga PSA!</h1>
       <p>Your account has been successfully created</p>
     </div>
   
   <div class="content">
     <h2>Hello ${adminUser.firstName} ${adminUser.lastName},</h2>
     
-    <p>Congratulations! Your new account for <strong>${tenantName}</strong> has been successfully set up on <span class="brand-highlight">Alga PSA</span>. You have been designated as the administrator and can now access your management portal.</p>
+    <p>Congratulations! Your new account for <strong>${tenantName}</strong> has been successfully set up on Alga PSA. You have been designated as the administrator and can now access your management portal.</p>
     
-    <p>Say goodbye to scattered tools, manual workarounds, and overly complex systems. <span class="brand-highlight">Alga PSA</span> by Nine Minds brings everything together in one powerful platform — intuitive, user-focused, and built to grow with your business.</p>
+    <div class="tagline">
+      Say goodbye to scattered tools, manual workarounds, and overly complex systems. Alga PSA by Nine Minds brings everything together in one powerful platform — intuitive, user-focused, and built to grow with your business.
+    </div>
     
     <div class="credentials">
       <h3>Your Login Credentials</h3>
@@ -119,12 +263,13 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
   <div class="footer">
     <p>This email was sent automatically as part of your tenant creation process.</p>
     <p>If you did not request this account, please contact support immediately.</p>
+    <p style="margin-top: 12px; opacity: 0.8;">© ${new Date().getFullYear()} Nine Minds. All rights reserved.</p>
   </div>
 </body>
 </html>`;
 
   const textBody = `
-  Welcome to Alga PSA!
+Welcome to Alga PSA!
 
 Hello ${adminUser.firstName} ${adminUser.lastName},
 
@@ -157,6 +302,8 @@ Welcome aboard!
 ---
 This email was sent automatically as part of your tenant creation process.
 If you did not request this account, please contact support.
+
+© ${new Date().getFullYear()} Nine Minds. All rights reserved.
 `;
 
   return { subject, htmlBody, textBody };
