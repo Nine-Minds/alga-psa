@@ -43,40 +43,42 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
   htmlBody: string;
   textBody: string;
 } {
-  const { tenantName, adminUser, temporaryPassword, companyName, loginUrl } = input;
-  const displayName = companyName || tenantName;
-  const defaultLoginUrl = loginUrl || process.env.APPLICATION_URL || 'https://your-app.com/login';
+  const { tenantName, adminUser, temporaryPassword } = input;
+  const defaultLoginUrl = process.env.APPLICATION_URL;
   
-  const subject = `Welcome to ${displayName} - Your Account is Ready`;
+  const subject = `Welcome to Alga PSA - Your Account is Ready`;
   
   const htmlBody = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to ${displayName}</title>
-  <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background: #3B82F6; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
-    .content { background: #f8f9fa; padding: 30px; border: 1px solid #e9ecef; }
-    .footer { background: #6B7280; color: white; padding: 15px; border-radius: 0 0 8px 8px; text-align: center; font-size: 12px; }
-    .credentials { background: white; padding: 20px; border-radius: 6px; border-left: 4px solid #10B981; margin: 20px 0; }
-    .login-button { display: inline-block; background: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0; }
-    .warning { background: #FEF3C7; border: 1px solid #F59E0B; border-radius: 6px; padding: 15px; margin: 20px 0; }
-    .code { font-family: 'Courier New', monospace; background: #f1f5f9; padding: 2px 6px; border-radius: 3px; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>Welcome to ${displayName}!</h1>
-    <p>Your tenant account has been successfully created</p>
-  </div>
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Alga PSA</title>
+    <style>
+      body { font-family: Inter, system-ui, sans-serif; line-height: 1.6; color: #0f172a; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc; }
+      .header { background: #8a4dea; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
+      .content { background: white; padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-bottom: none; }
+      .footer { background: #8a4dea; color: white; padding: 15px; border-radius: 0 0 8px 8px; text-align: center; font-size: 12px; }
+      .credentials { background: #f3f0ff; padding: 20px; border-radius: 6px; border-left: 4px solid #8a4dea; margin: 20px 0; }
+      .login-button { display: inline-block; background: #8a4dea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0; font-family: Poppins, system-ui, sans-serif; }
+      .warning { background: #fffbeb; border: 1px solid #f59e0b; border-radius: 6px; padding: 15px; margin: 20px 0; color: #92400e; }
+      .code { font-family: 'Courier New', monospace; background: #f1f5f9; padding: 2px 6px; border-radius: 3px; color: #0f172a; }
+      .brand-highlight { color: #8a4dea; }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Welcome to <span class="brand-highlight">Alga PSA</span>!</h1>
+      <p>Your account has been successfully created</p>
+    </div>
   
   <div class="content">
     <h2>Hello ${adminUser.firstName} ${adminUser.lastName},</h2>
     
-    <p>Congratulations! Your new tenant account for <strong>${tenantName}</strong> has been successfully set up. You have been designated as the administrator and can now access your management portal.</p>
+    <p>Congratulations! Your new account for <strong>${tenantName}</strong> has been successfully set up on <span class="brand-highlight">Alga PSA</span>. You have been designated as the administrator and can now access your management portal.</p>
+    
+    <p>Say goodbye to scattered tools, manual workarounds, and overly complex systems. <span class="brand-highlight">Alga PSA</span> by Nine Minds brings everything together in one powerful platform — intuitive, user-focused, and built to grow with your business.</p>
     
     <div class="credentials">
       <h3>Your Login Credentials</h3>
@@ -122,7 +124,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
 </html>`;
 
   const textBody = `
-Welcome to ${displayName}!
+  Welcome to Alga PSA!
 
 Hello ${adminUser.firstName} ${adminUser.lastName},
 
@@ -148,11 +150,13 @@ GETTING STARTED:
 
 Need help? Contact our support team if you have any questions.
 
+Say goodbye to scattered tools, manual workarounds, and overly complex systems. Alga PSA by Nine Minds brings everything together in one powerful platform — intuitive, user-focused, and built to grow with your business.
+
 Welcome aboard!
 
 ---
 This email was sent automatically as part of your tenant creation process.
-If you did not request this account, please contact support immediately.
+If you did not request this account, please contact support.
 `;
 
   return { subject, htmlBody, textBody };

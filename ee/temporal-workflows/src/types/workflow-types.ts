@@ -70,7 +70,6 @@ export interface SendWelcomeEmailActivityInput {
   };
   temporaryPassword: string;
   companyName?: string;
-  loginUrl?: string;
 }
 
 export interface SendWelcomeEmailActivityResult {
