@@ -17,14 +17,9 @@ const BillingPage = async () => {
       flagKey="billing-enabled"
       fallback={<div className="flex-1 flex"><FeaturePlaceholder /></div>}
     >
-      <FeatureFlagWrapper
-        flagKey="advanced-features-enabled"
-        fallback={<div className="flex-1 flex"><FeaturePlaceholder /></div>}
-      >
-        <BillingDashboard
-          initialServices={services}
-        />
-      </FeatureFlagWrapper>
+      <BillingDashboard
+        initialServices={services}
+      />
     </FeatureFlagWrapper>
   );
 };
