@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       tenant: user.tenant,
       userId: user.user_id,
       providerId: body.providerId,
-      redirectUri: effectiveRedirectUri || `${await secretProvider.getAppSecret('NEXT_PUBLIC_APP_URL')}/api/auth/${provider}/callback`,
+      redirectUri: effectiveRedirectUri || `${await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')}/api/auth/${provider}/callback`,
       timestamp: Date.now(),
       nonce: generateNonce()
     };

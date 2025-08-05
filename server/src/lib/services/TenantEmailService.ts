@@ -1,19 +1,17 @@
 import { Knex } from 'knex';
-import { createTenantKnex, runWithTenant } from '../db';
+import { createTenantKnex } from '../db';
 import { getConnection } from '../db/db';
 import { EmailProviderManager } from '../../services/email/EmailProviderManager';
 import { 
   TenantEmailSettings, 
-  EmailMessage, 
-  EmailSendResult,
-  EmailAddress
+  EmailAddress,
+  IEmailProvider
 } from '../../types/email.types';
 import logger from '@alga-psa/shared/core/logger.js';
 import { 
-  ITemplateProcessor, 
-  DatabaseTemplateProcessor,
-  EmailTemplateContent 
+  ITemplateProcessor
 } from './email/templateProcessors';
+import { BaseEmailService, BaseEmailParams, EmailSendResult } from '../email/BaseEmailService';
 
 export interface SendEmailParams {
   tenantId: string;
@@ -34,7 +32,55 @@ export interface EmailSettingsValidation {
   settings?: TenantEmailSettings;
 }
 
-export class TenantEmailService {
+export class TenantEmailService extends BaseEmailService {
+  private static instances: Map<string, TenantEmailService> = new Map();
+  private tenantId: string;
+  private providerManager: EmailProviderManager | null = null;
+
+  private constructor(tenantId: string) {
+    super();
+    this.tenantId = tenantId;
+  }
+
+  /**
+   * Get or create a singleton instance per tenant
+   */
+  public static getInstance(tenantId: string): TenantEmailService {
+    if (!TenantEmailService.instances.has(tenantId)) {
+      TenantEmailService.instances.set(tenantId, new TenantEmailService(tenantId));
+    }
+    return TenantEmailService.instances.get(tenantId)!;
+  }
+
+  protected getServiceName(): string {
+    return `TenantEmailService[${this.tenantId}]`;
+  }
+
+  protected async getEmailProvider(): Promise<IEmailProvider | null> {
+    if (!this.providerManager) {
+      const { knex } = await createTenantKnex();
+      const settings = await TenantEmailService.getTenantEmailSettings(this.tenantId, knex);
+      
+      if (!settings) {
+        logger.warn(`[${this.getServiceName()}] No email settings found`);
+        return null;
+      }
+      
+      this.providerManager = new EmailProviderManager();
+      await this.providerManager.initialize(settings);
+    }
+    
+    const providers = await this.providerManager.getAvailableProviders(this.tenantId);
+    return providers.length > 0 ? providers[0] : null;
+  }
+
+  protected getFromAddress(params?: BaseEmailParams): EmailAddress | string {
+    if (params?.from) {
+      return params.from as EmailAddress | string;
+    }
+    // Default from address will be handled by the provider
+    return { email: 'noreply@localhost', name: 'Portal Notifications' };
+  }
   /**
    * Get tenant email settings from database
    * This is the centralized method that should be used across the application
@@ -73,69 +119,27 @@ export class TenantEmailService {
 
   /**
    * Send an email with automatic provider initialization and template support
+   * @deprecated Use instance method sendEmail instead
    */
   static async sendEmail(params: SendEmailParams): Promise<EmailSendResult> {
     const { tenantId } = params;
+    const service = TenantEmailService.getInstance(tenantId);
+    await service.initialize();
     
-    try {
-      return await runWithTenant(tenantId, async () => {
-        const { knex } = await createTenantKnex();
-        
-        // Get tenant email settings
-        const tenantSettings = await this.getTenantEmailSettings(tenantId, knex);
-        
-        if (!tenantSettings) {
-          throw new Error('Email service is not configured. Please contact your administrator to set up email settings.');
-        }
-        
-        // Initialize email provider manager
-        const emailProviderManager = new EmailProviderManager();
-        await emailProviderManager.initialize(tenantSettings);
-        
-        // Process template to get content
-        const templateContent = await params.templateProcessor.process({
-          tenantId,
-          templateData: params.templateData
-        });
-        
-        const subject = templateContent.subject;
-        const htmlContent = templateContent.html;
-        const textContent = templateContent.text;
-        
-        // Normalize email address
-        const toAddress: EmailAddress = typeof params.to === 'string' 
-          ? { email: params.to }
-          : params.to;
-
-        // Create email message
-        const emailMessage: EmailMessage = {
-          from: params.from || { 
-            email: `noreply@${tenantSettings.defaultFromDomain}`,
-            name: params.fromName || 'Portal Notifications'
-          },
-          to: [toAddress],
-          cc: params.cc,
-          bcc: params.bcc,
-          subject,
-          html: htmlContent,
-          text: textContent,
-          attachments: params.attachments,
-          replyTo: params.replyTo
-        };
-        
-        // Send email using provider manager
-        const result = await emailProviderManager.sendEmail(emailMessage, tenantId);
-        
-        if (!result.success) {
-          throw new Error(`Failed to send email: ${result.error || 'Unknown error'}`);
-        }
-        
-        return result;
-      });
-    } catch (error) {
-      logger.error('[TenantEmailService] Error sending email:', error);
-      throw error;
-    }
+    // Convert params to BaseEmailParams format
+    const baseParams: BaseEmailParams = {
+      to: params.to,
+      cc: params.cc,
+      bcc: params.bcc,
+      attachments: params.attachments,
+      replyTo: params.replyTo,
+      templateProcessor: params.templateProcessor,
+      templateData: params.templateData,
+      from: params.from,
+      tenantId
+    };
+    
+    return service.sendEmail(baseParams);
   }
 
   /**

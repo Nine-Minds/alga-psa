@@ -141,7 +141,7 @@ export async function GET(request: NextRequest) {
       clientSecret = await secretProvider.getAppSecret('GOOGLE_CLIENT_SECRET') || await secretProvider.getTenantSecret(stateData.tenant, 'google_client_secret') || null;
     }
     
-    const redirectUri = stateData.redirectUri || `${await secretProvider.getAppSecret('NEXT_PUBLIC_APP_URL')}/api/auth/google/callback`;
+    const redirectUri = stateData.redirectUri || `${await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')}/api/auth/google/callback`;
 
     if (!clientId || !clientSecret) {
       console.error('Google OAuth credentials not configured');

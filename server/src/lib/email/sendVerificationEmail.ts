@@ -22,7 +22,7 @@ export async function sendVerificationEmail({
       const { knex } = await createTenantKnex();
 
       // Get the base URL from environment variable or default to localhost
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
       const verificationUrl = `${baseUrl}/auth/verify?token=${token}&registrationId=${registrationId}`;
 
       // Get both company names from their respective tables

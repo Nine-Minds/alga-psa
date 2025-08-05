@@ -1,8 +1,10 @@
 'use server'
 
-import { TenantEmailService } from '../services/TenantEmailService';
+import { getSystemEmailService } from './index';
 import { DatabaseTemplateProcessor } from '../services/email/templateProcessors';
-import { createTenantKnex, runWithTenant } from '../db';
+import { getConnection } from '../db/db';
+import { runWithTenant } from '../db/index';
+import logger from '@alga-psa/shared/core/logger.js';
 
 interface SendPortalInvitationEmailParams {
   email: string;
@@ -25,11 +27,11 @@ export async function sendPortalInvitationEmail({
   tenant,
   companyLocationEmail,
   companyLocationPhone,
-  fromName
+  fromName: _fromName
 }: SendPortalInvitationEmailParams): Promise<boolean> {
   try {
     return await runWithTenant(tenant, async () => {
-      const { knex } = await createTenantKnex();
+      const knex = await getConnection(tenant);
       
       // Prepare template data
       const templateData = {
@@ -42,23 +44,29 @@ export async function sendPortalInvitationEmail({
         companyLocationPhone: companyLocationPhone || 'Not provided'
       };
 
-      // Create database template processor
+      // Create database template processor to get the template from tenant DB
       const templateProcessor = new DatabaseTemplateProcessor(knex, 'portal-invitation');
 
-      // Use TenantEmailService to send the email
-      const result = await TenantEmailService.sendEmail({
-        tenantId: tenant,
+      // Use SystemEmailService temporarily until domain approval is implemented
+      // This ensures better deliverability using the platform's authenticated domain
+      const systemEmailService = await getSystemEmailService();
+      const result = await systemEmailService.sendEmail({
         to: email,
         templateProcessor,
         templateData,
-        fromName,
-        replyTo: companyLocationEmail ? { email: companyLocationEmail } : undefined
+        replyTo: companyLocationEmail // Company email as reply-to
       });
+
+      if (!result.success) {
+        logger.error('Failed to send portal invitation email:', result.error);
+        // Throw error to trigger transaction rollback
+        throw new Error(result.error || 'Failed to send portal invitation email');
+      }
 
       return result.success;
     });
   } catch (error) {
-    console.error('Error sending portal invitation email:', error);
+    logger.error('Error sending portal invitation email:', error);
     // Re-throw the error to ensure transaction rollback
     throw error;
   }

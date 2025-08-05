@@ -58,14 +58,14 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
     }
 
     // Validate email settings are configured for this tenant
-    const emailValidation = await TenantEmailService.validateEmailSettings(tenant);
+    // const emailValidation = await TenantEmailService.validateEmailSettings(tenant);
     
-    if (!emailValidation.valid) {
-      return { 
-        success: false, 
-        error: emailValidation.error || 'Email settings are not properly configured.'
-      };
-    }
+    // if (!emailValidation.valid) {
+    //   return { 
+    //     success: false, 
+    //     error: emailValidation.error || 'Email settings are not properly configured.'
+    //   };
+    // }
 
     // Check rate limits first
     const rateLimitResult = await checkPortalInvitationLimit(contactId);
