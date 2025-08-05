@@ -3,11 +3,7 @@ import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
 import type { Knex } from 'knex';
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { fileURLToPath, pathToFileURL } from 'url';
 
 const logger = () => Context.current().log;
 
@@ -22,49 +18,75 @@ export async function runOnboardingSeeds(tenantId: string): Promise<{ success: b
     // Get knex connection
     const knex = await getAdminConnection();
     
-    // Set the tenant ID in environment for the seeds to use
-    const originalTenantId = process.env.TENANT_ID;
-    process.env.TENANT_ID = tenantId;
-
-    // Get the onboarding seeds directory
-    const seedsDir = path.join(__dirname, '../../../server/seeds/onboarding');
-    
-    // Read all files from the directory
-    const files = await fs.readdir(seedsDir);
-    
-    // Filter and sort seed files (assuming they follow a naming convention like 01_*.cjs)
-    const seedFiles = files
-      .filter(file => file.endsWith('.cjs'))
-      .sort(); // This will sort them alphabetically, which works for numbered files
-
-    // Run each seed file
-    for (const seedFile of seedFiles) {
-      const seedPath = path.join(seedsDir, seedFile);
+    // Run all seeds in a single transaction to ensure consistency
+    await knex.transaction(async (trx: Knex.Transaction) => {
+      // Get the onboarding seeds directory
+      // Path from ee/temporal-workflows/src/db to ee/server/seeds/onboarding
+      const currentDir = path.dirname(fileURLToPath(import.meta.url));
+      const seedsDir = path.resolve(currentDir, '../../../server/seeds/onboarding');
       
-      try {
-        // Import and run the seed
-        const seedModule = await import(seedPath);
-        await seedModule.seed(knex);
-        seedsApplied.push(seedFile);
-        log.info(`Successfully ran seed: ${seedFile} for tenant ${tenantId}`);
-      } catch (error) {
-        log.error(`Failed to run seed ${seedFile}:`, error);
-        throw new Error(`Failed to run seed ${seedFile}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
-    }
+      // Read all files from the directory
+      const files = await fs.readdir(seedsDir);
+      
+      // Filter and sort seed files
+      const seedFiles = files
+        .filter(file => file.endsWith('.cjs'))
+        .sort(); // This will sort them alphabetically, which works for numbered files
 
-    // Restore original tenant ID
-    if (originalTenantId !== undefined) {
-      process.env.TENANT_ID = originalTenantId;
-    } else {
-      delete process.env.TENANT_ID;
-    }
+      // Run each seed file
+      for (const seedFile of seedFiles) {
+        const seedPath = path.join(seedsDir, seedFile);
+        
+        try {
+          // Import and run the seed with proper URL handling for Windows
+          const seedModule = await import(pathToFileURL(seedPath).href);
+          
+          // Create a modified seed function that passes tenantId
+          const modifiedSeed = async (knex: Knex | Knex.Transaction) => {
+            // Temporarily set TENANT_ID for backward compatibility
+            const originalTenantId = process.env.TENANT_ID;
+            process.env.TENANT_ID = tenantId;
+            
+            try {
+              await seedModule.seed(knex);
+            } finally {
+              // Always restore original tenant ID
+              if (originalTenantId !== undefined) {
+                process.env.TENANT_ID = originalTenantId;
+              } else {
+                delete process.env.TENANT_ID;
+              }
+            }
+          };
+          
+          await modifiedSeed(trx);
+          seedsApplied.push(seedFile);
+          log.info(`Successfully ran seed: ${seedFile} for tenant ${tenantId}`);
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          const errorStack = error instanceof Error ? error.stack : undefined;
+          log.error(`Failed to run seed ${seedFile}:`, { 
+            error: errorMessage,
+            stack: errorStack,
+            tenantId 
+          });
+          throw new Error(`Failed to run seed ${seedFile}: ${errorMessage}`);
+        }
+      }
+    });
 
     return {
       success: true,
       seedsApplied
     };
   } catch (error) {
-    throw new Error(`Failed to run onboarding seeds: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    log.error('Failed to run onboarding seeds', { 
+      error: errorMessage,
+      stack: errorStack,
+      tenantId 
+    });
+    throw new Error(`Failed to run onboarding seeds: ${errorMessage}`);
   }
 }
