@@ -18,13 +18,10 @@ export async function runOnboardingSeeds(tenantId: string): Promise<{ success: b
     // Get knex connection
     const knex = await getAdminConnection();
     
-    // Save original TENANT_ID if it exists (for tests, local dev, etc.)
-    const originalTenantId = process.env.TENANT_ID;
-    
     // Run all seeds in a single transaction to ensure consistency
     await knex.transaction(async (trx: Knex.Transaction) => {
       // Set tenant ID using PostgreSQL session variable for the entire transaction
-      // This avoids race conditions between concurrent workflows
+      // This is useful for any queries that might use current_setting('app.current_tenant')
       await trx.raw('SET LOCAL app.current_tenant = ?', [tenantId]);
       
       // Get the onboarding seeds directory
@@ -48,25 +45,8 @@ export async function runOnboardingSeeds(tenantId: string): Promise<{ success: b
           // Import and run the seed with proper URL handling for Windows
           const seedModule = await import(pathToFileURL(seedPath).href);
           
-          // Create a modified seed function that temporarily sets TENANT_ID
-          // only for backward compatibility with existing seeds
-          const modifiedSeed = async (conn: Knex | Knex.Transaction) => {
-            // Set TENANT_ID briefly for the seed execution
-            process.env.TENANT_ID = tenantId;
-            
-            try {
-              await seedModule.seed(conn);
-            } finally {
-              // Restore original value or delete if it didn't exist
-              if (originalTenantId !== undefined) {
-                process.env.TENANT_ID = originalTenantId;
-              } else {
-                delete process.env.TENANT_ID;
-              }
-            }
-          };
-          
-          await modifiedSeed(trx);
+          // Call the seed function directly with tenantId
+          await seedModule.seed(trx, tenantId);
           seedsApplied.push(seedFile);
           log.info(`Successfully ran seed: ${seedFile} for tenant ${tenantId}`);
         } catch (error) {

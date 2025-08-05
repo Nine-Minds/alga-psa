@@ -1,8 +1,8 @@
-exports.seed = async function(knex) {
-    // Get the tenant ID from environment or use all tenants
+exports.seed = async function(knex, tenantId) {
+    // Use provided tenantId or seed all tenants
     let tenants;
-    if (process.env.TENANT_ID) {
-        tenants = [{ tenant: process.env.TENANT_ID }];
+    if (tenantId) {
+        tenants = [{ tenant: tenantId }];
     } else {
         tenants = await knex('tenants').select('tenant');
         if (!tenants.length) {
