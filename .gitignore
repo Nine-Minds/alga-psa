@@ -126,6 +126,7 @@ secrets/
 .secrets
 .clinerules
 data/
+uploads/
 shared/dist
 temp_wasm_compile
 venv/
