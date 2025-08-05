@@ -4,6 +4,8 @@ export interface WizardData {
   lastName: string;
   companyName: string;
   email: string;
+  newPassword?: string;
+  confirmPassword?: string;
 
   // Team Members
   teamMembers: TeamMember[];

@@ -51,6 +51,8 @@ export function OnboardingWizard({
     lastName: '',
     companyName: '',
     email: '',
+    newPassword: '',
+    confirmPassword: '',
 
     // Team Members
     teamMembers: [{ firstName: '', lastName: '', email: '', role: 'technician' }],
@@ -105,7 +107,8 @@ export function OnboardingWizard({
             firstName: wizardData.firstName,
             lastName: wizardData.lastName,
             companyName: wizardData.companyName,
-            email: wizardData.email
+            email: wizardData.email,
+            newPassword: wizardData.newPassword
           });
           if (!companyResult.success) {
             setErrors(prev => ({ ...prev, [stepIndex]: companyResult.error || 'Failed to save company info' }));
@@ -298,8 +301,23 @@ export function OnboardingWizard({
   };
 
   const isFirstStepValid = () => {
-    const { firstName, lastName, companyName, email } = wizardData;
-    return !!(firstName && lastName && companyName && email);
+    const { firstName, lastName, companyName, email, newPassword, confirmPassword } = wizardData;
+    
+    // Basic field validation
+    if (!firstName || !lastName || !companyName || !email || !newPassword || !confirmPassword) {
+      return false;
+    }
+    
+    // Password validation
+    if (newPassword.length < 8) {
+      return false;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      return false;
+    }
+    
+    return true;
   };
 
   const isTicketingStepValid = () => {
