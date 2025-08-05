@@ -1,0 +1,2 @@
+"postgres" "${POSTGRES_PASSWORD}"
+"app_user" "${DB_PASSWORD_SERVER}"
