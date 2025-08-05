@@ -7,7 +7,7 @@ import { Label } from 'server/src/components/ui/Label';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { Mail, Shield, User } from 'lucide-react';
+import { Mail, Shield, User, Info } from 'lucide-react';
 import { IContact } from 'server/src/interfaces';
 import { 
   updateContactPortalAdminStatus, 
@@ -111,7 +111,16 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
         // Reload invitation history to show the new invitation
         await loadData();
       } else {
-        toast.error(result.error || "Failed to send invitation");
+        toast.error(
+          <div>
+            <p>{result.error || "Failed to send invitation"}</p>
+            {result.error?.includes('default location') && (
+              <p className="text-sm mt-1">
+                Configure a default location with email in Company Settings → Locations
+              </p>
+            )}
+          </div>
+        );
       }
     } catch (error) {
       console.error('Error sending portal invitation:', error);
@@ -283,6 +292,13 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
               
               <div className="border-t pt-6">
                 <div className="space-y-4">
+                <Alert className="mb-4">
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    Invitation emails will be sent from your organization's email system. 
+                    Replies will go to your company's default location email address.
+                  </AlertDescription>
+                </Alert>
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="text-sm font-medium">No Portal Access</h4>

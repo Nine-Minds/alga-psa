@@ -18,16 +18,14 @@ import {
 export interface SendEmailParams {
   tenantId: string;
   to: string | EmailAddress;
-  subject?: string;
   templateData?: Record<string, any>;
-  html?: string;
-  text?: string;
   from?: EmailAddress;
+  fromName?: string;
   cc?: EmailAddress[];
   bcc?: EmailAddress[];
   attachments?: any[];
   replyTo?: EmailAddress;
-  templateProcessor?: ITemplateProcessor;
+  templateProcessor: ITemplateProcessor;
 }
 
 export interface EmailSettingsValidation {
@@ -94,32 +92,26 @@ export class TenantEmailService {
         const emailProviderManager = new EmailProviderManager();
         await emailProviderManager.initialize(tenantSettings);
         
-        let subject = params.subject || '';
-        let htmlContent = params.html || '';
-        let textContent = params.text || '';
+        // Process template to get content
+        const templateContent = await params.templateProcessor.process({
+          tenantId,
+          templateData: params.templateData
+        });
         
-        // Process template if processor provided
-        if (params.templateProcessor) {
-          const templateContent = await params.templateProcessor.process({
-            tenantId,
-            templateData: params.templateData
-          });
-          
-          // Use template content, allowing params to override
-          subject = params.subject || templateContent.subject;
-          htmlContent = params.html || templateContent.html;
-          textContent = params.text || templateContent.text;
-        }
+        const subject = templateContent.subject;
+        const htmlContent = templateContent.html;
+        const textContent = templateContent.text;
         
         // Normalize email address
         const toAddress: EmailAddress = typeof params.to === 'string' 
           ? { email: params.to }
           : params.to;
-        
+
         // Create email message
         const emailMessage: EmailMessage = {
           from: params.from || { 
-            email: `noreply@${tenantSettings.defaultFromDomain || 'localhost'}` 
+            email: `noreply@${tenantSettings.defaultFromDomain}`,
+            name: params.fromName || 'Portal Notifications'
           },
           to: [toAddress],
           cc: params.cc,
@@ -169,7 +161,7 @@ export class TenantEmailService {
           valid: false,
           error: 'No email provider is enabled. Please enable at least one email provider in settings.'
         };
-      }
+      }    
       
       // Check if default from domain is set
       if (!settings.defaultFromDomain || settings.defaultFromDomain === 'localhost') {

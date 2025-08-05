@@ -102,6 +102,24 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
       const company = await trx('companies')
         .where({ tenant, company_id: contact.company_id })
         .first();
+      
+      // Get company's default location for contact information
+      const defaultLocation = await trx('company_locations')
+        .where({ 
+          tenant, 
+          company_id: contact.company_id,
+          is_default: true,
+          is_active: true
+        })
+        .first();
+      
+      if (!defaultLocation) {
+        throw new Error('Company must have a default location configured to send portal invitations');
+      }
+      
+      if (!defaultLocation.email) {
+        throw new Error('Company\'s default location must have a contact email configured');
+      }
 
       // Generate portal setup URL
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
@@ -117,7 +135,10 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
         companyName: company?.company_name || 'Your Company',
         portalLink: portalSetupUrl,
         expirationTime: expirationTime,
-        tenant: tenant
+        tenant: tenant,
+        companyLocationEmail: defaultLocation.email,
+        companyLocationPhone: defaultLocation.phone || 'Not provided',
+        fromName: `${company?.company_name || 'Your Company'} Portal`
       });
 
       return {

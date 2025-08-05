@@ -11,6 +11,9 @@ interface SendPortalInvitationEmailParams {
   portalLink: string;
   expirationTime: string;
   tenant: string;
+  companyLocationEmail?: string;
+  companyLocationPhone?: string;
+  fromName?: string;
 }
 
 export async function sendPortalInvitationEmail({ 
@@ -19,7 +22,10 @@ export async function sendPortalInvitationEmail({
   companyName,
   portalLink,
   expirationTime,
-  tenant 
+  tenant,
+  companyLocationEmail,
+  companyLocationPhone,
+  fromName
 }: SendPortalInvitationEmailParams): Promise<boolean> {
   try {
     return await runWithTenant(tenant, async () => {
@@ -31,7 +37,9 @@ export async function sendPortalInvitationEmail({
         companyName,
         portalLink,
         expirationTime,
-        currentYear: new Date().getFullYear()
+        currentYear: new Date().getFullYear(),
+        companyLocationEmail: companyLocationEmail || 'Not provided',
+        companyLocationPhone: companyLocationPhone || 'Not provided'
       };
 
       // Create database template processor
@@ -42,7 +50,9 @@ export async function sendPortalInvitationEmail({
         tenantId: tenant,
         to: email,
         templateProcessor,
-        templateData
+        templateData,
+        fromName,
+        replyTo: companyLocationEmail ? { email: companyLocationEmail } : undefined
       });
 
       return result.success;
