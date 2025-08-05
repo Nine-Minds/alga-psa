@@ -23,6 +23,7 @@ export interface CompanyInfoData {
   lastName: string;
   companyName: string;
   email: string;
+  newPassword?: string;
 }
 
 export interface TeamMember {
@@ -93,14 +94,21 @@ export async function saveCompanyInfo(data: CompanyInfoData): Promise<Onboarding
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Update current user with company owner information
+      const updateData: any = {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        email: data.email.toLowerCase(),
+        updated_at: new Date()
+      };
+      
+      // If new password is provided, hash and update it
+      if (data.newPassword) {
+        updateData.hashed_password = await hashPassword(data.newPassword);
+      }
+      
       await trx('users')
         .where({ user_id: currentUser.user_id, tenant })
-        .update({
-          first_name: data.firstName,
-          last_name: data.lastName,
-          email: data.email.toLowerCase(),
-          updated_at: new Date()
-        });
+        .update(updateData);
 
       // Save progress to tenant settings
       await saveTenantOnboardingProgress({

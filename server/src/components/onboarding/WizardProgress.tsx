@@ -3,6 +3,7 @@
 import React from 'react';
 import { cn } from 'server/src/lib/utils';
 import { Check } from 'lucide-react';
+import { Button } from 'server/src/components/ui/Button';
 
 interface WizardProgressProps {
   steps: string[];
@@ -31,18 +32,14 @@ export function WizardProgress({
           return (
             <React.Fragment key={step}>
               <div className="flex flex-col items-center">
-                <button
+                <Button
                   onClick={() => canNavigate && onStepClick?.(index)}
+                  id="onboarding-wizard-step-button"
                   disabled={!canNavigate}
+                  variant={isActive ? "secondary" : isCompleted ? "default" : "outline"}
+                  size="icon"
                   className={cn(
-                    "w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
-                    // Ghost style for incomplete steps
-                    !isActive && !isCompleted && "text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] border border-[rgb(var(--color-border-400))]",
-                    // Secondary style for current step
-                    isActive && "bg-[rgb(var(--color-secondary-500))] text-white hover:bg-[rgb(var(--color-secondary-600))]",
-                    // Default style for completed steps
-                    isCompleted && "bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))]",
-                    canNavigate && "cursor-pointer",
+                    "w-10 h-10 rounded-full",
                     !canNavigate && "cursor-not-allowed opacity-50"
                   )}
                 >
@@ -51,7 +48,7 @@ export function WizardProgress({
                   ) : (
                     index + 1
                   )}
-                </button>
+                </Button>
                 <span className={cn(
                   "mt-2 text-xs font-medium",
                   isActive && "text-[rgb(var(--color-secondary-600))]",
