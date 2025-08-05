@@ -22,7 +22,8 @@ export async function runOnboardingSeeds(tenantId: string): Promise<{ success: b
     await knex.transaction(async (trx: Knex.Transaction) => {
       // Set tenant ID using PostgreSQL session variable for the entire transaction
       // This is useful for any queries that might use current_setting('app.current_tenant')
-      await trx.raw('SET LOCAL app.current_tenant = ?', [tenantId]);
+      // Note: SET LOCAL doesn't support parameterized queries, but this is safe since tenantId is a UUID
+      await trx.raw(`SET LOCAL app.current_tenant = '${tenantId}'`);
       
       // Get the onboarding seeds directory
       // Path from ee/temporal-workflows/src/db to ee/server/seeds/onboarding
