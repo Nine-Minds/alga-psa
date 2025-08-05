@@ -28,9 +28,9 @@ export async function runOnboardingSeeds(tenantId: string): Promise<{ success: b
       // Read all files from the directory
       const files = await fs.readdir(seedsDir);
       
-      // Filter and sort seed files
+      // Filter and sort seed files (case-insensitive for cross-platform compatibility)
       const seedFiles = files
-        .filter(file => file.endsWith('.cjs'))
+        .filter(file => file.toLowerCase().endsWith('.cjs'))
         .sort(); // This will sort them alphabetically, which works for numbered files
 
       // Run each seed file
@@ -41,21 +41,21 @@ export async function runOnboardingSeeds(tenantId: string): Promise<{ success: b
           // Import and run the seed with proper URL handling for Windows
           const seedModule = await import(pathToFileURL(seedPath).href);
           
-          // Create a modified seed function that passes tenantId
-          const modifiedSeed = async (knex: Knex | Knex.Transaction) => {
-            // Temporarily set TENANT_ID for backward compatibility
-            const originalTenantId = process.env.TENANT_ID;
+          // Set tenant ID using PostgreSQL session variable instead of process.env
+          // This avoids race conditions between concurrent workflows
+          await trx.raw('SET LOCAL app.current_tenant = ?', [tenantId]);
+          
+          // Create a modified seed function that temporarily sets TENANT_ID
+          // only for backward compatibility with existing seeds
+          const modifiedSeed = async (conn: Knex | Knex.Transaction) => {
+            // Set TENANT_ID briefly for the seed execution
             process.env.TENANT_ID = tenantId;
             
             try {
-              await seedModule.seed(knex);
+              await seedModule.seed(conn);
             } finally {
-              // Always restore original tenant ID
-              if (originalTenantId !== undefined) {
-                process.env.TENANT_ID = originalTenantId;
-              } else {
-                delete process.env.TENANT_ID;
-              }
+              // Always clean up the env var immediately
+              delete process.env.TENANT_ID;
             }
           };
           
@@ -70,7 +70,7 @@ export async function runOnboardingSeeds(tenantId: string): Promise<{ success: b
             stack: errorStack,
             tenantId 
           });
-          throw new Error(`Failed to run seed ${seedFile}: ${errorMessage}`);
+          throw new Error(`Failed to run seed ${seedFile}: ${errorMessage}`, { cause: error as Error });
         }
       }
     });
@@ -87,6 +87,6 @@ export async function runOnboardingSeeds(tenantId: string): Promise<{ success: b
       stack: errorStack,
       tenantId 
     });
-    throw new Error(`Failed to run onboarding seeds: ${errorMessage}`);
+    throw new Error(`Failed to run onboarding seeds: ${errorMessage}`, { cause: error as Error });
   }
 }
