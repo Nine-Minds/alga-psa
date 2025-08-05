@@ -18,8 +18,15 @@ export async function runOnboardingSeeds(tenantId: string): Promise<{ success: b
     // Get knex connection
     const knex = await getAdminConnection();
     
+    // Save original TENANT_ID if it exists (for tests, local dev, etc.)
+    const originalTenantId = process.env.TENANT_ID;
+    
     // Run all seeds in a single transaction to ensure consistency
     await knex.transaction(async (trx: Knex.Transaction) => {
+      // Set tenant ID using PostgreSQL session variable for the entire transaction
+      // This avoids race conditions between concurrent workflows
+      await trx.raw('SET LOCAL app.current_tenant = ?', [tenantId]);
+      
       // Get the onboarding seeds directory
       // Path from ee/temporal-workflows/src/db to ee/server/seeds/onboarding
       const currentDir = path.dirname(fileURLToPath(import.meta.url));
@@ -41,10 +48,6 @@ export async function runOnboardingSeeds(tenantId: string): Promise<{ success: b
           // Import and run the seed with proper URL handling for Windows
           const seedModule = await import(pathToFileURL(seedPath).href);
           
-          // Set tenant ID using PostgreSQL session variable instead of process.env
-          // This avoids race conditions between concurrent workflows
-          await trx.raw('SET LOCAL app.current_tenant = ?', [tenantId]);
-          
           // Create a modified seed function that temporarily sets TENANT_ID
           // only for backward compatibility with existing seeds
           const modifiedSeed = async (conn: Knex | Knex.Transaction) => {
@@ -54,8 +57,12 @@ export async function runOnboardingSeeds(tenantId: string): Promise<{ success: b
             try {
               await seedModule.seed(conn);
             } finally {
-              // Always clean up the env var immediately
-              delete process.env.TENANT_ID;
+              // Restore original value or delete if it didn't exist
+              if (originalTenantId !== undefined) {
+                process.env.TENANT_ID = originalTenantId;
+              } else {
+                delete process.env.TENANT_ID;
+              }
             }
           };
           
