@@ -1,5 +1,7 @@
 #!/bin/sh
 set -e
+# Prevent accidental secret leakage if someone runs with set -x
+set +x
 
 # Read secrets into environment variables with shell safety
 # Use IFS= and read -r to preserve whitespace and special characters
@@ -17,11 +19,13 @@ chmod 600 /etc/pgbouncer/userlist.txt
 chown postgres:postgres /etc/pgbouncer/userlist.txt
 
 # Substitute environment variables in pgbouncer.ini
+# Set default for POSTGRES_HOST if not provided (envsubst doesn't support ${VAR:-default})
+: "${POSTGRES_HOST:=postgres}"
+export POSTGRES_HOST
 envsubst '$POSTGRES_HOST' < /etc/pgbouncer/pgbouncer.ini.template > /etc/pgbouncer/pgbouncer.ini
 
 # Clear sensitive environment variables for security
-unset POSTGRES_PASSWORD
-unset DB_PASSWORD_SERVER
+unset POSTGRES_PASSWORD DB_PASSWORD_SERVER
 
 # Start pgbouncer
 # Use standard su to switch user (target user is 'postgres' based on whoami)
