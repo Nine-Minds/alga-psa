@@ -37,6 +37,7 @@ const activities = proxyActivities<{
     companyId?: string;
     billingPlan?: string;
   }): Promise<SetupTenantDataActivityResult>;
+  run_onboarding_seeds(tenantId: string): Promise<{ success: boolean; seedsApplied: string[] }>;
   sendWelcomeEmail(input: SendWelcomeEmailActivityInput): Promise<SendWelcomeEmailActivityResult>;
   rollbackTenant(tenantId: string): Promise<void>;
   rollbackUser(userId: string, tenantId: string): Promise<void>;
@@ -69,8 +70,10 @@ export const getWorkflowStateQuery = defineQuery<TenantCreationWorkflowState>('g
  * 
  * This workflow orchestrates the creation of a new tenant, including:
  * 1. Creating the tenant record in the database
- * 2. Creating an admin user for the tenant
- * 3. Setting up initial tenant data (billing plans, default settings, etc.)
+ * 2. Running onboarding seeds (roles, permissions, tax settings)
+ * 3. Creating an admin user for the tenant
+ * 4. Setting up initial tenant data (billing plans, default settings, etc.)
+ * 5. Sending welcome email to the admin user
  * 
  * The workflow supports cancellation and provides detailed state tracking.
  */
@@ -151,9 +154,23 @@ export async function tenantCreationWorkflow(
       companyId: tenantResult.companyId 
     });
 
-    // Step 2: Create admin user
-    workflowState.step = 'creating_admin_user';
+    // Step 2: Run onboarding seeds (roles, permissions, etc.)
+    workflowState.step = 'running_onboarding_seeds';
+    workflowState.progress = 40;
+
+    if (cancelled) {
+      throw new Error(`Workflow cancelled: ${cancelReason}`);
+    }
+
+    log.info('Running onboarding seeds for tenant');
+    const seedsResult = await activities.run_onboarding_seeds(tenantResult.tenantId);
+    
     workflowState.progress = 50;
+    log.info('Onboarding seeds completed', { seedsApplied: seedsResult.seedsApplied });
+
+    // Step 3: Create admin user (now with proper roles/permissions in place)
+    workflowState.step = 'creating_admin_user';
+    workflowState.progress = 60;
 
     if (cancelled) {
       throw new Error(`Workflow cancelled: ${cancelReason}`);
@@ -171,16 +188,16 @@ export async function tenantCreationWorkflow(
     userCreated = true;
     workflowState.adminUserId = userResult.userId;
     temporaryPassword = userResult.temporaryPassword;
-    workflowState.progress = 60;
+    workflowState.progress = 70;
 
     log.info('Admin user created successfully', { 
       userId: userResult.userId, 
       roleId: userResult.roleId 
     });
 
-    // Step 3: Setup tenant data
+    // Step 4: Setup tenant data
     workflowState.step = 'setting_up_data';
-    workflowState.progress = 70;
+    workflowState.progress = 80;
 
     if (cancelled) {
       throw new Error(`Workflow cancelled: ${cancelReason}`);
@@ -194,13 +211,13 @@ export async function tenantCreationWorkflow(
       billingPlan: input.billingPlan,
     });
 
-    workflowState.progress = 85;
+    workflowState.progress = 90;
 
     log.info('Tenant data setup completed', { setupSteps: setupResult.setupSteps });
 
-    // Step 4: Send welcome email
+    // Step 5: Send welcome email
     workflowState.step = 'sending_welcome_email';
-    workflowState.progress = 90;
+    workflowState.progress = 95;
 
     if (cancelled) {
       throw new Error(`Workflow cancelled: ${cancelReason}`);
