@@ -1,6 +1,6 @@
 /**
  * Distribute companies and contacts tables together
- * Handles circular dependency by temporarily dropping and recreating foreign keys
+ * Handles circular dependency and all foreign key constraints
  */
 
 exports.up = async function(knex) {
@@ -16,61 +16,148 @@ exports.up = async function(knex) {
     return;
   }
 
-  console.log('Distributing companies and contacts tables (handling circular dependency)...');
+  console.log('Distributing companies and contacts tables (handling all dependencies)...');
   
   try {
-    // Step 0: First make invoice_templates a reference table if it exists
-    console.log('  Step 0: Creating reference table for invoice_templates...');
+    // Step 0: First create reference tables for lookup/configuration tables
+    console.log('  Step 0: Creating reference tables for lookup data...');
     
-    const invoiceTemplatesExists = await knex.raw(`
-      SELECT EXISTS (
-        SELECT 1 FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = 'invoice_templates'
-      ) as exists
-    `);
+    const referenceTables = [
+      'invoice_templates',
+      'tax_regions',
+      'countries',  // If exists
+      'currencies', // If exists
+    ];
     
-    if (invoiceTemplatesExists.rows[0].exists) {
-      const invoiceTemplatesDistributed = await knex.raw(`
+    for (const tableName of referenceTables) {
+      const tableExists = await knex.raw(`
         SELECT EXISTS (
-          SELECT 1 FROM pg_dist_partition 
-          WHERE logicalrelid = 'invoice_templates'::regclass
-        ) as distributed
-      `);
+          SELECT 1 FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = ?
+        ) as exists
+      `, [tableName]);
       
-      if (!invoiceTemplatesDistributed.rows[0].distributed) {
-        await knex.raw(`SELECT create_reference_table('invoice_templates')`);
-        console.log('    ✓ Created invoice_templates as reference table');
-      } else {
-        console.log('    - invoice_templates already distributed');
+      if (tableExists.rows[0].exists) {
+        const isDistributed = await knex.raw(`
+          SELECT EXISTS (
+            SELECT 1 FROM pg_dist_partition 
+            WHERE logicalrelid = ?::regclass
+          ) as distributed
+        `, [tableName]);
+        
+        if (!isDistributed.rows[0].distributed) {
+          try {
+            await knex.raw(`SELECT create_reference_table('${tableName}')`);
+            console.log(`    ✓ Created ${tableName} as reference table`);
+          } catch (e) {
+            console.log(`    - Could not create ${tableName} as reference table: ${e.message}`);
+          }
+        } else {
+          console.log(`    - ${tableName} already distributed`);
+        }
       }
     }
     
-    // Step 1: Drop the foreign key constraint from companies to contacts
-    console.log('  Step 1: Dropping foreign key constraints to break circular dependency...');
+    // Step 1: Store all foreign key constraints we need to drop
+    console.log('  Step 1: Identifying foreign key constraints to temporarily drop...');
     
-    // Check if the foreign key exists before trying to drop it
-    const fkExists = await knex.raw(`
+    const constraintsToDrop = [
+      // Companies FK to contacts (circular dependency)
+      'companies_tenant_billing_contact_id_foreign',
+      // Companies FK to documents
+      'companies_tenant_notes_document_id_foreign',
+      // Companies FK to users (account_manager)
+      'fk_companies_account_manager',
+      // Companies FK to tax_regions (if not made reference table)
+      'companies_tenant_region_code_fkey',
+      // Contacts FK to companies (circular dependency)
+      'contacts_tenant_company_id_foreign'
+    ];
+    
+    const droppedConstraints = [];
+    
+    // Step 2: Drop the foreign key constraints
+    console.log('  Step 2: Dropping foreign key constraints to break dependencies...');
+    
+    for (const constraintName of constraintsToDrop) {
+      try {
+        // Check which table has this constraint
+        const constraintInfo = await knex.raw(`
+          SELECT table_name 
+          FROM information_schema.table_constraints 
+          WHERE constraint_name = ? 
+          AND constraint_type = 'FOREIGN KEY'
+          AND table_schema = 'public'
+        `, [constraintName]);
+        
+        if (constraintInfo.rows.length > 0) {
+          const tableName = constraintInfo.rows[0].table_name;
+          
+          // Store constraint definition for recreation
+          const constraintDef = await knex.raw(`
+            SELECT 
+              tc.table_name,
+              tc.constraint_name,
+              string_agg(kcu.column_name, ', ' ORDER BY kcu.ordinal_position) AS columns,
+              ccu.table_name AS foreign_table,
+              string_agg(ccu.column_name, ', ' ORDER BY kcu.ordinal_position) AS foreign_columns
+            FROM information_schema.table_constraints tc
+            JOIN information_schema.key_column_usage kcu 
+              ON tc.constraint_name = kcu.constraint_name
+              AND tc.table_schema = kcu.table_schema
+            JOIN information_schema.constraint_column_usage ccu
+              ON tc.constraint_name = ccu.constraint_name
+              AND tc.table_schema = ccu.table_schema
+            WHERE tc.constraint_name = ?
+              AND tc.table_schema = 'public'
+            GROUP BY tc.table_name, tc.constraint_name, ccu.table_name
+          `, [constraintName]);
+          
+          if (constraintDef.rows.length > 0) {
+            droppedConstraints.push(constraintDef.rows[0]);
+            await knex.raw(`ALTER TABLE ${tableName} DROP CONSTRAINT ${constraintName}`);
+            console.log(`    ✓ Dropped ${constraintName} from ${tableName}`);
+          }
+        }
+      } catch (e) {
+        console.log(`    - Could not drop ${constraintName}: ${e.message}`);
+      }
+    }
+    
+    // Step 3: Distribute documents table first (if exists) since companies references it
+    console.log('  Step 3: Distributing documents table (if exists)...');
+    
+    const documentsExists = await knex.raw(`
       SELECT EXISTS (
-        SELECT 1 FROM information_schema.table_constraints 
-        WHERE constraint_type = 'FOREIGN KEY' 
-        AND table_name = 'companies' 
-        AND constraint_name = 'companies_tenant_billing_contact_id_foreign'
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'documents'
       ) as exists
     `);
     
-    if (fkExists.rows[0].exists) {
-      await knex.raw(`
-        ALTER TABLE companies 
-        DROP CONSTRAINT companies_tenant_billing_contact_id_foreign
+    if (documentsExists.rows[0].exists) {
+      const documentsDistributed = await knex.raw(`
+        SELECT EXISTS (
+          SELECT 1 FROM pg_dist_partition 
+          WHERE logicalrelid = 'documents'::regclass
+        ) as distributed
       `);
-      console.log('    ✓ Dropped companies → contacts foreign key');
-    } else {
-      console.log('    - Foreign key already dropped or does not exist');
+      
+      if (!documentsDistributed.rows[0].distributed) {
+        try {
+          await knex.raw(`SELECT create_distributed_table('documents', 'tenant')`);
+          console.log('    ✓ Distributed documents table');
+        } catch (e) {
+          console.log(`    - Could not distribute documents: ${e.message}`);
+        }
+      } else {
+        console.log('    - documents table already distributed');
+      }
     }
     
-    // Step 2: Distribute companies table
-    console.log('  Step 2: Distributing companies table...');
+    // Step 4: Distribute companies table
+    console.log('  Step 4: Distributing companies table...');
     
     const companiesDistributed = await knex.raw(`
       SELECT EXISTS (
@@ -86,8 +173,8 @@ exports.up = async function(knex) {
       console.log('    - Companies table already distributed');
     }
     
-    // Step 3: Distribute contacts table
-    console.log('  Step 3: Distributing contacts table...');
+    // Step 5: Distribute contacts table
+    console.log('  Step 5: Distributing contacts table...');
     
     const contactsDistributed = await knex.raw(`
       SELECT EXISTS (
@@ -103,43 +190,43 @@ exports.up = async function(knex) {
       console.log('    - Contacts table already distributed');
     }
     
-    // Step 4: Recreate the foreign key constraint
-    console.log('  Step 4: Recreating foreign key constraint...');
+    // Step 6: Recreate the foreign key constraints
+    console.log('  Step 6: Recreating foreign key constraints...');
     
-    // Check if we need to recreate the constraint
-    const fkExistsAfter = await knex.raw(`
-      SELECT EXISTS (
-        SELECT 1 FROM information_schema.table_constraints 
-        WHERE constraint_type = 'FOREIGN KEY' 
-        AND table_name = 'companies' 
-        AND constraint_name = 'companies_tenant_billing_contact_id_foreign'
-      ) as exists
-    `);
-    
-    if (!fkExistsAfter.rows[0].exists) {
-      // Check if billing_contact_id column exists
-      const columnExists = await knex.raw(`
-        SELECT EXISTS (
-          SELECT 1 FROM information_schema.columns 
-          WHERE table_name = 'companies' 
-          AND column_name = 'billing_contact_id'
-        ) as exists
-      `);
-      
-      if (columnExists.rows[0].exists) {
-        await knex.raw(`
-          ALTER TABLE companies 
-          ADD CONSTRAINT companies_tenant_billing_contact_id_foreign 
-          FOREIGN KEY (tenant, billing_contact_id) 
-          REFERENCES contacts(tenant, contact_name_id)
-          ON DELETE SET NULL
-        `);
-        console.log('    ✓ Recreated companies → contacts foreign key');
-      } else {
-        console.log('    - billing_contact_id column does not exist, skipping FK recreation');
+    for (const constraint of droppedConstraints) {
+      try {
+        const { table_name, constraint_name, columns, foreign_table, foreign_columns } = constraint;
+        
+        // Check if both tables involved are distributed or reference tables
+        const tableDistributed = await knex.raw(`
+          SELECT EXISTS (
+            SELECT 1 FROM pg_dist_partition 
+            WHERE logicalrelid = ?::regclass
+          ) as distributed
+        `, [table_name]);
+        
+        const foreignTableDistributed = await knex.raw(`
+          SELECT EXISTS (
+            SELECT 1 FROM pg_dist_partition 
+            WHERE logicalrelid = ?::regclass
+          ) as distributed
+        `, [foreign_table]);
+        
+        if (tableDistributed.rows[0].distributed && foreignTableDistributed.rows[0].distributed) {
+          await knex.raw(`
+            ALTER TABLE ${table_name} 
+            ADD CONSTRAINT ${constraint_name} 
+            FOREIGN KEY (${columns}) 
+            REFERENCES ${foreign_table}(${foreign_columns})
+            ON DELETE SET NULL
+          `);
+          console.log(`    ✓ Recreated ${constraint_name}`);
+        } else {
+          console.log(`    - Skipped ${constraint_name} (tables not both distributed)`);
+        }
+      } catch (e) {
+        console.log(`    - Could not recreate constraint ${constraint.constraint_name}: ${e.message}`);
       }
-    } else {
-      console.log('    - Foreign key already exists');
     }
     
     console.log('  ✓ Successfully distributed companies and contacts tables');
@@ -166,33 +253,24 @@ exports.down = async function(knex) {
   console.log('Undistributing companies and contacts tables...');
   
   try {
-    // Undistribute contacts first (reverse order)
-    const contactsDistributed = await knex.raw(`
-      SELECT EXISTS (
-        SELECT 1 FROM pg_dist_partition 
-        WHERE logicalrelid = 'contacts'::regclass
-      ) as distributed
-    `);
+    // Undistribute in reverse order
+    const tablesToUndistribute = ['contacts', 'companies', 'documents'];
     
-    if (contactsDistributed.rows[0].distributed) {
-      await knex.raw(`SELECT undistribute_table('contacts')`);
-      console.log('  ✓ Undistributed contacts table');
-    }
-    
-    // Undistribute companies
-    const companiesDistributed = await knex.raw(`
-      SELECT EXISTS (
-        SELECT 1 FROM pg_dist_partition 
-        WHERE logicalrelid = 'companies'::regclass
-      ) as distributed
-    `);
-    
-    if (companiesDistributed.rows[0].distributed) {
-      await knex.raw(`SELECT undistribute_table('companies')`);
-      console.log('  ✓ Undistributed companies table');
+    for (const tableName of tablesToUndistribute) {
+      const isDistributed = await knex.raw(`
+        SELECT EXISTS (
+          SELECT 1 FROM pg_dist_partition 
+          WHERE logicalrelid = ?::regclass
+        ) as distributed
+      `, [tableName]);
+      
+      if (isDistributed.rows[0].distributed) {
+        await knex.raw(`SELECT undistribute_table('${tableName}')`);
+        console.log(`  ✓ Undistributed ${tableName} table`);
+      }
     }
     
   } catch (error) {
-    console.error(`  ✗ Failed to undistribute companies/contacts: ${error.message}`);
+    console.error(`  ✗ Failed to undistribute: ${error.message}`);
   }
 };
