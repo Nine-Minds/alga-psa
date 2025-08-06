@@ -1,6 +1,6 @@
 /**
- * Distribute company-related tables
- * These tables depend on tenants and users being distributed first
+ * Distribute users table and related tables
+ * Contacts are now handled with companies in the previous migration
  */
 
 exports.up = async function(knex) {
@@ -16,7 +16,7 @@ exports.up = async function(knex) {
     return;
   }
 
-  console.log('Distributing company tables...');
+  console.log('Distributing users table and related tables...');
   
   // Helper function to safely distribute a table
   async function distributeTable(tableName, distributionColumn = 'tenant') {
@@ -48,7 +48,7 @@ exports.up = async function(knex) {
         return true;
       }
       
-      // Distribute the table with colocation to ensure JOINs work
+      // Distribute the table
       await knex.raw(`SELECT create_distributed_table('${tableName}', '${distributionColumn}')`);
       console.log(`  ✓ Distributed table: ${tableName} on column: ${distributionColumn}`);
       return true;
@@ -58,47 +58,16 @@ exports.up = async function(knex) {
     }
   }
 
-  // Companies and related tables
-  await distributeTable('companies', 'tenant');
-  // contacts moved to 20250805000001 as users depends on it
-  await distributeTable('company_locations', 'tenant');
-  await distributeTable('company_billing_settings', 'tenant');
-  await distributeTable('company_billing_cycles', 'tenant');
-  await distributeTable('company_tax_settings', 'tenant');
-  await distributeTable('company_tax_rates', 'tenant');
-  await distributeTable('pending_registrations', 'tenant');
-  await distributeTable('payment_methods', 'tenant');
-  await distributeTable('inbound_ticket_defaults', 'tenant');
+  // Distribute users (now that contacts is distributed in previous migration)
+  await distributeTable('users');
   
-  // Now we can create company_email_settings as a reference table since companies is distributed
-  try {
-    const tableExists = await knex.raw(`
-      SELECT EXISTS (
-        SELECT 1 FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = 'company_email_settings'
-      ) as exists
-    `);
-    
-    if (tableExists.rows[0].exists) {
-      const isDistributed = await knex.raw(`
-        SELECT EXISTS (
-          SELECT 1 FROM pg_dist_partition 
-          WHERE logicalrelid = 'company_email_settings'::regclass
-        ) as distributed
-      `);
-      
-      if (!isDistributed.rows[0].distributed) {
-        await knex.raw(`SELECT create_reference_table('company_email_settings')`);
-        console.log(`  ✓ Created reference table: company_email_settings`);
-      }
-    }
-  } catch (error) {
-    console.error(`  ✗ Failed to create reference table company_email_settings: ${error.message}`);
-    throw error;
-  }
+  // Then tables that depend on users
+  await distributeTable('sessions');
+  await distributeTable('user_roles');
+  await distributeTable('user_preferences');
+  await distributeTable('user_notification_preferences');
   
-  console.log('Company tables distributed successfully');
+  console.log('Users table and related tables distributed successfully');
 };
 
 exports.down = async function(knex) {
@@ -110,12 +79,12 @@ exports.down = async function(knex) {
   `);
   
   if (!citusEnabled.rows[0].enabled) {
+    console.log('Citus not enabled, nothing to undo');
     return;
   }
 
-  console.log('Undistributing company tables...');
+  console.log('Undistributing users table and related tables...');
   
-  // Helper function to safely undistribute a table
   async function undistributeTable(tableName) {
     try {
       const isDistributed = await knex.raw(`
@@ -128,9 +97,8 @@ exports.down = async function(knex) {
       if (isDistributed.rows[0].distributed) {
         await knex.raw(`SELECT undistribute_table('${tableName}')`);
         console.log(`  ✓ Undistributed table: ${tableName}`);
-        return true;
       }
-      return false;
+      return true;
     } catch (error) {
       console.error(`  ✗ Failed to undistribute table ${tableName}: ${error.message}`);
       return false;
@@ -138,15 +106,9 @@ exports.down = async function(knex) {
   }
 
   // Undistribute in reverse order
-  await undistributeTable('inbound_ticket_defaults');
-  await undistributeTable('payment_methods');
-  await undistributeTable('pending_registrations');
-  await undistributeTable('company_email_settings');
-  await undistributeTable('company_tax_rates');
-  await undistributeTable('company_tax_settings');
-  await undistributeTable('company_billing_cycles');
-  await undistributeTable('company_billing_settings');
-  await undistributeTable('company_locations');
-  // contacts handled in 20250805000001
-  await undistributeTable('companies');
+  await undistributeTable('user_notification_preferences');
+  await undistributeTable('user_preferences');
+  await undistributeTable('user_roles');
+  await undistributeTable('sessions');
+  await undistributeTable('users');
 };
