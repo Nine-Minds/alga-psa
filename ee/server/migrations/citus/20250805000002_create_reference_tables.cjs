@@ -23,11 +23,8 @@ exports.up = async function(knex) {
     // List of reference tables that need to be created early
     // These are lookup/configuration tables that are shared across all tenants
     const referenceTables = [
-      // Document-related tables
+      // Document-related tables (only truly shared ones)
       'shared_document_types',
-      'document_types',
-      'document_categories',
-      'document_statuses',
       
       // Standard lookup tables
       'countries',
@@ -121,11 +118,8 @@ exports.down = async function(knex) {
   
   try {
     const tablesToUndistribute = [
-      // Document-related tables
+      // Document-related tables (only truly shared ones)
       'shared_document_types',
-      'document_types',
-      'document_categories',
-      'document_statuses',
       
       // Standard lookup tables
       'countries',
