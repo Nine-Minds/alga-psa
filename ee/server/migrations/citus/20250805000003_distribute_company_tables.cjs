@@ -49,7 +49,7 @@ exports.up = async function(knex) {
       }
       
       // Distribute the table with colocation to ensure JOINs work
-      await knex.raw(`SELECT create_distributed_table('${tableName}', '${distributionColumn}', colocate_with => 'tenants')`);
+      await knex.raw(`SELECT create_distributed_table('${tableName}', '${distributionColumn}')`);
       console.log(`  ✓ Distributed table: ${tableName} on column: ${distributionColumn}`);
       return true;
     } catch (error) {
@@ -60,7 +60,7 @@ exports.up = async function(knex) {
 
   // Companies and related tables
   await distributeTable('companies', 'tenant');
-  await distributeTable('contacts', 'tenant');
+  // contacts moved to 20250805000001 as users depends on it
   await distributeTable('company_locations', 'tenant');
   await distributeTable('company_billing_settings', 'tenant');
   await distributeTable('company_billing_cycles', 'tenant');
@@ -147,6 +147,6 @@ exports.down = async function(knex) {
   await undistributeTable('company_billing_cycles');
   await undistributeTable('company_billing_settings');
   await undistributeTable('company_locations');
-  await undistributeTable('contacts');
+  // contacts handled in 20250805000001
   await undistributeTable('companies');
 };

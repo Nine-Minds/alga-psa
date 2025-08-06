@@ -48,8 +48,8 @@ exports.up = async function(knex) {
         return true;
       }
       
-      // Distribute the table, colocate with tenants
-      await knex.raw(`SELECT create_distributed_table('${tableName}', '${distributionColumn}', colocate_with => 'tenants')`);
+      // Distribute the table
+      await knex.raw(`SELECT create_distributed_table('${tableName}', '${distributionColumn}')`);
       console.log(`  ✓ Distributed table: ${tableName} on column: ${distributionColumn}`);
       return true;
     } catch (error) {
@@ -59,7 +59,11 @@ exports.up = async function(knex) {
   }
 
   // Tenants should already be distributed by 20250805000000
-  // Step 1: Distribute users table (depends on tenants)
+  
+  // Step 1: Distribute contacts first (users depends on it)
+  await distributeTable('contacts', 'tenant');
+  
+  // Step 2: Distribute users table (depends on tenants and contacts)
   await distributeTable('users', 'tenant');
   
   // Step 3: Distribute sessions (depends on users)
@@ -123,4 +127,5 @@ exports.down = async function(knex) {
   await undistributeTable('roles');
   await undistributeTable('sessions');
   await undistributeTable('users');
+  await undistributeTable('contacts');
 };
