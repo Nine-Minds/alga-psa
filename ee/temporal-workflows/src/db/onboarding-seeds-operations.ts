@@ -31,10 +31,9 @@ export async function runOnboardingSeeds(tenantId: string): Promise<{ success: b
       
       let seedsDir: string;
       if (isRunningFromDist) {
-        // Running from dist - seeds are copied to dist/seeds/onboarding
-        const currentDir = path.dirname(fileURLToPath(currentFileUrl));
-        // From dist/ee/temporal-workflows/src/db to dist/seeds/onboarding
-        seedsDir = path.resolve(currentDir, '../../../../seeds/onboarding');
+        // Running from dist - seeds are copied to dist/seeds/onboarding by Docker
+        // This assumes we're running in the container where working directory is /app/ee/temporal-workflows
+        seedsDir = path.resolve(process.cwd(), 'dist/seeds/onboarding');
       } else {
         // Running from source (development)
         const currentDir = path.dirname(fileURLToPath(currentFileUrl));
