@@ -19,6 +19,33 @@ exports.up = async function(knex) {
   console.log('Distributing companies and contacts tables (handling circular dependency)...');
   
   try {
+    // Step 0: First make invoice_templates a reference table if it exists
+    console.log('  Step 0: Creating reference table for invoice_templates...');
+    
+    const invoiceTemplatesExists = await knex.raw(`
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'invoice_templates'
+      ) as exists
+    `);
+    
+    if (invoiceTemplatesExists.rows[0].exists) {
+      const invoiceTemplatesDistributed = await knex.raw(`
+        SELECT EXISTS (
+          SELECT 1 FROM pg_dist_partition 
+          WHERE logicalrelid = 'invoice_templates'::regclass
+        ) as distributed
+      `);
+      
+      if (!invoiceTemplatesDistributed.rows[0].distributed) {
+        await knex.raw(`SELECT create_reference_table('invoice_templates')`);
+        console.log('    ✓ Created invoice_templates as reference table');
+      } else {
+        console.log('    - invoice_templates already distributed');
+      }
+    }
+    
     // Step 1: Drop the foreign key constraint from companies to contacts
     console.log('  Step 1: Dropping foreign key constraints to break circular dependency...');
     
