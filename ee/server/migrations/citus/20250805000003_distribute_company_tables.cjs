@@ -70,6 +70,34 @@ exports.up = async function(knex) {
   await distributeTable('payment_methods', 'tenant');
   await distributeTable('inbound_ticket_defaults', 'tenant');
   
+  // Now we can create company_email_settings as a reference table since companies is distributed
+  try {
+    const tableExists = await knex.raw(`
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'company_email_settings'
+      ) as exists
+    `);
+    
+    if (tableExists.rows[0].exists) {
+      const isDistributed = await knex.raw(`
+        SELECT EXISTS (
+          SELECT 1 FROM pg_dist_partition 
+          WHERE logicalrelid = 'company_email_settings'::regclass
+        ) as distributed
+      `);
+      
+      if (!isDistributed.rows[0].distributed) {
+        await knex.raw(`SELECT create_reference_table('company_email_settings')`);
+        console.log(`  ✓ Created reference table: company_email_settings`);
+      }
+    }
+  } catch (error) {
+    console.error(`  ✗ Failed to create reference table company_email_settings: ${error.message}`);
+    throw error;
+  }
+  
   console.log('Company tables distributed successfully');
 };
 
@@ -113,6 +141,7 @@ exports.down = async function(knex) {
   await undistributeTable('inbound_ticket_defaults');
   await undistributeTable('payment_methods');
   await undistributeTable('pending_registrations');
+  await undistributeTable('company_email_settings');
   await undistributeTable('company_tax_rates');
   await undistributeTable('company_tax_settings');
   await undistributeTable('company_billing_cycles');
