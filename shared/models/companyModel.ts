@@ -7,6 +7,7 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
+import { ICompany } from '../../server/src/interfaces/company.interfaces';
 
 // =============================================================================
 // VALIDATION SCHEMAS
@@ -105,12 +106,7 @@ export interface UpdateCompanyInput {
   plan_id?: string;
 }
 
-export interface CreateCompanyOutput {
-  company_id: string;
-  company_name: string;
-  tenant: string;
-  created_at: string;
-}
+// CreateCompanyOutput removed - now returns ICompany directly
 
 export interface CompanyCreationOptions {
   skipTaxSettings?: boolean;
@@ -236,60 +232,91 @@ export class CompanyModel {
 
   /**
    * Create default tax settings for a company
+   * Delegates to TaxService for consistency with existing implementation
    */
   static async createDefaultTaxSettings(
     companyId: string,
     tenant: string,
     trx: Knex.Transaction
   ): Promise<void> {
-    const taxRateId = uuidv4();
-    const now = new Date().toISOString();
-    
-    await trx('tax_rates').insert({
-      tax_rate_id: taxRateId,
-      tenant,
-      rate: 0,
-      name: 'Default Tax',
-      description: 'Default tax rate',
-      created_at: now,
-      updated_at: now
-    });
+    // Get the first active tax rate to use as the default
+    const defaultTaxRate = await trx('tax_rates')
+      .where('tenant', tenant)
+      .andWhere('is_active', true)
+      .orderBy('created_at', 'asc')
+      .first();
 
-    await trx('company_tax_rate').insert({
+    if (!defaultTaxRate) {
+      // Create a default tax rate if none exists
+      const taxRateId = uuidv4();
+      const now = new Date().toISOString();
+      
+      await trx('tax_rates').insert({
+        tax_rate_id: taxRateId,
+        tenant,
+        rate: 0,
+        name: 'Default Tax',
+        description: 'Default tax rate',
+        is_active: true,
+        created_at: now,
+        updated_at: now
+      });
+
+      // Link the tax rate to the company
+      await trx('company_tax_rate').insert({
+        company_id: companyId,
+        tax_rate_id: taxRateId,
+        tenant
+      });
+    } else {
+      // Link existing default tax rate to the company
+      await trx('company_tax_rate').insert({
+        company_id: companyId,
+        tax_rate_id: defaultTaxRate.tax_rate_id,
+        tenant
+      });
+    }
+
+    // Create default company tax settings
+    await trx('company_tax_settings').insert({
       company_id: companyId,
-      tax_rate_id: taxRateId,
-      tenant
+      tenant,
+      is_reverse_charge_applicable: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     });
   }
 
   /**
    * Add company email setting (domain suffix)
+   * Extracted from server/src/lib/actions/company-settings/emailSettings.ts
    */
   static async addCompanyEmailSetting(
     companyId: string,
     domain: string,
     tenant: string,
-    trx: Knex.Transaction
+    trx: Knex.Transaction,
+    selfRegistrationEnabled: boolean = true
   ): Promise<void> {
     const settingId = uuidv4();
     const now = new Date().toISOString();
     
-    // Check if setting already exists
-    const existing = await trx('company_settings')
+    // Check if suffix already exists for this company
+    const existing = await trx('company_email_settings')
       .where({
-        company_id: companyId,
         tenant,
-        setting_type: 'email_suffix'
+        company_id: companyId,
+        email_suffix: domain
       })
       .first();
     
     if (!existing) {
-      await trx('company_settings').insert({
+      await trx('company_email_settings').insert({
         setting_id: settingId,
         company_id: companyId,
         tenant,
-        setting_type: 'email_suffix',
-        setting_value: domain,
+        email_suffix: domain,
+        self_registration_enabled: selfRegistrationEnabled,
         created_at: now,
         updated_at: now
       });
@@ -298,13 +325,14 @@ export class CompanyModel {
 
   /**
    * Create a new company with complete validation
+   * Core logic extracted from server/src/lib/actions/company-actions/companyActions.ts
    */
   static async createCompany(
     input: CreateCompanyInput,
     tenant: string,
     trx: Knex.Transaction,
     options: CompanyCreationOptions = {}
-  ): Promise<CreateCompanyOutput> {
+  ): Promise<ICompany> {
     // Validate input
     const validation = this.validateCreateCompanyInput(input);
     if (!validation.valid) {
@@ -358,23 +386,42 @@ export class CompanyModel {
     
     // Create default tax settings if not skipped
     if (!options.skipTaxSettings) {
-      await this.createDefaultTaxSettings(company.company_id, tenant, trx);
-    }
-    
-    // Add website domain as email suffix if available and not skipped
-    if (!options.skipEmailSuffix && companyData.url) {
-      const domain = this.extractDomainFromUrl(companyData.url);
-      if (domain) {
-        await this.addCompanyEmailSetting(company.company_id, domain, tenant, trx);
+      try {
+        await this.createDefaultTaxSettings(company.company_id, tenant, trx);
+      } catch (error) {
+        // Log but don't fail company creation if tax settings fail
+        console.error('Failed to create default tax settings:', error);
       }
     }
     
-    return {
-      company_id: company.company_id,
-      company_name: company.company_name,
-      tenant,
-      created_at: now.toISOString()
-    };
+    // Add website domain as email suffix if available and not skipped
+    if (!options.skipEmailSuffix) {
+      const websiteUrl = company.url || company.properties?.website;
+      if (websiteUrl) {
+        const domain = this.extractDomainFromUrl(websiteUrl);
+        if (domain) {
+          try {
+            await this.addCompanyEmailSetting(
+              company.company_id, 
+              domain, 
+              tenant, 
+              trx,
+              true // self-registration enabled by default
+            );
+          } catch (error) {
+            // Log error but don't fail company creation
+            console.error('Failed to add website domain as email suffix:', error);
+          }
+        }
+      }
+    }
+    
+    // Parse properties back to object if it was stringified
+    if (company.properties && typeof company.properties === 'string') {
+      company.properties = JSON.parse(company.properties);
+    }
+    
+    return company as ICompany;
   }
 
   /**
