@@ -5,10 +5,11 @@
  */
 
 import { Context } from '@temporalio/activity';
-import { getAdminConnection } from '../db/admin-operations';
+import { getAdminConnection } from '@alga-psa/shared/db/admin';
 import { CompanyModel } from '@alga-psa/shared/models/companyModel';
 import { ContactModel } from '@alga-psa/shared/models/contactModel';
 import { TagModel } from '@alga-psa/shared/models/tagModel';
+import { Knex } from 'knex';
 
 /**
  * Create a customer company in the nineminds tenant
@@ -28,7 +29,7 @@ export async function createCustomerCompanyActivity(input: {
       ninemindsTenant
     });
     
-    const result = await adminKnex.transaction(async (trx) => {
+    const result = await adminKnex.transaction(async (trx: Knex.Transaction<any, any[]>) => {
       return await CompanyModel.createCompany(
         {
           company_name: input.tenantName,
@@ -81,7 +82,7 @@ export async function createCustomerContactActivity(input: {
       companyId: input.companyId
     });
     
-    const result = await adminKnex.transaction(async (trx) => {
+    const result = await adminKnex.transaction(async (trx: Knex.Transaction<any, any[]>) => {
       return await ContactModel.createContact(
         {
           full_name: `${input.firstName} ${input.lastName}`,
@@ -128,7 +129,7 @@ export async function tagCustomerCompanyActivity(input: {
       tagText: input.tagText
     });
     
-    const result = await adminKnex.transaction(async (trx) => {
+    const result = await adminKnex.transaction(async (trx: Knex.Transaction<any, any[]>) => {
       return await TagModel.createTag(
         {
           tag_text: input.tagText,
@@ -173,7 +174,7 @@ export async function deleteCustomerCompanyActivity(input: {
       companyId: input.companyId
     });
     
-    await adminKnex.transaction(async (trx) => {
+    await adminKnex.transaction(async (trx: Knex.Transaction<any, any[]>) => {
       // Delete company (contacts and tags will cascade)
       await trx('companies')
         .where({
@@ -211,7 +212,7 @@ export async function deleteCustomerContactActivity(input: {
       contactId: input.contactId
     });
     
-    await adminKnex.transaction(async (trx) => {
+    await adminKnex.transaction(async (trx: Knex.Transaction<any, any[]>) => {
       await trx('contacts')
         .where({
           contact_name_id: input.contactId,
