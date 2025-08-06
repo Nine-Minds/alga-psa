@@ -19,12 +19,11 @@ exports.up = async function(knex) {
   console.log('Distributing companies and contacts tables (handling all dependencies)...');
   
   try {
-    // Step 0: First create reference tables for lookup/configuration tables
-    console.log('  Step 0: Creating reference tables for lookup data...');
+    // Step 0a: First create reference tables for true lookup/configuration tables
+    console.log('  Step 0a: Creating reference tables for lookup data...');
     
     const referenceTables = [
       'invoice_templates',
-      'tax_regions',
       'countries',  // If exists
       'currencies', // If exists
     ];
@@ -56,6 +55,37 @@ exports.up = async function(knex) {
         } else {
           console.log(`    - ${tableName} already distributed`);
         }
+      }
+    }
+    
+    // Step 0b: Distribute tax_regions as a distributed table (has FK to tenants)
+    console.log('  Step 0b: Distributing tax_regions table...');
+    
+    const taxRegionsExists = await knex.raw(`
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'tax_regions'
+      ) as exists
+    `);
+    
+    if (taxRegionsExists.rows[0].exists) {
+      const taxRegionsDistributed = await knex.raw(`
+        SELECT EXISTS (
+          SELECT 1 FROM pg_dist_partition 
+          WHERE logicalrelid = 'tax_regions'::regclass
+        ) as distributed
+      `);
+      
+      if (!taxRegionsDistributed.rows[0].distributed) {
+        try {
+          await knex.raw(`SELECT create_distributed_table('tax_regions', 'tenant')`);
+          console.log('    ✓ Distributed tax_regions table');
+        } catch (e) {
+          console.log(`    - Could not distribute tax_regions: ${e.message}`);
+        }
+      } else {
+        console.log('    - tax_regions already distributed');
       }
     }
     
@@ -254,7 +284,7 @@ exports.down = async function(knex) {
   
   try {
     // Undistribute in reverse order
-    const tablesToUndistribute = ['contacts', 'companies', 'documents'];
+    const tablesToUndistribute = ['contacts', 'companies', 'documents', 'tax_regions'];
     
     for (const tableName of tablesToUndistribute) {
       const isDistributed = await knex.raw(`
