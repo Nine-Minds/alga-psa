@@ -1,6 +1,6 @@
 /**
- * Distribute the foundational tenant and user tables
- * These must be distributed first as many other tables depend on them
+ * Distribute users and other core tables that depend on tenants
+ * Tenants table must already be distributed (handled in 20250805000000)
  */
 
 exports.up = async function(knex) {
@@ -16,7 +16,7 @@ exports.up = async function(knex) {
     return;
   }
 
-  console.log('Distributing tenant and user tables...');
+  console.log('Distributing users and core tables...');
   
   // Helper function to safely distribute a table
   async function distributeTable(tableName, distributionColumn = 'tenant') {
@@ -48,8 +48,8 @@ exports.up = async function(knex) {
         return true;
       }
       
-      // Distribute the table
-      await knex.raw(`SELECT create_distributed_table('${tableName}', '${distributionColumn}')`);
+      // Distribute the table, colocate with tenants
+      await knex.raw(`SELECT create_distributed_table('${tableName}', '${distributionColumn}', colocate_with => 'tenants')`);
       console.log(`  ✓ Distributed table: ${tableName} on column: ${distributionColumn}`);
       return true;
     } catch (error) {
@@ -58,10 +58,8 @@ exports.up = async function(knex) {
     }
   }
 
-  // Step 1: Distribute tenants table (root of the hierarchy)
-  await distributeTable('tenants', 'tenant');
-  
-  // Step 2: Distribute users table (depends on tenants)
+  // Tenants should already be distributed by 20250805000000
+  // Step 1: Distribute users table (depends on tenants)
   await distributeTable('users', 'tenant');
   
   // Step 3: Distribute sessions (depends on users)
@@ -116,7 +114,7 @@ exports.down = async function(knex) {
     }
   }
 
-  // Undistribute in reverse order
+  // Undistribute in reverse order (tenants handled in 20250805000000)
   await undistributeTable('user_notification_preferences');
   await undistributeTable('user_preferences');
   await undistributeTable('user_roles');
@@ -125,5 +123,4 @@ exports.down = async function(knex) {
   await undistributeTable('roles');
   await undistributeTable('sessions');
   await undistributeTable('users');
-  await undistributeTable('tenants');
 };
