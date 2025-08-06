@@ -20,7 +20,7 @@ exports.up = async function(knex) {
   
   // Reference tables from production (colocation group 48)
   const referenceTables = [
-    'company_email_settings',
+    // 'company_email_settings', // Moved to 20250805000003 as it depends on companies table
     'countries',
     'notification_categories', 
     'notification_subtypes',
@@ -100,7 +100,7 @@ exports.down = async function(knex) {
   console.log('Undistributing reference tables...');
   
   const referenceTables = [
-    'company_email_settings',
+    // 'company_email_settings', // Now handled in 20250805000003
     'countries',
     'notification_categories',
     'notification_subtypes',
