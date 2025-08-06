@@ -4,7 +4,7 @@ FROM edoburu/pgbouncer:latest
 RUN apk add --no-cache gettext-envsubst
 
 # Copy configuration templates and entrypoint
-COPY pgbouncer.ini /etc/pgbouncer/pgbouncer.ini.template
+COPY pgbouncer.ini.template /etc/pgbouncer/pgbouncer.ini.template
 COPY userlist.txt.template /etc/pgbouncer/userlist.txt.template
 COPY entrypoint.sh /entrypoint.sh
 
