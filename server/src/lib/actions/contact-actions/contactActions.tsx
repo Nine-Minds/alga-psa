@@ -492,18 +492,27 @@ export async function addContact(contactData: Partial<IContact>): Promise<IConta
     phone_number: contactData.phone_number,
     company_id: contactData.company_id || undefined,
     role: contactData.role,
-    notes: contactData.notes,
+    notes: contactData.notes || undefined,
     is_inactive: contactData.is_inactive
   };
 
   // Use the shared ContactModel to create the contact
   // The model handles all validation and business logic
   return await withTransaction(db, async (trx: Knex.Transaction) => {
-    return await ContactModel.createContact(
+    const contact = await ContactModel.createContact(
       createInput,
       tenant,
       trx
     );
+    
+    // Convert to server IContact format (ensuring non-nullable fields)
+    return {
+      ...contact,
+      phone_number: contact.phone_number || '',
+      email: contact.email || '',
+      role: contact.role || '',
+      is_inactive: contact.is_inactive || false
+    } as IContact;
   });
 }
 

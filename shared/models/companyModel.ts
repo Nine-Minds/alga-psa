@@ -7,7 +7,13 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
-import { ICompany } from '../../server/src/interfaces/company.interfaces';
+import { 
+  ICompany, 
+  CreateCompanyInput, 
+  UpdateCompanyInput, 
+  CompanyCreationOptions 
+} from '../interfaces/company.interfaces';
+import { ValidationResult } from '../interfaces/validation.interfaces';
 
 // =============================================================================
 // VALIDATION SCHEMAS
@@ -65,59 +71,16 @@ export const companyUpdateSchema = companySchema.partial().omit({
 });
 
 // =============================================================================
-// INTERFACES
+// Re-export interfaces for backward compatibility
 // =============================================================================
 
-export interface CreateCompanyInput {
-  company_name: string;
-  client_type?: 'company' | 'individual';
-  url?: string;
-  phone_no?: string;
-  email?: string;
-  address?: string;
-  address_2?: string;
-  city?: string;
-  state?: string;
-  zip?: string;
-  country?: string;
-  notes?: string;
-  properties?: Record<string, any>;
-  parent_company_id?: string;
-  plan_id?: string;
-  is_default?: boolean;
-}
-
-export interface UpdateCompanyInput {
-  company_name?: string;
-  client_type?: 'company' | 'individual';
-  url?: string;
-  phone_no?: string;
-  email?: string;
-  address?: string;
-  address_2?: string;
-  city?: string;
-  state?: string;
-  zip?: string;
-  country?: string;
-  notes?: string;
-  is_inactive?: boolean;
-  properties?: Record<string, any>;
-  parent_company_id?: string;
-  plan_id?: string;
-}
-
-// CreateCompanyOutput removed - now returns ICompany directly
-
-export interface CompanyCreationOptions {
-  skipTaxSettings?: boolean;
-  skipEmailSuffix?: boolean;
-}
-
-export interface ValidationResult {
-  valid: boolean;
-  data?: any;
-  errors?: string[];
-}
+export type { 
+  ICompany, 
+  CreateCompanyInput, 
+  UpdateCompanyInput, 
+  CompanyCreationOptions 
+} from '../interfaces/company.interfaces';
+export type { ValidationResult } from '../interfaces/validation.interfaces';
 
 // =============================================================================
 // VALIDATION HELPER FUNCTIONS

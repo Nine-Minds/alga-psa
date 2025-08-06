@@ -7,6 +7,14 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
+import { 
+  TaggedEntityType,
+  TagDefinition,
+  TagMapping,
+  CreateTagInput,
+  CreateTagOutput
+} from '../interfaces/tag.interfaces';
+import { ValidationResult } from '../interfaces/validation.interfaces';
 
 // =============================================================================
 // VALIDATION SCHEMAS
@@ -47,58 +55,17 @@ export const tagMappingSchema = z.object({
 });
 
 // =============================================================================
-// INTERFACES
+// Re-export interfaces for backward compatibility
 // =============================================================================
 
-export type TaggedEntityType = 'company' | 'contact' | 'project_task' | 'document' | 'knowledge_base_article';
-
-export interface CreateTagInput {
-  tag_text: string;
-  tagged_id: string;
-  tagged_type: TaggedEntityType;
-  channel_id?: string;
-  background_color?: string | null;
-  text_color?: string | null;
-  created_by?: string;
-}
-
-export interface CreateTagOutput {
-  tag_id: string;
-  mapping_id: string;
-  tag_text: string;
-  tagged_id: string;
-  tagged_type: TaggedEntityType;
-  tenant: string;
-  created_at: string;
-}
-
-export interface TagDefinition {
-  tag_id: string;
-  tenant: string;
-  tag_text: string;
-  tagged_type: TaggedEntityType;
-  channel_id?: string | null;
-  background_color?: string | null;
-  text_color?: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface TagMapping {
-  mapping_id: string;
-  tenant: string;
-  tag_id: string;
-  tagged_id: string;
-  tagged_type: TaggedEntityType;
-  created_by?: string | null;
-  created_at: string;
-}
-
-export interface ValidationResult {
-  valid: boolean;
-  data?: any;
-  errors?: string[];
-}
+export type { 
+  TaggedEntityType,
+  TagDefinition,
+  TagMapping,
+  CreateTagInput,
+  CreateTagOutput
+} from '../interfaces/tag.interfaces';
+export type { ValidationResult } from '../interfaces/validation.interfaces';
 
 // =============================================================================
 // COLOR GENERATION

@@ -7,7 +7,12 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
-import { IContact } from '../../server/src/interfaces/contact.interfaces';
+import { 
+  IContact, 
+  CreateContactInput, 
+  UpdateContactInput 
+} from '../interfaces/contact.interfaces';
+import { ValidationResult } from '../interfaces/validation.interfaces';
 
 // =============================================================================
 // VALIDATION SCHEMAS
@@ -47,36 +52,15 @@ export const contactUpdateSchema = contactSchema.partial().omit({
 });
 
 // =============================================================================
-// INTERFACES
+// Re-export interfaces for backward compatibility
 // =============================================================================
 
-export interface CreateContactInput {
-  full_name: string;
-  email?: string;
-  phone_number?: string;
-  company_id?: string;
-  role?: string;
-  notes?: string;
-  is_inactive?: boolean;
-}
-
-export interface UpdateContactInput {
-  full_name?: string;
-  email?: string;
-  phone_number?: string;
-  company_id?: string;
-  role?: string;
-  notes?: string;
-  is_inactive?: boolean;
-}
-
-// CreateContactOutput removed - now returns IContact directly
-
-export interface ValidationResult {
-  valid: boolean;
-  data?: any;
-  errors?: string[];
-}
+export type { 
+  IContact, 
+  CreateContactInput, 
+  UpdateContactInput 
+} from '../interfaces/contact.interfaces';
+export type { ValidationResult } from '../interfaces/validation.interfaces';
 
 // =============================================================================
 // VALIDATION HELPER FUNCTIONS
