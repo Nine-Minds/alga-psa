@@ -19,47 +19,8 @@ exports.up = async function(knex) {
   console.log('Distributing companies and contacts tables (handling all dependencies)...');
   
   try {
-    // Step 0a: First create reference tables for true lookup/configuration tables
-    console.log('  Step 0a: Creating reference tables for lookup data...');
-    
-    const referenceTables = [
-      'invoice_templates',
-      'countries',  // If exists
-      'currencies', // If exists
-    ];
-    
-    for (const tableName of referenceTables) {
-      const tableExists = await knex.raw(`
-        SELECT EXISTS (
-          SELECT 1 FROM information_schema.tables 
-          WHERE table_schema = 'public' 
-          AND table_name = ?
-        ) as exists
-      `, [tableName]);
-      
-      if (tableExists.rows[0].exists) {
-        const isDistributed = await knex.raw(`
-          SELECT EXISTS (
-            SELECT 1 FROM pg_dist_partition 
-            WHERE logicalrelid = ?::regclass
-          ) as distributed
-        `, [tableName]);
-        
-        if (!isDistributed.rows[0].distributed) {
-          try {
-            await knex.raw(`SELECT create_reference_table('${tableName}')`);
-            console.log(`    ✓ Created ${tableName} as reference table`);
-          } catch (e) {
-            console.log(`    - Could not create ${tableName} as reference table: ${e.message}`);
-          }
-        } else {
-          console.log(`    - ${tableName} already distributed`);
-        }
-      }
-    }
-    
-    // Step 0b: Distribute tax_regions as a distributed table (has FK to tenants)
-    console.log('  Step 0b: Distributing tax_regions table...');
+    // Step 0: Distribute tax_regions as a distributed table (has FK to tenants)
+    console.log('  Step 0: Distributing tax_regions table...');
     
     const taxRegionsExists = await knex.raw(`
       SELECT EXISTS (
