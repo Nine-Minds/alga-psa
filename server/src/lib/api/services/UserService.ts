@@ -34,6 +34,7 @@ import UserPreferences from 'server/src/lib/models/userPreferences';
 import { generateResourceLinks, addHateoasLinks } from '../utils/responseHelpers';
 import { NotFoundError, ConflictError, ValidationError, ForbiddenError } from '../middleware/apiMiddleware';
 import logger from '@shared/core/logger';
+import { validateSystemContext } from './SystemContext';
 
 // Extended interfaces for service operations
 export interface UserWithFullDetails extends IUserWithRoles {
@@ -1424,6 +1425,24 @@ export class UserService extends BaseService<IUser> {
     action: string,
     trx?: Knex.Transaction
   ): Promise<void> {
+    // Validate system context if using zero UUID
+    try {
+      validateSystemContext(context);
+    } catch (error) {
+      logger.error('Invalid system context detected', { 
+        error, 
+        userId: context.userId,
+        resource,
+        action 
+      });
+      throw new ForbiddenError('Invalid system context');
+    }
+
+    // If validated as system context, bypass permission checks
+    if (context.userId === '00000000-0000-0000-0000-000000000000') {
+      return;
+    }
+
     const { knex } = await this.getKnex();
     const db = trx || knex;
     

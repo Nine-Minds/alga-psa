@@ -118,8 +118,8 @@ export default function PortalSetupPage() {
       
       if (result.success) {
         toast.success('Portal account created successfully!');
-        // Redirect to login page
-        router.push('/auth/signin?message=Account created successfully. Please sign in.');
+        // Redirect to client portal login page
+        router.push('/client-portal/dashboard?message=Account created successfully. Please sign in.');
       } else {
         toast.error(result.error || 'Failed to create account');
       }
@@ -164,11 +164,11 @@ export default function PortalSetupPage() {
               </AlertDescription>
             </Alert>
             <Button 
-              onClick={() => router.push('/auth/signin')}
+              onClick={() => router.push('/client-portal/dashboard')}
               id='btn=signin'
               className="w-full"
             >
-              Go to Sign In
+              Go to Portal Sign In
             </Button>
           </CardContent>
         </Card>
@@ -311,10 +311,10 @@ export default function PortalSetupPage() {
           <div className="text-center text-xs text-muted-foreground">
             Already have an account?{' '}
             <button
-              onClick={() => router.push('/auth/signin')}
+              onClick={() => router.push('/client-portal/dashboard')}
               className="text-blue-600 hover:underline"
             >
-              Sign in here
+              Sign in to portal
             </button>
           </div>
         </CardContent>

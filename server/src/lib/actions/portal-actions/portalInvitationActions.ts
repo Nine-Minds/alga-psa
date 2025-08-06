@@ -6,6 +6,8 @@ import { PortalInvitationService } from '../../services/PortalInvitationService'
 import { sendPortalInvitationEmail } from '../../email/sendPortalInvitationEmail';
 import { checkPortalInvitationLimit, formatRateLimitError } from '../../security/rateLimiting';
 import { TenantEmailService } from '../../services/TenantEmailService';
+import { UserService } from '../../api/services/UserService';
+import { runAsSystem, createSystemContext } from '../../api/services/SystemContext';
 
 export interface SendInvitationResult {
   success: boolean;
@@ -214,6 +216,10 @@ export async function completePortalSetup(
     const { knex, tenant } = await createTenantKnex();
     const contact = verificationResult.contact;
 
+    if (!tenant) {
+      return { success: false, error: 'Tenant context is required' };
+    }
+
     // Check if user already exists
     const existingUser = await knex('users')
       .where({ 
@@ -229,24 +235,44 @@ export async function completePortalSetup(
       };
     }
 
-    // Create user account
-    const bcrypt = require('bcrypt');
-    const hashedPassword = await bcrypt.hash(password, 12);
+    // Create user account using UserService within a system operation
+    let newUser;
+    try {
+      newUser = await runAsSystem('portal-invitation-user-creation', async () => {
+        const userService = new UserService();
+        const systemContext = createSystemContext(tenant);
 
-    const [newUser] = await knex('users')
-      .insert({
-        tenant,
-        user_id: knex.raw('gen_random_uuid()'),
-        username: contact.email,
-        email: contact.email,
-        password_hash: hashedPassword,
-        contact_id: contact.contact_name_id,
-        user_type: 'client',
-        is_active: true,
-        created_at: new Date(),
-        updated_at: new Date()
-      })
-      .returning(['user_id']);
+        // Extract first and last names from full_name
+        const nameParts = contact.full_name.split(' ');
+        const firstName = nameParts[0] || contact.full_name;
+        const lastName = nameParts.slice(1).join(' ') || undefined;
+
+        const user = await userService.create({
+          username: contact.email,
+          email: contact.email,
+          password: password,
+          first_name: firstName,
+          last_name: lastName,
+          contact_id: contact.contact_name_id,
+          user_type: 'client',
+          is_inactive: false,
+          two_factor_enabled: false,
+          is_google_user: false
+        }, systemContext);
+
+        if (!user || !user.user_id) {
+          throw new Error('Failed to create user account');
+        }
+
+        return user;
+      });
+    } catch (error) {
+      console.error('Error creating user account:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to create user account'
+      };
+    }
 
     // Mark invitation as used
     const tokenMarked = await PortalInvitationService.markTokenAsUsed(token);
