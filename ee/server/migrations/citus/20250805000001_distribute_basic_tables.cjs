@@ -60,16 +60,13 @@ exports.up = async function(knex) {
   }
 
   // Distribute tables that only have FK to tenants (no other dependencies)
+  // Only include tables that exist and have no complex dependencies
   const basicTables = [
     'roles',
     'permissions', 
     'role_permissions',
-    'tenant_settings',
-    'telemetry_settings',
-    'credit_accounts',
-    'credit_allocations',
-    'credits',
-    'credit_transactions'
+    'tenant_settings'
+    // Removed credit tables as they depend on invoices
   ];
 
   for (const table of basicTables) {
@@ -116,11 +113,6 @@ exports.down = async function(knex) {
 
   // Undistribute in reverse order
   const basicTables = [
-    'credit_transactions',
-    'credits',
-    'credit_allocations',
-    'credit_accounts',
-    'telemetry_settings',
     'tenant_settings',
     'role_permissions',
     'permissions',
