@@ -46,6 +46,19 @@ Controls access to advanced/experimental features.
 - Pages/tabs show construction placeholder when accessed
 - Workflow Tasks in User Activities are completely hidden
 
+### 3. `email-configuration`
+Controls access to email configuration settings.
+
+**Affected Areas:**
+- **Settings - General - Email tab**
+  - Email provider configuration
+  - Domain settings
+  - Email settings management
+
+**Behavior:**
+- When disabled: Shows construction placeholder image
+- Tab remains visible but displays placeholder content when accessed
+
 ## Implementation Details
 
 ### User Identification
@@ -78,7 +91,7 @@ posthog.identify(anonymousId, {
 To configure these feature flags in PostHog:
 
 1. **Create Feature Flag:**
-   - Key: `billing-enabled` or `advanced-features-enabled`
+   - Key: `billing-enabled`, `advanced-features-enabled`, or `email-configuration`
    - Type: Boolean
 
 2. **Set Rollout Conditions:**
