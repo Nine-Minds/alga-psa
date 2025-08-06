@@ -21,6 +21,9 @@ export interface TenantCreationResult {
   emailSent: boolean;
   success: boolean;
   createdAt: ISO8601String;
+  // Customer tracking information
+  customerCompanyId?: string;
+  customerContactId?: string;
 }
 
 export interface CreateTenantActivityInput {

@@ -329,7 +329,7 @@ export async function createClient(data: ClientData): Promise<OnboardingActionRe
         is_inactive: false,
         is_tax_exempt: false,
         billing_cycle: 'monthly' as const,
-        client_type: 'company',
+        client_type: 'company' as const,
         tenant
       };
 

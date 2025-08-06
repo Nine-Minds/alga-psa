@@ -9,6 +9,7 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { throwPermissionError } from 'server/src/lib/utils/errorHandling';
 import { Knex } from 'knex';
+import { TagModel, CreateTagInput } from '@alga-psa/shared/models/tagModel';
 
 export async function findTagsByEntityId(entityId: string, entityType: string): Promise<ITag[]> {
   const { knex: db } = await createTenantKnex();
