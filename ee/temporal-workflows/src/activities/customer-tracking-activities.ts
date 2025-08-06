@@ -5,10 +5,10 @@
  */
 
 import { Context } from '@temporalio/activity';
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
-import { CompanyModel } from '@alga-psa/shared/models/companyModel';
-import { ContactModel } from '@alga-psa/shared/models/contactModel';
-import { TagModel } from '@alga-psa/shared/models/tagModel';
+import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
+import { CompanyModel } from '@alga-psa/shared/models/companyModel.js';
+import { ContactModel } from '@alga-psa/shared/models/contactModel.js';
+import { TagModel } from '@alga-psa/shared/models/tagModel.js';
 import { Knex } from 'knex';
 
 /**
