@@ -7,6 +7,7 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
+import { IContact } from '../../server/src/interfaces/contact.interfaces';
 
 // =============================================================================
 // VALIDATION SCHEMAS
@@ -89,14 +90,7 @@ export interface UpdateContactInput {
   receive_emails?: boolean;
 }
 
-export interface CreateContactOutput {
-  contact_id: string;
-  full_name: string;
-  email?: string;
-  company_id?: string;
-  tenant: string;
-  created_at: string;
-}
+// CreateContactOutput removed - now returns IContact directly
 
 export interface ValidationResult {
   valid: boolean;
@@ -234,63 +228,118 @@ export class ContactModel {
 
   /**
    * Create a new contact with complete validation
+   * Core logic extracted from server/src/lib/actions/contact-actions/contactActions.tsx
    */
   static async createContact(
     input: CreateContactInput,
     tenant: string,
     trx: Knex.Transaction
-  ): Promise<CreateContactOutput> {
-    // Validate input
-    const validation = this.validateCreateContactInput(input);
-    if (!validation.valid) {
-      throw new Error(`Contact validation failed: ${validation.errors?.join('; ')}`);
+  ): Promise<IContact> {
+    // Validate required fields with specific messages
+    if (!input.full_name?.trim() && !input.email?.trim()) {
+      throw new Error('VALIDATION_ERROR: Full name and email address are required');
+    }
+    if (!input.full_name?.trim()) {
+      throw new Error('VALIDATION_ERROR: Full name is required');
+    }
+    if (!input.email?.trim()) {
+      throw new Error('VALIDATION_ERROR: Email address is required');
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(input.email.trim())) {
+      throw new Error('VALIDATION_ERROR: Please enter a valid email address');
+    }
+
+    // Check if email already exists
+    const existingContact = await trx('contacts')
+      .where({ email: input.email.trim().toLowerCase(), tenant })
+      .first();
+
+    if (existingContact) {
+      throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system');
+    }
+
+    // If company_id is provided, verify it exists
+    if (input.company_id) {
+      const company = await trx('companies')
+        .where({ company_id: input.company_id, tenant })
+        .first();
+
+      if (!company) {
+        throw new Error('FOREIGN_KEY_ERROR: The selected company no longer exists');
+      }
     }
 
     const contactId = uuidv4();
     const now = new Date();
-    const contactData = validation.data;
 
-    // Check for duplicate email if provided
-    if (contactData.email) {
-      const emailExists = await this.checkEmailExists(contactData.email, tenant, trx);
-      if (emailExists) {
-        throw new Error(`A contact with email ${contactData.email} already exists`);
-      }
-    }
-
-    // Prepare data for insertion
+    // Prepare contact data with proper sanitization
     const insertData = {
       contact_name_id: contactId,
       tenant,
-      full_name: contactData.full_name,
-      email: contactData.email || null,
-      phone_number: contactData.phone_number || null,
-      company_id: contactData.company_id || null,
-      role: contactData.role || null,
-      title: contactData.title || null,
-      department: contactData.department || null,
-      notes: contactData.notes || null,
-      is_inactive: contactData.is_inactive || false,
-      portal_access: contactData.portal_access || false,
-      login_email: contactData.login_email || contactData.email || null,
-      receive_emails: contactData.receive_emails !== false, // Default to true
+      full_name: input.full_name.trim(),
+      email: input.email.trim().toLowerCase(),
+      phone_number: input.phone_number?.trim() || null,
+      company_id: input.company_id || null,
+      role: input.role?.trim() || null,
+      title: input.title?.trim() || null,
+      department: input.department?.trim() || null,
+      notes: input.notes?.trim() || null,
+      is_inactive: input.is_inactive || false,
+      portal_access: input.portal_access || false,
+      login_email: input.login_email?.trim().toLowerCase() || input.email.trim().toLowerCase(),
+      receive_emails: input.receive_emails !== false, // Default to true
       created_at: now.toISOString(),
       updated_at: now.toISOString()
     };
 
-    // Insert contact
-    const [contact] = await trx('contacts')
-      .insert(insertData)
-      .returning('*');
-    
-    return {
-      contact_id: contact.contact_name_id,
-      full_name: contact.full_name,
-      email: contact.email,
-      company_id: contact.company_id,
-      tenant,
-      created_at: now.toISOString()
-    };
+    try {
+      // Insert contact
+      const [contact] = await trx('contacts')
+        .insert(insertData)
+        .returning('*');
+      
+      if (!contact) {
+        throw new Error('SYSTEM_ERROR: Failed to create contact record');
+      }
+      
+      return contact as IContact;
+    } catch (err) {
+      // Log the error for debugging
+      console.error('Error creating contact:', err);
+
+      // Handle known error types
+      if (err instanceof Error) {
+        const message = err.message;
+
+        // If it's already one of our formatted errors, rethrow it
+        if (message.includes('VALIDATION_ERROR:') ||
+          message.includes('EMAIL_EXISTS:') ||
+          message.includes('FOREIGN_KEY_ERROR:') ||
+          message.includes('SYSTEM_ERROR:')) {
+          throw err;
+        }
+
+        // Handle database-specific errors
+        if (message.includes('duplicate key') && message.includes('contacts_email_tenant_unique')) {
+          throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system');
+        }
+
+        if (message.includes('violates not-null constraint')) {
+          const field = message.match(/column "([^"]+)"/)?.[1] || 'field';
+          throw new Error(`VALIDATION_ERROR: The ${field} is required`);
+        }
+
+        if (message.includes('violates foreign key constraint') && message.includes('company_id')) {
+          throw new Error('FOREIGN_KEY_ERROR: The selected company is no longer valid');
+        }
+      }
+
+      // For unexpected errors, throw a generic system error
+      throw new Error('SYSTEM_ERROR: An unexpected error occurred while creating the contact');
+    }
   }
 
   /**
