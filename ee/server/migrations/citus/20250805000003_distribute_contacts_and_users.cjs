@@ -1,6 +1,6 @@
 /**
- * Distribute users and other core tables that depend on tenants
- * Tenants table must already be distributed (handled in 20250805000000)
+ * Distribute contacts and users tables after companies is distributed
+ * These have circular dependencies that required companies to be distributed first
  */
 
 exports.up = async function(knex) {
@@ -16,7 +16,7 @@ exports.up = async function(knex) {
     return;
   }
 
-  console.log('Distributing users and core tables...');
+  console.log('Distributing contacts and users tables...');
   
   // Helper function to safely distribute a table
   async function distributeTable(tableName, distributionColumn = 'tenant') {
@@ -58,28 +58,19 @@ exports.up = async function(knex) {
     }
   }
 
-  // Tenants should already be distributed by 20250805000000
+  // Now that companies is distributed, we can distribute contacts
+  await distributeTable('contacts');
   
-  // Step 1: Distribute contacts first (users depends on it)
-  await distributeTable('contacts', 'tenant');
+  // And then users (depends on contacts)
+  await distributeTable('users');
   
-  // Step 2: Distribute users table (depends on tenants and contacts)
-  await distributeTable('users', 'tenant');
+  // Then tables that depend on users
+  await distributeTable('sessions');
+  await distributeTable('user_roles');
+  await distributeTable('user_preferences');
+  await distributeTable('user_notification_preferences');
   
-  // Step 3: Distribute sessions (depends on users)
-  await distributeTable('sessions', 'tenant');
-  
-  // Step 4: Distribute roles and permissions
-  await distributeTable('roles', 'tenant');
-  await distributeTable('permissions', 'tenant');
-  await distributeTable('role_permissions', 'tenant');
-  await distributeTable('user_roles', 'tenant');
-  
-  // Step 5: Distribute user preferences
-  await distributeTable('user_preferences', 'tenant');
-  await distributeTable('user_notification_preferences', 'tenant');
-  
-  console.log('Tenant and user tables distributed successfully');
+  console.log('Contacts and users tables distributed successfully');
 };
 
 exports.down = async function(knex) {
@@ -91,12 +82,12 @@ exports.down = async function(knex) {
   `);
   
   if (!citusEnabled.rows[0].enabled) {
+    console.log('Citus not enabled, nothing to undo');
     return;
   }
 
-  console.log('Undistributing tenant and user tables...');
+  console.log('Undistributing contacts and users tables...');
   
-  // Helper function to safely undistribute a table
   async function undistributeTable(tableName) {
     try {
       const isDistributed = await knex.raw(`
@@ -109,22 +100,18 @@ exports.down = async function(knex) {
       if (isDistributed.rows[0].distributed) {
         await knex.raw(`SELECT undistribute_table('${tableName}')`);
         console.log(`  ✓ Undistributed table: ${tableName}`);
-        return true;
       }
-      return false;
+      return true;
     } catch (error) {
       console.error(`  ✗ Failed to undistribute table ${tableName}: ${error.message}`);
       return false;
     }
   }
 
-  // Undistribute in reverse order (tenants handled in 20250805000000)
+  // Undistribute in reverse order
   await undistributeTable('user_notification_preferences');
   await undistributeTable('user_preferences');
   await undistributeTable('user_roles');
-  await undistributeTable('role_permissions');
-  await undistributeTable('permissions');
-  await undistributeTable('roles');
   await undistributeTable('sessions');
   await undistributeTable('users');
   await undistributeTable('contacts');
