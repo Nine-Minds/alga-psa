@@ -48,7 +48,7 @@ exports.up = async function(knex) {
       }
       
       // Distribute the table with colocation
-      await knex.raw(`SELECT create_distributed_table('${tableName}', '${distributionColumn}', colocate_with => 'tenants')`);
+      await knex.raw(`SELECT create_distributed_table('${tableName}', '${distributionColumn}')`);
       console.log(`  ✓ Distributed table: ${tableName}`);
       return true;
     } catch (error) {
