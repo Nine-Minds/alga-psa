@@ -26,9 +26,20 @@ export async function runOnboardingSeeds(tenantId: string): Promise<{ success: b
       await trx.raw(`SET LOCAL app.current_tenant = '${tenantId}'`);
       
       // Get the onboarding seeds directory
-      // Path from ee/temporal-workflows/src/db to ee/server/seeds/onboarding
-      const currentDir = path.dirname(fileURLToPath(import.meta.url));
-      const seedsDir = path.resolve(currentDir, '../../../server/seeds/onboarding');
+      const currentFileUrl = import.meta.url;
+      const isRunningFromDist = currentFileUrl.includes('/dist/');
+      
+      let seedsDir: string;
+      if (isRunningFromDist) {
+        // Running from dist - seeds are copied to dist/seeds/onboarding
+        const currentDir = path.dirname(fileURLToPath(currentFileUrl));
+        // From dist/ee/temporal-workflows/src/db to dist/seeds/onboarding
+        seedsDir = path.resolve(currentDir, '../../../../seeds/onboarding');
+      } else {
+        // Running from source (development)
+        const currentDir = path.dirname(fileURLToPath(currentFileUrl));
+        seedsDir = path.resolve(currentDir, '../../../server/seeds/onboarding');
+      }
       
       // Read all files from the directory
       const files = await fs.readdir(seedsDir);
