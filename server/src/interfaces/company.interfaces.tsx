@@ -4,8 +4,9 @@ import { ITaggable } from './tag.interfaces';
 import { ICompany as SharedICompany } from '@alga-psa/shared/interfaces/company.interfaces';
 
 // Extend the shared ICompany interface with server-specific fields
+// We need to merge SharedICompany with TenantEntity and ITaggable
 export interface ICompany extends SharedICompany, TenantEntity, ITaggable {
-  // Server-specific fields that override shared nullable types
+  // Override shared fields to match server expectations (non-nullable)
   url: string;
   is_inactive: boolean;
   

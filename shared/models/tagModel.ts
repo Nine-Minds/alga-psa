@@ -462,7 +462,7 @@ export class TagModel {
       .count('* as count')
       .first();
     
-    return Number(result?.count || 0) > 0;
+    return parseInt(String(result?.count || 0), 10) > 0;
   }
 
   /**

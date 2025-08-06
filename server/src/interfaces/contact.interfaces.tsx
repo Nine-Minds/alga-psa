@@ -4,14 +4,15 @@ import { IContact as SharedIContact } from '@alga-psa/shared/interfaces/contact.
 
 // Extend the shared IContact interface with server-specific fields
 export interface IContact extends SharedIContact, TenantEntity, ITaggable {
-  // Server-specific fields
-  avatarUrl?: string | null;
-  is_client_admin?: boolean;
-  // Override shared fields to match existing server expectations
+  // Override shared fields to match existing server expectations (non-nullable)
   phone_number: string;
   email: string;
   role: string;
   is_inactive: boolean;
+  
+  // Server-specific fields
+  avatarUrl?: string | null;
+  is_client_admin?: boolean;
 }
 
 export interface ICSVColumnMapping {

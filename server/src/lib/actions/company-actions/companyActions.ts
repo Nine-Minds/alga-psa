@@ -14,7 +14,7 @@ import { Knex } from 'knex';
 import { addCompanyEmailSetting } from '../company-settings/emailSettings';
 import { deleteEntityTags } from '../../utils/tagCleanup';
 import { createTag } from '../tagActions';
-import { CompanyModel, CreateCompanyInput, ICompany as ICompanyModel } from '@alga-psa/shared/models/companyModel';
+import { CompanyModel, CreateCompanyInput } from '@alga-psa/shared/models/companyModel';
 
 export async function getCompanyById(companyId: string): Promise<ICompanyWithLocation | null> {
   const currentUser = await getCurrentUser();
