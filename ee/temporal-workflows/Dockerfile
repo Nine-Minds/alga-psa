@@ -32,6 +32,9 @@ COPY ee/temporal-workflows/ ./
 WORKDIR /app/ee/temporal-workflows
 RUN npm run build
 
+# Copy onboarding seeds after build
+COPY ee/server/seeds/onboarding /app/ee/temporal-workflows/dist/seeds/onboarding
+
 # Production stage
 FROM base AS production
 
