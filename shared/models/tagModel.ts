@@ -495,7 +495,7 @@ export class TagModel {
       .count('* as count')
       .first();
     
-    return result?.count > 0;
+    return Number(result?.count || 0) > 0;
   }
 
   /**

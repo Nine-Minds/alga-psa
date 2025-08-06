@@ -20,13 +20,8 @@ export const contactFormSchema = z.object({
   phone_number: z.string().optional(),
   company_id: z.string().uuid('Company ID must be a valid UUID').optional().nullable(),
   role: z.string().optional(),
-  title: z.string().optional(),
-  department: z.string().optional(),
   notes: z.string().optional(),
-  is_inactive: z.boolean().optional(),
-  portal_access: z.boolean().optional(),
-  login_email: z.string().email().optional().or(z.literal('')),
-  receive_emails: z.boolean().optional()
+  is_inactive: z.boolean().optional()
 });
 
 // Complete contact schema for validation
@@ -38,13 +33,8 @@ export const contactSchema = z.object({
   phone_number: z.string().nullable(),
   company_id: z.string().uuid().nullable(),
   role: z.string().nullable(),
-  title: z.string().nullable(),
-  department: z.string().nullable(),
   notes: z.string().nullable(),
   is_inactive: z.boolean().nullable(),
-  portal_access: z.boolean().nullable(),
-  login_email: z.string().nullable(),
-  receive_emails: z.boolean().nullable(),
   created_at: z.string(),
   updated_at: z.string()
 });
@@ -66,13 +56,8 @@ export interface CreateContactInput {
   phone_number?: string;
   company_id?: string;
   role?: string;
-  title?: string;
-  department?: string;
   notes?: string;
   is_inactive?: boolean;
-  portal_access?: boolean;
-  login_email?: string;
-  receive_emails?: boolean;
 }
 
 export interface UpdateContactInput {
@@ -81,13 +66,8 @@ export interface UpdateContactInput {
   phone_number?: string;
   company_id?: string;
   role?: string;
-  title?: string;
-  department?: string;
   notes?: string;
   is_inactive?: boolean;
-  portal_access?: boolean;
-  login_email?: string;
-  receive_emails?: boolean;
 }
 
 // CreateContactOutput removed - now returns IContact directly
@@ -284,13 +264,8 @@ export class ContactModel {
       phone_number: input.phone_number?.trim() || null,
       company_id: input.company_id || null,
       role: input.role?.trim() || null,
-      title: input.title?.trim() || null,
-      department: input.department?.trim() || null,
       notes: input.notes?.trim() || null,
       is_inactive: input.is_inactive || false,
-      portal_access: input.portal_access || false,
-      login_email: input.login_email?.trim().toLowerCase() || input.email.trim().toLowerCase(),
-      receive_emails: input.receive_emails !== false, // Default to true
       created_at: now.toISOString(),
       updated_at: now.toISOString()
     };
@@ -440,7 +415,7 @@ export class ContactModel {
       .count('* as count')
       .first();
     
-    return result?.count > 0;
+    return Number(result?.count || 0) > 0;
   }
 
   /**
@@ -450,21 +425,15 @@ export class ContactModel {
     input: CreateContactInput,
     tenant: string,
     trx: Knex.Transaction
-  ): Promise<CreateContactOutput> {
+  ): Promise<IContact> {
     // Try to find existing contact by email
     if (input.email) {
       const existing = await this.getContactByEmail(input.email, tenant, trx);
       if (existing) {
         // Update existing contact
         await this.updateContact(existing.contact_name_id, input, tenant, trx);
-        return {
-          contact_id: existing.contact_name_id,
-          full_name: input.full_name || existing.full_name,
-          email: input.email,
-          company_id: input.company_id || existing.company_id,
-          tenant,
-          created_at: existing.created_at
-        };
+        // Return the updated contact
+        return await this.getContactById(existing.contact_name_id, tenant, trx);
       }
     }
     

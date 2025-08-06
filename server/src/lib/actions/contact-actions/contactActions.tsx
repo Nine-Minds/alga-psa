@@ -490,15 +490,10 @@ export async function addContact(contactData: Partial<IContact>): Promise<IConta
     full_name: contactData.full_name || '',
     email: contactData.email,
     phone_number: contactData.phone_number,
-    company_id: contactData.company_id,
+    company_id: contactData.company_id || undefined,
     role: contactData.role,
-    title: contactData.title,
-    department: contactData.department,
     notes: contactData.notes,
-    is_inactive: contactData.is_inactive,
-    portal_access: contactData.portal_access,
-    login_email: contactData.login_email,
-    receive_emails: contactData.receive_emails
+    is_inactive: contactData.is_inactive
   };
 
   // Use the shared ContactModel to create the contact

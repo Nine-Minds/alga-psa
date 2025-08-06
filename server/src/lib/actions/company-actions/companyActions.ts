@@ -174,7 +174,7 @@ export async function updateCompany(companyId: string, updateData: Partial<Omit<
     if (updateData.url !== undefined || updateData.properties?.website !== undefined) {
       const websiteUrl = updateData.url || updateData.properties?.website;
       if (websiteUrl) {
-        const domain = extractDomainFromUrl(websiteUrl);
+        const domain = CompanyModel.extractDomainFromUrl(websiteUrl);
         if (domain) {
           try {
             await addCompanyEmailSetting(
@@ -260,7 +260,7 @@ export async function createCompany(company: Omit<ICompany, 'company_id' | 'crea
     // Add website domain as email suffix if available
     const websiteUrl = createdCompany.url || createdCompany.properties?.website;
     if (websiteUrl) {
-      const domain = extractDomainFromUrl(websiteUrl);
+      const domain = CompanyModel.extractDomainFromUrl(websiteUrl);
       if (domain) {
         try {
           await addCompanyEmailSetting(
