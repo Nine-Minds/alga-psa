@@ -224,7 +224,7 @@ export class PortalInvitationService {
       const invitation = await knex('portal_invitations as pi')
         .join('contacts as c', function() {
           this.on('pi.tenant', '=', 'c.tenant')
-              .andOn('pi.contact_id', '=', 'c.contact_id');
+              .andOn('pi.contact_id', '=', 'c.contact_name_id');
         })
         .join('companies as comp', function() {
           this.on('c.tenant', '=', 'comp.tenant')
@@ -356,15 +356,31 @@ export class PortalInvitationService {
    */
   static async cleanupExpiredTokens(): Promise<number> {
     try {
-      const { knex } = await createTenantKnex();
+      const { knex, tenant } = await createTenantKnex();
 
-      // Call the cleanup function created in the migration
-      const result = await knex.raw('SELECT cleanup_expired_portal_invitations() as deleted_count');
+      // Delete expired tokens directly
+      // Since expires_at is timestamptz, PostgreSQL handles timezone conversion automatically
+      const deletedRows = await knex('portal_invitations')
+        .where('expires_at', '<', knex.fn.now())
+        .del();
       
-      const deletedCount = result.rows[0]?.deleted_count || 0;
+      const deletedCount = deletedRows || 0;
       
       if (deletedCount > 0) {
         console.log(`Cleaned up ${deletedCount} expired portal invitation tokens`);
+        
+        // Log to audit_logs if needed
+        await knex('audit_logs').insert({
+          audit_id: knex.raw('gen_random_uuid()'),
+          tenant: tenant || '00000000-0000-0000-0000-000000000000',
+          table_name: 'portal_invitations',
+          operation: 'CLEANUP',
+          record_id: '00000000-0000-0000-0000-000000000000',
+          changed_data: { deleted_count: deletedCount },
+          details: { operation: 'automated_cleanup', deleted_count: deletedCount },
+          user_id: '00000000-0000-0000-0000-000000000000',
+          timestamp: knex.fn.now()
+        });
       }
 
       return deletedCount;

@@ -27,59 +27,9 @@ exports.up = async function(knex) {
     // Unique constraint on token per tenant for CitusDB compatibility
     table.unique(['tenant', 'token'], 'unique_portal_invitation_tenant_token');
   });
-
-  // Create automatic cleanup function for expired tokens
-  await knex.raw(`
-    CREATE OR REPLACE FUNCTION cleanup_expired_portal_invitations()
-    RETURNS INTEGER AS $$
-    DECLARE
-      deleted_count INTEGER;
-    BEGIN
-      DELETE FROM portal_invitations 
-      WHERE expires_at < NOW() AT TIME ZONE 'UTC';
-      
-      GET DIAGNOSTICS deleted_count = ROW_COUNT;
-      
-      -- Log cleanup operation
-      INSERT INTO audit_logs (
-        audit_id,
-        tenant,
-        table_name,
-        operation,
-        record_id,
-        changed_data,
-        details,
-        user_id,
-        timestamp
-      )
-      SELECT 
-        gen_random_uuid(),
-        '00000000-0000-0000-0000-000000000000'::uuid,
-        'portal_invitations',
-        'CLEANUP',
-        '00000000-0000-0000-0000-000000000000'::text,
-        jsonb_build_object('deleted_count', deleted_count),
-        jsonb_build_object('operation', 'automated_cleanup', 'deleted_count', deleted_count),
-        '00000000-0000-0000-0000-000000000000'::text,
-        NOW() AT TIME ZONE 'UTC'
-      WHERE deleted_count > 0;
-      
-      RETURN deleted_count;
-    END;
-    $$ LANGUAGE plpgsql;
-  `);
-
-  // Create index on audit_logs if it doesn't exist (for the cleanup logging)
-  await knex.raw(`
-    CREATE INDEX IF NOT EXISTS idx_audit_logs_table_operation 
-    ON audit_logs(tenant, table_name, operation, timestamp);
-  `);
 };
 
 exports.down = async function(knex) {
-  // Drop the cleanup function
-  await knex.raw('DROP FUNCTION IF EXISTS cleanup_expired_portal_invitations()');
-  
   // Drop the table (will cascade and remove indexes and foreign keys)
   await knex.schema.dropTableIfExists('portal_invitations');
 };
