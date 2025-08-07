@@ -46,6 +46,22 @@ const User = {
     }
   },
 
+  // Find a user by email and user_type (e.g., 'internal' vs 'client').
+  // Email is normalized to lowercase to avoid case-sensitivity issues.
+  findUserByEmailAndType: async (email: string, userType: string): Promise<IUser | undefined> => {
+    const db = await getAdminConnection();
+    try {
+      const user = await db<IUser>('users')
+        .select('*')
+        .where({ email: email.toLowerCase(), user_type: userType })
+        .first();
+      return user;
+    } catch (error) {
+      logger.error(`Error finding user with email ${email} and type ${userType}:`, error);
+      throw error;
+    }
+  },
+
   findUserByUsername: async (knexOrTrx: Knex | Knex.Transaction, username: string): Promise<IUser | undefined> => {
     const tenant = await getCurrentTenantId();
     try {

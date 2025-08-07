@@ -123,16 +123,18 @@ export async function createPortalUserInDB(
 ): Promise<CreatePortalUserResult> {
   try {
     const result = await knex.transaction(async (trx: Knex.Transaction) => {
-      // Check if user already exists
+      // Check if a client-portal user already exists for this email
+      // Allow the same email to exist for other user types (e.g., internal MSP users)
       const existingUser = await trx('users')
         .where({
           email: input.email.toLowerCase(),
-          tenant: input.tenantId
+          tenant: input.tenantId,
+          user_type: 'client'
         })
         .first();
 
       if (existingUser) {
-        throw new Error('A user with this email already exists');
+        throw new Error('A client portal user with this email already exists');
       }
 
       // Get the contact to check is_client_admin flag if not explicitly provided

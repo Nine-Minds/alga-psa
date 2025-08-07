@@ -194,9 +194,11 @@ export class UserService extends BaseService<IUser> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      // Validate email uniqueness across all tenants
+      // Validate email uniqueness per user_type (allow same email for different types)
+      const targetUserType = data.user_type || 'internal';
       const existingUserByEmail = await trx('users')
         .where('email', data.email.toLowerCase())
+        .andWhere('user_type', targetUserType)
         .first();
 
       if (existingUserByEmail) {
@@ -297,10 +299,12 @@ export class UserService extends BaseService<IUser> {
         throw new Error('User not found or permission denied');
       }
 
-      // Validate email uniqueness if changing email
+      // Validate email uniqueness per user_type if changing email
       if (data.email && data.email.toLowerCase() !== existingUser.email) {
+        const userTypeToCheck = (data.user_type || existingUser.user_type || 'internal');
         const emailExists = await trx('users')
           .where('email', data.email.toLowerCase())
+          .andWhere('user_type', userTypeToCheck)
           .whereNot('user_id', id)
           .first();
 
