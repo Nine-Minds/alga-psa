@@ -292,6 +292,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         
         return (
           <Link
+            id={`ticket-number-link-${record.ticket_id}`}
             href={href}
             className="text-blue-500 hover:underline"
           >

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import TicketingDashboard from './TicketingDashboard';
 import { loadMoreTickets } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
@@ -38,7 +38,6 @@ export default function TicketingDashboardContainer({
   const [tickets, setTickets] = useState<ITicketListItem[]>(consolidatedData.tickets);
   const [nextCursor, setNextCursor] = useState<string | null>(consolidatedData.nextCursor);
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [activeFilters, setActiveFilters] = useState<Partial<ITicketListFilters>>(() => {
     // Use initialFilters if provided, otherwise use defaults
