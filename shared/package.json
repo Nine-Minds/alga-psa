@@ -23,7 +23,11 @@
     "./workflow/streams/redisStreamClient.js": "./dist/workflow/streams/redisStreamClient.js",
     "./utils/retryUtils.js": "./dist/utils/retryUtils.js",
     "./db/connection.js": "./dist/db/connection.js",
-    "./extension-utils": "./dist/extension-utils/index.js"
+    "./extension-utils": "./dist/extension-utils/index.js",
+    "./models/companyModel.js": "./dist/models/companyModel.js",
+    "./models/contactModel.js": "./dist/models/contactModel.js",
+    "./models/tagModel.js": "./dist/models/tagModel.js",
+    "./models/ticketModel.js": "./dist/models/ticketModel.js"
   },
   "scripts": {
     "build": "tsc",

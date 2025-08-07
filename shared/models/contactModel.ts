@@ -21,7 +21,7 @@ import { ValidationResult } from '../interfaces/validation.interfaces';
 // Core contact form validation schema
 export const contactFormSchema = z.object({
   full_name: z.string().min(1, 'Full name is required'),
-  email: z.string().email('Invalid email address').optional().or(z.literal('')),
+  email: z.union([z.string().email('Invalid email address'), z.literal(''), z.null()]).optional(),
   phone_number: z.string().optional(),
   company_id: z.string().uuid('Company ID must be a valid UUID').optional().nullable(),
   role: z.string().optional(),
