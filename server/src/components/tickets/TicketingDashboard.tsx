@@ -173,6 +173,24 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
+  // Helper function to generate URL with current filter state
+  const getCurrentFiltersQuery = useCallback(() => {
+    const params = new URLSearchParams();
+    
+    // Only add non-default/non-empty values to URL
+    if (selectedChannel) params.set('channelId', selectedChannel);
+    if (selectedCompany) params.set('companyId', selectedCompany);
+    if (selectedStatus && selectedStatus !== 'open') params.set('statusId', selectedStatus);
+    if (selectedPriority && selectedPriority !== 'all') params.set('priorityId', selectedPriority);
+    if (selectedCategories.length > 0) params.set('categoryId', selectedCategories[0]);
+    if (debouncedSearchQuery) params.set('searchQuery', debouncedSearchQuery);
+    if (channelFilterState && channelFilterState !== 'active') {
+      params.set('channelFilterState', channelFilterState);
+    }
+
+    return params.toString();
+  }, [selectedChannel, selectedCompany, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, channelFilterState]);
+
   useEffect(() => {
     const currentFilters: Partial<ITicketListFilters> = {
       channelId: selectedChannel === null ? undefined : selectedChannel,
@@ -266,14 +284,21 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       title: 'Ticket Number',
       dataIndex: 'ticket_number',
       width: '9%',
-      render: (value: string, record: ITicketListItem) => (
-        <Link
-          href={`/msp/tickets/${record.ticket_id}`}
-          className="text-blue-500 hover:underline"
-        >
-          {value}
-        </Link>
-      ),
+      render: (value: string, record: ITicketListItem) => {
+        const filterQuery = getCurrentFiltersQuery();
+        const href = filterQuery 
+          ? `/msp/tickets/${record.ticket_id}?returnFilters=${encodeURIComponent(filterQuery)}`
+          : `/msp/tickets/${record.ticket_id}`;
+        
+        return (
+          <Link
+            href={href}
+            className="text-blue-500 hover:underline"
+          >
+            {value}
+          </Link>
+        );
+      },
     },
     {
       title: 'Title',
@@ -397,7 +422,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         </DropdownMenu>
       ),
     }
-  ], [ticketTagsRef, allUniqueTags]);
+  ], [ticketTagsRef, allUniqueTags, getCurrentFiltersQuery]);
 
   // Create columns with categories data
   const columns = useMemo(() => createTicketColumns(categories), [categories, createTicketColumns]);
