@@ -21,6 +21,7 @@ import { TimePeriodSettings } from './models/timePeriodSettings';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { initializeScheduler } from 'server/src/lib/jobs';
 import { CompositeSecretProvider, FileSystemSecretProvider, getSecretProviderInstance, ISecretProvider, EnvSecretProvider } from '@alga-psa/shared/core';
+import { validateEmailConfiguration, logEmailConfigWarnings } from './validation/emailConfigValidation';
 
 let isFunctionExecuted = false;
 
@@ -68,6 +69,19 @@ export async function initializeApp() {
     
     // Run general environment validation
     validateEnv();
+
+    // Validate email configuration (non-critical but important)
+    try {
+      const emailValidation = validateEmailConfiguration();
+      if (emailValidation.warnings.length > 0) {
+        logEmailConfigWarnings(emailValidation.warnings);
+      } else if (process.env.EMAIL_ENABLE === 'true') {
+        logger.info('Email configuration validation passed');
+      }
+    } catch (error) {
+      logger.error('Failed to validate email configuration:', error);
+      // Continue startup - email validation is not critical
+    }
 
     // Initialize event bus (critical - must succeed)
     try {
@@ -212,13 +226,17 @@ function logConfiguration() {
   });
 
   // Email Configuration
+  const emailProviderType = process.env.EMAIL_PROVIDER_TYPE || 
+    (process.env.RESEND_API_KEY ? 'resend' : 'smtp');
+  
   logger.info('Email Configuration:', {
     EMAIL_ENABLE: process.env.EMAIL_ENABLE,
+    EMAIL_PROVIDER_TYPE: emailProviderType,
     EMAIL_FROM: process.env.EMAIL_FROM,
     EMAIL_HOST: process.env.EMAIL_HOST,
     EMAIL_PORT: process.env.EMAIL_PORT,
     EMAIL_USERNAME: process.env.EMAIL_USERNAME,
-    // Password intentionally omitted for security
+    // Password and API keys intentionally omitted for security
   });
 
   // Auth Configuration

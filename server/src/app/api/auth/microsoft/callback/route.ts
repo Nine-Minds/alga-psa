@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
       clientSecret = process.env.MICROSOFT_CLIENT_SECRET || await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_client_secret') || null;
     }
     
-    const redirectUri = stateData.redirectUri || `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/microsoft/callback`;
+    const redirectUri = stateData.redirectUri || `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/microsoft/callback`;
 
     if (!clientId || !clientSecret) {
       console.error('Microsoft OAuth credentials not configured');
