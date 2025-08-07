@@ -195,10 +195,11 @@ export class UserService extends BaseService<IUser> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      // Validate email uniqueness per user_type (allow same email for different types)
+      // Validate email uniqueness per tenant + user_type (allow same email across different types)
       const targetUserType = data.user_type || 'internal';
       const existingUserByEmail = await trx('users')
-        .where('email', data.email.toLowerCase())
+        .where('tenant', context.tenant)
+        .andWhere('email', data.email.toLowerCase())
         .andWhere('user_type', targetUserType)
         .first();
 
@@ -206,14 +207,15 @@ export class UserService extends BaseService<IUser> {
         throw new Error('A user with this email address already exists');
       }
 
-      // Validate username uniqueness within tenant
+      // Validate username uniqueness within tenant + user_type (allow same username across different types)
       const existingUserByUsername = await trx('users')
-        .where('username', data.username)
         .where('tenant', context.tenant)
+        .andWhere('username', data.username)
+        .andWhere('user_type', targetUserType)
         .first();
 
       if (existingUserByUsername) {
-        throw new Error('A user with this username already exists');
+        throw new Error('A user with this username already exists for this user type');
       }
 
       // Validate role IDs if provided
