@@ -22,11 +22,11 @@ spec:
         {{- if .Values.vaultAgent.enabled }}
         vault.hashicorp.com/agent-inject: "true"
         vault.hashicorp.com/role: "{{ .Values.vaultAgent.role }}"
-        vault.hashicorp.com/agent-inject-secret-alga-auth-key: "{{ .Values.vaultAgent.sharedSecretPath }}"
-        vault.hashicorp.com/agent-inject-template-alga-auth-key: |
+        vault.hashicorp.com/agent-inject-secret-alga_auth_key: "{{ .Values.vaultAgent.sharedSecretPath }}"
+        vault.hashicorp.com/agent-inject-template-alga_auth_key: |
           {{`{{- with secret "`}}{{ .Values.vaultAgent.sharedSecretPath }}{{`" -}}
-          export ALGA_AUTH_KEY="{{ .Data.data.alga_auth_key }}"
-          {{- end }}`}}
+          {{- .Data.data.alga_auth_key -}}
+          {{- end }}`}}        
         vault.hashicorp.com/agent-inject-secret-server-secrets: "{{ .Values.vaultAgent.secretPath }}"
         vault.hashicorp.com/agent-inject-template-server-secrets: |
           {{`{{- with secret "`}}{{ .Values.vaultAgent.secretPath }}{{`" -}}
@@ -64,20 +64,7 @@ spec:
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.server.image.name }}:{{ .Values.server.image.tag }}"
-          {{- if .Values.vaultAgent.enabled }}
-          command: ["/bin/sh", "-c"]
-          args: 
-            - |
-              if [ -f /vault/secrets/alga-auth-key ]; then
-                source /vault/secrets/alga-auth-key
-              fi
-              if [ -f /vault/secrets/server-secrets ]; then
-                source /vault/secrets/server-secrets
-              fi
-              exec ./entrypoint.sh
-          {{- else }}
           command: ["./entrypoint.sh"]
-          {{- end }}
           imagePullPolicy: {{ .Values.server.pullPolicy }}
           env:
           # ----------- APP ----------------
@@ -404,3 +391,4 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
 {{- end }}
+

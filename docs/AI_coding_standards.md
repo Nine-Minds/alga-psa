@@ -9,9 +9,25 @@
 
 Prefer radix components over other libraries
 
+## Import Paths
+
+- **Always use full relative paths** instead of `@` aliases
+- Example:
+  ```tsx
+  // Good
+  import { Button } from 'server/src/components/ui/Button';
+  import { createUser } from 'server/src/lib/actions/user-actions/userActions';
+  
+  // Bad - Don't use @ imports
+  import { Button } from '@/components/ui/Button';
+  import { createUser } from '@/lib/actions/user-actions/userActions';
+  ```
+
 ## UI Components
 
-- Use component from `@/components/ui' folder
+**IMPORTANT: All interactive elements (buttons, inputs, selects, etc.) MUST have unique `id` attributes for the reflection UI system. See Component ID Guidelines section for naming conventions.**
+
+- Use component from `server/src/components/ui` folder
     - [Button](../server/src/components/ui/Button.tsx)
     - [Card](../server/src/components/ui/Card.tsx)
     - [Checkbox](../server/src/components/ui/Checkbox.tsx)
@@ -131,6 +147,7 @@ When implementing action menus in DataTable components, follow these guidelines:
    ```tsx
    <DropdownMenuTrigger asChild>
      <Button
+       id="billing-plan-actions-menu"  // Follow pattern: {object}-actions-menu
        variant="ghost"
        className="h-8 w-8 p-0"
        onClick={(e) => e.stopPropagation()}
@@ -428,7 +445,7 @@ Dates and times should use the ISO8601String type in the types.d.tsx file. In th
 ## Date Handling Standards
 
 1. **Use Centralized Date Utilities**
-   - Always use `toPlainDate` from `@/lib/utils/dateTimeUtils` for date conversions
+   - Always use `toPlainDate` from `server/src/lib/utils/dateTimeUtils` for date conversions
    - Never use `Temporal.PlainDate.from` directly in components
    - Example:
      ```tsx

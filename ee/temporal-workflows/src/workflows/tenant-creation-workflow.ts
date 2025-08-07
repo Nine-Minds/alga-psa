@@ -37,6 +37,7 @@ const activities = proxyActivities<{
     companyId?: string;
     billingPlan?: string;
   }): Promise<SetupTenantDataActivityResult>;
+  run_onboarding_seeds(tenantId: string): Promise<{ success: boolean; seedsApplied: string[] }>;
   sendWelcomeEmail(input: SendWelcomeEmailActivityInput): Promise<SendWelcomeEmailActivityResult>;
   rollbackTenant(tenantId: string): Promise<void>;
   rollbackUser(userId: string, tenantId: string): Promise<void>;
@@ -45,6 +46,27 @@ const activities = proxyActivities<{
     workflowStatus: 'pending' | 'started' | 'in_progress' | 'completed' | 'failed';
     workflowId?: string;
     error?: string;
+  }): Promise<void>;
+  // Customer tracking activities
+  createCustomerCompanyActivity(input: {
+    tenantName: string;
+    adminUserEmail: string;
+  }): Promise<{ customerId: string }>;
+  createCustomerContactActivity(input: {
+    companyId: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  }): Promise<{ contactId: string }>;
+  tagCustomerCompanyActivity(input: {
+    companyId: string;
+    tagText: string;
+  }): Promise<{ tagId: string }>;
+  deleteCustomerCompanyActivity(input: {
+    companyId: string;
+  }): Promise<void>;
+  deleteCustomerContactActivity(input: {
+    contactId: string;
   }): Promise<void>;
 }>({
   startToCloseTimeout: '5m',
@@ -69,8 +91,11 @@ export const getWorkflowStateQuery = defineQuery<TenantCreationWorkflowState>('g
  * 
  * This workflow orchestrates the creation of a new tenant, including:
  * 1. Creating the tenant record in the database
- * 2. Creating an admin user for the tenant
- * 3. Setting up initial tenant data (billing plans, default settings, etc.)
+ * 2. Running onboarding seeds (roles, permissions, tax settings)
+ * 3. Creating an admin user for the tenant
+ * 4. Setting up initial tenant data (billing plans, default settings, etc.)
+ * 5. Creating customer tracking records in nineminds tenant
+ * 6. Sending welcome email to the admin user
  * 
  * The workflow supports cancellation and provides detailed state tracking.
  */
@@ -88,6 +113,11 @@ export async function tenantCreationWorkflow(
   let userCreated = false;
   let temporaryPassword = '';
   let emailSent = false;
+  
+  // Customer tracking variables
+  let customerCompanyId: string | undefined;
+  let customerContactId: string | undefined;
+  let customerTagId: string | undefined;
 
   // Set up signal handlers
   setHandler(cancelWorkflowSignal, (signal: TenantCreationCancelSignal) => {
@@ -151,9 +181,23 @@ export async function tenantCreationWorkflow(
       companyId: tenantResult.companyId 
     });
 
-    // Step 2: Create admin user
-    workflowState.step = 'creating_admin_user';
+    // Step 2: Run onboarding seeds (roles, permissions, etc.)
+    workflowState.step = 'running_onboarding_seeds';
+    workflowState.progress = 40;
+
+    if (cancelled) {
+      throw new Error(`Workflow cancelled: ${cancelReason}`);
+    }
+
+    log.info('Running onboarding seeds for tenant');
+    const seedsResult = await activities.run_onboarding_seeds(tenantResult.tenantId);
+    
     workflowState.progress = 50;
+    log.info('Onboarding seeds completed', { seedsApplied: seedsResult.seedsApplied });
+
+    // Step 3: Create admin user (now with proper roles/permissions in place)
+    workflowState.step = 'creating_admin_user';
+    workflowState.progress = 60;
 
     if (cancelled) {
       throw new Error(`Workflow cancelled: ${cancelReason}`);
@@ -171,16 +215,16 @@ export async function tenantCreationWorkflow(
     userCreated = true;
     workflowState.adminUserId = userResult.userId;
     temporaryPassword = userResult.temporaryPassword;
-    workflowState.progress = 60;
+    workflowState.progress = 70;
 
     log.info('Admin user created successfully', { 
       userId: userResult.userId, 
       roleId: userResult.roleId 
     });
 
-    // Step 3: Setup tenant data
+    // Step 4: Setup tenant data
     workflowState.step = 'setting_up_data';
-    workflowState.progress = 70;
+    workflowState.progress = 80;
 
     if (cancelled) {
       throw new Error(`Workflow cancelled: ${cancelReason}`);
@@ -194,13 +238,64 @@ export async function tenantCreationWorkflow(
       billingPlan: input.billingPlan,
     });
 
-    workflowState.progress = 85;
+    workflowState.progress = 90;
 
     log.info('Tenant data setup completed', { setupSteps: setupResult.setupSteps });
 
-    // Step 4: Send welcome email
+    // Step 5: Create customer tracking records (optional, non-blocking)
+    // This tracks the new tenant as a customer in the nineminds management tenant
+    try {
+      workflowState.step = 'creating_customer_tracking';
+      workflowState.progress = 85;
+
+      if (cancelled) {
+        throw new Error(`Workflow cancelled: ${cancelReason}`);
+      }
+
+      log.info('Creating customer tracking records in nineminds tenant');
+      
+      // Create customer company
+      const customerCompanyResult = await activities.createCustomerCompanyActivity({
+        tenantName: input.tenantName,
+        adminUserEmail: input.adminUser.email,
+      });
+      customerCompanyId = customerCompanyResult.customerId;
+      
+      log.info('Customer company created', { customerId: customerCompanyId });
+
+      // Create customer contact
+      const customerContactResult = await activities.createCustomerContactActivity({
+        companyId: customerCompanyId,
+        firstName: input.adminUser.firstName,
+        lastName: input.adminUser.lastName,
+        email: input.adminUser.email,
+      });
+      customerContactId = customerContactResult.contactId;
+      
+      log.info('Customer contact created', { contactId: customerContactId });
+
+      // Tag company as PSA Customer
+      const tagResult = await activities.tagCustomerCompanyActivity({
+        companyId: customerCompanyId,
+        tagText: 'PSA Customer',
+      });
+      customerTagId = tagResult.tagId;
+      
+      log.info('Customer company tagged', { tagId: customerTagId });
+      
+      workflowState.progress = 90;
+    } catch (customerTrackingError) {
+      // Log the error but don't fail the workflow - customer tracking is optional
+      log.error('Failed to create customer tracking records (non-fatal)', {
+        error: customerTrackingError instanceof Error ? customerTrackingError.message : 'Unknown error',
+        tenantName: input.tenantName,
+      });
+      // Continue with the workflow - this is not a critical failure
+    }
+
+    // Step 6: Send welcome email
     workflowState.step = 'sending_welcome_email';
-    workflowState.progress = 90;
+    workflowState.progress = 95;
 
     if (cancelled) {
       throw new Error(`Workflow cancelled: ${cancelReason}`);
@@ -257,6 +352,9 @@ export async function tenantCreationWorkflow(
       emailSent,
       success: true,
       createdAt: new Date().toISOString(),
+      // Include customer tracking IDs if they were created
+      customerCompanyId,
+      customerContactId,
     };
 
   } catch (error) {
@@ -289,6 +387,29 @@ export async function tenantCreationWorkflow(
 
     // Rollback operations in reverse order
     try {
+      // Rollback customer tracking if created
+      if (customerContactId) {
+        try {
+          log.info('Rolling back customer contact', { contactId: customerContactId });
+          await activities.deleteCustomerContactActivity({ contactId: customerContactId });
+        } catch (customerRollbackError) {
+          log.warn('Failed to rollback customer contact (non-critical)', { 
+            error: customerRollbackError instanceof Error ? customerRollbackError.message : 'Unknown error'
+          });
+        }
+      }
+      
+      if (customerCompanyId) {
+        try {
+          log.info('Rolling back customer company', { companyId: customerCompanyId });
+          await activities.deleteCustomerCompanyActivity({ companyId: customerCompanyId });
+        } catch (customerRollbackError) {
+          log.warn('Failed to rollback customer company (non-critical)', { 
+            error: customerRollbackError instanceof Error ? customerRollbackError.message : 'Unknown error'
+          });
+        }
+      }
+
       if (userCreated && workflowState.adminUserId && workflowState.tenantId) {
         log.info('Rolling back user creation', { userId: workflowState.adminUserId });
         await activities.rollbackUser(workflowState.adminUserId, workflowState.tenantId);

@@ -13,7 +13,9 @@ const logger = createLogger({
 const REQUIRED_CONFIGS = {
   // Authentication
   ALGA_AUTH_KEY: 'Shared authentication key for internal API calls',
-  
+  NEXTAUTH_SECRET: 'Secret used by NextAuth for session management and password hashing',
+  APPLICATION_URL: 'Base URL for the application',
+
   // Database
   DB_HOST: 'Database host (e.g., localhost or postgres)',
   DB_PORT: 'Database port (e.g., 5432)',

@@ -1,11 +1,15 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
+import { Eye, EyeOff } from 'lucide-react';
 import { StepProps } from '../types';
 
 export function CompanyInfoStep({ data, updateData }: StepProps) {
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -71,6 +75,74 @@ export function CompanyInfoStep({ data, updateData }: StepProps) {
         <p className="text-xs text-gray-500">
           This will be used for signing in to your account.
         </p>
+      </div>
+
+      <div className="space-y-4 pt-4 border-t">
+        <div className="space-y-2">
+          <h3 className="text-lg font-medium">Set Your Password</h3>
+          <p className="text-sm text-gray-600">
+            Please set a new password to replace your temporary password.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="newPassword">
+            New Password <span className="text-red-500">*</span>
+          </Label>
+          <div className="relative">
+            <Input
+              id="newPassword"
+              type={showNewPassword ? "text" : "password"}
+              value={data.newPassword || ''}
+              onChange={(e) => updateData({ newPassword: e.target.value })}
+              placeholder="Enter your new password"
+              required
+              className="pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowNewPassword(!showNewPassword)}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+            >
+              {showNewPassword ? (
+                <EyeOff className="h-4 w-4 text-gray-400" />
+              ) : (
+                <Eye className="h-4 w-4 text-gray-400" />
+              )}
+            </button>
+          </div>
+          <p className="text-xs text-gray-500">
+            Must be at least 8 characters long.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="confirmPassword">
+            Confirm Password <span className="text-red-500">*</span>
+          </Label>
+          <div className="relative">
+            <Input
+              id="confirmPassword"
+              type={showConfirmPassword ? "text" : "password"}
+              value={data.confirmPassword || ''}
+              onChange={(e) => updateData({ confirmPassword: e.target.value })}
+              placeholder="Confirm your new password"
+              required
+              className="pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+            >
+              {showConfirmPassword ? (
+                <EyeOff className="h-4 w-4 text-gray-400" />
+              ) : (
+                <Eye className="h-4 w-4 text-gray-400" />
+              )}
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="rounded-md bg-blue-50 p-4">

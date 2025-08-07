@@ -14,27 +14,7 @@ import { Knex } from 'knex';
 import { addCompanyEmailSetting } from '../company-settings/emailSettings';
 import { deleteEntityTags } from '../../utils/tagCleanup';
 import { createTag } from '../tagActions';
-
-// Helper function to extract domain from URL
-function extractDomainFromUrl(url: string): string | null {
-  if (!url) return null;
-  
-  try {
-    // Add protocol if missing
-    let urlWithProtocol = url;
-    if (!url.match(/^https?:\/\//)) {
-      urlWithProtocol = `https://${url}`;
-    }
-    
-    const urlObj = new URL(urlWithProtocol);
-    // Remove 'www.' prefix if present
-    return urlObj.hostname.replace(/^www\./, '');
-  } catch (error) {
-    // If URL parsing fails, try basic extraction
-    const match = url.match(/(?:https?:\/\/)?(?:www\.)?([^\/\s]+)/);
-    return match ? match[1] : null;
-  }
-}
+import { CompanyModel, CreateCompanyInput } from '@alga-psa/shared/models/companyModel';
 
 export async function getCompanyById(companyId: string): Promise<ICompanyWithLocation | null> {
   const currentUser = await getCurrentUser();
@@ -194,7 +174,7 @@ export async function updateCompany(companyId: string, updateData: Partial<Omit<
     if (updateData.url !== undefined || updateData.properties?.website !== undefined) {
       const websiteUrl = updateData.url || updateData.properties?.website;
       if (websiteUrl) {
-        const domain = extractDomainFromUrl(websiteUrl);
+        const domain = CompanyModel.extractDomainFromUrl(websiteUrl);
         if (domain) {
           try {
             await addCompanyEmailSetting(
@@ -280,7 +260,7 @@ export async function createCompany(company: Omit<ICompany, 'company_id' | 'crea
     // Add website domain as email suffix if available
     const websiteUrl = createdCompany.url || createdCompany.properties?.website;
     if (websiteUrl) {
-      const domain = extractDomainFromUrl(websiteUrl);
+      const domain = CompanyModel.extractDomainFromUrl(websiteUrl);
       if (domain) {
         try {
           await addCompanyEmailSetting(

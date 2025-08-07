@@ -1,9 +1,6 @@
-exports.seed = async function (knex) {
-    // Get the tenant ID from environment or use the first tenant
-    let tenantId;
-    if (process.env.TENANT_ID) {
-        tenantId = process.env.TENANT_ID;
-    } else {
+exports.seed = async function (knex, tenantId) {
+    // Use provided tenantId or fall back to first tenant
+    if (!tenantId) {
         const tenant = await knex('tenants').select('tenant').first();
         if (!tenant) {
             console.log('No tenant found, skipping tax regions seed');

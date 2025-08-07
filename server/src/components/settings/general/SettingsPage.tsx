@@ -46,6 +46,8 @@ const SettingsPage = (): JSX.Element =>  {
   const isBillingEnabled = typeof billingFeatureFlag === 'boolean' ? billingFeatureFlag : billingFeatureFlag?.enabled;
   const advancedFeatureFlag = useFeatureFlag('advanced-features-enabled');
   const isAdvancedFeaturesEnabled = typeof advancedFeatureFlag === 'boolean' ? advancedFeatureFlag : advancedFeatureFlag?.enabled;
+  const emailConfigFlag = useFeatureFlag('email-configuration');
+  const isEmailConfigEnabled = typeof emailConfigFlag === 'boolean' ? emailConfigFlag : emailConfigFlag?.enabled;
   // Extensions are conditionally available based on edition
   // The webpack alias will resolve to either the EE component or empty component
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
@@ -189,7 +191,7 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Email",
-      content: (
+      content: isEmailConfigEnabled ? (
         <Card>
           <CardHeader>
             <CardTitle>Email Configuration</CardTitle>
@@ -199,6 +201,8 @@ const SettingsPage = (): JSX.Element =>  {
             <EmailSettings />
           </CardContent>
         </Card>
+      ) : (
+        <FeaturePlaceholder />
       ),
     },
     { // Add the new Integrations tab definition

@@ -53,27 +53,23 @@ export async function createAdminUserInDB(
       
       const userId = userResult[0].user_id;
 
-      // Find or create Admin role
-      let adminRole = await trx('roles')
+      // Find Admin role (should already exist from onboarding seeds)
+      const adminRole = await trx('roles')
         .select('role_id')
-        .where({ role_name: 'Admin', tenant: input.tenantId })
+        .where({ 
+          role_name: 'Admin', 
+          tenant: input.tenantId,
+          msp: true,  // MSP Admin role, not client portal
+          client: false 
+        })
         .first();
 
-      let roleId: string;
       if (!adminRole) {
-        // Create Admin role for this tenant
-        const newRoleResult = await trx('roles')
-          .insert({
-            role_name: 'Admin',
-            tenant: input.tenantId,
-            description: 'Administrator role with full access'
-          })
-          .returning('role_id');
-        roleId = newRoleResult[0].role_id;
-        log.info('Created Admin role', { roleId, tenantId: input.tenantId });
-      } else {
-        roleId = adminRole.role_id;
+        throw new Error('Admin role not found. Onboarding seeds may not have run properly.');
       }
+
+      const roleId = adminRole.role_id;
+      log.info('Using existing Admin role', { roleId, tenantId: input.tenantId });
 
       // Associate user with tenant and role (using correct table name)
       await trx('user_roles')

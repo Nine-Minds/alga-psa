@@ -569,7 +569,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                 </Label>
                 <TextArea
                   data-automation-id="notes"
-                  value={formData.notes}
+                  value={formData.notes || ''}
                   onChange={(e) => handleCompanyChange('notes', e.target.value)}
                   placeholder="Add any initial notes (optional)"
                   disabled={isSubmitting}

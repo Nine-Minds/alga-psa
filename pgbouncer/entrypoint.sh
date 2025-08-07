@@ -1,21 +1,31 @@
 #!/bin/sh
 set -e
+# Prevent accidental secret leakage if someone runs with set -x
+set +x
 
-# Read secrets
-POSTGRES_PASSWORD=$(cat /run/secrets/postgres_password)
-DB_PASSWORD_SERVER=$(cat /run/secrets/db_password_server)
+# Read secrets into environment variables with shell safety
+# Use IFS= and read -r to preserve whitespace and special characters
+IFS= read -r POSTGRES_PASSWORD < /run/secrets/postgres_password
+IFS= read -r DB_PASSWORD_SERVER < /run/secrets/db_password_server
+export POSTGRES_PASSWORD
+export DB_PASSWORD_SERVER
 
-# Escape potential special characters in passwords for sed
-POSTGRES_PASSWORD_ESC=$(echo "$POSTGRES_PASSWORD" | sed -e 's/[\/&]/\\&/g')
-DB_PASSWORD_SERVER_ESC=$(echo "$DB_PASSWORD_SERVER" | sed -e 's/[\/&]/\\&/g')
+# Use envsubst to safely substitute passwords - handles ALL special characters perfectly
+# Only substitute the specific variables we want (for security)
+envsubst '$POSTGRES_PASSWORD $DB_PASSWORD_SERVER' < /etc/pgbouncer/userlist.txt.template > /etc/pgbouncer/userlist.txt
 
-# Substitute placeholders in userlist.txt with actual passwords from secrets
-# Using '#' as delimiter for sed to avoid issues with '/' in passwords
-sed -i "s#POSTGRES_PASSWORD_PLACEHOLDER#$POSTGRES_PASSWORD_ESC#g" /etc/pgbouncer/userlist.txt
-sed -i "s#DB_PASSWORD_SERVER_PLACEHOLDER#$DB_PASSWORD_SERVER_ESC#g" /etc/pgbouncer/userlist.txt
+# Set proper permissions on userlist.txt (contains clear-text passwords)
+chmod 600 /etc/pgbouncer/userlist.txt
+chown postgres:postgres /etc/pgbouncer/userlist.txt
 
 # Substitute environment variables in pgbouncer.ini
-sed -i "s/\${POSTGRES_HOST:-postgres}/${POSTGRES_HOST:-postgres}/g" /etc/pgbouncer/pgbouncer.ini
+# Set default for POSTGRES_HOST if not provided (envsubst doesn't support ${VAR:-default})
+: "${POSTGRES_HOST:=postgres}"
+export POSTGRES_HOST
+envsubst '$POSTGRES_HOST' < /etc/pgbouncer/pgbouncer.ini.template > /etc/pgbouncer/pgbouncer.ini
+
+# Clear sensitive environment variables for security
+unset POSTGRES_PASSWORD DB_PASSWORD_SERVER
 
 # Start pgbouncer
 # Use standard su to switch user (target user is 'postgres' based on whoami)
