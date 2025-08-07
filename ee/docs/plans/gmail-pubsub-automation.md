@@ -27,7 +27,7 @@ Automate the Pub/Sub configuration using standardized naming conventions based o
 - [x] Implement standardized naming conventions:
   - Topic: `gmail-notifications-{tenant-id}`
   - Subscription: `gmail-webhook-{tenant-id}`
-  - Webhook URL: `${process.env.NEXT_PUBLIC_APP_URL}/api/email/webhooks/google`
+  - Webhook URL: `${process.env.NEXT_PUBLIC_BASE_URL}/api/email/webhooks/google`
 - [x] Handle setup automatically during OAuth flow
 - [x] Add proper error handling for Pub/Sub setup failures
 
@@ -84,7 +84,7 @@ sequenceDiagram
 ```typescript
 const topicName = `gmail-notifications-${tenantId}`;
 const subscriptionName = `gmail-webhook-${tenantId}`;
-const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/email/webhooks/google`;
+const webhookUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/email/webhooks/google`;
 ```
 
 ### Files to Modify

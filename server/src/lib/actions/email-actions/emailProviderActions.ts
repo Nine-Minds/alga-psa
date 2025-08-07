@@ -15,7 +15,7 @@ async function generatePubSubNames(tenantId: string) {
   // Use ngrok URL in development if available
   const secretProvider = await getSecretProviderInstance();
   const baseUrl = await secretProvider.getAppSecret('NGROK_URL') || 
-                  await secretProvider.getAppSecret('NEXT_PUBLIC_APP_URL') || 
+                  await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL') || 
                   await secretProvider.getAppSecret('NEXTAUTH_URL') ||
                   'http://localhost:3000';
   

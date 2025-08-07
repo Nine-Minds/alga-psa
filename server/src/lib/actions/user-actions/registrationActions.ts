@@ -10,7 +10,7 @@ import User from 'server/src/lib/models/user';
 import { verifyEmailSuffix, getCompanyByEmailSuffix } from 'server/src/lib/actions/company-settings/emailSettings';
 import { v4 as uuid } from 'uuid';
 import crypto from 'crypto';
-import { sendVerificationEmail } from 'server/src/lib/email/sendVerificationEmail';
+import { sendVerificationEmail } from 'server/src/lib/email/system/templates/emailVerification';
 import { 
   checkRegistrationLimit, 
   checkVerificationLimit, 
@@ -155,8 +155,7 @@ export async function initiateRegistration(
       await sendVerificationEmail({
         email,
         token,
-        registrationId,
-        tenant: result.tenant
+        registrationId
       });
     } catch (error) {
       // If email fails to send, clean up the registration and token
