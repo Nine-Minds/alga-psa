@@ -153,11 +153,11 @@ export async function createCustomerContactActivity(input: {
     });
     
     log.info('Customer contact created successfully', {
-      contactId: result.contact_id,
+      contactId: result.contact_name_id,
       email: input.email
     });
     
-    return { contactId: result.contact_id };
+    return { contactId: result.contact_name_id };
   } catch (error) {
     log.error('Failed to create customer contact', {
       error: error instanceof Error ? error.message : 'Unknown error',
