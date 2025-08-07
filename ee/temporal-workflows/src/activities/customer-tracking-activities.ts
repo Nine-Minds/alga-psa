@@ -15,7 +15,7 @@ import { Knex } from 'knex';
  * Get the management tenant ID for 'Nine Minds LLC'
  * @throws Error if management tenant doesn't exist
  */
-async function getManagementTenantId(knex: Knex): Promise<string> {
+async function getManagementTenantIdInternal(knex: Knex): Promise<string> {
   const MANAGEMENT_TENANT_NAME = 'Nine Minds LLC';
   
   const tenant = await knex('tenants')
@@ -27,6 +27,28 @@ async function getManagementTenantId(knex: Knex): Promise<string> {
   }
   
   return tenant.tenant;
+}
+
+/**
+ * Activity to get the management tenant ID
+ * This can be called by workflows to get the Nine Minds tenant ID
+ */
+export async function getManagementTenantId(): Promise<{ tenantId: string }> {
+  const log = Context.current().log;
+  
+  try {
+    const adminKnex = await getAdminConnection();
+    const tenantId = await getManagementTenantIdInternal(adminKnex);
+    
+    log.info('Retrieved management tenant ID', { tenantId });
+    
+    return { tenantId };
+  } catch (error) {
+    log.error('Failed to get management tenant ID', {
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+    throw error;
+  }
 }
 
 /**
@@ -42,7 +64,7 @@ export async function createCustomerCompanyActivity(input: {
     const adminKnex = await getAdminConnection();
     
     // Get the management tenant ID (will throw if not found)
-    const ninemindsTenant = await getManagementTenantId(adminKnex);
+    const ninemindsTenant = await getManagementTenantIdInternal(adminKnex);
     
     log.info('Creating customer company in management tenant', {
       tenantName: input.tenantName,
@@ -96,7 +118,7 @@ export async function createCustomerContactActivity(input: {
   try {
     const adminKnex = await getAdminConnection();
     // Get the management tenant ID (will throw if not found)
-    const ninemindsTenant = await getManagementTenantId(adminKnex);
+    const ninemindsTenant = await getManagementTenantIdInternal(adminKnex);
     
     log.info('Creating customer contact in nineminds tenant', {
       email: input.email,
@@ -157,7 +179,7 @@ export async function tagCustomerCompanyActivity(input: {
   try {
     const adminKnex = await getAdminConnection();
     // Get the management tenant ID (will throw if not found)
-    const ninemindsTenant = await getManagementTenantId(adminKnex);
+    const ninemindsTenant = await getManagementTenantIdInternal(adminKnex);
     
     log.info('Tagging customer company', {
       companyId: input.companyId,
@@ -204,7 +226,7 @@ export async function deleteCustomerCompanyActivity(input: {
   try {
     const adminKnex = await getAdminConnection();
     // Get the management tenant ID (will throw if not found)
-    const ninemindsTenant = await getManagementTenantId(adminKnex);
+    const ninemindsTenant = await getManagementTenantIdInternal(adminKnex);
     
     log.info('Deleting customer company for rollback', {
       companyId: input.companyId
@@ -243,7 +265,7 @@ export async function deleteCustomerContactActivity(input: {
   try {
     const adminKnex = await getAdminConnection();
     // Get the management tenant ID (will throw if not found)
-    const ninemindsTenant = await getManagementTenantId(adminKnex);
+    const ninemindsTenant = await getManagementTenantIdInternal(adminKnex);
     
     log.info('Deleting customer contact for rollback', {
       contactId: input.contactId

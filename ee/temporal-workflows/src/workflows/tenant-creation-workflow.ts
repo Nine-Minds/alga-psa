@@ -18,7 +18,9 @@ import type {
   CreateAdminUserActivityResult,
   SetupTenantDataActivityResult,
   SendWelcomeEmailActivityInput,
-  SendWelcomeEmailActivityResult
+  SendWelcomeEmailActivityResult,
+  CreatePortalUserActivityInput,
+  CreatePortalUserActivityResult
 } from '../types/workflow-types.js';
 
 // Define activity proxies with appropriate timeouts and retry policies
@@ -68,6 +70,9 @@ const activities = proxyActivities<{
   deleteCustomerContactActivity(input: {
     contactId: string;
   }): Promise<void>;
+  getManagementTenantId(): Promise<{ tenantId: string }>;
+  createPortalUser(input: CreatePortalUserActivityInput): Promise<CreatePortalUserActivityResult>;
+  rollbackPortalUser(userId: string, tenantId: string): Promise<void>;
 }>({
   startToCloseTimeout: '5m',
   retry: {
@@ -118,6 +123,8 @@ export async function tenantCreationWorkflow(
   let customerCompanyId: string | undefined;
   let customerContactId: string | undefined;
   let customerTagId: string | undefined;
+  let portalUserId: string | undefined;
+  let portalUserCreated = false;
 
   // Set up signal handlers
   setHandler(cancelWorkflowSignal, (signal: TenantCreationCancelSignal) => {
@@ -283,6 +290,44 @@ export async function tenantCreationWorkflow(
       
       log.info('Customer company tagged', { tagId: customerTagId });
       
+      // Create portal user in Nine Minds tenant for the new customer
+      // This allows them to access a client portal in the Nine Minds system
+      if (customerContactId) {
+        try {
+          log.info('Creating portal user in Nine Minds tenant for customer');
+          
+          // Get the Nine Minds management tenant ID
+          const { tenantId: ninemindsTenantId } = await activities.getManagementTenantId();
+          
+          const portalUserResult = await activities.createPortalUser({
+            tenantId: ninemindsTenantId,
+            email: input.adminUser.email,
+            password: temporaryPassword, // Use the same password as the admin user
+            contactId: customerContactId,
+            companyId: customerCompanyId,
+            firstName: input.adminUser.firstName,
+            lastName: input.adminUser.lastName,
+            isClientAdmin: true // Make them a client admin in the portal
+          });
+          
+          portalUserId = portalUserResult.userId;
+          portalUserCreated = true;
+          
+          log.info('Portal user created in Nine Minds tenant', { 
+            portalUserId,
+            roleId: portalUserResult.roleId,
+            tenantId: ninemindsTenantId
+          });
+        } catch (portalUserError) {
+          // Log the error but don't fail the workflow - portal user creation is optional
+          log.error('Failed to create portal user in Nine Minds tenant (non-fatal)', {
+            error: portalUserError instanceof Error ? portalUserError.message : 'Unknown error',
+            email: input.adminUser.email,
+          });
+          // Continue with the workflow - this is not a critical failure
+        }
+      }
+      
       workflowState.progress = 90;
     } catch (customerTrackingError) {
       // Log the error but don't fail the workflow - customer tracking is optional
@@ -387,6 +432,20 @@ export async function tenantCreationWorkflow(
 
     // Rollback operations in reverse order
     try {
+      // Rollback portal user if created
+      if (portalUserCreated && portalUserId) {
+        try {
+          // Get the Nine Minds tenant ID for rollback
+          const { tenantId: ninemindsTenantId } = await activities.getManagementTenantId();
+          log.info('Rolling back portal user', { userId: portalUserId, tenantId: ninemindsTenantId });
+          await activities.rollbackPortalUser(portalUserId, ninemindsTenantId);
+        } catch (portalRollbackError) {
+          log.warn('Failed to rollback portal user (non-critical)', {
+            error: portalRollbackError instanceof Error ? portalRollbackError.message : 'Unknown error'
+          });
+        }
+      }
+      
       // Rollback customer tracking if created
       if (customerContactId) {
         try {

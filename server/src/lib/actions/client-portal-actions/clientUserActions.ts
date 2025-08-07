@@ -4,21 +4,29 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
-import { IUser, IRole } from 'server/src/interfaces/auth.interfaces';;
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser, getUserRolesWithPermissions, getUserCompanyId } from 'server/src/lib/actions/user-actions/userActions';
 import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/EntityImageService';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { getRoles, assignRoleToUser, removeRoleFromUser, getUserRoles } from 'server/src/lib/actions/policyActions';
+import { 
+  createPortalUserInDB, 
+  getClientPortalRoles as getClientPortalRolesFromDB,
+  CreatePortalUserInput
+} from '@shared/models/userModel';
+import { IUser, IRole } from '@shared/interfaces/user.interfaces';
 
 /**
  * Get available client portal roles
  */
 export async function getClientPortalRoles(): Promise<IRole[]> {
   try {
-    const allRoles = await getRoles();
-    // Filter to only client portal roles
-    return allRoles.filter(role => role.client && !role.msp);
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+    
+    return await getClientPortalRolesFromDB(knex, tenant);
   } catch (error) {
     console.error('Error fetching client portal roles:', error);
     return [];
@@ -182,107 +190,30 @@ export async function createClientUser({
       throw new Error('Tenant not found');
     }
 
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
-      let roleToAssign: { role_id: string } | null = null;
+    // Use the shared model to create the portal user
+    const input: CreatePortalUserInput = {
+      email,
+      password,
+      contactId,
+      companyId,
+      tenantId: tenant,
+      firstName,
+      lastName,
+      roleId
+    };
 
-      // If roleId is provided, use it (for backward compatibility)
-      if (roleId) {
-        // Verify the provided role exists and is a client portal role
-        roleToAssign = await trx('roles')
-          .where({ 
-            role_id: roleId,
-            tenant,
-            client: true
-          })
-          .first();
-        
-        if (!roleToAssign) {
-          throw new Error('Invalid role ID or role is not a client portal role');
-        }
-      } else {
-        // Get the contact to check is_client_admin flag
-        const contact = await trx('contacts')
-          .where({ 
-            contact_name_id: contactId,
-            tenant
-          })
-          .first();
+    const result = await createPortalUserInDB(knex, input);
+    
+    // Revalidate paths after successful creation
+    if (result.success) {
+      revalidatePath('/client/settings/users');
+      revalidatePath('/contacts');
+    }
 
-        if (!contact) {
-          throw new Error('Contact not found');
-        }
-
-        // Determine role based on is_client_admin flag
-        const roleName = contact.is_client_admin ? 'admin' : 'user';
-        
-        // Get the appropriate client portal role
-        let clientRole = await trx('roles')
-          .where({ 
-            tenant,
-            client: true,
-            msp: false
-          })
-          .whereRaw('LOWER(role_name) = ?', [roleName])
-          .first();
-
-        // Fallback for User role: try to find any role with "client" in name for backwards compatibility
-        if (!clientRole && roleName === 'user') {
-          const roles = await trx('roles').where({ tenant });
-          clientRole = roles.find(role => 
-            role.role_name && role.role_name.toLowerCase().includes('client')
-          );
-        }
-
-        if (!clientRole) {
-          throw new Error(`Client portal ${roleName} role not found for tenant`);
-        }
-        
-        roleToAssign = clientRole;
-      }
-
-      // Hash the password
-      const hashedPassword = await hashPassword(password);
-
-      // Check if the password field exists in the users table
-      const hasPasswordField = await knex.schema.hasColumn('users', 'password');
-      const passwordField = hasPasswordField ? 'password' : 'hashed_password';
-      
-      console.log(`Using password field: ${passwordField}`);
-      
-      // Create the user with dynamic password field
-      const userData: any = {
-        tenant,
-        email,
-        username: email,
-        contact_id: contactId,
-        user_type: 'client',
-        is_inactive: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      
-      // Add first and last name if provided
-      if (firstName) userData.first_name = firstName;
-      if (lastName) userData.last_name = lastName;
-      
-      userData[passwordField] = hashedPassword;
-      
-      const [user] = await trx('users')
-        .insert(userData)
-        .returning('*');
-
-      // Assign the role
-      if (roleToAssign) {
-        await trx('user_roles')
-          .insert({
-            user_id: user.user_id,
-            role_id: roleToAssign.role_id,
-            tenant
-          });
-      }
-    });
-
-    return { success: true };
+    return {
+      success: result.success,
+      error: result.error
+    };
   } catch (error) {
     console.error('Error creating client user:', error);
     return { 
