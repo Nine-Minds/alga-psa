@@ -444,6 +444,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
             id={`${id}-delete-entry-${index}-btn`}
             onClick={() => onDelete(index)}
             variant="destructive"
+            disabled={!isEditable}
           >
             Delete Time Entry
           </Button>

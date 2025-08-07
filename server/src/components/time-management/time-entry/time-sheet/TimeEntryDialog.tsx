@@ -330,7 +330,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     }
   }, [entries]);
 
-  const handleClose = useCallback(() => {
+  const handleCancel = useCallback(() => {
     const hasUnsavedChanges = entries.some(entry => entry.isDirty);
     if (hasUnsavedChanges) {
       setCloseConfirmation(true);
@@ -338,6 +338,16 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       onClose();
     }
   }, [entries, onClose]);
+
+  const handleSaveAll = useCallback(async () => {
+    // Find the first entry that needs to be saved
+    const entryToSave = entries.findIndex(entry => entry.isDirty || entry.isNew);
+    if (entryToSave !== -1) {
+      await handleSaveEntry(entryToSave);
+    } else {
+      onClose();
+    }
+  }, [entries, handleSaveEntry, onClose]);
 
   const title = existingEntries && existingEntries.length > 0 
     ? `Edit Time Entries for ${workItem.name}`
@@ -385,15 +395,22 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
         />
       )}
 
-      {/* Only show the Close button if not in a drawer, since the drawer will have its own close button */}
+      {/* Only show the dialog buttons if not in a drawer, since the drawer will have its own close button */}
       {!inDrawer && (
         <DialogFooter>
           <Button
-            id={`${id}-close-dialog-btn`}
-            onClick={handleClose}
+            id={`${id}-cancel-dialog-btn`}
+            onClick={handleCancel}
             variant="outline"
           >
-            Close
+            Cancel
+          </Button>
+          <Button
+            id={`${id}-save-dialog-btn`}
+            onClick={handleSaveAll}
+            variant="default"
+          >
+            Save
           </Button>
         </DialogFooter>
       )}
@@ -407,7 +424,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       ) : (
         <Dialog 
           isOpen={isOpen} 
-          onClose={handleClose} 
+          onClose={handleCancel} 
           title={title} 
           hideCloseButton={false}
           id={id}
@@ -443,10 +460,10 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
           onClose();
           setCloseConfirmation(false);
         }}
-        title="Unsaved Changes"
-        message="You have unsaved changes. Are you sure you want to close?"
-        confirmLabel="Close"
-        cancelLabel="Cancel"
+        title="Discard Changes"
+        message="You have unsaved changes. Are you sure you want to discard them?"
+        confirmLabel="Discard"
+        cancelLabel="Keep Editing"
       />
     </>
   );
