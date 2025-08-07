@@ -28,7 +28,7 @@ export interface TimeEntryFormProps {
   taxRegions: TaxRegion[];
   timeInputs: TimeInputs;
   totalDuration: number;
-  onSave: (index: number) => Promise<void>;
+  onSave?: (index: number) => Promise<void>;
   onDelete: (index: number) => Promise<void>;
   onUpdateEntry: (index: number, entry: ITimeEntryWithNew) => void;
   onUpdateTimeInputs: (inputs: TimeInputs) => void;

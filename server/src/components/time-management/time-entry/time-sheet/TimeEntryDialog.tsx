@@ -331,8 +331,15 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
   }, [entries]);
 
   const handleCancel = useCallback(() => {
-    const hasUnsavedChanges = entries.some(entry => entry.isDirty);
-    if (hasUnsavedChanges) {
+    // For new entries that were never saved, don't show confirmation - just close
+    const hasOnlyNewUnsavedEntries = entries.every(entry => entry.isNew && !entry.entry_id);
+    const hasSavedEntriesWithChanges = entries.some(entry => entry.isDirty && entry.entry_id);
+    
+    if (hasOnlyNewUnsavedEntries) {
+      // Just close without saving new entries that were never saved
+      onClose();
+    } else if (hasSavedEntriesWithChanges) {
+      // Show confirmation for existing entries that have changes
       setCloseConfirmation(true);
     } else {
       onClose();
@@ -377,22 +384,23 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
           date={date}
         />
       ) : (
-        <SingleTimeEntryForm
-          id={id}
-          entry={entries[0]}
-          services={services}
-          taxRegions={taxRegions}
-          timeInputs={timeInputs}
-          totalDuration={totalDurations[0] || 0}
-          isEditable={isEditable}
-          lastNoteInputRef={lastNoteInputRef}
-          onSave={handleSaveEntry}
-          onDelete={handleDeleteEntry}
-          onUpdateEntry={updateEntry}
-          onUpdateTimeInputs={updateTimeInputs}
-          date={date}
-          isNewEntry={!existingEntries || existingEntries.length === 0}
-        />
+        <div className="mt-2">
+          <SingleTimeEntryForm
+            id={id}
+            entry={entries[0]}
+            services={services}
+            taxRegions={taxRegions}
+            timeInputs={timeInputs}
+            totalDuration={totalDurations[0] || 0}
+            isEditable={isEditable}
+            lastNoteInputRef={lastNoteInputRef}
+            onDelete={handleDeleteEntry}
+            onUpdateEntry={updateEntry}
+            onUpdateTimeInputs={updateTimeInputs}
+            date={date}
+            isNewEntry={!existingEntries || existingEntries.length === 0}
+          />
+        </div>
       )}
 
       {/* Only show the dialog buttons if not in a drawer, since the drawer will have its own close button */}
