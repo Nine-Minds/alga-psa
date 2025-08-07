@@ -27,7 +27,8 @@
     "./models/companyModel.js": "./dist/models/companyModel.js",
     "./models/contactModel.js": "./dist/models/contactModel.js",
     "./models/tagModel.js": "./dist/models/tagModel.js",
-    "./models/ticketModel.js": "./dist/models/ticketModel.js"
+    "./models/ticketModel.js": "./dist/models/ticketModel.js",
+    "./models/userModel.js": "./dist/models/userModel.js"
   },
   "scripts": {
     "build": "tsc",
