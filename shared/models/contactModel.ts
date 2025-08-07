@@ -264,6 +264,7 @@ export class ContactModel {
         throw new Error('SYSTEM_ERROR: Failed to create contact record');
       }
       
+      console.log('*** contact creation: ', contact);
       return contact as IContact;
     } catch (err) {
       // Log the error for debugging
