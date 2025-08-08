@@ -1,0 +1,31 @@
+{
+  "name": "com.alga.softwareone",
+  "publisher": "SoftwareOne",
+  "version": "1.2.3",
+  "runtime": "wasm-js@1",
+  "capabilities": ["http.fetch", "storage.kv", "secrets.get"],
+  "ui": {
+    "type": "iframe",
+    "entry": "ui/index.html",
+    "routes": [
+      { "path": "/agreements", "iframePath": "ui/index.html" }
+    ]
+  },
+  "events": [
+    { "topic": "billing.statement.created", "handler": "dist/handlers/statement.wasm#handle" }
+  ],
+  "entry": "dist/main.wasm#handle",
+  "precompiled": {
+    "x86_64-linux-gnu": "artifacts/cwasm/x86_64-linux-gnu/main.cwasm",
+    "aarch64-linux-gnu": "artifacts/cwasm/aarch64-linux-gnu/main.cwasm"
+  },
+  "api": {
+    "endpoints": [
+      { "method": "GET", "path": "/agreements", "handler": "dist/handlers/http/list_agreements#handle" },
+      { "method": "POST", "path": "/agreements/sync", "handler": "dist/handlers/http/sync#handle" }
+    ]
+  },
+  "assets": ["ui/**/*"],
+  "sbom": "sbom.spdx.json"
+}
+
