@@ -17,6 +17,7 @@ export interface PortalInvitation {
 
 export interface TokenVerificationResult {
   valid: boolean;
+  tenant?: string;
   contact?: {
     contact_name_id: string;
     full_name: string;
@@ -77,8 +78,7 @@ export class PortalInvitationService {
 
       // Generate secure token
       const token = this.generateSecureToken();
-      const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + 24); // 24 hours from now
+      // Compute expiration in the database to avoid timezone/DST drift
 
       // Check if there's already an active invitation (using transaction)
       const existingInvitation = await trx('portal_invitations')
@@ -104,7 +104,8 @@ export class PortalInvitationService {
           contact_id: contactId,
           token,
           email: contact.email,
-          expires_at: expiresAt,
+          // Use DB time for expiration: now() + 24 hours
+          expires_at: trx.raw("now() + interval '24 hours'"),
           metadata: {
             created_by: user.user_id,
             contact_name: contact.full_name
@@ -163,8 +164,7 @@ export class PortalInvitationService {
 
       // Generate secure token
       const token = this.generateSecureToken();
-      const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + 24); // 24 hours from now
+      // Compute expiration in the database to avoid timezone/DST drift
 
       // Check if there's already an active invitation
       const existingInvitation = await knex('portal_invitations')
@@ -190,7 +190,8 @@ export class PortalInvitationService {
           contact_id: contactId,
           token,
           email: contact.email,
-          expires_at: expiresAt,
+          // Use DB time for expiration: now() + 24 hours
+          expires_at: knex.raw("now() + interval '24 hours'"),
           metadata: {
             created_by: user.user_id,
             contact_name: contact.full_name
@@ -220,6 +221,9 @@ export class PortalInvitationService {
       // Clean up expired tokens first
       await this.cleanupExpiredTokens();
 
+      const invitations = await knex('portal_invitations');
+      console.log(invitations);
+      
       // Find the invitation
       const invitation = await knex('portal_invitations as pi')
         .join('contacts as c', function() {
@@ -230,8 +234,8 @@ export class PortalInvitationService {
           this.on('c.tenant', '=', 'comp.tenant')
               .andOn('c.company_id', '=', 'comp.company_id');
         })
+        // Do not require tenant context here; derive tenant from invitation
         .where({
-          'pi.tenant': tenant,
           'pi.token': token,
           'pi.used_at': null
         })
@@ -253,6 +257,7 @@ export class PortalInvitationService {
 
       return {
         valid: true,
+        tenant: (invitation as any).tenant,
         contact: {
           contact_name_id: invitation.contact_id,
           full_name: invitation.full_name,

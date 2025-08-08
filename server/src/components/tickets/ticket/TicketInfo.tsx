@@ -184,18 +184,20 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   };
 
   // If we don't have users data but have agentOptions, convert agentOptions to users format
-  const usersList = users.length > 0 ? users : agentOptions.map(agent => ({
-    user_id: agent.value,
-    username: agent.value,
-    first_name: agent.label.split(' ')[0] || '',
-    last_name: agent.label.split(' ').slice(1).join(' ') || '',
-    email: '',
-    hashed_password: '',
-    is_inactive: false,
-    tenant: '',
-    user_type: 'internal',
-    roles: []
-  }));
+  const usersList: IUserWithRoles[] = users.length > 0
+    ? users
+    : agentOptions.map((agent): IUserWithRoles => ({
+        user_id: agent.value,
+        username: agent.value,
+        first_name: agent.label.split(' ')[0] || '',
+        last_name: agent.label.split(' ').slice(1).join(' ') || '',
+        email: '',
+        hashed_password: '',
+        is_inactive: false,
+        tenant: '',
+        user_type: 'internal',
+        roles: []
+      }));
 
   return (
     <ReflectionContainer id={id} label={`Info for ticket ${ticket.ticket_number}`}>

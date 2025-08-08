@@ -102,3 +102,22 @@ export interface TenantCreationUpdateSignal {
   field: string;
   value: any;
 }
+
+// Portal User Creation Types
+export interface CreatePortalUserActivityInput {
+  tenantId: string;
+  email: string;
+  password?: string; // Optional - will generate if not provided
+  contactId: string;
+  companyId: string;
+  firstName?: string;
+  lastName?: string;
+  roleId?: string; // Optional specific role ID
+  isClientAdmin?: boolean; // Whether the user should be a client admin
+}
+
+export interface CreatePortalUserActivityResult {
+  userId: string;
+  roleId: string;
+  temporaryPassword?: string; // Only set if password was generated
+}

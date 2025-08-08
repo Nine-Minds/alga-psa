@@ -82,6 +82,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
       const result = await signIn('credentials', {
         email,
         password,
+        userType: 'client',
         redirect: false,
         callbackUrl,
       })

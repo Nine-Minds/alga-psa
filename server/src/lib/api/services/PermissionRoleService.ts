@@ -549,8 +549,11 @@ export class PermissionRoleService extends BaseService<IRole> {
 
   /**
    * Create method for base controller compatibility
+   * Overloads for BaseService compatibility
    */
-  async create(data: CreateRoleData, context: ServiceContext): Promise<IRole> {
+  async create(data: Partial<IRole>, context: ServiceContext): Promise<IRole>;
+  async create(data: CreateRoleData, context: ServiceContext): Promise<IRole>;
+  async create(data: any, context: ServiceContext): Promise<IRole> {
     const role = await this.createRole(data, context);
     // Transform RoleResponse to IRole
     return {

@@ -1,6 +1,6 @@
 'use server'
 
-import { createTenantKnex } from '../../db';
+import { createTenantKnex, runWithTenant } from '../../db';
 import { getCurrentUser } from '../user-actions/userActions';
 import { PortalInvitationService } from '../../services/PortalInvitationService';
 import { sendPortalInvitationEmail } from '../../email/sendPortalInvitationEmail';
@@ -207,87 +207,81 @@ export async function completePortalSetup(
       return { success: false, error: 'Password must be at least 8 characters long' };
     }
 
-    // Verify token first
+    // Verify token first and derive tenant from it
     const verificationResult = await PortalInvitationService.verifyToken(token);
-    if (!verificationResult.valid || !verificationResult.contact) {
+    if (!verificationResult.valid || !verificationResult.contact || !verificationResult.tenant) {
       return { success: false, error: 'Invalid or expired invitation token' };
     }
 
-    const { knex, tenant } = await createTenantKnex();
+    const tenantFromInvitation = verificationResult.tenant;
     const contact = verificationResult.contact;
 
-    if (!tenant) {
-      return { success: false, error: 'Tenant context is required' };
-    }
+    // Run the rest of the flow in the invitation's tenant context
+    const result = await runWithTenant(tenantFromInvitation, async () => {
+      const { knex, tenant } = await createTenantKnex();
 
-    // Check if user already exists
-    const existingUser = await knex('users')
-      .where({ 
-        tenant, 
-        contact_id: contact.contact_name_id 
-      })
-      .first();
+      if (!tenant) {
+        return { success: false, error: 'Tenant context is required' } as CompleteSetupResult;
+      }
 
-    if (existingUser) {
-      return { 
-        success: false, 
-        error: 'A user account already exists for this contact' 
-      };
-    }
+      // Check if user already exists
+      const existingUser = await knex('users')
+        .where({ tenant, contact_id: contact.contact_name_id })
+        .first();
 
-    // Create user account using UserService within a system operation
-    let newUser;
-    try {
-      newUser = await runAsSystem('portal-invitation-user-creation', async () => {
-        const userService = new UserService();
-        const systemContext = createSystemContext(tenant);
+      if (existingUser) {
+        return { success: false, error: 'A user account already exists for this contact' } as CompleteSetupResult;
+      }
 
-        // Extract first and last names from full_name
-        const nameParts = contact.full_name.split(' ');
-        const firstName = nameParts[0] || contact.full_name;
-        const lastName = nameParts.slice(1).join(' ') || undefined;
+      // Create user account using UserService within a system operation
+      let newUser;
+      try {
+        newUser = await runAsSystem('portal-invitation-user-creation', async () => {
+          const userService = new UserService();
+          const systemContext = createSystemContext(tenant);
 
-        const user = await userService.create({
-          username: contact.email,
-          email: contact.email,
-          password: password,
-          first_name: firstName,
-          last_name: lastName,
-          contact_id: contact.contact_name_id,
-          user_type: 'client',
-          is_inactive: false,
-          two_factor_enabled: false,
-          is_google_user: false
-        }, systemContext);
+          // Extract first and last names from full_name
+          const nameParts = contact.full_name.split(' ');
+          const firstName = nameParts[0] || contact.full_name;
+          const lastName = nameParts.slice(1).join(' ') || undefined;
 
-        if (!user || !user.user_id) {
-          throw new Error('Failed to create user account');
-        }
+          const user = await userService.create({
+            username: contact.email,
+            email: contact.email,
+            password: password,
+            first_name: firstName,
+            last_name: lastName,
+            contact_id: contact.contact_name_id,
+            user_type: 'client',
+            is_inactive: false,
+            two_factor_enabled: false,
+            is_google_user: false
+          }, systemContext);
 
-        return user;
-      });
-    } catch (error) {
-      console.error('Error creating user account:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to create user account'
-      };
-    }
+          if (!user || !user.user_id) {
+            throw new Error('Failed to create user account');
+          }
 
-    // Mark invitation as used
-    const tokenMarked = await PortalInvitationService.markTokenAsUsed(token);
-    if (!tokenMarked) {
-      console.warn('Failed to mark invitation token as used');
-    }
+          return user;
+        });
+      } catch (error) {
+        console.error('Error creating user account:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Failed to create user account' } as CompleteSetupResult;
+      }
 
-    // Trigger token cleanup
-    await PortalInvitationService.cleanupExpiredTokens();
+      // Mark invitation as used (tenant context is active)
+      const tokenMarked = await PortalInvitationService.markTokenAsUsed(token);
+      if (!tokenMarked) {
+        console.warn('Failed to mark invitation token as used');
+      }
 
-    return {
-      success: true,
-      userId: newUser.user_id,
-      message: 'Portal account created successfully'
-    };
+      // Trigger token cleanup
+      await PortalInvitationService.cleanupExpiredTokens();
+
+      return { success: true, userId: newUser.user_id, message: 'Portal account created successfully' } as CompleteSetupResult;
+    });
+
+    return result;
 
   } catch (error) {
     console.error('Error completing portal setup:', error);

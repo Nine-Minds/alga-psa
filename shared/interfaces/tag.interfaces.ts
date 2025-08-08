@@ -21,7 +21,6 @@ export interface TagDefinition {
   background_color?: string | null;
   text_color?: string | null;
   created_at: string;
-  updated_at: string;
 }
 
 /**

@@ -23,7 +23,8 @@ import {
 } from 'server/src/lib/actions/user-actions/userActions';
 import { createOrFindContactByEmail } from 'server/src/lib/actions/contact-actions/contactActions';
 import { createClientUser, getClientPortalRoles, getClientUserRoles } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
-import { IUser, IPermission, IRole } from 'server/src/interfaces/auth.interfaces';
+import type { IUser, IPermission } from 'server/src/interfaces/auth.interfaces';
+import type { IRole as SharedIRole } from '@shared/interfaces/user.interfaces';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
@@ -40,8 +41,8 @@ export function UserManagementSettings() {
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [userToDelete, setUserToDelete] = useState<IUser | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [availableRoles, setAvailableRoles] = useState<IRole[]>([]);
-  const [userRoles, setUserRoles] = useState<{ [key: string]: IRole[] }>({});
+  const [availableRoles, setAvailableRoles] = useState<SharedIRole[]>([]);
+  const [userRoles, setUserRoles] = useState<{ [key: string]: SharedIRole[] }>({});
   const { openDrawer } = useDrawer();
 
   useEffect(() => {
@@ -91,7 +92,7 @@ export function UserManagementSettings() {
       setAvailableRoles(roles);
       
       // Fetch roles for each user
-      const rolesMap: { [key: string]: IRole[] } = {};
+      const rolesMap: { [key: string]: SharedIRole[] } = {};
       for (const user of clientUsers) {
         const userRolesList = await getClientUserRoles(user.user_id);
         rolesMap[user.user_id] = userRolesList;
@@ -139,7 +140,7 @@ export function UserManagementSettings() {
       setUsers(updatedUsers);
       
       // Refresh user roles
-      const rolesMap: { [key: string]: IRole[] } = {};
+      const rolesMap: { [key: string]: SharedIRole[] } = {};
       for (const user of updatedUsers) {
         const userRolesList = await getClientUserRoles(user.user_id);
         rolesMap[user.user_id] = userRolesList;

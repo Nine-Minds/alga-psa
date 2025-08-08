@@ -36,6 +36,7 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
       const result = await signIn('credentials', {
         email,
         password,
+        userType: 'internal',
         redirect: false,
         callbackUrl,
       });

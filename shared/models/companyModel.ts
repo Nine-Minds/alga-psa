@@ -23,9 +23,9 @@ import { ValidationResult } from '../interfaces/validation.interfaces';
 export const companyFormSchema = z.object({
   company_name: z.string().min(1, 'Company name is required'),
   client_type: z.enum(['company', 'individual']).optional(),
-  url: z.string().url().optional().or(z.literal('')),
+  url: z.union([z.string().url(), z.literal(''), z.null()]).optional(),
   phone_no: z.string().optional(),
-  email: z.string().email().optional().or(z.literal('')),
+  email: z.union([z.string().email(), z.literal(''), z.null()]).optional(),
   address: z.string().optional(),
   address_2: z.string().optional(),
   city: z.string().optional(),
@@ -317,30 +317,24 @@ export class CompanyModel {
       companyData.properties.website = companyData.url;
     }
 
-    // Prepare data for insertion
-    const insertData = {
+    // Prepare data for insertion (only include fields that exist in companies table)
+    const insertData: any = {
       company_id: companyId,
       company_name: companyData.company_name,
       client_type: companyData.client_type || 'company',
       tenant,
       url: companyData.url || null,
-      phone_no: companyData.phone_no || null,
-      email: companyData.email || null,
-      address: companyData.address || null,
-      address_2: companyData.address_2 || null,
-      city: companyData.city || null,
-      state: companyData.state || null,
-      zip: companyData.zip || null,
-      country: companyData.country || null,
       notes: companyData.notes || null,
       is_inactive: false,
       created_at: now.toISOString(),
       updated_at: now.toISOString(),
-      properties: companyData.properties ? JSON.stringify(companyData.properties) : null,
-      parent_company_id: companyData.parent_company_id || null,
-      plan_id: companyData.plan_id || null,
-      is_default: companyData.is_default || false
+      properties: companyData.properties ? JSON.stringify(companyData.properties) : null
     };
+
+    // Add billing_email if email is provided
+    if (companyData.email) {
+      insertData.billing_email = companyData.email;
+    }
 
     // Insert company
     const [company] = await trx('companies')
