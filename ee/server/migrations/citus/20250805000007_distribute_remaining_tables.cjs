@@ -1,6 +1,7 @@
 /**
  * Distribute remaining tables including invoicing, assets, documents, workflows, etc.
  */
+exports.config = { transaction: false };
 
 exports.up = async function(knex) {
   // Check if Citus is enabled
@@ -48,7 +49,7 @@ exports.up = async function(knex) {
       }
       
       // Distribute the table with colocation
-      await knex.raw(`SELECT create_distributed_table('${tableName}', '${distributionColumn}')`);
+      await knex.raw(`SELECT create_distributed_table('${tableName}', '${distributionColumn}', colocate_with => 'tenants')`);
       console.log(`  ✓ Distributed table: ${tableName}`);
       return true;
     } catch (error) {
@@ -167,19 +168,19 @@ exports.up = async function(knex) {
   // Audit logs (if exists)
   await distributeTable('audit_logs', 'tenant');
   
-  // Email domain tables (these use tenant_id instead of tenant)
-  await distributeTable('email_domains', 'tenant_id');
-  await distributeTable('email_provider_health', 'tenant_id');
-  await distributeTable('email_rate_limits', 'tenant_id');
-  await distributeTable('email_sending_logs', 'tenant_id');
-  await distributeTable('email_templates', 'tenant_id');
-  await distributeTable('tenant_email_settings', 'tenant_id');
+  // Email domain tables (now standardized to use tenant column)
+  await distributeTable('email_domains', 'tenant');
+  await distributeTable('email_provider_health', 'tenant');
+  await distributeTable('email_rate_limits', 'tenant');
+  await distributeTable('email_sending_logs', 'tenant');
+  await distributeTable('email_templates', 'tenant');
+  await distributeTable('tenant_email_settings', 'tenant');
   
   // Tables with tenant columns that were incorrectly classified as reference tables
-  await distributeTable('standard_statuses', 'tenant');
+  // 'standard_statuses' is now a reference table (tenant column removed in base migration)
   await distributeTable('time_period_settings', 'tenant');
   await distributeTable('verification_tokens', 'tenant');
-  await distributeTable('tenant_companies', 'tenant_id');
+  await distributeTable('tenant_companies', 'tenant');
   
   console.log('Remaining tables distributed successfully');
 };

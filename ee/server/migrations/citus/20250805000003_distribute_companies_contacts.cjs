@@ -2,6 +2,7 @@
  * Distribute companies and contacts tables together
  * Handles circular dependency and all foreign key constraints
  */
+exports.config = { transaction: false };
 
 exports.up = async function(knex) {
   // Check if Citus is enabled
@@ -40,7 +41,7 @@ exports.up = async function(knex) {
       
       if (!taxRegionsDistributed.rows[0].distributed) {
         try {
-          await knex.raw(`SELECT create_distributed_table('tax_regions', 'tenant')`);
+          await knex.raw(`SELECT create_distributed_table('tax_regions', 'tenant', colocate_with => 'tenants')`);
           console.log('    ✓ Distributed tax_regions table');
         } catch (e) {
           console.log(`    - Could not distribute tax_regions: ${e.message}`);
@@ -137,7 +138,7 @@ exports.up = async function(knex) {
       
       if (!documentsDistributed.rows[0].distributed) {
         try {
-          await knex.raw(`SELECT create_distributed_table('documents', 'tenant')`);
+          await knex.raw(`SELECT create_distributed_table('documents', 'tenant', colocate_with => 'tenants')`);
           console.log('    ✓ Distributed documents table');
         } catch (e) {
           console.log(`    - Could not distribute documents: ${e.message}`);
@@ -158,7 +159,7 @@ exports.up = async function(knex) {
     `);
     
     if (!companiesDistributed.rows[0].distributed) {
-      await knex.raw(`SELECT create_distributed_table('companies', 'tenant')`);
+      await knex.raw(`SELECT create_distributed_table('companies', 'tenant', colocate_with => 'tenants')`);
       console.log('    ✓ Distributed companies table');
     } else {
       console.log('    - Companies table already distributed');
@@ -175,7 +176,7 @@ exports.up = async function(knex) {
     `);
     
     if (!contactsDistributed.rows[0].distributed) {
-      await knex.raw(`SELECT create_distributed_table('contacts', 'tenant')`);
+      await knex.raw(`SELECT create_distributed_table('contacts', 'tenant', colocate_with => 'tenants')`);
       console.log('    ✓ Distributed contacts table');
     } else {
       console.log('    - Contacts table already distributed');

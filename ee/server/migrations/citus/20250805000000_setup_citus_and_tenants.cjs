@@ -2,6 +2,7 @@
  * Enable Citus extension and distribute tenants table first
  * This is the foundation for all other distributed tables
  */
+exports.config = { transaction: false };
 
 exports.up = async function(knex) {
   console.log('Checking for Citus extension...');
