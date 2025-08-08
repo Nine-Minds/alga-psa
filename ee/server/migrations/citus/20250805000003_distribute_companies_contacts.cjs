@@ -59,6 +59,8 @@ exports.up = async function(knex) {
       'companies_tenant_billing_contact_id_foreign',
       // Companies FK to documents
       'companies_tenant_notes_document_id_foreign',
+      // Companies FK to invoice_templates
+      'companies_tenant_invoice_template_id_foreign',
       // Companies FK to users (account_manager)
       'fk_companies_account_manager',
       // Companies FK to tax_regions (if not made reference table)
@@ -117,8 +119,39 @@ exports.up = async function(knex) {
       }
     }
     
-    // Step 3: Distribute documents table first (if exists) since companies references it
-    console.log('  Step 3: Distributing documents table (if exists)...');
+    // Step 3: Distribute invoice_templates table first since companies references it
+    console.log('  Step 3: Distributing invoice_templates table (if exists)...');
+    
+    const invoiceTemplatesExists = await knex.raw(`
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'invoice_templates'
+      ) as exists
+    `);
+    
+    if (invoiceTemplatesExists.rows[0].exists) {
+      const invoiceTemplatesDistributed = await knex.raw(`
+        SELECT EXISTS (
+          SELECT 1 FROM pg_dist_partition 
+          WHERE logicalrelid = 'invoice_templates'::regclass
+        ) as distributed
+      `);
+      
+      if (!invoiceTemplatesDistributed.rows[0].distributed) {
+        try {
+          await knex.raw(`SELECT create_distributed_table('invoice_templates', 'tenant', colocate_with => 'tenants')`);
+          console.log('    ✓ Distributed invoice_templates table');
+        } catch (e) {
+          console.log(`    - Could not distribute invoice_templates: ${e.message}`);
+        }
+      } else {
+        console.log('    - invoice_templates table already distributed');
+      }
+    }
+    
+    // Step 4: Distribute documents table (if exists) since companies references it
+    console.log('  Step 4: Distributing documents table (if exists)...');
     
     const documentsExists = await knex.raw(`
       SELECT EXISTS (
@@ -148,8 +181,8 @@ exports.up = async function(knex) {
       }
     }
     
-    // Step 4: Distribute companies table
-    console.log('  Step 4: Distributing companies table...');
+    // Step 5: Distribute companies table
+    console.log('  Step 5: Distributing companies table...');
     
     const companiesDistributed = await knex.raw(`
       SELECT EXISTS (
@@ -165,8 +198,8 @@ exports.up = async function(knex) {
       console.log('    - Companies table already distributed');
     }
     
-    // Step 5: Distribute contacts table
-    console.log('  Step 5: Distributing contacts table...');
+    // Step 6: Distribute contacts table
+    console.log('  Step 6: Distributing contacts table...');
     
     const contactsDistributed = await knex.raw(`
       SELECT EXISTS (
@@ -182,8 +215,72 @@ exports.up = async function(knex) {
       console.log('    - Contacts table already distributed');
     }
     
-    // Step 6: Recreate the foreign key constraints
-    console.log('  Step 6: Recreating foreign key constraints...');
+    // Step 7: Distribute users table (depends on contacts)
+    console.log('  Step 7: Distributing users table...');
+    
+    const usersExists = await knex.raw(`
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'users'
+      ) as exists
+    `);
+    
+    if (usersExists.rows[0].exists) {
+      const usersDistributed = await knex.raw(`
+        SELECT EXISTS (
+          SELECT 1 FROM pg_dist_partition 
+          WHERE logicalrelid = 'users'::regclass
+        ) as distributed
+      `);
+      
+      if (!usersDistributed.rows[0].distributed) {
+        try {
+          // Drop FK to contacts temporarily if it exists
+          await knex.raw(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_tenant_contact_id_foreign`).catch(() => {});
+          
+          await knex.raw(`SELECT create_distributed_table('users', 'tenant', colocate_with => 'tenants')`);
+          console.log('    ✓ Distributed users table');
+          
+          // Recreate FK to contacts
+          await knex.raw(`
+            ALTER TABLE users 
+            ADD CONSTRAINT users_tenant_contact_id_foreign 
+            FOREIGN KEY (tenant, contact_id) 
+            REFERENCES contacts(tenant, contact_id) 
+            ON DELETE SET NULL
+          `).catch(() => {});
+        } catch (e) {
+          console.log(`    - Could not distribute users: ${e.message}`);
+        }
+      } else {
+        console.log('    - users table already distributed');
+      }
+    }
+    
+    // Step 8: Now retry distributing documents (depends on users)
+    console.log('  Step 8: Retrying documents table distribution (now that users is distributed)...');
+    
+    if (documentsExists.rows[0].exists) {
+      const documentsNowDistributed = await knex.raw(`
+        SELECT EXISTS (
+          SELECT 1 FROM pg_dist_partition 
+          WHERE logicalrelid = 'documents'::regclass
+        ) as distributed
+      `);
+      
+      if (!documentsNowDistributed.rows[0].distributed) {
+        try {
+          await knex.raw(`SELECT create_distributed_table('documents', 'tenant', colocate_with => 'tenants')`);
+          console.log('    ✓ Distributed documents table');
+        } catch (e) {
+          console.log(`    - Could not distribute documents: ${e.message}`);
+        }
+      }
+    }
+    
+    // Step 9: Recreate the foreign key constraints
+    console.log('  Step 9: Recreating foreign key constraints...');
     
     for (const constraint of droppedConstraints) {
       try {
