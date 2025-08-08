@@ -190,6 +190,16 @@ export async function createClientUser({
       throw new Error('Tenant not found');
     }
 
+    // Enforce RBAC: require permission to create users
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return { success: false, error: 'User not authenticated' };
+    }
+    const allowed = await hasPermission(currentUser, 'user', 'create', knex);
+    if (!allowed) {
+      return { success: false, error: 'Permission denied: Cannot create client user' };
+    }
+
     // Use the shared model to create the portal user
     const input: CreatePortalUserInput = {
       email,
