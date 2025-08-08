@@ -26,7 +26,7 @@ exports.up = async function(knex) {
       // Document-related tables (only truly shared ones)
       'shared_document_types',
       
-      // Standard lookup tables
+      // Standard lookup tables (without tenant columns)
       'countries',
       'currencies',
       'invoice_templates',
@@ -35,7 +35,7 @@ exports.up = async function(knex) {
       'standard_invoice_templates',
       'standard_priorities',
       'standard_service_types',
-      'standard_statuses',
+      // 'standard_statuses', - Has tenant column, moved to distributed tables
       'standard_task_types',
       
       // System configuration tables
@@ -52,10 +52,10 @@ exports.up = async function(knex) {
       'notification_subtypes',
       
       // Other configuration tables
-      'time_period_settings',
-      'verification_tokens',
+      // 'time_period_settings', - Has tenant column, moved to distributed tables
+      // 'verification_tokens', - Has tenant column, moved to distributed tables
       'workflow_event_mappings',
-      'tenant_companies',
+      // 'tenant_companies', - Has tenant_id column, moved to distributed tables
     ];
     
     for (const tableName of referenceTables) {
@@ -121,7 +121,7 @@ exports.down = async function(knex) {
       // Document-related tables (only truly shared ones)
       'shared_document_types',
       
-      // Standard lookup tables
+      // Standard lookup tables (without tenant columns)
       'countries',
       'currencies',
       'invoice_templates',
@@ -130,7 +130,7 @@ exports.down = async function(knex) {
       'standard_invoice_templates',
       'standard_priorities',
       'standard_service_types',
-      'standard_statuses',
+      // 'standard_statuses', - Has tenant column, moved to distributed tables
       'standard_task_types',
       
       // System configuration tables
@@ -147,10 +147,10 @@ exports.down = async function(knex) {
       'notification_subtypes',
       
       // Other configuration tables
-      'time_period_settings',
-      'verification_tokens',
+      // 'time_period_settings', - Has tenant column, moved to distributed tables
+      // 'verification_tokens', - Has tenant column, moved to distributed tables
       'workflow_event_mappings',
-      'tenant_companies',
+      // 'tenant_companies', - Has tenant_id column, moved to distributed tables
     ];
     
     for (const tableName of tablesToUndistribute) {

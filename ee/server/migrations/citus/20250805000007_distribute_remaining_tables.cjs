@@ -175,6 +175,12 @@ exports.up = async function(knex) {
   await distributeTable('email_templates', 'tenant_id');
   await distributeTable('tenant_email_settings', 'tenant_id');
   
+  // Tables with tenant columns that were incorrectly classified as reference tables
+  await distributeTable('standard_statuses', 'tenant');
+  await distributeTable('time_period_settings', 'tenant');
+  await distributeTable('verification_tokens', 'tenant');
+  await distributeTable('tenant_companies', 'tenant_id');
+  
   console.log('Remaining tables distributed successfully');
 };
 
@@ -216,6 +222,11 @@ exports.down = async function(knex) {
 
   // Undistribute in reverse order
   const tables = [
+    // Tables with tenant columns that were incorrectly classified as reference tables
+    'tenant_companies',
+    'verification_tokens',
+    'time_period_settings',
+    'standard_statuses',
     'tenant_email_settings',
     'email_templates',
     'email_sending_logs',
