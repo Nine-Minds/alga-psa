@@ -1,6 +1,7 @@
 /**
  * Distribute billing and service catalog related tables
  */
+exports.config = { transaction: false };
 
 exports.up = async function(knex) {
   // Check if Citus is enabled
@@ -48,7 +49,7 @@ exports.up = async function(knex) {
       }
       
       // Distribute the table with colocation
-      await knex.raw(`SELECT create_distributed_table('${tableName}', '${distributionColumn}')`);
+      await knex.raw(`SELECT create_distributed_table('${tableName}', '${distributionColumn}', colocate_with => 'tenants')`);
       console.log(`  ✓ Distributed table: ${tableName}`);
       return true;
     } catch (error) {

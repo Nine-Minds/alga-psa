@@ -3,6 +3,7 @@
  * This must run early to avoid foreign key dependency issues
  * Reference tables are small lookup tables that are replicated to all worker nodes
  */
+exports.config = { transaction: false };
 
 exports.up = async function(knex) {
   // Check if Citus is enabled
@@ -19,46 +20,51 @@ exports.up = async function(knex) {
 
   console.log('Creating reference tables for lookup/configuration data...');
   
-  try {
-    // List of reference tables that need to be created early
-    // These are lookup/configuration tables that are shared across all tenants
-    const referenceTables = [
-      // Document-related tables (only truly shared ones)
-      'shared_document_types',
-      
-      // Standard lookup tables (without tenant columns)
-      'countries',
-      'currencies',
-      'invoice_templates',
-      'standard_categories',
-      'standard_channels',
-      'standard_invoice_templates',
-      'standard_priorities',
-      'standard_service_types',
-      // 'standard_statuses', - Has tenant column, moved to distributed tables
-      'standard_task_types',
-      
-      // System configuration tables
-      'system_email_templates',
-      'system_interaction_types',
-      'system_workflow_event_attachments',
-      'system_workflow_form_definitions',
-      'system_workflow_registration_versions',
-      'system_workflow_registrations',
-      'system_workflow_task_definitions',
-      
-      // Notification tables
-      'notification_categories',
-      'notification_subtypes',
-      
-      // Other configuration tables
-      // 'time_period_settings', - Has tenant column, moved to distributed tables
-      // 'verification_tokens', - Has tenant column, moved to distributed tables
-      'workflow_event_mappings',
-      // 'tenant_companies', - Has tenant_id column, moved to distributed tables
-    ];
+  // List of reference tables that need to be created early
+  // These are lookup/configuration tables that are shared across all tenants
+  // Ordered to handle dependencies (notification tables first, then system tables that reference them)
+  const referenceTables = [
+    // Notification tables (no dependencies)
+    'notification_categories',
+    'notification_subtypes',
     
-    for (const tableName of referenceTables) {
+    // Document-related tables (only truly shared ones)
+    'shared_document_types',
+    
+    // Standard lookup tables (without tenant columns)
+    'countries',
+    'currencies',
+    // 'invoice_templates', - Has tenant column, moved to distributed tables
+    'standard_categories',
+    'standard_channels',
+    'standard_invoice_templates',
+    'standard_priorities',
+    'standard_service_types',
+    'standard_statuses',  // Now a global reference table (tenant column removed in base migration)
+    'standard_task_types',
+    
+    // System configuration tables (some depend on notification tables)
+    'system_email_templates',
+    'system_event_catalog',  // Global system catalog
+    'system_interaction_types',
+    'system_workflow_event_attachments',
+    'system_workflow_form_definitions',
+    'system_workflow_registration_versions',
+    'system_workflow_registrations',
+    'system_workflow_task_definitions',
+    
+    // Other configuration tables
+    // 'time_period_settings', - Has tenant column, moved to distributed tables
+    // 'verification_tokens', - Has tenant column, moved to distributed tables
+    'workflow_event_mappings',
+    // 'tenant_companies', - Has tenant_id column, moved to distributed tables
+  ];
+  
+  let successCount = 0;
+  let failedTables = [];
+  
+  for (const tableName of referenceTables) {
+    try {
       // Check if table exists
       const tableExists = await knex.raw(`
         SELECT EXISTS (
@@ -68,8 +74,42 @@ exports.up = async function(knex) {
         ) as exists
       `, [tableName]);
       
-      if (tableExists.rows[0].exists) {
-        // Check if already distributed
+      if (!tableExists.rows[0].exists) {
+        console.log(`  - ${tableName} does not exist, skipping`);
+        continue;
+      }
+
+      // Check if already distributed
+      const isDistributed = await knex.raw(`
+        SELECT EXISTS (
+          SELECT 1 FROM pg_dist_partition 
+          WHERE logicalrelid = ?::regclass
+        ) as distributed
+      `, [tableName]);
+      
+      if (isDistributed.rows[0].distributed) {
+        console.log(`  - ${tableName} already distributed`);
+        continue;
+      }
+      
+      // Try to create as reference table
+      await knex.raw(`SELECT create_reference_table('${tableName}')`);
+      console.log(`  ✓ Created ${tableName} as reference table`);
+      successCount++;
+      
+    } catch (e) {
+      console.log(`  - Could not create ${tableName} as reference table: ${e.message}`);
+      failedTables.push({table: tableName, error: e.message});
+      // Continue with next table instead of aborting
+    }
+  }
+  
+  // Try failed tables again in case dependencies are now resolved
+  if (failedTables.length > 0) {
+    console.log('\n  Retrying failed tables...');
+    for (const {table: tableName} of failedTables) {
+      try {
+        // Check if still not distributed
         const isDistributed = await knex.raw(`
           SELECT EXISTS (
             SELECT 1 FROM pg_dist_partition 
@@ -78,27 +118,17 @@ exports.up = async function(knex) {
         `, [tableName]);
         
         if (!isDistributed.rows[0].distributed) {
-          try {
-            await knex.raw(`SELECT create_reference_table('${tableName}')`);
-            console.log(`  ✓ Created ${tableName} as reference table`);
-          } catch (e) {
-            console.log(`  - Could not create ${tableName} as reference table: ${e.message}`);
-            // Don't throw - some tables might have dependencies we handle later
-          }
-        } else {
-          console.log(`  - ${tableName} already distributed`);
+          await knex.raw(`SELECT create_reference_table('${tableName}')`);
+          console.log(`  ✓ Created ${tableName} as reference table (on retry)`);
+          successCount++;
         }
-      } else {
-        console.log(`  - ${tableName} does not exist, skipping`);
+      } catch (e) {
+        console.log(`  - Still could not create ${tableName} as reference table: ${e.message}`);
       }
     }
-    
-    console.log('  ✓ Reference tables setup complete');
-    
-  } catch (error) {
-    console.error(`  ✗ Failed to create reference tables: ${error.message}`);
-    throw error;
   }
+  
+  console.log(`\n  ✓ Reference tables setup complete (${successCount} tables created)`);
 };
 
 exports.down = async function(knex) {
@@ -124,17 +154,18 @@ exports.down = async function(knex) {
       // Standard lookup tables (without tenant columns)
       'countries',
       'currencies',
-      'invoice_templates',
+      // 'invoice_templates', - Has tenant column, moved to distributed tables
       'standard_categories',
       'standard_channels',
       'standard_invoice_templates',
       'standard_priorities',
       'standard_service_types',
-      // 'standard_statuses', - Has tenant column, moved to distributed tables
+      'standard_statuses',  // Now a global reference table (tenant column removed in base migration)
       'standard_task_types',
       
       // System configuration tables
       'system_email_templates',
+      'system_event_catalog',  // Global system catalog
       'system_interaction_types',
       'system_workflow_event_attachments',
       'system_workflow_form_definitions',

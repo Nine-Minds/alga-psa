@@ -2,6 +2,7 @@
  * Distribute users table and related tables
  * Contacts are now handled with companies in the previous migration
  */
+exports.config = { transaction: false };
 
 exports.up = async function(knex) {
   // Check if Citus is enabled
@@ -48,8 +49,8 @@ exports.up = async function(knex) {
         return true;
       }
       
-      // Distribute the table
-      await knex.raw(`SELECT create_distributed_table('${tableName}', '${distributionColumn}')`);
+      // Distribute the table with colocation
+      await knex.raw(`SELECT create_distributed_table('${tableName}', '${distributionColumn}', colocate_with => 'tenants')`);
       console.log(`  ✓ Distributed table: ${tableName} on column: ${distributionColumn}`);
       return true;
     } catch (error) {
