@@ -40,12 +40,12 @@ exports.up = async function(knex) {
     'standard_invoice_templates',
     'standard_priorities',
     'standard_service_types',
-    'standard_statuses',  // Now a global reference table (tenant column removed in base migration)
+    // 'standard_statuses', - Has tenant column and FKs to distributed tables, must remain distributed
     'standard_task_types',
     
     // System configuration tables (some depend on notification tables)
     'system_email_templates',
-    'system_event_catalog',  // Global system catalog
+    // 'system_event_catalog', - Has triggers, cannot be distributed with Citus
     'system_interaction_types',
     'system_workflow_event_attachments',
     'system_workflow_form_definitions',
@@ -160,12 +160,12 @@ exports.down = async function(knex) {
       'standard_invoice_templates',
       'standard_priorities',
       'standard_service_types',
-      'standard_statuses',  // Now a global reference table (tenant column removed in base migration)
+      // 'standard_statuses', - Has tenant column and FKs to distributed tables, must remain distributed
       'standard_task_types',
       
       // System configuration tables
       'system_email_templates',
-      'system_event_catalog',  // Global system catalog
+      // 'system_event_catalog', - Has triggers, cannot be distributed with Citus
       'system_interaction_types',
       'system_workflow_event_attachments',
       'system_workflow_form_definitions',

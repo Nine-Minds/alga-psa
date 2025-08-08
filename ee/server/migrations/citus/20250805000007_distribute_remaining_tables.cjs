@@ -177,7 +177,7 @@ exports.up = async function(knex) {
   await distributeTable('tenant_email_settings', 'tenant');
   
   // Tables with tenant columns that were incorrectly classified as reference tables
-  // 'standard_statuses' is now a reference table (tenant column removed in base migration)
+  await distributeTable('standard_statuses', 'tenant');
   await distributeTable('time_period_settings', 'tenant');
   await distributeTable('verification_tokens', 'tenant');
   await distributeTable('tenant_companies', 'tenant');

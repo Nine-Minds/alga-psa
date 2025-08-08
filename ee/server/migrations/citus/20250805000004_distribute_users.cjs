@@ -59,8 +59,8 @@ exports.up = async function(knex) {
     }
   }
 
-  // Distribute users (now that contacts is distributed in previous migration)
-  await distributeTable('users');
+  // Users is now distributed in the companies/contacts migration (0003) due to dependencies
+  // await distributeTable('users');
   
   // Then tables that depend on users
   await distributeTable('sessions');
@@ -111,5 +111,6 @@ exports.down = async function(knex) {
   await undistributeTable('user_preferences');
   await undistributeTable('user_roles');
   await undistributeTable('sessions');
-  await undistributeTable('users');
+  // Users is undistributed in companies/contacts migration
+  // await undistributeTable('users');
 };

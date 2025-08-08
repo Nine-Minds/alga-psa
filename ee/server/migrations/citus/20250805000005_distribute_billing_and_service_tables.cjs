@@ -60,7 +60,25 @@ exports.up = async function(knex) {
 
   // Tax configuration
   await distributeTable('tax_regions', 'tenant');
-  await distributeTable('tax_rates', 'tenant');
+  
+  // Handle tax_rates - may have constraints that need to be dropped
+  try {
+    // Drop any problematic constraints on tax_rates first
+    await knex.raw(`ALTER TABLE tax_rates DROP CONSTRAINT IF EXISTS tax_rates_tenant_region_id_tax_type_key`).catch(() => {});
+    await knex.raw(`ALTER TABLE tax_rates DROP CONSTRAINT IF EXISTS tax_rates_unique_region_type`).catch(() => {});
+    
+    await distributeTable('tax_rates', 'tenant');
+    
+    // Recreate the constraint if needed (Citus supports unique constraints on distributed tables if they include the distribution key)
+    await knex.raw(`
+      ALTER TABLE tax_rates 
+      ADD CONSTRAINT tax_rates_tenant_region_id_tax_type_key 
+      UNIQUE (tenant, region_id, tax_type)
+    `).catch(() => {});
+  } catch (e) {
+    console.error(`  ✗ Failed to distribute tax_rates: ${e.message}`);
+  }
+  
   await distributeTable('tax_components', 'tenant');
   
   // Service catalog
@@ -90,6 +108,7 @@ exports.up = async function(knex) {
   await distributeTable('user_type_rates', 'tenant');
   
   // Company billing relationships
+  await distributeTable('company_billing_cycles', 'tenant');
   await distributeTable('company_billing_plans', 'tenant');
   await distributeTable('company_plan_bundles', 'tenant');
   await distributeTable('client_billing', 'tenant');
@@ -149,6 +168,7 @@ exports.down = async function(knex) {
     'bucket_usage',
     'client_billing',
     'company_plan_bundles',
+    'company_billing_cycles',
     'company_billing_plans',
     'user_type_rates',
     'plan_service_usage_config',
