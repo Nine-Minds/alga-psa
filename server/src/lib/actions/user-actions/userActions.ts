@@ -651,9 +651,8 @@ export async function registerClientUser(
         })
         .returning('*');
 
-      // Get the default client portal user role
-      // After migration, "Client" role is now "User" in client portal
-      let clientRole = await trx('roles')
+      // Get the default client portal user role (must exist via migrations)
+      const clientRole = await trx('roles')
         .where({ 
           tenant: contact.tenant,
           client: true,
@@ -662,40 +661,16 @@ export async function registerClientUser(
         .whereRaw('LOWER(role_name) = ?', ['user'])
         .first();
 
-      // Fallback: try old "client" role name for backwards compatibility
       if (!clientRole) {
-        clientRole = await trx('roles')
-          .where({ tenant: contact.tenant })
-          .whereRaw('LOWER(role_name) = ?', ['client'])
-          .first();
-      }
-
-      if (!clientRole) {
-        // If role doesn't exist, create it. This is a fallback.
-        // The primary mechanism should be the migration.
-        [clientRole] = await trx('roles')
-          .insert({
-            role_name: 'User',
-            description: 'Standard client portal user',
-            tenant: contact.tenant,
-            msp: false,
-            client: true
-          })
-          .returning('*');
+        throw new Error('Client portal User role not found for tenant');
       }
 
       // Assign the role to the user
-      if (clientRole) {
-        await trx('user_roles').insert({
-          user_id: user.user_id,
-          role_id: clientRole.role_id,
-          tenant: contact.tenant
-        });
-      } else {
-        // This case should ideally not be reached if the migration and fallback work.
-        console.error(`Critical: Could not find or create a client role for tenant ${contact.tenant}`);
-        throw new Error('Client role could not be assigned.');
-      }
+      await trx('user_roles').insert({
+        user_id: user.user_id,
+        role_id: clientRole.role_id,
+        tenant: contact.tenant
+      });
 
       return { success: true };
     });

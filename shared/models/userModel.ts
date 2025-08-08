@@ -8,13 +8,12 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { hashPassword } from '../utils/encryption.js';
-import {
+import type {
   IUser,
   IRole,
   CreatePortalUserInput,
   CreatePortalUserResult,
-  PortalRoleOptions,
-  IUserRole
+  PortalRoleOptions
 } from '../interfaces/user.interfaces.js';
 
 // Re-export types for convenience
@@ -89,14 +88,6 @@ export async function determinePortalUserRole(
     .whereRaw('LOWER(role_name) = ?', [roleName])
     .first();
 
-  // Fallback for User role: try to find any role with "client" in name for backwards compatibility
-  if (!clientRole && roleName === 'user') {
-    const roles = await trx('roles').where({ tenant: tenantId });
-    clientRole = roles.find((role: IRole) =>
-      role.role_name && role.role_name.toLowerCase().includes('client')
-    );
-  }
-
   if (!clientRole) {
     throw new Error(`Client portal ${roleName} role not found for tenant`);
   }
@@ -168,9 +159,6 @@ export async function createPortalUserInDB(
       // Hash the password
       const hashedPassword = await hashPassword(input.password);
 
-      // Check which password field to use
-      const passwordFieldName = await getPasswordFieldName(knex);
-
       // Create the user with dynamic password field
       const userData: any = {
         user_id: uuidv4(),
@@ -181,15 +169,13 @@ export async function createPortalUserInDB(
         user_type: 'client',
         is_inactive: false,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        hashed_password: hashedPassword
       };
 
       // Add optional fields
       if (input.firstName) userData.first_name = input.firstName;
       if (input.lastName) userData.last_name = input.lastName;
-
-      // Set the password field dynamically
-      userData[passwordFieldName] = hashedPassword;
 
       // Insert the user
       const [user] = await trx('users')

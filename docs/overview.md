@@ -386,6 +386,11 @@ No code has been merged yet – this section serves as an architectural note so 
   * Implemented through RBAC/ABAC (`server/src/lib/auth`) and secure authentication (`server/src/pages/api/auth/[...nextauth]/options.ts`).
   * The workflows feature incorporates security measures to ensure that only authorized users can create or modify workflows.
 
+  RBAC Roles (Client Portal)
+  - Required roles: `User` and `Admin` in the client portal (`roles.msp = false`, `roles.client = true`).
+  - Migrations create/normalize these roles; application code assumes they exist.
+  - No legacy fallback: code no longer falls back to roles named "Client"/"Client_Admin". Missing roles cause explicit errors to surface misconfigurations.
+
 * **Extensibility:**
   * Facilitated by well-defined API endpoints (`server/src/pages/api`) and a modular codebase.
   * The workflows module allows for the extension of system capabilities through custom automation, enabling integrations with external systems and services.
