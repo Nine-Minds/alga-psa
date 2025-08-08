@@ -276,111 +276,49 @@ export function TimeSheet({
     };
 
   const handleAddWorkItem = async (workItem: IExtendedWorkItem) => {
-    console.log('Adding work item:', workItem);
+    console.log('Selected work item for time entry:', workItem);
     
-    // Update workItemsByType
-    setWorkItemsByType(prevTypes => {
-      const newTypes = { ...prevTypes };
-      if (!newTypes[workItem.type]) {
-        newTypes[workItem.type] = [];
-      }
-      newTypes[workItem.type] = [...newTypes[workItem.type], workItem];
-      return newTypes;
-    });
-
-    // Update groupedTimeEntries to include the new work item
-    setGroupedTimeEntries(prev => ({
-      ...prev,
-      [workItem.work_item_id]: []
-    }));
-
-    setLocalWorkItems(prevItems => [...prevItems, workItem]);
+    // Close the add work item dialog
     setIsAddWorkItemDialogOpen(false);
-
-    // Automatically create time entry for ad_hoc work items
-    if (workItem.type === 'ad_hoc') {
-      console.log('Creating time entry for ad_hoc item:', workItem);
-
-      try {
-        if (!workItem.scheduled_start || !workItem.scheduled_end) {
-          console.error('Missing scheduled times for ad_hoc item:', workItem);
-          toast.error('Cannot create time entry: Missing scheduled times');
-          return;
-        }
-
-        // Create a time entry using the ad_hoc entry's scheduled times
-        const startTime = new Date(workItem.scheduled_start);
-        const endTime = new Date(workItem.scheduled_end);
-
-        console.log('Time entry times:', { startTime, endTime });
-
-        // Create a time entry for the current day (or first day of time period)
-        const currentDate = timeSheet.time_period ?
-          new Date(timeSheet.time_period.start_date) :
-          new Date();
-
-        // If end time is before start time (crossed midnight), add a day to end time
-        if (endTime < startTime) {
-          endTime.setDate(endTime.getDate() + 1);
-        }
-
-        const timeEntry: ITimeEntry = {
-          entry_id: '',
-          work_item_id: workItem.work_item_id,
-          work_item_type: 'ad_hoc',
-          start_time: formatISO(startTime),
-          end_time: formatISO(endTime),
-          billable_duration: 0, // Set to 0 for ad_hoc
-          notes: '',
-          time_sheet_id: timeSheet.id,
-          user_id: timeSheet.user_id,
-          approval_status: 'DRAFT',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          // Service and billing plan are left empty as requested
-        };
-
-        console.log('Saving time entry:', timeEntry);
-        await handleSaveTimeEntry(timeEntry);
-
-        // Refresh the data to show the new time entry
-        const fetchedTimeEntries = await fetchTimeEntriesForTimeSheet(timeSheet.id);
-        const grouped = fetchedTimeEntries.reduce((acc: Record<string, ITimeEntryWithWorkItemString[]>, entry: ITimeEntryWithWorkItem) => {
-          const key = `${entry.work_item_id}`;
-          if (!acc[key]) {
-            acc[key] = [];
-          }
-          acc[key].push({
-            ...entry,
-            start_time: typeof entry.start_time === 'string' ? entry.start_time : formatISO(entry.start_time),
-            end_time: typeof entry.end_time === 'string' ? entry.end_time : formatISO(entry.end_time)
-          });
-          return acc;
-        }, {});
-
-        setGroupedTimeEntries(prev => {
-          const newGrouped = { ...prev };
-          Object.keys(grouped).forEach(key => {
-            newGrouped[key] = grouped[key];
-          });
-          return newGrouped;
-        });
-
-        toast.success('Time entry automatically created for ad-hoc item');
-      } catch (error) {
-        console.error('Error creating automatic time entry for ad-hoc item:', error);
-        toast.error('Failed to create automatic time entry');
-      }
-    } else {
-      // For non-ad_hoc work items, open the time entry dialog with current date
-      const currentDate = new Date();
+    
+    // Set up for creating a new time entry
+    let defaultStartTime: Date | undefined;
+    let defaultEndTime: Date | undefined;
+    let currentDate: Date;
+    
+    // For ad_hoc items, use their scheduled times as defaults
+    if (workItem.type === 'ad_hoc' && workItem.scheduled_start && workItem.scheduled_end) {
+      defaultStartTime = new Date(workItem.scheduled_start);
+      defaultEndTime = new Date(workItem.scheduled_end);
       
-      setSelectedCell({
-        workItem,
-        date: formatISO(currentDate, { representation: 'date' }), // Format as YYYY-MM-DD string
-        entries: []
-      });
+      // If end time is before start time (crossed midnight), add a day to end time
+      if (defaultEndTime < defaultStartTime) {
+        defaultEndTime.setDate(defaultEndTime.getDate() + 1);
+      }
+      
+      currentDate = timeSheet.time_period ?
+        new Date(timeSheet.time_period.start_date) :
+        new Date();
+    } else {
+      // For other work items, set reasonable defaults
+      currentDate = timeSheet.time_period ?
+        new Date(timeSheet.time_period.start_date) :
+        new Date();
+      defaultStartTime = new Date(currentDate);
+      defaultStartTime.setHours(8, 0, 0, 0); // 8:00 AM
+      defaultEndTime = new Date(defaultStartTime);
+      defaultEndTime.setHours(9, 0, 0, 0); // 9:00 AM (1 hour duration)
     }
+
+    // Open the time entry dialog for the selected work item
+    // The work item will be added to the time sheet only when the time entry is saved
+    setSelectedCell({
+      workItem,
+      date: formatISO(currentDate, { representation: 'date' }), // Format as YYYY-MM-DD string
+      entries: [],
+      defaultStartTime: defaultStartTime ? formatISO(defaultStartTime) : undefined,
+      defaultEndTime: defaultEndTime ? formatISO(defaultEndTime) : undefined
+    });
   };
 
     const handleAddComment = async (comment: string) => {
