@@ -695,7 +695,14 @@ export async function checkPasswordResetStatus(): Promise<{ hasResetPassword: bo
       return { hasResetPassword: true }; // Default to true if no user
     }
 
-    const {knex} = await createTenantKnex();
+    const {knex, tenant} = await createTenantKnex();
+    
+    // RBAC check - users can only check their own password reset status
+    if (!await hasPermission(currentUser, 'user', 'read', knex)) {
+      console.error('Permission denied: Cannot check password reset status');
+      return { hasResetPassword: true }; // Default to true on permission error
+    }
+    
     const preference = await UserPreferences.get(knex, currentUser.user_id, 'has_reset_password');
     
     // For existing users without this preference, assume they have already reset their password
