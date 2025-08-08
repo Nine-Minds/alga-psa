@@ -28,6 +28,8 @@ export async function getClientCompany(): Promise<ICompany | null> {
     throw new Error('Tenant not found');
   }
 
+  // Company.getById enforces tenant scoping internally (WHERE tenant = currentTenant)
+  // which is required for Citus/pooled connections to avoid cross-shard scans.
   const company = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await Company.getById(trx, companyId);
   });
@@ -39,4 +41,3 @@ export async function getClientCompany(): Promise<ICompany | null> {
 
   return { ...company, logoUrl } as ICompany;
 }
-
