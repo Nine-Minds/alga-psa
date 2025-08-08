@@ -235,6 +235,8 @@ This document provides a high-level architectural overview of the open-source MS
 * **Backend:**
   * Node.js server with API routes in `server/src/pages/api`.
   * Server actions are defined within the `server/src/lib/actions` directory.
+  * Shared data models (used by actions and workflows) are under `shared/models`.
+    - Example: `shared/models/userModel.ts` exposes `createPortalUserInDB` and `createPortalUserInDBWithTrx` (accepts an existing transaction) for portal user creation.
   * **Workflows Backend:** Workflow-related services, actions, and utilities are located in `ee/server/src/services/flow/`. Server actions specific to workflows are in `ee/server/src/lib/actions/workflow.ts`.
 
 ### Upcoming Runtime Change: Moving from the built-in Next.js server to an Express.js custom server

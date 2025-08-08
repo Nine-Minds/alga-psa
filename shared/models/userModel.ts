@@ -108,12 +108,11 @@ export async function getPasswordFieldName(knex: Knex): Promise<string> {
  * Create a portal user in the database
  * This is the core logic for creating client/portal users
  */
-export async function createPortalUserInDB(
-  knex: Knex,
+async function _createPortalUserInDBWithTrx(
+  trx: Knex.Transaction,
   input: CreatePortalUserInput
 ): Promise<CreatePortalUserResult> {
   try {
-    const result = await knex.transaction(async (trx: Knex.Transaction) => {
       // Check if a client-portal user already exists for this email
       // Allow the same email to exist for other user types (e.g., internal MSP users)
       const existingUser = await trx('users')
@@ -195,6 +194,35 @@ export async function createPortalUserInDB(
         userId: user.user_id,
         roleId: roleToAssign.role_id
       };
+  } catch (error) {
+    console.error('Error creating portal user:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+/**
+ * Create a portal user using an existing transaction
+ */
+export async function createPortalUserInDBWithTrx(
+  trx: Knex.Transaction,
+  input: CreatePortalUserInput
+): Promise<CreatePortalUserResult> {
+  return _createPortalUserInDBWithTrx(trx, input);
+}
+
+/**
+ * Create a portal user, managing its own transaction
+ */
+export async function createPortalUserInDB(
+  knex: Knex,
+  input: CreatePortalUserInput
+): Promise<CreatePortalUserResult> {
+  try {
+    const result = await knex.transaction(async (trx: Knex.Transaction) => {
+      return _createPortalUserInDBWithTrx(trx, input);
     });
 
     return result;
