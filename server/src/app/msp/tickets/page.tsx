@@ -3,25 +3,77 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import TicketingDashboardContainer from 'server/src/components/tickets/TicketingDashboardContainer';
 import { Suspense } from 'react';
 import TicketsLoading from './loading';
+import { ITicketListFilters } from 'server/src/interfaces/ticket.interfaces';
 
-export default async function TicketsPage() {
+interface TicketsPageProps {
+  searchParams?: { [key: string]: string | string[] | undefined };
+}
+
+export default async function TicketsPage({ searchParams }: TicketsPageProps) {
   try {
     const user = await getCurrentUser();
     if (!user) {
       throw new Error('User not found');
     }
 
-    // Fetch consolidated data for the ticket list
-    const consolidatedData = await getConsolidatedTicketListData(user, {
-      channelFilterState: 'active'
-    });
+    // Parse search parameters into filter values
+    const filtersFromURL: Partial<ITicketListFilters> = {};
+    
+    if (searchParams?.channelId && typeof searchParams.channelId === 'string') {
+      filtersFromURL.channelId = searchParams.channelId;
+    }
+    if (searchParams?.companyId && typeof searchParams.companyId === 'string') {
+      filtersFromURL.companyId = searchParams.companyId;
+    }
+    if (searchParams?.statusId && typeof searchParams.statusId === 'string') {
+      filtersFromURL.statusId = searchParams.statusId;
+    }
+    if (searchParams?.priorityId && typeof searchParams.priorityId === 'string') {
+      filtersFromURL.priorityId = searchParams.priorityId;
+    }
+    if (searchParams?.categoryId && typeof searchParams.categoryId === 'string') {
+      filtersFromURL.categoryId = searchParams.categoryId;
+    }
+    if (searchParams?.searchQuery && typeof searchParams.searchQuery === 'string') {
+      filtersFromURL.searchQuery = searchParams.searchQuery;
+    }
+    if (searchParams?.channelFilterState && typeof searchParams.channelFilterState === 'string') {
+      const channelFilterState = searchParams.channelFilterState;
+      if (channelFilterState === 'active' || channelFilterState === 'inactive' || channelFilterState === 'all') {
+        filtersFromURL.channelFilterState = channelFilterState;
+      }
+    }
+
+    // Apply defaults for missing parameters
+    const initialFilters: Partial<ITicketListFilters> = {
+      channelFilterState: 'active',
+      statusId: 'open',
+      priorityId: 'all',
+      ...filtersFromURL
+    };
+
+    // Create full filter object for data fetching
+    const fetchFilters: ITicketListFilters = {
+      channelId: initialFilters.channelId || undefined,
+      statusId: initialFilters.statusId || 'open',
+      priorityId: initialFilters.priorityId || 'all',
+      categoryId: initialFilters.categoryId || undefined,
+      companyId: initialFilters.companyId || undefined,
+      searchQuery: initialFilters.searchQuery || '',
+      channelFilterState: initialFilters.channelFilterState || 'active',
+      showOpenOnly: (initialFilters.statusId === 'open') || false
+    };
+
+    // Fetch consolidated data for the ticket list with initial filters
+    const consolidatedData = await getConsolidatedTicketListData(user, fetchFilters);
 
     return (
       <div id="tickets-page-container" className="bg-gray-100">
         <Suspense fallback={<TicketsLoading />}>
           <TicketingDashboardContainer 
             consolidatedData={consolidatedData} 
-            currentUser={user} 
+            currentUser={user}
+            initialFilters={initialFilters}
           />
         </Suspense>
       </div>
