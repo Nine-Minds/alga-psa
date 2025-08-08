@@ -109,6 +109,17 @@ export async function saveCompanyInfo(data: CompanyInfoData): Promise<Onboarding
       await trx('users')
         .where({ user_id: currentUser.user_id, tenant })
         .update(updateData);
+      
+      // If password was changed, mark it as reset
+      if (data.newPassword) {
+        const UserPreferences = await import('server/src/lib/models/userPreferences').then(m => m.default);
+        await UserPreferences.upsert(trx, {
+          user_id: currentUser.user_id,
+          setting_name: 'has_reset_password',
+          setting_value: true,
+          updated_at: new Date()
+        });
+      }
 
       // Save progress to tenant settings
       await saveTenantOnboardingProgress({
@@ -224,6 +235,15 @@ export async function addTeamMembers(members: TeamMember[]): Promise<OnboardingA
               });
             }
           }
+
+          // Mark that the user hasn't reset their initial password
+          const UserPreferences = await import('server/src/lib/models/userPreferences').then(m => m.default);
+          await UserPreferences.upsert(trx, {
+            user_id: userId,
+            setting_name: 'has_reset_password',
+            setting_value: false,
+            updated_at: new Date()
+          });
 
           created.push(member.email);
         } catch (memberError) {

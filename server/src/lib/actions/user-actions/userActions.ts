@@ -109,6 +109,14 @@ export async function addUser(userData: { firstName: string; lastName: string; e
         tenant: tenant || undefined
       });
 
+      // Mark that the user hasn't reset their initial password
+      await UserPreferences.upsert(trx, {
+        user_id: user.user_id,
+        setting_name: 'has_reset_password',
+        setting_value: false,
+        updated_at: new Date()
+      });
+
       revalidatePath('/settings');
       return user;
     });
@@ -680,6 +688,24 @@ export async function registerClientUser(
   }
 }
 
+export async function checkPasswordResetStatus(): Promise<{ hasResetPassword: boolean }> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return { hasResetPassword: true }; // Default to true if no user
+    }
+
+    const {knex} = await createTenantKnex();
+    const preference = await UserPreferences.get(knex, currentUser.user_id, 'has_reset_password');
+    
+    // If no preference exists, assume they haven't reset their password
+    return { hasResetPassword: preference?.setting_value === true };
+  } catch (error) {
+    console.error('Error checking password reset status:', error);
+    return { hasResetPassword: true }; // Default to true on error
+  }
+}
+
 // New function for users to change their own password
 export async function changeOwnPassword(
   currentPassword: string,
@@ -700,6 +726,15 @@ export async function changeOwnPassword(
     // Hash the new password and update
     const hashedPassword = await hashPassword(newPassword);
     await User.updatePassword(currentUser.email, hashedPassword);
+
+    // Mark that the user has reset their password
+    const {knex} = await createTenantKnex();
+    await UserPreferences.upsert(knex, {
+      user_id: currentUser.user_id,
+      setting_name: 'has_reset_password',
+      setting_value: true,
+      updated_at: new Date()
+    });
 
     return { success: true };
   } catch (error) {
