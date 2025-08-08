@@ -1,571 +1,172 @@
-# DataTable Integration Guide
+# DataTable Integration Guide (Iframe UI + UI Kit)
 
-This guide explains how to integrate and use the DataTable component in Alga PSA extensions through the descriptor-based architecture.
+This guide shows how to use the Alga UI Kit DataTable inside an extension’s iframe app, fetching data via the gateway (`/api/ext/[extensionId]/[...]`) and following best practices for performance, security, and UX.
 
 ## Overview
 
-The extension system provides seamless integration with Alga PSA's DataTable component, offering rich functionality including sorting, pagination, filtering, and custom cell rendering - all through declarative JSON descriptors.
+- UI renders in a sandboxed iframe
+- Use `@alga/ui-kit` components and `@alga/extension-iframe-sdk` for host integration
+- All server calls go through the gateway and are executed by the Runner
 
-## DataTable Descriptor Structure
+## Prerequisites
 
-### Basic Table Structure
+- An iframe app (React recommended) scaffolded with Vite/Next
+- Installed SDKs:
+  - `@alga/extension-iframe-sdk`
+  - `@alga/ui-kit`
 
-```json
-{
-  "type": "table",
-  "data": {
-    "key": "agreements",
-    "source": "api",
-    "endpoint": "/api/extensions/{{extensionId}}/agreements"
+## Basic Table
+
+```tsx
+import React from 'react';
+import { DataTable } from '@alga/ui-kit';
+import { useEffect, useMemo, useState } from 'react';
+import { useExtension } from '@alga/extension-iframe-sdk';
+
+export default function AgreementsTable() {
+  const { context } = useExtension(); // provides tenant/extension context, auth bridge
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [total, setTotal] = useState(0);
+
+  const columns = useMemo(() => [
+    { key: 'name', header: 'Agreement Name', sortable: true },
+    { key: 'vendor', header: 'Vendor', sortable: true },
+    { key: 'status', header: 'Status', sortable: true },
+    { key: 'amount', header: 'Amount' }
+  ], []);
+
+  useEffect(() => {
+    const abort = new AbortController();
+    async function load() {
+      setLoading(true);
+      try {
+        const qp = new URLSearchParams({ page: String(page), limit: String(pageSize) });
+        const url = `${context.gatewayBase}/api/ext/${context.extensionId}/agreements?${qp}`;
+        const res = await fetch(url, { signal: abort.signal, headers: context.authHeaders });
+        if (!res.ok) throw new Error('Request failed');
+        const data = await res.json();
+        const list = Array.isArray(data) ? data : data.data ?? [];
+        setRows(list);
+        setTotal((data.meta && data.meta.total) || list.length);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+    return () => abort.abort();
+  }, [context.extensionId, context.gatewayBase, context.authHeaders, page, pageSize]);
+
+  return (
+    <DataTable
+      columns={columns}
+      rows={rows}
+      loading={loading}
+      pagination={{
+        page,
+        pageSize,
+        total,
+        onPageChange: setPage,
+        onPageSizeChange: setPageSize,
+        pageSizeOptions: [10, 25, 50, 100]
+      }}
+      onSortChange={(sort) => {
+        // Optionally re‑fetch with sort params
+      }}
+    />
+  );
+}
+```
+
+Notes:
+- `context.gatewayBase` and `context.authHeaders` are provided by the SDK bridge
+- The gateway applies header allowlists and enforces timeouts; the Runner executes the handler
+
+## Custom Cells and Actions
+
+```tsx
+import { Button, Badge } from '@alga/ui-kit';
+
+const columns = [
+  {
+    key: 'name',
+    header: 'Agreement Name',
+    sortable: true,
+    cell: (row: any) => (
+      <a className="text-blue-600 hover:underline" href={`#/agreements/${row.id}`}>{row.name}</a>
+    )
   },
-  "columns": [
-    {
-      "key": "name",
-      "header": "Agreement Name",
-      "sortable": true
-    }
-  ],
-  "pagination": {
-    "enabled": true,
-    "pageSize": 10
+  {
+    key: 'status',
+    header: 'Status',
+    cell: (row: any) => (
+      <Badge variant={row.status === 'active' ? 'success' : row.status === 'pending' ? 'warning' : 'secondary'}>
+        {row.status}
+      </Badge>
+    )
+  },
+  {
+    key: 'amount',
+    header: 'Amount',
+    cell: (row: any) => (
+      <span className="font-medium">{row.currency} {Number(row.amount).toLocaleString()}</span>
+    )
+  },
+  {
+    key: 'actions',
+    header: '',
+    cell: (row: any) => (
+      <Button variant="ghost" size="sm" onClick={() => console.log('Actions for', row.id)}>Actions</Button>
+    )
   }
-}
+];
 ```
 
-### Component Registration
+## Data Fetching Patterns
 
-The ComponentRegistry automatically maps table descriptors to the real DataTable component:
+- Always go through the gateway: `/api/ext/${extensionId}/...`
+- Expect either an array or `{ success, data, meta }`
+- Propagate only SDK‑provided auth headers; do not attach end‑user tokens directly
 
-```typescript
-// Automatic mapping in ComponentRegistry
-this.register('DataTable', DataTable);
-this.register('table', DataTable); // Both 'table' and 'DataTable' work
-```
+## Performance Tips
 
-## Data Loading
+- Server‑side: perform data transformation in handlers executed by the Runner
+- Client‑side: memoize column definitions; avoid heavy computations in cell renderers
+- Use pagination and server‑side filtering/sorting when lists are large
 
-### API Data Source
+## Error and Loading States
 
-```json
-{
-  "data": {
-    "key": "tableData",
-    "source": "api",
-    "endpoint": "/api/extensions/{{extensionId}}/agreements",
-    "params": {
-      "page": 1,
-      "limit": 50
-    }
-  }
-}
-```
+- Display loading indicators while fetching
+- Show concise error messages; avoid leaking internal details
+- Consider retry UI for transient errors (e.g., 502 from Runner)
 
-### Expected API Response Format
+## Security Considerations
 
-The API should return data in one of these formats:
+- Do not attempt cross‑origin requests; route everything through `/api/ext/...`
+- Avoid evaluating code or templates at runtime
+- Keep sizes small; large responses may be rejected by gateway caps
 
-```json
-// Format 1: Direct array
-[
-  {"id": "1", "name": "Agreement 1"},
-  {"id": "2", "name": "Agreement 2"}
-]
+## Example Handler (Runner)
 
-// Format 2: Wrapped in data property (preferred)
-{
-  "success": true,
-  "data": [
-    {"id": "1", "name": "Agreement 1"},
-    {"id": "2", "name": "Agreement 2"}
-  ],
-  "meta": {
-    "total": 100,
-    "page": 1,
-    "extensionId": "uuid"
-  }
-}
-```
+Manifest v2 declares an endpoint, e.g.: `GET /agreements` → `dist/handlers/http/list_agreements`
 
-### Automatic Data Loading
-
-The system automatically:
-
-1. **Finds Tables**: Recursively discovers all table descriptors in the page
-2. **Loads Data**: Makes API calls for each table's data source
-3. **Handles Responses**: Extracts data from both array and wrapped formats
-4. **Updates State**: Sets loading states and handles errors
-
-## Column Configuration
-
-### Simple Columns
-
-For basic text display:
-
-```json
-{
-  "key": "name",
-  "header": "Agreement Name",
-  "sortable": true,
-  "width": "200px"
-}
-```
-
-### Custom Cell Rendering
-
-For complex content with styling and interactions:
-
-```json
-{
-  "key": "name",
-  "header": "Agreement Name",
-  "sortable": true,
-  "cell": {
-    "type": "a",
-    "props": {
-      "className": "text-blue-600 hover:underline cursor-pointer font-medium"
-    },
-    "handlers": {
-      "click": {
-        "handler": "navigateToDetail",
-        "params": {
-          "id": "{{row.id}}"
-        }
-      }
-    },
-    "children": ["{{row.name}}"]
-  }
-}
-```
-
-### Status Badges
-
-Dynamic styling based on data:
-
-```json
-{
-  "key": "status",
-  "header": "Status", 
-  "cell": {
-    "type": "Badge",
-    "props": {
-      "variant": "{{row.status === 'active' ? 'success' : row.status === 'pending' ? 'warning' : 'secondary'}}"
-    },
-    "children": ["{{row.status}}"]
-  }
-}
-```
-
-### Formatted Numbers
-
-With proper number formatting:
-
-```json
-{
-  "key": "amount",
-  "header": "Amount",
-  "cell": {
-    "type": "span",
-    "children": ["{{row.currency}} {{row.amount.toLocaleString()}}"]
-  }
-}
-```
-
-### Action Buttons
-
-Interactive buttons in cells:
-
-```json
-{
-  "key": "actions",
-  "header": "Actions",
-  "cell": {
-    "type": "Button",
-    "props": {
-      "variant": "ghost",
-      "size": "sm"
-    },
-    "handlers": {
-      "click": {
-        "handler": "showActions",
-        "params": {
-          "id": "{{row.id}}"
-        }
-      }
-    },
-    "children": ["Actions"]
-  }
-}
-```
-
-## DataTable Features
-
-### Pagination
-
-```json
-{
-  "pagination": {
-    "enabled": true,
-    "pageSize": 25,
-    "pageSizeOptions": [10, 25, 50, 100]
-  }
-}
-```
-
-### Sorting
-
-```json
-{
-  "sorting": {
-    "enabled": true,
-    "defaultSort": {
-      "field": "name",
-      "order": "asc"
-    }
-  }
-}
-```
-
-### Filtering
-
-```json
-{
-  "filtering": {
-    "enabled": true,
-    "filters": [
-      {
-        "key": "status",
-        "label": "Status",
-        "type": "select",
-        "options": [
-          {"label": "All", "value": ""},
-          {"label": "Active", "value": "active"},
-          {"label": "Inactive", "value": "inactive"}
-        ]
-      },
-      {
-        "key": "vendor",
-        "label": "Vendor",
-        "type": "text"
-      }
-    ]
-  }
-}
-```
-
-## Event Handlers
-
-### Table Context
-
-Handlers receive a table context with useful methods:
-
-```typescript
-interface TableContext extends HandlerContext {
-  table: {
-    selectedRows: any[];
-    setSelectedRows: (rows: any[]) => void;
-    refresh: () => void;
+Handler (conceptual):
+```ts
+export async function list_agreements(ctx) {
+  // Use host APIs via ctx: storage, http.fetch, secrets, log, metrics
+  const items = await ctx.storage.list({ namespace: 'agreements' });
+  return {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+    body: { data: items }
   };
 }
 ```
 
-### Refresh Handler
+## Migration Notes (Legacy → New)
 
-```typescript
-export async function refreshTable(event: MouseEvent, context: TableContext) {
-  try {
-    context.ui.toast('Refreshing data...', 'info');
-    
-    // Trigger table refresh
-    context.table.refresh();
-    
-    context.ui.toast('Data refreshed successfully', 'success');
-  } catch (error) {
-    console.error('Failed to refresh:', error);
-    context.ui.toast('Failed to refresh data', 'error');
-  }
-}
-```
-
-### Row Selection Handler
-
-```typescript
-export async function handleSelection(event: MouseEvent, context: TableContext) {
-  const selectedCount = context.table.selectedRows.length;
-  
-  if (selectedCount === 0) {
-    context.ui.toast('Please select items first', 'warning');
-    return;
-  }
-  
-  context.ui.toast(`Processing ${selectedCount} selected items`, 'info');
-  // Process selected rows...
-}
-```
-
-## Complete Example
-
-Here's a comprehensive table descriptor:
-
-```json
-{
-  "type": "Card",
-  "children": [
-    {
-      "type": "CardHeader",
-      "children": [
-        {
-          "type": "div",
-          "props": {
-            "className": "flex justify-between items-center"
-          },
-          "children": [
-            {
-              "type": "CardTitle",
-              "children": ["Agreements"]
-            },
-            {
-              "type": "div",
-              "props": {
-                "className": "flex gap-2"
-              },
-              "children": [
-                {
-                  "type": "Button",
-                  "props": {
-                    "variant": "outline",
-                    "size": "sm"
-                  },
-                  "handlers": {
-                    "click": "refreshTable"
-                  },
-                  "children": ["Refresh"]
-                },
-                {
-                  "type": "Button",
-                  "props": {
-                    "variant": "outline", 
-                    "size": "sm"
-                  },
-                  "handlers": {
-                    "click": "exportData"
-                  },
-                  "children": ["Export"]
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "CardContent",
-      "props": {
-        "className": "p-0"
-      },
-      "children": [
-        {
-          "type": "table",
-          "data": {
-            "key": "agreements",
-            "source": "api", 
-            "endpoint": "/api/extensions/{{extensionId}}/agreements"
-          },
-          "columns": [
-            {
-              "key": "name",
-              "header": "Agreement Name",
-              "sortable": true,
-              "cell": {
-                "type": "a",
-                "props": {
-                  "className": "text-blue-600 hover:underline cursor-pointer font-medium"
-                },
-                "handlers": {
-                  "click": {
-                    "handler": "navigateToDetail",
-                    "params": {
-                      "id": "{{row.id}}"
-                    }
-                  }
-                },
-                "children": ["{{row.name}}"]
-              }
-            },
-            {
-              "key": "vendor",
-              "header": "Vendor",
-              "sortable": true
-            },
-            {
-              "key": "status",
-              "header": "Status",
-              "sortable": true,
-              "cell": {
-                "type": "Badge",
-                "props": {
-                  "variant": "{{row.status === 'active' ? 'success' : row.status === 'pending' ? 'warning' : 'secondary'}}"
-                },
-                "children": ["{{row.status}}"]
-              }
-            },
-            {
-              "key": "amount",
-              "header": "Amount",
-              "cell": {
-                "type": "span",
-                "props": {
-                  "className": "font-medium"
-                },
-                "children": ["{{row.currency}} {{row.amount.toLocaleString()}}"]
-              }
-            },
-            {
-              "key": "actions",
-              "header": "",
-              "cell": {
-                "type": "Button",
-                "props": {
-                  "variant": "ghost",
-                  "size": "sm"
-                },
-                "handlers": {
-                  "click": {
-                    "handler": "showActions",
-                    "params": {
-                      "id": "{{row.id}}"
-                    }
-                  }
-                },
-                "children": ["Actions"]
-              }
-            }
-          ],
-          "pagination": {
-            "enabled": true,
-            "pageSize": 10,
-            "pageSizeOptions": [10, 25, 50]
-          },
-          "sorting": {
-            "enabled": true,
-            "defaultSort": {
-              "field": "name",
-              "order": "asc"
-            }
-          },
-          "filtering": {
-            "enabled": true,
-            "filters": [
-              {
-                "key": "status",
-                "label": "Status",
-                "type": "select",
-                "options": [
-                  {"label": "All", "value": ""},
-                  {"label": "Active", "value": "active"},
-                  {"label": "Inactive", "value": "inactive"},
-                  {"label": "Pending", "value": "pending"}
-                ]
-              }
-            ]
-          }
-        }
-      ]
-    }
-  ]
-}
-```
-
-## Loading States
-
-### Automatic Loading States
-
-The system automatically shows loading spinners:
-
-```typescript
-// Automatic loading state display
-if (loading[dataKey]) {
-  return (
-    <div className="p-4 text-center">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-2"></div>
-      <div className="text-gray-600">Loading data...</div>
-    </div>
-  );
-}
-```
-
-### Error States
-
-Automatic error handling and display:
-
-```typescript
-// Automatic error state display  
-if (errors[dataKey]) {
-  return (
-    <div className="p-4 text-center text-red-600">
-      <div className="mb-2">❌ Failed to load data</div>
-      <div className="text-sm">{errors[dataKey].message}</div>
-    </div>
-  );
-}
-```
-
-## Performance Optimization
-
-### Data Transformation
-
-Transform data in API responses rather than in templates:
-
-```typescript
-// Good: Transform in API
-const processedData = rawData.map(item => ({
-  ...item,
-  statusText: item.status === 'active' ? 'Active' : 'Inactive',
-  formattedAmount: `${item.currency} ${item.amount.toLocaleString()}`
-}));
-
-// Better than complex templates
-"{{row.statusText}}" // vs "{{row.status === 'active' ? 'Active' : 'Inactive'}}"
-```
-
-### Column Optimization
-
-- Use simple columns when possible
-- Minimize complex template expressions
-- Cache expensive calculations in data transformation
-
-### Memory Management
-
-The system automatically:
-- Cleans up event handlers when tables unmount
-- Revokes blob URLs used for dynamic imports
-- Manages template evaluation contexts
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Empty Table**: Check API response format and data key
-2. **Template Not Working**: Verify variable names match data structure  
-3. **Handlers Not Firing**: Ensure handler names match exported functions
-4. **Styling Issues**: Verify ComponentRegistry has real components registered
-
-### Debug Mode
-
-Enable debug logging:
-
-```typescript
-console.log(`[DataTable] Rendering with data:`, {
-  key: dataKey,
-  tableData,
-  loading: loading[dataKey]
-});
-```
-
-### Data Flow Debugging
-
-1. **API Response**: Check network tab for API responses
-2. **Data Storage**: Check console logs for data setting
-3. **Template Evaluation**: Check template substitution logs
-4. **Component Props**: Check final DataTable props
-
-This integration provides a powerful, declarative way to create rich data tables while maintaining the security and simplicity benefits of the descriptor-based architecture.
+- JSON descriptors and template substitution are deprecated; replace with React UI in an iframe using the UI kit
+- Replace `/api/extensions/...` with `/api/ext/...` and declare endpoints in Manifest v2
+- Any dynamic code import into the host app is disallowed
