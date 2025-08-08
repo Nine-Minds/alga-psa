@@ -18,6 +18,7 @@ import { Knex } from 'knex';
 async function getManagementTenantIdInternal(knex: Knex): Promise<string> {
   const MANAGEMENT_TENANT_NAME = 'Nine Minds LLC';
   
+  // NOTE: tenants is a reference table
   const tenant = await knex('tenants')
     .where('company_name', MANAGEMENT_TENANT_NAME)
     .first();
