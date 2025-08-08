@@ -4,6 +4,11 @@ import tseslint from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 import pluginReact from "eslint-plugin-react";
 import customRules from "./eslint-plugin-custom-rules/index.js";
+import { fileURLToPath } from 'url';
+import path from 'path';
+
+// Ensure tsconfig resolution works regardless of process.cwd()
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('eslint').Linter.FlatConfig[]} */
 export default [
@@ -27,11 +32,16 @@ export default [
       parserOptions: {
         ecmaVersion: 2020,
         sourceType: "module",
-        project: ["./server/tsconfig.json", "./ee/server/tsconfig.json", "./shared/tsconfig.json"],
+        project: [
+          path.join(__dirname, 'server/tsconfig.json'),
+          path.join(__dirname, 'ee/server/tsconfig.json'),
+          path.join(__dirname, 'shared/tsconfig.json'),
+        ],
         ecmaFeatures: {
           jsx: true
         },
-        tsconfigRootDir: process.cwd(),
+        // Point to repo root so tsconfig extends work in editors
+        tsconfigRootDir: __dirname,
       },
     },
 

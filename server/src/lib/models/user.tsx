@@ -48,7 +48,7 @@ const User = {
 
   // Find a user by email and user_type (e.g., 'internal' vs 'client').
   // Email is normalized to lowercase to avoid case-sensitivity issues.
-  findUserByEmailAndType: async (email: string, userType: string): Promise<IUser | undefined> => {
+  findUserByEmailAndType: async (email: string, userType: 'internal' | 'client'): Promise<IUser | undefined> => {
     const db = await getAdminConnection();
     try {
       const user = await db<IUser>('users')

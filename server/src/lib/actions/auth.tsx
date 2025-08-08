@@ -17,7 +17,7 @@ export async function authenticateUser( email: string, password: string, userTyp
         return null;
     }
     const normalizedEmail = email.toLowerCase();
-    const user = userType
+    const user = (userType === 'client' || userType === 'internal')
         ? await User.findUserByEmailAndType(normalizedEmail, userType)
         : await User.findUserByEmail(normalizedEmail);
     if (!user || !user.user_id) {

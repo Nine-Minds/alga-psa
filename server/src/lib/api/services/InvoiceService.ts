@@ -310,8 +310,11 @@ export class InvoiceService extends BaseService<IInvoice> {
 
   /**
    * Create a new invoice
+   * Overloads for BaseService compatibility
    */
-  async create(data: CreateInvoice, context: ServiceContext): Promise<IInvoice> {
+  async create(data: Partial<IInvoice>, context: ServiceContext): Promise<IInvoice>;
+  async create(data: CreateInvoice, context: ServiceContext): Promise<IInvoice>;
+  async create(data: any, context: ServiceContext): Promise<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'create');
 
     const { knex } = await this.getKnex();
@@ -1457,4 +1460,3 @@ export class InvoiceService extends BaseService<IInvoice> {
 
 
 }
-

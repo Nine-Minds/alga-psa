@@ -83,7 +83,7 @@ export default function Register() {
         email: formData.email,
         password: formData.password,
         companyName: formData.companyName,
-        user_type: 'msp'
+        user_type: 'internal'
       });
       if (wasSuccess) {
         router.push(`/auth/check_email?email=${formData.email}&type=register`);

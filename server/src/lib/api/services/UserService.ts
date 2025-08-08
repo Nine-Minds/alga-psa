@@ -188,8 +188,11 @@ export class UserService extends BaseService<IUser> {
 
   /**
    * Create new user with validation and role assignment
+   * Overloads align with BaseService signature while supporting rich DTO
    */
-  async create(data: CreateUserData, context: ServiceContext): Promise<UserWithFullDetails> {
+  async create(data: Partial<IUser>, context: ServiceContext): Promise<IUser>;
+  async create(data: CreateUserData, context: ServiceContext): Promise<UserWithFullDetails>;
+  async create(data: any, context: ServiceContext): Promise<IUser> {
     await this.ensurePermission(context, 'user', 'create');
     
     const { knex } = await this.getKnex();
@@ -254,7 +257,7 @@ export class UserService extends BaseService<IUser> {
 
       // Assign roles
       if (data.role_ids && data.role_ids.length > 0) {
-        const userRoles = data.role_ids.map(roleId => ({
+        const userRoles = data.role_ids.map((roleId: string) => ({
           user_id: createdUser.user_id,
           role_id: roleId,
           tenant: context.tenant
@@ -280,7 +283,7 @@ export class UserService extends BaseService<IUser> {
         includeHateoas: true
       }, trx);
 
-      return enhancedUser;
+      return enhancedUser as unknown as IUser;
     });
   }
 

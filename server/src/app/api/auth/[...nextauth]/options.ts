@@ -744,7 +744,10 @@ export const options: NextAuthOptions = {
 async function validateUser(token: any) {
     try {
         // Fetch the user from the database using email and user_type (lowercase for consistency)
-        const user = await User.findUserByEmailAndType(token.email.toLowerCase(), token.user_type);
+        const user = await User.findUserByEmailAndType(
+          token.email.toLowerCase(),
+          (token.user_type === 'client' || token.user_type === 'internal') ? token.user_type : 'internal'
+        );
 
         // Check if the user exists and matches
         if (!user || user.user_id !== token.id || user.username !== token.username) {
