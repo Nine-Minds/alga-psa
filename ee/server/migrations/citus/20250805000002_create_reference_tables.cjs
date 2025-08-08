@@ -24,9 +24,9 @@ exports.up = async function(knex) {
   // These are lookup/configuration tables that are shared across all tenants
   // Ordered to handle dependencies (notification tables first, then system tables that reference them)
   const referenceTables = [
-    // Notification tables (no dependencies)
-    'notification_categories',
-    'notification_subtypes',
+    // Notification tables removed - causing permission granting issues in Citus
+    // 'notification_categories',
+    // 'notification_subtypes',
     
     // Document-related tables (only truly shared ones)
     'shared_document_types',
@@ -173,9 +173,9 @@ exports.down = async function(knex) {
       'system_workflow_registrations',
       'system_workflow_task_definitions',
       
-      // Notification tables
-      'notification_categories',
-      'notification_subtypes',
+      // Notification tables removed - causing permission granting issues
+      // 'notification_categories',
+      // 'notification_subtypes',
       
       // Other configuration tables
       // 'time_period_settings', - Has tenant column, moved to distributed tables
