@@ -698,11 +698,14 @@ export async function checkPasswordResetStatus(): Promise<{ hasResetPassword: bo
     const {knex} = await createTenantKnex();
     const preference = await UserPreferences.get(knex, currentUser.user_id, 'has_reset_password');
     
-    // If no preference exists, assume they haven't reset their password
-    return { hasResetPassword: preference?.setting_value === true };
+    // For existing users without this preference, assume they have already reset their password
+    // Only new users created after this feature will have has_reset_password = false
+    const hasReset = preference ? preference.setting_value === true : true;
+    
+    return { hasResetPassword: hasReset };
   } catch (error) {
     console.error('Error checking password reset status:', error);
-    return { hasResetPassword: true }; // Default to true on error
+    return { hasResetPassword: true }; // Default to true on error to avoid showing warning
   }
 }
 

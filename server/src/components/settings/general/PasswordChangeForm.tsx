@@ -27,8 +27,14 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
 
   useEffect(() => {
     const checkStatus = async () => {
-      const status = await checkPasswordResetStatus();
-      setNeedsPasswordReset(!status.hasResetPassword);
+      try {
+        const status = await checkPasswordResetStatus();
+        setNeedsPasswordReset(!status.hasResetPassword);
+      } catch (error) {
+        console.error('Error checking password reset status:', error);
+        // Default to not showing warning if there's an error
+        setNeedsPasswordReset(false);
+      }
     };
     checkStatus();
   }, []);
