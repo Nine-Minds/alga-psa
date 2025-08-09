@@ -523,7 +523,7 @@ Phase 1 — Database Schema and Registry Services
   - [ ] Consider `extension_id` normalization vs. `registry_id` lookups.
 
 Phase 2 — Bundle Storage Integration
-- [ ] EE S3 provider implemented against MinIO (scaffold exists).
+- [x] EE S3 provider implemented against MinIO (scaffold).
 - [x] CE bundle helpers added in `server/src/lib/extensions/bundles.ts` (placeholders for EE wiring).
 - [x] Precompiled cwasm support in schema (DB) and manifest; [ ] runtime selection logic in loader.
 - Details
@@ -558,8 +558,8 @@ Phase 4 — Next.js API Gateway for Server-Side Handlers
   - [ ] Emit telemetry (tracing/metrics).
 - Details
   - [ ] AuthN/Z: derive tenant from session/API key; enforce RBAC.
-  - [ ] Idempotency key for non-GET and retry policy (502/503/504 with jitter).
-  - [ ] Propagate `x-request-id`; record correlation IDs.
+  - [x] Idempotency key for non-GET; [ ] retry policy (502/503/504 with jitter).
+  - [x] Propagate `x-request-id`; record correlation IDs.
   - [ ] Normalize `user-agent`.
 
 Phase 5 — Client Asset Fetch-and-Serve (Pod-Local Cache)
@@ -569,9 +569,9 @@ Phase 5 — Client Asset Fetch-and-Serve (Pod-Local Cache)
 - [x] Mime map: `server/src/lib/extensions/assets/mime.ts`.
 - Details
   - [x] Tar/zip extraction for `ui/**/*`.
-  - [x] LRU index file structure recorded; [ ] eviction policy and GC.
+  - [x] LRU index file structure recorded; [x] eviction policy and GC.
   - [x] ETag generation and conditional GET support.
-  - [ ] Locking/concurrency control for first-touch extraction.
+  - [x] Locking/concurrency control for first-touch extraction.
   - [ ] CSP guidance for iframe pages.
 
 Phase 6 — Client SDK (Iframe)
