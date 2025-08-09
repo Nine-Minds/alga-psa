@@ -269,6 +269,19 @@ export async function completePortalSetup(
         return { success: false, error: error instanceof Error ? error.message : 'Failed to create user account' } as CompleteSetupResult;
       }
 
+      // Mark that the user has set their password (not using a temporary password)
+      try {
+        const UserPreferences = await import('../../models/userPreferences').then(m => m.default);
+        await UserPreferences.upsert(knex, {
+          user_id: newUser.user_id,
+          setting_name: 'has_reset_password',
+          setting_value: true,
+          updated_at: new Date()
+        });
+      } catch (prefError) {
+        console.warn('Failed to set password reset preference:', prefError);
+      }
+
       // Mark invitation as used (tenant context is active)
       const tokenMarked = await PortalInvitationService.markTokenAsUsed(token);
       if (!tokenMarked) {

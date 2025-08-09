@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { StepProps } from '../types';
 
 export function CompanyInfoStep({ data, updateData }: StepProps) {
@@ -78,6 +78,22 @@ export function CompanyInfoStep({ data, updateData }: StepProps) {
       </div>
 
       <div className="space-y-4 pt-4 border-t">
+        <div className="rounded-md bg-amber-50 border border-amber-200 p-4 mb-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <AlertTriangle className="h-5 w-5 text-amber-400" />
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-semibold text-amber-800">
+                Password Reset Required
+              </h3>
+              <div className="mt-1 text-sm text-amber-700">
+                <p>You must set a new password to continue with the setup process. This step cannot be skipped.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         <div className="space-y-2">
           <h3 className="text-lg font-medium">Set Your Password</h3>
           <p className="text-sm text-gray-600">

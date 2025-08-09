@@ -16,6 +16,7 @@ import { verifyEmailSuffix, getCompanyByEmailSuffix } from 'server/src/lib/actio
 import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/EntityImageService';
 import { hasPermission } from 'server/src/lib/auth/rbac';
+import { throwPermissionError } from 'server/src/lib/utils/errorHandling';
 
 interface ActionResult {
   success: boolean;
@@ -107,6 +108,14 @@ export async function addUser(userData: { firstName: string; lastName: string; e
         user_id: user.user_id,
         role_id: userData.roleId,
         tenant: tenant || undefined
+      });
+
+      // Mark that the user hasn't reset their initial password
+      await UserPreferences.upsert(trx, {
+        user_id: user.user_id,
+        setting_name: 'has_reset_password',
+        setting_value: false,
+        updated_at: new Date()
       });
 
       revalidatePath('/settings');
@@ -680,6 +689,35 @@ export async function registerClientUser(
   }
 }
 
+export async function checkPasswordResetStatus(): Promise<{ hasResetPassword: boolean }> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return { hasResetPassword: true }; // Default to true if no user
+    }
+
+    const {knex} = await createTenantKnex();
+
+    // RBAC check - users can only check their own password reset status
+    if (!await hasPermission(currentUser, 'user', 'read', knex)) {
+      // Use standardized permission error to avoid silent success paths
+      throwPermissionError('check password reset status');
+    }
+
+    // UserPreferences enforces tenant scoping internally (tenant is part of its unique key)
+    const preference = await UserPreferences.get(knex, currentUser.user_id, 'has_reset_password');
+    
+    // For existing users without this preference, assume they have already reset their password
+    // Only new users created after this feature will have has_reset_password = false
+    const hasReset = preference ? preference.setting_value === true : true;
+    
+    return { hasResetPassword: hasReset };
+  } catch (error) {
+    console.error('Error checking password reset status:', error);
+    return { hasResetPassword: true }; // Default to true on error to avoid showing warning
+  }
+}
+
 // New function for users to change their own password
 export async function changeOwnPassword(
   currentPassword: string,
@@ -700,6 +738,15 @@ export async function changeOwnPassword(
     // Hash the new password and update
     const hashedPassword = await hashPassword(newPassword);
     await User.updatePassword(currentUser.email, hashedPassword);
+
+    // Mark that the user has reset their password
+    const {knex} = await createTenantKnex();
+    await UserPreferences.upsert(knex, {
+      user_id: currentUser.user_id,
+      setting_name: 'has_reset_password',
+      setting_value: true,
+      updated_at: new Date()
+    });
 
     return { success: true };
   } catch (error) {
