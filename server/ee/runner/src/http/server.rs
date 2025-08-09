@@ -62,22 +62,56 @@ async fn execute(State(state): State<AppState>, headers: HeaderMap, Json(req): J
         }
     };
 
-    // Instantiate and optionally call exported `handler`
-    let call_result = match loader.instantiate_and_maybe_call(&wasm, req.limits.timeout_ms, req.limits.memory_mb) {
-        Ok(v) => v,
+    // Build normalized request JSON for guest handler
+    let input = serde_json::json!({
+        "context": {
+            "request_id": req.context.request_id,
+            "tenant_id": req.context.tenant_id,
+            "extension_id": req.context.extension_id,
+            "version_id": req.context.version_id,
+        },
+        "http": {
+            "method": req.http.method,
+            "path": req.http.path,
+            "query": req.http.query,
+            "headers": req.http.headers,
+            "body_b64": req.http.body_b64,
+        }
+    });
+    let input_bytes = match serde_json::to_vec(&input) {
+        Ok(b) => b,
         Err(e) => {
-            let resp = ExecuteResponse { status: 500, headers: Default::default(), body_b64: None, error: Some(format!("instantiate_failed: {}", e)) };
+            let resp = ExecuteResponse { status: 400, headers: Default::default(), body_b64: None, error: Some(format!("bad_input: {}", e)) };
             return Json(resp);
         }
     };
 
-    let body = if let Some(n) = call_result { format!("ok: {}", n) } else { "ok".to_string() };
-    let resp = ExecuteResponse {
-        status: 200,
-        headers: Default::default(),
-        body_b64: Some(base64::engine::general_purpose::STANDARD.encode(body)),
-        error: None,
+    let out_bytes = match loader.execute_handler(&wasm, req.limits.timeout_ms, req.limits.memory_mb, &input_bytes) {
+        Ok(v) => v,
+        Err(e) => {
+            let resp = ExecuteResponse { status: 500, headers: Default::default(), body_b64: None, error: Some(format!("execute_failed: {}", e)) };
+            return Json(resp);
+        }
     };
+
+    // Expect guest to return normalized response JSON: { status, headers, body_b64 }
+    let mut status: u16 = 200;
+    let mut headers: HashMap<String, String> = HashMap::new();
+    let mut body_b64: Option<String> = None;
+    match serde_json::from_slice::<serde_json::Value>(&out_bytes) {
+        Ok(v) => {
+            status = v.get("status").and_then(|x| x.as_u64()).unwrap_or(200) as u16;
+            if let Some(h) = v.get("headers").and_then(|x| x.as_object()) {
+                headers = h.iter().map(|(k, v)| (k.clone(), v.as_str().unwrap_or("").to_string())).collect();
+            }
+            body_b64 = v.get("body_b64").and_then(|x| x.as_str()).map(|s| s.to_string());
+        }
+        Err(_) => {
+            body_b64 = Some(base64::engine::general_purpose::STANDARD.encode(out_bytes));
+        }
+    }
+
+    let resp = ExecuteResponse { status, headers, body_b64, error: None };
 
     if !idem.is_empty() {
         let mut map = state.idempotency.lock().await;

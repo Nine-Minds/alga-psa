@@ -132,17 +132,46 @@ impl ModuleLoader {
         Ok(bytes)
     }
 
-    pub fn instantiate_and_maybe_call(&self, wasm: &[u8], timeout_ms: Option<u64>, memory_mb: Option<u64>) -> anyhow::Result<Option<i32>> {
+    pub fn execute_handler(&self, wasm: &[u8], timeout_ms: Option<u64>, memory_mb: Option<u64>, input: &[u8]) -> anyhow::Result<Vec<u8>> {
         let (mut store, mut linker, module) = self.instantiate(wasm, timeout_ms, memory_mb)?;
         let instance = linker.instantiate(&mut store, &module)?;
-        // Try calling an optional exported function `handler` with no params -> i32
-        if let Some(func) = instance.get_func(&mut store, "handler") {
-            if let Ok(typed) = func.typed::<(), i32>(&store) {
-                let result = typed.call(&mut store, ())?;
-                return Ok(Some(result));
+        // Resolve exports
+        let memory = instance.get_memory(&mut store, "memory").ok_or_else(|| anyhow::anyhow!("no memory export"))?;
+        let alloc = instance.get_func(&mut store, "alloc").ok_or_else(|| anyhow::anyhow!("no alloc export"))?;
+        let dealloc = instance.get_func(&mut store, "dealloc");
+        let handler = instance.get_func(&mut store, "handler").ok_or_else(|| anyhow::anyhow!("no handler export"))?;
+        // allocate input
+        let a = alloc.typed::<i32, i32>(&store)?;
+        let in_ptr = a.call(&mut store, input.len() as i32)?;
+        let data = memory.data_mut(&mut store);
+        let istart = in_ptr as usize;
+        let iend = istart.saturating_add(input.len());
+        if iend > data.len() { anyhow::bail!("input oob"); }
+        data[istart..iend].copy_from_slice(input);
+        // allocate out tuple (ptr,len)
+        let out_tuple_ptr = a.call(&mut store, 8)?;
+        // call handler(req_ptr, req_len, out_ptr) -> i32
+        let h = handler.typed::<(i32,i32,i32), i32>(&store)?;
+        let rc = h.call(&mut store, (in_ptr, input.len() as i32, out_tuple_ptr))?;
+        if rc != 0 { anyhow::bail!("handler error: {}", rc); }
+        // read out tuple
+        let data = memory.data(&store);
+        let ostart = out_tuple_ptr as usize;
+        if ostart + 8 > data.len() { anyhow::bail!("out oob"); }
+        let resp_ptr = i32::from_le_bytes(data[ostart..ostart+4].try_into().unwrap()) as usize;
+        let resp_len = u32::from_le_bytes(data[ostart+4..ostart+8].try_into().unwrap()) as usize;
+        if resp_ptr + resp_len > data.len() { anyhow::bail!("resp oob"); }
+        let mut out = vec![0u8; resp_len];
+        out.copy_from_slice(&data[resp_ptr..resp_ptr+resp_len]);
+        // free if dealloc exists
+        if let Some(f) = dealloc {
+            if let Ok(free) = f.typed::<(i32,i32), ()>(&store) {
+                let _ = free.call(&mut store, (in_ptr, input.len() as i32));
+                let _ = free.call(&mut store, (resp_ptr as i32, resp_len as i32));
+                let _ = free.call(&mut store, (out_tuple_ptr, 8));
             }
         }
-        Ok(None)
+        Ok(out)
     }
 }
 
