@@ -6,7 +6,10 @@
     "outDir": "dist",
     "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "jsx": "react",
+    "lib": ["ES2020", "DOM"],
+    "types": ["react", "react-dom"]
   },
   "include": ["src/**/*"]
 }
