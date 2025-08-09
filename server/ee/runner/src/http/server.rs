@@ -1,10 +1,13 @@
-use axum::{routing::post, Json, Router};
+use axum::{routing::{post, get}, Json, Router};
 use std::net::SocketAddr;
 
 use crate::models::{ExecuteRequest, ExecuteResponse};
 
 pub async fn run() -> anyhow::Result<()> {
-    let app = Router::new().route("/v1/execute", post(execute));
+    let app = Router::new()
+        .route("/v1/execute", post(execute))
+        .route("/healthz", get(healthz))
+        .route("/warmup", get(warmup));
 
     let addr: SocketAddr = ([0, 0, 0, 0], 8080).into();
     tracing::info!("listening on {}", addr);
@@ -21,3 +24,6 @@ async fn execute(Json(_req): Json<ExecuteRequest>) -> Json<ExecuteResponse> {
     })
 }
 
+async fn healthz() -> &'static str { "ok" }
+
+async fn warmup() -> &'static str { "warmed" }
