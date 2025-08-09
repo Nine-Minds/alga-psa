@@ -33,7 +33,7 @@ Last updated: 2025-08-09
 - Storage: Use S3-compatible storage via our existing S3StorageProvider against local MinIO only. No alternative providers. Canonical bucket and prefix are defined via env.
 - UI: Iframe-only Client SDK approach. React-based example and docs only for SDK; no descriptor renderer.
 - Fetch/serve model: Object storage is source of truth. Pods fetch bundles/UI on-demand into a pod-local cache and serve directly via Next.js/Knative.
-## Phased TODO (Implementation Plan)
+## Deprecated: Phased TODO (superseded by Consolidated TODOs)
 
 Phase 0 — Foundations and Switches
 - [ ] EE-only wiring: ensure extension initialization is only imported in EE builds (confirm in `server/src/lib/initializeApp.ts` and aliases). Remove/ignore extensions in CE.
@@ -617,12 +617,6 @@ Phase 4 – Migration & Deprecation
 - Initial capability set scope: finalize MVP host APIs.
 - Pricing/billing alignment with quotas and egress costs.
 
-## Next Steps
-- Spec Host API v1 and SDK v1.
-- Define bundle manifest schema and signing model.
-- Draft DB migrations for the data model above with RLS.
-- Build a minimal runner prototype with one event flow E2E.
-
 ## Consolidated TODOs (Status)
 
 This consolidated list supersedes the separate "Phased TODO" and "Detailed Planning" sections. Items are marked complete where scaffolding or implementation exists in this repo.
@@ -659,6 +653,7 @@ Phase 2 — Bundle Storage Integration
   - [x] Canonical content-address layout documented.
   - [ ] Hash verification on fetch and before use.
   - [ ] Signature format decision and trust bundle format.
+  - [ ] Signature verification: runner mandatory; gateway optional.
 
 Phase 3 — Runner Service (Rust + Wasmtime)
 - [x] Runner crate scaffolding: `Cargo.toml`, `src/main.rs`, `src/http/server.rs` (`POST /v1/execute`), `src/models.rs`.
@@ -687,6 +682,8 @@ Phase 4 — Next.js API Gateway for Server-Side Handlers
 - Details
   - [ ] AuthN/Z: derive tenant from session/API key; enforce RBAC.
   - [ ] Idempotency key for non-GET and retry policy (502/503/504 with jitter).
+  - [ ] Propagate `x-request-id`; record correlation IDs.
+  - [ ] Normalize `user-agent`.
 
 Phase 5 — Client Asset Fetch-and-Serve (Pod-Local Cache)
 - [x] Route: `src/app/ext-ui/[extensionId]/[contentHash]/[...path]/route.ts` (GET).
@@ -697,6 +694,8 @@ Phase 5 — Client Asset Fetch-and-Serve (Pod-Local Cache)
   - [ ] Tar/zip extraction for `ui/**/*` (currently placeholder).
   - [x] LRU index file structure recorded; [ ] eviction policy and GC.
   - [ ] ETag generation and conditional GET support.
+  - [ ] Locking/concurrency control for first-touch extraction.
+  - [ ] CSP guidance for iframe pages.
 
 Phase 6 — Client SDK (Iframe)
 - [x] Packages created: `packages/extension-iframe-sdk/`, `packages/ui-kit/`.
@@ -708,6 +707,11 @@ Phase 6 — Client SDK (Iframe)
   - [ ] Vite + TS example (README stub present only).
 - Host bridge bootstrap
   - [ ] `server/src/lib/extensions/ui/iframeBridge.ts` to inject theme tokens and session.
+ - Protocol & security
+   - [ ] Origin validation and sandbox attributes; author docs.
+   - [ ] Message types include `version`.
+ - Ergonomics
+   - [ ] React hooks: `useBridge`, `useTheme`, `useAuthToken`, `useResize`.
 
 Phase 7 — Knative Serving (Runner)
 - [x] KService manifest with autoscaling annotations.
@@ -716,138 +720,11 @@ Phase 7 — Knative Serving (Runner)
 - Details
   - [ ] Autoscale tuning; resource requests/limits aligned to memory caps.
   - [ ] Warmup prefetch strategy for hot bundles.
+  - [ ] Rollout notes for revision updates.
 
 Phase 8 — EE Code Migration (remove legacy paths)
 - [ ] Remove/gate legacy filesystem scan loader (`ee/server/src/lib/extensions/initialize.ts`).
 - [ ] Remove host-side descriptor rendering/dynamic imports; iframe-only UI.
 - [x] Document CE gating and deprecation notes (`ee/docs/cleanup-notes.md`).
 
-## Detailed Planning (Expanded TODOs)
-
-The following expands each phase into concrete, testable tasks. These are planning checklists; implementation can proceed once all items in a phase are defined.
-
-### Phase 1 — Database Schema and Registry Services (Detailed)
-- Schema & indexing
-  - [ ] Confirm PK/FK relationships and cascading deletes across `extension_*` tables
-  - [ ] Add RLS plan: queries scoped by `tenant_id` for installs, subscriptions, logs, quotas
-  - [ ] Indexes: `extension_execution_log (tenant_id, created_at)`, `extension_event_subscription (tenant_id, topic)`, `tenant_extension_install (tenant_id)`
-  - [ ] Consider `extension_id` string column normalization vs. lookup by `registry_id`
-- Registry service API (server-side)
-  - [ ] Methods: create/list/get registry entries; add version; attach bundle
-  - [ ] Version fields: `runtime`, `main_entry`, `api.endpoints[]`, `ui`, `capabilities[]`
-  - [ ] Bundle fields: `content_hash`, `signature`, `precompiled[target→path]`
-- Tenant install service API
-  - [ ] Methods: install/uninstall/enable/disable; persist `granted_caps`, `config`, `version_id`
-  - [ ] Validate caps against manifest; compute effective caps for runtime
-- Admin CLI flows (spec)
-  - [ ] `publish` (create registry + first version)
-  - [ ] `add-version` (attach manifest/runtime fields)
-  - [ ] `attach-bundle` (content-hash, signature, precompiled map)
-  - [ ] `install`/`uninstall`/`enable`/`disable` (tenant-scoped)
-  - [ ] `list`/`get` with filters (tenant, publisher, name)
-
-### Phase 2 — Bundle Storage Integration (Detailed)
-- S3/MinIO provider
-  - [ ] Config from env: `STORAGE_S3_*` and `EXT_BUNDLE_STORE_URL`
-  - [ ] Path-style addressing, retries, timeouts, and `forcePathStyle=true`
-  - [ ] Streaming `getObjectStream(key)` and `getObjectJson(key)` helpers
-- Content addressing & layout
-  - [ ] Canonical layout: `sha256/{hash}/manifest.json`, `dist/**/*`, `ui/**/*`, `artifacts/cwasm/{triple}/*.cwasm`, `SIGNATURE`
-  - [ ] Hash verification: recompute on fetch; verify `content_hash` before use
-  - [ ] Prefer precompiled `.cwasm` for current target triple; fall back to `.wasm`
-- Integrity & provenance
-  - [ ] Signature format decision (e.g., ed25519 raw + detached file vs. CMS); trust bundle format
-  - [ ] Signature verification at both gateway (optional) and runner (mandatory)
-
-### Phase 3 — Runner Service (Rust + Wasmtime) (Detailed)
-- Engine configuration
-  - [ ] Use Wasmtime PoolingAllocator (tuned instance/table/memory pool sizes)
-  - [ ] Store limits per invocation: `memory_mb`, table elements, stack size
-  - [ ] Epoch-based timeout with 1–5s default; graceful trap on expiry
-  - [ ] Optional fuel metering (per-invocation budget) and accounting
-  - [ ] Disable ambient WASI; no preopened FS
-- Host API surface (`alga.*`)
-  - [ ] `alga.storage.get/set/delete/list` (tenant/extension namespacing, quotas)
-  - [ ] `alga.http.fetch` (methods, headers allowlist, DNS/egress policy)
-  - [ ] `alga.secrets.get` (scoped keys resolved from cluster secrets or vault)
-  - [ ] `alga.log.info/warn/error` (structured fields)
-  - [ ] `alga.metrics.emit` (counter/gauge/histogram with labels)
-- Loader & cache
-  - [ ] Fetch `.cwasm` or `.wasm` by `content_hash`; validate signature
-  - [ ] Persist to `EXT_CACHE_ROOT/<hash>/` with LRU size cap
-  - [ ] Target-triple detection to select precompiled artifact
-- Execute flow & contract
-  - [ ] Validate request; resolve export (e.g., `dist/handlers/http/sync#handle`)
-  - [ ] Marshal normalized HTTP payload; base64 body
-  - [ ] Enforce limits; map traps/errors to codes
-  - [ ] Response: `{status, headers, body_b64}`
-- Errors & resilience
-  - [ ] Standard error codes: `timeout`, `memory_limit`, `quota_exceeded`, `bad_handler`, `egress_denied`, `signature_invalid`, `internal`
-  - [ ] Idempotency handling for retried invocations (gateway-provided key)
-- Observability
-  - [ ] Tracing fields: `tenant_id`, `extension_id`, `version_id`, `content_hash`, `request_id`
-  - [ ] Metrics: duration, mem, fuel, bytes egressed
-  - [ ] Execution logs persisted to `extension_execution_log`
-- Testing
-  - [ ] Unit tests for host APIs and loader
-  - [ ] Integration test: hello-world handler success path
-  - [ ] Fault injection tests for timeouts, mem limit, egress denied
-
-### Phase 4 — Next.js API Gateway (Detailed)
-- AuthN/AuthZ
-  - [ ] Derive `tenant_id` from NextAuth session/API key; enforce RBAC before dispatch
-  - [ ] Service token for Runner; do not forward end-user `authorization`
-- Endpoint resolution
-  - [ ] Load manifest by `content_hash` (cache per version); path params matching
-  - [ ] Exact + param patterns; method-sensitive routing
-- Request policy
-  - [ ] Header allowlist/denylist finalized; normalize `user-agent`
-  - [ ] Body size caps (e.g., 1–5 MB default) per method
-  - [ ] Timeout (`EXT_GATEWAY_TIMEOUT_MS`); retries on 502/503/504 with jitter
-- Idempotency & tracing
-  - [ ] Idempotency key for non-GET: `request_id || hash(method+url+body)`
-  - [ ] Propagate `x-request-id`; record correlation IDs
-
-### Phase 5 — Client Asset Fetch-and-Serve (Detailed)
-- Extraction & safety
-  - [ ] Tar/zip extraction for `ui/**/*`; sanitize paths; limit file size
-  - [ ] Verify file hashes during extraction; refuse mismatches
-- Cache management
-  - [ ] LRU index format at `<EXT_CACHE_ROOT>/_index.json` (keys, size, last access)
-  - [ ] Eviction on capacity thresholds; background GC cadence
-  - [ ] Locking/concurrency control for first-touch extraction
-- Serving
-  - [ ] ETag generation from file hash; conditional GET support
-  - [ ] MIME map completeness; CSP guidance for iframe pages
-
-### Phase 6 — Client SDK (Iframe) (Detailed)
-- Protocol & security
-  - [ ] Message types: `init`, `theme`, `auth.request/auth`, `navigate`, `telemetry`, `resize`, `version`
-  - [ ] Origin validation and sandbox attributes; docs for host integrators
-- SDK ergonomics
-  - [ ] React hooks: `useBridge`, `useTheme`, `useAuthToken`, `useResize`
-  - [ ] TypeScript types and generics for messages
-- UI Kit MVP
-  - [ ] Tokens + theming utilities; a11y-first component seeds (Button, Input, Table)
-- Example app
-  - [ ] Vite + TS template; demonstrates auth, theme, navigation
-
-### Phase 7 — Knative Serving (Runner) (Detailed)
-- CI/CD
-  - [ ] Build runner image; push to container registry
-  - [ ] Deploy KService; capture revision; smoke test `/v1/execute`
-- Autoscaling & resources
-  - [ ] `containerConcurrency` and target tuning; minScale/maxScale
-  - [ ] Resource requests/limits alignment with memory caps
-- Warmup & prefetch
-  - [ ] `/warmup` to precompile hot bundles; selection strategy defined
-  - [ ] Rollout notes for revision updates
-
-### Phase 8 — EE Code Migration (Detailed)
-- Removal & gating
-  - [ ] Remove legacy filesystem scan loader; gate any legacy paths by edition
-  - [ ] Deprecate dynamic JS module serving; enforce iframe-only UI
-- Migration guide
-  - [ ] Authoring guide for v2 bundles (build, sign, publish)
-  - [ ] Runtime differences and capability model
-  - [ ] Operational runbooks (quotas, debugging, logs)
+<!-- Consolidated TODOs are canonical. Previous detailed planning content has been removed for clarity. -->
