@@ -1,12 +1,18 @@
 // Wasmtime engine configuration, module fetch/cache, and instantiation
-use wasmtime::{Config, Engine, Store, Module, Linker, ResourceLimiter, InstanceAllocationStrategy, PoolingAllocationConfig};
+use wasmtime::{Config, Engine, Store, Module, Linker, ResourceLimiter, InstanceAllocationStrategy, PoolingAllocationConfig, Instance};
 use reqwest::Client;
 use std::env;
 use std::time::Duration;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use std::collections::HashMap;
+
+use super::host_api::{add_host_imports, HostApiConfig};
 
 pub struct ModuleLoader {
     pub engine: Engine,
     http: Client,
+    cache: Arc<RwLock<HashMap<String, Arc<Vec<u8>>>>>,
 }
 
 struct Limits {
@@ -52,7 +58,7 @@ impl ModuleLoader {
 
         let engine = Engine::new(&cfg)?;
         let http = Client::builder().build()?;
-        Ok(Self { engine, http })
+        Ok(Self { engine, http, cache: Arc::new(RwLock::new(HashMap::new())) })
     }
 
     pub fn instantiate(&self, wasm: &[u8], timeout_ms: Option<u64>, memory_mb: Option<u64>) -> anyhow::Result<(Store<Limits>, Linker<Limits>, Module)> {
@@ -64,7 +70,10 @@ impl ModuleLoader {
         store.limiter(|s| s);
 
         if let Some(ms) = timeout_ms { self.apply_timeout(&mut store, ms); }
-        let linker: Linker<Limits> = Linker::new(&self.engine);
+        let mut linker: Linker<Limits> = Linker::new(&self.engine);
+        // Add host imports
+        let host_cfg = HostApiConfig::default();
+        add_host_imports(&mut linker, &host_cfg)?;
         Ok((store, linker, module))
     }
 
@@ -88,6 +97,10 @@ impl ModuleLoader {
     }
 
     pub async fn fetch_object(&self, key: &str) -> anyhow::Result<Vec<u8>> {
+        // Cache lookup
+        if let Some(v) = self.cache.read().await.get(key).cloned() {
+            return Ok((*v).clone());
+        }
         // Build from BUNDLE_STORE_BASE like http://minio:9000/alga-extensions
         let base = env::var("BUNDLE_STORE_BASE")?;
         let url = format!("{}/{}", base.trim_end_matches('/'), key.trim_start_matches('/'));
@@ -95,8 +108,24 @@ impl ModuleLoader {
         if !resp.status().is_success() {
             anyhow::bail!("fetch failed: {}", resp.status());
         }
-        let bytes = resp.bytes().await?;
-        Ok(bytes.to_vec())
+        let bytes = resp.bytes().await?.to_vec();
+        // TODO: signature/hash verification here (trust bundle)
+        let arc = Arc::new(bytes.clone());
+        self.cache.write().await.insert(key.to_string(), arc);
+        Ok(bytes)
+    }
+
+    pub fn instantiate_and_maybe_call(&self, wasm: &[u8], timeout_ms: Option<u64>, memory_mb: Option<u64>) -> anyhow::Result<Option<i32>> {
+        let (mut store, mut linker, module) = self.instantiate(wasm, timeout_ms, memory_mb)?;
+        let instance = linker.instantiate(&mut store, &module)?;
+        // Try calling an optional exported function `handler` with no params -> i32
+        if let Some(func) = instance.get_func(&mut store, "handler") {
+            if let Ok(typed) = func.typed::<(), i32>(&store) {
+                let result = typed.call(&mut store, ())?;
+                return Ok(Some(result));
+            }
+        }
+        Ok(None)
     }
 }
 

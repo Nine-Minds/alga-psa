@@ -61,16 +61,20 @@ async fn execute(State(state): State<AppState>, headers: HeaderMap, Json(req): J
         }
     };
 
-    // Instantiate (no actual call yet)
-    if let Err(e) = loader.instantiate(&wasm, req.limits.timeout_ms, req.limits.memory_mb) {
-        let resp = ExecuteResponse { status: 500, headers: Default::default(), body_b64: None, error: Some(format!("instantiate_failed: {}", e)) };
-        return Json(resp);
-    }
+    // Instantiate and optionally call exported `handler`
+    let call_result = match loader.instantiate_and_maybe_call(&wasm, req.limits.timeout_ms, req.limits.memory_mb) {
+        Ok(v) => v,
+        Err(e) => {
+            let resp = ExecuteResponse { status: 500, headers: Default::default(), body_b64: None, error: Some(format!("instantiate_failed: {}", e)) };
+            return Json(resp);
+        }
+    };
 
+    let body = if let Some(n) = call_result { format!("ok: {}", n) } else { "ok".to_string() };
     let resp = ExecuteResponse {
         status: 200,
         headers: Default::default(),
-        body_b64: Some(base64::encode("ok")),
+        body_b64: Some(base64::encode(body)),
         error: None,
     };
 
