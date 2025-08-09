@@ -1,4 +1,5 @@
 use axum::{routing::{post, get}, Json, Router, extract::State, http::HeaderMap};
+use base64::Engine;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -33,7 +34,7 @@ async fn execute(State(state): State<AppState>, headers: HeaderMap, Json(req): J
     let idem = headers.get("x-idempotency-key").and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
     let tenant = headers.get("x-alga-tenant").and_then(|v| v.to_str().ok()).unwrap_or("");
     let ext = headers.get("x-alga-extension").and_then(|v| v.to_str().ok()).unwrap_or("");
-    tracing::info!("execute called" , request_id=%req_id, idempotency=%idem, tenant=%tenant, extension=%ext);
+    tracing::info!(request_id=%req_id, idempotency=%idem, tenant=%tenant, extension=%ext, "execute called");
 
     if !idem.is_empty() {
         let mut map = state.idempotency.lock().await;
@@ -74,7 +75,7 @@ async fn execute(State(state): State<AppState>, headers: HeaderMap, Json(req): J
     let resp = ExecuteResponse {
         status: 200,
         headers: Default::default(),
-        body_b64: Some(base64::encode(body)),
+        body_b64: Some(base64::engine::general_purpose::STANDARD.encode(body)),
         error: None,
     };
 

@@ -15,15 +15,15 @@ pub struct ModuleLoader {
     cache: Arc<RwLock<HashMap<String, Arc<Vec<u8>>>>>,
 }
 
-struct Limits {
+pub(crate) struct Limits {
     max_memory: usize,
 }
 
 impl ResourceLimiter for Limits {
-    fn memory_growing(&mut self, _current: usize, desired: usize, _maximum: Option<usize>) -> bool {
-        desired <= self.max_memory
+    fn memory_growing(&mut self, _current: usize, desired: usize, _maximum: Option<usize>) -> Result<bool, wasmtime::Error> {
+        Ok(desired <= self.max_memory)
     }
-    fn table_growing(&mut self, _current: u32, _desired: u32, _maximum: Option<u32>) -> bool { true }
+    fn table_growing(&mut self, _current: u32, _desired: u32, _maximum: Option<u32>) -> Result<bool, wasmtime::Error> { Ok(true) }
 }
 
 impl ModuleLoader {
@@ -72,7 +72,11 @@ impl ModuleLoader {
         if let Some(ms) = timeout_ms { self.apply_timeout(&mut store, ms); }
         let mut linker: Linker<Limits> = Linker::new(&self.engine);
         // Add host imports
-        let host_cfg = HostApiConfig::default();
+        let host_cfg = HostApiConfig {
+            egress_allowlist: std::env::var("EXT_EGRESS_ALLOWLIST").ok()
+                .map(|s| s.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect())
+                .unwrap_or_default(),
+        };
         add_host_imports(&mut linker, &host_cfg)?;
         Ok((store, linker, module))
     }
@@ -109,7 +113,20 @@ impl ModuleLoader {
             anyhow::bail!("fetch failed: {}", resp.status());
         }
         let bytes = resp.bytes().await?.to_vec();
-        // TODO: signature/hash verification here (trust bundle)
+        // Hash verification: expect key under sha256/<hash>/...
+        if let Some((_prefix, rest)) = key.split_once("sha256/") {
+            if let Some((hash, _tail)) = rest.split_once('/') {
+                use sha2::{Digest, Sha256};
+                let mut hasher = Sha256::new();
+                hasher.update(&bytes);
+                let digest = hasher.finalize();
+                let got = hex::encode(digest);
+                if got != hash {
+                    anyhow::bail!("hash_mismatch: expected {} got {}", hash, got);
+                }
+            }
+        }
+        // TODO: signature verification using SIGNING_TRUST_BUNDLE and sha256/<hash>/SIGNATURE
         let arc = Arc::new(bytes.clone());
         self.cache.write().await.insert(key.to_string(), arc);
         Ok(bytes)

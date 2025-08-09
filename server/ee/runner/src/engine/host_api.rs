@@ -1,5 +1,5 @@
 // Host API imports exposed to WASM (alga.*)
-use wasmtime::{Linker, Caller, Func, Store};
+use wasmtime::{Linker, Caller};
 use super::loader::Limits;
 
 #[derive(Clone, Default)]
@@ -7,7 +7,7 @@ pub struct HostApiConfig {
     pub egress_allowlist: Vec<String>,
 }
 
-pub fn add_host_imports(linker: &mut Linker<Limits>, _cfg: &HostApiConfig) -> anyhow::Result<()> {
+pub fn add_host_imports(linker: &mut Linker<Limits>, cfg: &HostApiConfig) -> anyhow::Result<()> {
     // alga.log.info(ptr, len) -> void (reads guest memory and logs)
     linker.func_wrap("alga", "log_info", |mut caller: Caller<'_, Limits>, ptr: i32, len: i32| {
         if let Some(mem) = caller.get_export("memory").and_then(|e| e.into_memory()) {
@@ -37,8 +37,13 @@ pub fn add_host_imports(linker: &mut Linker<Limits>, _cfg: &HostApiConfig) -> an
     })?;
 
     // Stubbed: alga.http.fetch(...) -> returns 0 for now
-    linker.func_wrap("alga", "http_fetch", |_caller: Caller<'_, Limits>, _req_ptr: i32, _req_len: i32, _out_ptr: i32| -> i32 {
-        // TODO: implement via gateway/broker with allowlist and size caps
+    let allowlist = cfg.egress_allowlist.clone();
+    linker.func_wrap("alga", "http_fetch", move |_caller: Caller<'_, Limits>, _req_ptr: i32, _req_len: i32, _out_ptr: i32| -> i32 {
+        // TODO: parse req from guest memory, enforce allowlist and size caps, perform fetch via broker
+        if allowlist.is_empty() {
+            // Deny by default
+            return -1;
+        }
         0
     })?;
 
