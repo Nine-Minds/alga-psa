@@ -33,13 +33,14 @@ exports.up = async function(knex) {
       return;
     }
 
-    // Step 1: Get ALL constraints on companies table
+    // Step 1: Get ALL constraints on companies table (skip problematic ones)
     console.log('  Step 1: Identifying all constraints on companies table...');
     const constraints = await knex.raw(`
       SELECT conname, contype
       FROM pg_constraint
       WHERE conrelid = 'companies'::regclass
       AND contype IN ('u', 'c', 'x')  -- unique, check, exclusion constraints
+      AND conname NOT IN ('companies_pkey', 'companies_company_id_unique')  -- Skip PK and problematic unique
     `);
     
     const droppedConstraints = [];
@@ -76,13 +77,22 @@ exports.up = async function(knex) {
       }
     }
     
-    // Step 4: Distribute the table
-    console.log('  Step 4: Distributing companies table...');
+    // Step 4: Try to drop the problematic unique constraint with CASCADE
+    console.log('  Step 4: Handling problematic unique constraint...');
+    try {
+      await knex.raw(`ALTER TABLE companies DROP CONSTRAINT IF EXISTS companies_company_id_unique CASCADE`);
+      console.log('    ✓ Dropped companies_company_id_unique with CASCADE');
+    } catch (e) {
+      console.log('    - Could not drop companies_company_id_unique');
+    }
+    
+    // Step 5: Distribute the table
+    console.log('  Step 5: Distributing companies table...');
     await knex.raw(`SELECT create_distributed_table('companies', 'tenant', colocate_with => 'tenants')`);
     console.log('    ✓ Distributed companies table');
     
-    // Step 5: Recreate only Citus-compatible constraints
-    console.log('  Step 5: Recreating Citus-compatible constraints...');
+    // Step 6: Recreate only Citus-compatible constraints
+    console.log('  Step 6: Recreating Citus-compatible constraints...');
     
     // Only recreate constraints that include the distribution key (tenant)
     try {
