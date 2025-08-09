@@ -543,7 +543,7 @@ Phase 3 — Runner Service (Rust + Wasmtime)
 - [x] Containerization: `ee/runner/Dockerfile` and KService YAML with `/healthz` and `/warmup`.
 - Details
   - [ ] Observability: tracing fields and metrics; persist execution logs.
-  - [ ] Idempotency handling with gateway-provided key.
+  - [x] Idempotency handling with gateway-provided key.
 
 Phase 4 — Next.js API Gateway for Server-Side Handlers
 - [x] Route added: `src/app/api/ext/[extensionId]/[...path]/route.ts` (GET/POST/PUT/PATCH/DELETE).
