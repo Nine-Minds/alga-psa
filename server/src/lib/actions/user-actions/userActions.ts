@@ -16,6 +16,7 @@ import { verifyEmailSuffix, getCompanyByEmailSuffix } from 'server/src/lib/actio
 import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/EntityImageService';
 import { hasPermission } from 'server/src/lib/auth/rbac';
+import { throwPermissionError } from 'server/src/lib/utils/errorHandling';
 
 interface ActionResult {
   success: boolean;
@@ -695,14 +696,15 @@ export async function checkPasswordResetStatus(): Promise<{ hasResetPassword: bo
       return { hasResetPassword: true }; // Default to true if no user
     }
 
-    const {knex, tenant} = await createTenantKnex();
-    
+    const {knex} = await createTenantKnex();
+
     // RBAC check - users can only check their own password reset status
     if (!await hasPermission(currentUser, 'user', 'read', knex)) {
-      console.error('Permission denied: Cannot check password reset status');
-      return { hasResetPassword: true }; // Default to true on permission error
+      // Use standardized permission error to avoid silent success paths
+      throwPermissionError('check password reset status');
     }
-    
+
+    // UserPreferences enforces tenant scoping internally (tenant is part of its unique key)
     const preference = await UserPreferences.get(knex, currentUser.user_id, 'has_reset_password');
     
     // For existing users without this preference, assume they have already reset their password
