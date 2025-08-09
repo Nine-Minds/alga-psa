@@ -123,17 +123,25 @@ export class MailHogPollingService {
       const tenantId = await this.getDefaultTenant();
       console.log(`[TENANT-DEBUG] MailHogPollingService processing email: tenant=${tenantId}, messageId=${mailhogMessage.ID}, subject=${emailData.subject}`);
       
-      // For MailHog test emails, emit the event directly instead of using EmailProcessor
-      // which requires Microsoft Graph credentials
-      const eventData = {
-        tenantId: tenantId,  // Changed from 'tenant' to 'tenantId' to match schema
-        providerId: 'mailhog-test-provider',
-        emailData: emailData
+      // Create an email processing job
+      const emailJob: EmailQueueJob = {
+        id: uuidv4(),
+        messageId: emailData.id,
+        providerId: 'mailhog-test-provider', // Special provider ID for MailHog
+        provider: 'mailhog-test-provider',
+        tenant: tenantId,
+        attempt: 1,
+        maxRetries: 3,
+        createdAt: new Date().toISOString(),
+        webhookData: {
+          source: 'mailhog',
+          originalMessageId: mailhogMessage.ID
+        }
       };
-      
-      console.log(`[TENANT-DEBUG] MailHogPollingService about to emit INBOUND_EMAIL_RECEIVED event: tenant=${tenantId}, providerId=${eventData.providerId}, emailSubject=${emailData.subject}`);
-      await this.emitEmailReceivedEvent(eventData);
-      
+
+      console.log(`[TENANT-DEBUG] MailHogPollingService about to emit INBOUND_EMAIL_RECEIVED event: tenant=${tenantId}, providerId=${emailJob.providerId}, emailSubject=${emailData.subject}`);
+      await this.emitEmailReceivedEvent(emailJob);
+
       console.log(`✅ Successfully processed MailHog email: ${emailData.subject}`);
     } catch (error: any) {
       console.error(`❌ Failed to process MailHog message ${mailhogMessage.ID}:`, error.message);
