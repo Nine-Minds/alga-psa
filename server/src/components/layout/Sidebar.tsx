@@ -4,7 +4,7 @@ import * as RadixIcons from '@radix-ui/react-icons';
 import { ChevronRightIcon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
 import Image from 'next/image';
 import * as Tooltip from '@radix-ui/react-tooltip';
-import { menuItems, bottomMenuItems, MenuItem } from '../../config/menuConfig';
+import { menuItems as defaultMenuItems, bottomMenuItems as defaultBottomMenuItems, MenuItem } from '../../config/menuConfig';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSubMenuItem from './SidebarSubMenuItem';
@@ -15,9 +15,16 @@ import { DynamicNavigationSlot } from '../extensions/DynamicNavigationSlot';
 interface SidebarProps {
   sidebarOpen: boolean;
   setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  menuItems?: MenuItem[];
+  bottomMenuItems?: MenuItem[];
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }): JSX.Element => {
+const Sidebar: React.FC<SidebarProps> = ({ 
+  sidebarOpen, 
+  setSidebarOpen,
+  menuItems = defaultMenuItems,
+  bottomMenuItems = defaultBottomMenuItems
+}): JSX.Element => {
   const pathname = usePathname();
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
 
@@ -104,18 +111,23 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }): JSX.E
       <aside 
         className={`bg-[#1e1f25] text-white h-screen flex flex-col relative transition-all duration-300 ease-in-out ${sidebarOpen ? 'w-64' : 'w-16'}`}
       >
-      <div className="p-4 flex items-center space-x-2">
+      <a 
+        href="/msp/dashboard" 
+        className="p-4 flex items-center space-x-2 hover:bg-[#2a2b32] cursor-pointer"
+        aria-label="Go to dashboard"
+        id="logo-home-link"
+      >
         <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
           <Image
             src="/images/avatar-purple-background.png"
-            alt="404"
+            alt="AlgaPSA Logo"
             width={200}
             height={200}
             className="w-full h-full object-cover"
           />
         </div>
         {sidebarOpen && <span className="text-xl font-semibold truncate">AlgaPSA</span>}
-      </div>
+      </a>
 
       {/* Temporarily hide the search bar since it is non-functional */}
       {/*

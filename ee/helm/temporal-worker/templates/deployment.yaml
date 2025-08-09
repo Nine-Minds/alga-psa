@@ -1,0 +1,222 @@
+{{- if .Values.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "temporal-worker.fullname" . }}
+  namespace: {{ include "temporal-worker.namespace" . }}
+  labels:
+    {{- include "temporal-worker.labels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal-worker
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: {{ .Values.rollingUpdate.maxSurge | default 1 }}
+      maxUnavailable: {{ .Values.rollingUpdate.maxUnavailable | default 0 }}
+  selector:
+    matchLabels:
+      {{- include "temporal-worker.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: temporal-worker
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- if .Values.vault.enabled }}
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "{{ .Values.vault.role }}"
+        vault.hashicorp.com/agent-inject-secret-internal-api: "{{ .Values.vault.secretPath }}"
+        vault.hashicorp.com/agent-inject-template-internal-api: |
+          {{`{{- with secret "`}}{{ .Values.vault.secretPath }}{{`" -}}
+          export INTERNAL_API_SHARED_SECRET="{{ .Data.data.internal_api_shared_secret }}"
+          {{- end }}`}}
+        vault.hashicorp.com/agent-inject-secret-auth-key: "{{ .Values.vault.sharedSecretPath }}"
+        vault.hashicorp.com/agent-inject-template-auth-key: |
+          {{`{{- with secret "`}}{{ .Values.vault.sharedSecretPath }}{{`" -}}
+          export ALGA_AUTH_KEY="{{ .Data.data.alga_auth_key }}"
+          {{- end }}`}}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "temporal-worker.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: temporal-worker
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "temporal-worker.serviceAccountName" . }}
+      {{- if .Values.image.is_private }}
+      imagePullSecrets:
+        - name: "{{ .Values.image.credentials }}"
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.affinity }}
+      affinity:
+        {{- toYaml .Values.affinity | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                  - temporal-worker
+              topologyKey: kubernetes.io/hostname
+      {{- end }}
+      {{- if .Values.tolerations }}
+      tolerations:
+        {{- toYaml .Values.tolerations | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: temporal-worker
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.vault.enabled }}
+          command: ["/bin/sh"]
+          args:
+            - -c
+            - |
+              . /vault/secrets/internal-api
+              . /vault/secrets/auth-key
+              exec node dist/worker.js
+          {{- end }}
+          env:
+            # Node.js module resolution
+            - name: NODE_PATH
+              value: "/app:/app/node_modules"
+            
+            # Core Temporal Configuration
+            - name: TEMPORAL_ADDRESS
+              value: "{{ .Values.temporal.address }}"
+            - name: TEMPORAL_NAMESPACE
+              value: "{{ .Values.temporal.namespace }}"
+            - name: TEMPORAL_TASK_QUEUE
+              value: "{{ .Values.temporal.taskQueue }}"
+            
+            # Database Configuration
+            - name: DB_HOST
+              value: "{{ .Values.db.host }}"
+            - name: DB_PORT
+              value: "{{ .Values.db.port }}"
+            - name: DB_NAME_SERVER
+              value: "{{ .Values.db.serverDatabase }}"
+            - name: DB_USER_SERVER
+              value: "{{ .Values.db.user }}"
+            - name: DB_PASSWORD_SERVER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.serverPasswordSecret.name }}
+                  key: {{ .Values.db.serverPasswordSecret.key }}
+            - name: DB_USER_ADMIN
+              value: "postgres"
+            - name: DB_PASSWORD_ADMIN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.adminPasswordSecret.name }}
+                  key: {{ .Values.db.adminPasswordSecret.key }}
+            
+            # Application Configuration
+            - name: NODE_ENV
+              value: "production"
+            - name: LOG_LEVEL
+              value: "{{ .Values.logLevel }}"
+            - name: APPLICATION_URL
+              value: "{{ .Values.applicationUrl }}"
+            - name: NMSTORE_BASE_URL
+              value: "{{ .Values.nmstore.baseUrl }}"
+            
+            # Email Configuration
+            - name: RESEND_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.email.resendApiKeySecret.name }}
+                  key: {{ .Values.email.resendApiKeySecret.key }}
+                  optional: true
+            
+            # Encryption Configuration
+            - name: SALT_BYTES
+              value: "{{ .Values.encryption.saltBytes }}"
+            - name: ITERATIONS
+              value: "{{ .Values.encryption.iterations }}"
+            - name: KEY_LENGTH
+              value: "{{ .Values.encryption.keyLength }}"
+            - name: ALGORITHM
+              value: "{{ .Values.encryption.algorithm }}"
+            
+            # Health Check Configuration
+            - name: ENABLE_HEALTH_CHECK
+              value: "true"
+            - name: HEALTH_CHECK_PORT
+              value: "8080"
+            
+            {{- if not .Values.vault.enabled }}
+            # Local development secrets (when Vault is not enabled)
+            - name: INTERNAL_API_SHARED_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "temporal-worker.fullname" . }}-secrets
+                  key: INTERNAL_API_SHARED_SECRET
+            - name: ALGA_AUTH_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "temporal-worker.fullname" . }}-secrets
+                  key: ALGA_AUTH_KEY
+            {{- end }}
+            
+            # Additional environment variables
+            {{- range .Values.extraEnv }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+          
+          ports:
+            - name: health
+              containerPort: 8080
+              protocol: TCP
+          
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: health
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.livenessProbe.successThreshold | default 1 }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold | default 3 }}
+          
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: health
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.readinessProbe.successThreshold | default 1 }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold | default 3 }}
+          
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          
+          volumeMounts:
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      
+      volumes:
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+{{- end }}

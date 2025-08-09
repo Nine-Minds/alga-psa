@@ -1,7 +1,40 @@
 // server/src/config/sidebarNavigationConfig.ts
 
-import * as RadixIcons from '@radix-ui/react-icons';
-import { CreditCard, PercentIcon } from 'lucide-react';
+import { 
+  BarChart3,
+  Activity,
+  MessageSquare,
+  Layers,
+  Building2,
+  Users,
+  FileText,
+  Timer,
+  Clock,
+  CheckCircle,
+  CreditCard,
+  Percent,
+  LayoutDashboard,
+  FilePlus,
+  FileText as FileTextIcon,
+  FileMinus,
+  Package,
+  Box,
+  Layers3,
+  Calendar,
+  Gauge,
+  MapPin,
+  Rocket,
+  Layout,
+  Code,
+  Bell,
+  Monitor,
+  Home,
+  Settings,
+  UserCircle,
+  Shield,
+  HelpCircle,
+  SlidersHorizontal
+} from 'lucide-react';
 
 export interface MenuItem {
   name: string;
@@ -12,51 +45,51 @@ export interface MenuItem {
 
 export const menuItems: MenuItem[] = [
   {
-    name: 'Dashboard',
-    icon: RadixIcons.BarChartIcon,
+    name: 'Home',
+    icon: Home,
     href: '/msp/dashboard'  // Updated to point to our new dashboard page
   },
   {
     name: 'User Activities',
-    icon: RadixIcons.ActivityLogIcon,
+    icon: BarChart3,
     href: '/msp/user-activities'
   },
   {
     name: 'Tickets',
-    icon: RadixIcons.ChatBubbleIcon,
+    icon: MessageSquare,
     href: '/msp/tickets'
   },
   {
     name: 'Projects',
-    icon: RadixIcons.LayersIcon,
+    icon: Layers,
     href: '/msp/projects'
   },
   // {
   //   name: 'Assets',
-  //   icon: RadixIcons.DesktopIcon,
+  //   icon: Monitor,
   //   href: '/msp/assets'
   // },
   {
     name: 'Clients',
-    icon: RadixIcons.CubeIcon,
+    icon: Building2,
     href: '/msp/companies'
   },
   {
     name: 'Contacts',
-    icon: RadixIcons.PersonIcon,
+    icon: Users,
     href: '/msp/contacts'
   },
   {
     name: 'Documents',
-    icon: RadixIcons.FileIcon,
+    icon: FileText,
     href: '/msp/documents'
   },
   {
     name: 'Time Management',
-    icon: RadixIcons.TimerIcon,
+    icon: Timer,
     subItems: [
-      { name: 'Time Entry', icon: RadixIcons.ClockIcon, href: '/msp/time-entry' },
-      { name: 'Time Sheet Approvals', icon: RadixIcons.CheckCircledIcon, href: '/msp/time-sheet-approvals' },
+      { name: 'Time Entry', icon: Clock, href: '/msp/time-entry' },
+      { name: 'Time Sheet Approvals', icon: CheckCircle, href: '/msp/time-sheet-approvals' },
     ]
   },
   {
@@ -65,57 +98,47 @@ export const menuItems: MenuItem[] = [
     subItems: [
       {
         name: 'Overview',
-        icon: RadixIcons.DashboardIcon,
+        icon: LayoutDashboard,
         href: '/msp/billing?tab=overview'
       },
       {
         name: 'Generate Invoices',
-        icon: RadixIcons.FilePlusIcon,
+        icon: FilePlus,
         href: '/msp/billing?tab=generate-invoices'
       },
       {
         name: 'Invoices',
-        icon: RadixIcons.FileTextIcon,
+        icon: FileTextIcon,
         href: '/msp/billing?tab=invoices'
       },
       {
         name: 'Invoice Templates',
-        icon: RadixIcons.FileMinusIcon,
+        icon: FileMinus,
         href: '/msp/billing?tab=invoice-templates'
       },
       {
         name: 'Tax Rates',
-        icon: PercentIcon,
+        icon: Percent,
         href: '/msp/billing?tab=tax-rates'
       },
       {
         name: 'Plans',
-        icon: RadixIcons.CardStackIcon,
+        icon: Package,
         href: '/msp/billing?tab=plans'
       },
       {
         name: 'Plan Bundles',
-        icon: RadixIcons.BoxIcon,
+        icon: Box,
         href: '/msp/billing?tab=plan-bundles'
       },
       {
-        name: 'Service Catalog',
-        icon: RadixIcons.StackIcon,
-        href: '/msp/billing?tab=service-catalog'
-      },
-      {
         name: 'Billing Cycles',
-        icon: RadixIcons.CalendarIcon,
+        icon: Calendar,
         href: '/msp/billing?tab=billing-cycles'
       },
       {
-        name: 'Time Periods',
-        icon: RadixIcons.ClockIcon,
-        href: '/msp/billing?tab=time-periods'
-      },
-      {
         name: 'Usage Tracking',
-        icon: RadixIcons.TimerIcon,
+        icon: Gauge,
         href: '/msp/billing?tab=usage-tracking'
       },
       {
@@ -125,55 +148,55 @@ export const menuItems: MenuItem[] = [
       },
       {
         name: 'Reconciliation',
-        icon: RadixIcons.CheckCircledIcon,
+        icon: CheckCircle,
         href: '/msp/billing?tab=reconciliation'
       }
     ]
   },
   {
     name: 'Schedule',
-    icon: RadixIcons.CalendarIcon,
+    icon: Calendar,
     href: '/msp/schedule'
   },
   {
     name: 'Technician Dispatch',
-    icon: RadixIcons.PersonIcon,
+    icon: MapPin,
     href: '/msp/technician-dispatch'
   },
   {
     name: 'Automation Hub',
-    icon: RadixIcons.RocketIcon,
+    icon: Rocket,
     href: '/msp/automation-hub',
     subItems: [
       {
         name: 'Template Library',
-        icon: RadixIcons.LayoutIcon,
+        icon: Layout,
         href: '/msp/automation-hub?tab=template-library'
       },
       {
         name: 'Workflows',
-        icon: RadixIcons.CodeIcon,
+        icon: Code,
         href: '/msp/automation-hub?tab=workflows'
       },
       {
         name: 'Events Catalog',
-        icon: RadixIcons.BellIcon,
+        icon: Bell,
         href: '/msp/automation-hub?tab=events-catalog'
       },
       {
         name: 'Logs & History',
-        icon: RadixIcons.ClockIcon,
+        icon: Clock,
         href: '/msp/automation-hub?tab=logs-history'
       }
     ]
   },
   {
     name: 'System',
-    icon: RadixIcons.DesktopIcon,
+    icon: Monitor,
     subItems: [
       {
         name: 'Job Monitoring',
-        icon: RadixIcons.DashboardIcon,
+        icon: LayoutDashboard,
         href: '/msp/jobs'
       }
     ]
@@ -183,16 +206,16 @@ export const menuItems: MenuItem[] = [
 export const bottomMenuItems: MenuItem[] = [
   { 
     name: 'Settings', 
-    icon: RadixIcons.GearIcon,
+    icon: Settings,
     subItems: [
-      { name: 'General', icon: RadixIcons.MixerHorizontalIcon, href: '/msp/settings' },
-      { name: 'Profile', icon: RadixIcons.PersonIcon, href: '/msp/profile' },
+      { name: 'General', icon: SlidersHorizontal, href: '/msp/settings' },
+      { name: 'Profile', icon: UserCircle, href: '/msp/profile' },
       {
         name: 'Security',
         href: '/msp/security-settings',
-        icon: RadixIcons.LockClosedIcon,
+        icon: Shield,
       },
     ]
   },
-  { name: 'Support', icon: RadixIcons.QuestionMarkCircledIcon },
+  { name: 'Support', icon: HelpCircle },
 ];

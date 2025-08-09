@@ -21,26 +21,48 @@ const TaskDependencyModel = {
             throw new Error('A task cannot depend on itself.');
         }
 
-        const allTypes: DependencyType[] = ['blocks', 'blocked_by', 'related_to'];
-        if (allTypes.includes(dependencyType)) {
-            await TaskDependencyModel.validateNoCycles(knexOrTrx, tenant, predecessorTaskId, successorTaskId);
-        }
-        
-        const [dependency] = await knexOrTrx('project_task_dependencies')
-            .insert({
-                dependency_id: uuidv4(),
+        // Check for existing dependency first
+        const existingDependency = await knexOrTrx('project_task_dependencies')
+            .where({
                 tenant,
                 predecessor_task_id: predecessorTaskId,
                 successor_task_id: successorTaskId,
-                dependency_type: dependencyType,
-                lead_lag_days: leadLagDays,
-                notes,
-                created_at: new Date(),
-                updated_at: new Date()
+                dependency_type: dependencyType
             })
-            .returning('*');
+            .first();
             
-        return dependency;
+        if (existingDependency) {
+            throw new Error('This dependency already exists.');
+        }
+
+        // Check for circular dependencies (only for blocking relationships)
+        if (dependencyType === 'blocks' || dependencyType === 'blocked_by') {
+            await TaskDependencyModel.validateNoCycles(knexOrTrx, tenant, predecessorTaskId, successorTaskId);
+        }
+        
+        try {
+            const [dependency] = await knexOrTrx('project_task_dependencies')
+                .insert({
+                    dependency_id: uuidv4(),
+                    tenant,
+                    predecessor_task_id: predecessorTaskId,
+                    successor_task_id: successorTaskId,
+                    dependency_type: dependencyType,
+                    lead_lag_days: leadLagDays,
+                    notes,
+                    created_at: new Date(),
+                    updated_at: new Date()
+                })
+                .returning('*');
+                
+            return dependency;
+        } catch (error: any) {
+            // Handle database constraint errors
+            if (error.constraint === 'idx_unique_dependency_per_type') {
+                throw new Error('This dependency already exists.');
+            }
+            throw error;
+        }
     },
     
     getTaskDependencies: async (knexOrTrx: Knex | Knex.Transaction, taskId: string): Promise<{
@@ -150,7 +172,7 @@ const TaskDependencyModel = {
                     predecessor_task_id: currentTaskId, 
                     tenant,
                 })
-                .whereIn('dependency_type', ['blocks', 'blocked_by', 'related_to'])
+                .whereIn('dependency_type', ['blocks', 'blocked_by'])
                 .select('successor_task_id');
                 
             for (const dep of dependencies) {

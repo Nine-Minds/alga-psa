@@ -2,13 +2,13 @@
 
 'use server'
 
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { IInteractionType, ISystemInteractionType } from 'server/src/interfaces/interaction.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
-export async function getAllInteractionTypes(): Promise<(IInteractionType | ISystemInteractionType)[]> {
+export async function getAllInteractionTypes(): Promise<IInteractionType[]> {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
@@ -21,19 +21,14 @@ export async function getAllInteractionTypes(): Promise<(IInteractionType | ISys
     }
     
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Get system interaction types
-      const systemTypes = await trx('system_interaction_types')
-        .select('*')
-        .orderBy('type_name');
-
-      // Get tenant-specific interaction types
+      // Get only tenant-specific interaction types
       const tenantTypes = await trx('interaction_types')
         .where({ tenant: currentUser.tenant })
         .select('*')
-        .orderBy('type_name');
+        .orderBy('display_order', 'asc')
+        .orderBy('type_name', 'asc');
 
-      // Combine both types, with system types first
-      return [...systemTypes, ...tenantTypes];
+      return tenantTypes;
     });
   } catch (error) {
     console.error('Error fetching interaction types:', error);
@@ -88,13 +83,25 @@ export async function createInteractionType(
     const {knex: db} = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Extract only the allowed fields from interactionType
-      const { type_name, icon } = interactionType;
+      const { type_name, icon, display_order } = interactionType;
+      
+      // If no display_order provided, get the next available order
+      let finalDisplayOrder = display_order;
+      if (finalDisplayOrder === undefined || finalDisplayOrder === null) {
+        const maxOrder = await trx('interaction_types')
+          .where({ tenant: currentUser.tenant })
+          .max('display_order as max')
+          .first();
+        finalDisplayOrder = (maxOrder?.max || 0) + 1;
+      }
       
       const [newType] = await trx('interaction_types')
         .insert({
           type_name,
           icon,
-          tenant: currentUser.tenant
+          display_order: finalDisplayOrder,
+          tenant: currentUser.tenant,
+          created_by: currentUser.user_id
         })
         .returning('*');
       return newType;
@@ -126,9 +133,17 @@ export async function updateInteractionType(
         throw new Error('Interaction type not found or not authorized');
       }
 
+      // Extract only allowed fields from data
+      const { type_name, icon, display_order } = data;
+      const updateData: any = {};
+      
+      if (type_name !== undefined) updateData.type_name = type_name;
+      if (icon !== undefined) updateData.icon = icon;
+      if (display_order !== undefined) updateData.display_order = display_order;
+      
       const [updatedType] = await trx('interaction_types')
         .where({ type_id: typeId, tenant: currentUser.tenant })
-        .update(data)
+        .update(updateData)
         .returning('*');
 
       return updatedType;

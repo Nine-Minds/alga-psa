@@ -1,4 +1,5 @@
 import Knex, { Knex as KnexType } from 'knex';
+import { getSecretProviderInstance } from '../core/index.js';
 
 // Create a map to store Knex instances
 const knexInstances: Map<string, KnexType> = new Map();
@@ -6,7 +7,11 @@ const knexInstances: Map<string, KnexType> = new Map();
 /**
  * Get database configuration
  */
-function getDbConfig(): KnexType.Config {
+async function getDbConfig(): Promise<KnexType.Config> {
+  // Get password from secret provider with fallback to environment variable
+  const secretProvider = await getSecretProviderInstance();
+  const password = await secretProvider.getAppSecret('DB_PASSWORD_SERVER') || process.env.DB_PASSWORD_SERVER;
+
   return {
     client: 'pg',
     connection: {
@@ -14,7 +19,7 @@ function getDbConfig(): KnexType.Config {
       port: Number(process.env.DB_PORT) || 5432,
       database: process.env.DB_NAME_SERVER || 'server',
       user: process.env.DB_USER_SERVER || 'app_user',
-      password: process.env.DB_PASSWORD_SERVER
+      password: password
     },
     pool: {
       min: 0,
@@ -38,7 +43,7 @@ export async function getConnection(): Promise<KnexType> {
   
   if (!knexInstance) {
     console.log('Creating new knex instance');
-    const config = getDbConfig();
+    const config = await getDbConfig();
     knexInstance = Knex(config);
     knexInstances.set(instanceKey, knexInstance);
   }

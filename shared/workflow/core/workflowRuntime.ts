@@ -9,15 +9,15 @@ import { ActionRegistry } from './actionRegistry.js';
 import { WorkflowEventSourcing, EventReplayOptions } from './workflowEventSourcing.js';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { getRedisStreamClient } from '@shared/workflow/streams/redisStreamClient.js';
-import { executeDistributedTransaction } from '@shared/workflow/utils/distributedTransaction.js';
-import { acquireDistributedLock, releaseDistributedLock } from '@shared/workflow/utils/distributedLock.js';
-import { toStreamEvent } from '@shared/workflow/streams/workflowEventSchema.js';
-import WorkflowEventModel from '@shared/workflow/persistence/workflowEventModel.js';
-import WorkflowExecutionModel from '@shared/workflow/persistence/workflowExecutionModel.js';
-import WorkflowEventProcessingModel from '@shared/workflow/persistence/workflowEventProcessingModel.js';
-import WorkflowRegistrationModel from '@shared/workflow/persistence/workflowRegistrationModel.js';
-import logger from '@shared/core/logger.js';
+import { getRedisStreamClient } from '@alga-psa/shared/workflow/streams/redisStreamClient.js';
+import { executeDistributedTransaction } from '@alga-psa/shared/workflow/utils/distributedTransaction.js';
+import { acquireDistributedLock, releaseDistributedLock } from '@alga-psa/shared/workflow/utils/distributedLock.js';
+import { toStreamEvent } from '@alga-psa/shared/workflow/streams/workflowEventSchema.js';
+import WorkflowEventModel from '@alga-psa/shared/workflow/persistence/workflowEventModel.js';
+import WorkflowExecutionModel from '@alga-psa/shared/workflow/persistence/workflowExecutionModel.js';
+import WorkflowEventProcessingModel from '@alga-psa/shared/workflow/persistence/workflowEventProcessingModel.js';
+import WorkflowRegistrationModel from '@alga-psa/shared/workflow/persistence/workflowRegistrationModel.js';
+import logger from '@alga-psa/shared/core/logger.js';
 
 // No configuration needed - all events are processed asynchronously
 
@@ -983,6 +983,7 @@ export class TypeScriptWorkflowRuntime {
           console.debug(prefix, message, ...args);
         }
       },
+      input: executionState.data, // Make the initial data available as input
       getCurrentState: (): string => executionState.currentState,
       setState: (state: string): void => { executionState.currentState = state; }
     };
@@ -1135,6 +1136,10 @@ export class TypeScriptWorkflowRuntime {
     executionState: any
   ): Promise<void> {
     try {
+      // Debug logging
+      console.log('[executeWorkflow] context.input:', JSON.stringify(context.input));
+      console.log('[executeWorkflow] executionState.data:', JSON.stringify(executionState.data));
+      
       // Execute the workflow function
       await workflowFn(context);
       

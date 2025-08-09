@@ -7,13 +7,48 @@
       "*"
     ]
   },
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start --port 3000",
+    "lint": "next lint",
+    "test": "vitest",
+    "test:unit": "vitest run src/__tests__/unit",
+    "test:integration": "vitest run src/__tests__/integration --exclude '**/*.playwright.*'",
+    "test:playwright": "playwright test",
+    "test:e2e": "playwright test",
+    "test:all": "npm run test:unit && npm run test:integration && npm run test:playwright",
+    "test:watch": "vitest",
+    "playwright:install": "playwright install",
+    "playwright:install-deps": "playwright install-deps"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.3",
     "@huggingface/inference": "^3.3.3",
     "gm": "^1.25.0",
+    "lucide-react": "^0.475.0",
+    "next": "^14.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
     "uuid": "^11.0.5"
   },
   "devDependencies": {
-    "autoprefixer": "^10.4.21"
+    "@playwright/test": "^1.40.0",
+    "@testing-library/jest-dom": "^6.1.0",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/user-event": "^14.5.0",
+    "@types/bcrypt": "^5.0.0",
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "@types/uuid": "^9.0.0",
+    "autoprefixer": "^10.4.21",
+    "bcrypt": "^5.1.0",
+    "dotenv": "^16.3.0",
+    "jsdom": "^23.0.0",
+    "knex": "^3.0.0",
+    "pg": "^8.11.0",
+    "typescript": "^5.0.0",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^1.0.0"
   }
 }

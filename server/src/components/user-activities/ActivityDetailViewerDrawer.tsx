@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ISO8601String } from '@shared/types/temporal';
+import { ISO8601String } from '@alga-psa/shared/types';
 import { ActivityType } from "server/src/interfaces/activity.interfaces";
 import { processTemplateVariables } from "server/src/utils/templateUtils";
 import { useDrawer } from "server/src/context/DrawerContext";

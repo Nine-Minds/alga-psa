@@ -29,6 +29,8 @@ interface EntryPopupProps {
   slot?: {
     start: Date | string;
     end: Date | string;
+    assigned_user_ids?: string[];
+    defaultAssigneeId?: string;
   };
   onClose: () => void;
   onSave: (entryData: Omit<IScheduleEntry, 'tenant'> & { updateType?: string }) => void;
@@ -85,8 +87,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         work_item_id: null,
         status: 'scheduled',
         work_item_type: 'ad_hoc',
-        // Default to focused technician if available, otherwise current user
-        assigned_user_ids: focusedTechnicianId ? [focusedTechnicianId] : [currentUserId],
+        // Use assigned_user_ids from slot if provided, otherwise default to focused technician or current user
+        assigned_user_ids: slot.assigned_user_ids || (focusedTechnicianId ? [focusedTechnicianId] : [currentUserId]),
         is_private: false,
       };
     } else {
@@ -204,7 +206,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
           work_item_id: null,
           status: 'scheduled',
           work_item_type: 'ad_hoc',
-          assigned_user_ids: [currentUserId],
+          assigned_user_ids: slot.assigned_user_ids || (focusedTechnicianId ? [focusedTechnicianId] : [currentUserId]),
         });
       }
     };
@@ -270,6 +272,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    clearErrorIfSubmitted();
     setEntryData((prev) => ({
       ...prev,
       [name]: name === 'scheduled_start' || name === 'scheduled_end' ? new Date(value) : value,
@@ -277,6 +280,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   };
 
   const handleWorkItemSelect = (workItem: IWorkItem | null) => {
+    clearErrorIfSubmitted();
     setSelectedWorkItem(workItem);
     setEntryData(prev => ({
       ...prev,
@@ -299,6 +303,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   };
 
   const handleAssignedUsersChange = (userIds: string[]) => {
+    clearErrorIfSubmitted();
     setEntryData(prev => {
       // If the selected user is not the current user, set is_private to false
       const isPrivate = userIds.length === 1 && userIds[0] === currentUserId ? prev.is_private : false;
@@ -314,6 +319,15 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   const [showRecurrenceDialog, setShowRecurrenceDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [pendingUpdateData, setPendingUpdateData] = useState<Omit<IScheduleEntry, 'tenant'>>();
+
+  const handleDeleteConfirm = (selected?: string) => {
+    if (event && onDelete) {
+      const deleteType = event.is_recurring ? (selected as IEditScope) : undefined;
+      onDelete(event.entry_id, deleteType);
+    }
+    setShowDeleteDialog(false);
+    onClose();
+  };
 
   const clearErrorIfSubmitted = () => {
     if (hasAttemptedSubmit) {
@@ -436,6 +450,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             <Button
               id="delete-entry-btn"
               onClick={() => setShowDeleteDialog(true)}
+              type="button"
               variant="destructive"
               size="sm"
             >
@@ -788,12 +803,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       <ConfirmationDialog
         className="max-w-[450px]"
         isOpen={showDeleteDialog}
-        onConfirm={(value) => {
-          if (event && onDelete) {
-            onDelete(event.entry_id, event.is_recurring ? value as IEditScope : undefined);
-            onClose();
-          }
-        }}
+        onConfirm={handleDeleteConfirm}
         onClose={() => setShowDeleteDialog(false)}
         title="Delete Schedule Entry"
         message={event?.is_recurring 

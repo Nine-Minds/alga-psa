@@ -527,10 +527,8 @@ class ScheduleEntry {
         const originalPattern = parseRecurrencePattern(originalEntry.recurrence_pattern);
         
         if (originalPattern) {
-          // Initialize update data with tenant first
-          let updateData: Partial<IScheduleEntry & { tenant: string }> = {
-            tenant
-          };
+          // Initialize update data
+          let updateData: Partial<IScheduleEntry> = {};
 
           switch (updateType) {
             case IEditScope.SINGLE:
@@ -716,9 +714,7 @@ class ScheduleEntry {
         (!entry.recurrence_pattern || Object.keys(entry.recurrence_pattern).length === 0)) || isVirtualId;
 
       // Initialize update data
-      const updateData: Partial<IScheduleEntry & { tenant: string }> = {
-        tenant
-      };
+      const updateData: Partial<IScheduleEntry> = {};
 
       // If removing recurrence, handle cleanup
       if (isRemovingRecurrence) {

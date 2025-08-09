@@ -8,6 +8,7 @@ import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { QuickAddTicket } from './QuickAddTicket';
 import { CategoryPicker } from './CategoryPicker';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
+import { PrioritySelect } from './PrioritySelect';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
@@ -15,11 +16,12 @@ import { ChannelPicker } from 'server/src/components/settings/general/ChannelPic
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
 import { TagFilter, TagManager } from 'server/src/components/tags';
+import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import { IChannel, ICompany, IUser } from 'server/src/interfaces';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { deleteTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
-import { MoreVertical, XCircle, Clock, Trash2 } from 'lucide-react';
+import { MoreVertical, XCircle, Clock, Trash2, ExternalLink } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from 'server/src/components/ui/DropdownMenu';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
@@ -27,6 +29,8 @@ import { useIntervalTracking } from 'server/src/hooks/useIntervalTracking';
 import { IntervalManagementDrawer } from 'server/src/components/time-management/interval-tracking/IntervalManagementDrawer';
 import { saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
 import { toast } from 'react-hot-toast';
+import Drawer from 'server/src/components/ui/Drawer';
+import CompanyDetails from 'server/src/components/companies/CompanyDetails';
 
 interface TicketingDashboardProps {
   id?: string;
@@ -72,6 +76,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   isLoadingMore,
   user
 }) => {
+  // Pre-fetch tag permissions to prevent individual API calls
+  useTagPermissions(['ticket']);
+  
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
   const [ticketToDeleteName, setTicketToDeleteName] = useState<string | null>(null);
@@ -100,27 +107,31 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isLoadingSelf, setIsLoadingSelf] = useState(false);
   
+  // Quick View state
+  const [quickViewCompanyId, setQuickViewCompanyId] = useState<string | null>(null);
+  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
+  
   // Tag-related state
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const ticketTagsRef = useRef<Record<string, ITag[]>>({});
-  const [allUniqueTags, setAllUniqueTags] = useState<string[]>([]);
+  const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
   
   const handleTagsChange = (ticketId: string, tags: ITag[]) => {
     ticketTagsRef.current[ticketId] = tags;
     
-    // Update unique tags list
-    const allTags = new Set<string>();
-    Object.values(ticketTagsRef.current).forEach(entityTags => {
-      entityTags.forEach(tag => allTags.add(tag.tag_text));
+    // Update unique tags list if needed
+    setAllUniqueTags(current => {
+      const currentTagTexts = new Set(current.map(t => t.tag_text));
+      const newTags = tags.filter(tag => !currentTagTexts.has(tag.tag_text));
+      return [...current, ...newTags];
     });
-    setAllUniqueTags(Array.from(allTags));
   };
 
   useEffect(() => {
     setTickets(initialTickets);
   }, [initialTickets]);
 
-  // Fetch tags when initial tickets change
+  // Fetch ticket-specific tags when initial tickets change
   useEffect(() => {
     const fetchTags = async () => {
       if (initialTickets.length === 0) return;
@@ -128,10 +139,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       try {
         const ticketIds = initialTickets.map(ticket => ticket.ticket_id).filter((id): id is string => id !== undefined);
         
-        const [ticketTags, allTags] = await Promise.all([
-          findTagsByEntityIds(ticketIds, 'ticket'),
-          findAllTagsByType('ticket')
-        ]);
+        // Only fetch ticket-specific tags, not all tags again
+        const ticketTags = await findTagsByEntityIds(ticketIds, 'ticket');
 
         const newTicketTags: Record<string, ITag[]> = {};
         ticketTags.forEach(tag => {
@@ -142,13 +151,25 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         });
 
         ticketTagsRef.current = newTicketTags;
-        setAllUniqueTags(allTags.map(tag => tag.tag_text));
       } catch (error) {
         console.error('Error fetching tags:', error);
       }
     };
     fetchTags();
-  }, [initialTickets]); // Changed dependency to initialTickets to prevent cascade
+  }, [initialTickets]);
+
+  // Fetch all unique tags only once on mount
+  useEffect(() => {
+    const fetchAllTags = async () => {
+      try {
+        const allTags = await findAllTagsByType('ticket');
+        setAllUniqueTags(allTags);
+      } catch (error) {
+        console.error('Error fetching all tags:', error);
+      }
+    };
+    fetchAllTags();
+  }, []);
 
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
@@ -179,6 +200,18 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setTicketToDelete(ticketId);
     setTicketToDeleteName(ticketNameOrNumber);
     setDeleteError(null);
+  };
+  
+  const [quickViewCompany, setQuickViewCompany] = useState<ICompany | null>(null);
+  
+  const onQuickViewCompany = async (companyId: string) => {
+    // First try to find the company in our existing data
+    const company = initialCompanies.find(c => c.company_id === companyId);
+    if (company) {
+      setQuickViewCompany(company);
+      setQuickViewCompanyId(companyId);
+      setIsQuickViewOpen(true);
+    }
   };
   
   // Initialize currentUser state from props if available
@@ -232,6 +265,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     {
       title: 'Ticket Number',
       dataIndex: 'ticket_number',
+      width: '9%',
       render: (value: string, record: ITicketListItem) => (
         <Link
           href={`/msp/tickets/${record.ticket_id}`}
@@ -244,22 +278,36 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     {
       title: 'Title',
       dataIndex: 'title',
+      width: '20%',
     },
     {
       title: 'Status',
       dataIndex: 'status_name',
+      width: '9%',
     },
     {
       title: 'Priority',
       dataIndex: 'priority_name',
+      width: '9%',
+      render: (value: string, record: ITicketListItem) => (
+        <div className="flex items-center gap-2">
+          <div 
+            className="w-3 h-3 rounded-full border border-gray-300" 
+            style={{ backgroundColor: record.priority_color || '#6B7280' }}
+          />
+          <span>{value}</span>
+        </div>
+      ),
     },
     {
-      title: 'Channel',
+      title: 'Board',
       dataIndex: 'channel_name',
+      width: '9%',
     },
     {
       title: 'Category',
       dataIndex: 'category_id',
+      width: '10%',
       render: (value: string, record: ITicketListItem) => {
         if (!value && !record.subcategory_id) return 'No Category';
 
@@ -279,13 +327,32 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       },
     },
     {
+      title: 'Client',
+      dataIndex: 'company_name',
+      width: '9%',
+      render: (value: string, record: ITicketListItem) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (record.company_id) {
+              onQuickViewCompany(record.company_id);
+            }
+          }}
+          className="text-blue-500 hover:underline text-left whitespace-normal break-words"
+        >
+          {value || 'No Client'}
+        </button>
+      ),
+    },
+    {
       title: 'Created By',
       dataIndex: 'entered_by_name',
+      width: '9%',
     },
     {
       title: 'Tags',
       dataIndex: 'tags',
-      width: '15%',
+      width: '13%',
       render: (value: string, record: ITicketListItem) => {
         if (!record.ticket_id) return null;
         
@@ -304,7 +371,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     {
       title: 'Actions',
       dataIndex: 'actions',
-      width: '5%',
+      width: '3%',
       render: (value: string, record: ITicketListItem) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -382,6 +449,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         }
       }
       
+      // Find the company name
+      const company = initialCompanies.find(c => c.company_id === newTicket.company_id);
+      const companyName = company ? company.company_name : 'Unknown';
+      
       // Convert the new ticket to match the ITicketListItem format
       const newTicketListItem: ITicketListItem = {
         ticket_id: newTicket.ticket_id,
@@ -398,6 +469,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         subcategory_id: newTicket.subcategory_id,
         category_name: categoryName,
         company_id: newTicket.company_id,
+        company_name: companyName,
         contact_name_id: newTicket.contact_name_id,
         entered_by: newTicket.entered_by,
         entered_by_name: currentUser ? `${currentUser.first_name} ${currentUser.last_name}` : '',
@@ -527,8 +599,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               onValueChange={(value) => setSelectedStatus(value)}
               placeholder="Select Status"
             />
-            <CustomSelect
-              data-automation-id={`${id}-priority-select`}
+            <PrioritySelect
+              id={`${id}-priority-select`}
               options={priorityOptions}
               value={selectedPriority}
               onValueChange={(value) => setSelectedPriority(value)}
@@ -644,6 +716,24 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           onCreateTimeEntry={handleCreateTimeEntry}
         />
       )}
+      
+      {/* Company Quick View Drawer */}
+      <Drawer
+        isOpen={isQuickViewOpen}
+        onClose={() => {
+          setIsQuickViewOpen(false);
+          setQuickViewCompanyId(null);
+          setQuickViewCompany(null);
+        }}
+      >
+        {quickViewCompany && (
+          <CompanyDetails
+            company={quickViewCompany}
+            isInDrawer={true}
+            quickView={true}
+          />
+        )}
+      </Drawer>
     </ReflectionContainer>
   );
 };

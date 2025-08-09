@@ -32,7 +32,11 @@ export function createWasmImportObject(
 
     // Construct the final import object
     const importObject: Record<string, Record<string, WebAssembly.ImportValue>> = {
-        [importNamespace]: envImports
+        [importNamespace]: envImports,
+        // Add the 'types' module with the log function
+        types: {
+            log: logFn as WebAssembly.ImportValue
+        }
     };
 
     // The loader will merge its own required imports (e.g., for memory, GC).

@@ -5,17 +5,18 @@ import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { Button } from 'server/src/components/ui/Button';
 
 interface QboCallbackPageProps {
-  searchParams: {
+  searchParams: Promise<{
     success?: string;
     error?: string;
     realmId?: string; // Optional: Backend might pass this on success
-  };
+  }>;
 }
 
-export default function QboCallbackPage({ searchParams }: QboCallbackPageProps) {
-  const isSuccess = searchParams.success === 'true';
-  const errorMessage = searchParams.error;
-  const realmId = searchParams.realmId;
+export default async function QboCallbackPage({ searchParams }: QboCallbackPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const isSuccess = resolvedSearchParams.success === 'true';
+  const errorMessage = resolvedSearchParams.error;
+  const realmId = resolvedSearchParams.realmId;
 
   return (
     <div className="flex justify-center items-center min-h-[calc(100vh-200px)]"> {/* Basic centering */}

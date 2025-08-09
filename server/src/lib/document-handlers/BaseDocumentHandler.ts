@@ -78,10 +78,24 @@ export abstract class BaseDocumentHandler implements DocumentTypeHandler {
   protected async renderHtmlToPng(htmlContent: string, width: number = 400, height: number = 300): Promise<Buffer> {
     let browser;
     try {
-      browser = await puppeteer.launch({
+      const puppeteerOptions: any = {
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-      });
+        args: [
+          '--no-sandbox', 
+          '--disable-setuid-sandbox', 
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--disable-features=IsolateOrigins',
+          '--disable-site-isolation-trials'
+        ]
+      };
+      
+      // Use system chromium if available (Docker environment)
+      if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+        puppeteerOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+      }
+      
+      browser = await puppeteer.launch(puppeteerOptions);
       const page = await browser.newPage();
       await page.setViewport({ width, height });
       const styledHtml = `

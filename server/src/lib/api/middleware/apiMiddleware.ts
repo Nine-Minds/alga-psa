@@ -17,6 +17,12 @@ export interface ApiContext {
 
 export interface ApiRequest extends NextRequest {
   context?: ApiContext;
+  params?: any;
+}
+
+export interface AuthenticatedApiRequest extends NextRequest {
+  context: ApiContext;
+  params?: any;
 }
 
 export interface ApiError extends Error {
@@ -74,6 +80,16 @@ export class ConflictError extends Error implements ApiError {
   constructor(message: string = 'Resource conflict') {
     super(message);
     this.name = 'ConflictError';
+  }
+}
+
+export class BadRequestError extends Error implements ApiError {
+  statusCode = 400;
+  code = 'BAD_REQUEST';
+
+  constructor(message: string = 'Bad request') {
+    super(message);
+    this.name = 'BadRequestError';
   }
 }
 
@@ -248,6 +264,11 @@ export function handleApiError(error: any): NextResponse {
  * Success response helper
  */
 export function createSuccessResponse(data: any, status: number = 200, metadata?: any): NextResponse {
+  // For 204 No Content, return empty response
+  if (status === 204) {
+    return new NextResponse(null, { status: 204 });
+  }
+  
   const response: any = { data };
   
   if (metadata) {

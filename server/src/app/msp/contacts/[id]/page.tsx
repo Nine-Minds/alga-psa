@@ -10,16 +10,33 @@ import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/do
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
 import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
+import { getContactPortalPermissions } from 'server/src/lib/actions/permission-actions';
 
-const ContactDetailPage = ({ params }: { params: { id: string } }) => {
+const ContactDetailPage = ({ params }: { params: Promise<{ id: string }> }) => {
   const [contact, setContact] = useState<IContact | null>(null);
   const [documents, setDocuments] = useState<IDocument[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [currentUser, setCurrentUser] = useState<IUserWithRoles | null>(null);
+  const [contactId, setContactId] = useState<string | null>(null);
+  const [userPermissions, setUserPermissions] = useState({
+    canInvite: false,
+    canUpdateRoles: false,
+    canRead: false
+  });
 
   useEffect(() => {
+    const initializeParams = async () => {
+      const resolvedParams = await params;
+      setContactId(resolvedParams.id);
+    };
+    initializeParams();
+  }, [params]);
+
+  useEffect(() => {
+    if (!contactId) return;
+
     const fetchData = async () => {
       setLoading(true);
       setError(null);
@@ -28,16 +45,20 @@ const ContactDetailPage = ({ params }: { params: { id: string } }) => {
         const userData = await getCurrentUser();
         setCurrentUser(userData);
 
+        // Fetch permissions
+        const permissions = await getContactPortalPermissions();
+        setUserPermissions(permissions);
+
         // Fetch companies using server action
         const companiesData = await getAllCompanies();
         setCompanies(companiesData);
 
         // Fetch contact data using server action
-        const contactData = await getContactByContactNameId(params.id);
+        const contactData = await getContactByContactNameId(contactId);
         setContact(contactData);
 
         // Fetch documents using server action
-        const documentsResponse = await getDocumentsByEntity(params.id, 'contact');
+        const documentsResponse = await getDocumentsByEntity(contactId, 'contact');
         // Handle both array and paginated response formats
         const documentsList = Array.isArray(documentsResponse)
           ? documentsResponse
@@ -52,7 +73,7 @@ const ContactDetailPage = ({ params }: { params: { id: string } }) => {
     };
 
     fetchData();
-  }, [params.id]);
+  }, [contactId]);
 
   if (error) {
     return (
@@ -70,13 +91,16 @@ const ContactDetailPage = ({ params }: { params: { id: string } }) => {
                   const userData = await getCurrentUser();
                   setCurrentUser(userData);
                   
+                  const permissions = await getContactPortalPermissions();
+                  setUserPermissions(permissions);
+                  
                   const companiesData = await getAllCompanies();
                   setCompanies(companiesData);
                   
-                  const contactData = await getContactByContactNameId(params.id);
+                  const contactData = await getContactByContactNameId(contactId!);
                   setContact(contactData);
                   
-                  const documentsResponse = await getDocumentsByEntity(params.id, 'contact');
+                  const documentsResponse = await getDocumentsByEntity(contactId!, 'contact');
                   const documentsList = Array.isArray(documentsResponse)
                     ? documentsResponse
                     : documentsResponse.documents || [];
@@ -116,10 +140,12 @@ const ContactDetailPage = ({ params }: { params: { id: string } }) => {
   }
 
   const handleDocumentCreated = async () => {
+    if (!contactId) return;
+    
     try {
       setLoading(true);
       // Refresh documents after a new one is created
-      const updatedResponse = await getDocumentsByEntity(params.id, 'contact');
+      const updatedResponse = await getDocumentsByEntity(contactId, 'contact');
       // Handle both array and paginated response formats
       const updatedDocumentsList = Array.isArray(updatedResponse)
         ? updatedResponse
@@ -140,6 +166,7 @@ const ContactDetailPage = ({ params }: { params: { id: string } }) => {
         documents={documents}
         userId={currentUser.user_id}
         onDocumentCreated={handleDocumentCreated}
+        userPermissions={userPermissions}
       />
     </div>
   );

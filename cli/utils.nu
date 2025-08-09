@@ -52,3 +52,29 @@ export def load-db-env [] {
     # Select the CORRECT keys provided by the user
     | select DB_HOST DB_PORT DB_USER_ADMIN DB_NAME_SERVER DB_PASSWORD_ADMIN
 }
+
+# Parse a flag value from arguments list
+export def parse-flag [
+    args: list<string>   # The arguments list
+    flag: string         # The flag to look for
+] {
+    let matches = ($args | enumerate | where { |it| $it.item == $flag })
+    if ($matches | length) > 0 {
+        let index = ($matches | first | get index)
+        if ($index + 1) < ($args | length) {
+            $args | get ($index + 1)
+        } else {
+            null
+        }
+    } else {
+        null
+    }
+}
+
+# Check if a flag exists in arguments list
+export def check-flag [
+    args: list<string>   # The arguments list
+    flag: string         # The flag to check for
+] {
+    $flag in $args
+}

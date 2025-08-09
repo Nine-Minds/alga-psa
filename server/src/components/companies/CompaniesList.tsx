@@ -1,17 +1,21 @@
+import React, { memo } from 'react';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { useRouter } from 'next/navigation';
-import { MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { MoreVertical, Pencil, Trash2, ExternalLink } from "lucide-react";
 import { ReflectedDropdownMenu } from 'server/src/components/ui/ReflectedDropdownMenu';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Button } from 'server/src/components/ui/Button';
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
 import { TagManager } from 'server/src/components/tags';
-import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
-import { useRegisterChild } from 'server/src/types/ui-reflection/useRegisterChild';
-import { FormFieldComponent, ButtonComponent } from 'server/src/types/ui-reflection/types';
-import { CommonActions } from 'server/src/types/ui-reflection/actionBuilders';
+ import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
+ import { useRegisterChild } from 'server/src/types/ui-reflection/useRegisterChild';
+ import { FormFieldComponent, ButtonComponent } from 'server/src/types/ui-reflection/types';
+ import { CommonActions } from 'server/src/types/ui-reflection/actionBuilders';
+
+
 interface CompaniesListProps {
     selectedCompanies: string[];
     filteredCompanies: ICompany[];
@@ -19,13 +23,17 @@ interface CompaniesListProps {
     handleCheckboxChange: (companyId: string) => void;
     handleEditCompany: (companyId: string) => void;
     handleDeleteCompany: (company: ICompany) => void;
+    onQuickView?: (company: ICompany) => void;
     currentPage?: number;
     pageSize?: number;
     totalCount?: number;
     onPageChange?: (page: number) => void;
     companyTags?: Record<string, ITag[]>;
-    allUniqueTags?: string[];
+    allUniqueTags?: ITag[];
     onTagsChange?: (companyId: string, tags: ITag[]) => void;
+    sortBy?: string;
+    sortDirection?: 'asc' | 'desc';
+    onSortChange?: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
 }
 
 // Component for company selection checkbox
@@ -38,13 +46,13 @@ interface CompanyCheckboxProps {
 const CompanyCheckbox: React.FC<CompanyCheckboxProps> = ({ companyId, checked, onChange }) => {
   const checkboxId = `company-checkbox-${companyId}`;
   
-  useRegisterChild<FormFieldComponent>({
-    id: checkboxId,
-    type: 'formField',
-    label: 'Select Company',
-    value: checked ? 'true' : 'false',
-    fieldType: 'checkbox'
-  });
+   useRegisterChild<FormFieldComponent>({
+     id: checkboxId,
+     type: 'formField',
+     label: 'Select Company',
+     value: checked ? 'true' : 'false',
+     fieldType: 'checkbox'
+   });
 
   return (
     <input
@@ -66,19 +74,19 @@ interface CompanyLinkProps {
 const CompanyLink: React.FC<CompanyLinkProps> = ({ company, onClick }) => {
   const linkId = `company-link-${company.company_id}`;
   
-  useRegisterChild<ButtonComponent>({
-    id: linkId,
-    type: 'button',
-    label: company.company_name,
-    actions: [CommonActions.click('Click this button')]
-  });
+   useRegisterChild<ButtonComponent>({
+     id: linkId,
+     type: 'button',
+     label: company.company_name,
+     actions: [CommonActions.click('Click this button')]
+   });
 
   return (
     <a
       data-automation-id={linkId}
       href={`/msp/companies/${company.company_id}`}
       onClick={onClick}
-      className="text-blue-600 hover:underline font-medium truncate"
+      className="text-blue-600 hover:underline font-medium whitespace-normal break-words"
       title={company.company_name}
     >
       {company.company_name}
@@ -93,13 +101,17 @@ const CompaniesList = ({
   handleCheckboxChange, 
   handleEditCompany, 
   handleDeleteCompany,
+  onQuickView,
   currentPage,
   pageSize,
   totalCount,
   onPageChange,
   companyTags = {},
   allUniqueTags = [],
-  onTagsChange
+  onTagsChange,
+  sortBy,
+  sortDirection,
+  onSortChange
 }: CompaniesListProps) => {
   const router = useRouter(); // Get router instance
 
@@ -111,7 +123,7 @@ const CompaniesList = ({
         {
             title: '',
             dataIndex: 'checkbox',
-            width: '4%',
+            width: '5%',
             render: (value: string, record: ICompany) => (
                 <div onClick={(e) => e.stopPropagation()} className="flex justify-center">
                   <CompanyCheckbox
@@ -125,7 +137,7 @@ const CompaniesList = ({
         {
             title: 'Name',
             dataIndex: 'company_name',
-            width: '30%',
+            width: '29%',
             render: (text: string, record: ICompany) => (
                 <div className="flex items-center">
                     <CompanyAvatar
@@ -145,27 +157,37 @@ const CompaniesList = ({
         {
             title: 'Type',
             dataIndex: 'client_type',
-            width: '8%',
+            width: '9%',
             render: (text: string | null, record: ICompany) => record.client_type || 'N/A',
         },
         {
             title: 'Phone',
             dataIndex: 'phone_no',
             width: '12%',
-            render: (text: string | null, record: ICompany) => record.phone_no || 'N/A',
+            render: (text: string | null, record: ICompany) => (record as any).location_phone || 'N/A',
         },
         {
             title: 'Address',
             dataIndex: 'address',
             width: '18%',
-            render: (text: string | null, record: ICompany) => <span className="truncate" title={record.address ?? ''}>{record.address || 'N/A'}</span>,
+            render: (text: string | null, record: ICompany) => {
+                const company = record as any;
+                const addressParts = [
+                    company.address_line1,
+                    company.address_line2,
+                    company.city,
+                    company.state_province
+                ].filter(Boolean);
+                const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : 'N/A';
+                return <span className="break-words" title={fullAddress}>{fullAddress}</span>;
+            },
         },
         {
             title: 'Account Manager',
             dataIndex: 'account_manager_full_name',
             width: '9%',
             render: (text: string | undefined, record: ICompany) =>
-                <span className="truncate" title={record.account_manager_full_name ?? ''}>{record.account_manager_full_name || 'N/A'}</span>,
+                <span className="break-words" title={record.account_manager_full_name ?? ''}>{record.account_manager_full_name || 'N/A'}</span>,
         },
         {
             title: 'URL',
@@ -173,7 +195,7 @@ const CompaniesList = ({
             width: '10%',
             render: (text: string | null, record: ICompany) => (
                 record.url && record.url.trim() !== '' ? (
-                    <a href={record.url.startsWith('http') ? record.url : `https://${record.url}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate block" title={record.url}>
+                    <a href={record.url.startsWith('http') ? record.url : `https://${record.url}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline whitespace-normal break-words block" title={record.url}>
                         {record.url}
                     </a>
                 ) : 'N/A'
@@ -186,12 +208,14 @@ const CompaniesList = ({
             render: (value: string, record: ICompany) => {
                 if (!record.company_id || !onTagsChange) return null;
                 
+                const initialTags = companyTags[record.company_id] || [];
+                
                 return (
                     <div onClick={(e) => e.stopPropagation()}>
                         <TagManager
                             entityId={record.company_id}
                             entityType="company"
-                            initialTags={companyTags[record.company_id] || []}
+                            initialTags={initialTags}
                             onTagsChange={(tags) => onTagsChange(record.company_id, tags)}
                         />
                     </div>
@@ -205,41 +229,47 @@ const CompaniesList = ({
             render: (value: string, record: ICompany) => (
                 // Wrap DropdownMenu in a div and stop propagation on its click
                 <div onClick={(e) => e.stopPropagation()}>
-                    <ReflectedDropdownMenu
-                        id={`company-list-actions-${record.company_id}`}
-                        triggerLabel="Company Actions"
-                        trigger={
+                    <DropdownMenu.Root>
+                        <DropdownMenu.Trigger asChild>
                             <Button
-                                id={`company-actions-trigger-${record.company_id}`}
                                 variant="ghost"
+                                id="companies-actions-menu"
                                 size="sm"
                                 className="h-8 w-8 p-0"
                             >
                                 <span className="sr-only">Open menu</span>
                                 <MoreVertical className="h-4 w-4" />
                             </Button>
-                        }
-                        items={[
-                            {
-                                id: 'edit',
-                                text: 'Edit',
-                                icon: <Pencil size={14} />,
-                                variant: 'default',
-                                onSelect: () => handleEditCompany(record.company_id)
-                            },
-                            {
-                                id: 'delete',
-                                text: 'Delete',
-                                icon: <Trash2 size={14} />,
-                                variant: 'destructive',
-                                onSelect: () => handleDeleteCompany(record)
-                            }
-                        ]}
-                        contentProps={{
-                            align: "end",
-                            className: "bg-white z-50"
-                        }}
-                    />
+                        </DropdownMenu.Trigger>
+                        <DropdownMenu.Content 
+                            align="end" 
+                            className="bg-white rounded-md shadow-lg p-1 border border-gray-200 min-w-[120px] z-50"
+                        >
+                            {onQuickView && (
+                                <DropdownMenu.Item 
+                                    className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center rounded"
+                                    onSelect={() => onQuickView(record)}
+                                >
+                                    <ExternalLink size={14} className="mr-2" />
+                                    Quick View
+                                </DropdownMenu.Item>
+                            )}
+                            <DropdownMenu.Item 
+                                className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center rounded"
+                                onSelect={() => handleEditCompany(record.company_id)}
+                            >
+                                <Pencil size={14} className="mr-2" />
+                                Edit
+                            </DropdownMenu.Item>
+                            <DropdownMenu.Item 
+                                className="px-2 py-1 text-sm cursor-pointer hover:bg-red-100 text-red-600 flex items-center rounded"
+                                onSelect={() => handleDeleteCompany(record)}
+                            >
+                                <Trash2 size={14} className="mr-2" />
+                                Delete
+                            </DropdownMenu.Item>
+                        </DropdownMenu.Content>
+                    </DropdownMenu.Root>
                 </div>
             ),
         },
@@ -249,17 +279,19 @@ const CompaniesList = ({
         <div className="w-full">
             <DataTable
                 id="companies-table"
-                data={filteredCompanies.map((company): ICompany => ({
-                    ...company,
-                    company_id: company.company_id
-                }))}
+                data={filteredCompanies}
                 columns={columns}
-                onRowClick={handleRowClick} // Use the original onRowClick signature
+                onRowClick={handleRowClick}
                 pagination={true}
                 currentPage={currentPage}
                 pageSize={pageSize}
                 totalItems={totalCount}
                 onPageChange={onPageChange}
+                rowClassName={() => ''}
+                manualSorting={true}
+                sortBy={sortBy}
+                sortDirection={sortDirection}
+                onSortChange={onSortChange}
             />
         </div>
     );

@@ -4,6 +4,7 @@
 import { createClient } from 'redis';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
+import { getSecretProviderInstance } from '../../shared/core/secretProvider.js';
 
 // Load environment variables
 dotenv.config();
@@ -12,10 +13,14 @@ async function publishTestEvent() {
   try {
     console.log('Connecting to Redis...');
     
+    // Get Redis password from secret provider with fallback to environment variable
+    const secretProvider = await getSecretProviderInstance();
+    const redisPassword = await secretProvider.getAppSecret('REDIS_PASSWORD') || process.env.REDIS_PASSWORD;
+    
     // Create Redis client
     const client = createClient({
       url: `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || '6379'}`,
-      password: process.env.REDIS_PASSWORD
+      password: redisPassword
     });
     
     // Handle connection errors

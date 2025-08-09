@@ -7,7 +7,7 @@ import Spinner from 'server/src/components/ui/Spinner';
 import { format } from 'date-fns';
 import { getClientTickets, updateTicketStatus } from 'server/src/lib/actions/client-portal-actions/client-tickets';
 import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
-import { getAllPrioritiesWithStandard } from 'server/src/lib/actions/priorityActions';
+import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import { getTicketCategories } from 'server/src/lib/actions/ticketCategoryActions';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ITicketListItem, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
@@ -50,7 +50,7 @@ export function TicketList() {
       try {
         const [statuses, priorities, categories] = await Promise.all([
           getTicketStatuses(),
-          getAllPrioritiesWithStandard('ticket'),
+          getAllPriorities('ticket'),
           getTicketCategories()
         ]);
 
@@ -207,6 +207,24 @@ export function TicketList() {
 
   const columns: ColumnDefinition<ITicketListItem>[] = [
     {
+      title: 'Ticket Number',
+      dataIndex: 'ticket_number',
+      width: '75px',
+      render: (value: string, record: ITicketListItem) => (
+        <div
+          className="font-medium cursor-pointer hover:text-blue-600"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (record.ticket_id) {
+              setSelectedTicketId(record.ticket_id);
+            }
+          }}
+        >
+          {value}
+        </div>
+      ),
+    },
+    {
       title: 'Title',
       dataIndex: 'title',
       width: '25%',
@@ -270,8 +288,14 @@ export function TicketList() {
       title: 'Priority',
       dataIndex: 'priority_name',
       width: '15%',
-      render: (value: string) => (
-        <div className="capitalize">{value}</div>
+      render: (value: string, record: ITicketListItem) => (
+        <div className="flex items-center gap-2">
+          <div 
+            className={`w-3 h-3 rounded-full border border-gray-300 ${!record.priority_color ? 'bg-gray-500' : ''}`}
+            style={record.priority_color ? { backgroundColor: record.priority_color } : undefined}
+          />
+          <span className="capitalize">{value}</span>
+        </div>
       ),
     },
     {

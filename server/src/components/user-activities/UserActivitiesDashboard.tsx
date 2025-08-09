@@ -7,27 +7,42 @@ import { WorkflowTasksSection } from './WorkflowTasksSection';
 import { ActivitiesDataTableSection } from './ActivitiesDataTableSection';
 import { Button } from '../ui/Button';
 import { LayoutGrid, List } from 'lucide-react';
-import { ActivityFilters as ActivityFiltersType, ActivityType } from '../../interfaces/activity.interfaces';
+import { ActivityFilters as ActivityFiltersType, ActivityType } from 'server/src/interfaces/activity.interfaces';
 import { CustomTabs } from '../ui/CustomTabs';
-import { DrawerProvider } from '../../context/DrawerContext';
+import { DrawerProvider } from 'server/src/context/DrawerContext';
 import { ActivityDrawerProvider } from './ActivityDrawerProvider';
-import { getCurrentUser, getUserPreference, setUserPreference } from '../../lib/actions/user-actions/userActions';
+import { useUserPreference } from 'server/src/hooks/useUserPreference';
+import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
 
 export function UserActivitiesDashboard() {
-  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Define view mode type
+  type UserActivitiesViewMode = 'cards' | 'table';
+  
+  // Check if advanced features are enabled
+  const advancedFeatureFlag = useFeatureFlag('advanced-features-enabled');
+  const isAdvancedFeaturesEnabled = typeof advancedFeatureFlag === 'boolean' ? advancedFeatureFlag : advancedFeatureFlag?.enabled;
+  
+  // Use the custom hook for view mode preference
+  const { 
+    value: viewMode, 
+    setValue: setViewModePreference,
+    isLoading: isViewModeLoading 
+  } = useUserPreference<UserActivitiesViewMode>(
+    'activitiesDashboardViewMode',
+    {
+      defaultValue: 'cards',
+      localStorageKey: 'activitiesDashboardViewMode',
+      debounceMs: 300
+    }
+  );
+  
   const [tableInitialFilters, setTableInitialFilters] = useState<ActivityFiltersType | null>(null); // State for specific filters
 
   // Generic handler for "View All" clicks
   const handleViewAll = (types: ActivityType[]) => {
     const filters: ActivityFiltersType = { types, isClosed: false };
     setTableInitialFilters(filters);
-    setViewMode('table');
-    // Optionally save preference if desired when clicking "View All"
-    // if (currentUser?.user_id) {
-    //   setUserPreference(currentUser.user_id, 'activitiesDashboardViewMode', 'table').catch(console.error);
-    // }
+    setViewModePreference('table');
   };
 
   // Specific handlers calling the generic one
@@ -36,29 +51,6 @@ export function UserActivitiesDashboard() {
   const handleViewAllTickets = () => handleViewAll([ActivityType.TICKET]);
   const handleViewAllWorkflowTasks = () => handleViewAll([ActivityType.WORKFLOW_TASK]);
 
-  // Load user preference when component mounts
-  useEffect(() => {
-    const loadUserPreference = async () => {
-      try {
-        setIsLoading(true);
-        const user = await getCurrentUser();
-        setCurrentUser(user);
-        
-        if (user?.user_id) {
-          const savedViewMode = await getUserPreference(user.user_id, 'activitiesDashboardViewMode');
-          if (savedViewMode === 'cards' || savedViewMode === 'table') {
-            setViewMode(savedViewMode);
-          }
-        }
-      } catch (error) {
-        console.error('Error loading user preference:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    loadUserPreference();
-  }, []);
 
   // Determine the filters to apply to the table
   const currentTableFilters: ActivityFiltersType = tableInitialFilters || {
@@ -97,17 +89,16 @@ export function UserActivitiesDashboard() {
         onViewAll={handleViewAllProjects}
       />
 
-      {/* Workflow Tasks Section */}
-      <WorkflowTasksSection
-        limit={5}
-        onViewAll={handleViewAllWorkflowTasks}
-      />
+      {/* Workflow Tasks Section - Only show if advanced features are enabled */}
+      {isAdvancedFeaturesEnabled && (
+        <WorkflowTasksSection
+          limit={5}
+          onViewAll={handleViewAllWorkflowTasks}
+        />
+      )}
     </div>
-  ), [handleViewAllSchedule, handleViewAllTickets, handleViewAllProjects, handleViewAllWorkflowTasks]
+  ), [handleViewAllSchedule, handleViewAllTickets, handleViewAllProjects, handleViewAllWorkflowTasks, isAdvancedFeaturesEnabled]
   );
-
-  // Define view mode type
-  type UserActivitiesViewMode = 'cards' | 'table';
 
   // Define options for the ViewSwitcher with explicit type
   const viewOptions: ViewSwitcherOption<UserActivitiesViewMode>[] = [
@@ -116,18 +107,10 @@ export function UserActivitiesDashboard() {
   ];
 
   // Handler for view change
-  const handleViewChange = async (newView: UserActivitiesViewMode) => {
-    setViewMode(newView);
+  const handleViewChange = (newView: UserActivitiesViewMode) => {
+    setViewModePreference(newView);
     if (newView === 'table') {
       setTableInitialFilters(null); // Reset specific filters when switching to table view
-    }
-    // Save preference
-    if (currentUser?.user_id) {
-      try {
-        await setUserPreference(currentUser.user_id, 'activitiesDashboardViewMode', newView);
-      } catch (error) {
-        console.error('Error saving view mode preference:', error);
-      }
     }
   };
 
@@ -146,7 +129,7 @@ export function UserActivitiesDashboard() {
             </div>
           </div>
 
-          {isLoading ? (
+          {isViewModeLoading ? (
             <div className="flex justify-center items-center h-40">
               <p className="text-gray-500">Loading user preferences...</p>
             </div>

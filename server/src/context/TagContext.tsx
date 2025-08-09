@@ -1,60 +1,186 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef, useMemo } from 'react';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
-import { getAllTags, updateTagColor } from 'server/src/lib/actions/tagActions';
+import { getAllTags, updateTagColor, updateTagText, deleteAllTagsByText, checkTagPermissions } from 'server/src/lib/actions/tagActions';
+import { TaggedEntityType } from 'server/src/interfaces/tag.interfaces';
+
+interface TagPermissions {
+  canAddExisting: boolean;
+  canCreateNew: boolean;
+  canEditColors: boolean;
+  canEditText: boolean;
+  canDelete: boolean;
+  canDeleteAll: boolean;
+}
 
 interface TagContextType {
   tags: ITag[];
   updateTagColor: (tagId: string, backgroundColor: string | null, textColor: string | null) => Promise<void>;
+  updateTagText: (tagId: string, newTagText: string) => Promise<void>;
+  deleteAllTagsByText: (tagText: string, taggedType: TaggedEntityType) => Promise<void>;
+  addTag: (tag: ITag) => void;
+  removeTag: (tagId: string) => void;
   refetchTags: () => Promise<void>;
+  getPermissions: (entityType: TaggedEntityType) => Promise<TagPermissions>;
+  permissions: Record<TaggedEntityType, TagPermissions>;
 }
 
 const TagContext = createContext<TagContextType | undefined>(undefined);
 
 export const TagProvider = ({ children }: { children: ReactNode }) => {
   const [tags, setTags] = useState<ITag[]>([]);
+  const [permissions, setPermissions] = useState<Record<TaggedEntityType, TagPermissions>>({} as Record<TaggedEntityType, TagPermissions>);
+  const lastFetchRef = useRef<number>(0);
+  const pendingPermissions = useRef<Record<string, Promise<TagPermissions> | null>>({});
+  const permissionsRef = useRef<Record<TaggedEntityType, TagPermissions>>({} as Record<TaggedEntityType, TagPermissions>);
+  const FETCH_DEBOUNCE_MS = 1000; // Prevent fetching more than once per second
 
-  const fetchTags = useCallback(async () => {
+  // Keep permissionsRef in sync with permissions state
+  useEffect(() => {
+    permissionsRef.current = permissions;
+  }, [permissions]);
+
+  // Create a stable refetch function that doesn't create circular dependencies
+  const refetchTagsStable = useCallback(async () => {
+    const now = Date.now();
+    if (now - lastFetchRef.current < FETCH_DEBOUNCE_MS) {
+      return;
+    }
+    lastFetchRef.current = now;
+    
     const allTags = await getAllTags();
     setTags(allTags);
   }, []);
 
   useEffect(() => {
-    fetchTags();
-  }, [fetchTags]);
+    refetchTagsStable();
+  }, [refetchTagsStable]);
 
-  const handleUpdateTagColor = async (tagId: string, backgroundColor: string | null, textColor: string | null) => {
-    const tagToUpdate = tags.find(t => t.tag_id === tagId);
-    if (!tagToUpdate) return;
+  const handleUpdateTagColor = useCallback(async (tagId: string, backgroundColor: string | null, textColor: string | null) => {
+    setTags(currentTags => {
+      const tagToUpdate = currentTags.find(t => t.tag_id === tagId);
+      if (!tagToUpdate) return currentTags;
 
-    const originalTags = [...tags];
-    const { tag_text } = tagToUpdate;
-
-    // Optimistic UI update
-    setTags(currentTags =>
-      currentTags.map(tag => {
-        if (tag.tag_text === tag_text) {
+      const { tag_text, tagged_type } = tagToUpdate;
+      return currentTags.map(tag => {
+        // Update tags with the same text AND same type
+        if (tag.tag_text === tag_text && tag.tagged_type === tagged_type) {
           return { ...tag, background_color: backgroundColor, text_color: textColor };
         }
         return tag;
-      })
+      });
+    });
+
+    try {
+      await updateTagColor(tagId, backgroundColor, textColor);
+      // Skip automatic refetch - let individual components handle their own updates
+    } catch (error) {
+      console.error("Failed to update tag color:", error);
+      // On error, revert the optimistic update
+      refetchTagsStable();
+      throw error;
+    }
+  }, [refetchTagsStable]);
+
+  const handleUpdateTagText = useCallback(async (tagId: string, newTagText: string) => {
+    setTags(currentTags => {
+      const tagToUpdate = currentTags.find(t => t.tag_id === tagId);
+      if (!tagToUpdate) return currentTags;
+
+      const oldTagText = tagToUpdate.tag_text;
+      return currentTags.map(tag => {
+        // Update tags with the same text AND same type
+        if (tag.tag_text === oldTagText && tag.tagged_type === tagToUpdate.tagged_type) {
+          return { ...tag, tag_text: newTagText };
+        }
+        return tag;
+      });
+    });
+
+    try {
+      await updateTagText(tagId, newTagText);
+      // Skip automatic refetch - let individual components handle their own updates
+    } catch (error) {
+      console.error("Failed to update tag text:", error);
+      // On error, revert the optimistic update
+      refetchTagsStable();
+      throw error;
+    }
+  }, [refetchTagsStable]);
+
+  const handleDeleteAllTagsByText = useCallback(async (tagText: string, taggedType: TaggedEntityType) => {
+    setTags(currentTags =>
+      currentTags.filter(tag => 
+        !(tag.tag_text === tagText && tag.tagged_type === taggedType)
+      )
     );
 
     try {
-      // Persist the change in the background
-      await updateTagColor(tagId, backgroundColor, textColor);
-      // Refetch the tags to ensure consistency
-      await fetchTags();
+      await deleteAllTagsByText(tagText, taggedType);
+      // Skip automatic refetch - let individual components handle their own updates
     } catch (error) {
-      console.error("Failed to update tag color:", error);
-      // Revert on error
-      setTags(originalTags);
+      console.error("Failed to delete tags:", error);
+      // On error, revert the optimistic update
+      refetchTagsStable();
+      throw error;
     }
-  };
+  }, [refetchTagsStable]);
+
+  // Use useRef to create a stable function that doesn't change on re-renders
+  const getPermissionsRef = useRef<(entityType: TaggedEntityType) => Promise<TagPermissions>>();
+  
+  if (!getPermissionsRef.current) {
+    getPermissionsRef.current = async (entityType: TaggedEntityType): Promise<TagPermissions> => {
+      // Return cached permissions if available using ref to avoid stale closures
+      const currentPerms = permissionsRef.current[entityType];
+      if (currentPerms) {
+        return currentPerms;
+      }
+      
+      // Check if there's already a pending request for this entityType
+      if (pendingPermissions.current[entityType]) {
+        return pendingPermissions.current[entityType]!;
+      }
+      
+      // Create a new promise and cache it
+      const permissionPromise = checkTagPermissions(entityType)
+        .then(perms => {
+          setPermissions(current => ({ ...current, [entityType]: perms }));
+          return perms;
+        })
+        .finally(() => {
+          // Clear the pending promise
+          pendingPermissions.current[entityType] = null;
+        });
+      
+      // Store the promise so other concurrent calls can use it
+      pendingPermissions.current[entityType] = permissionPromise;
+      
+      return permissionPromise;
+    };
+  }
+  
+  const getPermissions = getPermissionsRef.current;
+
+  // Create stable function references to prevent context value from changing unnecessarily
+  const addTag = useCallback((tag: ITag) => setTags(current => [...current, tag]), []);
+  const removeTag = useCallback((tagId: string) => setTags(current => current.filter(t => t.tag_id !== tagId)), []);
+
+  const contextValue = useMemo(() => ({
+    tags, 
+    updateTagColor: handleUpdateTagColor, 
+    updateTagText: handleUpdateTagText,
+    deleteAllTagsByText: handleDeleteAllTagsByText,
+    addTag,
+    removeTag,
+    refetchTags: refetchTagsStable,
+    permissions,
+    getPermissions
+  }), [tags, handleUpdateTagColor, handleUpdateTagText, handleDeleteAllTagsByText, addTag, removeTag, refetchTagsStable, getPermissions]);
 
   return (
-    <TagContext.Provider value={{ tags, updateTagColor: handleUpdateTagColor, refetchTags: fetchTags }}>
+    <TagContext.Provider value={contextValue}>
       {children}
     </TagContext.Provider>
   );

@@ -1,10 +1,18 @@
 import { Metadata } from 'next';
-import AssetForm from 'server/src/components/assets/AssetForm';
+import { Suspense } from 'react';
+import dynamic from 'next/dynamic';
+import AssetFormSkeleton from 'server/src/components/ui/skeletons/AssetFormSkeleton';
+
+// Dynamic import for AssetForm
+const AssetForm = dynamic(() => import('server/src/components/assets/AssetForm'), {
+  loading: () => <AssetFormSkeleton title="Edit Asset" isEdit={true} />,
+  ssr: false
+});
 
 interface AssetEditPageProps {
-  params: {
+  params: Promise<{
     asset_id: string;
-  };
+  }>;
 }
 
 export const metadata: Metadata = {
@@ -12,10 +20,13 @@ export const metadata: Metadata = {
   description: 'Edit asset details'
 };
 
-export default function AssetEditPage({ params }: AssetEditPageProps) {
+export default async function AssetEditPage({ params }: AssetEditPageProps) {
+  const resolvedParams = await params;
   return (
     <div className="container mx-auto px-4 py-8">
-      <AssetForm assetId={params.asset_id} />
+      <Suspense fallback={<AssetFormSkeleton title="Edit Asset" isEdit={true} />}>
+        <AssetForm assetId={resolvedParams.asset_id} />
+      </Suspense>
     </div>
   );
 }

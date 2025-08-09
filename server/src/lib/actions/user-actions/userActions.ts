@@ -7,7 +7,7 @@ import { options as authOptions } from 'server/src/app/api/auth/[...nextauth]/op
 import { revalidatePath } from 'next/cache';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getAdminConnection } from 'server/src/lib/db/admin';
-import { withAdminTransaction, withTransaction } from '@shared/db';
+import { withAdminTransaction, withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
 import Tenant from 'server/src/lib/models/tenant';
@@ -16,6 +16,7 @@ import { verifyEmailSuffix, getCompanyByEmailSuffix } from 'server/src/lib/actio
 import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/EntityImageService';
 import { hasPermission } from 'server/src/lib/auth/rbac';
+import { throwPermissionError } from 'server/src/lib/utils/errorHandling';
 
 interface ActionResult {
   success: boolean;
@@ -72,6 +73,19 @@ export async function addUser(userData: { firstName: string; lastName: string; e
         throw new Error("Role is required");
       }
 
+      // Validate that the role exists and is an MSP role
+      const role = await trx('roles')
+        .where({ role_id: userData.roleId, tenant: tenant || undefined })
+        .first();
+        
+      if (!role) {
+        throw new Error("Invalid role");
+      }
+      
+      if (!role.msp) {
+        throw new Error("Cannot assign client portal role to MSP user");
+      }
+
       // Check if email already exists globally
       const emailExists = await checkEmailExistsGlobally(userData.email);
       if (emailExists) {
@@ -86,13 +100,22 @@ export async function addUser(userData: { firstName: string; lastName: string; e
           username: userData.email.toLowerCase(),
           is_inactive: false,
           hashed_password: await hashPassword(userData.password),
-          tenant: tenant || undefined
+          tenant: tenant || undefined,
+          user_type: 'internal' // Explicitly set user_type for MSP users
         }).returning('*');
 
       await trx('user_roles').insert({
         user_id: user.user_id,
         role_id: userData.roleId,
         tenant: tenant || undefined
+      });
+
+      // Mark that the user hasn't reset their initial password
+      await UserPreferences.upsert(trx, {
+        user_id: user.user_id,
+        setting_name: 'has_reset_password',
+        setting_value: false,
+        updated_at: new Date()
       });
 
       revalidatePath('/settings');
@@ -335,6 +358,27 @@ export async function getAllRoles(): Promise<IRole[]> {
   } catch (error) {
     console.error('Failed to fetch all roles:', error);
     throw new Error('Failed to fetch all roles');
+  }
+}
+
+/**
+ * Get MSP roles only (roles with msp flag = true)
+ */
+export async function getMSPRoles(): Promise<IRole[]> {
+  try {
+    const {knex: db, tenant} = await createTenantKnex();
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const roles = await trx('roles')
+        .where({ 
+          tenant: tenant || undefined,
+          msp: true 
+        })
+        .select('*');
+      return roles;
+    });
+  } catch (error) {
+    console.error('Failed to fetch MSP roles:', error);
+    throw new Error('Failed to fetch MSP roles');
   }
 }
 
@@ -616,42 +660,61 @@ export async function registerClientUser(
         })
         .returning('*');
 
-      // Get the default client role
-      let clientRole = await trx('roles')
-        .where({ tenant: contact.tenant })
-        .whereRaw('LOWER(role_name) = ?', ['client'])
+      // Get the default client portal user role (must exist via migrations)
+      const clientRole = await trx('roles')
+        .where({ 
+          tenant: contact.tenant,
+          client: true,
+          msp: false
+        })
+        .whereRaw('LOWER(role_name) = ?', ['user'])
         .first();
 
       if (!clientRole) {
-        // If role doesn't exist, create it. This is a fallback.
-        // The primary mechanism should be the migration.
-        [clientRole] = await trx('roles')
-          .insert({
-            role_name: 'Client', // Store with capitalization
-            description: 'Default client user role',
-            tenant: contact.tenant
-          })
-          .returning('*');
+        throw new Error('Client portal User role not found for tenant');
       }
 
       // Assign the role to the user
-      if (clientRole) {
-        await trx('user_roles').insert({
-          user_id: user.user_id,
-          role_id: clientRole.role_id,
-          tenant: contact.tenant
-        });
-      } else {
-        // This case should ideally not be reached if the migration and fallback work.
-        console.error(`Critical: Could not find or create a client role for tenant ${contact.tenant}`);
-        throw new Error('Client role could not be assigned.');
-      }
+      await trx('user_roles').insert({
+        user_id: user.user_id,
+        role_id: clientRole.role_id,
+        tenant: contact.tenant
+      });
 
       return { success: true };
     });
   } catch (error) {
     console.error('Error registering client user:', error);
     return { success: false, error: 'Failed to register user' };
+  }
+}
+
+export async function checkPasswordResetStatus(): Promise<{ hasResetPassword: boolean }> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return { hasResetPassword: true }; // Default to true if no user
+    }
+
+    const {knex} = await createTenantKnex();
+
+    // RBAC check - users can only check their own password reset status
+    if (!await hasPermission(currentUser, 'user', 'read', knex)) {
+      // Use standardized permission error to avoid silent success paths
+      throwPermissionError('check password reset status');
+    }
+
+    // UserPreferences enforces tenant scoping internally (tenant is part of its unique key)
+    const preference = await UserPreferences.get(knex, currentUser.user_id, 'has_reset_password');
+    
+    // For existing users without this preference, assume they have already reset their password
+    // Only new users created after this feature will have has_reset_password = false
+    const hasReset = preference ? preference.setting_value === true : true;
+    
+    return { hasResetPassword: hasReset };
+  } catch (error) {
+    console.error('Error checking password reset status:', error);
+    return { hasResetPassword: true }; // Default to true on error to avoid showing warning
   }
 }
 
@@ -676,6 +739,15 @@ export async function changeOwnPassword(
     const hashedPassword = await hashPassword(newPassword);
     await User.updatePassword(currentUser.email, hashedPassword);
 
+    // Mark that the user has reset their password
+    const {knex} = await createTenantKnex();
+    await UserPreferences.upsert(knex, {
+      user_id: currentUser.user_id,
+      setting_name: 'has_reset_password',
+      setting_value: true,
+      updated_at: new Date()
+    });
+
     return { success: true };
   } catch (error) {
     console.error('Error changing password:', error);
@@ -697,7 +769,9 @@ export async function getUserCompanyId(userId: string): Promise<string | null> {
     }
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      if (!await hasPermission(currentUser, 'user', 'read', trx)) {
+      // For client users accessing their own company ID, no permission check needed
+      // For other users, check user:read permission
+      if (currentUser.user_id !== userId && !await hasPermission(currentUser, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot read user company ID');
       }
 

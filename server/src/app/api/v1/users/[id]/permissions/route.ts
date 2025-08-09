@@ -3,19 +3,11 @@
  * GET /api/v1/users/[id]/permissions - Get user effective permissions
  */
 
-import { UserController } from 'server/src/lib/api/controllers/UserController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiUserController } from '@/lib/api/controllers/ApiUserController';
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
-  try {
-    const controller = new UserController();
-    const req = request as any;
-    req.params = params;
-    return await controller.getUserPermissions()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+const controller = new ApiUserController();
+
+export const GET = controller.getPermissions();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

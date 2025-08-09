@@ -3,12 +3,12 @@
  * DELETE /api/v1/users/[id]/teams/[teamId] - Remove user from team
  */
 
-import { UserController } from 'server/src/lib/api/controllers/UserController';
+import { ApiUserController } from '@/lib/api/controllers/ApiUserController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-export async function DELETE(request: Request, { params }: { params: { id: string; teamId: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string; teamId: string }> }) {
   try {
-    const controller = new UserController();
+    const controller = new ApiUserController();
     const req = request as any;
     req.params = params;
     return await controller.delete()(req);

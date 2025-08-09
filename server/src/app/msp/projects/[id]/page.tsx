@@ -1,6 +1,6 @@
 'use client';
 
-import { getProjectDetails, updateProject } from 'server/src/lib/actions/project-actions/projectActions';
+import { getProjectMetadata, updateProject } from 'server/src/lib/actions/project-actions/projectActions';
 import ProjectInfo from 'server/src/components/projects/ProjectInfo';
 import ProjectDetail from 'server/src/components/projects/ProjectDetail';
 import { useEffect, useState } from 'react';
@@ -9,11 +9,9 @@ import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 
-interface ProjectDetails {
+interface ProjectMetadata {
   project: IProject;
   phases: IProjectPhase[];
-  tasks: IProjectTask[];
-  ticketLinks: IProjectTicketLinkWithDetails[];
   statuses: ProjectStatus[];
   users: IUserWithRoles[];
   contact?: { full_name: string };
@@ -21,52 +19,68 @@ interface ProjectDetails {
   companies: ICompany[];
 }
 
-export default function ProjectPage({ params }: { params: { id: string } }) {
-  const { id } = params;
-  const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
+export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [projectMetadata, setProjectMetadata] = useState<ProjectMetadata | null>(null);
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
   const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
 
   useEffect(() => {
-    const fetchProjectDetails = async () => {
-      const details = await getProjectDetails(id);
-      setProjectDetails(details);
+    const initializeParams = async () => {
+      const resolvedParams = await params;
+      setProjectId(resolvedParams.id);
     };
-    fetchProjectDetails();
-  }, [id]);
+    initializeParams();
+  }, [params]);
+
+  useEffect(() => {
+    if (!projectId) return;
+
+    const fetchProjectMetadata = async () => {
+      const metadata = await getProjectMetadata(projectId);
+      setProjectMetadata(metadata);
+    };
+    fetchProjectMetadata();
+  }, [projectId]);
 
   const handleAssignedUserChange = async (userId: string | null) => {
+    if (!projectId) return;
+    
     try {
-      await updateProject(id, {
+      await updateProject(projectId, {
         assigned_to: userId
       });
-      // Refresh project details after update
-      const updatedDetails = await getProjectDetails(id);
-      setProjectDetails(updatedDetails);
+      // Refresh project metadata after update
+      const updatedMetadata = await getProjectMetadata(projectId);
+      setProjectMetadata(updatedMetadata);
     } catch (error) {
       console.error('Error updating assigned user:', error);
     }
   };
 
   const handleContactChange = async (contactId: string | null) => {
+    if (!projectId) return;
+    
     try {
-      await updateProject(id, {
+      await updateProject(projectId, {
         contact_name_id: contactId
       });
-      // Refresh project details after update
-      const updatedDetails = await getProjectDetails(id);
-      setProjectDetails(updatedDetails);
+      // Refresh project metadata after update
+      const updatedMetadata = await getProjectMetadata(projectId);
+      setProjectMetadata(updatedMetadata);
     } catch (error) {
       console.error('Error updating contact:', error);
     }
   };
 
   const handleProjectUpdate = async (updatedProject: IProject) => {
+    if (!projectId) return;
+    
     try {
-      await updateProject(id, updatedProject);
-      // Refresh project details after update
-      const updatedDetails = await getProjectDetails(id);
-      setProjectDetails(updatedDetails);
+      await updateProject(projectId, updatedProject);
+      // Refresh project metadata after update
+      const updatedMetadata = await getProjectMetadata(projectId);
+      setProjectMetadata(updatedMetadata);
     } catch (error) {
       console.error('Error updating project:', error);
     }
@@ -77,18 +91,18 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     setAllTagTexts(allTags);
   };
 
-  if (!projectDetails) {
+  if (!projectMetadata) {
     return <div>Loading...</div>;
   }
 
   return (
     <div>
       <ProjectInfo
-        project={projectDetails.project}
-        contact={projectDetails.contact}
-        assignedUser={projectDetails.assignedUser || undefined}
-        users={projectDetails.users}
-        companies={projectDetails.companies}
+        project={projectMetadata.project}
+        contact={projectMetadata.contact}
+        assignedUser={projectMetadata.assignedUser || undefined}
+        users={projectMetadata.users}
+        companies={projectMetadata.companies}
         onAssignedUserChange={handleAssignedUserChange}
         onContactChange={handleContactChange}
         onProjectUpdate={handleProjectUpdate}
@@ -97,13 +111,11 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         onTagsChange={setProjectTags}
       />
       <ProjectDetail
-        project={projectDetails.project}
-        phases={projectDetails.phases}
-        tasks={projectDetails.tasks}
-        ticketLinks={projectDetails.ticketLinks}
-        statuses={projectDetails.statuses}
-        users={projectDetails.users}
-        companies={projectDetails.companies}
+        project={projectMetadata.project}
+        phases={projectMetadata.phases}
+        statuses={projectMetadata.statuses}
+        users={projectMetadata.users}
+        companies={projectMetadata.companies}
         onTagsUpdate={handleTagsUpdate}
       />
     </div>

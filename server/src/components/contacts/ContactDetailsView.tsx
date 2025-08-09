@@ -32,6 +32,7 @@ interface ContactDetailsViewProps {
   userId?: string;
   documents?: IDocument[];
   onDocumentCreated?: () => Promise<void>;
+  quickView?: boolean;
 }
 
 interface TableRowProps {
@@ -65,7 +66,8 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   isInDrawer = false,
   userId,
   documents: initialDocuments = [],
-  onDocumentCreated
+  onDocumentCreated,
+  quickView = false
 }) => {
   const [contact, setContact] = useState<IContact>(initialContact);
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
@@ -242,16 +244,18 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
               <Heading size="6">{contact.full_name}</Heading>
             </div>
             <div className="flex items-center space-x-2">
-              <Button
-                id={`${id}-back-button`}
-                onClick={goBack}
-                variant="ghost"
-                size="sm"
-                className="flex items-center"
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
-              </Button>
+              {!quickView && (
+                <Button
+                  id={`${id}-back-button`}
+                  onClick={goBack}
+                  variant="ghost"
+                  size="sm"
+                  className="flex items-center"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back
+                </Button>
+              )}
               {isInDrawer && (
                 <Button
                   id={`${id}-go-to-contact-button`}
@@ -307,13 +311,14 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
                   entityId={contact.contact_name_id}
                   entityType="contact"
                   initialTags={contact.tags || []}
+                  useInlineInput={isInDrawer}
                 />
               </td>
             </tr>
           </tbody>
         </table>
 
-        {userId && (
+        {!quickView && userId && (
           <div className="mt-6">
             <Heading size="4" className="mb-4">Documents</Heading>
             <Documents
@@ -328,16 +333,18 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
           </div>
         )}
 
-        <div className="mt-6">
-          <InteractionsFeed 
-            id={`${id}-interactions`}
-            entityId={contact.contact_name_id} 
-            entityType="contact"
-            companyId={contact.company_id!}
-            interactions={interactions}
-            setInteractions={setInteractions}
-          />
-        </div>
+        {!quickView && (
+          <div className="mt-6">
+            <InteractionsFeed 
+              id={`${id}-interactions`}
+              entityId={contact.contact_name_id} 
+              entityType="contact"
+              companyId={contact.company_id!}
+              interactions={interactions}
+              setInteractions={setInteractions}
+            />
+          </div>
+        )}
       </div>
     </ReflectionContainer>
   );

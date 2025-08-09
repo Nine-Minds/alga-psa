@@ -7,6 +7,7 @@ import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
 import TimezonePicker from 'server/src/components/ui/TimezonePicker';
+import CustomTabs, { TabContent } from 'server/src/components/ui/CustomTabs';
 import { getCurrentUser, updateUser } from 'server/src/lib/actions/user-actions/userActions';
 import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import type { NotificationCategory, NotificationSubtype, UserNotificationPreference } from 'server/src/lib/models/notification';
@@ -186,109 +187,125 @@ export default function UserProfile({ userId }: UserProfileProps) {
     );
   }
 
+  const tabContent: TabContent[] = [
+    {
+      label: "Profile",
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>Basic Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* User Avatar Upload */}
+            <UserAvatarUpload
+              userId={user.user_id}
+              userName={`${user.first_name} ${user.last_name}`}
+              avatarUrl={avatarUrl}
+              onAvatarChange={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
+              className="mb-4"
+              size="xl"
+            />
+            
+            <div className="grid grid-cols-2 gap-x-4 gap-y-4">
+              <div>
+                <Label htmlFor="firstName">First Name</Label>
+                <Input
+                  id="firstName"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input
+                id="phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="timezone">Time Zone</Label>
+              <TimezonePicker
+                value={timezone}
+                onValueChange={setTimezone}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
+      label: "Security",
+      content: <PasswordChangeForm />,
+    },
+    {
+      label: "API Keys",
+      content: <ApiKeysSetup />,
+    },
+    {
+      label: "Notifications",
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>Notification Preferences</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {categories.map((category: NotificationCategory): JSX.Element => (
+                <div key={category.id} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>{category.name}</Label>
+                    <Switch
+                      checked={category.is_enabled}
+                      onCheckedChange={(checked) => handleCategoryToggle(category.id, checked)}
+                    />
+                  </div>
+                  <div className="ml-6 space-y-2">
+                    {subtypesByCategory[category.id]?.map((subtype: NotificationSubtype): JSX.Element => (
+                      <div key={subtype.id} className="flex items-center justify-between">
+                        <Label className="text-sm">{subtype.name}</Label>
+                        <Switch
+                          checked={subtype.is_enabled}
+                          disabled={!category.is_enabled}
+                          onCheckedChange={(checked) => handleSubtypeToggle(category.id, subtype.id, checked)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Basic Info Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Basic Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {/* User Avatar Upload */}
-          <UserAvatarUpload
-            userId={user.user_id}
-            userName={`${user.first_name} ${user.last_name}`}
-            avatarUrl={avatarUrl}
-            onAvatarChange={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
-            className="mb-4"
-            size="xl"
-          />
-          
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-            <div>
-              <Label htmlFor="firstName">First Name</Label>
-              <Input
-                id="firstName"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="lastName">Last Name</Label>
-              <Input
-                id="lastName"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-              />
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="phone">Phone Number</Label>
-            <Input
-              id="phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="timezone">Time Zone</Label>
-            <TimezonePicker
-              value={timezone}
-              onValueChange={setTimezone}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Password Change Section */}
-      <PasswordChangeForm />
-
-      {/* API Keys Section */}
-      <ApiKeysSetup />
-
-      {/* Notification Preferences Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Notification Preferences</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            {categories.map((category: NotificationCategory): JSX.Element => (
-              <div key={category.id} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>{category.name}</Label>
-                  <Switch
-                    checked={category.is_enabled}
-                    onCheckedChange={(checked) => handleCategoryToggle(category.id, checked)}
-                  />
-                </div>
-                <div className="ml-6 space-y-2">
-                  {subtypesByCategory[category.id]?.map((subtype: NotificationSubtype): JSX.Element => (
-                    <div key={subtype.id} className="flex items-center justify-between">
-                      <Label className="text-sm">{subtype.name}</Label>
-                      <Switch
-                        checked={subtype.is_enabled}
-                        disabled={!category.is_enabled}
-                        onCheckedChange={(checked) => handleSubtypeToggle(category.id, subtype.id, checked)}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <CustomTabs 
+        tabs={tabContent}
+        defaultTab="Profile"
+      />
 
       {/* Action Buttons */}
       <div className="flex justify-end space-x-2">

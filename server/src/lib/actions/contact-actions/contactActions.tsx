@@ -8,6 +8,10 @@ import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { unparseCSV } from 'server/src/lib/utils/csvParser';
 import { getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { createTag } from 'server/src/lib/actions/tagActions';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { hasPermission } from 'server/src/lib/auth/rbac';
+import { ContactModel, CreateContactInput } from '@alga-psa/shared/models/contactModel';
 
 export async function getContactByContactNameId(contactNameId: string): Promise<IContact | null> {
   // Revert to using createTenantKnex for now
@@ -101,7 +105,6 @@ export async function deleteContact(contactId: string) {
       const ticketCount = await trx('tickets')
         .where({
           contact_name_id: contactId,
-          is_closed: false,
           tenant
         })
         .count('* as count')
@@ -137,6 +140,45 @@ export async function deleteContact(contactId: string) {
         dependencies.push('document');
         counts['document'] = Number(documentCount.count);
       }
+
+      // Check for projects
+      const projectCount = await trx('projects')
+        .where({
+          contact_name_id: contactId,
+          tenant
+        })
+        .count('* as count')
+        .first();
+      if (projectCount && Number(projectCount.count) > 0) {
+        dependencies.push('project');
+        counts['project'] = Number(projectCount.count);
+      }
+
+      // Check for channels
+      const channelCount = await trx('channels')
+        .where({
+          contact_name_id: contactId,
+          tenant
+        })
+        .count('* as count')
+        .first();
+      if (channelCount && Number(channelCount.count) > 0) {
+        dependencies.push('channel');
+        counts['channel'] = Number(channelCount.count);
+      }
+
+      // Check for comments
+      const commentCount = await trx('comments')
+        .where({
+          contact_name_id: contactId,
+          tenant
+        })
+        .count('* as count')
+        .first();
+      if (commentCount && Number(commentCount.count) > 0) {
+        dependencies.push('comment');
+        counts['comment'] = Number(commentCount.count);
+      }
     });
 
     // If there are dependencies, throw a detailed error
@@ -148,14 +190,45 @@ export async function deleteContact(contactId: string) {
     // If no dependencies, proceed with deletion
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       try {
-        // Delete associated tags first
-        await trx('tags')
+        // Delete associated tag mappings first
+        // First get the tag_ids for this contact
+        const tagMappings = await trx('tag_mappings')
+          .where({
+            tagged_id: contactId,
+            tagged_type: 'contact',
+            tenant
+          })
+          .select('tag_id');
+        
+        // Delete the tag mappings
+        await trx('tag_mappings')
           .where({
             tagged_id: contactId,
             tagged_type: 'contact',
             tenant
           })
           .delete();
+        
+        // Check if any of these tags are now orphaned (not used by anything else)
+        for (const mapping of tagMappings) {
+          const remainingMappings = await trx('tag_mappings')
+            .where({
+              tag_id: mapping.tag_id,
+              tenant
+            })
+            .count('* as count')
+            .first();
+          
+          // If no other mappings exist for this tag, delete the tag definition
+          if (remainingMappings && Number(remainingMappings.count) === 0) {
+            await trx('tag_definitions')
+              .where({
+                tag_id: mapping.tag_id,
+                tenant
+              })
+              .delete();
+          }
+        }
 
         // Delete the contact
         const deleted = await trx('contacts')
@@ -168,7 +241,12 @@ export async function deleteContact(contactId: string) {
 
         return { success: true };
       } catch (err) {
-        throw new Error('SYSTEM_ERROR: Failed to delete contact and its associated records');
+        console.error('Error during contact deletion transaction:', err);
+        // Re-throw the error with more context
+        if (err instanceof Error) {
+          throw new Error(`SYSTEM_ERROR: Failed to delete contact - ${err.message}`);
+        }
+        throw new Error('SYSTEM_ERROR: An unexpected error occurred while deleting the contact');
       }
     });
 
@@ -397,100 +475,45 @@ export async function addContact(contactData: Partial<IContact>): Promise<IConta
     throw new Error('SYSTEM_ERROR: Tenant configuration not found');
   }
 
-
-  // Validate required fields with specific messages
-  if (!contactData.full_name?.trim() && !contactData.email?.trim()) {
-    throw new Error('VALIDATION_ERROR: Full name and email address are required');
+  // Check permissions (keep authentication/authorization in server action)
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
   }
-  if (!contactData.full_name?.trim()) {
-    throw new Error('VALIDATION_ERROR: Full name is required');
-  }
-  if (!contactData.email?.trim()) {
-    throw new Error('VALIDATION_ERROR: Email address is required');
+  
+  if (!await hasPermission(currentUser, 'contact', 'create')) {
+    throw new Error('Permission denied: Cannot create contacts');
   }
 
-  // Validate email format
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(contactData.email.trim())) {
-    throw new Error('VALIDATION_ERROR: Please enter a valid email address');
-  }
-
-
-  // Check if email already exists
-  const existingContact = await db('contacts')
-    .where({ email: contactData.email.trim().toLowerCase(), tenant })
-    .first();
-
-  if (existingContact) {
-    throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system');
-  }
-
-  // If company_id is provided, verify it exists
-  if (contactData.company_id) {
-    const company = await db('companies')
-      .where({ company_id: contactData.company_id, tenant })
-      .first();
-
-    if (!company) {
-      throw new Error('FOREIGN_KEY_ERROR: The selected company no longer exists');
-    }
-  }
-
-  // Prepare contact data with proper sanitization
-  const contactWithTenant = {
-    ...contactData,
-    full_name: contactData.full_name.trim(),
-    email: contactData.email.trim().toLowerCase(),
-    phone_number: contactData.phone_number?.trim() || null,
-    role: contactData.role?.trim() || null,
-    notes: contactData.notes?.trim() || null,
-    tenant: tenant,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
+  // Convert to CreateContactInput format for the model
+  const createInput: CreateContactInput = {
+    full_name: contactData.full_name || '',
+    email: contactData.email,
+    phone_number: contactData.phone_number,
+    company_id: contactData.company_id || undefined,
+    role: contactData.role,
+    notes: contactData.notes || undefined,
+    is_inactive: contactData.is_inactive
   };
 
-  try {
-    const [newContact] = await db('contacts').insert(contactWithTenant).returning('*');
-
-    if (!newContact) {
-      throw new Error('SYSTEM_ERROR: Failed to create contact record');
-    }
-
-    return newContact;
-  } catch (err) {
-    // Log the error for debugging
-    console.error('Error creating contact:', err);
-
-    // Handle known error types
-    if (err instanceof Error) {
-      const message = err.message;
-
-      // If it's already one of our formatted errors, rethrow it
-      if (message.includes('VALIDATION_ERROR:') ||
-        message.includes('EMAIL_EXISTS:') ||
-        message.includes('FOREIGN_KEY_ERROR:') ||
-        message.includes('SYSTEM_ERROR:')) {
-        throw err;
-      }
-
-      // Handle database-specific errors
-      if (message.includes('duplicate key') && message.includes('contacts_email_tenant_unique')) {
-        throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system');
-      }
-
-      if (message.includes('violates not-null constraint')) {
-        const field = message.match(/column "([^"]+)"/)?.[1] || 'field';
-        throw new Error(`VALIDATION_ERROR: The ${field} is required`);
-      }
-
-      if (message.includes('violates foreign key constraint') && message.includes('company_id')) {
-        throw new Error('FOREIGN_KEY_ERROR: The selected company is no longer valid');
-      }
-    }
-
-    // For unexpected errors, throw a generic system error
-    throw new Error('SYSTEM_ERROR: An unexpected error occurred while creating the contact');
-  }
+  // Use the shared ContactModel to create the contact
+  // The model handles all validation and business logic
+  return await withTransaction(db, async (trx: Knex.Transaction) => {
+    const contact = await ContactModel.createContact(
+      createInput,
+      tenant,
+      trx
+    );
+    
+    // Convert to server IContact format (ensuring non-nullable fields)
+    return {
+      ...contact,
+      phone_number: contact.phone_number || '',
+      email: contact.email || '',
+      role: contact.role || '',
+      is_inactive: contact.is_inactive || false
+    } as IContact;
+  });
 }
 
 export async function updateContact(contactData: Partial<IContact>): Promise<IContact> {
@@ -768,7 +791,7 @@ export async function exportContactsToCSV(
   companies: ICompany[],
   contactTags: Record<string, ITag[]>
 ): Promise<string> {
-  const fields = ['full_name', 'email', 'phone_number', 'company_name', 'role', 'notes', 'tags'];
+  const fields = ['full_name', 'email', 'phone_number', 'company', 'role', 'notes', 'tags'];
 
   const data = contacts.map((contact): Record<string, string> => {
     const company = companies.find(c => c.company_id === contact.company_id);
@@ -779,7 +802,7 @@ export async function exportContactsToCSV(
       full_name: contact.full_name || '',
       email: contact.email || '',
       phone_number: contact.phone_number || '',
-      company_name: company?.company_name || '',
+      company: company?.company_name || '',
       role: contact.role || '',
       notes: contact.notes || '',
       tags: tagText
@@ -789,8 +812,38 @@ export async function exportContactsToCSV(
   return unparseCSV(data, fields);
 }
 
+export async function generateContactCSVTemplate(): Promise<string> {
+  // Create template with Alice in Wonderland themed sample data
+  const templateData = [
+    {
+      full_name: 'Alice Liddell',
+      email: 'alice@wonderland.com',
+      phone_number: '+1-555-CURIOUS',
+      company: 'Mad Hatter Tea Company',
+      role: 'Chief Explorer',
+      notes: 'Fell down a rabbit hole and discovered a whole new world',
+      tags: 'Curious, Adventurous, Brave'
+    },
+    {
+      full_name: 'Mad Hatter',
+      email: 'hatter@teaparty.wonderland',
+      phone_number: '+1-555-TEA-TIME',
+      company: 'Mad Hatter Tea Company',
+      role: 'Chief Tea Ceremony Expert',
+      notes: 'Knows why a raven is like a writing desk',
+      tags: 'Creative, Eccentric, Tea Expert'
+    }
+  ];
+
+  const fields = ['full_name', 'email', 'phone_number', 'company', 'role', 'notes', 'tags'];
+
+  return unparseCSV(templateData, fields);
+}
+
+type ContactImportData = Partial<IContact> & { tags?: string };
+
 export async function importContactsFromCSV(
-  contactsData: Array<Partial<IContact>>,
+  contactsData: Array<ContactImportData>,
   updateExisting: boolean = false
 ): Promise<ImportContactResult[]> {
   const { knex: db, tenant } = await createTenantKnex();
@@ -802,6 +855,12 @@ export async function importContactsFromCSV(
     // Validate input
     if (!contactsData || contactsData.length === 0) {
       throw new Error('VALIDATION_ERROR: No contact data provided');
+    }
+
+    // Get current user for tag creation
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('SYSTEM_ERROR: User authentication required');
     }
 
     const results: ImportContactResult[] = [];
@@ -872,6 +931,36 @@ export async function importContactsFromCSV(
               .update(updateData)
               .returning('*');
 
+            // Handle tags if provided (for updates, we'll replace existing tags)
+            if (contactData.tags !== undefined) {
+              try {
+                // First, delete existing tag mappings
+                await trx('tag_mappings')
+                  .where({
+                    tagged_id: savedContact.contact_name_id,
+                    tagged_type: 'contact',
+                    tenant
+                  })
+                  .delete();
+
+                // Then create new tags if any
+                if (contactData.tags) {
+                  const tagTexts = contactData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
+                  for (const tagText of tagTexts) {
+                    await createTag({
+                      tag_text: tagText,
+                      tagged_id: savedContact.contact_name_id,
+                      tagged_type: 'contact',
+                      created_by: currentUser.user_id
+                    });
+                  }
+                }
+              } catch (tagError) {
+                console.error('Failed to update tags during CSV import:', tagError);
+                // Don't fail the contact import if tag update fails
+              }
+            }
+
             results.push({
               success: true,
               message: 'Contact updated successfully',
@@ -896,6 +985,24 @@ export async function importContactsFromCSV(
             [savedContact] = await trx('contacts')
               .insert(contactToCreate)
               .returning('*');
+
+            // Handle tags if provided
+            if (contactData.tags) {
+              try {
+                const tagTexts = contactData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
+                for (const tagText of tagTexts) {
+                  await createTag({
+                    tag_text: tagText,
+                    tagged_id: savedContact.contact_name_id,
+                    tagged_type: 'contact',
+                    created_by: currentUser.user_id
+                  });
+                }
+              } catch (tagError) {
+                console.error('Failed to create tags during CSV import:', tagError);
+                // Don't fail the contact import if tag creation fails
+              }
+            }
 
             results.push({
               success: true,
@@ -1265,4 +1372,118 @@ function extractNameFromEmail(email: string): string {
     .split(' ')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
+}
+
+/**
+ * Update contact's portal admin status
+ */
+export async function updateContactPortalAdminStatus(
+  contactId: string,
+  isPortalAdmin: boolean
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+
+    // Check permissions
+    const hasUpdatePermission = await hasPermission(currentUser, 'client', 'update');
+    if (!hasUpdatePermission) {
+      throw new Error('You do not have permission to update client settings');
+    }
+
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const updated = await trx('contacts')
+        .where({ 
+          contact_name_id: contactId,
+          tenant
+        })
+        .update({
+          is_client_admin: isPortalAdmin,
+          updated_at: new Date().toISOString()
+        });
+
+      if (updated === 0) {
+        throw new Error('Contact not found');
+      }
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('[contactActions.updateContactPortalAdminStatus]', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to update contact' 
+    };
+  }
+}
+
+/**
+ * Get user associated with a contact
+ */
+export async function getUserByContactId(
+  contactId: string
+): Promise<{ user: any | null; error?: string }> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+
+    // Check permissions
+    const hasReadPermission = await hasPermission(currentUser, 'client', 'read');
+    if (!hasReadPermission) {
+      throw new Error('You do not have permission to view client information');
+    }
+
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
+    // First get the user
+    const user = await knex('users')
+      .where({ 
+        contact_id: contactId,
+        tenant: tenant,
+        user_type: 'client'
+      })
+      .first();
+
+    if (!user) {
+      return { user: null, error: undefined };
+    }
+
+    // Then get the roles separately
+    const roles = await knex('user_roles')
+      .select('roles.role_id', 'roles.role_name')
+      .join('roles', function(this: Knex.JoinClause) {
+        this.on('user_roles.role_id', 'roles.role_id')
+          .andOn('roles.tenant', knex.raw('?', [tenant]));
+      })
+      .where({
+        'user_roles.user_id': user.user_id,
+        'user_roles.tenant': tenant
+      });
+
+    // Attach roles to user object
+    const userWithRoles = {
+      ...user,
+      roles: roles || []
+    };
+
+    return { user: userWithRoles, error: undefined };
+  } catch (error) {
+    console.error('[contactActions.getUserByContactId]', error);
+    return { 
+      user: null,
+      error: error instanceof Error ? error.message : 'Failed to get user' 
+    };
+  }
 }

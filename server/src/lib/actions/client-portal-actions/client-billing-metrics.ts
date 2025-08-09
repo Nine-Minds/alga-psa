@@ -162,11 +162,11 @@ export async function getClientHoursByService(
       .select(
         'sc.service_id',
         'sc.service_name',
-        knex.raw('COALESCE(sc.standard_service_type_id, sc.custom_service_type_id) as service_type_id'),
+        'sc.custom_service_type_id as service_type_id',
         knex.raw('st.name as service_type_name'), 
         knex.raw('SUM(time_entries.billable_duration) as total_duration')
       )
-        .groupBy('sc.service_id', 'sc.service_name', trx.raw('COALESCE(sc.standard_service_type_id, sc.custom_service_type_id)'), 'st.name', groupByColumn)
+        .groupBy('sc.service_id', 'sc.service_name', 'sc.custom_service_type_id', 'st.name', groupByColumn)
         .orderBy(groupByColumn);
 
       const rawResults: any[] = await timeEntriesQuery;

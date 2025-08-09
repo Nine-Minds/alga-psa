@@ -3,18 +3,11 @@
  * GET /api/v1/permissions/categories - Get permission categories
  */
 
-import { PermissionRoleController } from 'server/src/lib/api/controllers/PermissionRoleController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiPermissionController } from '@/lib/api/controllers/ApiPermissionController';
 
-const controller = new PermissionRoleController();
+const controller = new ApiPermissionController();
 
-export async function GET(request: Request) {
-  try {
-    return await controller.getPermissionCategories()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+export const GET = controller.getCategories();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

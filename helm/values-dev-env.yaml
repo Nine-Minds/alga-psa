@@ -10,6 +10,25 @@ version: "dev"
 env: "development"
 host: "http://localhost:3000"
 
+# Secret Provider Configuration (Development Environment)
+# Development environments typically use simple env and filesystem providers
+secrets:
+  # Development read chain: env vars for easy overrides, filesystem for mounted secrets
+  readChain: "env,filesystem"
+  
+  # Use filesystem for writes in development
+  writeProvider: "filesystem"
+  
+  # Optional environment variable prefix for development
+  envPrefix: ""
+  
+  # Vault configuration (typically not used in development)
+  vault:
+    addr: ""
+    token: ""
+    appSecretPath: "kv/data/app/secrets"
+    tenantSecretPathTemplate: "kv/data/tenants/{tenantId}/secrets"
+
 # Development Environment Configuration
 devEnv:
   enabled: false  # Set to true when deploying dev environments

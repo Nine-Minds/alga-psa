@@ -20,7 +20,7 @@ if (process.env.NODE_ENV === 'test') {
 }
 
 setTypeParser(20, parseFloat);
-setTypeParser(1114, str => new Date(str + 'Z'));
+setTypeParser(1114, (str: string) => new Date(str + 'Z'));
 
 import { getSecret } from '../core/getSecret.js';
 
@@ -68,6 +68,24 @@ const baseConfig: Record<string, CustomKnexConfig> = {
       reapIntervalMillis: 500,
       createTimeoutMillis: 1000,
       destroyTimeoutMillis: 500
+    }
+  },
+  test: {
+    client: 'pg',
+    connection: {
+      host: process.env.DB_HOST || 'localhost',
+      port: Number(process.env.DB_PORT) || 5432,
+      user: process.env.DB_USER_ADMIN || 'postgres',
+      password: await getPostgresPassword(),
+      database: process.env.DB_NAME_SERVER || 'server'
+    },
+    pool: {
+      min: 0,
+      max: 10,
+      idleTimeoutMillis: 1000,
+      reapIntervalMillis: 1000,
+      createTimeoutMillis: 3000,
+      destroyTimeoutMillis: 1000
     }
   },
   production: {

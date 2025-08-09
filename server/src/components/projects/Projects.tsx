@@ -14,9 +14,10 @@ import { getContactByContactNameId } from 'server/src/lib/actions/contact-action
 import { findUserById } from 'server/src/lib/actions/user-actions/userActions';
 import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
 import { TagFilter, TagManager } from 'server/src/components/tags';
+import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
-import { Search, MoreVertical, Pen, Trash2, XCircle } from 'lucide-react';
+import { Search, MoreVertical, Pen, Trash2, XCircle, ExternalLink } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useDrawer } from "server/src/context/DrawerContext";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
@@ -30,6 +31,8 @@ import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import Drawer from 'server/src/components/ui/Drawer';
+import CompanyDetails from 'server/src/components/companies/CompanyDetails';
 
 interface ProjectsProps {
   initialProjects: IProject[];
@@ -37,6 +40,9 @@ interface ProjectsProps {
 }
 
 export default function Projects({ initialProjects, companies }: ProjectsProps) {
+  // Pre-fetch tag permissions to prevent individual API calls
+  useTagPermissions(['project']);
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
   const [projects, setProjects] = useState<IProject[]>(initialProjects);
@@ -48,7 +54,7 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
   // Tag-related state
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const projectTagsRef = useRef<Record<string, ITag[]>>({});
-  const [allUniqueTags, setAllUniqueTags] = useState<string[]>([]);
+  const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
   
   // New filter states
   const [filterCompanyId, setFilterCompanyId] = useState<string | null>(null);
@@ -62,18 +68,22 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [users, setUsers] = useState<IUserWithRoles[]>([]);
   
+  // Quick View state
+  const [quickViewCompany, setQuickViewCompany] = useState<ICompany | null>(null);
+  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
+  
   const handleTagsChange = (projectId: string, tags: ITag[]) => {
     projectTagsRef.current[projectId] = tags;
     
-    // Update unique tags list
-    const allTags = new Set<string>();
-    Object.values(projectTagsRef.current).forEach(entityTags => {
-      entityTags.forEach(tag => allTags.add(tag.tag_text));
+    // Update unique tags list if needed
+    setAllUniqueTags(current => {
+      const currentTagTexts = new Set(current.map(t => t.tag_text));
+      const newTags = tags.filter(tag => !currentTagTexts.has(tag.tag_text));
+      return [...current, ...newTags];
     });
-    setAllUniqueTags(Array.from(allTags));
   };
 
-  // Fetch tags when projects change
+  // Fetch project-specific tags when projects change
   useEffect(() => {
     const fetchTags = async () => {
       if (projects.length === 0) return;
@@ -81,10 +91,8 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
       try {
         const projectIds = projects.map(project => project.project_id).filter((id): id is string => id !== undefined);
         
-        const [projectTags, allTags] = await Promise.all([
-          findTagsByEntityIds(projectIds, 'project'),
-          findAllTagsByType('project')
-        ]);
+        // Only fetch project-specific tags, not all tags again
+        const projectTags = await findTagsByEntityIds(projectIds, 'project');
 
         const newProjectTags: Record<string, ITag[]> = {};
         projectTags.forEach(tag => {
@@ -95,13 +103,25 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
         });
 
         projectTagsRef.current = newProjectTags;
-        setAllUniqueTags(allTags.map(tag => tag.tag_text));
       } catch (error) {
         console.error('Error fetching tags:', error);
       }
     };
     fetchTags();
   }, [projects]);
+
+  // Fetch all unique tags only once on mount
+  useEffect(() => {
+    const fetchAllTags = async () => {
+      try {
+        const allTags = await findAllTagsByType('project');
+        setAllUniqueTags(allTags);
+      } catch (error) {
+        console.error('Error fetching all tags:', error);
+      }
+    };
+    fetchAllTags();
+  }, []);
 
   // Fetch contacts and users
   useEffect(() => {
@@ -228,13 +248,21 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
     }
   };
 
+  const onQuickViewCompany = (companyId: string) => {
+    const company = companies.find(c => c.company_id === companyId);
+    if (company) {
+      setQuickViewCompany(company);
+      setIsQuickViewOpen(true);
+    }
+  };
+
   const columns: ColumnDefinition<IProject>[] = [
     {
       title: 'Project Name',
       dataIndex: 'project_name',
       width: '20%',
       render: (text: string, record: IProject) => (
-        <Link href={`/msp/projects/${record.project_id}`} className="text-blue-600 hover:text-blue-800 block truncate">
+        <Link href={`/msp/projects/${record.project_id}`} className="text-blue-600 hover:text-blue-800 block whitespace-normal break-words">
           {text}
         </Link>
       ),
@@ -245,7 +273,19 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
       width: '15%',
       render: (value, record) => {
         const company = companies.find(c => c.company_id === value);
-        return company ? company.company_name : 'No Client';
+        if (!company) return 'No Client';
+        
+        return (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onQuickViewCompany(value);
+            }}
+            className="text-blue-500 hover:underline text-left whitespace-normal break-words"
+          >
+            {company.company_name}
+          </button>
+        );
       }
     },
     {
@@ -525,6 +565,23 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
         confirmLabel="Delete"
         cancelLabel="Cancel"
       />
+
+      {/* Company Quick View Drawer */}
+      <Drawer
+        isOpen={isQuickViewOpen}
+        onClose={() => {
+          setIsQuickViewOpen(false);
+          setQuickViewCompany(null);
+        }}
+      >
+        {quickViewCompany && (
+          <CompanyDetails
+            company={quickViewCompany}
+            isInDrawer={true}
+            quickView={true}
+          />
+        )}
+      </Drawer>
     </div>
   );
 }

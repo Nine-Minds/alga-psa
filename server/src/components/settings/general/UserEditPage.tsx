@@ -1,11 +1,13 @@
+'use client';
+
 import React, { useCallback } from 'react';
-import { useRouter } from 'next/router';
+import { useParams } from 'next/navigation';
 import UserDetails from './UserDetails';
 import { Card, CardContent, CardHeader, CardTitle } from "server/src/components/ui/Card";
 
 const UserEditPage: React.FC = () => {
-  const router = useRouter();
-  const { id } = router.query;
+  const params = useParams();
+  const id = params?.id as string;
 
   const handleUpdate = useCallback(() => {
     console.log('User updated successfully');

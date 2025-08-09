@@ -16,19 +16,43 @@ FROM base AS deps
 # Copy package files for both root and server parts of the project
 COPY package.json package-lock.json ./
 COPY server/package.json ./server/
+COPY shared/package.json ./shared/
 COPY tsconfig.base.json ./
 COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/assemblyscript
 
-RUN npm install
 
 # Builder stage for compiling the application
 FROM deps AS builder
 # Copy all project files and build the server
-COPY . .
 
 WORKDIR /app
-RUN npm install --workspace=shared
-RUN npm run build --workspace=shared
+
+COPY . .
+
+# Remove ee directory for CE build to ensure stub implementations are used
+RUN rm -rf /app/ee
+
+# Create a dummy file for the relative import that webpack tries to resolve
+RUN mkdir -p /app/ee/server/src/lib/extensions && \
+    echo "export const initializeExtensions = async () => { console.log('CE build - extensions not available'); };" > /app/ee/server/src/lib/extensions/initialize.js
+
+# Remove EE-specific scripts that shouldn't be in CE build
+RUN rm -f /app/server/src/scripts/check-extension.ts
+
+RUN npm install --include=optional sharp --workspace=shared --workspace=server
+RUN npm install --workspace=shared --workspace=server
+
+# Build shared module first
+WORKDIR /app/shared
+RUN npm run build
+
+WORKDIR /app/server
+RUN npm install
+
+# Increase Node.js memory limit for the build process
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
+RUN npm run build
 
 WORKDIR /app/server
 
@@ -45,14 +69,12 @@ RUN mkdir -p /app/secrets && \
     echo "secure-email-password-placeholder" > /app/secrets/email_password && \
     echo "secure-oauth-client-id-placeholder" > /app/secrets/google_oauth_client_id && \
     echo "secure-oauth-client-secret-placeholder" > /app/secrets/google_oauth_client_secret && \
+    echo "secure-ee-gmail-client-secret-placeholder" > /app/secrets/EE_GMAIL_CLIENT_SECRET && \
+    echo "secure-ee-microsoft-client-secret-placeholder" > /app/secrets/EE_MICROSOFT_CLIENT_SECRET && \
     chmod 600 /app/secrets/*
 # Copy example environment file
 COPY .env.example /app/.env   
 COPY .env.example /app/server/.env  
-
-
-WORKDIR /app
-RUN npm run build
 
 # Final production image with minimal runtime artifacts
 FROM node:alpine
@@ -81,14 +103,28 @@ COPY --from=builder /app/server/package.json ./server/
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/package-lock.json ./
 COPY --from=builder /app/server/knexfile.cjs ./server/
+COPY --from=builder /app/server/tsconfig.json ./server/
+COPY --from=builder /app/server/index.ts ./server/
 COPY --from=builder /app/server/migrations/ ./server/migrations/
 COPY --from=builder /app/server/seeds/ ./server/seeds/
 COPY --from=builder /app/server/src/ ./server/src/
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/server/node_modules ./server/node_modules
+
+RUN npm install -g tsx
 
 COPY server/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 3000
+
+# Environment configuration
 ENV NODE_ENV=production
+
+# Secret provider configuration
+# Default configuration for composite secret system
+# Can be overridden in docker-compose or deployment environments
+ENV SECRET_READ_CHAIN="env,filesystem"
+ENV SECRET_WRITE_PROVIDER="filesystem"
+
 ENTRYPOINT ["/app/entrypoint.sh"]

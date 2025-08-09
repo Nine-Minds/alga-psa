@@ -9,15 +9,16 @@ import WorkflowEventTimeline from 'server/src/components/workflows/WorkflowEvent
 import WorkflowActionsList from 'server/src/components/workflows/WorkflowActionsList';
 import WorkflowControls from 'server/src/components/workflows/WorkflowControls';
 
-export const revalidate = 5; // Revalidate every 5 seconds
+export const dynamic = 'force-dynamic';
 
 interface WorkflowDetailPageProps {
-  params: {
+  params: Promise<{
     executionId: string;
-  };
+  }>;
 }
 export default async function WorkflowDetailPage({ params }: WorkflowDetailPageProps) {
-  const { executionId } = params;
+  const resolvedParams = await params;
+  const { executionId } = resolvedParams;
   
   // Get workflow execution details
   const workflowDetails = await getWorkflowExecutionDetails(executionId);

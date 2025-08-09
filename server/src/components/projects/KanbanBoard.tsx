@@ -20,7 +20,8 @@ interface KanbanBoardProps {
   ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] };
   taskResources: { [taskId: string]: any[] };
   taskTags?: Record<string, ITag[]>;
-  allTaskTagTexts?: string[];
+  taskDocumentCounts?: Map<string, number>;
+  allTaskTags?: ITag[];
   projectTreeData?: any[]; // Add projectTreeData prop
   animatingTasks: Set<string>;
   onDrop: (e: React.DragEvent, statusId: string, draggedTaskId: string, beforeTaskId: string | null, afterTaskId: string | null) => void;
@@ -60,7 +61,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   ticketLinks,
   taskResources,
   taskTags = {},
-  allTaskTagTexts = [],
+  taskDocumentCounts = {},
+  allTaskTags = [],
   projectTreeData,
   animatingTasks,
   onDrop,
@@ -132,6 +134,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             ticketLinks={ticketLinks}
             taskResources={taskResources}
             taskTags={taskTags}
+            taskDocumentCounts={taskDocumentCounts instanceof Map ? Object.fromEntries(taskDocumentCounts.entries()) : {}}
             statusIcon={statusIcons[status.name] || <Circle className="w-4 h-4" />}
             backgroundColor={backgroundColor}
             darkBackgroundColor={darkBackgroundColor}

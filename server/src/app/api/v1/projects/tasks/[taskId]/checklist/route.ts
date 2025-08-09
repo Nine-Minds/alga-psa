@@ -4,26 +4,12 @@
  * POST /api/v1/projects/tasks/{taskId}/checklist - Create checklist item
  */
 
-import { ProjectController } from 'server/src/lib/api/controllers/ProjectController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiProjectController } from '@/lib/api/controllers/ApiProjectController';
 
-const controller = new ProjectController();
+const controller = new ApiProjectController();
 
-export async function GET(request: Request) {
-  try {
-    return await controller.getTaskChecklist()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
-
-export async function POST(request: Request) {
-  try {
-    return await controller.createChecklistItem()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+export const GET = controller.getTaskChecklist();
+export const POST = controller.createChecklistItem();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

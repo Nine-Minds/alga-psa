@@ -6,9 +6,10 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { fileId: string } }
+  { params }: { params: Promise<{ fileId: string }> }
 ) {
-  const fileId = params.fileId;
+  const resolvedParams = await params;
+  const fileId = resolvedParams.fileId;
 
   if (!fileId) {
     return new NextResponse('File ID is required', { status: 400 });

@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { BaseEmailAdapter } from './base/BaseEmailAdapter';
 import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/email.interfaces';
-import { getSecretProviderInstance } from '@shared/core';
+import { getSecretProviderInstance } from '@alga-psa/shared/core';
 
 /**
  * Microsoft Graph API adapter for email processing
@@ -38,7 +38,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
    */
   protected async loadCredentials(): Promise<void> {
     try {
-      const secretProvider = getSecretProviderInstance();
+      const secretProvider = await getSecretProviderInstance();
       const secret = await secretProvider.getTenantSecret(
         this.config.tenant, 
         'email_provider_credentials'
@@ -74,9 +74,9 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         throw new Error('No refresh token available');
       }
 
-      const secretProvider = getSecretProviderInstance();
-      const clientId = await secretProvider.getAppSecret('microsoft_client_id');
-      const clientSecret = await secretProvider.getAppSecret('microsoft_client_secret');
+      const secretProvider = await getSecretProviderInstance();
+      const clientId = await secretProvider.getTenantSecret(this.config.tenant, 'microsoft_client_id');
+      const clientSecret = await secretProvider.getTenantSecret(this.config.tenant, 'microsoft_client_secret');
 
       if (!clientId || !clientSecret) {
         throw new Error('Microsoft OAuth credentials not configured');
@@ -126,7 +126,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
    */
   private async updateStoredCredentials(): Promise<void> {
     try {
-      const secretProvider = getSecretProviderInstance();
+      const secretProvider = await getSecretProviderInstance();
       const secret = await secretProvider.getTenantSecret(
         this.config.tenant, 
         'email_provider_credentials'

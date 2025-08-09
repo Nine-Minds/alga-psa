@@ -8,16 +8,15 @@ import { revalidatePath } from 'next/cache';
 import { getTicketAttributes } from 'server/src/lib/actions/policyActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
+import { deleteEntityTags } from '../../utils/tagCleanup';
 import { 
-  ticketFormSchema, 
   ticketSchema, 
   ticketUpdateSchema, 
   ticketAttributesQuerySchema,
   ticketListItemSchema,
-  ticketListFiltersSchema,
-  createTicketFromAssetSchema
+  ticketListFiltersSchema
 } from 'server/src/lib/schemas/ticket.schema';
 import { z } from 'zod';
 import { validateData } from 'server/src/lib/utils/validation';
@@ -28,7 +27,11 @@ import {
   TicketUpdatedEvent,
   TicketClosedEvent
 } from '../../../lib/eventBus/events';
-import { NumberingService } from 'server/src/lib/services/numberingService';
+import { analytics } from '../../analytics/posthog';
+import { AnalyticsEvents } from '../../analytics/events';
+import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel.js';
+import { ServerEventPublisher } from '../../adapters/serverEventPublisher';
+import { ServerAnalyticsTracker } from '../../adapters/serverAnalyticsTracker';
 
 // Helper function to safely convert dates
 function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null }>(record: T): T {
@@ -67,62 +70,47 @@ export async function createTicketFromAsset(data: CreateTicketFromAssetData, use
             throw new Error('Tenant not found');
         }
 
-        // Validate the input data
-        const validatedData = validateData(createTicketFromAssetSchema, data);
-
-        const numberingService = new NumberingService();
         const result = await db.transaction(async (trx) => {
+            // Server-specific: Check permissions
             if (!await hasPermission(user, 'ticket', 'create', trx)) {
                 throw new Error('Permission denied: Cannot create ticket');
             }
-            const ticketNumber = await numberingService.getNextTicketNumber();
-            
-            // Create the ticket
-          const ticketData: Partial<ITicket> = {
-            ticket_number: ticketNumber,
-            title: validatedData.title,
-            company_id: validatedData.company_id,
-            status_id: await getDefaultStatusId(trx, tenant),
-            entered_by: user.user_id,
-            priority_id: validatedData.priority_id,
-            entered_at: new Date().toISOString(),
-            attributes: {
-              description: validatedData.description
-            },
-            tenant: tenant
-          };
 
-            // Validate complete ticket data
-            const validatedTicket = validateData(ticketSchema.partial(), ticketData);
+            // Server-specific: Create adapters for dependency injection
+            const eventPublisher = new ServerEventPublisher();
+            const analyticsTracker = new ServerAnalyticsTracker();
 
-            // Insert the ticket
-            const [newTicket] = await trx('tickets')
-                .insert(validatedTicket)
-                .returning('*');
+            // Use shared TicketModel for asset ticket creation
+            const ticketResult = await TicketModel.createTicketFromAsset(
+                data,
+                user.user_id,
+                tenant,
+                trx,
+                eventPublisher,
+                analyticsTracker
+            );
 
-            if (!newTicket.ticket_id) {
-                throw new Error('Failed to create ticket');
-            }
-
-            // Create the asset association
+            // Server-specific: Create the asset association
             await AssetAssociationModel.create(trx, {
-                asset_id: validatedData.asset_id,
-                entity_id: newTicket.ticket_id,
+                asset_id: data.asset_id,
+                entity_id: ticketResult.ticket_id,
                 entity_type: 'ticket',
                 relationship_type: 'affected'
             }, user.user_id);
 
-            // Publish ticket created event
-            await safePublishEvent('TICKET_CREATED', {
-                tenantId: tenant,
-                ticketId: newTicket.ticket_id,
-                userId: user.user_id,
-            });
+            // Server-specific: Get full ticket data for return
+            const fullTicket = await trx('tickets')
+                .where({ ticket_id: ticketResult.ticket_id, tenant: tenant })
+                .first();
 
-            return convertDates(newTicket);
+            if (!fullTicket) {
+                throw new Error('Failed to retrieve created ticket');
+            }
+
+            return convertDates(fullTicket);
         });
 
-        // Revalidate relevant paths
+        // Server-specific: Revalidate cache paths
         revalidatePath('/msp/tickets');
         revalidatePath('/msp/assets');
 
@@ -133,22 +121,6 @@ export async function createTicketFromAsset(data: CreateTicketFromAssetData, use
     }
 }
 
-// Helper function to get default status ID
-async function getDefaultStatusId(trx: any, tenant: string): Promise<string> {
-    const defaultStatus = await trx('statuses')
-        .where({ 
-            tenant,
-            is_default: true,
-            item_type: 'ticket'
-        })
-        .first();
-
-    if (!defaultStatus) {
-        throw new Error('No default status found for tickets');
-    }
-
-    return defaultStatus.status_id;
-}
 
 export async function addTicket(data: FormData, user: IUser): Promise<ITicket|undefined> {
   try {
@@ -157,115 +129,77 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
       throw new Error('Tenant not found');
     }
 
-    const numberingService = new NumberingService();
-    const MAX_RETRIES = 3;
-    let retries = 0;
-
-    while (retries < MAX_RETRIES) {
-      try {
-        return await db.transaction(async (trx) => {
-          if (!await hasPermission(user, 'ticket', 'create', trx)) {
-            throw new Error('Permission denied: Cannot create ticket');
-          }
-          // Get form data and convert empty strings to null for nullable fields
-          const contact_name_id = data.get('contact_name_id');
-          const category_id = data.get('category_id');
-          const subcategory_id = data.get('subcategory_id');
-          const description = data.get('description');
-          const location_id = data.get('location_id');
-
-          const formData = {
-            title: data.get('title'),
-            channel_id: data.get('channel_id'),
-            company_id: data.get('company_id'),
-            location_id: location_id === '' ? null : location_id,
-            contact_name_id: contact_name_id === '' ? null : contact_name_id,
-            status_id: data.get('status_id'),
-            assigned_to: data.get('assigned_to'),
-            priority_id: data.get('priority_id'),
-            description: description,
-            category_id: category_id === '' ? null : category_id,
-            subcategory_id: subcategory_id === '' ? null : subcategory_id,
-          };
-
-          const validatedData = validateData(ticketFormSchema, formData);
-
-          const ticketNumber = await numberingService.getNextTicketNumber();
-            
-          const ticketData: Partial<ITicket> = {
-            ticket_number: ticketNumber,
-            title: validatedData.title,
-            channel_id: validatedData.channel_id,
-            company_id: validatedData.company_id,
-            location_id: validatedData.location_id,
-            contact_name_id: validatedData.contact_name_id,
-            status_id: validatedData.status_id,
-            entered_by: user.user_id,
-            assigned_to: validatedData.assigned_to,
-            priority_id: validatedData.priority_id,
-            category_id: validatedData.category_id,
-            subcategory_id: validatedData.subcategory_id,
-            entered_at: new Date().toISOString(),
-            attributes: {
-              description: validatedData.description
-            },
-            tenant: tenant
-          };
-
-      // Validate location belongs to the company if provided
-      if (validatedData.location_id) {
-        const location = await trx('company_locations')
-          .where({
-            location_id: validatedData.location_id,
-            company_id: validatedData.company_id,
-            tenant: tenant
-          })
-          .first();
-        
-        if (!location) {
-          throw new Error('Invalid location: Location does not belong to the selected company');
-        }
+    return await db.transaction(async (trx) => {
+      // Server-specific: Check permissions
+      if (!await hasPermission(user, 'ticket', 'create', trx)) {
+        throw new Error('Permission denied: Cannot create ticket');
       }
 
-      // Validate complete ticket data
-      const validatedTicket = validateData(ticketSchema.partial(), ticketData);
+      // Server-specific: Parse FormData
+      const contact_name_id = data.get('contact_name_id');
+      const category_id = data.get('category_id');
+      const subcategory_id = data.get('subcategory_id');
+      const description = data.get('description');
+      const location_id = data.get('location_id');
 
-      // Insert the ticket
-      const [newTicket] = await trx('tickets').insert(validatedTicket).returning('*');
+      // Convert FormData to CreateTicketInput format
+      const createTicketInput: CreateTicketInput = {
+        title: data.get('title') as string,
+        channel_id: data.get('channel_id') as string,
+        company_id: data.get('company_id') as string,
+        location_id: location_id === '' ? undefined : (location_id as string),
+        contact_id: contact_name_id === '' ? undefined : (contact_name_id as string), // Note: maps to contact_name_id
+        status_id: data.get('status_id') as string,
+        assigned_to: data.get('assigned_to') as string,
+        priority_id: data.get('priority_id') as string,
+        description: description as string,
+        category_id: category_id === '' ? undefined : (category_id as string),
+        subcategory_id: subcategory_id === '' ? undefined : (subcategory_id as string),
+        entered_by: user.user_id,
+        source: 'web_app'
+      };
 
-      if (!newTicket.ticket_id) {
-        throw new Error('Failed to create a new ticket');
-      }
+      // Server-specific: Create adapters for dependency injection
+      const eventPublisher = new ServerEventPublisher();
+      const analyticsTracker = new ServerAnalyticsTracker();
 
-      // Publish ticket created event
-      await safePublishEvent('TICKET_CREATED', {
-        tenantId: tenant,
-        ticketId: newTicket.ticket_id,
-        userId: user.user_id,
-      });
+      // Use shared TicketModel with retry logic
+      const ticketResult = await TicketModel.createTicketWithRetry(
+        createTicketInput,
+        tenant,
+        trx,
+        {}, // validation options
+        eventPublisher,
+        analyticsTracker,
+        user.user_id,
+        3 // max retries
+      );
 
-      // If ticket has assigned_to, publish assigned event
-      if (newTicket.assigned_to) {
+      // Server-specific: Handle assigned ticket event
+      if (createTicketInput.assigned_to) {
         await safePublishEvent('TICKET_ASSIGNED', {
           tenantId: tenant,
-          ticketId: newTicket.ticket_id,
+          ticketId: ticketResult.ticket_id,
           userId: user.user_id,
         });
       }
 
-          return convertDates(newTicket);
-        });
-      } catch (err: unknown) {
-        if (err instanceof Error && 'code' in err && err.code === '40P01') { // Deadlock detected
-          retries++;
-          continue;
-        }
-        throw err;
+      // Server-specific: Get full ticket data for return
+      const fullTicket = await trx('tickets')
+        .where({ ticket_id: ticketResult.ticket_id, tenant: tenant })
+        .first();
+
+      if (!fullTicket) {
+        throw new Error('Failed to retrieve created ticket');
       }
-    }
-    throw new Error('Failed to create ticket after 3 retries');
+
+      // Server-specific: Revalidate cache paths
+      revalidatePath('/msp/tickets');
+      
+      return convertDates(fullTicket);
+    });
   } catch (error) {
-    console.error(error);
+    console.error('Error in addTicket:', error);
     throw error;
   }
 }
@@ -487,6 +421,15 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
           userId: user.user_id,
           changes: updateData
         });
+        
+        // Track ticket resolved analytics
+        analytics.capture(AnalyticsEvents.TICKET_RESOLVED, {
+          time_to_resolution: currentTicket.entered_at ? 
+            Math.round((Date.now() - new Date(currentTicket.entered_at).getTime()) / 1000 / 60) : 0, // minutes
+          priority_id: updatedTicket.priority_id,
+          category_id: updatedTicket.category_id,
+          had_assignment: !!updatedTicket.assigned_to,
+        }, user.user_id);
       } else if (updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
         // Ticket was assigned
         await safePublishEvent('TICKET_ASSIGNED', {
@@ -495,6 +438,13 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
           userId: user.user_id,
           changes: updateData
         });
+        
+        // Track ticket assignment analytics
+        analytics.capture(AnalyticsEvents.TICKET_ASSIGNED, {
+          was_reassignment: !!currentTicket.assigned_to,
+          time_to_assignment: currentTicket.entered_at && !currentTicket.assigned_to ? 
+            Math.round((Date.now() - new Date(currentTicket.entered_at).getTime()) / 1000 / 60) : 0, // minutes
+        }, user.user_id);
       } else {
         // Regular update
         await safePublishEvent('TICKET_UPDATED', {
@@ -504,6 +454,15 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
           changes: updateData
         });
       }
+      
+      // Track general ticket update analytics
+      analytics.capture(AnalyticsEvents.TICKET_UPDATED, {
+        fields_updated: Object.keys(updateData),
+        updated_priority: 'priority_id' in updateData,
+        updated_status: 'status_id' in updateData,
+        updated_category: 'category_id' in updateData || 'subcategory_id' in updateData,
+        updated_assignment: 'assigned_to' in updateData,
+      }, user.user_id);
 
       return updatedTicket;
     });
@@ -764,6 +723,9 @@ export async function deleteTicket(ticketId: string, user: IUser): Promise<void>
         })
         .delete();
 
+      // Delete associated tags
+      await deleteEntityTags(trx, ticketId, 'ticket');
+
       // Delete the ticket
       await trx('tickets')
         .where({ 
@@ -778,6 +740,14 @@ export async function deleteTicket(ticketId: string, user: IUser): Promise<void>
         ticketId: ticketId,
         userId: user.user_id
       });
+      
+      // Track ticket deletion analytics
+      analytics.capture('ticket_deleted', {
+        was_resolved: !!ticket.closed_at,
+        had_comments: false, // We could query this if needed
+        age_in_days: ticket.entered_at ? 
+          Math.round((Date.now() - new Date(ticket.entered_at).getTime()) / 1000 / 60 / 60 / 24) : 0,
+      }, user.user_id);
     });
 
     // Revalidate relevant paths
@@ -1012,6 +982,21 @@ export async function getTicketById(id: string, user: IUser): Promise<DetailedTi
     delete (detailedTicket as any).assigned_to_first_name;
     delete (detailedTicket as any).assigned_to_last_name;
 
+    // Track ticket view analytics
+    analytics.capture('ticket_viewed', {
+      ticket_id: id,
+      status_id: ticket.status_id,
+      status_name: ticket.status_name,
+      is_closed: ticket.is_closed,
+      priority_id: ticket.priority_id,
+      category_id: ticket.category_id,
+      channel_id: ticket.channel_id,
+      assigned_to: ticket.assigned_to,
+      company_id: ticket.company_id,
+      has_additional_agents: additionalAgents.length > 0,
+      additional_agent_count: additionalAgents.length,
+      view_source: 'ticket_by_id'
+    }, user.user_id);
 
       return convertDates(detailedTicket);
     });

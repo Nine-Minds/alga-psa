@@ -3,17 +3,11 @@
  * GET /api/v1/teams/hierarchy - Get team hierarchy
  */
 
-import { TeamController } from 'server/src/lib/api/controllers/TeamController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiTeamController } from '@/lib/api/controllers/ApiTeamController';
 
-export async function GET(request: Request) {
-  try {
-    const controller = new TeamController();
-    return await controller.list()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+const controller = new ApiTeamController();
+
+export const GET = controller.getHierarchy();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

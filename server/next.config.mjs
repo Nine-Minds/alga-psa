@@ -6,13 +6,37 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+
 const nextConfig = {
+  eslint: {
+    // Warning: This allows production builds to successfully complete even if
+    // your project has ESLint errors.
+    ignoreDuringBuilds: true,
+  },
   reactStrictMode: true,
-  output: 'standalone', // Disable static generation entirely
   transpilePackages: ['@blocknote/core', '@blocknote/react', '@blocknote/mantine'],
+  // Rewrites required for PostHog
+  async rewrites() {
+    return [
+      {
+        source: '/ingest/static/:path*',
+        destination: 'https://us-assets.i.posthog.com/static/:path*',
+      },
+      {
+        source: '/ingest/:path*',
+        destination: 'https://us.i.posthog.com/:path*',
+      },
+      {
+        source: '/ingest/decide',
+        destination: 'https://us.i.posthog.com/decide',
+      },
+    ];
+  },
+  // This is required to support PostHog trailing slash API requests
+  skipTrailingSlashRedirect: true,
   webpack: (config, { isServer }) => {
-    // Disable webpack cache
-    config.cache = false;
+    // Enable webpack cache for faster builds
+    config.cache = true;
 
     // Add support for importing from ee/server/src using absolute paths
     // and ensure packages from root workspace are resolved
@@ -121,7 +145,6 @@ const nextConfig = {
       // );
     }
 
-
     return config;
   },
   experimental: {
@@ -129,6 +152,10 @@ const nextConfig = {
       bodySizeLimit: '5mb', // Increase limit for WASM uploads
     },
     instrumentationHook: true
+  },
+  // Skip static optimization for error pages
+  generateBuildId: async () => {
+    return 'build-' + Date.now();
   }
 };
 

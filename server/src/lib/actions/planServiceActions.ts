@@ -1,6 +1,6 @@
 'use server';
 
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { IPlanServiceRateTier, IUserTypeRate } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import { IPlanService } from 'server/src/interfaces/billing.interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
@@ -65,14 +65,17 @@ export async function addServiceToPlan(
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
 
-  // Get service details and join with standard_service_types to get the type's billing_method
+  // Get service details and join with service_types to get the type's billing_method
   const serviceWithType = await trx('service_catalog as sc')
-    .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
+    .leftJoin('service_types as st', function() {
+      this.on('sc.custom_service_type_id', '=', 'st.id')
+          .andOn('sc.tenant', '=', 'st.tenant');
+    })
     .where({
       'sc.service_id': serviceId,
       'sc.tenant': tenant
     })
-    .select('sc.*', 'sst.billing_method as service_type_billing_method') // Select the billing_method from the type table
+    .select('sc.*', 'st.billing_method as service_type_billing_method') // Select the billing_method from the type table
     .first() as IService & { service_type_billing_method?: 'fixed' | 'per_unit' }; // Add type info
 
   if (!serviceWithType) {
@@ -274,18 +277,17 @@ export async function getPlanServicesWithConfigurations(planId: string): Promise
   // Get service details including service type name for each configuration
   const result = [];
   for (const config of configurations) {
-    // Join service_catalog with standard_service_types to get the name
+    // Join service_catalog with service_types to get the name
     const service = await trx('service_catalog as sc')
-      .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id') // Join standard types
-      .leftJoin('service_types as tst', function() { // Join tenant-specific types
-        this.on('sc.custom_service_type_id', '=', 'tst.id')
-            .andOn('sc.tenant', '=', 'tst.tenant');
+      .leftJoin('service_types as st', function() {
+        this.on('sc.custom_service_type_id', '=', 'st.id')
+            .andOn('sc.tenant', '=', 'st.tenant');
       })
       .where({
         'sc.service_id': config.service_id,
         'sc.tenant': tenant
       })
-      .select('sc.*', trx.raw('COALESCE(sst.name, tst.name) as service_type_name')) // Use COALESCE for name
+      .select('sc.*', 'st.name as service_type_name')
       .first() as IService & { service_type_name?: string }; // Cast to include the new field
 
     if (!service) {

@@ -1,10 +1,12 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { ICompany, ICompanyLocation } from 'server/src/interfaces/company.interfaces';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { Input } from 'server/src/components/ui/Input';
+import { PhoneInput } from 'server/src/components/ui/PhoneInput';
 import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
@@ -24,8 +26,9 @@ import { getAllCountries, ICountry } from 'server/src/lib/actions/company-action
 import CountryPicker from 'server/src/components/ui/CountryPicker';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import toast from 'react-hot-toast';
+import ClientCreatedDialog from './ClientCreatedDialog';
 
-type CreateCompanyData = Omit<ICompany, "company_id" | "created_at" | "updated_at" | "notes_document_id" | "status" | "tenant" | "deleted_at" | "address">;
+type CreateCompanyData = Omit<ICompany, "company_id" | "created_at" | "updated_at" | "notes_document_id" | "status" | "tenant" | "deleted_at">;
 
 type CreateLocationData = Omit<ICompanyLocation, "location_id" | "tenant" | "created_at" | "updated_at">;
 
@@ -47,8 +50,6 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
   const initialFormData: CreateCompanyData = {
     company_name: '',
     client_type: 'company',
-    phone_no: '',
-    email: '',
     url: '',
     notes: '',
     is_inactive: false,
@@ -61,7 +62,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       website: '',
     },
     account_manager_id: null,
-    credit_balance: 0,
+    credit_balance: 0
   };
 
   const initialLocationData: CreateLocationData = {
@@ -105,6 +106,9 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [createdCompany, setCreatedCompany] = useState<ICompany | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     if (open) {
@@ -174,7 +178,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       const dataToSend = {
         ...formData,
         properties: formData.properties,
-        account_manager_id: formData.account_manager_id === '' ? null : formData.account_manager_id,
+        account_manager_id: formData.account_manager_id === '' ? null : formData.account_manager_id
       };
 
       const result = await createCompany(dataToSend);
@@ -187,8 +191,15 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
 
       const newCompany = result.data;
 
-      // Create location if address data is provided
-      if (locationData.address_line1.trim() || locationData.city.trim()) {
+      // Create location if any location data is provided (address, city, phone, or email)
+      // Check if phone has actual number, not just country code
+      const phoneCode = countries.find(c => c.code === locationData.country_code)?.phone_code || '';
+      const hasActualPhone = locationData.phone?.trim() && 
+                            locationData.phone.trim() !== phoneCode &&
+                            locationData.phone.replace(/\s+/g, '').length > phoneCode.length;
+      
+      if (locationData.address_line1.trim() || locationData.city.trim() || 
+          hasActualPhone || locationData.email?.trim()) {
         try {
           await createCompanyLocation(newCompany.company_id, locationData);
         } catch (locationError) {
@@ -214,10 +225,11 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       }
 
 
-      toast.success(`Company "${newCompany.company_name}" created successfully.`);
+      setCreatedCompany(newCompany);
+      setShowSuccess(true);
       onCompanyAdded(newCompany);
       onOpenChange(false);
-    } catch (error: any) {
+      } catch (error: any) {
       console.error("Error creating company:", error);
       const errorMessage = error.message || "Failed to create company. Please try again.";
       setError(errorMessage);
@@ -282,6 +294,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
 
 
   return (
+    <>
     <Dialog
       id="quick-add-company-dialog"
       isOpen={open}
@@ -459,36 +472,31 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
-              </div>
 
-              <div>
-                <Label htmlFor="country_picker" className="block text-sm font-medium text-gray-700 mb-1">
-                  Country
-                </Label>
-                <CountryPicker
-                  data-automation-id="country_picker"
-                  value={locationData.country_code}
-                  onValueChange={handleCountryChange}
-                  countries={countries}
-                  disabled={isLoadingCountries || isSubmitting}
-                  placeholder={isLoadingCountries ? "Loading countries..." : "Select Country"}
-                  buttonWidth="full"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="location_phone" className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone
+                  <Label htmlFor="country_picker" className="block text-sm font-medium text-gray-700 mb-1">
+                    Country
                   </Label>
-                  <Input
-                    data-automation-id="location_phone"
-                    value={locationData.phone || ''}
-                    onChange={(e) => handleLocationChange('phone', e.target.value)}
-                    disabled={isSubmitting}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  <CountryPicker
+                    data-automation-id="country_picker"
+                    value={locationData.country_code}
+                    onValueChange={handleCountryChange}
+                    countries={countries}
+                    disabled={isLoadingCountries || isSubmitting}
+                    placeholder={isLoadingCountries ? "Loading countries..." : "Select Country"}
+                    buttonWidth="full"
                   />
                 </div>
+
+                <PhoneInput
+                  label="Phone"
+                  value={locationData.phone || ''}
+                  onChange={(value) => handleLocationChange('phone', value)}
+                  countryCode={locationData.country_code}
+                  phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
+                  disabled={isSubmitting}
+                  data-automation-id="location_phone"
+                />
 
                 <div>
                   <Label htmlFor="location_email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -541,18 +549,15 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="contact_phone" className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone
-                  </Label>
-                  <Input
-                    data-automation-id="contact_phone"
-                    value={contactData.phone_number}
-                    onChange={(e) => handleContactChange('phone_number', e.target.value)}
-                    disabled={isSubmitting}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
+                <PhoneInput
+                  label="Phone"
+                  value={contactData.phone_number}
+                  onChange={(value) => handleContactChange('phone_number', value)}
+                  countryCode={locationData.country_code}
+                  phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
+                  disabled={isSubmitting}
+                  data-automation-id="contact_phone"
+                />
               </div>
             </div>
 
@@ -564,7 +569,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                 </Label>
                 <TextArea
                   data-automation-id="notes"
-                  value={formData.notes}
+                  value={formData.notes || ''}
                   onChange={(e) => handleCompanyChange('notes', e.target.value)}
                   placeholder="Add any initial notes (optional)"
                   disabled={isSubmitting}
@@ -604,6 +609,22 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    <ClientCreatedDialog
+      isOpen={showSuccess}
+      company={createdCompany}
+      onClose={() => setShowSuccess(false)}
+      onViewClient={() => {
+        if (createdCompany) {
+          setShowSuccess(false);
+          router.push(`/msp/companies/${createdCompany.company_id}`);
+        }
+      }}
+      onAddAnother={() => {
+        setShowSuccess(false);
+        onOpenChange(true);
+      }}
+    />
+    </>
   );
 };
 

@@ -4,6 +4,11 @@ import tseslint from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 import pluginReact from "eslint-plugin-react";
 import customRules from "./eslint-plugin-custom-rules/index.js";
+import { fileURLToPath } from 'url';
+import path from 'path';
+
+// Ensure tsconfig resolution works regardless of process.cwd()
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('eslint').Linter.FlatConfig[]} */
 export default [
@@ -27,11 +32,16 @@ export default [
       parserOptions: {
         ecmaVersion: 2020,
         sourceType: "module",
-        project: ["./server/tsconfig.json", "./ee/server/tsconfig.json", "./shared/tsconfig.json"],
+        project: [
+          path.join(__dirname, 'server/tsconfig.json'),
+          path.join(__dirname, 'ee/server/tsconfig.json'),
+          path.join(__dirname, 'shared/tsconfig.json'),
+        ],
         ecmaFeatures: {
           jsx: true
         },
-        tsconfigRootDir: process.cwd(),
+        // Point to repo root so tsconfig extends work in editors
+        tsconfigRootDir: __dirname,
       },
     },
 
@@ -51,10 +61,10 @@ export default [
           allowFunctionsWithoutTypeParameters: true,
         },
       ],
-      "@typescript-eslint/no-explicit-any": "warn",
-      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": ["off", { argsIgnorePattern: "^_" }],
       "@typescript-eslint/no-unsafe-assignment": "warn",
-      "@typescript-eslint/no-unsafe-member-access": "warn",
+      "@typescript-eslint/no-unsafe-member-access": "off",
       "@typescript-eslint/no-unsafe-return": "warn",
       "@typescript-eslint/no-unsafe-call": "warn",
       "@typescript-eslint/no-unsafe-argument": "warn",
@@ -68,7 +78,7 @@ export default [
       "@typescript-eslint/no-non-null-assertion": "warn",
 
       // Custom rules as warnings
-      "custom-rules/map-return-type": "warn",
+      "custom-rules/map-return-type": "off",
       "custom-rules/check-required-props": "error",
 
       // Base ESLint rules

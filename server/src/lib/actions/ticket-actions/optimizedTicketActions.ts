@@ -10,7 +10,7 @@ import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 import { ITicketResource } from 'server/src/interfaces/ticketResource.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache';
 import { hasPermission } from 'server/src/lib/auth/rbac';
@@ -28,6 +28,8 @@ import {
   ticketListItemSchema,
   ticketListFiltersSchema
 } from 'server/src/lib/schemas/ticket.schema';
+import { analytics } from '../../analytics/posthog';
+import { AnalyticsEvents } from '../../analytics/events';
 
 // Helper function to safely convert dates
 function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null }>(record: T): T {
@@ -186,6 +188,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
           tenant: tenant,
           status_type: 'ticket'
         })
+        .orderBy('order_number', 'asc')
         .orderBy('name', 'asc'),
       
       // Channels
@@ -193,15 +196,10 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
         .where({ tenant })
         .orderBy('channel_name', 'asc'),
       
-      // Priorities - fetch both standard and tenant-specific (tickets only)
-      Promise.all([
-        trx('standard_priorities')
-          .where({ item_type: 'ticket' })
-          .orderBy('priority_name', 'asc'),
-        trx('priorities')
-          .where({ tenant, item_type: 'ticket' })
-          .orderBy('priority_name', 'asc')
-      ]).then(([standardPriorities, tenantPriorities]) => [...standardPriorities, ...tenantPriorities]),
+      // Priorities - fetch only tenant-specific ticket priorities
+      trx('priorities')
+        .where({ tenant, item_type: 'ticket' })
+        .orderBy('priority_name', 'asc'),
       
       // Categories
       trx('categories')
@@ -382,7 +380,8 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
 
     const priorityOptions = priorities.map((priority) => ({
       value: priority.priority_id,
-      label: priority.priority_name
+      label: priority.priority_name,
+      color: priority.color
     }));
 
     // Get scheduled hours for ticket
@@ -471,6 +470,28 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       ...ticketData
     } = ticket;
 
+    // Track ticket view analytics
+    analytics.capture('ticket_viewed', {
+      ticket_id: ticketId,
+      status_id: ticketData.status_id,
+      status_name: ticketData.status_name,
+      is_closed: ticketData.is_closed,
+      priority_id: ticketData.priority_id,
+      category_id: ticketData.category_id,
+      channel_id: ticketData.channel_id,
+      assigned_to: ticketData.assigned_to,
+      company_id: ticketData.company_id,
+      has_comments: comments.length > 0,
+      comment_count: comments.length,
+      has_documents: documents.length > 0,
+      document_count: documents.length,
+      has_additional_agents: resources.length > 0,
+      additional_agent_count: resources.length,
+      has_schedule: agentSchedulesList.length > 0,
+      total_scheduled_minutes: agentSchedulesList.reduce((sum, schedule) => sum + schedule.minutes, 0),
+      view_source: 'ticket_details'
+    }, user.user_id);
+
     // Return all data in a single consolidated object
     return {
       ticket: {
@@ -549,8 +570,10 @@ export async function getTicketsForListWithCursor(
         't.*',
         's.name as status_name',
         'p.priority_name',
+        'p.color as priority_color',
         'c.channel_name',
         'cat.category_name',
+        'comp.company_name',
         trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
         trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name")
       )
@@ -558,12 +581,10 @@ export async function getTicketsForListWithCursor(
         this.on('t.status_id', 's.status_id')
            .andOn('t.tenant', 's.tenant')
       })
-      .leftJoin(db.raw(`(
-        SELECT priority_id, priority_name, NULL as tenant FROM standard_priorities WHERE item_type = 'ticket'
-        UNION ALL
-        SELECT priority_id, priority_name, tenant FROM priorities WHERE tenant = ? AND item_type = 'ticket'
-      ) as p`, [tenant]), function() {
+      .leftJoin('priorities as p', function() {
         this.on('t.priority_id', 'p.priority_id')
+           .andOn('t.tenant', 'p.tenant')
+           .andOnVal('p.item_type', '=', 'ticket')
       })
       .leftJoin('channels as c', function() {
         this.on('t.channel_id', 'c.channel_id')
@@ -572,6 +593,10 @@ export async function getTicketsForListWithCursor(
       .leftJoin('categories as cat', function() {
         this.on('t.category_id', 'cat.category_id')
            .andOn('t.tenant', 'cat.tenant')
+      })
+      .leftJoin('companies as comp', function() {
+        this.on('t.company_id', 'comp.company_id')
+           .andOn('t.tenant', 'comp.tenant')
       })
       .leftJoin('users as u', function() {
         this.on('t.entered_by', 'u.user_id')
@@ -697,8 +722,10 @@ export async function getTicketsForListWithCursor(
         entered_by,
         status_name,
         priority_name,
+        priority_color,
         channel_name,
         category_name,
+        company_name,
         entered_by_name,
         assigned_to_name,
         ...rest
@@ -712,8 +739,10 @@ export async function getTicketsForListWithCursor(
         entered_by: entered_by || null,
         status_name: status_name || 'Unknown',
         priority_name: priority_name || 'Unknown',
+        priority_color: priority_color || '#6B7280',
         channel_name: channel_name || 'Unknown',
         category_name: category_name || 'Unknown',
+        company_name: company_name || 'Unknown',
         entered_by_name: entered_by_name || 'Unknown',
         assigned_to_name: assigned_to_name || 'Unknown',
         ...convertDates(rest)
@@ -762,16 +791,13 @@ export async function getTicketFormOptions(user: IUser) {
           tenant: tenant,
           status_type: 'ticket'  // Changed from item_type to status_type
         })
+        .orderBy('order_number', 'asc')
         .orderBy('name', 'asc'),
       
-      // Priorities - fetch both standard and tenant-specific
-      Promise.all([
-        trx('standard_priorities')
-          .orderBy('priority_name', 'asc'),
-        trx('priorities')
-          .where({ tenant })
-          .orderBy('priority_name', 'asc')
-      ]).then(([standardPriorities, tenantPriorities]) => [...standardPriorities, ...tenantPriorities]),
+      // Priorities - fetch only tenant-specific ticket priorities
+      trx('priorities')
+        .where({ tenant, item_type: 'ticket' })
+        .orderBy('priority_name', 'asc'),
       
       trx('channels')
         .where({ tenant })
@@ -806,7 +832,8 @@ export async function getTicketFormOptions(user: IUser) {
       { value: 'all', label: 'All Priorities' },
       ...priorities.map((priority: any) => ({
         value: priority.priority_id,
-        label: priority.priority_name
+        label: priority.priority_name,
+        color: priority.color
       }))
     ];
 
@@ -1109,6 +1136,14 @@ export async function addTicketCommentWithCache(
         isInternal
       }
     });
+    
+    // Track comment analytics
+    analytics.capture('ticket_comment_added', {
+      is_internal: isInternal,
+      is_resolution: isResolution,
+      content_length: markdownContent.length,
+      has_formatting: content.includes('"type"'), // BlockNote content has type field
+    }, user.user_id);
 
     // Revalidate paths to update UI
     revalidatePath(`/msp/tickets/${ticketId}`);

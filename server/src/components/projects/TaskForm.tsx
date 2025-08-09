@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { IProjectPhase, IProjectTask, ITaskChecklistItem, ProjectStatus, IProjectTicketLinkWithDetails, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
+import { IPriority } from 'server/src/interfaces/ticket.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import AvatarIcon from 'server/src/components/ui/AvatarIcon';
 import { getProjectTreeData, getProjectDetails } from 'server/src/lib/actions/project-actions/projectActions';
-import { getAllPrioritiesWithStandard } from 'server/src/lib/actions/priorityActions';
+import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import {
   updateTaskWithChecklist,
   addTaskToPhase,
@@ -27,7 +27,7 @@ import { TagManager } from 'server/src/components/tags';
 import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { TextArea } from 'server/src/components/ui/TextArea';
-import { ListChecks, UserPlus, Trash2, Clock } from 'lucide-react';
+import { ListChecks, Trash2, Clock } from 'lucide-react';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
@@ -39,9 +39,11 @@ import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTask
 import { ITaskType } from 'server/src/interfaces/project.interfaces';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import TaskTicketLinks from './TaskTicketLinks';
-import { TaskDependencies } from './TaskDependencies';
+import { TaskDependencies, TaskDependenciesRef } from './TaskDependencies';
+import TaskDocumentsSimple from './TaskDocumentsSimple';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from 'server/src/components/ui/TreeSelect';
+import { PrioritySelect } from 'server/src/components/tickets/PrioritySelect';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { useDrawer } from 'server/src/context/DrawerContext';
 import { IWorkItem, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
@@ -80,6 +82,9 @@ export default function TaskForm({
   inDrawer = false,
   projectTreeData = []
 }: TaskFormProps): JSX.Element {
+  const dependenciesRef = useRef<TaskDependenciesRef>(null);
+  const [showDependencyConfirmation, setShowDependencyConfirmation] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState<React.FormEvent | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [taskName, setTaskName] = useState(task?.task_name || '');
   const [description, setDescription] = useState(task?.description || '');
@@ -100,7 +105,6 @@ export default function TaskForm({
   const [dueDate, setDueDate] = useState<Date | undefined>(task?.due_date ? new Date(task.due_date) : undefined);
   const [taskResources, setTaskResources] = useState<any[]>(task?.task_id ? [] : []);
   const [tempTaskResources, setTempTaskResources] = useState<any[]>([]);
-  const [showAgentPicker, setShowAgentPicker] = useState(false);
   const [taskTags, setTaskTags] = useState<ITag[]>([]);
   const [pendingTicketLinks, setPendingTicketLinks] = useState<IProjectTicketLinkWithDetails[]>(task?.ticket_links || []);
   const [editingChecklistItemId, setEditingChecklistItemId] = useState<string | null>(null);
@@ -122,7 +126,7 @@ export default function TaskForm({
     additionalAssigneeCount: number;
     ticketLinkCount: number;
   } | null>(null);
-  const [priorities, setPriorities] = useState<(IPriority | IStandardPriority)[]>([]);
+  const [priorities, setPriorities] = useState<IPriority[]>([]);
   const [selectedPriorityId, setSelectedPriorityId] = useState<string | null>(task?.priority_id ?? null);
   const [taskDependencies, setTaskDependencies] = useState<{
     predecessors: IProjectTaskDependency[];
@@ -148,7 +152,7 @@ export default function TaskForm({
         }
 
         // Fetch priorities for project tasks
-        const allPriorities = await getAllPrioritiesWithStandard('project_task');
+        const allPriorities = await getAllPriorities('project_task');
         setPriorities(allPriorities);
         
         // Fetch task types
@@ -177,15 +181,11 @@ export default function TaskForm({
             setChecklistItems(existingChecklistItems);
           }
 
-          if (task.resources !== undefined) {
-            console.log('Using resources from task object');
-            setTaskResources(task.resources);
-          } else {
-            // Only fetch if not available on the task object
-            console.log('Fetching resources from API');
-            const resources = await getTaskResourcesAction(task.task_id);
-            setTaskResources(resources);
-          }
+          // Always fetch resources to ensure we have the latest data
+          console.log('Fetching resources from API for task:', task.task_id);
+          const resources = await getTaskResourcesAction(task.task_id);
+          console.log('Fetched resources:', resources);
+          setTaskResources(resources);
 
           // Fetch tags
           const tags = await findTagsByEntityId(task.task_id, 'project_task');
@@ -412,6 +412,17 @@ export default function TaskForm({
     
     setValidationErrors([]);
 
+    // Check for unsaved dependencies
+    if (dependenciesRef.current?.hasPendingChanges()) {
+      setPendingSubmit(e);
+      setShowDependencyConfirmation(true);
+      return;
+    }
+
+    await performSubmit();
+  };
+
+  const performSubmit = async () => {
     setIsSubmitting(true);
 
     try {
@@ -421,34 +432,45 @@ export default function TaskForm({
       const finalAssignedTo = !assignedUser || assignedUser === '' ? null : assignedUser;
 
       if (mode === 'edit' && task?.task_id) {
-        // Edit mode - handle cross-project moves properly
-        const movedTask = await moveTaskToPhase(
-          task.task_id, 
-          selectedPhaseId, 
-          isCrossProjectMove ? undefined : selectedStatusId
-        );
+        // Check if phase or status actually changed
+        const phaseChanged = task.phase_id !== selectedPhaseId;
+        const statusChanged = task.project_status_mapping_id !== selectedStatusId;
         
-        if (movedTask) {
-          // For cross-project moves, use the status mapping that moveTaskToPhase determined
-          // Update our local state to match the new status
-          if (isCrossProjectMove) {
-            setSelectedStatusId(movedTask.project_status_mapping_id);
+        let taskToUpdate = task;
+        
+        // Only call moveTaskToPhase if phase or status actually changed
+        if (phaseChanged || statusChanged) {
+          // Phase or status changed - handle the move
+          const movedTask = await moveTaskToPhase(
+            task.task_id, 
+            selectedPhaseId, 
+            isCrossProjectMove ? undefined : selectedStatusId
+          );
+          
+          if (movedTask) {
+            taskToUpdate = movedTask;
+            // For cross-project moves, use the status mapping that moveTaskToPhase determined
+            if (isCrossProjectMove) {
+              setSelectedStatusId(movedTask.project_status_mapping_id);
+            }
           }
-
-          const taskData: Partial<IProjectTask> = {
-            task_name: taskName,
-            description: description,
-            assigned_to: finalAssignedTo,
-            estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
-            actual_hours: Math.round(actualHours * 60), // Convert hours to minutes for storage
-            due_date: dueDate || null,
-            priority_id: selectedPriorityId,
-            checklist_items: checklistItems,
-            project_status_mapping_id: movedTask.project_status_mapping_id, // Always use the mapping from moveTaskToPhase
-            task_type_key: selectedTaskType
-          };
-          resultTask = await updateTaskWithChecklist(movedTask.task_id, taskData);
         }
+
+        // Always update the task data (whether moved or not)
+        const taskData: Partial<IProjectTask> = {
+          task_name: taskName,
+          description: description,
+          assigned_to: finalAssignedTo,
+          estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
+          actual_hours: Math.round(actualHours * 60), // Convert hours to minutes for storage
+          due_date: dueDate || null,
+          priority_id: selectedPriorityId,
+          checklist_items: checklistItems,
+          project_status_mapping_id: statusChanged ? taskToUpdate.project_status_mapping_id : task.project_status_mapping_id,
+          task_type_key: selectedTaskType,
+          order_key: task.order_key // Always preserve the original order_key
+        };
+        resultTask = await updateTaskWithChecklist(taskToUpdate.task_id, taskData);
         onSubmit(resultTask);
         onClose();
       } else {
@@ -501,6 +523,21 @@ export default function TaskForm({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleDependencyConfirm = async () => {
+    if (dependenciesRef.current) {
+      await dependenciesRef.current.savePendingDependency();
+    }
+    setShowDependencyConfirmation(false);
+    await performSubmit();
+  };
+
+  const handleDependencyCancel = async () => {
+    setShowDependencyConfirmation(false);
+    setPendingSubmit(null);
+    // Proceed with submit without saving dependency
+    await performSubmit();
   };
 
   const handlePhaseChange = (phaseId: string) => {
@@ -764,10 +801,16 @@ export default function TaskForm({
 
   const handleAddAgent = async (userId: string) => {
     try {
+      if (!assignedUser) {
+        toast.error('Please assign a primary agent first');
+        return;
+      }
+      
       if (task?.task_id) {
         await addTaskResourceAction(task.task_id, userId);
         const updatedResources = await getTaskResourcesAction(task.task_id);
         setTaskResources(updatedResources);
+        toast.success('Agent added successfully');
       } else {
         // For new tasks, store resources temporarily
         const selectedUser = users.find(u => u.user_id === userId);
@@ -779,12 +822,16 @@ export default function TaskForm({
             assignment_id: `temp-${Date.now()}`
           };
           setTempTaskResources(prev => [...prev, tempResource]);
+          toast.success('Agent will be added when task is saved');
         }
       }
-      setShowAgentPicker(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding agent:', error);
-      toast.error('Failed to add agent');
+      if (error.message?.includes('assigned_to')) {
+        toast.error('Please assign a primary agent first');
+      } else {
+        toast.error(`Failed to add agent: ${error.message || 'Unknown error'}`);
+      }
     }
   };
 
@@ -855,20 +902,6 @@ export default function TaskForm({
 
   const renderContent = () => (
     <div className="h-full">
-      {mode === 'edit' && (
-        <div className="flex justify-end mb-4">
-          <Button
-            id='add-time-entry-button'
-            type="button"
-            variant="default"
-            onClick={handleAddTimeEntry}
-            disabled={isSubmitting || !task?.task_id}
-          >
-            <Clock className="h-4 w-4 mr-2" />
-            Add Time Entry
-          </Button>
-        </div>
-      )}
       <form onSubmit={handleSubmit} className="flex flex-col h-full" noValidate>
         {hasAttemptedSubmit && validationErrors.length > 0 && (
           <Alert variant="destructive" className="mb-4">
@@ -883,216 +916,267 @@ export default function TaskForm({
           </Alert>
         )}
         <div className="space-y-4">
-          <TextArea
-                  value={taskName}
-                  onChange={(e) => {
-                    setTaskName(e.target.value);
-                    clearErrorIfSubmitted();
-                  }}
-                  placeholder="Title... *"
-                  className={`w-full text-2xl font-bold p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                    hasAttemptedSubmit && !taskName.trim() ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  rows={1}
-                />
+          {/* Full width Title */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Task Name *</label>
+            <TextArea
+              value={taskName}
+              onChange={(e) => {
+                setTaskName(e.target.value);
+                clearErrorIfSubmitted();
+              }}
+              placeholder="Enter task name..."
+              className={`w-full text-2xl font-bold p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                hasAttemptedSubmit && !taskName.trim() ? 'border-red-500' : 'border-gray-300'
+              }`}
+              rows={1}
+            />
+          </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Task Type</label>
-                    <TaskTypeSelector
-                      value={selectedTaskType}
-                      taskTypes={taskTypes}
-                      onChange={setSelectedTaskType}
-                      disabled={isSubmitting}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                    <CustomSelect
-                      value={selectedPriorityId || ''}
-                      options={priorities.map(p => ({
-                        value: p.priority_id,
-                        label: p.priority_name,
-                        color: p.color
-                      }))}
-                      onValueChange={(value) => setSelectedPriorityId(value || null)}
-                      placeholder="Select priority"
-                      className="w-full"
-                    />
-                  </div>
-                </div>
+          {/* Full width Description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <TextArea
+              value={description}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
+              placeholder="Add task description..."
+              className="w-full p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 whitespace-pre-wrap break-words"
+              rows={3}
+            />
+          </div>
 
-                {mode === 'edit' && (
-                  <div className="flex gap-4 w-full"> {/* Container for side-by-side dropdowns */}
-                    {/* Move To Dropdown */}
-                    <div className="flex-1">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Move to</label>
-                      {projectTreeOptions.length > 0 ? (
-                        <TreeSelect<ProjectTreeTypes>
-                          value={selectedPhaseId}
-                          onValueChange={handleTreeSelectChange}
-                          options={projectTreeOptions}
-                          placeholder="Select move destination..."
-                          className="w-full"
-                          multiSelect={false}
-                          showExclude={false}
-                          showReset={false}
-                          allowEmpty={false}
-                        />
-                      ) : (
-                        <div className="text-sm text-gray-500">Loading...</div>
-                      )}
-                    </div>
+          {/* 2 Column Grid Section */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Row 1: Task Type and Priority */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Task Type</label>
+              <TaskTypeSelector
+                value={selectedTaskType}
+                taskTypes={taskTypes}
+                onChange={setSelectedTaskType}
+                disabled={isSubmitting}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+              <PrioritySelect
+                value={selectedPriorityId}
+                options={priorities
+                  .sort((a, b) => a.order_number - b.order_number)
+                  .map(p => ({
+                    value: p.priority_id,
+                    label: p.priority_name,
+                    color: p.color
+                  }))}
+                onValueChange={(value) => setSelectedPriorityId(value || null)}
+                placeholder="Select priority"
+                className="w-full"
+              />
+            </div>
 
-                    {/* Duplicate To Dropdown */}
-                    <div className="flex-1">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Duplicate to</label>
-                      {projectTreeOptions.length > 0 ? (
-                        <TreeSelect<ProjectTreeTypes>
-                          value={selectedDuplicatePhaseId || ''}
-                          onValueChange={handleDuplicateTreeSelectChange}
-                          options={projectTreeOptions}
-                          placeholder="Select duplicate destination..."
-                          className="w-full"
-                          multiSelect={false}
-                          showExclude={false}
-                          showReset={false}
-                          allowEmpty={true}
-                        />
-                      ) : (
-                        <div className="text-sm text-gray-500">Loading...</div>
-                      )}
-                    </div>
-                  </div>
-                )}
-                <TextArea
-                  value={description}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
-                  placeholder="Description"
-                  className="w-full max-w-4xl p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 whitespace-pre-wrap break-words"
-                  rows={3}
-                />
-
-                <div className="grid grid-cols-3 gap-4">
+            {/* Row 2: Move To and Duplicate To (Edit mode only) */}
+            {mode === 'edit' && (
+              <>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-                  <DatePicker
-                    value={dueDate}
-                    onChange={setDueDate}
-                    id="task-due-date-picker"
-                    label="Task Due Date"
-                    placeholder="Select due date"
-                    required={true}
-                    disabled={isSubmitting}
-                  />
-                </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Estimated Hours
-                    </label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      value={estimatedHours}
-                      onChange={(e) => setEstimatedHours(Number(e.target.value))}
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Move to</label>
+                  {projectTreeOptions.length > 0 ? (
+                    <TreeSelect<ProjectTreeTypes>
+                      value={selectedPhaseId}
+                      onValueChange={handleTreeSelectChange}
+                      options={projectTreeOptions}
+                      placeholder="Select move destination..."
                       className="w-full"
+                      multiSelect={false}
+                      showExclude={false}
+                      showReset={false}
+                      allowEmpty={false}
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Actual Hours
-                    </label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      value={actualHours}
-                      onChange={(e) => setActualHours(Number(e.target.value))}
-                      className="w-full"
-                    />
-                  </div>
+                  ) : (
+                    <div className="text-sm text-gray-500">Loading...</div>
+                  )}
                 </div>
-                <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Duplicate to</label>
+                  {projectTreeOptions.length > 0 ? (
+                    <TreeSelect<ProjectTreeTypes>
+                      value={selectedDuplicatePhaseId || ''}
+                      onValueChange={handleDuplicateTreeSelectChange}
+                      options={projectTreeOptions}
+                      placeholder="Select duplicate destination..."
+                      className="w-full"
+                      multiSelect={false}
+                      showExclude={false}
+                      showReset={false}
+                      allowEmpty={true}
+                    />
+                  ) : (
+                    <div className="text-sm text-gray-500">Loading...</div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* Row 3: Created At (Edit mode only) and Due Date */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Created At</label>
+              {mode === 'edit' && task ? (
+                <div className="p-2 bg-gray-50 border border-gray-200 rounded-md text-gray-700">
+                  {new Date(task.created_at).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </div>
+              ) : (
+                <div className="p-2 bg-gray-50 border border-gray-200 rounded-md text-gray-500">
+                  Will be set on creation
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+              <DatePicker
+                value={dueDate}
+                onChange={setDueDate}
+                id="task-due-date-picker"
+                label="Task Due Date"
+                placeholder="Select due date"
+                required={true}
+                disabled={isSubmitting}
+              />
+            </div>
+
+            {/* Row 4: Estimated Hours and Actual Hours */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Estimated Hours
+              </label>
+              <Input
+                type="number"
+                min="0"
+                step="0.5"
+                value={estimatedHours}
+                onChange={(e) => setEstimatedHours(Number(e.target.value))}
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Actual Hours
+              </label>
+              <Input
+                type="number"
+                min="0"
+                step="0.5"
+                value={actualHours}
+                onChange={(e) => setActualHours(Number(e.target.value))}
+                className="w-full"
+              />
+            </div>
+            {/* Row 5: Assigned To and Additional Agents */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
+              <UserPicker
+                label=""
+                value={assignedUser ?? ''}
+                onValueChange={(value) => {
+                  // Only set to null if explicitly choosing "Not assigned"
+                  setAssignedUser(value === '' ? null : value);
+                }}
+                size="sm"
+                users={users.filter(u => 
+                  !(task?.task_id ? taskResources : tempTaskResources)
+                    .some(r => r.additional_user_id === u.user_id)
+                )}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Additional Agents</label>
+              {!assignedUser ? (
+                <div className="text-sm text-gray-500 italic p-2 bg-gray-50 rounded mb-2">
+                  Please assign a primary agent first before adding additional agents.
+                </div>
+              ) : mode === 'edit' && task?.assigned_to !== assignedUser ? (
+                <div className="text-sm text-gray-500 italic p-2 bg-gray-50 rounded mb-2">
+                  Please save the task after changing the primary agent before adding additional agents.
+                </div>
+              ) : (
+                <div className="mb-2">
                   <UserPicker
-                    label="Assigned To"
-                    value={assignedUser ?? ''}
-                    onValueChange={(value) => {
-                      // Only set to null if explicitly choosing "Not assigned"
-                      setAssignedUser(value === '' ? null : value);
+                    key={`agent-picker-${(task?.task_id ? taskResources : tempTaskResources).length}`}
+                    value=""
+                    onValueChange={(userId) => {
+                      if (userId) {
+                        handleAddAgent(userId);
+                      }
                     }}
-                    size="sm"
                     users={users.filter(u => 
+                      u.user_id !== assignedUser && 
                       !(task?.task_id ? taskResources : tempTaskResources)
                         .some(r => r.additional_user_id === u.user_id)
                     )}
+                    size="sm"
+                    placeholder="Select additional agent..."
                   />
-
-
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <h3 className="font-semibold">Additional Agents</h3>
-                      <Button
-                        id='add-agent-button'
-                        type="button"
-                        variant="soft"
-                        onClick={() => setShowAgentPicker(true)}
-                        className="w-fit"
-                      >
-                        <UserPlus className="h-4 w-4 mr-2" />
-                        Add Agent
-                      </Button>
-                    </div>
-                    <div className="space-y-2">
-                      {(task?.task_id ? taskResources : tempTaskResources).map((resource): JSX.Element => (
-                        <div key={resource.assignment_id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                          <div className="flex items-center gap-2">
-                            <AvatarIcon
-                              userId={resource.additional_user_id}
-                              firstName={resource.first_name}
-                              lastName={resource.last_name}
-                              size="sm"
-                            />
-                            <span>{resource.first_name} {resource.last_name}</span>
-                          </div>
-                          <Button
-                            id='remove-agent-button'
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRemoveAgent(resource.assignment_id)}
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
                 </div>
-
-                {mode === 'edit' && task?.task_id && (
-                  <div>
-                    <h3 className="font-semibold mb-2">Tags</h3>
-                    <TagManager
-                      id="task-tags-edit"
-                      entityId={task.task_id}
-                      entityType="project_task"
-                      initialTags={taskTags}
-                      onTagsChange={setTaskTags}
-                    />
+              )}
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {(task?.task_id ? taskResources : tempTaskResources).map((resource): JSX.Element => (
+                  <div key={resource.assignment_id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                    <div className="flex items-center gap-2">
+                      <AvatarIcon
+                        userId={resource.additional_user_id}
+                        firstName={resource.first_name}
+                        lastName={resource.last_name}
+                        size="sm"
+                      />
+                      <span className="text-sm">{resource.first_name} {resource.last_name}</span>
+                    </div>
+                    <Button
+                      id='remove-agent-button'
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveAgent(resource.assignment_id)}
+                      className="text-red-500 hover:text-red-700 h-6 w-6 p-0"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
                   </div>
-                )}
+                ))}
+              </div>
+            </div>
+          </div>
 
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className='font-semibold'>Checklist</h3>
-                  <button 
-                    onClick={toggleEditChecklist} 
-                    className="text-gray-500 hover:text-gray-700"
-                    type="button"
-                  >
-                    <ListChecks className="h-5 w-5" />
-                  </button>
-                </div>
+          {/* Full width Tags section */}
+          {mode === 'edit' && task?.task_id && (
+            <div>
+              <h3 className="font-semibold mb-2">Tags</h3>
+              <TagManager
+                id="task-tags-edit"
+                entityId={task.task_id}
+                entityType="project_task"
+                initialTags={taskTags}
+                onTagsChange={setTaskTags}
+                useInlineInput={true}
+              />
+            </div>
+          )}
+
+          {/* Full width Checklist section */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className='font-semibold'>Checklist</h3>
+              <button 
+                onClick={toggleEditChecklist} 
+                className="text-gray-500 hover:text-gray-700"
+                type="button"
+                title={isEditingChecklist ? "Done editing" : "Edit checklist"}
+              >
+                <ListChecks className="h-5 w-5" />
+              </button>
+            </div>
 
                 <div className="flex flex-col space-y-2">
                   {checklistItems.map((item, index): JSX.Element => (
@@ -1142,73 +1226,99 @@ export default function TaskForm({
                   ))}
                 </div>
 
-                {isEditingChecklist && (
-                  <Button id='add-checklist-item-button' type="button" variant="soft" onClick={addChecklistItem}>
-                    Add an item
-                  </Button>
-                )}
-
-            {mode === 'edit' && task && (
-              <TaskDependencies
-                task={task}
-                allTasksInProject={allProjectTasks}
-                taskTypes={taskTypes}
-                initialPredecessors={taskDependencies.predecessors}
-                initialSuccessors={taskDependencies.successors}
-                users={users}
-                phases={phases}
-                refreshDependencies={async () => {
-                  try {
-                    const dependencies = await getTaskDependencies(task.task_id);
-                    setTaskDependencies(dependencies);
-                  } catch (error) {
-                    console.error('Error refreshing dependencies:', error);
-                  }
-                }}
-              />
+            {isEditingChecklist && (
+              <Button id='add-checklist-item-button' type="button" variant="soft" onClick={addChecklistItem}>
+                Add an item
+              </Button>
             )}
+          </div>
 
-            <TaskTicketLinks
-              taskId={task?.task_id || undefined}
-              phaseId={phase.phase_id}
-              projectId={phase.project_id}
-              initialLinks={task?.ticket_links}
+          {/* Full width Dependencies section */}
+          {mode === 'edit' && task && (
+            <TaskDependencies
+              ref={dependenciesRef}
+              task={task}
+              allTasksInProject={allProjectTasks}
+              taskTypes={taskTypes}
+              initialPredecessors={taskDependencies.predecessors}
+              initialSuccessors={taskDependencies.successors}
               users={users}
-              onLinksChange={setPendingTicketLinks}
+              phases={phases}
+              refreshDependencies={async () => {
+                try {
+                  const dependencies = await getTaskDependencies(task.task_id);
+                  setTaskDependencies(dependencies);
+                } catch (error) {
+                  console.error('Error refreshing dependencies:', error);
+                }
+              }}
             />
+          )}
 
-                <div className="flex justify-between mt-6">
-                  <div className="flex gap-2">
-                    {/* Only show Cancel button if not in drawer */}
-                    {!inDrawer && (
-                      <Button
-                        id='cancel-button'
-                        type="button"
-                        variant="ghost"
-                        onClick={handleCancelClick}
-                        disabled={isSubmitting}
-                      >
-                        Cancel
-                      </Button>
-                    )}
-                    {mode === 'edit' && !inDrawer && (
-                      <Button
-                        id='delete-button'
-                        type="button"
-                        variant="destructive"
-                        onClick={() => setShowDeleteConfirm(true)}
-                        disabled={isSubmitting}
-                      >
-                        Delete
-                      </Button>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button id='save-button' type="submit" disabled={isSubmitting} className={!taskName.trim() ? 'opacity-50' : ''}>
-                      {isSubmitting ? (mode === 'edit' ? 'Updating...' : 'Adding...') : (mode === 'edit' ? 'Update' : 'Save')}
-                    </Button>
-                  </div>
-                </div>
+          {/* Full width Associated Tickets section */}
+          <TaskTicketLinks
+            taskId={task?.task_id || undefined}
+            phaseId={phase.phase_id}
+            projectId={phase.project_id}
+            initialLinks={task?.ticket_links}
+            users={users}
+            onLinksChange={setPendingTicketLinks}
+          />
+
+          {/* Full width Attachments section */}
+          {mode === 'edit' && task && (
+            <div onClick={(e) => e.stopPropagation()} onSubmit={(e) => e.preventDefault()}>
+              <TaskDocumentsSimple
+                taskId={task.task_id}
+              />
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex justify-between mt-6 pt-4 border-t">
+            <div className="flex gap-2">
+              {/* Only show Cancel button if not in drawer */}
+              {!inDrawer && (
+                <Button
+                  id='cancel-button'
+                  type="button"
+                  variant="ghost"
+                  onClick={handleCancelClick}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+              )}
+              {mode === 'edit' && !inDrawer && (
+                <Button
+                  id='delete-button'
+                  type="button"
+                  variant="destructive"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={isSubmitting}
+                >
+                  Delete
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              {mode === 'edit' && (
+                <Button
+                  id='add-time-entry-button'
+                  type="button"
+                  variant="soft"
+                  onClick={handleAddTimeEntry}
+                  disabled={isSubmitting || !task?.task_id}
+                >
+                  <Clock className="h-4 w-4 mr-2" />
+                  Add Time Entry
+                </Button>
+              )}
+              <Button id='save-button' type="submit" disabled={isSubmitting} className={!taskName.trim() ? 'opacity-50' : ''}>
+                {isSubmitting ? (mode === 'edit' ? 'Updating...' : 'Adding...') : (mode === 'edit' ? 'Update' : 'Save')}
+              </Button>
+            </div>
+          </div>
         </div>
       </form>
     </div>
@@ -1222,7 +1332,7 @@ export default function TaskForm({
         <Dialog 
           isOpen={true} 
           onClose={handleCancelClick}
-          className="max-w-2xl max-h-[90vh] overflow-y-auto"
+          className="max-w-3xl max-h-[90vh] overflow-y-auto"
           title={mode === 'create' ? 'Add New Task' : 'Edit Task'}
         >
           <DialogContent>
@@ -1305,33 +1415,16 @@ export default function TaskForm({
         />
       )}
 
-      <Dialog 
-        isOpen={showAgentPicker} 
-        onClose={() => setShowAgentPicker(false)}
-        title="Add Additional Agent"
-        className="max-w-md"
-      >
-        <DialogContent>
-            <div className="space-y-4">
-              <UserPicker
-                value=""
-                onValueChange={handleAddAgent}
-                users={users.filter(u => 
-                  (!assignedUser ? u.user_id !== currentUserId : true) && 
-                  u.user_id !== assignedUser && 
-                  !(task?.task_id ? taskResources : tempTaskResources)
-                    .some(r => r.additional_user_id === u.user_id)
-                )}
-                size="sm"
-              />
-              <div className="flex justify-end space-x-2">
-                <Button id='cancel-button' variant="ghost" onClick={() => setShowAgentPicker(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-      </Dialog>
+      <ConfirmationDialog
+        isOpen={showDependencyConfirmation}
+        onClose={handleDependencyCancel}
+        onConfirm={handleDependencyConfirm}
+        title="Unsaved Dependency Changes"
+        message="You have unsaved dependency changes. Would you like to save them before updating the task?"
+        confirmLabel="Save & Continue"
+        cancelLabel="Discard & Continue"
+      />
+
     </>
   );
 }

@@ -6,24 +6,184 @@
  * - Email threading for conversations using In-Reply-To/References headers
  * - Inline forms for human tasks
  * - Hardcoded retry policies and error handling
+ * 
+ * NOTE: This file uses plain JavaScript syntax to be compatible with the workflow runtime.
+ * No imports or TypeScript types are used to avoid serialization issues.
  */
 
-import { WorkflowContext } from '../core/workflowContext';
+// No imports - all dependencies are available in the workflow context
 
 // Email actions are called through the workflow action registry
 // to avoid module resolution issues during Docker builds
 
-export async function systemEmailProcessingWorkflow(context: WorkflowContext): Promise<void> {
-  const { actions, data, logger, setState } = context;
-  const triggerEvent = (context.input as any)?.triggerEvent;
+export async function systemEmailProcessingWorkflow(context) {
+  const { actions, data, logger, setState, events } = context;
   
-  // Extract email data from the INBOUND_EMAIL_RECEIVED event payload
-  const emailData = triggerEvent.payload.emailData;
-  const providerId = triggerEvent.payload.providerId;
-  const tenant = triggerEvent.payload.tenant;
+  // Helper functions - defined inside the main workflow function
+  /**
+   * Check if email is part of existing conversation thread
+   */
+  const checkEmailThreading = async (emailData, actions) => {
+    // Check for threading headers
+    if (!emailData.inReplyTo && (!emailData.references || emailData.references.length === 0)) {
+      return null;
+    }
+    
+    // Look for existing ticket with matching email metadata
+    try {
+      const result = await actions.find_ticket_by_email_thread({
+        threadId: emailData.threadId,
+        inReplyTo: emailData.inReplyTo,
+        references: emailData.references,
+        originalMessageId: emailData.inReplyTo // Look for ticket created from the original message
+      });
+      
+      return result.success ? result.ticket : null;
+    } catch (error) {
+      console.warn(`Error checking email threading: ${error.message}`);
+      return null;
+    }
+  };
+
+  /**
+   * Handle email reply to existing ticket
+   */
+  const handleEmailReply = async (emailData, existingTicket, actions) => {
+    // Add email as comment to existing ticket
+    await actions.create_comment_from_email({
+      ticket_id: existingTicket.ticketId,
+      content: emailData.body.html || emailData.body.text,
+      format: emailData.body.html ? 'html' : 'text',
+      source: 'email',
+      author_type: 'client' // This is a reply from the client
+    });
+    
+    // Handle attachments for reply
+    if (emailData.attachments && emailData.attachments.length > 0) {
+      for (const attachment of emailData.attachments) {
+        try {
+          await actions.process_email_attachment({
+            emailId: emailData.id,
+            attachmentId: attachment.id,
+            ticketId: existingTicket.ticketId,
+            tenant: emailData.tenant,
+            providerId: emailData.providerId,
+            attachmentData: attachment
+          });
+        } catch (attachmentError) {
+          console.warn(`Failed to process reply attachment ${attachment.name}: ${attachmentError.message}`);
+        }
+      }
+    }
+  };
+
+  /**
+   * Find exact email match in contacts
+   */
+  const findExactEmailMatch = async (emailAddress, actions) => {
+    try {
+      const result = await actions.find_contact_by_email({ email: emailAddress });
+      
+      if (result.success && result.contact) {
+        return {
+          contactId: result.contact.contact_id,
+          contactName: result.contact.name,
+          companyId: result.contact.company_id,
+          companyName: result.contact.company_name
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.warn(`Error finding email match: ${error.message}`);
+      return null;
+    }
+  };
+
+  /**
+   * Process the result of manual client matching
+   */
+  const processClientMatchingResult = async (
+    matchingResult, 
+    emailData,
+    actions
+  ) => {
+    let companyId = matchingResult.selectedCompanyId;
+    let companyName = '';
+    let contactId = null;
+    
+    // Create new company if requested
+    if (matchingResult.createNewCompany && matchingResult.newCompanyName) {
+      const result = await actions.create_company_from_email({
+        company_name: matchingResult.newCompanyName,
+        email: emailData.from.email,
+        source: 'email'
+      });
+      
+      if (result.success) {
+        companyId = result.company.company_id;
+        companyName = result.company.company_name;
+      }
+    } else {
+      // Get existing company details
+      const result = await actions.get_company_by_id_for_email({ companyId });
+      if (result.success && result.company) {
+        companyName = result.company.company_name || '';
+      }
+    }
+    
+    // Create or find contact
+    if (matchingResult.contactName || emailData.from.name) {
+      const result = await actions.create_or_find_contact({
+        email: emailData.from.email,
+        name: matchingResult.contactName || emailData.from.name,
+        company_id: companyId
+      });
+      
+      if (result.success) {
+        contactId = result.contact.id;
+      }
+    }
+    
+    // Save email association if requested
+    if (matchingResult.saveEmailAssociation) {
+      await actions.save_email_client_association({
+        email: emailData.from.email,
+        company_id: companyId,
+        contact_id: contactId || undefined
+      });
+    }
+    
+    return {
+      companyId,
+      companyName,
+      contactId,
+      contactName: matchingResult.contactName || emailData.from.name
+    };
+  };
+
+
+  // Main workflow logic starts here
+  setState('PROCESSING_INBOUND_EMAIL');
+  logger.info('🚀 Starting email processing workflow');
+  
+  // Wait for the INBOUND_EMAIL_RECEIVED event that triggered this workflow
+  // This event should have been submitted immediately after starting the workflow
+  logger.info('⏳ Waiting for INBOUND_EMAIL_RECEIVED event...');
+  const eventPayload = await events.waitFor('INBOUND_EMAIL_RECEIVED', 10000); // 10 second timeout
+  
+  logger.info('✅ Received INBOUND_EMAIL_RECEIVED event', {
+    hasPayload: !!eventPayload,
+    payloadKeys: eventPayload ? Object.keys(eventPayload) : []
+  });
+  
+  // Extract email data from the event payload
+  const emailData = eventPayload.emailData;
+  const providerId = eventPayload.providerId;
+  const tenant = eventPayload.tenantId;
   
   setState('PROCESSING_INBOUND_EMAIL');
-  logger.info(`Processing inbound email: ${emailData.subject} from ${emailData.from.email}`);
+  console.log(`Processing inbound email: ${emailData.subject} from ${emailData.from.email}`);
   
   // Store relevant data in workflow context
   data.set('emailData', emailData);
@@ -34,26 +194,26 @@ export async function systemEmailProcessingWorkflow(context: WorkflowContext): P
   try {
     // Step 1: Check if this is a threaded email (reply to existing ticket)
     setState('CHECKING_EMAIL_THREADING');
-    logger.info('Checking if email is part of existing conversation thread');
+    console.log('Checking if email is part of existing conversation thread');
     
     const existingTicket = await checkEmailThreading(emailData, actions);
     
     if (existingTicket) {
       // This is a reply to an existing ticket - add as comment
-      logger.info(`Email is part of existing ticket: ${existingTicket.ticketId}`);
+      console.log(`Email is part of existing ticket: ${existingTicket.ticketId}`);
       await handleEmailReply(emailData, existingTicket, actions);
       return; // Exit workflow after handling reply
     }
     
     // Step 2: This is a new email - find or match client
     setState('MATCHING_EMAIL_CLIENT');
-    logger.info('Attempting to match email sender to existing client');
+    console.log('Attempting to match email sender to existing client');
     
     let matchedClient = await findExactEmailMatch(emailData.from.email, actions);
     
     if (!matchedClient) {
       // No exact match found - create human task for manual matching
-      logger.info('No exact email match found, creating human task for manual client selection');
+      console.log('No exact email match found, creating human task for manual client selection');
       
       const taskResult = await actions.createTaskAndWaitForResult({
         taskType: 'match_email_to_client' as any,
@@ -65,30 +225,56 @@ export async function systemEmailProcessingWorkflow(context: WorkflowContext): P
         matchedClient = await processClientMatchingResult(taskResult.resolutionData, emailData, actions);
         data.set('matchedClient', matchedClient);
       } else {
-        logger.warn('Manual client matching was not completed successfully');
+        console.warn('Manual client matching was not completed successfully');
         // Continue without client match - ticket will be created without company association
       }
     } else {
-      logger.info(`Found exact email match: ${matchedClient.companyName}`);
+      console.log(`Found exact email match: ${matchedClient.companyName}`);
       data.set('matchedClient', matchedClient);
     }
     
-    // Step 3: Create new ticket from email
+    // Step 3: Get tenant-level inbound ticket defaults
+    setState('RESOLVING_TICKET_DEFAULTS');
+    console.log('Resolving inbound ticket defaults for tenant:', tenant);
+    
+    let ticketDefaults = await actions.resolve_inbound_ticket_defaults({
+      tenant: tenant
+    });
+    
+    if (!ticketDefaults) {
+      console.error(`No inbound ticket defaults configured for tenant ${tenant}. Email processing cannot continue.`);
+      setState('ERROR_NO_TICKET_DEFAULTS');
+      throw new Error(`No inbound ticket defaults configured for tenant ${tenant}. Please configure default ticket settings for email processing.`);
+    }
+    
+    console.log('Using ticket defaults:', ticketDefaults);
+    data.set('ticketDefaults', ticketDefaults);
+    
+    // Step 4: Create new ticket from email using tenant defaults
     setState('CREATING_TICKET');
-    logger.info('Creating new ticket from email');
+    console.log('Creating new ticket from email with tenant defaults');
+    
+    // Override defaults with matched client info if available
+    const finalCompanyId = matchedClient?.companyId || ticketDefaults.company_id;
+    const finalContactId = matchedClient?.contactId || null;
     
     const ticketResult = await actions.create_ticket_from_email({
       title: emailData.subject,
       description: emailData.body.text,
-      company_id: matchedClient?.companyId,
-      contact_id: matchedClient?.contactId,
+      company_id: finalCompanyId,
+      contact_id: finalContactId,
       source: 'email',
-      channel_id: await getEmailChannelId(actions), // Get or create email channel
-      status_id: await getNewTicketStatusId(actions), // Get default new ticket status
-      priority_id: await getDefaultPriorityId(actions), // Get default priority
+      channel_id: ticketDefaults.channel_id,
+      status_id: ticketDefaults.status_id,
+      priority_id: ticketDefaults.priority_id,
+      category_id: ticketDefaults.category_id,
+      subcategory_id: ticketDefaults.subcategory_id,
+      location_id: ticketDefaults.location_id,
+      entered_by: ticketDefaults.entered_by,
       // Store email metadata for future threading
       email_metadata: {
         messageId: emailData.id,
+        mailhogId: emailData.mailhogId,
         threadId: emailData.threadId,
         from: emailData.from,
         inReplyTo: emailData.inReplyTo,
@@ -97,13 +283,13 @@ export async function systemEmailProcessingWorkflow(context: WorkflowContext): P
       }
     });
     
-    logger.info(`Ticket created with ID: ${ticketResult.ticket_id}`);
+    console.log(`Ticket created with ID: ${ticketResult.ticket_id}`);
     data.set('ticketId', ticketResult.ticket_id);
     
-    // Step 4: Handle attachments if present
+    // Step 5: Handle attachments if present
     if (emailData.attachments && emailData.attachments.length > 0) {
       setState('PROCESSING_ATTACHMENTS');
-      logger.info(`Processing ${emailData.attachments.length} email attachments`);
+      console.log(`Processing ${emailData.attachments.length} email attachments`);
       
       for (const attachment of emailData.attachments) {
         try {
@@ -116,247 +302,45 @@ export async function systemEmailProcessingWorkflow(context: WorkflowContext): P
             attachmentData: attachment
           });
         } catch (attachmentError: any) {
-          logger.warn(`Failed to process attachment ${attachment.name}: ${attachmentError.message}`);
+          console.warn(`Failed to process attachment ${attachment.name}: ${attachmentError.message}`);
           // Continue processing other attachments
         }
       }
       
-      logger.info(`Processed ${emailData.attachments.length} attachments`);
+      console.log(`Processed ${emailData.attachments.length} attachments`);
     }
     
-    // Step 5: Create initial comment with original email content
+    // Step 6: Create initial comment with original email content
     await actions.create_comment_from_email({
       ticket_id: ticketResult.ticket_id,
       content: emailData.body.html || emailData.body.text,
       format: emailData.body.html ? 'html' : 'text',
       source: 'email',
-      author_type: 'system',
-      metadata: {
-        emailSource: true,
-        originalEmailId: emailData.id,
-        fromEmail: emailData.from.email,
-        fromName: emailData.from.name,
-        emailSubject: emailData.subject,
-        emailReceivedAt: emailData.receivedAt
-      }
+      author_type: 'internal'
     });
     
     setState('EMAIL_PROCESSED');
-    logger.info('Email processing completed successfully');
+    console.log('Email processing completed successfully');
     
-    // Step 6: Optional notification (if we have a matched client)
+    // Step 7: Optional notification (if we have a matched client)
     if (matchedClient?.companyId) {
       try {
         // TODO: Implement notification system
-        logger.info('Sent ticket creation acknowledgment email');
+        console.log('Sent ticket creation acknowledgment email');
       } catch (notificationError: any) {
-        logger.warn(`Failed to send notification: ${notificationError.message}`);
+        console.warn(`Failed to send notification: ${notificationError.message}`);
         // Don't fail the workflow for notification errors
       }
     }
     
-  } catch (error: any) {
-    logger.error(`Error processing inbound email: ${error.message}`);
+  } catch (error) {
+    console.error(`Error processing inbound email: ${error.message}`);
     setState('ERROR_PROCESSING_EMAIL');
     
     // Create human task for error handling - simplified for compilation
-    logger.error(`Email processing failed: ${error.message}. Manual intervention required for email: ${emailData.subject}`);
+    console.error(`Email processing failed: ${error.message}. Manual intervention required for email: ${emailData.subject}`);
     
     // Don't re-throw the error - let the human task handle resolution
     setState('AWAITING_MANUAL_RESOLUTION');
   }
-}
-
-/**
- * Check if email is part of existing conversation thread
- */
-async function checkEmailThreading(emailData: any, actions: any): Promise<any | null> {
-  // Check for threading headers
-  if (!emailData.inReplyTo && (!emailData.references || emailData.references.length === 0)) {
-    return null;
-  }
-  
-  // Look for existing ticket with matching email metadata
-  try {
-    const result = await actions.find_ticket_by_email_thread({
-      threadId: emailData.threadId,
-      inReplyTo: emailData.inReplyTo,
-      references: emailData.references,
-      originalMessageId: emailData.inReplyTo // Look for ticket created from the original message
-    });
-    
-    return result.success ? result.ticket : null;
-  } catch (error: any) {
-    console.warn(`Error checking email threading: ${error.message}`);
-    return null;
-  }
-}
-
-/**
- * Handle email reply to existing ticket
- */
-async function handleEmailReply(emailData: any, existingTicket: any, actions: any): Promise<void> {
-  // Add email as comment to existing ticket
-  await actions.create_comment_from_email({
-    ticket_id: existingTicket.ticketId,
-    content: emailData.body.html || emailData.body.text,
-    format: emailData.body.html ? 'html' : 'text',
-    source: 'email',
-    author_type: 'contact', // This is a reply from the client
-    metadata: {
-      emailSource: true,
-      emailId: emailData.id,
-      fromEmail: emailData.from.email,
-      fromName: emailData.from.name,
-      emailSubject: emailData.subject,
-      emailReceivedAt: emailData.receivedAt,
-      isReply: true,
-      replyToMessageId: emailData.inReplyTo
-    }
-  });
-  
-  // Handle attachments for reply
-  if (emailData.attachments && emailData.attachments.length > 0) {
-    for (const attachment of emailData.attachments) {
-      try {
-        await actions.process_email_attachment({
-          emailId: emailData.id,
-          attachmentId: attachment.id,
-          ticketId: existingTicket.ticketId,
-          tenant: emailData.tenant,
-          providerId: emailData.providerId,
-          attachmentData: attachment
-        });
-      } catch (attachmentError: any) {
-        console.warn(`Failed to process reply attachment ${attachment.name}: ${attachmentError.message}`);
-      }
-    }
-  }
-}
-
-/**
- * Find exact email match in contacts
- */
-async function findExactEmailMatch(emailAddress: string, actions: any): Promise<any | null> {
-  try {
-    const result = await actions.find_contact_by_email({ email: emailAddress });
-    
-    if (result.success && result.contact) {
-      return {
-        contactId: result.contact.contact_id,
-        contactName: result.contact.name,
-        companyId: result.contact.company_id,
-        companyName: result.contact.company_name
-      };
-    }
-    
-    return null;
-  } catch (error: any) {
-    console.warn(`Error finding email match: ${error.message}`);
-    return null;
-  }
-}
-
-/**
- * Process the result of manual client matching
- */
-async function processClientMatchingResult(
-  matchingResult: any, 
-  emailData: any,
-  actions: any
-): Promise<any> {
-  let companyId = matchingResult.selectedCompanyId;
-  let companyName = '';
-  let contactId = null;
-  
-  // Create new company if requested
-  if (matchingResult.createNewCompany && matchingResult.newCompanyName) {
-    const result = await actions.create_company_from_email({
-      company_name: matchingResult.newCompanyName,
-      email: emailData.from.email,
-      source: 'email'
-    });
-    
-    if (result.success) {
-      companyId = result.company.company_id;
-      companyName = result.company.company_name;
-    }
-  } else {
-    // Get existing company details
-    const result = await actions.get_company_by_id_for_email({ companyId });
-    if (result.success && result.company) {
-      companyName = result.company.company_name || '';
-    }
-  }
-  
-  // Create or find contact
-  if (matchingResult.contactName || emailData.from.name) {
-    const result = await actions.create_or_find_contact({
-      email: emailData.from.email,
-      name: matchingResult.contactName || emailData.from.name,
-      company_id: companyId
-    });
-    
-    if (result.success) {
-      contactId = result.contact.id;
-    }
-  }
-  
-  // Save email association if requested
-  if (matchingResult.saveEmailAssociation) {
-    await actions.save_email_client_association({
-      email: emailData.from.email,
-      company_id: companyId,
-      contact_id: contactId || undefined
-    });
-  }
-  
-  return {
-    companyId,
-    companyName,
-    contactId,
-    contactName: matchingResult.contactName || emailData.from.name
-  };
-}
-
-/**
- * Get or create email channel ID
- */
-async function getEmailChannelId(actions: any): Promise<string> {
-  // Try to find existing email channel
-  const result = await actions.find_channel_by_name({ name: 'Email' });
-  
-  if (result.success && result.channel) {
-    return result.channel.id;
-  }
-  
-  // Create email channel if it doesn't exist
-  const createResult = await actions.create_channel_from_email({
-    channel_name: 'Email',
-    description: 'Tickets created from inbound emails',
-    is_default: false
-  });
-  
-  return createResult.success ? createResult.channel.channel_id : '';
-}
-
-/**
- * Get default status ID for new tickets
- */
-async function getNewTicketStatusId(actions: any): Promise<string> {
-  const result = await actions.find_status_by_name({ 
-    name: 'New',
-    item_type: 'ticket'
-  });
-  
-  return (result.success && result.status) ? result.status.id : '';
-}
-
-/**
- * Get default priority ID
- */
-async function getDefaultPriorityId(actions: any): Promise<string> {
-  const result = await actions.find_priority_by_name({ name: 'Medium' });
-  
-  return (result.success && result.priority) ? result.priority.id : '';
 }

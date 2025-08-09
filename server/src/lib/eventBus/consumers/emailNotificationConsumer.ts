@@ -79,7 +79,7 @@ export async function initializeEmailNotificationConsumer(tenantId: string) {
             't.ticket_number',
             't.title',
             knex.raw("t.attributes->>'description' as description"),
-            'c.email as company_email',
+            'cl.email as company_email',
             'co.email as contact_email',
             'p.priority_name',
             's.name as status_name'
@@ -91,6 +91,11 @@ export async function initializeEmailNotificationConsumer(tenantId: string) {
           .leftJoin('companies as c', function() {
             this.on('t.company_id', 'c.company_id')
                 .andOn('t.tenant', 'c.tenant');
+          })
+          .leftJoin('company_locations as cl', function() {
+            this.on('c.company_id', 'cl.company_id')
+                .andOn('c.tenant', 'cl.tenant')
+                .andOn('cl.is_default', knex.raw('true'));
           })
           .leftJoin('priorities as p', function() {
             this.on('t.priority_id', 'p.priority_id')
@@ -152,7 +157,7 @@ export async function initializeEmailNotificationConsumer(tenantId: string) {
         const project = await knex('projects as p')
           .select(
             'p.*',
-            'c.email as company_email',
+            'cl.email as company_email',
             'ct.email as contact_email',
             's.name as status_name',
             'u.email as assigned_user_email'
@@ -160,6 +165,11 @@ export async function initializeEmailNotificationConsumer(tenantId: string) {
           .leftJoin('companies as c', function() {
             this.on('c.company_id', '=', 'p.company_id')
                 .andOn('c.tenant', '=', 'p.tenant');
+          })
+          .leftJoin('company_locations as cl', function() {
+            this.on('c.company_id', '=', 'cl.company_id')
+                .andOn('c.tenant', '=', 'cl.tenant')
+                .andOn('cl.is_default', '=', knex.raw('true'));
           })
           .leftJoin('contacts as ct', function() {
             this.on('ct.contact_name_id', '=', 'p.contact_name_id')

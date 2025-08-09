@@ -1,10 +1,12 @@
 import { TenantEntity } from ".";
 
+export type DocumentAssociationEntityType = 'user' | 'ticket' | 'company' | 'contact' | 'asset' | 'project_task';
+
 export interface IDocumentAssociation extends TenantEntity {
     association_id: string;
     document_id: string;
     entity_id: string;
-    entity_type: 'user' | 'ticket' | 'company' | 'contact' | 'asset';
+    entity_type: DocumentAssociationEntityType;
     created_at?: Date;
     notes?: string;
     created_by?: string;
@@ -14,7 +16,7 @@ export interface IDocumentAssociation extends TenantEntity {
 export interface IDocumentAssociationInput {
     document_id: string;
     entity_id: string;
-    entity_type: 'user' | 'ticket' | 'company' | 'contact' | 'asset';
+    entity_type: DocumentAssociationEntityType;
     tenant: string;
     notes?: string;
     is_entity_logo?: boolean;

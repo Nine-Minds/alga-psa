@@ -1,0 +1,13 @@
+services:
+  temporal:
+    image: temporalio/auto-setup:1.24.2
+    ports:
+      - "7233:7233"   # gRPC
+      - "8233:8233"   # Web UI
+    environment:
+      - CASSANDRA_SEEDS=127.0.0.1
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development.yaml
+
+networks:
+  temporal-test:
+    driver: bridge

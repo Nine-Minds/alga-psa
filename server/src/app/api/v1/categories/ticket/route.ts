@@ -4,25 +4,16 @@
  * POST /api/v1/categories/ticket - Create ticket category
  */
 
-import { CategoryTagController } from 'server/src/lib/api/controllers/CategoryTagController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiCategoryController } from 'server/src/lib/api/controllers/ApiCategoryController';
 
-const controller = new CategoryTagController();
+const controller = new ApiCategoryController();
 
 export async function GET(request: Request) {
-  try {
-    return await controller.listTicketCategories()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
+  return controller.listTicketCategories()(request as any);
 }
 
 export async function POST(request: Request) {
-  try {
-    return await controller.createTicketCategory()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
+  return controller.createTicketCategory()(request as any);
 }
 
 export const runtime = 'nodejs';

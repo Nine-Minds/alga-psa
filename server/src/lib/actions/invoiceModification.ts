@@ -1,6 +1,6 @@
 'use server'
 
-import { withTransaction } from '../../../../shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import { Temporal } from '@js-temporal/polyfill';
@@ -17,11 +17,11 @@ import { persistInvoiceItems, persistManualInvoiceItems } from 'server/src/lib/s
 import Invoice from 'server/src/lib/models/invoice'; // Needed for getFullInvoiceById
 import { v4 as uuidv4 } from 'uuid';
 import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core'; // Import runtime getter via package export
-// import { getRedisStreamClient } from '@shared/workflow/streams/redisStreamClient.js'; // No longer directly used here
+// import { getRedisStreamClient } from '@alga-psa/shared/workflow/streams/redisStreamClient.js'; // No longer directly used here
 import { getEventBus } from 'server/src/lib/eventBus'; // Import EventBus
-import { EventType as BusEventType } from '@shared/workflow/streams/eventBusSchema'; // For type safety
-import { EventSubmissionOptions } from '../../../../shared/workflow/core/workflowRuntime.js'; // Import type directly via relative path
-import { getSecretProviderInstance } from '@shared/core';
+import { EventType as BusEventType } from '@alga-psa/shared/workflow/streams'; // For type safety
+import { EventSubmissionOptions } from '@alga-psa/shared/workflow/core'; // Import type directly via package export
+import { getSecretProviderInstance } from '@alga-psa/shared/core';
 
 // Interface definitions specific to manual updates (might move to interfaces file later)
 export interface ManualInvoiceUpdate {
@@ -561,7 +561,7 @@ async function updateManualInvoiceItemsInternal(
     // Fetch realmId from qbo_credentials secret
     let realmId: string | null = null;
     try {
-      const secretProvider = getSecretProviderInstance();
+      const secretProvider = await getSecretProviderInstance();
       const secretString = await secretProvider.getTenantSecret(tenant, 'qbo_credentials'); // Read the whole secret
 
       if (secretString) {

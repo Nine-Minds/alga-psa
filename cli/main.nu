@@ -10,6 +10,7 @@ use "workflows.nu" *
 use "dev-env.nu" *
 use "build.nu" *
 use "config.nu" *
+use "tenant.nu" *
 
 # Main CLI entry point function
 def --wrapped main [
@@ -102,6 +103,19 @@ def --wrapped main [
        print "    Example: nu main.nu config get dev_env.author.name"
        print "  nu main.nu config set <key> <value>  # Set a specific config value"
        print "    Example: nu main.nu config set dev_env.author.email \"john@example.com\""
+       print ""
+       print "  nu main.nu create-tenant <name> <email> [options]  # Create a new tenant"
+       print "    --first-name: Admin user's first name (default: Admin)"
+       print "    --last-name: Admin user's last name (default: User)"
+       print "    --company-name: Company name (defaults to tenant name)"
+       print "    --password: Admin password (generated if not provided)"
+       print "    --seed-onboarding: Run onboarding seeds (default: true)"
+       print "    --skip-onboarding: Set onboarding_skipped flag in tenant_settings"
+       print "    Example: nu main.nu create-tenant \"Test Company\" \"admin@test.com\""
+       print "    Example: nu main.nu create-tenant \"Test Company\" \"admin@test.com\" --skip-onboarding"
+       print "  nu main.nu list-tenants           # List all tenants"
+       print "  nu main.nu delete-tenant <id> [--force]  # Delete a tenant"
+       print "    Example: nu main.nu delete-tenant test-tenant-id --force"
        print ""
        print "Alternatively, source the script ('source main.nu') and run commands directly:"
        print "  run-migrate <action>"
@@ -551,8 +565,39 @@ def --wrapped main [
                }
            }
        }
+       "create-tenant" => {
+           let tenant_name = ($args | get 1? | default null)
+           let admin_email = ($args | get 2? | default null)
+           
+           if $tenant_name == null or $admin_email == null {
+               error make { msg: $"($env.ALGA_COLOR_RED)create-tenant requires tenant name and admin email arguments($env.ALGA_COLOR_RESET)" }
+           }
+           
+           # Parse optional flags
+           let first_name = (parse-flag $args "--first-name" | default "Admin")
+           let last_name = (parse-flag $args "--last-name" | default "User")
+           let company_name = (parse-flag $args "--company-name" | default "")
+           let password = (parse-flag $args "--password" | default "")
+           let seed_onboarding = not (check-flag $args "--no-seed-onboarding")
+           let skip_onboarding = (check-flag $args "--skip-onboarding")
+           
+           create-tenant $tenant_name $admin_email --first-name $first_name --last-name $last_name --company-name $company_name --password $password --seed-onboarding $seed_onboarding --skip-onboarding $skip_onboarding
+       }
+       "list-tenants" => {
+           list-tenants
+       }
+       "delete-tenant" => {
+           let tenant_id = ($args | get 1? | default null)
+           
+           if $tenant_id == null {
+               error make { msg: $"($env.ALGA_COLOR_RED)delete-tenant requires tenant ID argument($env.ALGA_COLOR_RESET)" }
+           }
+           
+           let force = (check-flag $args "--force")
+           delete-tenant $tenant_id --force $force
+       }
        _ => {
-           error make { msg: $"($env.ALGA_COLOR_RED)Unknown command: '($command)'. Must be 'migrate', 'dev-up', 'dev-down', 'dev-env-*', 'dev-env-force-cleanup', 'update-workflow', 'register-workflow', 'build-image', 'build-all-images', 'build-code-server', 'build-ai-api', 'build-ai-web', 'build-ai-web-k8s', 'build-ai-all', or 'config'.($env.ALGA_COLOR_RESET)" }
+           error make { msg: $"($env.ALGA_COLOR_RED)Unknown command: '($command)'. Must be 'migrate', 'dev-up', 'dev-down', 'dev-env-*', 'dev-env-force-cleanup', 'update-workflow', 'register-workflow', 'build-image', 'build-all-images', 'build-code-server', 'build-ai-api', 'build-ai-web', 'build-ai-web-k8s', 'build-ai-all', 'config', 'create-tenant', 'list-tenants', or 'delete-tenant'.($env.ALGA_COLOR_RESET)" }
        }
    }
 }

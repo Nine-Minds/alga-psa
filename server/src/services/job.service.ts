@@ -1,6 +1,6 @@
 import { JobScheduler } from '../lib/jobs/jobScheduler';
 import { StorageService } from 'server/src/lib/storage/StorageService';
-import { JobStatus } from '../types/job.d';
+import { JobStatus } from '../types/job';
 import { createTenantKnex, runWithTenant } from 'server/src/lib/db';
 
 export interface JobStep {

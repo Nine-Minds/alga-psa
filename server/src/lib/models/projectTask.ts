@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
 import { getCurrentTenantId } from '../db';
 import { getCurrentUser } from '../actions/user-actions/userActions';
+import { deleteEntityTags } from '../utils/tagCleanup';
 import { 
   IProjectTask, 
   ITaskChecklistItem, 
@@ -214,6 +215,10 @@ const ProjectTaskModel = {
           .where('task_id', taskId)
           .andWhere('tenant', tenant)
           .del();
+        
+        // Delete task tags
+        await deleteEntityTags(trx, taskId, 'project_task');
+        
         await trx<IProjectTask>('project_tasks')
           .where('task_id', taskId)
           .andWhere('tenant', tenant)
@@ -579,6 +584,93 @@ const ProjectTaskModel = {
       return links;
     } catch (error) {
       console.error('Error getting task ticket links:', error);
+      throw error;
+    }
+  },
+
+  getTasksByPhase: async (knexOrTrx: Knex | Knex.Transaction, phaseId: string): Promise<IProjectTask[]> => {
+    try {
+      const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
+      
+      // Get phase to find its WBS code
+      const phase = await knexOrTrx('project_phases')
+        .where({ phase_id: phaseId, tenant })
+        .first();
+        
+      if (!phase) {
+        return [];
+      }
+      
+      // Get all tasks that belong to this phase (based on WBS code)
+      const tasks = await knexOrTrx<IProjectTask>('project_tasks')
+        .where('tenant', tenant)
+        .where('wbs_code', 'like', `${phase.wbs_code}.%`)
+        .orderBy('order_key');
+        
+      return tasks;
+    } catch (error) {
+      console.error('Error getting tasks by phase:', error);
+      throw error;
+    }
+  },
+
+  getTaskTicketLinksForTasks: async (knexOrTrx: Knex | Knex.Transaction, taskIds: string[]): Promise<IProjectTicketLinkWithDetails[]> => {
+    try {
+      const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
+      
+      if (taskIds.length === 0) {
+        return [];
+      }
+      
+      const links = await knexOrTrx<IProjectTicketLink>('project_ticket_links')
+        .whereIn('task_id', taskIds)
+        .andWhere('project_ticket_links.tenant', tenant)
+        .leftJoin('tickets', function() {
+          this.on('project_ticket_links.ticket_id', 'tickets.ticket_id')
+              .andOn('project_ticket_links.tenant', 'tickets.tenant')
+        })
+        .leftJoin('statuses', function() {
+          this.on('tickets.status_id', 'statuses.status_id')
+              .andOn('tickets.tenant', 'statuses.tenant')
+        })
+        .select(
+          'project_ticket_links.*',
+          'tickets.ticket_number',
+          'tickets.title',
+          'statuses.name as status_name',
+          'statuses.is_closed'
+        );
+      return links;
+    } catch (error) {
+      console.error('Error getting task ticket links for tasks:', error);
+      throw error;
+    }
+  },
+
+  getTaskResourcesForTasks: async (knexOrTrx: Knex | Knex.Transaction, taskIds: string[]): Promise<any[]> => {
+    try {
+      const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
+      
+      if (taskIds.length === 0) {
+        return [];
+      }
+      
+      const resources = await knexOrTrx('task_resources')
+        .whereIn('task_id', taskIds)
+        .andWhere('tenant', tenant);
+        
+      return resources;
+    } catch (error) {
+      console.error('Error getting task resources for tasks:', error);
       throw error;
     }
   },

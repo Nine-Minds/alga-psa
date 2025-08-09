@@ -209,9 +209,10 @@ async function CreditExpirationSettings({ companyId }: { companyId: string }) {
 }
 
 // Main page component
-export default async function CreditsPage({ params }: { params: { companyId?: string } }) {
+export default async function CreditsPage({ params }: { params: Promise<{ companyId?: string }> }) {
+  const resolvedParams = await params;
   // For demo purposes, use a placeholder company ID if none is provided
-  const companyId = params.companyId || '00000000-0000-0000-0000-000000000000';
+  const companyId = resolvedParams.companyId || '00000000-0000-0000-0000-000000000000';
   
   // Get credit expiration settings
   const settings = await getCreditExpirationSettings(companyId);

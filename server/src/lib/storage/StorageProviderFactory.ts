@@ -18,7 +18,7 @@ export class StorageProviderFactory {
         }
 
         console.log('StorageProviderFactory: Loading storage configuration');
-        const config = getStorageConfig();
+        const config = await getStorageConfig();
         console.log('StorageProviderFactory: Config loaded:', {
             defaultProvider: config.defaultProvider,
             availableProviders: Object.keys(config.providers),

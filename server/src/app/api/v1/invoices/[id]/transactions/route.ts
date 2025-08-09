@@ -3,19 +3,14 @@
  * GET /api/v1/invoices/[id]/transactions - List invoice transactions
  */
 
-import { InvoiceController } from 'server/src/lib/api/controllers/InvoiceController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiInvoiceController } from 'server/src/lib/api/controllers/ApiInvoiceController';
 
-const controller = new InvoiceController();
+const controller = new ApiInvoiceController();
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
-  try {
-    const req = request as any;
-    req.params = params;
-    return await controller.listTransactions()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const req = request as any;
+  req.params = params;
+  return controller.listTransactions()(req);
 }
 
 export const runtime = 'nodejs';

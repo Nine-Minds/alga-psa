@@ -5,6 +5,17 @@ node_modules/
 
 # testing
 /coverage
+test-results/
+playwright-test-results/
+playwright-report/
+screenshots/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.webm
+*.mp4
 
 # Next.js
 *.next/
@@ -74,6 +85,7 @@ yarn-error.log*
 .roo/
 .mcp.json
 CLAUDE.md
+.claude/
 
 # vercel
 .vercel
@@ -114,7 +126,16 @@ secrets/
 .secrets
 .clinerules
 data/
+uploads/
 shared/dist
 temp_wasm_compile
 venv/
+.venv
 .serena
+
+# OpenCode configuration files
+OpenCode.md
+opencode.md
+.opencode
+shared/core/*.d.ts
+shared/core/*.js

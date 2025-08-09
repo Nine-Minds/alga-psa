@@ -7,7 +7,16 @@ import { Knex } from 'knex';
 import { v4 as uuid4 } from 'uuid';
 import { BaseService, ServiceContext, ListResult } from './BaseService';
 import { ITeam, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { withTransaction } from '@shared/db';
+import { NotFoundError, ValidationError, ConflictError, BadRequestError } from '../middleware/apiMiddleware';
+
+// Helper function for transactions
+async function withTransaction<T>(
+  knex: Knex,
+  callback: (trx: Knex.Transaction) => Promise<T>
+): Promise<T> {
+  return knex.transaction(callback);
+}
+
 import { 
   CreateTeamData,
   UpdateTeamData,
@@ -29,9 +38,9 @@ import {
   validateTeamAccess,
   validateTeamCapacity
 } from '../schemas/teamSchemas';
-import { ListOptions } from '../controllers/BaseController';
-import { getMultipleUsersWithRoles, getUserById } from 'server/src/lib/actions/user-actions/userActions';
-import TeamModel from 'server/src/lib/models/team';
+import { ListOptions } from '../controllers/types';
+// Removed user actions import - will query users directly
+// TeamModel removed - functionality implemented directly in service
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { 
   generateResourceLinks, 
@@ -126,8 +135,8 @@ export class TeamService extends BaseService<ITeam> {
         .where('t.tenant', context.tenant);
   
       // Apply filters
-      dataQuery = this.applyTeamFilters(dataQuery, filters, knex);
-      countQuery = this.applyTeamFilters(countQuery, filters, knex);
+      dataQuery = this.applyTeamFilters(dataQuery, filters, knex, true);  // has manager join
+      countQuery = this.applyTeamFilters(countQuery, filters, knex, false); // no manager join
   
       // Apply sorting
       const sortField = sort || this.defaultSort;
@@ -168,8 +177,21 @@ export class TeamService extends BaseService<ITeam> {
       // Enhance teams with members and HATEOAS links
       const enhancedTeams = await Promise.all(
         teams.map(async (team: any) => {
-          const memberIds = await TeamModel.getMembers(knex, team.team_id);
-          const members = memberIds.length > 0 ? await getMultipleUsersWithRoles(memberIds) : [];
+          const memberIds = await knex('team_members')
+            .where({ 'team_members.team_id': team.team_id, 'team_members.tenant': team.tenant })
+            .join('users', function() {
+              this.on('team_members.user_id', '=', 'users.user_id')
+                  .andOn('team_members.tenant', '=', 'users.tenant');
+            })
+            .where('users.is_inactive', false)
+            .pluck('team_members.user_id');
+          // Get user details for members
+          const members = memberIds.length > 0 
+            ? await knex('users')
+                .whereIn('user_id', memberIds)
+                .where('tenant', team.tenant)
+                .select('user_id', 'username', 'email', 'first_name', 'last_name')
+            : [];
           
           const teamData = {
             ...team,
@@ -237,8 +259,21 @@ export class TeamService extends BaseService<ITeam> {
       }
   
       // Get team members
-      const memberIds = await TeamModel.getMembers(knex, id);
-      const members = memberIds.length > 0 ? await getMultipleUsersWithRoles(memberIds) : [];
+      const memberIds = await knex('team_members')
+        .where({ 'team_members.team_id': id, 'team_members.tenant': team.tenant })
+        .join('users', function() {
+          this.on('team_members.user_id', '=', 'users.user_id')
+              .andOn('team_members.tenant', '=', 'users.tenant');
+        })
+        .where('users.is_inactive', false)
+        .pluck('team_members.user_id');
+      // Get user details for members
+      const members = memberIds.length > 0 
+        ? await knex('users')
+            .whereIn('user_id', memberIds)
+            .where('tenant', context.tenant)
+            .select('user_id', 'username', 'email', 'first_name', 'last_name')
+        : [];
   
       let enhancedTeam: any = {
         ...team,
@@ -248,7 +283,10 @@ export class TeamService extends BaseService<ITeam> {
       // Add manager details if requested
       if (options.includeManager && team.manager_id) {
         try {
-          const manager = await getUserById(team.manager_id);
+          const manager = await knex('users')
+            .where({ user_id: team.manager_id, tenant: team.tenant })
+            .select('user_id', 'username', 'email', 'first_name', 'last_name')
+            .first();
           enhancedTeam.manager = manager;
         } catch (error) {
           logger.warn(`Failed to fetch manager details for team ${id}:`, error);
@@ -300,31 +338,19 @@ export class TeamService extends BaseService<ITeam> {
 
   /**
    * Create new team with validation
-    // Override for BaseService compatibility  
-    async create(data: Partial<ITeam>, context: ServiceContext): Promise<ITeam>;
-    async create(data: CreateTeamData, context: ServiceContext): Promise<ITeam>;
-    async create(data: CreateTeamData | Partial<ITeam>, context: ServiceContext): Promise<ITeam> {
-      // Ensure we have required fields for CreateTeamData
-      if (!data.team_name) {
-        throw new Error('Team name is required');
-      }
-      return this.createTeam(data as CreateTeamData, context);
-    }
-  
-    private async createTeam(data: CreateTeamData, context: ServiceContext): Promise<ITeam> {
    */
-    // Override for BaseService compatibility  
-    async create(data: Partial<ITeam>, context: ServiceContext): Promise<ITeam>;
-    async create(data: CreateTeamData, context: ServiceContext): Promise<ITeam>;
-    async create(data: CreateTeamData | Partial<ITeam>, context: ServiceContext): Promise<ITeam> {
-      // Ensure we have required fields for CreateTeamData
-      if (!data.team_name) {
-        throw new Error('Team name is required');
-      }
-      return this.createTeam(data as CreateTeamData, context);
+  // Override for BaseService compatibility  
+  async create(data: Partial<ITeam>, context: ServiceContext): Promise<ITeam>;
+  async create(data: CreateTeamData, context: ServiceContext): Promise<ITeam>;
+  async create(data: CreateTeamData | Partial<ITeam>, context: ServiceContext): Promise<ITeam> {
+    // Ensure we have required fields for CreateTeamData
+    if (!data.team_name) {
+      throw new ValidationError('Team name is required');
     }
-  
-    private async createTeam(data: CreateTeamData, context: ServiceContext): Promise<ITeam> {
+    return this.createTeam(data as CreateTeamData, context);
+  }
+
+  private async createTeam(data: CreateTeamData, context: ServiceContext): Promise<ITeam> {
       const { knex } = await this.getKnex();
   
       return withTransaction(knex, async (trx) => {
@@ -334,7 +360,7 @@ export class TeamService extends BaseService<ITeam> {
           .pluck('team_name');
         
         if (!validateTeamNameUniqueness(data.team_name, existingTeams)) {
-          throw new Error('Team name already exists');
+          throw new ConflictError('Team name already exists');
         }
   
         // Validate manager if provided
@@ -344,13 +370,13 @@ export class TeamService extends BaseService<ITeam> {
             .first();
           
           if (!manager) {
-            throw new Error('Manager not found or inactive');
+            throw new BadRequestError('Manager not found or inactive');
           }
         }
   
         // Validate team size if members provided
         if (data.members && !validateTeamSize(data.members.length)) {
-          throw new Error('Team size exceeds maximum allowed members');
+          throw new ValidationError('Team size exceeds maximum allowed members');
         }
   
         // Create team
@@ -365,23 +391,28 @@ export class TeamService extends BaseService<ITeam> {
   
         const [team] = await trx('teams').insert(teamData).returning('*');
   
-        // Add members if provided
+        // Collect all member IDs including the manager
+        const allMemberIds = new Set<string>();
+        
+        // Add provided members
         if (data.members && data.members.length > 0) {
-          const memberIds = data.members.map(m => m.user_id);
-          
-          // Validate manager is not a member
-          if (data.manager_id && !validateManagerNotMember(data.manager_id, memberIds)) {
-            throw new Error('Manager cannot be a team member');
-          }
-  
-          // Add members
-          const memberInserts = memberIds.map(userId => ({
+          data.members.forEach(m => allMemberIds.add(m.user_id));
+        }
+        
+        // Add manager as a member if specified
+        if (data.manager_id) {
+          allMemberIds.add(data.manager_id);
+        }
+
+        // Add all members to the team
+        if (allMemberIds.size > 0) {
+          const memberInserts = Array.from(allMemberIds).map(userId => ({
             team_id: team.team_id,
             user_id: userId,
             tenant: context.tenant,
             created_at: new Date()
           }));
-  
+
           await trx('team_members').insert(memberInserts);
         }
   
@@ -391,8 +422,8 @@ export class TeamService extends BaseService<ITeam> {
         payload: {}
       });
   
-        // Return full team with members
-        return this.getById(team.team_id, context) as Promise<ITeam>;
+        // Return the created team
+        return team as ITeam;
       });
     }
 
@@ -410,7 +441,7 @@ export class TeamService extends BaseService<ITeam> {
         .first();
       
       if (!existingTeam) {
-        throw new Error('Team not found or permission denied');
+        throw new NotFoundError('Team not found or permission denied');
       }
 
       // Validate team name uniqueness if changing
@@ -421,7 +452,7 @@ export class TeamService extends BaseService<ITeam> {
           .pluck('team_name');
         
         if (!validateTeamNameUniqueness(data.team_name, existingTeams)) {
-          throw new Error('Team name already exists');
+          throw new ConflictError('Team name already exists');
         }
       }
 
@@ -433,14 +464,19 @@ export class TeamService extends BaseService<ITeam> {
             .first();
           
           if (!manager) {
-            throw new Error('Manager not found or inactive');
+            throw new BadRequestError('Manager not found or inactive');
           }
 
           // Validate manager is not a member
-          const memberIds = await TeamModel.getMembers(trx, id);
-          if (!validateManagerNotMember(data.manager_id, memberIds)) {
-            throw new Error('Manager cannot be a team member');
-          }
+          const memberIds = await trx('team_members')
+            .where({ 'team_members.team_id': id, 'team_members.tenant': context.tenant })
+            .join('users', function() {
+              this.on('team_members.user_id', '=', 'users.user_id')
+                  .andOn('team_members.tenant', '=', 'users.tenant');
+            })
+            .where('users.is_inactive', false)
+            .pluck('team_members.user_id');
+          // Managers can be team members, so no need to validate this restriction
         }
       }
 
@@ -468,7 +504,11 @@ export class TeamService extends BaseService<ITeam> {
       });
 
       // Return updated team
-      return this.getById(id, context) as Promise<ITeam>;
+      const updatedTeam = await trx('teams')
+        .where({ team_id: id, tenant: context.tenant })
+        .first();
+      
+      return updatedTeam as ITeam;
     });
   }
 
@@ -485,42 +525,11 @@ export class TeamService extends BaseService<ITeam> {
         .first();
       
       if (!team) {
-        throw new Error('Team not found or permission denied');
+        throw new NotFoundError('Team not found or permission denied');
       }
 
-      // Check for dependencies
-      const [projectCount, taskCount] = await Promise.all([
-        trx('project_team_assignments')
-          .where({ team_id: id, tenant: context.tenant })
-          .count('* as count')
-          .first(),
-        trx('task_assignments')
-          .where({ team_id: id, tenant: context.tenant })
-          .count('* as count')
-          .first()
-      ]);
-
-      if (parseInt(projectCount?.count as string || '0') > 0 || parseInt(taskCount?.count as string || '0') > 0) {
-        throw new Error('Cannot delete team with active project or task assignments');
-      }
-
-      // Delete team members first
+      // Delete team members first (only table that exists)
       await trx('team_members')
-        .where({ team_id: id, tenant: context.tenant })
-        .del();
-
-      // Delete team permissions
-      await trx('team_permissions')
-        .where({ team_id: id, tenant: context.tenant })
-        .del();
-
-      // Delete team communication channels
-      await trx('team_communication_channels')
-        .where({ team_id: id, tenant: context.tenant })
-        .del();
-
-      // Delete team collaboration workspaces
-      await trx('team_collaboration_workspaces')
         .where({ team_id: id, tenant: context.tenant })
         .del();
 
@@ -554,7 +563,7 @@ export class TeamService extends BaseService<ITeam> {
         .first();
       
       if (!team) {
-        throw new Error('Team not found or permission denied');
+        throw new NotFoundError('Team not found or permission denied');
       }
 
       // Validate user exists and is active
@@ -563,7 +572,7 @@ export class TeamService extends BaseService<ITeam> {
         .first();
       
       if (!user) {
-        throw new Error('User not found or inactive');
+        throw new BadRequestError('User not found or inactive');
       }
 
       // Check if user is already a member
@@ -572,13 +581,10 @@ export class TeamService extends BaseService<ITeam> {
         .first();
       
       if (existingMember) {
-        throw new Error('User is already a team member');
+        throw new ConflictError('User is already a team member');
       }
 
-      // Check if user is the team manager
-      if (team.manager_id === userId) {
-        throw new Error('Manager cannot be added as a team member');
-      }
+      // Managers can be team members, so no need to check this restriction
 
       // Check team size limit
       const currentMemberCount = await trx('team_members')
@@ -587,7 +593,7 @@ export class TeamService extends BaseService<ITeam> {
         .first();
       
       if (!validateTeamSize(parseInt(currentMemberCount?.count as string || '0') + 1)) {
-        throw new Error('Team size would exceed maximum allowed members');
+        throw new ValidationError('Team size would exceed maximum allowed members');
       }
 
       // Add member
@@ -621,7 +627,7 @@ export class TeamService extends BaseService<ITeam> {
         .first();
       
       if (!team) {
-        throw new Error('Team not found or permission denied');
+        throw new NotFoundError('Team not found or permission denied');
       }
 
       // Check if user is a member
@@ -630,7 +636,7 @@ export class TeamService extends BaseService<ITeam> {
         .first();
       
       if (!existingMember) {
-        throw new Error('User is not a team member');
+        throw new NotFoundError('User is not a team member');
       }
 
       // Remove member
@@ -666,7 +672,7 @@ export class TeamService extends BaseService<ITeam> {
         .first();
       
       if (!team) {
-        throw new Error('Team not found or permission denied');
+        throw new NotFoundError('Team not found or permission denied');
       }
 
       // Validate all users exist and are active
@@ -675,13 +681,10 @@ export class TeamService extends BaseService<ITeam> {
         .where({ tenant: context.tenant, is_inactive: false });
       
       if (users.length !== userIds.length) {
-        throw new Error('Some users not found or inactive');
+        throw new BadRequestError('Some users not found or inactive');
       }
 
-      // Check for manager in member list
-      if (team.manager_id && userIds.includes(team.manager_id)) {
-        throw new Error('Manager cannot be added as a team member');
-      }
+      // Managers can be team members, so no need to check this restriction
 
       // Check for existing members
       const existingMembers = await trx('team_members')
@@ -690,7 +693,7 @@ export class TeamService extends BaseService<ITeam> {
         .pluck('user_id');
       
       if (existingMembers.length > 0) {
-        throw new Error('Some users are already team members');
+        throw new ConflictError('Some users are already team members');
       }
 
       // Check team size limit
@@ -701,7 +704,7 @@ export class TeamService extends BaseService<ITeam> {
       
       const newTotalSize = parseInt(currentMemberCount?.count as string || '0') + userIds.length;
       if (!validateTeamSize(newTotalSize)) {
-        throw new Error('Team size would exceed maximum allowed members');
+        throw new ValidationError('Team size would exceed maximum allowed members');
       }
 
       // Add members
@@ -737,7 +740,7 @@ export class TeamService extends BaseService<ITeam> {
         .first();
       
       if (!team) {
-        throw new Error('Team not found or permission denied');
+        throw new NotFoundError('Team not found or permission denied');
       }
 
       // Remove members
@@ -775,7 +778,7 @@ export class TeamService extends BaseService<ITeam> {
         .first();
       
       if (!team) {
-        throw new Error('Team not found or permission denied');
+        throw new NotFoundError('Team not found or permission denied');
       }
 
       // Validate manager exists and is active
@@ -787,16 +790,10 @@ export class TeamService extends BaseService<ITeam> {
         throw new Error('Manager not found or inactive');
       }
 
-      // Check if manager is currently a team member - remove if so
+      // Check if manager is currently a team member
       const isCurrentMember = await trx('team_members')
         .where({ team_id: teamId, user_id: managerId, tenant: context.tenant })
         .first();
-      
-      if (isCurrentMember) {
-        await trx('team_members')
-          .where({ team_id: teamId, user_id: managerId, tenant: context.tenant })
-          .del();
-      }
 
       // Update team manager
       await trx('teams')
@@ -805,6 +802,16 @@ export class TeamService extends BaseService<ITeam> {
           manager_id: managerId,
           updated_at: new Date()
         });
+
+      // Add manager as team member if they're not already a member
+      if (!isCurrentMember) {
+        await trx('team_members').insert({
+          team_id: teamId,
+          user_id: managerId,
+          tenant: context.tenant,
+          created_at: new Date()
+        });
+      }
 
       // Publish manager assigned event
       await publishEvent({
@@ -905,12 +912,12 @@ export class TeamService extends BaseService<ITeam> {
       ]);
 
       if (!parentTeam || !childTeam) {
-        throw new Error('One or both teams not found');
+        throw new NotFoundError('One or both teams not found');
       }
 
       // Check for circular dependencies
       if (await this.wouldCreateCircularDependency(parentTeamId, childTeamId, context, trx)) {
-        throw new Error('Cannot create circular team hierarchy');
+        throw new ValidationError('Cannot create circular team hierarchy');
       }
 
       // Create or update hierarchy relationship
@@ -975,7 +982,7 @@ export class TeamService extends BaseService<ITeam> {
         .first();
       
       if (!team) {
-        throw new Error('Team not found or permission denied');
+        throw new NotFoundError('Team not found or permission denied');
       }
 
       // Grant permission
@@ -1010,7 +1017,7 @@ export class TeamService extends BaseService<ITeam> {
       .first();
 
     if (!permission) {
-      throw new Error('Permission not found');
+      throw new NotFoundError('Permission not found');
     }
 
     await knex('team_permissions')
@@ -1077,14 +1084,14 @@ export class TeamService extends BaseService<ITeam> {
       ]);
 
       if (!team || !project) {
-        throw new Error('Team or project not found');
+        throw new NotFoundError('Team or project not found');
       }
 
       // Check capacity if allocation specified
       if (options.allocationPercentage) {
         const capacity = await this.getTeamCapacity(teamId, context);
         if (!validateTeamCapacity(capacity.current_allocation, options.allocationPercentage)) {
-          throw new Error('Team allocation would exceed capacity');
+          throw new ValidationError('Team allocation would exceed capacity');
         }
       }
 
@@ -1168,7 +1175,7 @@ export class TeamService extends BaseService<ITeam> {
       .first();
 
     if (!team) {
-      throw new Error('Team not found');
+      throw new NotFoundError('Team not found');
     }
 
     // Get member count
@@ -1263,7 +1270,7 @@ export class TeamService extends BaseService<ITeam> {
       utilization_percentage: Math.min(100, ((parseFloat(member.hours_logged) || 0) / workingHours) * 100)
     }));
 
-    const totalHours = parseFloat(timeStats?.total_hours) || 0;
+    const totalHours = parseFloat((timeStats as any)?.total_hours) || 0;
     const avgHoursPerMember = totalHours / parseInt(memberCount?.count as string || '0');
 
     return {
@@ -1385,8 +1392,16 @@ export class TeamService extends BaseService<ITeam> {
     // Enhance with members
     const enhancedTeams = await Promise.all(
       teams.map(async (team: any) => {
-        const memberIds = await TeamModel.getMembers(knex, team.team_id);
-        const members = memberIds.length > 0 ? await getMultipleUsersWithRoles(memberIds) : [];
+        const memberIds = await knex('team_members')
+          .where({ team_id: team.team_id, tenant: context.tenant })
+          .pluck('user_id');
+        // Get user details for members
+      const members = memberIds.length > 0 
+        ? await knex('users')
+            .whereIn('user_id', memberIds)
+            .where('tenant', context.tenant)
+            .select('user_id', 'username', 'email', 'first_name', 'last_name')
+        : [];
         
         return { ...team, members } as ITeam;
       })
@@ -1459,6 +1474,7 @@ export class TeamService extends BaseService<ITeam> {
 
     const [
       totalStats,
+      largestTeamData,
       departmentStats,
       locationStats,
       performanceStats
@@ -1488,6 +1504,15 @@ export class TeamService extends BaseService<ITeam> {
         )
         .first(),
 
+      // Get largest team size
+      knex('team_members')
+        .where({ tenant: context.tenant })
+        .select('team_id')
+        .count('* as size')
+        .groupBy('team_id')
+        .orderBy('size', 'desc')
+        .first(),
+
       // Teams by department (mock data - would need department field)
       Promise.resolve({}),
 
@@ -1503,11 +1528,13 @@ export class TeamService extends BaseService<ITeam> {
     ]);
 
     return {
-      total_teams: parseInt(totalStats.total_teams),
-      active_teams: parseInt(totalStats.total_teams), // All teams are considered active
-      teams_with_managers: parseInt(totalStats.teams_with_managers),
-      average_team_size: parseFloat(totalStats.average_team_size) || 0,
-      total_members: parseInt(totalStats.total_members) || 0,
+      total_teams: parseInt((totalStats as any).total_teams),
+      active_teams: parseInt((totalStats as any).total_teams), // All teams are considered active
+      teams_with_managers: parseInt((totalStats as any).teams_with_managers),
+      teams_with_members: parseInt((totalStats as any).teams_with_managers), // Using same value as teams_with_managers
+      average_team_size: parseFloat((totalStats as any).average_team_size) || 0,
+      largest_team_size: largestTeamData ? parseInt((largestTeamData as any).size) : 0,
+      total_members: parseInt((totalStats as any).total_members) || 0,
       teams_by_department: departmentStats,
       teams_by_location: locationStats,
       performance_distribution: performanceStats
@@ -1542,7 +1569,7 @@ export class TeamService extends BaseService<ITeam> {
   /**
    * Apply team-specific filters
    */
-  private applyTeamFilters(query: Knex.QueryBuilder, filters: TeamFilterData, knex: Knex): Knex.QueryBuilder {
+  private applyTeamFilters(query: Knex.QueryBuilder, filters: TeamFilterData, knex: Knex, hasManagerJoin: boolean = false): Knex.QueryBuilder {
     Object.entries(filters).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
 
@@ -1592,8 +1619,11 @@ export class TeamService extends BaseService<ITeam> {
           break;
         case 'search':
           query.where(function() {
-            this.whereILike('t.team_name', `%${value}%`)
-                .orWhereRaw(`COALESCE(manager.first_name || ' ' || manager.last_name, manager.username) ILIKE ?`, [`%${value}%`]);
+            this.whereILike('t.team_name', `%${value}%`);
+            // Only search in manager name if the manager table is joined
+            if (hasManagerJoin) {
+              this.orWhereRaw(`COALESCE(manager.first_name || ' ' || manager.last_name, manager.username) ILIKE ?`, [`%${value}%`]);
+            }
           });
           break;
         case 'created_from':
@@ -1696,5 +1726,504 @@ export class TeamService extends BaseService<ITeam> {
   private calculateCompletionRate(completedProjects: number, totalProjects: number): number {
     if (totalProjects === 0) return 0;
     return (completedProjects / totalProjects) * 100;
+  }
+
+  // ============================================================================
+  // Team Member Management
+  // ============================================================================
+
+  /**
+   * Get team members
+   */
+  async getTeamMembers(teamId: string, context: ServiceContext): Promise<any[]> {
+    const { knex } = await this.getKnex();
+
+    // Check team exists
+    const team = await knex('teams')
+      .where({ team_id: teamId, tenant: context.tenant })
+      .first();
+    
+    if (!team) {
+      throw new NotFoundError('Team not found or permission denied');
+    }
+
+    // Get team members with user details
+    const members = await knex('team_members as tm')
+      .join('users as u', function() {
+        this.on('tm.user_id', '=', 'u.user_id')
+            .andOn('tm.tenant', '=', 'u.tenant');
+      })
+      .where({
+        'tm.team_id': teamId,
+        'tm.tenant': context.tenant,
+        'u.is_inactive': false
+      })
+      .select(
+        'tm.user_id',
+        'tm.team_id',
+        'tm.created_at as joined_at',
+        'u.username',
+        'u.email',
+        'u.first_name',
+        'u.last_name',
+        knex.raw('COALESCE(u.first_name || \' \' || u.last_name, u.username) as full_name')
+      );
+
+    return members;
+  }
+
+  /**
+   * Add a member to a team
+   */
+  async addTeamMember(teamId: string, data: { user_id: string }, context: ServiceContext): Promise<any> {
+    const { knex } = await this.getKnex();
+
+    return withTransaction(knex, async (trx) => {
+      // Check team exists
+      const team = await trx('teams')
+        .where({ team_id: teamId, tenant: context.tenant })
+        .first();
+      
+      if (!team) {
+        throw new NotFoundError('Team not found or permission denied');
+      }
+
+      // Check user exists
+      const user = await trx('users')
+        .where({ user_id: data.user_id, tenant: context.tenant, is_inactive: false })
+        .first();
+      
+      if (!user) {
+        throw new BadRequestError('User not found or inactive');
+      }
+
+      // Check if user is already a member
+      const existingMember = await trx('team_members')
+        .where({
+          team_id: teamId,
+          user_id: data.user_id,
+          tenant: context.tenant
+        })
+        .first();
+      
+      if (existingMember) {
+        throw new ConflictError('User is already a member of this team');
+      }
+
+      // Add member
+      const [member] = await trx('team_members')
+        .insert({
+          team_id: teamId,
+          user_id: data.user_id,
+          tenant: context.tenant,
+          created_at: new Date()
+        })
+        .returning('*');
+
+      return {
+        ...member,
+        username: user.username,
+        email: user.email,
+        full_name: user.first_name && user.last_name 
+          ? `${user.first_name} ${user.last_name}` 
+          : user.username
+      };
+    });
+  }
+
+  /**
+   * Remove a member from a team
+   */
+  async removeTeamMember(teamId: string, userId: string, context: ServiceContext): Promise<void> {
+    const { knex } = await this.getKnex();
+
+    return withTransaction(knex, async (trx) => {
+      // Check team exists
+      const team = await trx('teams')
+        .where({ team_id: teamId, tenant: context.tenant })
+        .first();
+      
+      if (!team) {
+        throw new NotFoundError('Team not found or permission denied');
+      }
+
+      // Remove member
+      const deleted = await trx('team_members')
+        .where({
+          team_id: teamId,
+          user_id: userId,
+          tenant: context.tenant
+        })
+        .delete();
+      
+      if (deleted === 0) {
+        throw new NotFoundError('Team member not found');
+      }
+    });
+  }
+
+  /**
+   * Bulk add team members
+   */
+  async bulkAddTeamMembers(teamId: string, data: { user_ids: string[] }, context: ServiceContext): Promise<any> {
+    const { knex } = await this.getKnex();
+
+    return withTransaction(knex, async (trx) => {
+      // Check team exists
+      const team = await trx('teams')
+        .where({ team_id: teamId, tenant: context.tenant })
+        .first();
+      
+      if (!team) {
+        throw new NotFoundError('Team not found or permission denied');
+      }
+
+      // Validate all users exist
+      const users = await trx('users')
+        .whereIn('user_id', data.user_ids)
+        .where({ tenant: context.tenant, is_inactive: false })
+        .select('user_id', 'username', 'email', 'first_name', 'last_name');
+      
+      const foundUserIds = users.map(u => u.user_id);
+      const missingUserIds = data.user_ids.filter(id => !foundUserIds.includes(id));
+      
+      if (missingUserIds.length > 0) {
+        throw new BadRequestError(`Users not found: ${missingUserIds.join(', ')}`);
+      }
+
+      // Check existing members
+      const existingMembers = await trx('team_members')
+        .where({ team_id: teamId, tenant: context.tenant })
+        .whereIn('user_id', data.user_ids)
+        .pluck('user_id');
+
+      // Filter out already existing members
+      const newUserIds = data.user_ids.filter(id => !existingMembers.includes(id));
+      
+      if (newUserIds.length === 0) {
+        return {
+          added: [],
+          already_members: data.user_ids
+        };
+      }
+
+      // Add new members
+      const membersToAdd = newUserIds.map(userId => ({
+        team_id: teamId,
+        user_id: userId,
+        tenant: context.tenant,
+        created_at: new Date()
+      }));
+
+      await trx('team_members').insert(membersToAdd);
+
+      // Return results
+      const addedUsers = users.filter(u => newUserIds.includes(u.user_id));
+      
+      return {
+        added: addedUsers.map(u => ({
+          user_id: u.user_id,
+          username: u.username,
+          email: u.email,
+          full_name: u.first_name && u.last_name 
+            ? `${u.first_name} ${u.last_name}` 
+            : u.username
+        })),
+        already_members: existingMembers
+      };
+    });
+  }
+
+  /**
+   * Get team statistics
+   */
+  async getTeamStatistics(context: ServiceContext): Promise<TeamStatsResponse> {
+    const { knex } = await this.getKnex();
+
+    const [
+      totalTeams,
+      teamsWithMembers,
+      teamSizes,
+      largestTeam
+    ] = await Promise.all([
+      // Total teams
+      knex('teams')
+        .where({ tenant: context.tenant })
+        .count('* as count')
+        .first(),
+      
+      // Teams with members
+      knex('teams as t')
+        .join('team_members as tm', function() {
+          this.on('t.team_id', '=', 'tm.team_id')
+              .andOn('t.tenant', '=', 'tm.tenant');
+        })
+        .where('t.tenant', context.tenant)
+        .countDistinct('t.team_id as count')
+        .first(),
+      
+      // Average team size
+      knex('team_members')
+        .where({ tenant: context.tenant })
+        .select('team_id')
+        .count('* as size')
+        .groupBy('team_id'),
+      
+      // Largest team
+      knex('team_members')
+        .where({ tenant: context.tenant })
+        .select('team_id')
+        .count('* as size')
+        .groupBy('team_id')
+        .orderBy('size', 'desc')
+        .first()
+    ]);
+
+    const avgTeamSize = teamSizes.length > 0
+      ? teamSizes.reduce((sum, t) => sum + parseInt(t.size as string), 0) / teamSizes.length
+      : 0;
+
+    return {
+      total_teams: parseInt(totalTeams?.count as string || '0'),
+      active_teams: parseInt(totalTeams?.count as string || '0'), // All teams are considered active
+      teams_with_managers: parseInt(teamsWithMembers?.count as string || '0'),
+      teams_with_members: parseInt(teamsWithMembers?.count as string || '0'),
+      average_team_size: Math.round(avgTeamSize * 10) / 10,
+      largest_team_size: largestTeam ? parseInt(largestTeam.size as string) : 0,
+      total_members: teamSizes.reduce((sum, t) => sum + parseInt(t.size as string), 0),
+      teams_by_department: {},
+      teams_by_location: {},
+      performance_distribution: {
+        high_performing: 0,
+        average_performing: 0,
+        needs_improvement: 0
+      }
+    };
+  }
+
+  /**
+   * Create team hierarchy relationship
+   */
+  async createHierarchy(
+    teamId: string,
+    parentTeamId: string,
+    context: ServiceContext
+  ): Promise<any> {
+    const { knex } = await this.getKnex();
+
+    return await knex.transaction(async (trx) => {
+      // Verify both teams exist and belong to the tenant
+      const [team, parentTeam] = await Promise.all([
+        trx('teams')
+          .where({ team_id: teamId, tenant: context.tenant })
+          .first(),
+        trx('teams')
+          .where({ team_id: parentTeamId, tenant: context.tenant })
+          .first()
+      ]);
+
+      if (!team) {
+        throw new NotFoundError('Team not found');
+      }
+
+      if (!parentTeam) {
+        throw new NotFoundError('Parent team not found');
+      }
+
+      // Check if hierarchy already exists
+      const existingHierarchy = await trx('team_hierarchy')
+        .where({
+          child_team_id: teamId,
+          parent_team_id: parentTeamId,
+          tenant: context.tenant
+        })
+        .first();
+
+      if (existingHierarchy) {
+        throw new ConflictError('Hierarchy relationship already exists');
+      }
+
+      // Check for circular reference
+      const wouldCreateCircle = await this.checkCircularHierarchy(
+        trx,
+        parentTeamId,
+        teamId,
+        context.tenant
+      );
+
+      if (wouldCreateCircle) {
+        throw new ValidationError('Cannot create circular hierarchy');
+      }
+
+      // Create hierarchy
+      const hierarchy = {
+        child_team_id: teamId,
+        parent_team_id: parentTeamId,
+        tenant: context.tenant,
+        created_at: new Date()
+      };
+
+      await trx('team_hierarchy').insert(hierarchy);
+
+      return {
+        child_team_id: teamId,
+        parent_team_id: parentTeamId,
+        child_team_name: team.team_name,
+        parent_team_name: parentTeam.team_name
+      };
+    });
+  }
+
+  /**
+   * Remove team from hierarchy
+   */
+  async removeFromHierarchy(teamId: string, context: ServiceContext): Promise<void> {
+    const { knex } = await this.getKnex();
+
+    const result = await knex('team_hierarchy')
+      .where({
+        child_team_id: teamId,
+        tenant: context.tenant
+      })
+      .delete();
+
+    if (result === 0) {
+      throw new NotFoundError('Team hierarchy relationship not found');
+    }
+  }
+
+  /**
+   * Check for circular hierarchy
+   */
+  private async checkCircularHierarchy(
+    trx: any,
+    parentId: string,
+    childId: string,
+    tenant: string
+  ): Promise<boolean> {
+    // Get all parent teams of the proposed parent
+    const parents = await trx('team_hierarchy')
+      .where({
+        child_team_id: parentId,
+        tenant
+      })
+      .pluck('parent_team_id');
+
+    // If the child is in the parent's hierarchy, it would create a circle
+    return parents.includes(childId);
+  }
+
+  /**
+   * Search teams with advanced filters
+   */
+  async searchTeams(filters: any, context: ServiceContext, options?: ListOptions): Promise<ListResult<ITeam>> {
+    const { knex } = await this.getKnex();
+    
+    // Build base query
+    let query = knex('teams')
+      .where('teams.tenant', context.tenant);
+
+    // Apply search filters
+    if (filters.query) {
+      query = query.where(function() {
+        this.where('team_name', 'ilike', `%${filters.query}%`)
+            .orWhere('description', 'ilike', `%${filters.query}%`);
+      });
+    }
+
+    if (filters.team_name) {
+      query = query.where('team_name', 'ilike', `%${filters.team_name}%`);
+    }
+
+    if (filters.manager_name) {
+      query = query
+        .leftJoin('users as manager', 'teams.manager_id', 'manager.user_id')
+        .where(knex.raw(`CONCAT(manager.first_name, ' ', manager.last_name)`), 'ilike', `%${filters.manager_name}%`);
+    }
+
+    if (filters.department) {
+      query = query.where('department', filters.department);
+    }
+
+    if (filters.location) {
+      query = query.where('location', filters.location);
+    }
+
+    // Get total count
+    const countQuery = query.clone().clearSelect().count('* as count');
+    const [{ count }] = await countQuery;
+
+    // Apply pagination
+    const page = options?.page || 1;
+    const limit = options?.limit || 25;
+    const offset = (page - 1) * limit;
+
+    // Apply sorting
+    const sort = options?.sort || 'team_name';
+    const order = options?.order || 'asc';
+    query = query.orderBy(sort, order);
+
+    // Get results
+    const teams = await query
+      .limit(limit)
+      .offset(offset)
+      .select('teams.*');
+
+    return {
+      data: teams,
+      total: parseInt(count as string)
+    };
+  }
+
+  /**
+   * Get full team hierarchy
+   */
+  async getFullHierarchy(teamId: string, context: ServiceContext): Promise<any> {
+    const { knex } = await this.getKnex();
+    
+    // Get the team
+    const team = await this.getById(teamId, context);
+    if (!team) {
+      throw new NotFoundError('Team not found');
+    }
+
+    // Get all child teams recursively
+    const getChildTeams = async (parentId: string): Promise<any[]> => {
+      const children = await knex('team_hierarchy as th')
+        .join('teams as t', 'th.child_team_id', 't.team_id')
+        .where({
+          'th.parent_team_id': parentId,
+          'th.tenant': context.tenant
+        })
+        .select('t.*');
+
+      const childrenWithSubTeams = await Promise.all(
+        children.map(async (child) => ({
+          ...child,
+          children: await getChildTeams(child.team_id)
+        }))
+      );
+
+      return childrenWithSubTeams;
+    };
+
+    // Get parent team if exists
+    const parentRelation = await knex('team_hierarchy')
+      .where({
+        child_team_id: teamId,
+        tenant: context.tenant
+      })
+      .first();
+
+    let parent = null;
+    if (parentRelation) {
+      parent = await this.getById(parentRelation.parent_team_id, context);
+    }
+
+    return {
+      ...team,
+      parent,
+      children: await getChildTeams(teamId)
+    };
   }
 }

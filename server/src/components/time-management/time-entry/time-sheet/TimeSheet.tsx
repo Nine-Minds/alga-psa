@@ -371,6 +371,15 @@ export function TimeSheet({
         console.error('Error creating automatic time entry for ad-hoc item:', error);
         toast.error('Failed to create automatic time entry');
       }
+    } else {
+      // For non-ad_hoc work items, open the time entry dialog with current date
+      const currentDate = new Date();
+      
+      setSelectedCell({
+        workItem,
+        date: formatISO(currentDate, { representation: 'date' }), // Format as YYYY-MM-DD string
+        entries: []
+      });
     }
   };
 

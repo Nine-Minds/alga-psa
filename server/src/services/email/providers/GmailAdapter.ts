@@ -1,398 +1,540 @@
-/**
- * Gmail API Adapter Implementation
- * Handles Gmail integration using Google APIs with OAuth2 authentication
- */
-
-import { EmailProviderAdapter } from '../../../interfaces/emailProvider.interface';
-import { EmailMessage, EmailProviderConfig, EmailMessageDetails } from '../../../interfaces/email.interfaces';
+import axios, { AxiosInstance } from 'axios';
 import { BaseEmailAdapter } from './base/BaseEmailAdapter';
+import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/email.interfaces';
+import { getSecretProviderInstance } from '@alga-psa/shared/core';
+import { google } from 'googleapis';
+import { OAuth2Client } from 'google-auth-library';
+import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
 
-export interface GmailConfig {
-  clientId: string;
-  clientSecret: string;
-  refreshToken: string;
-  accessToken?: string;
-  tokenExpiry?: Date;
-  mailbox: string; // Gmail address to monitor
-  labelFilters?: string[]; // Gmail labels to filter (default: INBOX)
-  maxResults?: number; // Max emails per request (default: 50)
-}
-
-export class GmailAdapter extends BaseEmailAdapter implements EmailProviderAdapter {
-  private gmailConfig: GmailConfig;
-  // private accessToken?: string;
-  private tokenExpiry?: Date;
+/**
+ * Gmail API adapter for email processing
+ * Handles OAuth authentication, Pub/Sub subscriptions, and message retrieval
+ */
+export class GmailAdapter extends BaseEmailAdapter {
+  private httpClient: AxiosInstance;
+  private baseUrl = 'https://gmail.googleapis.com/gmail/v1';
+  private oauth2Client: OAuth2Client;
+  private gmail: any;
   
-  constructor(providerConfig: EmailProviderConfig) {
-    super(providerConfig);
-    this.gmailConfig = providerConfig.provider_config as GmailConfig;
-    this.accessToken = this.gmailConfig.accessToken;
-    this.tokenExpiry = this.gmailConfig.tokenExpiry;
+  constructor(config: EmailProviderConfig) {
+    super(config);
+    
+    // Create axios instance with default headers
+    this.httpClient = axios.create({
+      baseURL: this.baseUrl,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      timeout: 30000,
+    });
+
+    // Initialize OAuth2 client (will be configured with credentials later)
+    this.oauth2Client = new OAuth2Client();
+    this.gmail = google.gmail({ version: 'v1', auth: this.oauth2Client });
+
+    // Add request interceptor to include auth token
+    this.httpClient.interceptors.request.use(async (config) => {
+      await this.ensureValidToken();
+      if (this.accessToken) {
+        config.headers.Authorization = `Bearer ${this.accessToken}`;
+      }
+      return config;
+    });
+  }
+
+  /**
+   * Load stored credentials from the provider configuration
+   */
+  protected async loadCredentials(): Promise<void> {
+    try {
+      const vendorConfig = this.config.provider_config || {};
+
+      // Check if OAuth tokens are available in provider config
+      if (!vendorConfig.access_token || !vendorConfig.refresh_token) {
+        throw new Error('OAuth tokens not found in provider configuration. Please complete OAuth authorization.');
+      }
+
+      this.accessToken = vendorConfig.access_token;
+      this.refreshToken = vendorConfig.refresh_token;
+      this.tokenExpiresAt = vendorConfig.token_expires_at ? new Date(vendorConfig.token_expires_at) : new Date();
+
+      // Configure OAuth2 client with stored credentials
+      this.oauth2Client.setCredentials({
+        access_token: this.accessToken,
+        refresh_token: this.refreshToken,
+        token_type: 'Bearer',
+        expiry_date: this.tokenExpiresAt.getTime()
+      });
+
+      this.log('info', 'Credentials loaded successfully from provider configuration');
+    } catch (error) {
+      throw this.handleError(error, 'loadCredentials');
+    }
+  }
+
+  /**
+   * Refresh the access token using Google OAuth
+   */
+  protected async refreshAccessToken(): Promise<void> {
+    try {
+      if (!this.refreshToken) {
+        throw new Error('No refresh token available');
+      }
+
+      const vendorConfig = this.config.provider_config || {};
+      
+      // Get client credentials from provider config, environment, or tenant secrets
+      let clientId = vendorConfig.client_id || process.env.GOOGLE_CLIENT_ID;
+      let clientSecret = vendorConfig.client_secret || process.env.GOOGLE_CLIENT_SECRET;
+      
+      // Fall back to tenant secrets if not found in config or environment
+      if (!clientId || !clientSecret) {
+        const secretProvider = await getSecretProviderInstance();
+        clientId = clientId || await secretProvider.getTenantSecret(this.config.tenant, 'google_client_id');
+        clientSecret = clientSecret || await secretProvider.getTenantSecret(this.config.tenant, 'google_client_secret');
+      }
+
+      if (!clientId || !clientSecret) {
+        throw new Error('Google OAuth credentials not configured');
+      }
+
+      // Configure OAuth2 client with app credentials
+      this.oauth2Client = new OAuth2Client(clientId, clientSecret);
+      this.oauth2Client.setCredentials({
+        refresh_token: this.refreshToken
+      });
+
+      // Get new access token
+      const { credentials } = await this.oauth2Client.refreshAccessToken();
+      
+      if (!credentials.access_token) {
+        throw new Error('Failed to obtain new access token');
+      }
+
+      this.accessToken = credentials.access_token;
+      if (credentials.refresh_token) {
+        this.refreshToken = credentials.refresh_token;
+      }
+
+      // Calculate expiry with 5-minute buffer
+      const expiryTime = credentials.expiry_date 
+        ? new Date(credentials.expiry_date - 300000) 
+        : new Date(Date.now() + 3300000); // Default to 55 minutes
+      
+      this.tokenExpiresAt = expiryTime;
+
+      // Update stored credentials
+      await this.updateStoredCredentials();
+
+      // Update gmail client
+      this.gmail = google.gmail({ version: 'v1', auth: this.oauth2Client });
+
+      this.log('info', 'Access token refreshed successfully');
+    } catch (error) {
+      throw this.handleError(error, 'refreshAccessToken');
+    }
+  }
+
+  /**
+   * Update stored credentials with new tokens
+   * This method updates both in-memory config and persists changes to the database.
+   */
+  private async updateStoredCredentials(): Promise<void> {
+    try {
+      // Update the provider config with new tokens
+      if (this.config.provider_config) {
+        this.config.provider_config.access_token = this.accessToken;
+        this.config.provider_config.refresh_token = this.refreshToken;
+        this.config.provider_config.token_expires_at = this.tokenExpiresAt?.toISOString();
+      }
+      
+      this.log('info', 'Updated credentials in provider configuration');
+
+      // Persist updated credentials to database
+      try {
+        const knex = await getAdminConnection();
+        await knex('google_email_provider_config')
+          .where('email_provider_id', this.config.id)
+          .update({
+            access_token: this.accessToken,
+            refresh_token: this.refreshToken,
+            token_expires_at: this.tokenExpiresAt?.toISOString(),
+            updated_at: new Date().toISOString()
+          });
+        
+        this.log('info', 'Successfully persisted refreshed OAuth tokens to database');
+      } catch (dbError: any) {
+        this.log('error', `Failed to persist credentials to database: ${dbError.message}`, dbError);
+        // Don't throw here - we still have the tokens in memory, so the current operation can continue
+        // But log the error so we know there's a persistence issue
+      }
+    } catch (error) {
+      this.log('warn', 'Failed to update stored credentials', error);
+      throw error; // Re-throw for the calling method to handle
+    }
+  }
+
+  /**
+   * Connect to Gmail API
+   */
+  async connect(): Promise<void> {
+    try {
+      await this.loadCredentials();
+      await this.testConnection();
+      this.log('info', 'Connected to Gmail API successfully');
+    } catch (error) {
+      throw this.handleError(error, 'connect');
+    }
+  }
+
+  /**
+   * Register webhook subscription using Google Pub/Sub
+   */
+  async registerWebhookSubscription(): Promise<void> {
+    try {
+      const vendorConfig = this.config.provider_config || {};
+      const topicName = vendorConfig.pubsub_topic_name;
+      const projectId = vendorConfig.project_id;
+      
+      if (!topicName) {
+        throw new Error('Pub/Sub topic name not configured');
+      }
+
+      if (!projectId) {
+        throw new Error('Google Cloud project ID not configured');
+      }
+
+      console.log('📦 vendorConfig', vendorConfig);
+
+      // Check if user has completed OAuth authorization
+      if (!vendorConfig.access_token || !vendorConfig.refresh_token) {
+        const errorMsg = `Gmail watch subscription setup failed: OAuth tokens are missing. 
+Expected tokens to be saved after OAuth authorization but found:
+- access_token: ${vendorConfig.access_token ? '[PRESENT]' : '[MISSING]'}
+- refresh_token: ${vendorConfig.refresh_token ? '[PRESENT]' : '[MISSING]'}
+This indicates a problem with the OAuth token saving process.`;
+        
+        this.log('error', errorMsg);
+        throw new Error('Gmail OAuth tokens are missing. Please check the OAuth authorization flow.');
+      }
+
+      // Load credentials and ensure valid token
+      await this.ensureValidToken();
+
+      // Enable Gmail push notifications
+      const response = await this.gmail.users.watch({
+        userId: 'me',
+        requestBody: {
+          topicName: `projects/${projectId}/topics/${topicName}`,
+          labelIds: ['INBOX'],
+          labelFilterBehavior: 'include'
+        }
+      });
+
+      console.log('✅ Gmail watch response:', response.data);
+
+      // Store the history ID for tracking changes in provider config
+      if (!this.config.provider_config) {
+        this.config.provider_config = {};
+      }
+      this.config.provider_config.history_id = response.data.historyId;
+      
+      // Handle expiration date safely - Gmail API returns expiration as a string timestamp in milliseconds
+      let expirationISO: string | null = null;
+      if (response.data.expiration) {
+        try {
+          // Gmail API returns expiration as a string of milliseconds since epoch
+          const expirationMs = parseInt(response.data.expiration, 10);
+          if (!isNaN(expirationMs) && expirationMs > 0) {
+            expirationISO = new Date(expirationMs).toISOString();
+          }
+        } catch (err) {
+          this.log('warn', `Failed to parse expiration date: ${response.data.expiration}`, err);
+        }
+      }
+      
+      this.config.provider_config.watch_expiration = expirationISO || undefined;
+
+      // Save updated history_id and watch_expiration to database
+      try {
+        const knex = await getAdminConnection();
+        await knex('google_email_provider_config')
+          .where('email_provider_id', this.config.id)
+          .update({
+            history_id: response.data.historyId,
+            watch_expiration: expirationISO,
+            updated_at: new Date().toISOString()
+          });
+        this.log('info', 'Updated database with new watch subscription details');
+      } catch (dbError: any) {
+        this.log('error', 'Failed to update database with watch subscription details', dbError);
+        // Continue execution - the watch subscription is still valid even if DB update fails
+      }
+
+      this.log('info', `Gmail watch created with historyId: ${response.data.historyId}, expiration: ${expirationISO}`);
+    } catch (error) {
+      throw this.handleError(error, 'registerWebhookSubscription');
+    }
+  }
+
+  /**
+   * Renew webhook subscription
+   */
+  async renewWebhookSubscription(): Promise<void> {
+    try {
+      // Load credentials and ensure valid token
+      await this.ensureValidToken();
+      
+      // Stop existing watch subscription first
+      try {
+        // await this.gmail.users.stop({ userId: 'me' });
+        this.log('info', 'Stopped existing Gmail watch subscription');
+      } catch (error: any) {
+        // It's okay if there's no existing watch to stop
+        this.log('warn', `No existing watch to stop: ${error.message}`);
+      }
+      
+      // Create new watch subscription
+      await this.registerWebhookSubscription();
+      
+      this.log('info', 'Successfully renewed Gmail watch subscription');
+    } catch (error) {
+      this.log('error', 'Failed to renew Gmail watch subscription', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Process webhook notification from Google Pub/Sub
+   */
+  async processWebhookNotification(payload: any): Promise<string[]> {
+    try {
+      const messageIds: string[] = [];
+      const vendorConfig = this.config.provider_config || {};
+      
+      // Extract historyId from the notification
+      const historyId = payload.historyId;
+      const lastHistoryId = this.config.provider_config?.history_id;
+
+      if (!historyId || !lastHistoryId) {
+        this.log('warn', 'Missing history ID in webhook notification');
+        return messageIds;
+      }
+
+      // Get history of changes since last known historyId
+      const history = await this.gmail.users.history.list({
+        userId: 'me',
+        startHistoryId: lastHistoryId,
+        historyTypes: ['messageAdded'],
+        labelId: 'INBOX'
+      });
+
+      if (history.data.history) {
+        for (const record of history.data.history) {
+          if (record.messagesAdded) {
+            for (const msg of record.messagesAdded) {
+              messageIds.push(msg.message.id);
+            }
+          }
+        }
+      }
+
+      // Update last known historyId
+      if (history.data.historyId) {
+        if (!this.config.provider_config) {
+          this.config.provider_config = {};
+        }
+        this.config.provider_config.history_id = history.data.historyId;
+      }
+
+      return messageIds;
+    } catch (error) {
+      throw this.handleError(error, 'processWebhookNotification');
+    }
+  }
+
+  /**
+   * Mark a message as processed
+   */
+  async markMessageProcessed(messageId: string): Promise<void> {
+    try {
+      const vendorConfig = this.config.provider_config || {};
+      
+      // Add a custom label to mark as processed
+      // First, check if we have a processed label
+      let processedLabelId: string | undefined;
+      
+      if (!processedLabelId) {
+        // Try to find or create the label
+        const labels = await this.gmail.users.labels.list({ userId: 'me' });
+        const processedLabel = labels.data.labels?.find(
+          (label: any) => label.name === 'PSA/Processed'
+        );
+        
+        if (processedLabel) {
+          processedLabelId = processedLabel.id;
+        } else {
+          // Create the label
+          const newLabel = await this.gmail.users.labels.create({
+            userId: 'me',
+            requestBody: {
+              name: 'PSA/Processed',
+              messageListVisibility: 'show',
+              labelListVisibility: 'labelShow'
+            }
+          });
+          processedLabelId = newLabel.data.id;
+        }
+        
+        // Store label ID for future use
+        // Store the label ID for future use (would need to update config)
+      }
+
+      // Apply the label to the message
+      await this.gmail.users.messages.modify({
+        userId: 'me',
+        id: messageId,
+        requestBody: {
+          addLabelIds: [processedLabelId]
+        }
+      });
+
+      this.log('info', `Message ${messageId} marked as processed`);
+    } catch (error) {
+      throw this.handleError(error, 'markMessageProcessed');
+    }
+  }
+
+  /**
+   * Get detailed information about a specific email message
+   */
+  async getMessageDetails(messageId: string): Promise<EmailMessageDetails> {
+    try {
+      const message = await this.gmail.users.messages.get({
+        userId: 'me',
+        id: messageId,
+        format: 'full'
+      });
+
+      const headers = message.data.payload?.headers || [];
+      const getHeader = (name: string) => 
+        headers.find((h: any) => h.name.toLowerCase() === name.toLowerCase())?.value || '';
+
+      // Extract body content
+      let bodyContent = '';
+      let htmlContent = '';
+      
+      const extractBody = (parts: any[]): void => {
+        for (const part of parts) {
+          if (part.mimeType === 'text/plain' && part.body?.data) {
+            bodyContent = Buffer.from(part.body.data, 'base64').toString();
+          } else if (part.mimeType === 'text/html' && part.body?.data) {
+            htmlContent = Buffer.from(part.body.data, 'base64').toString();
+          } else if (part.parts) {
+            extractBody(part.parts);
+          }
+        }
+      };
+
+      if (message.data.payload?.parts) {
+        extractBody(message.data.payload.parts);
+      } else if (message.data.payload?.body?.data) {
+        bodyContent = Buffer.from(message.data.payload.body.data, 'base64').toString();
+      }
+
+      // Extract attachments
+      const attachments: any[] = [];
+      const extractAttachments = (parts: any[]): void => {
+        for (const part of parts) {
+          if (part.filename && part.body?.attachmentId) {
+            attachments.push({
+              filename: part.filename,
+              mimeType: part.mimeType,
+              size: part.body.size,
+              attachmentId: part.body.attachmentId
+            });
+          } else if (part.parts) {
+            extractAttachments(part.parts);
+          }
+        }
+      };
+
+      if (message.data.payload?.parts) {
+        extractAttachments(message.data.payload.parts);
+      }
+
+      const fromEmail = getHeader('From') || '';
+      const toEmails = getHeader('To') || '';
+      const ccEmails = getHeader('Cc') || '';
+      
+      return {
+        id: message.data.id!,
+        provider: 'google' as const,
+        providerId: this.config.id,
+        tenant: this.config.tenant,
+        receivedAt: getHeader('Date') || new Date().toISOString(),
+        from: {
+          email: fromEmail.includes('<') ? fromEmail.split('<')[1].split('>')[0] : fromEmail,
+          name: fromEmail.includes('<') ? fromEmail.split('<')[0].trim() : undefined
+        },
+        to: toEmails ? toEmails.split(',').map((email: string) => ({
+          email: email.includes('<') ? email.split('<')[1].split('>')[0].trim() : email.trim(),
+          name: email.includes('<') ? email.split('<')[0].trim() : undefined
+        })) : [],
+        cc: ccEmails ? ccEmails.split(',').map((email: string) => ({
+          email: email.includes('<') ? email.split('<')[1].split('>')[0].trim() : email.trim(),
+          name: email.includes('<') ? email.split('<')[0].trim() : undefined
+        })) : undefined,
+        subject: getHeader('Subject') || '',
+        body: {
+          text: bodyContent,
+          html: htmlContent
+        },
+        attachments: attachments.map(att => ({
+          id: att.attachmentId,
+          name: att.filename,
+          size: att.size,
+          contentType: att.mimeType
+        })),
+        headers: headers.reduce((acc: any, header: any) => {
+          acc[header.name] = header.value;
+          return acc;
+        }, {})
+      };
+    } catch (error) {
+      throw this.handleError(error, 'getMessageDetails');
+    }
   }
 
   /**
    * Test the connection to Gmail API
    */
-  async testConnection(): Promise<{ success: boolean; error?: string }> {
+  async testConnection(): Promise<{ success: boolean; error?: string; }> {
     try {
-      await this.ensureValidToken();
+      // Try to get the user's profile
+      const profile = await this.gmail.users.getProfile({ userId: 'me' });
       
-      // Test with a simple profile request
-      const response = await this.makeGmailApiRequest('GET', '/gmail/v1/users/me/profile');
-      
-      if (response.emailAddress) {
-        return { success: true };
-      } else {
-        return { success: false, error: 'Unable to retrieve Gmail profile' };
+      if (profile.data.emailAddress !== this.config.mailbox) {
+        return {
+          success: false,
+          error: `Email mismatch: expected ${this.config.mailbox}, got ${profile.data.emailAddress}`
+        };
       }
-    } catch (error: any) {
-      return { 
-        success: false, 
-        error: `Gmail connection failed: ${error.message}` 
-      };
-    }
-  }
 
-  /**
-   * Initialize webhook subscription for real-time email notifications
-   */
-  async initializeWebhook(webhookUrl: string): Promise<{ success: boolean; subscriptionId?: string; error?: string }> {
-    try {
-      await this.ensureValidToken();
-      
-      console.log(`[MOCK] Initializing Gmail Push notification for ${this.getConfig().mailbox}`);
-      
-      // TODO: Implement actual Gmail Push notification setup
-      // This would use the Gmail API to create a push notification subscription
-      // See: https://developers.google.com/gmail/api/guides/push
-      
-      const mockSubscriptionData = {
-        topicName: `projects/your-project/topics/gmail-notifications`,
-        labelIds: this.gmailConfig.labelFilters || ['INBOX'],
-        labelFilterAction: 'include'
-      };
-      
-      // Mock API call structure would be:
-      // POST https://gmail.googleapis.com/gmail/v1/users/me/watch
-      // {
-      //   "topicName": "projects/your-project/topics/gmail-notifications",
-      //   "labelIds": ["INBOX"],
-      //   "labelFilterAction": "include"
-      // }
-      
-      const mockResponse = {
-        historyId: Date.now().toString(),
-        expiration: (Date.now() + 7 * 24 * 60 * 60 * 1000).toString() // 7 days
-      };
-      
-      console.log('[MOCK] Gmail Push notification initialized:', mockResponse);
-      
-      return {
-        success: true,
-        subscriptionId: mockResponse.historyId
-      };
-      
+      return { success: true };
     } catch (error: any) {
       return {
         success: false,
-        error: `Failed to initialize Gmail webhook: ${error.message}`
+        error: error.message || 'Failed to connect to Gmail API'
       };
     }
   }
 
   /**
-   * Retrieve new messages from Gmail
+   * Disconnect from Gmail API
    */
-  async getNewMessages(since?: Date, maxResults?: number): Promise<EmailMessage[]> {
-    try {
-      await this.ensureValidToken();
-      
-      const query = this.buildGmailQuery(since);
-      const limit = maxResults || this.gmailConfig.maxResults || 50;
-      
-      console.log(`[MOCK] Fetching Gmail messages with query: ${query}, limit: ${limit}`);
-      
-      // TODO: Implement actual Gmail API call
-      // This would use the Gmail API to search for messages
-      // GET https://gmail.googleapis.com/gmail/v1/users/me/messages?q={query}&maxResults={limit}
-      
-      // For demonstration, return mock emails
-      const mockMessages: EmailMessage[] = [
-        {
-          id: 'gmail-msg-123456',
-          provider: 'google',
-          providerId: this.getConfig().id,
-          receivedAt: new Date().toISOString(),
-          from: {
-            email: 'customer@example.com',
-            name: 'Example Customer'
-          },
-          to: [{
-            email: this.getConfig().mailbox,
-            name: 'Support Team'
-          }],
-          subject: 'Need help with account setup',
-          body: {
-            text: 'Hi, I need help setting up my account. Can someone please assist?',
-            html: '<p>Hi, I need help setting up my account. Can someone please assist?</p>'
-          },
-          threadId: 'gmail-thread-123',
-          tenant: this.getConfig().tenant,
-          attachments: []
-        }
-      ];
-      
-      return mockMessages;
-      
-    } catch (error: any) {
-      console.error('Error fetching Gmail messages:', error);
-      throw new Error(`Failed to fetch Gmail messages: ${error.message}`);
-    }
-  }
-
-  /**
-   * Retrieve a specific message by ID
-   */
-  async getMessage(messageId: string): Promise<EmailMessage> {
-    try {
-      await this.ensureValidToken();
-      
-      console.log(`[MOCK] Fetching Gmail message: ${messageId}`);
-      
-      // TODO: Implement actual Gmail API call
-      // GET https://gmail.googleapis.com/gmail/v1/users/me/messages/{messageId}?format=full
-      
-      // Mock response
-      const mockMessage: EmailMessage = {
-        id: messageId,
-        provider: 'google',
-        providerId: this.getConfig().id,
-        receivedAt: new Date().toISOString(),
-        from: {
-          email: 'customer@example.com',
-          name: 'Example Customer'
-        },
-        to: [{
-          email: this.getConfig().mailbox,
-          name: 'Support Team'
-        }],
-        subject: 'Mock Gmail Message',
-        body: {
-          text: 'This is a mock Gmail message body.',
-          html: '<p>This is a mock Gmail message body.</p>'
-        },
-        threadId: 'gmail-thread-123',
-        tenant: this.getConfig().tenant,
-        attachments: []
-      };
-      
-      return mockMessage;
-      
-    } catch (error: any) {
-      throw new Error(`Failed to fetch Gmail message: ${error.message}`);
-    }
-  }
-
-  /**
-   * Download attachment from Gmail
-   */
-  async downloadAttachment(messageId: string, attachmentId: string): Promise<Buffer> {
-    try {
-      await this.ensureValidToken();
-      
-      console.log(`[MOCK] Downloading Gmail attachment: ${attachmentId} from message: ${messageId}`);
-      
-      // TODO: Implement actual Gmail API call
-      // GET https://gmail.googleapis.com/gmail/v1/users/me/messages/{messageId}/attachments/{attachmentId}
-      
-      // Mock attachment content
-      return Buffer.from('Mock Gmail attachment content');
-      
-    } catch (error: any) {
-      throw new Error(`Failed to download Gmail attachment: ${error.message}`);
-    }
-  }
-
-  /**
-   * Process Gmail push notification
-   */
-  async processGmailNotification(notification: any): Promise<{ messageIds: string[]; error?: string }> {
-    try {
-      console.log('[MOCK] Processing Gmail push notification:', notification);
-      
-      // TODO: Implement actual Gmail push notification processing
-      // This would:
-      // 1. Decode the Pub/Sub message
-      // 2. Extract the historyId
-      // 3. Fetch the history since the last known historyId
-      // 4. Return the list of new message IDs
-      
-      // Mock response - return some message IDs that need processing
-      return {
-        messageIds: ['gmail-msg-new-1', 'gmail-msg-new-2']
-      };
-      
-    } catch (error: any) {
-      return {
-        messageIds: [],
-        error: `Failed to process Gmail notification: ${error.message}`
-      };
-    }
-  }
-
-  /**
-   * Ensure we have a valid access token, refresh if necessary
-   */
-  async ensureValidToken(): Promise<void> {
-    // Check if token is expired or will expire soon (5 minutes buffer)
-    const fiveMinutesFromNow = new Date(Date.now() + 5 * 60 * 1000);
-    
-    if (!this.accessToken || (this.tokenExpiry && this.tokenExpiry < fiveMinutesFromNow)) {
-      await this.refreshAccessToken();
-    }
-  }
-
-
-  /**
-   * Update stored tokens in the database
-   */
-  private async updateStoredTokens(): Promise<void> {
-    // TODO: Update the email_provider_configs table with new tokens
-    console.log('[MOCK] Updating stored Gmail tokens in database');
-  }
-
-  /**
-   * Build Gmail search query
-   */
-  private buildGmailQuery(since?: Date): string {
-    const queryParts: string[] = [];
-    
-    // Filter by labels (usually INBOX)
-    if (this.gmailConfig.labelFilters && this.gmailConfig.labelFilters.length > 0) {
-      queryParts.push(`label:${this.gmailConfig.labelFilters.join(' OR label:')}`);
-    } else {
-      queryParts.push('in:inbox');
-    }
-    
-    // Filter by date if provided
-    if (since) {
-      const dateStr = since.toISOString().split('T')[0]; // YYYY-MM-DD format
-      queryParts.push(`after:${dateStr}`);
-    }
-    
-    // Only unread emails for initial processing
-    queryParts.push('is:unread');
-    
-    return queryParts.join(' ');
-  }
-
-  /**
-   * Make authenticated request to Gmail API
-   */
-  private async makeGmailApiRequest(method: string, endpoint: string, body?: any): Promise<any> {
-    // TODO: Implement actual HTTP request to Gmail API
-    console.log(`[MOCK] Gmail API ${method} request to: ${endpoint}`);
-    
-    if (body) {
-      console.log('[MOCK] Request body:', body);
-    }
-    
-    // Mock successful response
-    return {
-      emailAddress: this.getConfig().mailbox,
-      messagesTotal: 42,
-      threadsTotal: 23
-    };
-  }
-
-  // Required abstract method implementations from BaseEmailAdapter
-
-  protected async refreshAccessToken(): Promise<void> {
-    // TODO: Implement actual OAuth2 token refresh
-    console.log(`[MOCK] Refreshing Gmail access token for ${this.getConfig().mailbox}`);
-    
-    // Mock token refresh - in real implementation, this would:
-    // 1. Use the refresh token to get a new access token
-    // 2. Update this.accessToken and this.tokenExpiry
-    // 3. Store the new tokens in the provider configuration
-    
-    this.accessToken = 'mock_refreshed_token_' + Date.now();
-    this.tokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
-  }
-
-  // Required abstract method implementations from EmailProviderAdapter interface
-
-  async loadCredentials(): Promise<void> {
-    // TODO: Load OAuth2 credentials from provider config
-    console.log(`[MOCK] Loading Gmail credentials for ${this.getConfig().mailbox}`);
-  }
-
-  async connect(): Promise<void> {
-    // TODO: Establish connection and validate credentials
-    console.log(`[MOCK] Connecting to Gmail for ${this.getConfig().mailbox}`);
-  }
-
-  async registerWebhookSubscription(): Promise<void> {
-    // TODO: Register Gmail push notifications
-    console.log(`[MOCK] Registering Gmail webhook for ${this.getConfig().mailbox}`);
-  }
-
-  async renewWebhookSubscription(): Promise<void> {
-    // TODO: Renew Gmail push subscription
-    console.log(`[MOCK] Renewing Gmail webhook for ${this.getConfig().mailbox}`);
-  }
-
-  async processWebhookPayload(payload: any): Promise<string[]> {
-    // TODO: Process Gmail webhook notification
-    console.log(`[MOCK] Processing Gmail webhook payload for ${this.getConfig().mailbox}`);
-    return [];
-  }
-
-  async processWebhookNotification(payload: any): Promise<string[]> {
-    // Delegate to the Gmail-specific method and extract message IDs
-    const result = await this.processGmailNotification(payload);
-    return result.messageIds;
-  }
-
-  async deleteWebhookSubscription(): Promise<void> {
-    // TODO: Delete Gmail push subscription
-    console.log(`[MOCK] Deleting Gmail webhook for ${this.getConfig().mailbox}`);
-  }
-
-  // Required abstract method implementations from BaseEmailAdapter
-
-  async markMessageProcessed(messageId: string): Promise<void> {
-    // TODO: Mark message as processed in Gmail
-    console.log(`[MOCK] Marking Gmail message ${messageId} as processed`);
-  }
-
-  async getMessageDetails(messageId: string): Promise<EmailMessageDetails> {
-    // TODO: Get full message details from Gmail API
-    console.log(`[MOCK] Getting Gmail message details for ${messageId}`);
-    
-    // Return mock detailed message
-    return {
-      id: messageId,
-      provider: 'google',
-      providerId: this.getConfig().mailbox,
-      receivedAt: new Date().toISOString(),
-      from: { email: 'mock@example.com', name: 'Mock Sender' },
-      to: [{ email: this.getConfig().mailbox }],
-      subject: 'Mock Gmail Message Details',
-      body: { text: 'Mock message body', html: '<p>Mock message body</p>' },
-      tenant: this.getConfig().tenant,
-      headers: { 'Message-ID': `<${messageId}@gmail.com>` },
-      messageSize: 1024,
-      importance: 'normal',
-      sensitivity: 'normal'
-    };
-  }
-
   async disconnect(): Promise<void> {
-    // TODO: Clean up Gmail connection
-    console.log(`[MOCK] Disconnecting from Gmail for ${this.getConfig().mailbox}`);
-    this.accessToken = undefined;
-    this.tokenExpiry = undefined;
+    // Gmail doesn't require explicit disconnect
+    this.log('info', 'Disconnected from Gmail API');
   }
-
 }

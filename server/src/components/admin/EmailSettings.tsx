@@ -3,6 +3,8 @@
  * Provides admin interface for managing email providers and domain settings
  */
 
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Button } from '../ui/Button';
@@ -11,7 +13,8 @@ import { Label } from '../ui/Label';
 import CustomSelect from '../ui/CustomSelect';
 import { Switch } from '../ui/Switch';
 import { Badge } from '../ui/Badge';
-import { Mail, Globe, Settings, CheckCircle, XCircle, Clock, Eye, EyeOff } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/Tabs';
+import { Mail, Globe, Settings, CheckCircle, XCircle, Clock, Eye, EyeOff, Send, Inbox } from 'lucide-react';
 import {
   TenantEmailSettings,
   EmailProviderConfig
@@ -25,9 +28,11 @@ import {
   addEmailDomain, 
   verifyEmailDomain
 } from '../../lib/actions/email-actions/emailDomainActions';
+import { EmailProviderConfiguration } from '../EmailProviderConfiguration';
+import { useTenant } from '../TenantProvider';
 
 interface EmailSettingsProps {
-  // Remove tenantId prop since server actions handle tenant context automatically
+  // Remove tenantId prop since we'll use the tenant context
 }
 
 interface DomainStatus {
@@ -45,6 +50,7 @@ interface DomainStatus {
 }
 
 export const EmailSettings: React.FC<EmailSettingsProps> = () => {
+  const tenantId = useTenant();
   const [settings, setSettings] = useState<TenantEmailSettings | null>(null);
   const [domains, setDomains] = useState<DomainStatus[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,6 +60,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
   const [selectedProvider, setSelectedProvider] = useState<'smtp' | 'resend'>('smtp');
   const [showPassword, setShowPassword] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [activeTab, setActiveTab] = useState('outbound');
 
   useEffect(() => {
     loadEmailSettings();
@@ -361,9 +368,25 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Provider Configuration Section */}
-      <Card>
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <TabsList className="grid w-full grid-cols-2 mb-6">
+        <TabsTrigger value="outbound" className="flex items-center gap-2">
+          <Send className="h-4 w-4" />
+          Outbound Email
+        </TabsTrigger>
+        <TabsTrigger value="inbound" className="flex items-center gap-2">
+          <Inbox className="h-4 w-4" />
+          Inbound Email
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="outbound" className="space-y-6">
+        <div className="text-sm text-muted-foreground mb-4">
+          Configure SMTP or API settings for sending emails from your application
+        </div>
+        
+        {/* Provider Configuration Section */}
+        <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
@@ -477,12 +500,35 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
         </CardContent>
       </Card>
 
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <Button id="save-email-settings" onClick={saveSettings} disabled={saving}>
-          {saving ? 'Saving...' : 'Save Settings'}
-        </Button>
-      </div>
-    </div>
+        {/* Save Button */}
+        <div className="flex justify-end">
+          <Button id="save-email-settings" onClick={saveSettings} disabled={saving}>
+            {saving ? 'Saving...' : 'Save Settings'}
+          </Button>
+        </div>
+      </TabsContent>
+
+      <TabsContent value="inbound" className="space-y-6">
+        <div className="text-sm text-muted-foreground mb-4">
+          Configure email providers to receive and process emails as tickets
+        </div>
+        
+        <EmailProviderConfiguration 
+          tenant={tenantId || ''}
+          onProviderAdded={(provider) => {
+            // Optional: Handle provider added event
+            console.log('Provider added:', provider);
+          }}
+          onProviderUpdated={(provider) => {
+            // Optional: Handle provider updated event
+            console.log('Provider updated:', provider);
+          }}
+          onProviderDeleted={(providerId) => {
+            // Optional: Handle provider deleted event
+            console.log('Provider deleted:', providerId);
+          }}
+        />
+      </TabsContent>
+    </Tabs>
   );
 };

@@ -2,11 +2,11 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { IInteraction, IInteractionType, ISystemInteractionType } from 'server/src/interfaces/interaction.interfaces';
+import { IInteraction, IInteractionType } from 'server/src/interfaces/interaction.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IContact } from 'server/src/interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
-import { Filter, RefreshCw } from 'lucide-react';
+import { Filter, RefreshCw, ChevronRight, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import { getRecentInteractions, getInteractionStatuses } from 'server/src/lib/actions/interactionActions';
 import { getAllInteractionTypes } from 'server/src/lib/actions/interactionTypeActions';
@@ -29,12 +29,20 @@ interface OverallInteractionsFeedProps {
   users: IUserWithRoles[];
   contacts: IContact[];
   companies: ICompany[];
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 
-const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users, contacts, companies }) => {
+const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ 
+  users, 
+  contacts, 
+  companies,
+  isCollapsed = false,
+  onToggleCollapse
+}) => {
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
-  const [interactionTypes, setInteractionTypes] = useState<(IInteractionType | ISystemInteractionType)[]>([]);
+  const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
   const [statuses, setStatuses] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>('all');
   const [selectedContact, setSelectedContact] = useState<string>('all');
@@ -138,14 +146,11 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
     }
   }, []);
 
-  const getTypeLabel = (type: IInteractionType | ISystemInteractionType) => {
-    const isSystemType = 'created_at' in type;
-    const suffix = isSystemType ? ' (System)' : ' (Custom)';
-    
+  const getTypeLabel = (type: IInteractionType) => {
     return (
       <div className="flex items-center gap-2">
         <InteractionIcon icon={type.icon} typeName={type.type_name} />
-        <span>{type.type_name}{suffix}</span>
+        <span>{type.type_name}</span>
       </div>
     );
   };
@@ -264,8 +269,36 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
 
   return (
     <ReflectionContainer id="overall-interactions-feed" label="Overall Interactions Feed">
+      {isCollapsed ? (
+        <div className="bg-white shadow rounded-lg h-full flex items-center justify-center p-2">
+          <Button
+            id="expand-interactions-button"
+            onClick={onToggleCollapse}
+            variant="ghost"
+            className="flex flex-col items-center gap-2 h-full min-h-[200px]"
+            aria-label="Expand Recent Interactions"
+          >
+            <ChevronLeft className="h-5 w-5" />
+            <span className="writing-mode-vertical-lr text-sm font-semibold" style={{ writingMode: 'vertical-lr' }}>
+              Recent Interactions
+            </span>
+          </Button>
+        </div>
+      ) : (
       <div className="bg-white shadow rounded-lg p-6">
-      <h2 className="text-xl font-bold mb-4">Recent Interactions</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold">Recent Interactions</h2>
+        <Button
+          id="collapse-interactions-button"
+          onClick={onToggleCollapse}
+          variant="ghost"
+          size="sm"
+          className="p-1"
+          aria-label="Collapse"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </Button>
+      </div>
       <div className="flex flex-nowrap items-stretch gap-4 mb-4">
         <div className="flex-grow min-w-0">
           <div className="flex items-center gap-2 w-full h-full">
@@ -436,6 +469,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
         ))}
       </ul>
       </div>
+      )}
     </ReflectionContainer>
   );
 };

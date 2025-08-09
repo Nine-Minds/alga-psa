@@ -16,10 +16,9 @@ interface ClientLoginFormProps {
   callbackUrl: string;
   onError: (error: string) => void;
   onTwoFactorRequired: () => void;
-  onRegister: () => void;
 }
 
-export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequired, onRegister }: ClientLoginFormProps) {
+export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequired }: ClientLoginFormProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -63,14 +62,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
     parentId: 'client-login-form'
   });
 
-  // Register register button as child of form
-  const updateRegisterButton = useRegisterUIComponent<ButtonComponent>({
-    id: 'client-register-button',
-    type: 'button',
-    label: 'Register',
-    disabled: false,
-    parentId: 'client-login-form'
-  });
+
 
   // Update field values when they change
   useEffect(() => {
@@ -90,6 +82,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
       const result = await signIn('credentials', {
         email,
         password,
+        userType: 'client',
         redirect: false,
         callbackUrl,
       })
@@ -170,7 +163,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
         {isLoading ? 'Signing in...' : 'Sign In'}
       </Button>
 
-      <div className="flex justify-between text-sm">
+      <div className="text-sm">
         <Link
           href="/client-portal/auth/forgot-password"
           className="text-blue-600 hover:text-blue-800 transition-colors"
@@ -178,14 +171,6 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
         >
           Forgot your password?
         </Link>
-        <button
-          type="button"
-          onClick={onRegister}
-          className="text-blue-600 hover:text-blue-800 transition-colors"
-          {...withDataAutomationId({ id: 'client-register-button' })}
-        >
-          Register
-        </button>
       </div>
     </form>
   )

@@ -4,13 +4,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, X, Edit2, ChevronRight, ChevronDown, Network, Search, MoreVertical } from "lucide-react"; 
+import { Plus, X, Edit2, ChevronRight, ChevronDown, Network, Search, MoreVertical, Palette } from "lucide-react";
+import ColorPicker from 'server/src/components/ui/ColorPicker';
 import { getAllChannels, createChannel, deleteChannel, updateChannel } from 'server/src/lib/actions/channel-actions/channelActions';
 import { getStatuses, createStatus, deleteStatus, updateStatus } from 'server/src/lib/actions/status-actions/statusActions';
 import { getAllPriorities, getAllPrioritiesWithStandard, createPriority, deletePriority, updatePriority } from 'server/src/lib/actions/priorityActions';
+import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from 'server/src/lib/actions/referenceDataActions';
 import { getTicketCategories, createTicketCategory, deleteTicketCategory, updateTicketCategory } from 'server/src/lib/actions/ticketCategoryActions';
 import { IChannel } from 'server/src/interfaces/channel.interface';
-import { IStatus, ItemType } from 'server/src/interfaces/status.interface';
+import { IStatus, IStandardStatus, ItemType } from 'server/src/interfaces/status.interface';
 import { IPriority, IStandardPriority, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import NumberingSettings from './NumberingSettings';
@@ -27,6 +29,8 @@ import {
 } from 'server/src/components/ui/DropdownMenu';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
+import CategoriesSettings from './CategoriesSettings';
+import ChannelsSettings from './ChannelsSettings';
 
 interface SettingSectionProps<T extends object> {
   title: string;
@@ -76,8 +80,8 @@ function SettingSection<T extends object>({
 
   const getPlaceholder = (): string => {
     switch (title) {
-      case "Channels":
-        return "New Channel";
+      case "Boards":
+        return "New Board";
       case "Ticket Statuses":
         return "New Status";
       case "Priorities":
@@ -93,7 +97,7 @@ function SettingSection<T extends object>({
     if (editingItem && editInputRef.current?.value.trim()) {
       let propertyName: string;
       switch (title) {
-        case "Channels":
+        case "Boards":
           propertyName = "channel_name";
           break;
         case "Ticket Statuses":
@@ -229,7 +233,6 @@ function SettingSection<T extends object>({
       <DataTable
         data={items}
         columns={allColumns}
-        pagination={false}
       />
       <div className="flex space-x-2 mt-4">
         <Input
@@ -272,6 +275,21 @@ const TicketingSettings = (): JSX.Element => {
   const [selectedPriorityType, setSelectedPriorityType] = useState<'ticket' | 'project_task'>('ticket');
   const [showPriorityDialog, setShowPriorityDialog] = useState(false);
   const [editingPriority, setEditingPriority] = useState<IPriority | null>(null);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [availableReferencePriorities, setAvailableReferencePriorities] = useState<IStandardPriority[]>([]);
+  const [selectedImportPriorities, setSelectedImportPriorities] = useState<string[]>([]);
+  const [priorityColor, setPriorityColor] = useState('#6B7280');
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
+  const [editingStatus, setEditingStatus] = useState<IStatus | null>(null);
+  const [showStatusImportDialog, setShowStatusImportDialog] = useState(false);
+  const [availableReferenceStatuses, setAvailableReferenceStatuses] = useState<IStandardStatus[]>([]);
+  const [selectedImportStatuses, setSelectedImportStatuses] = useState<string[]>([]);
+  
+  // Conflict resolution state
+  const [importConflicts, setImportConflicts] = useState<ImportConflict[]>([]);
+  const [showConflictDialog, setShowConflictDialog] = useState(false);
+  const [conflictResolutions, setConflictResolutions] = useState<Record<string, { action: 'skip' | 'rename' | 'reorder', newName?: string, newOrder?: number }>>({});
+  const [currentImportType, setCurrentImportType] = useState<'priorities' | 'statuses'>('priorities');
 
   useEffect(() => {
     const initUser = async () => {
@@ -289,7 +307,7 @@ const TicketingSettings = (): JSX.Element => {
         const [fetchedChannels, fetchedStatuses, fetchedPriorities, fetchedCategories] = await Promise.all([
           getAllChannels(true),
           getStatuses(selectedStatusType),
-          getAllPrioritiesWithStandard(),
+          getAllPriorities(),
           getTicketCategories()
         ]);
         setChannels(fetchedChannels);
@@ -814,10 +832,12 @@ const TicketingSettings = (): JSX.Element => {
       {
         title: 'Name',
         dataIndex: 'name',
+        width: '30%',
       },
       {
         title: 'Status',
         dataIndex: 'is_closed',
+        width: '25%',
         render: (value, record) => (
           <div className="flex items-center space-x-2 text-gray-500">
             <span className="text-sm mr-2">
@@ -830,8 +850,18 @@ const TicketingSettings = (): JSX.Element => {
             />
             <span className="text-xs text-gray-400 ml-2">
               {record.is_closed 
-                ? `${type === 'project' ? 'Projects' : 'Tickets'} with this status will be marked as closed` 
-                : `${type === 'project' ? 'Projects' : 'Tickets'} with this status will remain open`
+                ? `${
+                    type === 'project' ? 'Projects' : 
+                    type === 'ticket' ? 'Tickets' : 
+                    type === 'project_task' ? 'Tasks' : 
+                    'Interactions'
+                  } with this status will be marked as closed` 
+                : `${
+                    type === 'project' ? 'Projects' : 
+                    type === 'ticket' ? 'Tickets' : 
+                    type === 'project_task' ? 'Tasks' : 
+                    'Interactions'
+                  } with this status will remain open`
               }
             </span>
           </div>
@@ -844,6 +874,7 @@ const TicketingSettings = (): JSX.Element => {
       baseColumns.push({
         title: 'Default',
         dataIndex: 'is_default',
+        width: '25%',
         render: (value, record) => (
           <div className="flex items-center space-x-2 text-gray-500">
             <Switch
@@ -905,6 +936,14 @@ const TicketingSettings = (): JSX.Element => {
       });
     }
 
+    // Add Order column right before Actions
+    baseColumns.push({
+      title: 'Order',
+      dataIndex: 'order_number',
+      width: '10%',
+      render: (value) => value || 0,
+    });
+
     return baseColumns;
   };
 
@@ -933,11 +972,6 @@ const TicketingSettings = (): JSX.Element => {
       ),
     },
     {
-      title: 'Order',
-      dataIndex: 'order_number',
-      render: (value) => value,
-    },
-    {
       title: 'Color',
       dataIndex: 'color',
       render: (value) => (
@@ -949,6 +983,11 @@ const TicketingSettings = (): JSX.Element => {
           <span className="text-xs text-gray-500">{value}</span>
         </div>
       ),
+    },
+    {
+      title: 'Order',
+      dataIndex: 'order_number',
+      render: (value) => value,
     },
   ];
 
@@ -1010,7 +1049,7 @@ const TicketingSettings = (): JSX.Element => {
       },
     },
     {
-      title: 'Channel',
+      title: 'Board',
       dataIndex: 'channel_id',
       render: (value) => {
         const channel = channels.find(ch => ch.channel_id === value);
@@ -1025,52 +1064,8 @@ const TicketingSettings = (): JSX.Element => {
       content: <NumberingSettings entityType="TICKET" />
     },
     {
-      label: "Channels",
-      content: (
-        <div>
-          {/* Info Box - Moved before SettingSection */}
-          <div className="bg-blue-50 p-4 rounded-md mb-4">
-            <p className="text-sm text-blue-700">
-              <strong>Default Channel:</strong> When clients create tickets through the client portal,
-              they will automatically be assigned to the channel marked as default. Only one channel can
-              be set as default at a time.
-            </p>
-          </div>
-          {/* Setting Section */}
-          <SettingSection<IChannel>
-            title="Channels"
-            items={filteredChannels}
-            newItem={newChannel}
-            setNewItem={setNewChannel}
-            addItem={addChannel}
-            updateItem={updateChannelItem}
-            deleteItem={handleDeleteChannelRequestWrapper}
-            getItemName={(channel) => channel.channel_name || ''}
-            getItemKey={(channel) => channel.channel_id || ''}
-            columns={channelColumns}
-            headerControls={
-              <div className="flex items-center gap-6">
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search channels"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
-                  />
-                  <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                </div>
-                <CustomSelect
-                  value={filterStatus}
-                  onValueChange={(value: string) => setFilterStatus(value as 'all' | 'active' | 'inactive')}
-                  options={filterStatusOptions}
-                  className="w-64"
-                />
-              </div>
-            }
-          />
-        </div>
-      )
+      label: "Boards",
+      content: <ChannelsSettings />
     },
     {
       label: "Statuses",
@@ -1085,30 +1080,111 @@ const TicketingSettings = (): JSX.Element => {
               </p>
             </div>
           )}
-          {/* Setting Section */}
-          <SettingSection<IStatus>
-            title={`${selectedStatusType.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')} Statuses`}
-            items={statuses}
-            newItem={newStatus}
-            setNewItem={setNewStatus}
-            addItem={addStatus}
-            updateItem={updateStatusItem}
-            deleteItem={handleDeleteStatusRequestWrapper}
-            getItemName={(status) => status.name}
-            getItemKey={(status) => status.status_id || ''}
-            columns={getStatusColumns(selectedStatusType)}
-            headerControls={
+          {selectedStatusType === 'project' && (
+            <div className="bg-blue-50 p-4 rounded-md mb-4">
+              <p className="text-sm text-blue-700">
+                <strong>Project Statuses:</strong> Define the workflow stages for your projects.
+                Mark statuses as "closed" to indicate project completion.
+              </p>
+            </div>
+          )}
+          {selectedStatusType === 'interaction' && (
+            <div className="bg-blue-50 p-4 rounded-md mb-4">
+              <p className="text-sm text-blue-700">
+                <strong>Interaction Statuses:</strong> Track the state of customer interactions
+                such as calls, emails, and meetings.
+              </p>
+            </div>
+          )}
+          {/* Statuses Section */}
+          <div className="bg-white p-6 rounded-lg shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">
+                {selectedStatusType.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')} Statuses
+              </h3>
               <CustomSelect
                 value={selectedStatusType}
                 onValueChange={(value: string) => setSelectedStatusType(value as ItemType)}
                 options={[
                   { value: 'ticket', label: 'Ticket Statuses' },
-                  { value: 'project', label: 'Project Statuses' }
+                  { value: 'project', label: 'Project Statuses' },
+                  { value: 'interaction', label: 'Interaction Statuses' }
                 ]}
                 className="w-64"
               />
-            }
-          />
+            </div>
+            
+            <DataTable
+              data={statuses.filter(s => s.status_type === selectedStatusType).sort((a, b) => (a.order_number || 0) - (b.order_number || 0))}
+              columns={[...getStatusColumns(selectedStatusType), {
+                title: 'Actions',
+                dataIndex: 'action',
+                width: '10%',
+                render: (_, item) => (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        className="h-8 w-8 p-0"
+                        id={`status-actions-menu-${item.status_id}`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <span className="sr-only">Open menu</span>
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        id={`edit-status-${item.status_id}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingStatus(item);
+                          setShowStatusDialog(true);
+                        }}
+                      >
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        id={`delete-status-${item.status_id}`}
+                        className="text-red-600 focus:text-red-600"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteStatusRequestWrapper(item.status_id);
+                        }}
+                      >
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ),
+              }]}
+                  />
+            
+            <div className="mt-4 flex gap-2">
+              <Button 
+                id='add-status-button' 
+                onClick={() => {
+                  setEditingStatus(null);
+                  setShowStatusDialog(true);
+                }} 
+                className="bg-primary-500 text-white hover:bg-primary-600"
+              >
+                <Plus className="h-4 w-4 mr-2" /> Add Status
+              </Button>
+              <Button 
+                id='import-statuses-button' 
+                onClick={async () => {
+                  const available = await getAvailableReferenceData('statuses', { item_type: selectedStatusType });
+                  setAvailableReferenceStatuses(available);
+                  setSelectedImportStatuses([]);
+                  setShowStatusImportDialog(true);
+                }} 
+                variant="outline"
+              >
+                Import from Standard Statuses
+              </Button>
+            </div>
+          </div>
         </div>
       )
     },
@@ -1131,98 +1207,20 @@ const TicketingSettings = (): JSX.Element => {
               />
             </div>
             
-            {/* Info box about standard priorities */}
+            {/* Info box about priorities */}
             <div className="bg-blue-50 p-4 rounded-md mb-4">
               <p className="text-sm text-blue-700">
-                <strong>Standard Priorities:</strong> System-defined priorities cannot be edited or deleted. 
-                You can create custom priorities specific to your organization that will appear alongside standard ones.
+                <strong>Priority Management:</strong> Create custom priorities for your organization or import from standard templates. 
+                All priorities can be edited or deleted to fit your workflow.
               </p>
             </div>
 
             <DataTable
-              data={priorities.filter(p => p.item_type === selectedPriorityType)}
+              data={priorities
+                .filter(p => p.item_type === selectedPriorityType)
+                .sort((a, b) => (a.order_number || 0) - (b.order_number || 0))
+              }
               columns={[...priorityColumns, {
-                title: 'Actions',
-                dataIndex: 'action',
-                width: '5%',
-                render: (_, item) => (
-                  'tenant' in item ? (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          className="h-8 w-8 p-0"
-                          id={`priority-actions-menu-${item.priority_id}`}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <span className="sr-only">Open menu</span>
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          id={`edit-priority-${item.priority_id}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingPriority(item as IPriority);
-                            setShowPriorityDialog(true);
-                          }}
-                        >
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          id={`delete-priority-${item.priority_id}`}
-                          className="text-red-600 focus:text-red-600"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeletePriorityRequestWrapper(item.priority_id);
-                          }}
-                        >
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  ) : (
-                    <span className="text-xs text-gray-400">System</span>
-                  )
-                ),
-              }]}
-              pagination={false}
-            />
-            
-            <div className="mt-4">
-              <Button 
-                id='add-priority-button' 
-                onClick={() => {
-                  setEditingPriority(null);
-                  setShowPriorityDialog(true);
-                }} 
-                className="bg-primary-500 text-white hover:bg-primary-600"
-              >
-                <Plus className="h-4 w-4 mr-2" /> Add Priority
-              </Button>
-            </div>
-          </div>
-        </div>
-      )
-    },
-    {
-      label: "Categories",
-      content: (
-        <div>
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Categories</h3>
-              <CustomSelect
-                value={categoryChannelFilter}
-                onValueChange={(value: string) => setCategoryChannelFilter(value)}
-                options={channelFilterOptions}
-                className="w-64"
-              />
-            </div>
-            <DataTable
-              data={visibleCategories}
-              columns={[...categoryColumns, {
                 title: 'Actions',
                 dataIndex: 'action',
                 width: '5%',
@@ -1232,7 +1230,7 @@ const TicketingSettings = (): JSX.Element => {
                       <Button
                         variant="ghost"
                         className="h-8 w-8 p-0"
-                        id={`category-actions-menu-${item.category_id}`}
+                        id={`priority-actions-menu-${item.priority_id}`}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <span className="sr-only">Open menu</span>
@@ -1240,99 +1238,65 @@ const TicketingSettings = (): JSX.Element => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      {editingCategory === item.category_id ? (
-                        <>
-                          <DropdownMenuItem
-                            id={`save-category-${item.category_id}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSaveCategory(item.category_id);
-                            }}
-                          >
-                            Save
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            id={`cancel-edit-category-${item.category_id}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingCategory('');
-                            }}
-                          >
-                            Cancel
-                          </DropdownMenuItem>
-                        </>
-                      ) : (
-                        <>
-                          <DropdownMenuItem
-                            id={`edit-category-${item.category_id}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditCategory(item);
-                            }}
-                          >
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            id={`add-subcategory-${item.category_id}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedParentCategory(item.category_id);
-                            }}
-                          >
-                            Add Subcategory
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            id={`delete-category-${item.category_id}`}
-                            className="text-red-600 focus:text-red-600"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteCategoryRequestWrapper(item.category_id);
-                            }}
-                          >
-                            Delete
-                          </DropdownMenuItem>
-                        </>
-                      )}
+                      <DropdownMenuItem
+                        id={`edit-priority-${item.priority_id}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingPriority(item as IPriority);
+                          setPriorityColor(item.color || '#6B7280');
+                          setShowPriorityDialog(true);
+                        }}
+                      >
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        id={`delete-priority-${item.priority_id}`}
+                        className="text-red-600 focus:text-red-600"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeletePriorityRequestWrapper(item.priority_id);
+                        }}
+                      >
+                        Delete
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ),
               }]}
-              pagination={true}
-            />
-            <div className="flex space-x-2 mt-4">
-              <Input
-                type="text"
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
-                placeholder={selectedParentCategory ? "New Subcategory" : "New Category"}
-                className="flex-grow"
-              />
+                  />
+            
+            <div className="mt-4 flex gap-2">
               <Button 
-                id='add-button'
-                onClick={addCategory} 
+                id='add-priority-button' 
+                onClick={() => {
+                  setEditingPriority(null);
+                  setPriorityColor('#6B7280');
+                  setShowPriorityDialog(true);
+                }} 
                 className="bg-primary-500 text-white hover:bg-primary-600"
-                disabled={!newCategory.trim()}
               >
-                <Plus className="h-4 w-4 mr-2" /> Add
+                <Plus className="h-4 w-4 mr-2" /> Add Priority
+              </Button>
+              <Button 
+                id='import-priorities-button' 
+                onClick={async () => {
+                  const available = await getAvailableReferenceData('priorities', { item_type: selectedPriorityType });
+                  setAvailableReferencePriorities(available);
+                  setSelectedImportPriorities([]);
+                  setShowImportDialog(true);
+                }} 
+                variant="outline"
+              >
+                Import from Standard Priorities
               </Button>
             </div>
-            {selectedParentCategory && (
-              <div className="mt-2 text-sm text-gray-500">
-                Adding subcategory to: {categories.find(c => c.category_id === selectedParentCategory)?.category_name}
-                <Button
-                  id='cancel-button'
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedParentCategory('')}
-                  className="ml-2"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
           </div>
         </div>
       )
+    },
+    {
+      label: "Categories",
+      content: <CategoriesSettings />
     }
   ];
 
@@ -1372,31 +1336,54 @@ const TicketingSettings = (): JSX.Element => {
               const formData = new FormData(e.currentTarget);
               const name = formData.get('name') as string;
               const level = parseInt(formData.get('level') as string);
-              const color = formData.get('color') as string;
               
-              if (editingPriority) {
-                await updatePriorityItem({
-                  ...editingPriority,
-                  priority_name: name,
-                  order_number: level,
-                  color: color
-                });
-              } else {
-                await createPriority({
-                  priority_name: name,
-                  order_number: level,
-                  color: color,
-                  item_type: selectedPriorityType,
-                  created_by: userId,
-                  created_at: new Date()
-                });
+              try {
+                // Check if order number is already taken
+                const existingWithOrder = priorities.find(p => 
+                  'item_type' in p &&
+                  p.item_type === selectedPriorityType && 
+                  p.order_number === level &&
+                  p.priority_id !== editingPriority?.priority_id
+                );
+                
+                if (existingWithOrder) {
+                  toast.error(`Order number ${level} is already taken by "${existingWithOrder.priority_name}". Please choose a different order number.`);
+                  return;
+                }
+                
+                if (editingPriority) {
+                  await updatePriorityItem({
+                    ...editingPriority,
+                    priority_name: name,
+                    order_number: level,
+                    color: priorityColor
+                  });
+                } else {
+                  await createPriority({
+                    priority_name: name,
+                    order_number: level,
+                    color: priorityColor,
+                    item_type: selectedPriorityType,
+                    created_by: userId,
+                    created_at: new Date()
+                  });
+                }
+                
                 // Refresh priorities list
-                const updatedPriorities = await getAllPrioritiesWithStandard();
+                const updatedPriorities = await getAllPriorities();
                 setPriorities(updatedPriorities);
+                
+                setShowPriorityDialog(false);
+                setEditingPriority(null);
+                setPriorityColor('#6B7280');
+              } catch (error) {
+                console.error('Error saving priority:', error);
+                if (error instanceof Error && error.message.includes('unique constraint')) {
+                  toast.error('This order number is already in use. Please choose a different order number.');
+                } else {
+                  toast.error('Failed to save priority');
+                }
               }
-              
-              setShowPriorityDialog(false);
-              setEditingPriority(null);
             }}>
               <div className="space-y-4">
                 <div>
@@ -1420,9 +1407,35 @@ const TicketingSettings = (): JSX.Element => {
                     type="number"
                     min="1"
                     max="100"
-                    defaultValue={editingPriority?.order_number || 50}
+                    defaultValue={editingPriority?.order_number || (() => {
+                      // Suggest next available order number
+                      const prioritiesOfType = priorities.filter(p => 
+                        'item_type' in p && p.item_type === selectedPriorityType
+                      );
+                      const maxOrder = Math.max(...prioritiesOfType.map(p => p.order_number || 0), 0);
+                      return Math.min(maxOrder + 1, 100);
+                    })()}
                     required
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Controls the order in which priorities appear in dropdown menus throughout the platform. Higher numbers appear first for priorities.
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {(() => {
+                      const prioritiesOfType = priorities.filter(p => 
+                        'item_type' in p && p.item_type === selectedPriorityType
+                      );
+                      const usedOrders = prioritiesOfType
+                        .filter(p => p.priority_id !== editingPriority?.priority_id)
+                        .map(p => p.order_number)
+                        .filter(n => n !== null && n !== undefined)
+                        .sort((a, b) => a - b);
+                      if (usedOrders.length > 0) {
+                        return `Used order numbers: ${usedOrders.join(', ')}`;
+                      }
+                      return 'No order numbers used yet';
+                    })()}
+                  </p>
                 </div>
                 
                 <div>
@@ -1430,19 +1443,33 @@ const TicketingSettings = (): JSX.Element => {
                     Color
                   </label>
                   <div className="flex items-center gap-2">
-                    <Input
-                      name="color"
-                      type="color"
-                      defaultValue={editingPriority?.color || '#6B7280'}
-                      className="h-10 w-20"
-                      required
+                    <div 
+                      className="w-10 h-10 rounded border border-gray-300" 
+                      style={{ backgroundColor: priorityColor }}
                     />
-                    <Input
-                      type="text"
-                      value={editingPriority?.color || '#6B7280'}
-                      readOnly
-                      className="flex-1"
+                    <ColorPicker
+                      currentBackgroundColor={priorityColor}
+                      currentTextColor="#FFFFFF"
+                      onSave={(backgroundColor) => {
+                        if (backgroundColor) {
+                          setPriorityColor(backgroundColor);
+                        }
+                      }}
+                      showTextColor={false}
+                      previewType="circle"
+                      trigger={
+                        <Button
+                          id="priority-color-picker-btn"
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-2">
+                          <Palette className="h-4 w-4" />
+                          <span>Choose Color</span>
+                        </Button>
+                      }
                     />
+                    <span className="text-sm text-gray-600">{priorityColor}</span>
                   </div>
                 </div>
               </div>
@@ -1455,6 +1482,7 @@ const TicketingSettings = (): JSX.Element => {
                   onClick={() => {
                     setShowPriorityDialog(false);
                     setEditingPriority(null);
+                    setPriorityColor('#6B7280');
                   }}
                 >
                   Cancel
@@ -1469,6 +1497,690 @@ const TicketingSettings = (): JSX.Element => {
               </DialogFooter>
             </form>
         </DialogContent>
+      </Dialog>
+
+      {/* Import Priorities Dialog */}
+      <Dialog
+        isOpen={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        title="Import Standard Priorities"
+        className="max-w-lg"
+        id="import-priorities-dialog"
+      >
+        <DialogContent>
+          {availableReferencePriorities.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">All standard priorities have already been imported for {selectedPriorityType === 'ticket' ? 'tickets' : 'project tasks'}.</p>
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm text-gray-600 mb-4">
+                Select the standard priorities you want to import. These will be copied to your organization's priorities.
+              </p>
+              
+              <div className="border rounded-md">
+                {/* Table Header */}
+                <div className="flex items-center space-x-2 p-2 bg-muted/50 font-medium text-sm border-b">
+                  <div className="w-8">
+                    <input
+                      type="checkbox"
+                      checked={availableReferencePriorities.length > 0 && selectedImportPriorities.length === availableReferencePriorities.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedImportPriorities(availableReferencePriorities.map(p => p.priority_id));
+                        } else {
+                          setSelectedImportPriorities([]);
+                        }
+                      }}
+                      className="rounded border-gray-300"
+                    />
+                  </div>
+                  <div className="w-12"></div> {/* Color column */}
+                  <div className="flex-1">Name</div>
+                  <div className="w-16 text-center">Order</div>
+                </div>
+                {/* Table Body */}
+                <div className="max-h-96 overflow-y-auto">
+                  {availableReferencePriorities.map((priority) => (
+                    <label
+                      key={priority.priority_id}
+                      className="flex items-center space-x-2 p-2 hover:bg-muted/50 border-b last:border-b-0 cursor-pointer"
+                    >
+                      <div className="w-8">
+                        <input
+                          type="checkbox"
+                          id={`import-priority-${priority.priority_id}`}
+                          checked={selectedImportPriorities.includes(priority.priority_id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedImportPriorities([...selectedImportPriorities, priority.priority_id]);
+                            } else {
+                              setSelectedImportPriorities(selectedImportPriorities.filter(id => id !== priority.priority_id));
+                            }
+                          }}
+                          className="rounded border-gray-300"
+                        />
+                      </div>
+                      <div className="w-12 flex justify-center">
+                        <div
+                          className="w-4 h-4 rounded"
+                          style={{ backgroundColor: priority.color }}
+                        />
+                      </div>
+                      <div className="flex-1 font-medium">{priority.priority_name}</div>
+                      <div className="w-16 text-center text-sm text-muted-foreground">
+                        {priority.order_number}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button
+              id="cancel-import-dialog"
+              variant="outline"
+              onClick={() => {
+                setShowImportDialog(false);
+                setSelectedImportPriorities([]);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              id="import-selected-priorities"
+              variant="default"
+              disabled={selectedImportPriorities.length === 0}
+              onClick={async () => {
+                try {
+                  // Check for conflicts first
+                  const conflicts = await checkImportConflicts(
+                    'priorities',
+                    selectedImportPriorities,
+                    { item_type: selectedPriorityType }
+                  );
+                  
+                  if (conflicts.length > 0) {
+                    // Show conflict resolution dialog
+                    setImportConflicts(conflicts);
+                    setCurrentImportType('priorities');
+                    setConflictResolutions({});
+                    setShowConflictDialog(true);
+                    setShowImportDialog(false);
+                  } else {
+                    // No conflicts, proceed with import
+                    const result = await importReferenceData(
+                      'priorities',
+                      selectedImportPriorities,
+                      { item_type: selectedPriorityType }
+                    );
+                    
+                    if (result.imported.length > 0) {
+                      toast.success(`Successfully imported ${result.imported.length} priorities`);
+                      // Refresh priorities list
+                      const updatedPriorities = await getAllPriorities();
+                      setPriorities(updatedPriorities);
+                    }
+                    
+                    if (result.skipped.length > 0) {
+                      toast.error(`Skipped ${result.skipped.length} priorities (already exist)`);
+                    }
+                    
+                    setShowImportDialog(false);
+                    setSelectedImportPriorities([]);
+                  }
+                } catch (error) {
+                  console.error('Error importing priorities:', error);
+                  toast.error('Failed to import priorities');
+                }
+              }}
+            >
+              Import ({selectedImportPriorities.length})
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Status Add/Edit Dialog */}
+      <Dialog
+        isOpen={showStatusDialog}
+        onClose={() => setShowStatusDialog(false)}
+        title={editingStatus ? 'Edit Status' : 'Add New Status'}
+        className="max-w-lg"
+        id="status-dialog"
+      >
+        <DialogContent>
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            const name = formData.get('name') as string;
+            const orderNumber = parseInt(formData.get('orderNumber') as string);
+            const isClosed = formData.get('isClosed') === 'true';
+            const isDefault = selectedStatusType === 'ticket' ? formData.get('isDefault') === 'true' : false;
+            
+            try {
+              // Check if order number is already taken
+              const existingWithOrder = statuses.find(s => 
+                s.status_type === selectedStatusType && 
+                s.order_number === orderNumber &&
+                s.status_id !== editingStatus?.status_id
+              );
+              
+              if (existingWithOrder) {
+                toast.error(`Order number ${orderNumber} is already taken by "${existingWithOrder.name}". Please choose a different order number.`);
+                return;
+              }
+              
+              if (editingStatus) {
+                await updateStatusItem({
+                  ...editingStatus,
+                  name: name,
+                  order_number: orderNumber,
+                  is_closed: isClosed,
+                  is_default: isDefault
+                });
+              } else {
+                await createStatus({
+                  name: name,
+                  status_type: selectedStatusType,
+                  order_number: orderNumber,
+                  is_closed: isClosed,
+                  is_default: isDefault,
+                  created_by: userId
+                });
+              }
+              
+              // Refresh statuses list
+              const updatedStatuses = await getStatuses(selectedStatusType);
+              setStatuses(updatedStatuses);
+              
+              setShowStatusDialog(false);
+              setEditingStatus(null);
+            } catch (error) {
+              console.error('Error saving status:', error);
+              if (error instanceof Error && error.message.includes('unique_tenant_type_order')) {
+                toast.error('This order number is already in use. Please choose a different order number.');
+              } else {
+                toast.error('Failed to save status');
+              }
+            }
+          }}>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status Name
+                </label>
+                <Input
+                  name="name"
+                  defaultValue={editingStatus?.name || ''}
+                  required
+                  placeholder="e.g., In Progress"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Order Number (1-100, lower numbers appear first)
+                </label>
+                <Input
+                  name="orderNumber"
+                  type="number"
+                  min="1"
+                  max="100"
+                  defaultValue={editingStatus?.order_number || (() => {
+                    // Suggest next available order number
+                    const statusesOfType = statuses.filter(s => s.status_type === selectedStatusType);
+                    const maxOrder = Math.max(...statusesOfType.map(s => s.order_number || 0), 0);
+                    return Math.min(maxOrder + 1, 100);
+                  })()}
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Controls the order in which statuses appear in dropdown menus throughout the platform. Lower numbers appear first.
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {(() => {
+                    const statusesOfType = statuses.filter(s => s.status_type === selectedStatusType);
+                    const usedOrders = statusesOfType
+                      .filter(s => s.status_id !== editingStatus?.status_id)
+                      .map(s => s.order_number)
+                      .filter(n => n !== null && n !== undefined)
+                      .sort((a, b) => a - b);
+                    if (usedOrders.length > 0) {
+                      return `Used order numbers: ${usedOrders.join(', ')}`;
+                    }
+                    return 'No order numbers used yet';
+                  })()}
+                </p>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    name="isClosed"
+                    id="status-is-closed"
+                    value="true"
+                    defaultChecked={editingStatus?.is_closed || false}
+                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="status-is-closed" className="text-sm text-gray-700">
+                    Mark as closed status
+                  </label>
+                </div>
+                
+                {selectedStatusType === 'ticket' && (
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      name="isDefault"
+                      id="status-is-default"
+                      value="true"
+                      defaultChecked={editingStatus?.is_default || false}
+                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="status-is-default" className="text-sm text-gray-700">
+                      Set as default status for new tickets
+                    </label>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button
+                id="cancel-status-dialog"
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowStatusDialog(false);
+                  setEditingStatus(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                id="submit-status-dialog"
+                type="submit" 
+                variant="default"
+              >
+                {editingStatus ? 'Update' : 'Add'} Status
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Statuses Dialog */}
+      <Dialog
+        isOpen={showStatusImportDialog}
+        onClose={() => setShowStatusImportDialog(false)}
+        title="Import Standard Statuses"
+        className="max-w-lg"
+        id="import-statuses-dialog"
+      >
+        <DialogContent>
+          {availableReferenceStatuses.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">All standard statuses have already been imported for {selectedStatusType}s.</p>
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm text-gray-600 mb-4">
+                Select the standard statuses you want to import. These will be copied to your organization's statuses.
+              </p>
+              
+              <div className="border rounded-md">
+                {/* Table Header */}
+                <div className="flex items-center space-x-2 p-2 bg-muted/50 font-medium text-sm border-b">
+                  <div className="w-8">
+                    <input
+                      type="checkbox"
+                      checked={availableReferenceStatuses.length > 0 && selectedImportStatuses.length === availableReferenceStatuses.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedImportStatuses(availableReferenceStatuses.map(s => s.standard_status_id));
+                        } else {
+                          setSelectedImportStatuses([]);
+                        }
+                      }}
+                      className="rounded border-gray-300"
+                    />
+                  </div>
+                  <div className="flex-1">Name</div>
+                  <div className="w-20 text-center">Closed</div>
+                  <div className="w-20 text-center">Default</div>
+                  <div className="w-16 text-center">Order</div>
+                </div>
+                {/* Table Body */}
+                <div className="max-h-96 overflow-y-auto">
+                  {availableReferenceStatuses.map((status) => (
+                    <label
+                      key={status.standard_status_id}
+                      className="flex items-center space-x-2 p-2 hover:bg-muted/50 border-b last:border-b-0 cursor-pointer"
+                    >
+                      <div className="w-8">
+                        <input
+                          type="checkbox"
+                          id={`import-status-${status.standard_status_id}`}
+                          checked={selectedImportStatuses.includes(status.standard_status_id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedImportStatuses([...selectedImportStatuses, status.standard_status_id]);
+                            } else {
+                              setSelectedImportStatuses(selectedImportStatuses.filter(id => id !== status.standard_status_id));
+                            }
+                          }}
+                          className="rounded border-gray-300"
+                        />
+                      </div>
+                      <div className="flex-1 font-medium">{status.name}</div>
+                      <div className="w-20 text-center">
+                        {status.is_closed ? (
+                          <span className="text-sm text-muted-foreground">Yes</span>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">-</span>
+                        )}
+                      </div>
+                      <div className="w-20 text-center">
+                        {status.is_default ? (
+                          <span className="text-sm text-muted-foreground">Yes</span>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">-</span>
+                        )}
+                      </div>
+                      <div className="w-16 text-center text-sm text-muted-foreground">
+                        {status.display_order}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button
+              id="cancel-import-statuses-dialog"
+              variant="outline"
+              onClick={() => {
+                setShowStatusImportDialog(false);
+                setSelectedImportStatuses([]);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              id="import-selected-statuses"
+              variant="default"
+              disabled={selectedImportStatuses.length === 0}
+              onClick={async () => {
+                try {
+                  // Check for conflicts first
+                  const conflicts = await checkImportConflicts(
+                    'statuses',
+                    selectedImportStatuses,
+                    { item_type: selectedStatusType }
+                  );
+                  
+                  console.log('Status import conflicts:', conflicts);
+                  
+                  if (conflicts.length > 0) {
+                    // Show conflict resolution dialog
+                    setImportConflicts(conflicts);
+                    setCurrentImportType('statuses');
+                    setConflictResolutions({});
+                    setShowConflictDialog(true);
+                    setShowStatusImportDialog(false);
+                  } else {
+                    // No conflicts, proceed with import
+                    const result = await importReferenceData(
+                      'statuses',
+                      selectedImportStatuses,
+                      { item_type: selectedStatusType }
+                    );
+                    
+                    if (result.imported.length > 0) {
+                      toast.success(`Successfully imported ${result.imported.length} statuses`);
+                      // Refresh statuses list
+                      const updatedStatuses = await getStatuses(selectedStatusType);
+                      setStatuses(updatedStatuses);
+                    }
+                    
+                    if (result.skipped.length > 0) {
+                      const skippedReasons = result.skipped.map(s => `${s.name}: ${s.reason}`).join('\n');
+                      console.log('Skipped statuses:', skippedReasons);
+                      toast.error(`Skipped ${result.skipped.length} statuses (${result.skipped[0].reason})`);
+                    }
+                    
+                    setShowStatusImportDialog(false);
+                    setSelectedImportStatuses([]);
+                  }
+                } catch (error) {
+                  console.error('Error importing statuses:', error);
+                  toast.error('Failed to import statuses');
+                }
+              }}
+            >
+              Import ({selectedImportStatuses.length})
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Conflict Resolution Dialog */}
+      <Dialog
+        isOpen={showConflictDialog}
+        onClose={() => {
+          setShowConflictDialog(false);
+          setImportConflicts([]);
+          setConflictResolutions({});
+        }}
+        title="Resolve Import Conflicts"
+        className="max-w-2xl"
+        id="conflict-resolution-dialog"
+      >
+        <DialogContent>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              The following items have conflicts with existing data. Choose how to resolve each conflict:
+            </p>
+            
+            {(() => {
+              // Group conflicts by item ID
+              const conflictsByItem = importConflicts.reduce((acc, conflict) => {
+                const itemId = conflict.referenceItem.id || conflict.referenceItem.priority_id || conflict.referenceItem.standard_status_id || conflict.referenceItem.status_id;
+                if (!acc[itemId]) {
+                  acc[itemId] = {
+                    item: conflict.referenceItem,
+                    conflicts: []
+                  };
+                }
+                acc[itemId].conflicts.push(conflict);
+                return acc;
+              }, {} as Record<string, { item: any, conflicts: ImportConflict[] }>);
+
+              return Object.entries(conflictsByItem).map(([itemId, { item, conflicts }]) => {
+                const itemName = item.name || item.priority_name;
+                const resolution = conflictResolutions[itemId] || { action: 'skip' };
+                const hasNameConflict = conflicts.some(c => c.conflictType === 'name');
+                const hasOrderConflict = conflicts.some(c => c.conflictType === 'order');
+                const orderConflict = conflicts.find(c => c.conflictType === 'order');
+                
+                return (
+                  <div key={itemId} className="border rounded-lg p-4 space-y-3">
+                    <div className="font-medium">
+                      {itemName}
+                      {hasOrderConflict && (
+                        <span className="text-sm text-gray-500 ml-2">
+                          (Order: {item.order_number || item.display_order})
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="text-sm text-gray-600 space-y-1">
+                      {hasNameConflict && <div>• An item with this name already exists.</div>}
+                      {hasOrderConflict && <div>• Order number {item.order_number || item.display_order} is already taken.</div>}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          name={`conflict-${itemId}`}
+                          value="skip"
+                          checked={resolution.action === 'skip'}
+                          onChange={() => {
+                            setConflictResolutions({
+                              ...conflictResolutions,
+                              [itemId]: { action: 'skip' }
+                            });
+                          }}
+                        />
+                        <span>Skip this item</span>
+                      </label>
+                      
+                      {hasNameConflict && (
+                        <label className="flex items-center space-x-2">
+                          <input
+                            type="radio"
+                            name={`conflict-${itemId}`}
+                            value="rename"
+                            checked={resolution.action === 'rename'}
+                            onChange={() => {
+                              setConflictResolutions({
+                                ...conflictResolutions,
+                                [itemId]: { action: 'rename', newName: `${itemName} (Imported)` }
+                              });
+                            }}
+                          />
+                          <span>Import with different name:</span>
+                          {resolution.action === 'rename' && (
+                            <Input
+                              value={resolution.newName || ''}
+                              onChange={(e) => {
+                                setConflictResolutions({
+                                  ...conflictResolutions,
+                                  [itemId]: { ...resolution, newName: e.target.value }
+                                });
+                              }}
+                              className="ml-2 w-64"
+                            />
+                          )}
+                        </label>
+                      )}
+                      
+                      {hasOrderConflict && !hasNameConflict && (
+                        <label className="flex items-center space-x-2">
+                          <input
+                            type="radio"
+                            name={`conflict-${itemId}`}
+                            value="reorder"
+                            checked={resolution.action === 'reorder'}
+                            onChange={() => {
+                              setConflictResolutions({
+                                ...conflictResolutions,
+                                [itemId]: { action: 'reorder', newOrder: orderConflict?.suggestedOrder }
+                              });
+                            }}
+                          />
+                          <span>Import with different order:</span>
+                          {resolution.action === 'reorder' && (
+                            <Input
+                              type="number"
+                              value={resolution.newOrder || orderConflict?.suggestedOrder || 0}
+                              onChange={(e) => {
+                                setConflictResolutions({
+                                  ...conflictResolutions,
+                                  [itemId]: { ...resolution, newOrder: parseInt(e.target.value) }
+                                });
+                              }}
+                              className="ml-2 w-24"
+                            />
+                          )}
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+        </DialogContent>
+        <DialogFooter>
+          <Button
+            id="cancel-conflict-resolution"
+            variant="destructive"
+            onClick={() => {
+              setShowConflictDialog(false);
+              setImportConflicts([]);
+              setConflictResolutions({});
+              // Reopen the original import dialog
+              if (currentImportType === 'priorities') {
+                setShowImportDialog(true);
+              } else {
+                setShowStatusImportDialog(true);
+              }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            id="apply-conflict-resolution"
+            variant="default"
+            onClick={async () => {
+              try {
+                const itemIds = currentImportType === 'priorities' ? selectedImportPriorities : selectedImportStatuses;
+                const filters = currentImportType === 'priorities' 
+                  ? { item_type: selectedPriorityType } 
+                  : { item_type: selectedStatusType };
+                
+                const result = await importReferenceData(
+                  currentImportType,
+                  itemIds,
+                  filters,
+                  conflictResolutions
+                );
+                
+                if (result.imported.length > 0) {
+                  toast.success(`Successfully imported ${result.imported.length} ${currentImportType}`);
+                  
+                  // Refresh the appropriate list
+                  if (currentImportType === 'priorities') {
+                    const updatedPriorities = await getAllPriorities();
+                    setPriorities(updatedPriorities);
+                    setSelectedImportPriorities([]);
+                  } else {
+                    const updatedStatuses = await getStatuses(selectedStatusType);
+                    setStatuses(updatedStatuses);
+                    setSelectedImportStatuses([]);
+                  }
+                }
+                
+                if (result.skipped.length > 0) {
+                  const skippedNames = result.skipped.map(s => s.name).join(', ');
+                  toast(`Skipped: ${skippedNames}`, {
+                    icon: 'ℹ️',
+                    duration: 4000,
+                  });
+                }
+                
+                setShowConflictDialog(false);
+                setImportConflicts([]);
+                setConflictResolutions({});
+              } catch (error) {
+                console.error(`Error importing ${currentImportType}:`, error);
+                toast.error(`Failed to import ${currentImportType}`);
+              }
+            }}
+          >
+            Apply and Import
+          </Button>
+        </DialogFooter>
       </Dialog>
     </div>
   );

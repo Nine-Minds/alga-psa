@@ -35,7 +35,7 @@ export class FileSystemSecretProvider implements ISecretProvider {
       let basePath = process.env.SECRET_FS_BASE_PATH || await SECRETS_PATH_PROMISE || path.resolve(this.serverRoot, '../secrets');
       this._basePath = basePath;
     }
-    console.info(`located base path: ${this._basePath}`);
+    // console.info(`located base path: ${this._basePath}`);
     return this._basePath;
   }
 
@@ -51,7 +51,7 @@ export class FileSystemSecretProvider implements ISecretProvider {
     } catch (error: any) {
       if (error.code === 'ENOENT') {
         // File not found is expected, return undefined
-        console.debug(`Secret file not found: ${filePath}`);
+        // console.debug(`Secret file not found: ${filePath}`);
       } else {
         // Log other errors (e.g., permissions)
         console.error(`Error reading secret file ${filePath}: ${error.message}`);
@@ -75,7 +75,7 @@ export class FileSystemSecretProvider implements ISecretProvider {
         return undefined;
     }
     const filePath = path.join(await this.getBasePath(), safeName);
-    console.debug(`Attempting to read app secret: ${filePath}`);
+    // console.debug(`Attempting to read app secret: ${filePath}`);
     
     return this.readFileContent(filePath) || '';
   }

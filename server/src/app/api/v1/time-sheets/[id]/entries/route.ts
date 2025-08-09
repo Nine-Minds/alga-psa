@@ -3,12 +3,12 @@
  * GET /api/v1/time-sheets/[id]/entries - Get time sheet entries
  */
 
-import { TimeSheetController } from 'server/src/lib/api/controllers/TimeSheetController';
+import { ApiTimeSheetController } from 'server/src/lib/api/controllers/ApiTimeSheetController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const timeSheetController = new TimeSheetController();
+    const timeSheetController = new ApiTimeSheetController();
     const req = request as any;
     req.params = params;
     return await timeSheetController.list()(req);

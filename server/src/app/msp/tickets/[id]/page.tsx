@@ -6,13 +6,14 @@ import { Suspense } from 'react';
 import { TicketDetailsSkeleton } from 'server/src/components/tickets/ticket/TicketDetailsSkeleton';
 
 interface TicketDetailsPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function TicketDetailsPage({ params }: TicketDetailsPageProps) {
-  const { id } = params;
+  const resolvedParams = await params;
+  const { id } = resolvedParams;
   
   // Get current user for authorization
   const user = await getCurrentUser();
@@ -40,3 +41,5 @@ export default async function TicketDetailsPage({ params }: TicketDetailsPagePro
     );
   }
 }
+
+export const dynamic = "force-dynamic";

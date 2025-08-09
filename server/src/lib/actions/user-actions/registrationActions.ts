@@ -2,7 +2,7 @@
 
 import { createTenantKnex } from 'server/src/lib/db';
 import { getAdminConnection } from 'server/src/lib/db/admin';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
 import { verifyContactEmail } from 'server/src/lib/actions/user-actions/userActions';
@@ -10,7 +10,7 @@ import User from 'server/src/lib/models/user';
 import { verifyEmailSuffix, getCompanyByEmailSuffix } from 'server/src/lib/actions/company-settings/emailSettings';
 import { v4 as uuid } from 'uuid';
 import crypto from 'crypto';
-import { sendVerificationEmail } from 'server/src/lib/email/sendVerificationEmail';
+import { sendVerificationEmail } from 'server/src/lib/email/system/templates/emailVerification';
 import { 
   checkRegistrationLimit, 
   checkVerificationLimit, 
@@ -155,8 +155,7 @@ export async function initiateRegistration(
       await sendVerificationEmail({
         email,
         token,
-        registrationId,
-        tenant: result.tenant
+        registrationId
       });
     } catch (error) {
       // If email fails to send, clean up the registration and token
@@ -320,14 +319,14 @@ export async function completeRegistration(registrationId: string): Promise<IReg
         })
         .returning('*');
 
-      // Always assign client role for portal registrations
+      // Always assign User role for portal registrations
       const roles = await trx('roles').where({ tenant: registration.tenant });
       const role = roles.find(r => 
-        r.role_name && r.role_name.toLowerCase() === 'client'
+        r.role_name && r.role_name.toLowerCase() === 'user'
       );
 
       if (!role) {
-        throw new Error('Client role not found');
+        throw new Error('User role not found');
       }
 
       // Assign role
@@ -455,21 +454,21 @@ async function registerContactUser(
         })
         .returning('*');
 
-      // Get client role
+      // Get User role
       const roles = await trx('roles').where({ tenant: contact.tenant });
-      const clientRole = roles.find(r => 
-        r.role_name && r.role_name.toLowerCase() === 'client'
+      const userRole = roles.find(r => 
+        r.role_name && r.role_name.toLowerCase() === 'user'
       );
 
-      if (!clientRole) {
-        throw new Error('Client role not found');
+      if (!userRole) {
+        throw new Error('User role not found');
       }
 
       // Assign role
       await trx('user_roles').insert({
         tenant: contact.tenant,
         user_id: user.user_id,
-        role_id: clientRole.role_id
+        role_id: userRole.role_id
       });
 
       return { success: true };

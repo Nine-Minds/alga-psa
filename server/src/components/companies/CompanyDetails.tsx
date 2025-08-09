@@ -8,6 +8,8 @@ import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { TagManager } from 'server/src/components/tags';
+import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
+import { FeaturePlaceholder } from '../FeaturePlaceholder';
 import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
 import { useTags } from 'server/src/context/TagContext';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
@@ -21,6 +23,7 @@ import { updateCompany, uploadCompanyLogo, deleteCompanyLogo, getCompanyById } f
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
 import { Button } from 'server/src/components/ui/Button';
+import { ExternalLink } from 'lucide-react';
 import BackNav from 'server/src/components/ui/BackNav';
 import TaxSettingsForm from 'server/src/components/TaxSettingsForm';
 import InteractionsFeed from '../interactions/InteractionsFeed';
@@ -36,7 +39,7 @@ import CompanyLocations from './CompanyLocations';
 import TextEditor, { DEFAULT_BLOCK } from '../editor/TextEditor';
 import { ITicket, ITicketCategory } from 'server/src/interfaces';
 import { IChannel } from 'server/src/interfaces/channel.interface';
-import { SelectOption } from 'server/src/components/ui/CustomSelect';
+import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { Card } from 'server/src/components/ui/Card';
 import { Input } from 'server/src/components/ui/Input';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
@@ -140,6 +143,7 @@ interface CompanyDetailsProps {
   documents?: IDocument[];
   contacts?: IContact[];
   isInDrawer?: boolean;
+  quickView?: boolean;
 }
 
 const CompanyDetails: React.FC<CompanyDetailsProps> = ({
@@ -147,8 +151,11 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   company,
   documents = [],
   contacts = [],
-  isInDrawer = false
+  isInDrawer = false,
+  quickView = false
 }) => {
+  const featureFlag = useFeatureFlag('billing-enabled');
+  const isBillingEnabled = typeof featureFlag === 'boolean' ? featureFlag : featureFlag?.enabled;
   const [editedCompany, setEditedCompany] = useState<ICompany>(company);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
@@ -185,12 +192,10 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   const refreshCompanyData = useCallback(async () => {
     if (!company?.company_id) return; // Ensure company_id is available
 
-    console.log(`Refreshing company data for ID: ${company.company_id}`);
     try {
       const latestCompanyData = await getCompanyById(company.company_id);
       if (latestCompanyData) {
         setEditedCompany(latestCompanyData);
-        console.log('Company data refreshed successfully');
       }
     } catch (error) {
       console.error('Error refreshing company data:', error);
@@ -205,14 +210,18 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   // 2. Implement Initial Load Logic
   useEffect(() => {
     // Set initial state when the company prop changes
-    setEditedCompany(company);
+    setEditedCompany({
+      ...company,
+      // Ensure client_type has a value
+      client_type: company.client_type || 'company'
+    });
     // Reset unsaved changes flag when company prop changes
     setHasUnsavedChanges(false);
   }, [company]); // Dependency on the company prop
   
   useEffect(() => {
     if (editedCompany?.logoUrl !== company?.logoUrl) {
-      console.log("Logo URL updated in state:", editedCompany?.logoUrl);
+      // Logo URL has changed
     }
   }, [editedCompany?.logoUrl, company?.logoUrl]);
 
@@ -382,8 +391,11 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     
     setIsSaving(true);
     try {
-      // Prepare data for update, handling top-level account_manager_id
-      const { account_manager_full_name, ...restOfEditedCompany } = editedCompany;
+      // Prepare data for update, removing computed fields
+      const { 
+        account_manager_full_name,
+        ...restOfEditedCompany 
+      } = editedCompany;
       const dataToUpdate: Partial<Omit<ICompany, 'account_manager_full_name'>> = {
         ...restOfEditedCompany,
         properties: restOfEditedCompany.properties ? { ...restOfEditedCompany.properties } : {},
@@ -458,24 +470,28 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       // Convert blocks to JSON string
       const blockData = JSON.stringify(currentContent);
       
-      if (company.notes_document_id) {
+      if (editedCompany.notes_document_id) {
         // Update existing note document
-        await updateBlockContent(company.notes_document_id, {
+        await updateBlockContent(editedCompany.notes_document_id, {
           block_data: blockData,
           user_id: currentUser.user_id
         });
+        
+        // Refresh document metadata to show updated timestamp
+        const updatedDocument = await getDocument(editedCompany.notes_document_id);
+        setNoteDocument(updatedDocument);
       } else {
         // Create new note document
         const { document_id } = await createBlockDocument({
-          document_name: `${company.company_name} Notes`,
+          document_name: `${editedCompany.company_name} Notes`,
           user_id: currentUser.user_id,
           block_data: blockData,
-          entityId: company.company_id,
+          entityId: editedCompany.company_id,
           entityType: 'company'
         });
         
         // Update company with the new notes_document_id
-        await updateCompany(company.company_id, {
+        await updateCompany(editedCompany.company_id, {
           notes_document_id: document_id
         });
         
@@ -484,11 +500,25 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           ...prev,
           notes_document_id: document_id
         }));
+        
+        // Get the newly created document metadata
+        const newDocument = await getDocument(document_id);
+        setNoteDocument(newDocument);
       }
       
       setHasUnsavedNoteChanges(false);
+      toast({
+        title: "Success",
+        description: "Note saved successfully.",
+        variant: "default"
+      });
     } catch (error) {
       console.error('Error saving note:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save note. Please try again.",
+        variant: "destructive"
+      });
     }
   };
   
@@ -560,6 +590,33 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                 automationId="annual-revenue-field"
               />
 
+              {/* Status and Client Type in 2 columns */}
+              <div className="grid grid-cols-5 gap-4">
+
+                {/* Client Type */}
+                <div className="space-y-2 col-span-2">
+                  <Text as="label" size="2" className="text-gray-700 font-medium">Client Type</Text>
+                  <CustomSelect
+                    id="client-type-select"
+                    value={editedCompany.client_type || 'company'}
+                    onValueChange={(value) => handleFieldChange('client_type', value)}
+                    options={[
+                      { value: 'company', label: 'Company' },
+                      { value: 'individual', label: 'Individual' }
+                    ]}
+                    placeholder="Select client type"
+                    className="!w-fit"
+                  />
+                </div>
+                <div className="col-span-3">
+                  <SwitchDetailItem
+                    value={!editedCompany.is_inactive || false}
+                    onEdit={(isActive) => handleFieldChange('is_inactive', !isActive)}
+                    automationId="company-status-field"
+                  />
+                </div>
+              </div>
+
               {/* Tags */}
               <div className="space-y-2">
                 <Text as="label" size="2" className="text-gray-700 font-medium">Tags</Text>
@@ -569,14 +626,9 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                   entityType="company"
                   initialTags={tags}
                   onTagsChange={handleTagsChange}
+                  useInlineInput={isInDrawer}
                 />
               </div>
-              
-              <SwitchDetailItem
-                value={!editedCompany.is_inactive || false}
-                onEdit={(isActive) => handleFieldChange('is_inactive', !isActive)}
-                automationId="company-status-field"
-              />
             </div>
             
             {/* Right Column - Company Locations Only */}
@@ -651,7 +703,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     // },
     {
       label: "Billing",
-      content: (
+      content: isBillingEnabled ? (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <BillingConfiguration
             company={editedCompany}
@@ -659,13 +711,21 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             contacts={contacts}
           />
         </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden h-full">
+          <FeaturePlaceholder />
+        </div>
       )
     },
     {
       label: "Billing Dashboard",
-      content: (
+      content: isBillingEnabled ? (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <ClientBillingDashboard companyId={company.company_id} />
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden h-full">
+          <FeaturePlaceholder />
         </div>
       )
     },
@@ -704,9 +764,13 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     },
     {
       label: "Tax Settings",
-      content: (
+      content: isBillingEnabled ? (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <TaxSettingsForm companyId={company.company_id} />
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden h-full">
+          <FeaturePlaceholder />
         </div>
       )
     },
@@ -782,22 +846,12 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           <h4 className="text-md font-semibold text-gray-800 pt-2">Formatted Notes</h4>
 
           {/* Note metadata */}
-          {noteDocument && (
+          {noteDocument && noteDocument.updated_at && (
             <div className="bg-gray-50 p-3 rounded-md border border-gray-200 text-xs text-gray-600">
               <div className="flex justify-between items-center flex-wrap gap-2"> 
                 <div>
-                  <span className="font-medium">Created by:</span> {noteDocument.created_by_full_name || "Unknown"}
-                  {noteDocument.entered_at && (
-                    <span className="ml-2">
-                      on {new Date(noteDocument.entered_at).toLocaleDateString()} at {new Date(noteDocument.entered_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} {/* Formatted time */}
-                    </span>
-                  )}
+                  <span className="font-medium">Last updated:</span> {new Date(noteDocument.updated_at).toLocaleDateString()} at {new Date(noteDocument.updated_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
                 </div>
-                {noteDocument.updated_at && noteDocument.updated_at !== noteDocument.entered_at && (
-                  <div>
-                    <span className="font-medium">Last updated:</span> {new Date(noteDocument.updated_at).toLocaleDateString()} at {new Date(noteDocument.updated_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} {/* Formatted time */}
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -852,9 +906,11 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   return (
     <ReflectionContainer id={id} label="Company Details">
       <div className="flex items-center space-x-5 mb-4 pt-2">
-        <BackNav href={!isInDrawer ? "/msp/companies" : undefined}>
-          {isInDrawer ? 'Back' : 'Back to Clients'}
-        </BackNav>
+        {!quickView && (
+          <BackNav href="/msp/companies">
+            {isInDrawer ? 'Back' : 'Back to Clients'}
+          </BackNav>
+        )}
         
         {/* Logo Display and Edit Container */}
         <div className="flex items-center space-x-3">
@@ -866,7 +922,6 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             uploadAction={uploadCompanyLogo}
             deleteAction={deleteCompanyLogo}
             onImageChange={async (newLogoUrl) => {
-              console.log("CompanyDetails: Logo URL changed:", newLogoUrl);
               setEditedCompany(prev => {
                 if (!prev) return prev;
                 return {
@@ -877,7 +932,6 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               
               // If logo was deleted (newLogoUrl is null), refresh company data to ensure consistency
               if (newLogoUrl === null) {
-                console.log("Logo deleted, refreshing company data...");
                 await refreshCompanyData();
               }
             }}
@@ -885,13 +939,30 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           />
         </div>
 
-        <Heading size="6">{editedCompany.company_name}</Heading>
+        <div className="flex-1 flex items-center justify-between">
+          <Heading size="6" tabIndex={quickView ? 0 : undefined} autoFocus={quickView}>
+            {editedCompany.company_name}
+          </Heading>
+          
+          {isInDrawer && (
+            <Button
+              id={`${id}-go-to-client-button`}
+              onClick={() => window.open(`/msp/companies/${editedCompany.company_id}`, '_blank')}
+              variant="soft"
+              size="sm"
+              className="flex items-center ml-4 mr-8"
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Go to client
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Content Area */}
       <div>
         <CustomTabs
-          tabs={tabContent}
+          tabs={quickView ? [tabContent[0]] : tabContent}
           defaultTab={findTabLabel(searchParams?.get('tab'))}
           onTabChange={handleTabChange}
         />

@@ -1,15 +1,17 @@
 /**
- * Asset Relationship Detail API Route
- * DELETE /api/v1/assets/relationships/{relationshipId} - Delete asset relationship
+ * [relationshipId] API Routes
+ * Path: /api/v1/assets/relationships/[relationshipId]
  */
 
-import { AssetController } from 'server/src/lib/api/controllers/AssetController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiAssetController } from '@/lib/api/controllers/ApiAssetController';
+import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
 
-export async function DELETE(request: Request) {
+const controller = new ApiAssetController();
+
+export async function DELETE(request: Request, { params }: { params: Promise<any> }) {
   try {
-    const controller = new AssetController();
-    return await controller.deleteRelationship()(request as any);
+    const resolvedParams = await params;
+    return await controller.deleteRelationship(request as any, resolvedParams);
   } catch (error) {
     return handleApiError(error);
   }

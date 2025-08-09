@@ -11,14 +11,27 @@ RUN apk add --no-cache \
     imagemagick \
     ghostscript \
     curl \
-    nano
+    nano \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
+
+# Tell Puppeteer to skip installing Chrome. We'll use the installed chromium.
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 WORKDIR /app
 
 # Copy package files for dependency installation
 COPY package.json package-lock.json ./
 COPY server/package.json ./server/
+COPY shared/package.json ./shared/
 COPY ee/server/package.json ./ee/server/
+COPY services/workflow-worker/package.json ./services/workflow-worker/
 
 # Install only production dependencies
 RUN npm install --omit=dev
@@ -30,7 +43,7 @@ COPY .env.example /app/.env
 COPY .env.example /app/server/.env  
 
 # Copy pre-built shared workspace (must exist locally)
-COPY ./shared/dist ./shared/dist
+COPY ./shared/dist/ ./shared/dist/
 COPY ./shared/package.json ./shared/package.json
 
 # Copy pre-built artifacts (must exist locally with EE features)
@@ -42,6 +55,8 @@ COPY ./server/dist ./server/dist
 COPY ./server/public ./server/public
 COPY ./server/next.config.mjs ./server/
 COPY ./server/knexfile.cjs ./server/
+COPY ./server/tsconfig.json ./server/
+COPY ./server/index.ts ./server/
 COPY ./server/migrations/ ./server/migrations/
 COPY ./server/seeds/ ./server/seeds/
 COPY ./server/src/ ./server/src/

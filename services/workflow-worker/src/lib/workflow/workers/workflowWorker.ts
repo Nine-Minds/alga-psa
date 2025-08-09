@@ -1,12 +1,12 @@
 import { v4 as uuidv4 } from 'uuid';
 import os from 'os';
-import logger from '@shared/core/logger.js';
-import { getRedisStreamClient } from '@shared/workflow/streams/redisStreamClient.js';
-import { TypeScriptWorkflowRuntime, ProcessQueuedEventParams } from '@shared/workflow/core/index.js';
-import WorkflowEventProcessingModel from '@shared/workflow/persistence/workflowEventProcessingModel.js';
-import { withRetry, classifyError, RecoveryStrategy, ErrorCategory } from '@shared/utils/retryUtils.js';
+import logger from '@alga-psa/shared/core/logger.js';
+import { getRedisStreamClient } from '@alga-psa/shared/workflow/streams/redisStreamClient.js';
+import { TypeScriptWorkflowRuntime, ProcessQueuedEventParams } from '@alga-psa/shared/workflow/core/index.js';
+import WorkflowEventProcessingModel from '@alga-psa/shared/workflow/persistence/workflowEventProcessingModel.js';
+import { withRetry, classifyError, RecoveryStrategy, ErrorCategory } from '@alga-psa/shared/utils/retryUtils.js';
 import knex, { Knex } from 'knex';
-import { getConnection } from '@shared/db/connection.js';
+import { getConnection } from '@alga-psa/shared/db/connection.js';
 
 /**
  * Configuration options for the workflow worker
@@ -688,7 +688,7 @@ export class WorkflowWorker {
       // Find workflows attached to this event type
       const dbConnection = await getConnection();
       const attachments = await dbConnection('workflow_event_attachments as wea')
-        .join('event_catalog as ec', function() {
+        .join('event_catalog as ec', function(this: any) {
           this.on('wea.event_id', 'ec.event_id')
               .andOn('wea.tenant', 'ec.tenant');
         })
@@ -739,7 +739,7 @@ export class WorkflowWorker {
         try {
           // Get the workflow registration and its current version
           const registration = await dbConnection('workflow_registrations as wr')
-            .join('workflow_registration_versions as wrv', function() {
+            .join('workflow_registration_versions as wrv', function(this: any) {
               this.on('wrv.registration_id', '=', 'wr.registration_id')
                   .andOn('wrv.is_current', '=', dbConnection.raw('true'));
             })

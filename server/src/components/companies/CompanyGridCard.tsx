@@ -1,7 +1,7 @@
 import { useRouter } from 'next/navigation';
 import { Button } from 'server/src/components/ui/Button';
 import { ReflectedDropdownMenu } from "server/src/components/ui/ReflectedDropdownMenu";
-import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { MoreVertical, Pencil, Trash2, ExternalLink } from 'lucide-react';
 import { MouseEvent } from 'react';
 import { ICompany } from "server/src/interfaces/company.interfaces";
 import { ITag } from 'server/src/interfaces/tag.interfaces';
@@ -14,6 +14,7 @@ interface CompanyGridCardProps {
     handleCheckboxChange: (companyId: string) => void;
     handleEditCompany: (companyId: string) => void;
     handleDeleteCompany: (company: ICompany) => void;
+    onQuickView?: (company: ICompany) => void;
     tags?: ITag[];
     allUniqueTags?: string[];
     onTagsChange?: (companyId: string, tags: ITag[]) => void;
@@ -25,6 +26,7 @@ const CompanyGridCard = ({
     handleCheckboxChange,
     handleEditCompany,
     handleDeleteCompany,
+    onQuickView,
     tags = [],
     allUniqueTags = [],
     onTagsChange
@@ -70,7 +72,7 @@ const CompanyGridCard = ({
 
                 {/* Company Info */}
                 <div className="flex-1 min-w-0">
-                    <h2 className="text-md font-semibold text-gray-800 truncate" title={company.company_name}>
+                    <h2 className="text-md font-semibold text-gray-800 truncate flex items-center gap-2" title={company.company_name}>
                         <a
                           href={`/msp/companies/${company.company_id}`}
                           onClick={stopPropagation}
@@ -86,11 +88,15 @@ const CompanyGridCard = ({
                         </p>
                         <p className="truncate">
                             <span className="font-medium text-gray-700">Phone:</span>
-                            <span className="ml-1">{company.phone_no || 'N/A'}</span>
+                            <span className="ml-1">{(company as any).location_phone || 'N/A'}</span>
                         </p>
                         <p className="truncate">
                             <span className="font-medium text-gray-700">Address:</span>
-                            <span className="ml-1">{company.address || 'N/A'}</span>
+                            <span className="ml-1">{(
+                                (company as any).address_line1 
+                                    ? [(company as any).address_line1, (company as any).city, (company as any).state_province].filter(Boolean).join(', ')
+                                    : 'N/A'
+                            )}</span>
                         </p>
                         <div className="truncate">
                             <span className="font-medium text-gray-700">URL:</span>
@@ -142,6 +148,13 @@ const CompanyGridCard = ({
                             </Button>
                         }
                         items={[
+                            ...(onQuickView ? [{
+                                id: 'quick-view',
+                                text: 'Quick View',
+                                icon: <ExternalLink size={14} />,
+                                variant: 'default' as const,
+                                onSelect: () => onQuickView(company)
+                            }] : []),
                             {
                                 id: 'edit',
                                 text: 'Edit',

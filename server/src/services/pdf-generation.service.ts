@@ -9,7 +9,7 @@ import { executeWasmTemplate } from 'server/src/lib/invoice-renderer/wasm-execut
 import { renderLayout } from 'server/src/lib/invoice-renderer/layout-renderer';
 import type { WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
 import type { InvoiceViewModel as DbInvoiceViewModel, IInvoiceItem } from 'server/src/interfaces/invoice.interfaces';
-import { DateValue } from '@shared/types/temporal';
+import { DateValue } from '@alga-psa/shared/types';
 import { browserPoolService, BrowserPoolService } from './browser-pool.service';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { getDocument } from 'server/src/lib/actions/document-actions/documentActions';
@@ -97,13 +97,14 @@ export class PDFGenerationService {
     });
     
     // Update metadata separately if needed
-    await FileStoreModel.updateMetadata(knex, fileRecord.file_id, {
-      version: options.version || 1,
-      cacheKey: options.cacheKey,
-      generatedAt: new Date().toISOString(),
-      entityId,
-      tenant: this.tenant
-    });
+    // TODO: Re-enable when metadata column is added to external_files table
+    // await FileStoreModel.updateMetadata(knex, fileRecord.file_id, {
+    //   version: options.version || 1,
+    //   cacheKey: options.cacheKey,
+    //   generatedAt: new Date().toISOString(),
+    //   entityId,
+    //   tenant: this.tenant
+    // });
 
     return fileRecord;
   }
@@ -125,9 +126,26 @@ export class PDFGenerationService {
       .first();
 
     if (tenantCompanyLink) {
-      const tenantCompanyDetails = await knex('companies')
-        .where({ company_id: tenantCompanyLink.company_id })
-        .select('company_name', 'address')
+      const tenantCompanyDetails = await knex('companies as c')
+        .leftJoin('company_locations as cl', function() {
+          this.on('c.company_id', '=', 'cl.company_id')
+              .andOn('c.tenant', '=', 'cl.tenant')
+              .andOn('cl.is_default', '=', knex.raw('true'));
+        })
+        .where({ 'c.company_id': tenantCompanyLink.company_id })
+        .select(
+          'c.company_name',
+          knex.raw(`COALESCE(
+            CONCAT_WS(', ', 
+              cl.address_line1, 
+              cl.address_line2, 
+              cl.city, 
+              cl.state_province, 
+              cl.postal_code, 
+              cl.country_name
+            ), ''
+          ) as address`)
+        )
         .first();
 
       if (tenantCompanyDetails) {

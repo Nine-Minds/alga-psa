@@ -4,7 +4,7 @@ import { createTenantKnex } from '../db';
 import { getServerSession } from 'next-auth';
 import { options as authOptions } from '../../app/api/auth/[...nextauth]/options';
 import { Knex } from 'knex';
-import { withTransaction } from '../../../../shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 
 export interface CompanyProfile {
   name: string;
@@ -154,12 +154,23 @@ export async function getCompanyProfile(): Promise<CompanyProfile> {
 
     if (!contact?.company_id) throw new Error('No company associated with contact');
 
-    // Then get the company details
+    // Then get the company details with location
     const company = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('companies')
+      return await trx('companies as c')
+        .leftJoin('company_locations as cl', function() {
+          this.on('c.company_id', '=', 'cl.company_id')
+              .andOn('c.tenant', '=', 'cl.tenant')
+              .andOn('cl.is_default', '=', trx.raw('true'));
+        })
+        .select(
+          'c.*',
+          'cl.email as location_email',
+          'cl.phone as location_phone',
+          'cl.address_line1 as location_address'
+        )
         .where({ 
-          company_id: contact.company_id,
-          tenant: session.user.tenant 
+          'c.company_id': contact.company_id,
+          'c.tenant': session.user.tenant 
         })
         .first();
     });
@@ -168,9 +179,9 @@ export async function getCompanyProfile(): Promise<CompanyProfile> {
 
     return {
       name: company.company_name,
-      email: company.email || '',
-      phone: company.phone_no || '',
-      address: company.address || '',
+      email: company.location_email || '',
+      phone: company.location_phone || '',
+      address: company.location_address || '',
       notes: company.notes || ''
     };
   } else {
@@ -178,10 +189,21 @@ export async function getCompanyProfile(): Promise<CompanyProfile> {
     if (!session.user.companyId) throw new Error('No company associated with user');
 
     const company = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('companies')
+      return await trx('companies as c')
+        .leftJoin('company_locations as cl', function() {
+          this.on('c.company_id', '=', 'cl.company_id')
+              .andOn('c.tenant', '=', 'cl.tenant')
+              .andOn('cl.is_default', '=', trx.raw('true'));
+        })
+        .select(
+          'c.*',
+          'cl.email as location_email',
+          'cl.phone as location_phone',
+          'cl.address_line1 as location_address'
+        )
         .where({ 
-          company_id: session.user.companyId,
-          tenant: session.user.tenant 
+          'c.company_id': session.user.companyId,
+          'c.tenant': session.user.tenant 
         })
         .first();
     });
@@ -190,9 +212,9 @@ export async function getCompanyProfile(): Promise<CompanyProfile> {
 
     return {
       name: company.company_name,
-      email: company.email || '',
-      phone: company.phone_no || '',
-      address: company.address || '',
+      email: company.location_email || '',
+      phone: company.location_phone || '',
+      address: company.location_address || '',
       notes: company.notes || ''
     };
   }

@@ -346,7 +346,7 @@ export class MetadataService {
     }
 
     const endpoints: ApiEndpoint[] = [];
-    const apiPath = path.join(process.cwd(), 'server/src/app/api/v1');
+    const apiPath = path.join(process.cwd(), 'src/app/api/v1');
 
     try {
       await this.scanDirectoryForEndpoints(apiPath, '/api/v1', endpoints);

@@ -7,9 +7,11 @@ import { Knex } from 'knex'; // Import Knex type
 import { PlanServiceConfigurationService } from 'server/src/lib/services/planServiceConfigurationService';
 import { IPlanServiceFixedConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces'; // This might be removable if not used elsewhere after refactor
 import BillingPlanFixedConfig from 'server/src/lib/models/billingPlanFixedConfig'; // Added import for new model
-import { withTransaction } from '../../../../shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { getCurrentUser } from './user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
+import { analytics } from '../analytics/posthog';
+import { AnalyticsEvents } from '../analytics/events';
 
 export async function getBillingPlans(): Promise<IBillingPlan[]> {
     try {
@@ -101,6 +103,17 @@ export async function createBillingPlan(
             // Remove tenant field if present in planData to prevent override
             const { tenant: _, ...safePlanData } = planData;
             const plan = await BillingPlan.create(trx, safePlanData);
+
+            // Track analytics
+            analytics.capture(AnalyticsEvents.BILLING_RULE_CREATED, {
+                plan_id: plan.plan_id,
+                plan_name: plan.plan_name,
+                plan_type: plan.plan_type,
+                hourly_rate: plan.hourly_rate,
+                minimum_billable_time: plan.minimum_billable_time,
+                is_sla_plan: (plan as any).is_sla_plan || false
+            }, currentUser.user_id);
+
             return plan;
         });
     } catch (error) {
@@ -155,6 +168,15 @@ export async function updateBillingPlan(
             // Proceed with the update using the potentially modified data
             // Ensure BillingPlan.update handles empty updateData gracefully if all fields were removed
             const plan = await BillingPlan.update(trx, planId, safeUpdateData);
+
+            // Track analytics
+            analytics.capture(AnalyticsEvents.BILLING_RULE_UPDATED, {
+                plan_id: plan.plan_id,
+                plan_name: plan.plan_name,
+                plan_type: plan.plan_type,
+                updated_fields: Object.keys(safeUpdateData)
+            }, currentUser.user_id);
+
             return plan;
         });
     } catch (error) {

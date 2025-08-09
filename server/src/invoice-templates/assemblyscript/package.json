@@ -10,7 +10,7 @@
     "build:standard:default": "asc standard/standard-default.ts --runtime stub --debug --exportRuntime --transform json-as/transform -o ../../../../dist/server/src/invoice-templates/standard/standard-default.wasm --sourceMap",
     "build:standard:detailed": "asc standard/standard-detailed.ts --runtime stub --debug --exportRuntime --transform json-as/transform -o ../../../../dist/server/src/invoice-templates/standard/standard-detailed.wasm --sourceMap",
     "build:standard": "mkdir -p ../../../../dist/server/src/invoice-templates/standard && npm run build:standard:default && npm run build:standard:detailed",
-    "build": "npm run build:example && npm run build:standard",
+    "build": "npm run build:standard",
     "test": "node tests"
   },
   "keywords": [

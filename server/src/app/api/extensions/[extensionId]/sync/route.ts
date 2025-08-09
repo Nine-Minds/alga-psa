@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { extensionId: string } }
+  { params }: { params: Promise<{ extensionId: string }> }
 ) {
   try {
-    const { extensionId } = params;
+    const resolvedParams = await params;
+  const { extensionId } = resolvedParams;
     const body = await request.json();
     const { syncAgreements = false, syncStatements = false } = body;
 

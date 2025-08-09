@@ -119,6 +119,12 @@ export default function TextEditor({
   // Create editor instance with initial content
   const editor = useCreateBlockNote({
     initialContent,
+    domAttributes: {
+      editor: {
+        class: 'block-note-editor',
+        contenteditable: 'true'
+      }
+    }
   });
 
   // Update editorRef when editor is created
@@ -126,6 +132,13 @@ export default function TextEditor({
     if (editorRef) {
       editorRef.current = editor;
     }
+    
+    // Cleanup editorRef when component unmounts
+    return () => {
+      if (editorRef) {
+        editorRef.current = null;
+      }
+    };
   }, [editor, editorRef]);
 
   // Handle content changes
@@ -142,7 +155,6 @@ export default function TextEditor({
     };
 
     editor.onEditorContentChange(handleChange);
-    return () => {};
   }, [editor, onContentChange]);
 
   return (
@@ -153,6 +165,7 @@ export default function TextEditor({
           editor={editor}
           theme="light"
           className="w-full"
+          editable={true}
         />
       </div>
     </div>

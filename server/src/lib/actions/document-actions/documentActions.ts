@@ -24,7 +24,7 @@ import {
     DocumentInput,
     PaginatedDocumentsResponse
 } from 'server/src/interfaces/document.interface';
-import { IDocumentAssociation, IDocumentAssociationInput } from 'server/src/interfaces/document-association.interface';
+import { IDocumentAssociation, IDocumentAssociationInput, DocumentAssociationEntityType } from 'server/src/interfaces/document-association.interface';
 import { v4 as uuidv4 } from 'uuid';
 import { getStorageConfig } from 'server/src/config/storage';
 import { deleteFile } from 'server/src/lib/actions/file-actions/fileActions';
@@ -524,7 +524,7 @@ export async function getDocumentDownloadUrl(file_id: string): Promise<string> {
 }
 
 // Download document
-export async function downloadDocument(file_id: string) {
+export async function downloadDocument(documentIdOrFileId: string) {
     try {
         const currentUser = await getCurrentUser();
         if (!currentUser) {
@@ -541,19 +541,23 @@ export async function downloadDocument(file_id: string) {
             throw new Error('No tenant found');
         }
 
-        // Get document by file_id
+        // Get document by file_id or document_id
         const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
             return await trx('documents')
-                .where({ file_id, tenant })
+                .where({ tenant })
+                .andWhere(function() {
+                    this.where({ file_id: documentIdOrFileId })
+                        .orWhere({ document_id: documentIdOrFileId });
+                })
                 .first();
         });
 
-        if (!document) {
-            throw new Error('Document not found');
+        if (!document || !document.file_id) {
+            throw new Error('Document not found or has no associated file');
         }
 
         // Download file from storage
-        const result = await StorageService.downloadFile(file_id);
+        const result = await StorageService.downloadFile(document.file_id);
         if (!result) {
             throw new Error('File not found in storage');
         }
@@ -577,6 +581,45 @@ export async function downloadDocument(file_id: string) {
 }
 
 // Get documents by entity using the new association table
+export async function getDocumentCountsForEntities(
+  entityIds: string[],
+  entityType: string
+): Promise<Map<string, number>> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser || !currentUser.tenant) {
+    throw new Error('User not authenticated');
+  }
+
+  const { knex } = await createTenantKnex();
+  
+  try {
+    const counts = await knex('document_associations')
+      .select('entity_id')
+      .count('document_id as count')
+      .where('tenant', currentUser.tenant)
+      .whereIn('entity_id', entityIds)
+      .where('entity_type', entityType)
+      .groupBy('entity_id');
+
+    const countMap = new Map<string, number>();
+    for (const row of counts) {
+      countMap.set(String(row.entity_id), Number(row.count));
+    }
+    
+    // Ensure all requested entities have a count (0 if no documents)
+    for (const entityId of entityIds) {
+      if (!countMap.has(entityId)) {
+        countMap.set(entityId, 0);
+      }
+    }
+    
+    return countMap;
+  } catch (error) {
+    console.error('Error fetching document counts:', error);
+    throw error;
+  }
+}
+
 export async function getDocumentsByEntity(
   entity_id: string,
   entity_type: string,
@@ -1242,7 +1285,7 @@ export async function getAllDocuments(
 // Create document associations
 export async function createDocumentAssociations(
   entity_id: string,
-  entity_type: 'ticket' | 'company' | 'contact' | 'asset',
+  entity_type: DocumentAssociationEntityType,
   document_ids: string[]
 ): Promise<{ success: boolean }> {
   try {
@@ -1287,7 +1330,7 @@ export async function createDocumentAssociations(
 // Remove document associations
 export async function removeDocumentAssociations(
   entity_id: string,
-  entity_type: 'ticket' | 'company' | 'contact' | 'asset',
+  entity_type: DocumentAssociationEntityType,
   document_ids?: string[]
 ) {
   try {
@@ -1335,6 +1378,7 @@ export async function uploadDocument(
     ticketId?: string;
     contactNameId?: string;
     assetId?: string;
+    projectTaskId?: string;
   }
 ): Promise<
   | { success: true; document: IDocument }
@@ -1432,6 +1476,15 @@ export async function uploadDocument(
         document_id: documentWithId.document_id,
         entity_id: options.assetId,
         entity_type: 'asset',
+        tenant
+      });
+    }
+
+    if (options.projectTaskId) {
+      associations.push({
+        document_id: documentWithId.document_id,
+        entity_id: options.projectTaskId,
+        entity_type: 'project_task',
         tenant
       });
     }
@@ -1588,7 +1641,7 @@ async function getImageUrlCore(file_id: string, useTransaction: boolean = true):
     }
 
     // Determine storage provider type
-    const config = getStorageConfig();
+    const config = await getStorageConfig();
     const providerType = config.defaultProvider;
 
     if (providerType === 'local') {

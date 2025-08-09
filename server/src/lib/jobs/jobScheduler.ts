@@ -2,7 +2,7 @@ import PgBoss, { Job, WorkHandler } from 'pg-boss';
 import { getPostgresConnection } from '../db/knexfile';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { JobService } from '../../services/job.service';
-import { JobStatus } from '../../types/job.d';
+import { JobStatus } from '../../types/job';
 
 export interface JobFilter {
   state?: 'completed' | 'failed' | 'active' | 'expired';
@@ -105,7 +105,9 @@ export class JobScheduler implements IJobScheduler {
         const { host, port, user, database } = await getPostgresConnection();
         let { password } = await getPostgresConnection();
 
-        console.log('Initializing pgboss with connection:', { host, port, user, database, password });
+        // Avoid logging sensitive password in plaintext
+        const redactedPassword = password ? '***REDACTED***' : undefined;
+        console.log('Initializing pgboss with connection:', { host, port, user, database, password: redactedPassword });
         
         // Ensure password is properly encoded for URL
         if (password) {

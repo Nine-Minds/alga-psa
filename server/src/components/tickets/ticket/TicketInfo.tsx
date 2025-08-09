@@ -9,6 +9,7 @@ import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { PrioritySelect } from '@/components/tickets/PrioritySelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
 import { TagManager } from 'server/src/components/tags';
@@ -33,6 +34,7 @@ interface TicketInfoProps {
   tags?: ITag[];
   allTagTexts?: string[];
   onTagsChange?: (tags: ITag[]) => void;
+  isInDrawer?: boolean;
 }
 
 const TicketInfo: React.FC<TicketInfoProps> = ({
@@ -50,6 +52,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   tags = [],
   allTagTexts = [],
   onTagsChange,
+  isInDrawer = false,
 }) => {
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -181,18 +184,20 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   };
 
   // If we don't have users data but have agentOptions, convert agentOptions to users format
-  const usersList = users.length > 0 ? users : agentOptions.map(agent => ({
-    user_id: agent.value,
-    username: agent.value,
-    first_name: agent.label.split(' ')[0] || '',
-    last_name: agent.label.split(' ').slice(1).join(' ') || '',
-    email: '',
-    hashed_password: '',
-    is_inactive: false,
-    tenant: '',
-    user_type: 'internal',
-    roles: []
-  }));
+  const usersList: IUserWithRoles[] = users.length > 0
+    ? users
+    : agentOptions.map((agent): IUserWithRoles => ({
+        user_id: agent.value,
+        username: agent.value,
+        first_name: agent.label.split(' ')[0] || '',
+        last_name: agent.label.split(' ').slice(1).join(' ') || '',
+        email: '',
+        hashed_password: '',
+        is_inactive: false,
+        tenant: '',
+        user_type: 'internal',
+        roles: []
+      }));
 
   return (
     <ReflectionContainer id={id} label={`Info for ticket ${ticket.ticket_number}`}>
@@ -263,7 +268,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               />
             </div>
             <div>
-              <h5 className="font-bold mb-2">Channel</h5>
+              <h5 className="font-bold mb-2">Board</h5>
               <CustomSelect
                 value={ticket.channel_id || ''}
                 options={channelOptions}
@@ -274,8 +279,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             </div>
             <div>
               <h5 className="font-bold mb-2">Priority</h5>
-              <CustomSelect
-                value={ticket.priority_id || ''}
+              <PrioritySelect
+                value={ticket.priority_id}
                 options={priorityOptions}
                 onValueChange={(value) => onSelectChange('priority_id', value)}
                 customStyles={customStyles}
@@ -367,6 +372,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 entityType="ticket"
                 initialTags={tags}
                 onTagsChange={onTagsChange}
+                useInlineInput={isInDrawer}
               />
             ) : (
               <p className="text-sm text-gray-500">Tags cannot be managed</p>

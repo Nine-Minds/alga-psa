@@ -23,11 +23,23 @@ export interface EmailProviderConfig {
     // Microsoft-specific
     tenantId?: string;
     scopes?: string[];
-    // Google-specific
+    // Google-specific (camelCase for interface compatibility)
     projectId?: string;
     pubsubTopic?: string;
     // Common OAuth settings
     clientId?: string; // Usually from environment, but could be per-provider
+    
+    // Database field names (snake_case) - for Gmail adapter compatibility
+    project_id?: string;
+    pubsub_topic_name?: string;
+    pubsub_subscription_name?: string;
+    client_id?: string;
+    client_secret?: string;
+    access_token?: string;
+    refresh_token?: string;
+    token_expires_at?: string;
+    history_id?: string;
+    watch_expiration?: string;
     customScopes?: string[];
   };
   created_at: string; // ISO date
@@ -38,6 +50,7 @@ export interface EmailMessage {
   id: string;
   provider: 'microsoft' | 'google';
   providerId: string;
+  tenant: string;
   receivedAt: string;
   from: {
     email: string;
@@ -66,7 +79,6 @@ export interface EmailMessage {
   threadId?: string;
   references?: string[];
   inReplyTo?: string;
-  tenant: string;
 }
 
 export interface EmailMessageDetails extends EmailMessage {
@@ -110,5 +122,8 @@ export interface EmailQueueJob {
   providerId: string;
   webhookData: any;
   attempt: number;
+  maxRetries: number;
   createdAt: string;
+  // Optional email data for cases where we already have the email content (e.g., MailHog)
+  emailData?: EmailMessage;
 }

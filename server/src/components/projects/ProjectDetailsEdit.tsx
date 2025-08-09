@@ -18,7 +18,7 @@ import { updateProject, getProjectStatuses } from 'server/src/lib/actions/projec
 import { getContactsByCompany, getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
-// import { useTags } from 'server/src/context/TagContext';
+import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import { toast } from 'react-hot-toast';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
@@ -36,6 +36,9 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   onSave,
   onCancel,
 }) => {
+  // Initialize tag permissions for project tags
+  useTagPermissions(['project']);
+  
   // Debug logs
   useEffect(() => {
     console.log('ProjectDetailsEdit:', {
@@ -191,9 +194,6 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
 
   return (
     <div className="p-4 w-full max-w-[480px] mx-auto">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Edit Project</h2>
-      </div>
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         {hasAttemptedSubmit && validationErrors.length > 0 && (
           <Alert variant="destructive">
@@ -368,9 +368,11 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               entityType="project"
               initialTags={projectTags}
               onTagsChange={(tags) => {
+                console.log('Tags changed in ProjectDetailsEdit:', tags);
                 setProjectTags(tags);
                 setHasChanges(true);
               }}
+              useInlineInput={true}
             />
           </div>
 

@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/shared/core/logger.js';
 import { IUser, IRole, IUserRole, IUserWithRoles, IRoleWithPermissions, IPermission } from 'server/src/interfaces/auth.interfaces';
 import { getConnection } from 'server/src/lib/db/db';
 import { getAdminConnection } from 'server/src/lib/db/admin';
@@ -22,6 +22,10 @@ const User = {
       if (!includeInactive) {
         query = query.andWhere('is_inactive', false);
       }
+      query = query.orderBy([
+        { column: 'first_name', order: 'asc' },
+        { column: 'last_name', order: 'asc' }
+      ]);
       
       const users = await query;
       return users;
@@ -38,6 +42,22 @@ const User = {
       return user;
     } catch (error) {
       logger.error(`Error finding user with email ${email}:`, error);
+      throw error;
+    }
+  },
+
+  // Find a user by email and user_type (e.g., 'internal' vs 'client').
+  // Email is normalized to lowercase to avoid case-sensitivity issues.
+  findUserByEmailAndType: async (email: string, userType: 'internal' | 'client'): Promise<IUser | undefined> => {
+    const db = await getAdminConnection();
+    try {
+      const user = await db<IUser>('users')
+        .select('*')
+        .where({ email: email.toLowerCase(), user_type: userType })
+        .first();
+      return user;
+    } catch (error) {
+      logger.error(`Error finding user with email ${email} and type ${userType}:`, error);
       throw error;
     }
   },
@@ -247,7 +267,9 @@ const User = {
         'roles.role_id',
         'roles.role_name',
         'roles.description',
-        'roles.tenant'
+        'roles.tenant',
+        'roles.msp',
+        'roles.client'
       ]);
 
       const rolesWithPermissions = await Promise.all(roles.map(async (role): Promise<IRoleWithPermissions> => {
@@ -264,7 +286,9 @@ const User = {
           'permissions.permission_id',
           'permissions.resource',
           'permissions.action',
-          'permissions.tenant'
+          'permissions.tenant',
+          'permissions.msp',
+          'permissions.client'
         ]);
 
         return {

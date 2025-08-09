@@ -3,12 +3,13 @@
 import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { getEligibleBillingPlansForUI, getCompanyIdForWorkItem } from 'server/src/lib/utils/planDisambiguation';
 import { getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
-import { formatISO, parseISO, addMinutes } from 'date-fns';
+import { formatISO, parseISO, addMinutes, setHours, setMinutes, setSeconds } from 'date-fns';
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
 import { TimePicker } from 'server/src/components/ui/TimePicker';
+import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { MinusCircle, XCircle, AlertTriangle, Info } from 'lucide-react';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
@@ -41,7 +42,9 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
   onDelete,
   onUpdateEntry,
   onUpdateTimeInputs,
-  lastNoteInputRef
+  lastNoteInputRef,
+  date,
+  isNewEntry = false
 }: TimeEntryFormProps) {
   // Use work item times for ad-hoc entries - only update if values actually changed
   useEffect(() => {
@@ -95,6 +98,12 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
   const [showBillingPlanSelector, setShowBillingPlanSelector] = useState(false);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const prevServiceIdRef = useRef<string | undefined | null>();
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    if (entry?.start_time) {
+      return parseISO(entry.start_time);
+    }
+    return date || new Date();
+  });
 
   const validateTimes = useCallback(() => {
     if (!entry?.start_time || !entry?.end_time) return false;
@@ -538,6 +547,51 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
           </div>
         )}
       </div>
+
+      {isNewEntry && (
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Date <span className="text-red-500">*</span>
+          </label>
+          <DatePicker
+            value={selectedDate}
+            onChange={(newDate) => {
+              if (!newDate || !entry) return;
+              
+              setSelectedDate(newDate);
+              
+              // Update the entry's start and end times to the new date while preserving the time
+              const startTime = parseISO(entry.start_time);
+              const endTime = parseISO(entry.end_time);
+              
+              const newStartTime = setSeconds(
+                setMinutes(
+                  setHours(newDate, startTime.getHours()), 
+                  startTime.getMinutes()
+                ), 
+                startTime.getSeconds()
+              );
+              
+              const newEndTime = setSeconds(
+                setMinutes(
+                  setHours(newDate, endTime.getHours()), 
+                  endTime.getMinutes()
+                ), 
+                endTime.getSeconds()
+              );
+              
+              onUpdateEntry(index, {
+                ...entry,
+                start_time: formatISO(newStartTime),
+                end_time: formatISO(newEndTime)
+              });
+            }}
+            placeholder="Select date"
+            disabled={!isEditable}
+            clearable={false}
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">

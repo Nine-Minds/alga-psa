@@ -5,40 +5,27 @@
  * DELETE /api/v1/financial/payment-methods/[id] - Delete payment method
  */
 
-import { FinancialController } from 'server/src/lib/api/controllers/FinancialController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiFinancialController } from 'server/src/lib/api/controllers/ApiFinancialController';
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
-  try {
-    const controller = new FinancialController();
-    const req = request as any;
-    req.params = params;
-    return await controller.getById()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const controller = new ApiFinancialController();
+  const req = request as any;
+  req.params = params;
+  return await controller.getById()(req);
 }
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
-  try {
-    const controller = new FinancialController();
-    const req = request as any;
-    req.params = params;
-    return await controller.update()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const controller = new ApiFinancialController();
+  const req = request as any;
+  req.params = params;
+  return await controller.update()(req);
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
-  try {
-    const controller = new FinancialController();
-    const req = request as any;
-    req.params = params;
-    return await controller.delete()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const controller = new ApiFinancialController();
+  const req = request as any;
+  req.params = params;
+  return await controller.delete()(req);
 }
 
 export const runtime = 'nodejs';

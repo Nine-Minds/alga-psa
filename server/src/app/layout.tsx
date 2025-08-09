@@ -4,16 +4,17 @@ import "./globals.css";
 import { Toaster } from 'react-hot-toast';
 import { getCurrentTenant } from "../lib/actions/tenantActions";
 import { TenantProvider } from "../components/TenantProvider";
-import { Suspense } from "react";
 import { Theme } from '@radix-ui/themes';
 import { ThemeProvider } from '../context/ThemeContext';
 import { TagProvider } from '../context/TagContext';
 import { ClientUIStateProvider } from '../types/ui-reflection/ClientUIStateProvider';
 import { DynamicExtensionProvider } from '../components/extensions/DynamicExtensionProvider';
+import { PostHogProvider } from "../components/PostHogProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const dynamic = 'force-dynamic';
+//export const revalidate = false;
 
 export async function generateMetadata(): Promise<Metadata> {
   // App initialization is now handled by instrumentation.ts
@@ -36,10 +37,6 @@ export async function generateMetadata(): Promise<Metadata> {
       ],
     },
   };
-}
-
-function Loading() {
-  return <div>Loading...</div>;
 }
 
 async function MainContent({ children }: { children: React.ReactNode }) {
@@ -75,10 +72,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.className}>
       <body className={`${inter.className} light`}>
-        <Suspense fallback={<Loading />}>
-          <MainContent>{children}</MainContent>
-        </Suspense>
-        <Toaster position="top-right" />
+        <PostHogProvider>
+           <MainContent>{children}</MainContent>
+          <Toaster position="top-right" />
+        </PostHogProvider>
       </body>
     </html>
   );

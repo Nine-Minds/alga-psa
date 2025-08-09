@@ -1,10 +1,10 @@
 'use server'
 
-import { IUser, IChannel, ITicketStatus, IPriority, IStandardPriority, ICompany, IContact } from 'server/src/interfaces';
+import { IUser, IChannel, ITicketStatus, IPriority, ICompany, IContact } from 'server/src/interfaces';
 import { getAllUsers, getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getAllChannels } from 'server/src/lib/actions/channel-actions/channelActions';
 import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
-import { getAllPrioritiesWithStandard } from 'server/src/lib/actions/priorityActions';
+import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import { getAllCompanies, getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
 import { getContactsByCompany } from 'server/src/lib/actions/contact-actions/contactActions';
 
@@ -12,7 +12,7 @@ export interface TicketFormData {
   users: IUser[];
   channels: IChannel[];
   statuses: ITicketStatus[];
-  priorities: (IPriority | IStandardPriority)[];
+  priorities: IPriority[];
   companies: ICompany[];
   contacts?: IContact[];
   selectedCompany?: {
@@ -32,7 +32,7 @@ export async function getTicketFormData(prefilledCompanyId?: string): Promise<Ti
 
     // Fetch required data first
     const [users, channels, statuses, priorities, companies] = await Promise.all([
-      getAllUsers().catch(error => {
+      getAllUsers(false).catch(error => {
         console.error('Error fetching users:', error);
         return [];
       }),
@@ -44,7 +44,7 @@ export async function getTicketFormData(prefilledCompanyId?: string): Promise<Ti
         console.error('Error fetching statuses:', error);
         return [];
       }),
-      getAllPrioritiesWithStandard('ticket').catch(error => {
+      getAllPriorities('ticket').catch(error => {
         console.error('Error fetching priorities:', error);
         return [];
       }),
@@ -86,6 +86,40 @@ export async function getTicketFormData(prefilledCompanyId?: string): Promise<Ti
   } catch (error) {
     console.error('Error fetching ticket form data:', error);
     // Return empty data instead of throwing
+    return {
+      users: [],
+      channels: [],
+      statuses: [],
+      priorities: [],
+      companies: [],
+    };
+  }
+}
+
+export async function getClientTicketFormData(): Promise<Partial<TicketFormData>> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Client portal users only need priorities for ticket creation
+    // Companies are handled automatically based on the user's associated company
+    const priorities = await getAllPriorities('ticket').catch(error => {
+      console.error('Error fetching priorities:', error);
+      return [];
+    });
+
+    return {
+      priorities,
+      // Other fields are not needed for client portal ticket creation
+      users: [],
+      channels: [],
+      statuses: [],
+      companies: [],
+    };
+  } catch (error) {
+    console.error('Error fetching client ticket form data:', error);
     return {
       users: [],
       channels: [],

@@ -213,7 +213,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
       title: 'Title',
       dataIndex: 'title',
       render: (value: string, record: ITicketListItem) => (
-        <div className="max-w-xs truncate" title={value}>
+        <div className="break-words" title={value}>
           {value}
         </div>
       ),
@@ -226,7 +226,15 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
     {
       title: 'Priority',
       dataIndex: 'priority_name',
-      render: (value: string) => value,
+      render: (value: string, record: ITicketListItem) => (
+        <div className="flex items-center gap-2">
+          <div 
+            className="w-3 h-3 rounded-full border border-gray-300" 
+            style={{ backgroundColor: record.priority_color || '#6B7280' }}
+          />
+          <span>{value}</span>
+        </div>
+      ),
     },
     {
       title: 'Category',
@@ -250,7 +258,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
       },
     },
     {
-      title: 'Channel',
+      title: 'Board',
       dataIndex: 'channel_name',
       render: (value: string) => value || 'N/A',
     },

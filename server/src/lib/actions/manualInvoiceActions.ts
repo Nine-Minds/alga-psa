@@ -5,13 +5,13 @@ import { v4 as uuidv4 } from 'uuid';
 import { generateInvoiceNumber } from './invoiceGeneration';
 import { IInvoiceItem, InvoiceViewModel, DiscountType } from 'server/src/interfaces/invoice.interfaces';
 import { TaxService } from 'server/src/lib/services/taxService';
-import WorkflowEventModel from '@shared/workflow/persistence/workflowEventModel'; // Corrected import
-import { getRedisStreamClient } from '@shared/workflow/streams/redisStreamClient';
-import { toStreamEvent } from '@shared/workflow/streams/workflowEventSchema';
-import { IWorkflowEvent } from '@shared/workflow/persistence/workflowInterfaces'; // Corrected import path
+import { WorkflowEventModel, IWorkflowEvent } from '@alga-psa/shared/workflow/persistence';
+import { getRedisStreamClient, toStreamEvent } from '@alga-psa/shared/workflow/streams';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import * as invoiceService from 'server/src/lib/services/invoiceService';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
+import { analytics } from '../analytics/posthog';
+import { AnalyticsEvents } from '../analytics/events';
 
 export interface ManualInvoiceItem { // Add export
   service_id: string;
@@ -100,6 +100,19 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
       .where({ invoice_id: invoiceId })
       .orderBy('created_at', 'asc');
 
+    // Track analytics
+    analytics.capture(AnalyticsEvents.INVOICE_GENERATED, {
+      invoice_id: invoiceId,
+      invoice_number: invoiceNumber,
+      company_id: companyId,
+      subtotal: Math.ceil(subtotal),
+      tax: Math.ceil(computedTotalTax),
+      total_amount: Math.ceil(subtotal + computedTotalTax),
+      item_count: updatedItems.length,
+      is_manual: true,
+      is_prepayment: isPrepayment || false
+    }, session.user.id);
+
     // Return invoice view model
     return {
       invoice_id: invoiceId,
@@ -107,8 +120,8 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
       company_id: companyId,
       company: {
         name: company.company_name,
-        logo: company.logo || '',
-        address: company.address || ''
+        logo: company.logoUrl || '',
+        address: company.location_address || ''
       },
       contact: {
         name: '',
@@ -279,8 +292,8 @@ export async function updateManualInvoice(
     company_id: companyId,
     company: {
       name: company.company_name,
-      logo: company.logo || '',
-      address: company.address || ''
+      logo: company.logoUrl || '',
+      address: company.location_address || ''
     },
     contact: {
       name: '',

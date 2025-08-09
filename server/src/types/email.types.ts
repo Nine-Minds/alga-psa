@@ -212,3 +212,38 @@ export interface IEmailProviderManager {
    */
   updateTenantSettings(tenantId: string, settings: Partial<TenantEmailSettings>): Promise<void>;
 }
+
+/**
+ * Inbound ticket defaults for email-to-ticket processing
+ */
+export interface InboundTicketDefaults {
+  id: string;
+  tenant: string;
+  short_name: string;
+  display_name: string;
+  description?: string;
+  channel_id?: string;
+  status_id?: string;
+  priority_id?: string;
+  company_id?: string;
+  entered_by?: string | null;
+  category_id?: string;
+  subcategory_id?: string;
+  location_id?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Options for ticket field dropdowns
+ */
+export interface TicketFieldOptions {
+  channels: Array<{ id: string; name: string; is_default: boolean }>;
+  statuses: Array<{ id: string; name: string; is_default?: boolean }>;
+  priorities: Array<{ id: string; name: string; is_default?: boolean }>;
+  categories: Array<{ id: string; name: string; parent_id?: string }>;
+  companies: Array<{ id: string; name: string }>;
+  users: Array<{ id: string; name: string; username: string }>;
+  locations: Array<{ id: string; name: string; company_id: string }>;
+}

@@ -15,17 +15,31 @@ spec:
       {{- include "sebastian.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
       annotations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      labels:
-        {{- include "sebastian.selectorLabels" . | nindent 8 }}
-        {{- with .Values.podLabels }}
+        {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-        {{- if .Values.devEnv.enabled }}
-        alga.dev/environment: "true"
+        {{- if .Values.vaultAgent.enabled }}
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "{{ .Values.vaultAgent.role }}"
+        vault.hashicorp.com/agent-inject-secret-alga_auth_key: "{{ .Values.vaultAgent.sharedSecretPath }}"
+        vault.hashicorp.com/agent-inject-template-alga_auth_key: |
+          {{`{{- with secret "`}}{{ .Values.vaultAgent.sharedSecretPath }}{{`" -}}
+          {{- .Data.data.alga_auth_key -}}
+          {{- end }}`}}        
+        vault.hashicorp.com/agent-inject-secret-server-secrets: "{{ .Values.vaultAgent.secretPath }}"
+        vault.hashicorp.com/agent-inject-template-server-secrets: |
+          {{`{{- with secret "`}}{{ .Values.vaultAgent.secretPath }}{{`" -}}
+          {{- range $k, $v := .Data.data -}}
+          export {{ $k }}="{{ $v }}"
+          {{- end -}}
+          {{- end }}`}}
+        {{- end }}
+      labels:
+        {{- include "sebastian.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: "main"
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:    
       {{- if .Values.server.image.is_private }}
@@ -298,10 +312,8 @@ spec:
 
           # ----------- AUTH ----------------
           # NEXTAUTH_URL is configured via .env file to allow dynamic updates during port forwarding
-          {{- if not .Values.devEnv.enabled }}
           - name: NEXTAUTH_URL
             value: "https://{{ .Values.host }}"
-          {{- end }}
           - name: NEXTAUTH_SECRET
             valueFrom:
               secretKeyRef:
@@ -318,14 +330,42 @@ spec:
             value: "{{ .Values.google_auth.client_secret }}"
           {{- end }}
 
-          # ----------- EXTERNAL PORTS (DEV ENV) ----------------
-          {{- if and .Values.devEnv.enabled .Values.devEnv.externalPorts }}
-          - name: EXTERNAL_APP_PORT
-            value: "{{ .Values.devEnv.externalPorts.app }}"
-          - name: EXTERNAL_CODE_SERVER_PORT
-            value: "{{ .Values.devEnv.externalPorts.codeServer }}"
-          - name: EXTERNAL_CODE_APP_PORT
-            value: "{{ .Values.devEnv.externalPorts.codeApp }}"
+          # ----------- SECRET PROVIDER ----------------
+          # Composite secret provider configuration
+          - name: SECRET_READ_CHAIN
+            value: "{{ .Values.secrets_provider.readChain | default "env,filesystem" }}"
+          - name: SECRET_WRITE_PROVIDER
+            value: "{{ .Values.secrets_provider.writeProvider | default "filesystem" }}"
+          {{- if .Values.secrets_provider.envPrefix }}
+          - name: SECRET_ENV_PREFIX
+            value: "{{ .Values.secrets_provider.envPrefix }}"
+          {{- end }}
+          
+          # Vault configuration (only if vault is used)
+          {{- if or (contains "vault" .Values.secrets_provider.readChain) (eq .Values.secrets_provider.writeProvider "vault") }}
+          {{- if .Values.secrets_provider.vault.addr }}
+          - name: VAULT_ADDR
+            value: "{{ .Values.secrets_provider.vault.addr }}"
+          {{- end }}
+          {{- if or .Values.secrets_provider.vault.token (or (contains "vault" .Values.secrets_provider.readChain) (eq .Values.secrets_provider.writeProvider "vault")) }}
+          - name: VAULT_TOKEN
+            {{- if .Values.secrets_provider.vault.token }}
+            value: "{{ .Values.secrets_provider.vault.token }}"
+            {{- else }}
+            valueFrom:
+              secretKeyRef:
+                name: vault-credentials
+                key: VAULT_TOKEN
+            {{- end }}
+          {{- end }}
+          {{- if .Values.secrets_provider.vault.appSecretPath }}
+          - name: VAULT_APP_SECRET_PATH
+            value: "{{ .Values.secrets_provider.vault.appSecretPath }}"
+          {{- end }}
+          {{- if .Values.secrets_provider.vault.tenantSecretPathTemplate }}
+          - name: VAULT_TENANT_SECRET_PATH_TEMPLATE
+            value: "{{ .Values.secrets_provider.vault.tenantSecretPathTemplate }}"
+          {{- end }}
           {{- end }}
          {{- if .Values.server.persistence.enabled }}
           volumeMounts:
@@ -338,12 +378,6 @@ spec:
               protocol: TCP
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-      {{- if .Values.devEnv.enabled }}
-      {{- with .Values.devEnv.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- else }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -352,9 +386,9 @@ spec:
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- end }}
       {{- with .Values.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
 {{- end }}
+

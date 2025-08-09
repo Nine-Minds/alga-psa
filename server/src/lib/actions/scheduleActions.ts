@@ -3,7 +3,7 @@ import ScheduleEntry from '../models/scheduleEntry';
 import { IScheduleEntry, IEditScope } from 'server/src/interfaces/schedule.interfaces';
 import { WorkItemType } from 'server/src/interfaces/workItem.interfaces';
 import { getCurrentUser, getCurrentUserPermissions } from './user-actions/userActions';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 
@@ -126,12 +126,14 @@ export async function addScheduleEntry(
       };
     }
 
-    // Determine final assignedUserIds, defaulting to current user if none provided
+    // Determine final assignedUserIds, preferring entry.assigned_user_ids, then options, then defaulting to current user
     let assignedUserIds: string[];
-    if (!options?.assignedUserIds || options.assignedUserIds.length === 0) {
-      assignedUserIds = [currentUser.user_id];
-    } else {
+    if (entry.assigned_user_ids && entry.assigned_user_ids.length > 0) {
+      assignedUserIds = entry.assigned_user_ids;
+    } else if (options?.assignedUserIds && options.assignedUserIds.length > 0) {
       assignedUserIds = options.assignedUserIds;
+    } else {
+      assignedUserIds = [currentUser.user_id];
     }
 
     // --- Permission Check ---

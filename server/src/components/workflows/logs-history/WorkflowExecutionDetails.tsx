@@ -7,7 +7,7 @@ import { Skeleton } from 'server/src/components/ui/Skeleton';
 import { Button } from 'server/src/components/ui/Button';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
-import { IWorkflowExecution } from '@shared/workflow/persistence/workflowInterfaces';
+import { IWorkflowExecution } from '@alga-psa/shared/workflow/persistence';
 import { getWorkflowExecutionDetails } from 'server/src/lib/actions/workflow-actions';
 import WorkflowEventTimeline from 'server/src/components/workflows/WorkflowEventTimeline';
 import WorkflowActionsList from 'server/src/components/workflows/WorkflowActionsList';

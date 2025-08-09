@@ -17,7 +17,7 @@
 
 import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult } from './BaseService';
-import { ListOptions } from '../controllers/BaseController';
+import { ListOptions } from '../controllers/types';
 import { withTransaction } from '@shared/db';
 import { 
   IRole, 
@@ -83,8 +83,35 @@ export class PermissionRoleService extends BaseService<IRole> {
       tenantColumn: 'tenant',
       searchableFields: ['role_name', 'description'],
       defaultSort: 'role_name',
-      defaultOrder: 'asc'
+      defaultOrder: 'asc',
+      auditFields: {
+        createdAt: 'created_at',
+        updatedAt: 'updated_at'
+      }
     });
+  }
+
+  /**
+   * Override to exclude created_by and updated_by fields which don't exist in roles table
+   */
+  protected addCreateAuditFields(data: any, context: ServiceContext): any {
+    const now = new Date().toISOString();
+    return {
+      ...data,
+      [this.auditFields.createdAt]: now,
+      [this.auditFields.updatedAt]: now,
+      [this.tenantColumn]: context.tenant
+    };
+  }
+
+  /**
+   * Override to exclude updated_by field which doesn't exist in roles table
+   */
+  protected addUpdateAuditFields(data: any, context: ServiceContext): any {
+    return {
+      ...data,
+      [this.auditFields.updatedAt]: new Date().toISOString()
+    };
   }
 
   // =============================================================================
@@ -178,10 +205,12 @@ export class PermissionRoleService extends BaseService<IRole> {
         throw new Error(`Permission already exists for resource '${data.resource}' and action '${data.action}'`);
       }
 
-      const permissionData = this.addCreateAuditFields({
+      // Permissions table only has permission_id, resource, action, and tenant
+      const permissionData = {
         ...data,
-        permission_id: knex.raw('gen_random_uuid()')
-      }, context);
+        permission_id: knex.raw('gen_random_uuid()'),
+        tenant: context.tenant
+      };
 
       const [permission] = await trx('permissions').insert(permissionData).returning('*');
       
@@ -234,7 +263,10 @@ export class PermissionRoleService extends BaseService<IRole> {
         }
       }
 
-      const updateData = this.addUpdateAuditFields(data, context);
+      // Permissions table only has resource and action as updatable fields
+      const updateData: any = {};
+      if (data.resource) updateData.resource = data.resource;
+      if (data.action) updateData.action = data.action;
       
       const [permission] = await trx('permissions')
         .where('permission_id', permissionId)
@@ -340,6 +372,24 @@ export class PermissionRoleService extends BaseService<IRole> {
   // =============================================================================
 
   /**
+   * List method for base controller compatibility
+   */
+  async list(options: ListOptions, context: ServiceContext): Promise<ListResult<IRole>> {
+    const result = await this.listRoles(options, context);
+    // Transform RoleResponse to IRole
+    const roles: IRole[] = result.data.map(role => ({
+      role_id: role.role_id,
+      role_name: role.role_name,
+      tenant: role.tenant,
+      permissions: new Set<IPermission>()
+    } as unknown as IRole));
+    return {
+      ...result,
+      data: roles
+    };
+  }
+
+  /**
    * List roles with enhanced filtering
    */
   async listRoles(options: ListOptions, context: ServiceContext): Promise<ListResult<RoleResponse>> {
@@ -435,7 +485,7 @@ export class PermissionRoleService extends BaseService<IRole> {
     dataQuery = dataQuery.select(
       'r.*',
       knex.raw('COUNT(DISTINCT ur.user_id) as user_count')
-    ).groupBy('r.role_id');
+    ).groupBy('r.role_id', 'r.role_name', 'r.description', 'r.tenant', 'r.created_at', 'r.updated_at');
 
     // Execute queries
     const [roles, countResult] = await Promise.all([
@@ -449,6 +499,25 @@ export class PermissionRoleService extends BaseService<IRole> {
       data: roles.map(role => this.addRoleHateoas(role, context)),
       total: parseInt(count as string)
     };
+  }
+
+  /**
+   * Get by ID method for base controller compatibility
+   */
+  async getById(
+    id: string, 
+    context: ServiceContext
+  ): Promise<IRole | null> {
+    const role = await this.getRoleById(id, context, false) as RoleResponse | null;
+    if (!role) return null;
+    
+    // Transform RoleResponse to IRole
+    return {
+      role_id: role.role_id,
+      role_name: role.role_name,
+      tenant: role.tenant,
+      permissions: new Set<IPermission>()
+    } as unknown as IRole;
   }
 
   /**
@@ -476,6 +545,23 @@ export class PermissionRoleService extends BaseService<IRole> {
     }
 
     return this.addRoleHateoas(role, context);
+  }
+
+  /**
+   * Create method for base controller compatibility
+   * Overloads for BaseService compatibility
+   */
+  async create(data: Partial<IRole>, context: ServiceContext): Promise<IRole>;
+  async create(data: CreateRoleData, context: ServiceContext): Promise<IRole>;
+  async create(data: any, context: ServiceContext): Promise<IRole> {
+    const role = await this.createRole(data, context);
+    // Transform RoleResponse to IRole
+    return {
+      role_id: role.role_id,
+      role_name: role.role_name,
+      tenant: role.tenant,
+      permissions: new Set<IPermission>()
+    } as unknown as IRole;
   }
 
   /**
@@ -555,6 +641,20 @@ export class PermissionRoleService extends BaseService<IRole> {
   }
 
   /**
+   * Update method for base controller compatibility
+   */
+  async update(id: string, data: UpdateRoleData, context: ServiceContext): Promise<IRole> {
+    const role = await this.updateRole(id, data, context);
+    // Transform RoleResponse to IRole
+    return {
+      role_id: role.role_id,
+      role_name: role.role_name,
+      tenant: role.tenant,
+      permissions: new Set<IPermission>()
+    } as unknown as IRole;
+  }
+
+  /**
    * Update role
    */
   async updateRole(roleId: string, data: UpdateRoleData, context: ServiceContext): Promise<RoleResponse> {
@@ -608,6 +708,13 @@ export class PermissionRoleService extends BaseService<IRole> {
 
       return this.addRoleHateoas(role, context);
     });
+  }
+
+  /**
+   * Delete method for base controller compatibility
+   */
+  async delete(id: string, context: ServiceContext): Promise<void> {
+    return this.deleteRole(id, context);
   }
 
   /**
@@ -1284,10 +1391,33 @@ export class PermissionRoleService extends BaseService<IRole> {
   async getRoleTemplates(context: ServiceContext): Promise<RoleResponse[]> {
     const { knex } = await this.getKnex();
     
-    const templates = await knex('roles')
-      .where('tenant', context.tenant)
-      .where('is_template', true)
-      .orderBy('role_name');
+    // Since is_template column doesn't exist, return predefined role templates
+    const templates = [
+      {
+        role_id: 'template-admin',
+        role_name: 'Administrator',
+        description: 'Full system access with all permissions',
+        tenant: context.tenant
+      },
+      {
+        role_id: 'template-manager',
+        role_name: 'Manager',
+        description: 'Can manage projects, tickets, and team members',
+        tenant: context.tenant
+      },
+      {
+        role_id: 'template-technician',
+        role_name: 'Technician',
+        description: 'Can work on assigned tickets and projects',
+        tenant: context.tenant
+      },
+      {
+        role_id: 'template-viewer',
+        role_name: 'Viewer',
+        description: 'Read-only access to all resources',
+        tenant: context.tenant
+      }
+    ];
 
     return templates.map(template => this.addRoleHateoas(template, context));
   }
@@ -1599,12 +1729,12 @@ export class PermissionRoleService extends BaseService<IRole> {
     return {
       ...role,
       _links: {
-        self: { rel: 'self', href: `/api/roles/${role.role_id}` },
-        permissions: { rel: 'permissions', href: `/api/roles/${role.role_id}/permissions` },
-        users: { rel: 'users', href: `/api/roles/${role.role_id}/users` },
-        clone: { rel: 'clone', href: `/api/roles/${role.role_id}/clone`, method: 'POST' },
-        update: { rel: 'update', href: `/api/roles/${role.role_id}`, method: 'PUT' },
-        delete: { rel: 'delete', href: `/api/roles/${role.role_id}`, method: 'DELETE' }
+        self: { rel: 'self', href: `/api/v1/roles/${role.role_id}` },
+        permissions: { rel: 'permissions', href: `/api/v1/roles/${role.role_id}/permissions` },
+        users: { rel: 'users', href: `/api/v1/roles/${role.role_id}/users` },
+        clone: { rel: 'clone', href: `/api/v1/roles/${role.role_id}/clone`, method: 'POST' },
+        update: { rel: 'update', href: `/api/v1/roles/${role.role_id}`, method: 'PUT' },
+        delete: { rel: 'delete', href: `/api/v1/roles/${role.role_id}`, method: 'DELETE' }
       }
     };
   }
@@ -1616,10 +1746,10 @@ export class PermissionRoleService extends BaseService<IRole> {
     return {
       ...permission,
       _links: {
-        self: { rel: 'self', href: `/api/permissions/${permission.permission_id}` },
-        roles: { rel: 'roles', href: `/api/permissions/${permission.permission_id}/roles` },
-        update: { rel: 'update', href: `/api/permissions/${permission.permission_id}`, method: 'PUT' },
-        delete: { rel: 'delete', href: `/api/permissions/${permission.permission_id}`, method: 'DELETE' }
+        self: { rel: 'self', href: `/api/v1/permissions/${permission.permission_id}` },
+        roles: { rel: 'roles', href: `/api/v1/permissions/${permission.permission_id}/roles` },
+        update: { rel: 'update', href: `/api/v1/permissions/${permission.permission_id}`, method: 'PUT' },
+        delete: { rel: 'delete', href: `/api/v1/permissions/${permission.permission_id}`, method: 'DELETE' }
       }
     };
   }
@@ -1698,14 +1828,43 @@ export class PermissionRoleService extends BaseService<IRole> {
     trx: Knex | Knex.Transaction
   ): Promise<void> {
     try {
-      await trx('access_control_audit_log').insert({
-        audit_id: trx.raw('gen_random_uuid()'),
-        ...event,
-        timestamp: new Date().toISOString()
-      });
+      // Check if audit log table exists first
+      const tableExists = await trx.schema.hasTable('access_control_audit_log');
+      if (tableExists) {
+        await trx('access_control_audit_log').insert({
+          audit_id: trx.raw('gen_random_uuid()'),
+          ...event,
+          timestamp: new Date().toISOString()
+        });
+      }
     } catch (error) {
       logger.error('Error logging audit event:', error);
       // Don't throw - audit logging failure shouldn't break the operation
     }
+  }
+
+  /**
+   * Get roles that have a specific permission
+   */
+  async getRolesByPermission(permissionId: string, context: ServiceContext): Promise<RoleResponse[]> {
+    const { knex } = await this.getKnex();
+    
+    const roles = await knex('roles as r')
+      .join('role_permissions as rp', function() {
+        this.on('r.role_id', '=', 'rp.role_id')
+            .andOn('r.tenant', '=', 'rp.tenant');
+      })
+      .where('rp.permission_id', permissionId)
+      .where('r.tenant', context.tenant)
+      .select('r.*');
+
+    return roles.map(role => ({
+      role_id: role.role_id,
+      role_name: role.role_name,
+      tenant: role.tenant,
+      description: role.description,
+      created_at: role.created_at?.toISOString(),
+      updated_at: role.updated_at?.toISOString()
+    }));
   }
 }

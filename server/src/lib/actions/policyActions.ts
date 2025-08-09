@@ -4,17 +4,23 @@ import { IPermission, IRole, IPolicy, IUserRole, IUserWithRoles, ICondition } fr
 import { ITicket } from 'server/src/interfaces/ticket.interfaces';
 import { PolicyEngine } from '../policy/PolicyEngine';
 import { USER_ATTRIBUTES, TICKET_ATTRIBUTES } from '../attributes/EntityAttributes';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 
 const policyEngine = new PolicyEngine();
 
 // Role actions
-export async function createRole(roleName: string, description: string): Promise<IRole> {
+export async function createRole(roleName: string, description: string, msp: boolean = true, client: boolean = false): Promise<IRole> {
     const { knex: db, tenant } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        const [role] = await trx('roles').insert({ role_name: roleName, description, tenant }).returning('*');
+        const [role] = await trx('roles').insert({ 
+            role_name: roleName, 
+            description, 
+            tenant,
+            msp,
+            client
+        }).returning('*');
         return role;
     });
 }
@@ -33,6 +39,20 @@ export async function updateRole(roleId: string, roleName: string): Promise<IRol
 export async function deleteRole(roleId: string): Promise<void> {
     const { knex: db, tenant } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
+        // Check if role is an Admin role (immutable)
+        const role = await trx('roles')
+            .where({ role_id: roleId, tenant })
+            .first();
+        
+        if (!role) {
+            throw new Error('Role not found');
+        }
+        
+        // Prevent deletion of Admin roles
+        if (role.role_name.toLowerCase() === 'admin') {
+            throw new Error('Admin roles cannot be deleted');
+        }
+        
         await trx('roles').where({ role_id: roleId, tenant }).del();
     });
 }
@@ -40,7 +60,9 @@ export async function deleteRole(roleId: string): Promise<void> {
 export async function getRoles(): Promise<IRole[]> {
     const { knex: db, tenant } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-        return await trx('roles').where({ tenant });
+        return await trx('roles')
+            .where({ tenant })
+            .select('role_id', 'role_name', 'description', 'tenant', 'msp', 'client');
     });
 }
 
@@ -98,6 +120,29 @@ export async function removePermissionFromRole(roleId: string, permissionId: str
 export async function assignRoleToUser(userId: string, roleId: string): Promise<IUserRole> {
     const { knex: db, tenant } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
+        // Validate that the role and user exist and are compatible
+        const [user, role] = await Promise.all([
+            trx('users').where({ user_id: userId, tenant }).first(),
+            trx('roles').where({ role_id: roleId, tenant }).first()
+        ]);
+        
+        if (!user) {
+            throw new Error('User not found');
+        }
+        
+        if (!role) {
+            throw new Error('Role not found');
+        }
+        
+        // Validate role compatibility based on user type
+        if (user.user_type === 'internal' && !role.msp) {
+            throw new Error('Cannot assign client portal role to MSP user');
+        }
+        
+        if (user.user_type === 'client' && !role.client) {
+            throw new Error('Cannot assign MSP role to client portal user');
+        }
+        
         const [userRole] = await trx('user_roles')
             .insert({ user_id: userId, role_id: roleId, tenant })
             .returning('*');
@@ -235,7 +280,7 @@ export async function getRolePermissions(roleId: string): Promise<IPermission[]>
                     'role_permissions.tenant': tenant,
                     'permissions.tenant': tenant 
                 })
-                .select('permissions.*');
+                .select('permissions.permission_id', 'permissions.resource', 'permissions.action', 'permissions.tenant', 'permissions.msp', 'permissions.client', 'permissions.description');
         });
     } catch (error) {
         console.error('Error fetching role permissions:', error);
@@ -247,8 +292,9 @@ export async function getPermissions(): Promise<IPermission[]> {
     try {
         const { knex: db, tenant } = await createTenantKnex();
         return withTransaction(db, async (trx: Knex.Transaction) => {
-            const permissions = await trx('permissions').where({ tenant });
-            console.log('Fetched permissions for tenant:', tenant, permissions);
+            const permissions = await trx('permissions')
+                .where({ tenant })
+                .select('permission_id', 'resource', 'action', 'tenant', 'msp', 'client', 'description');
             return permissions;
         });
     } catch (error) {

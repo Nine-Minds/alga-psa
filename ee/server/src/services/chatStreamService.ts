@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { HuggingFaceChatModel } from '../models/HuggingFaceChatModel';
 import { AnthropicChatModel } from '../models/AnthropicChatModel';
+import { getSecretProviderInstance } from '../../../../shared/core/secretProvider.js';
 
 interface StreamRequestBody {
   inputs: any[];
@@ -36,8 +37,9 @@ const availableFunctions = [
 ];
 
 export class ChatStreamService {
-  private static getAnthropicModel() {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+  private static async getAnthropicModel() {
+    const secretProvider = await getSecretProviderInstance();
+    const apiKey = await secretProvider.getAppSecret('ANTHROPIC_API_KEY') || process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       console.error('[ChatStreamService] Missing Anthropic API key');
       throw new Error('Anthropic API key is not configured');
@@ -142,7 +144,7 @@ export class ChatStreamService {
 
               // Continue the conversation with the function result
               if (body.model === 'anthropic') {
-                const model = this.getAnthropicModel();
+                const model = await this.getAnthropicModel();
                 model.defineFunctions([...availableFunctions, ...(body.functions || [])]);
                 await model.streamMessage(currentMessages, (token: string) => {
                   writer.write({
@@ -176,7 +178,7 @@ export class ChatStreamService {
       (async () => {
         try {
           if (body.model === 'anthropic') {
-            const model = this.getAnthropicModel();
+            const model = await this.getAnthropicModel();
             // Set up available functions including both built-in and passed-in functions
             model.defineFunctions([...availableFunctions, ...(body.functions || [])]);
             await model.streamMessage(body.inputs, onTokenReceived, {

@@ -3,12 +3,12 @@
  * POST /api/v1/invoices/bulk/delete - Bulk delete invoices
  */
 
-import { InvoiceController } from 'server/src/lib/api/controllers/InvoiceController';
+import { ApiInvoiceController } from 'server/src/lib/api/controllers/ApiInvoiceController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
 export async function POST(request: Request) {
   try {
-    const controller = new InvoiceController();
+    const controller = new ApiInvoiceController();
     return await controller.bulkDelete()(request as any);
   } catch (error) {
     return handleApiError(error);

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { signOut } from "next-auth/react";
 import Link from 'next/link';
-import { QuestionMarkCircledIcon, ExitIcon, ChevronRightIcon, HomeIcon, PersonIcon } from '@radix-ui/react-icons';
+import { QuestionMarkCircledIcon, ExitIcon, ChevronRightIcon, HomeIcon, PersonIcon, RocketIcon } from '@radix-ui/react-icons';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
@@ -56,6 +56,8 @@ const Header: React.FC<HeaderProps> = ({
   const [userData, setUserData] = useState<IUserWithRoles | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const router = useRouter();
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  console.log('Environment:', process.env.NODE_ENV, 'isDevelopment:', isDevelopment);
   
   useEffect(() => {
     const fetchUserData = async () => {
@@ -197,6 +199,7 @@ const Header: React.FC<HeaderProps> = ({
           </DropdownMenu.Portal>
         </DropdownMenu.Root>
       </div>
+
 
     </header>
   );

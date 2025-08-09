@@ -3,13 +3,14 @@
  * GET /api/v1/rbac/analytics - Get RBAC analytics
  */
 
-import { PermissionRoleController } from 'server/src/lib/api/controllers/PermissionRoleController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiRoleController } from '@/lib/api/controllers/ApiRoleController';
+import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
+
+const controller = new ApiRoleController();
 
 export async function GET(request: Request) {
   try {
-    const controller = new PermissionRoleController();
-    return await controller.list()(request as any);
+    return await controller.getAccessControlMetrics()(request as any);
   } catch (error) {
     return handleApiError(error);
   }

@@ -7,10 +7,10 @@ import axios from 'axios';
 import { URLSearchParams } from 'url';
 // --- Import Actual Implementations ---
 import { createTenantKnex } from '../../../../../lib/db'; // Added DB import
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
-import { ISecretProvider } from '@shared/core/ISecretProvider';
-import { getSecretProviderInstance } from '@shared/core/secretProvider'; // Corrected import path
+import { ISecretProvider } from '@alga-psa/shared/core';
+import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider.js'; // Corrected import path
 import { createWorkflowEventAttachment } from '../../../../../lib/actions/workflow-event-attachment-actions'; // Added action import
 import { EventCatalogModel } from '../../../../../models/eventCatalog'; // Added model import
 // TODO: Import actual CSRF token validation logic
@@ -66,7 +66,7 @@ export async function GET(request: Request) {
 
   let tenantId: string | null = null;
   // Get the secret provider instance
-  const secretProvider = getSecretProviderInstance();
+  const secretProvider = await getSecretProviderInstance();
 
   try {
     // 1. Validate State Parameter (CSRF Protection - Task 83)

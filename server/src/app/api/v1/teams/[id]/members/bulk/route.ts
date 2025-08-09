@@ -1,33 +1,13 @@
 /**
- * Team Members Bulk Operations API Route
- * POST /api/v1/teams/[id]/members/bulk - Bulk add members
- * DELETE /api/v1/teams/[id]/members/bulk - Bulk remove members
+ * Team Bulk Members API Route
+ * POST /api/v1/teams/{id}/members/bulk - Bulk add team members
  */
 
-import { TeamController } from 'server/src/lib/api/controllers/TeamController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiTeamController } from '@/lib/api/controllers/ApiTeamController';
 
-const controller = new TeamController();
+const controller = new ApiTeamController();
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
-  try {
-    const req = request as any;
-    req.params = params;
-    return await controller.bulkAddMembers()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
-
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
-  try {
-    const req = request as any;
-    req.params = params;
-    return await controller.bulkRemoveMembers()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+export const POST = controller.bulkAddMembers();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
