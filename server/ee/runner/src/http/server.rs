@@ -33,7 +33,7 @@ async fn execute(State(state): State<AppState>, headers: HeaderMap, Json(req): J
     let idem = headers.get("x-idempotency-key").and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
     let tenant = headers.get("x-alga-tenant").and_then(|v| v.to_str().ok()).unwrap_or("");
     let ext = headers.get("x-alga-extension").and_then(|v| v.to_str().ok()).unwrap_or("");
-    tracing::info!("execute called", request_id=%req_id, idempotency=%idem, tenant=%tenant, extension=%ext);
+    tracing::info!("execute called" , request_id=%req_id, idempotency=%idem, tenant=%tenant, extension=%ext);
 
     if !idem.is_empty() {
         let mut map = state.idempotency.lock().await;
@@ -67,7 +67,7 @@ async fn execute(State(state): State<AppState>, headers: HeaderMap, Json(req): J
         return Json(resp);
     }
 
-    let mut resp = ExecuteResponse {
+    let resp = ExecuteResponse {
         status: 200,
         headers: Default::default(),
         body_b64: Some(base64::encode("ok")),
@@ -80,11 +80,6 @@ async fn execute(State(state): State<AppState>, headers: HeaderMap, Json(req): J
     }
 
     Json(resp)
-        status: 501,
-        headers: Default::default(),
-        body_b64: Some(base64::encode("not implemented")),
-        error: Some("not_implemented".to_string()),
-    })
 }
 
 async fn healthz() -> &'static str { "ok" }

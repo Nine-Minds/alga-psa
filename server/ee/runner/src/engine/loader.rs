@@ -1,7 +1,8 @@
-// Placeholder module fetch/cache/instantiate logic using Wasmtime
-use wasmtime::{Config, Engine, Store, Module, Linker, ResourceLimiter};
+// Wasmtime engine configuration, module fetch/cache, and instantiation
+use wasmtime::{Config, Engine, Store, Module, Linker, ResourceLimiter, InstanceAllocationStrategy, PoolingAllocationConfig};
 use reqwest::Client;
 use std::env;
+use std::time::Duration;
 
 pub struct ModuleLoader {
     pub engine: Engine,
@@ -22,13 +23,33 @@ impl ResourceLimiter for Limits {
 impl ModuleLoader {
     pub fn new() -> anyhow::Result<Self> {
         let mut cfg = Config::default();
-        cfg.wasm_memory64(false)
+        // Enable async + epoch interruption for cooperative timeslicing
+        cfg.async_support(true)
+            .epoch_interruption(true)
+            // Fuel is optional; disabled by default for lower overhead
             .consume_fuel(false)
             .cranelift_debug_verifier(false)
             .parallel_compilation(true)
-            .async_support(true)
-            .epoch_interruption(true)
-            .static_memory_maximum_size(64 << 20);
+            // Use static memories up to 256 MiB per memory (adjustable later)
+            .static_memory_maximum_size(256 << 20)
+            .static_memory_guard_size(1 << 31) // 2 GiB guard on 64-bit hosts
+            .dynamic_memory_guard_size(64 << 10); // 64 KiB for dynamic
+
+        // Configure pooling allocator with conservative defaults
+        let mut pool = PoolingAllocationConfig::default();
+        pool.total_core_instances(256)
+            .total_memories(256)
+            .total_tables(256)
+            .total_stacks(512)
+            .max_core_instance_size(1 << 20)
+            .max_component_instance_size(1 << 20)
+            // Limit per-memory committed pages (64KiB/page). 256 pages ~= 16 MiB committed cap per instance memory
+            .memory_pages(256)
+            // Keep small resident regions to avoid page thrash without bloating RSS
+            .linear_memory_keep_resident(0)
+            .table_keep_resident(0);
+        cfg.allocation_strategy(InstanceAllocationStrategy::Pooling(pool));
+
         let engine = Engine::new(&cfg)?;
         let http = Client::builder().build()?;
         Ok(Self { engine, http })
@@ -36,16 +57,34 @@ impl ModuleLoader {
 
     pub fn instantiate(&self, wasm: &[u8], timeout_ms: Option<u64>, memory_mb: Option<u64>) -> anyhow::Result<(Store<Limits>, Linker<Limits>, Module)> {
         let module = Module::new(&self.engine, wasm)?;
-        let mut limits = Limits { max_memory: (memory_mb.unwrap_or(256) as usize) * 1024 * 1024 };
+        let limits = Limits { max_memory: (memory_mb.unwrap_or(256) as usize) * 1024 * 1024 };
         let mut store = Store::new(&self.engine, limits);
+
+        // Apply store-level resource limits if needed
+        store.limiter(|s| s);
+
         if let Some(ms) = timeout_ms { self.apply_timeout(&mut store, ms); }
         let linker: Linker<Limits> = Linker::new(&self.engine);
         Ok((store, linker, module))
     }
 
-    fn apply_timeout(&self, store: &mut Store<Limits>, _ms: u64) {
-        // Epoch-based timeout wiring to be added with a timer task bumping the engine epoch
-        let _ = store; // suppress warnings
+    fn apply_timeout(&self, store: &mut Store<Limits>, ms: u64) {
+        // Use epoch-based interruption. Map ms to ticks by incrementing the engine epoch every 10ms.
+        let tick_ms: u64 = 10;
+        let ticks = (ms / tick_ms).max(1);
+        store.set_epoch_deadline(ticks);
+        // For async configs, yield and update to continue if host wants to resume (not used yet)
+        let _ = store.epoch_deadline_trap();
+
+        // Spawn a background task to bump the engine epoch periodically until the deadline is likely reached.
+        let engine = self.engine.clone();
+        tokio::spawn(async move {
+            let steps = ticks + 2;
+            for _ in 0..steps {
+                tokio::time::sleep(Duration::from_millis(tick_ms)).await;
+                engine.increment_epoch();
+            }
+        });
     }
 
     pub async fn fetch_object(&self, key: &str) -> anyhow::Result<Vec<u8>> {
