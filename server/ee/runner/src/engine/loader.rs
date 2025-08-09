@@ -1,8 +1,11 @@
 // Placeholder module fetch/cache/instantiate logic using Wasmtime
-use wasmtime::{Config, Engine, StoreLimitsBuilder, Store, Module, Linker, ResourceLimiter, AsContextMut};
+use wasmtime::{Config, Engine, Store, Module, Linker, ResourceLimiter};
+use reqwest::Client;
+use std::env;
 
 pub struct ModuleLoader {
     pub engine: Engine,
+    http: Client,
 }
 
 struct Limits {
@@ -27,7 +30,8 @@ impl ModuleLoader {
             .epoch_interruption(true)
             .static_memory_maximum_size(64 << 20);
         let engine = Engine::new(&cfg)?;
-        Ok(Self { engine })
+        let http = Client::builder().build()?;
+        Ok(Self { engine, http })
     }
 
     pub fn instantiate(&self, wasm: &[u8], timeout_ms: Option<u64>, memory_mb: Option<u64>) -> anyhow::Result<(Store<Limits>, Linker<Limits>, Module)> {
@@ -42,6 +46,18 @@ impl ModuleLoader {
     fn apply_timeout(&self, store: &mut Store<Limits>, _ms: u64) {
         // Epoch-based timeout wiring to be added with a timer task bumping the engine epoch
         let _ = store; // suppress warnings
+    }
+
+    pub async fn fetch_object(&self, key: &str) -> anyhow::Result<Vec<u8>> {
+        // Build from BUNDLE_STORE_BASE like http://minio:9000/alga-extensions
+        let base = env::var("BUNDLE_STORE_BASE")?;
+        let url = format!("{}/{}", base.trim_end_matches('/'), key.trim_start_matches('/'));
+        let resp = self.http.get(url).send().await?;
+        if !resp.status().is_success() {
+            anyhow::bail!("fetch failed: {}", resp.status());
+        }
+        let bytes = resp.bytes().await?;
+        Ok(bytes.to_vec())
     }
 }
 
