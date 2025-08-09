@@ -139,3 +139,7 @@ opencode.md
 .opencode
 shared/core/*.d.ts
 shared/core/*.js
+
+# Rust build output
+/target/
+**/target/
