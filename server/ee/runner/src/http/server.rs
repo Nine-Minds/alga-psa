@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use std::net::SocketAddr;
+use std::time::Instant;
 
 use crate::models::{ExecuteRequest, ExecuteResponse};
 use crate::engine::loader::ModuleLoader;
@@ -30,11 +31,12 @@ pub async fn run() -> anyhow::Result<()> {
 }
 
 async fn execute(State(state): State<AppState>, headers: HeaderMap, Json(req): Json<ExecuteRequest>) -> Json<ExecuteResponse> {
+    let started = Instant::now();
     let req_id = headers.get("x-request-id").and_then(|v| v.to_str().ok()).unwrap_or("");
     let idem = headers.get("x-idempotency-key").and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
     let tenant = headers.get("x-alga-tenant").and_then(|v| v.to_str().ok()).unwrap_or("");
     let ext = headers.get("x-alga-extension").and_then(|v| v.to_str().ok()).unwrap_or("");
-    tracing::info!(request_id=%req_id, idempotency=%idem, tenant=%tenant, extension=%ext, "execute called");
+    tracing::info!(request_id=%req_id, idempotency=%idem, tenant=%tenant, extension=%ext, "execute start");
 
     if !idem.is_empty() {
         let mut map = state.idempotency.lock().await;
@@ -89,6 +91,8 @@ async fn execute(State(state): State<AppState>, headers: HeaderMap, Json(req): J
     let out_bytes = match loader.execute_handler(&wasm, req.limits.timeout_ms, req.limits.memory_mb, &input_bytes) {
         Ok(v) => v,
         Err(e) => {
+            let dur_ms = started.elapsed().as_millis() as u64;
+            tracing::error!(request_id=%req_id, tenant=%tenant, extension=%ext, duration_ms=%dur_ms, err=%e.to_string(), "execute failed");
             let resp = ExecuteResponse { status: 500, headers: Default::default(), body_b64: None, error: Some(format!("execute_failed: {}", e)) };
             return Json(resp);
         }
@@ -111,6 +115,9 @@ async fn execute(State(state): State<AppState>, headers: HeaderMap, Json(req): J
         }
     }
 
+    let dur_ms = started.elapsed().as_millis() as u64;
+    let body_len = body_b64.as_ref().map(|s| s.len()).unwrap_or(0);
+    tracing::info!(request_id=%req_id, tenant=%tenant, extension=%ext, duration_ms=%dur_ms, status=%status, resp_b64_len=%body_len, timeout_ms=?req.limits.timeout_ms, mem_mb=?req.limits.memory_mb, "execute done");
     let resp = ExecuteResponse { status, headers, body_b64, error: None };
 
     if !idem.is_empty() {
