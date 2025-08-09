@@ -138,10 +138,10 @@ export class MailHogPollingService {
           originalMessageId: mailhogMessage.ID
         }
       };
-      
-      console.log(`[TENANT-DEBUG] MailHogPollingService about to emit INBOUND_EMAIL_RECEIVED event: tenant=${tenantId}, providerId=${eventData.providerId}, emailSubject=${emailData.subject}`);
-      await this.emitEmailReceivedEvent(eventData);
-      
+
+      console.log(`[TENANT-DEBUG] MailHogPollingService about to emit INBOUND_EMAIL_RECEIVED event: tenant=${tenantId}, providerId=${emailJob.providerId}, emailSubject=${emailData.subject}`);
+      await this.emitEmailReceivedEvent(emailJob);
+
       console.log(`✅ Successfully processed MailHog email: ${emailData.subject}`);
     } catch (error: any) {
       console.error(`❌ Failed to process MailHog message ${mailhogMessage.ID}:`, error.message);
