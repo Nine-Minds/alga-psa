@@ -33,130 +33,7 @@ Last updated: 2025-08-09
 - Storage: Use S3-compatible storage via our existing S3StorageProvider against local MinIO only. No alternative providers. Canonical bucket and prefix are defined via env.
 - UI: Iframe-only Client SDK approach. React-based example and docs only for SDK; no descriptor renderer.
 - Fetch/serve model: Object storage is source of truth. Pods fetch bundles/UI on-demand into a pod-local cache and serve directly via Next.js/Knative.
-## Deprecated: Phased TODO (superseded by Consolidated TODOs)
 
-Phase 0 — Foundations and Switches
-- [ ] EE-only wiring: ensure extension initialization is only imported in EE builds (confirm in `server/src/lib/initializeApp.ts` and aliases). Remove/ignore extensions in CE.
-- [ ] Env/config (MinIO + cache + runner): document and template in `.env` and `ee/server/.env.example`:
-  - `EXT_BUNDLE_STORE_URL=http://minio:9000/alga-extensions` (or bucket + endpoint vars)
-  - `STORAGE_S3_ENDPOINT=http://minio:9000`
-  - `STORAGE_S3_ACCESS_KEY=alga`
-  - `STORAGE_S3_SECRET_KEY=alga-secret`
-  - `STORAGE_S3_BUCKET=alga-extensions`
-  - `STORAGE_S3_REGION=us-east-1`
-  - `STORAGE_S3_FORCE_PATH_STYLE=true`
-  - `EXT_CACHE_ROOT=/var/cache/alga-ext`
-  - `RUNNER_BASE_URL=http://alga-ext-runner.default.svc.cluster.local`
-- [ ] Draft Manifest v2 JSON Schema at `ee/docs/schemas/extension-manifest.v2.schema.json` and example bundle layout at `ee/docs/examples/extension-bundle-v2/`.
-
-Phase 1 — Database Schema and Registry Services
-- [ ] Migrations (EE): add files under `ee/server/migrations/`:
-  - `[2025xxxx01]_create_extension_registry.cjs`
-  - `[2025xxxx02]_create_extension_version.cjs`
-  - `[2025xxxx03]_create_extension_bundle.cjs`
-  - `[2025xxxx04]_create_tenant_extension_install.cjs`
-  - `[2025xxxx05]_create_extension_event_subscription.cjs`
-  - `[2025xxxx06]_create_extension_execution_log.cjs`
-  - `[2025xxxx07]_create_extension_quota_usage.cjs`
-  - Ensure RLS: tables keyed by `tenant_id` enforce row-level security in queries.
-- [ ] Registry service (TS) in `ee/server/src/lib/extensions/registry-v2.ts`:
-  - create/list/get registry entries; add versions with `content_hash`, `signature`, `runtime`, `precompiled`, `api.endpoints`, `ui` block.
-- [ ] Tenant install service in `ee/server/src/lib/extensions/install-v2.ts`:
-  - install/uninstall/enable/disable; persist `granted_caps`, `config`, `version_id`.
-- [ ] Signature verification util in `server/src/lib/extensions/signing.ts`:
-  - load trust bundle from `SIGNING_TRUST_BUNDLE` (PEM); verify bundle signature + content hash.
-- [ ] (Optional) Admin CLI: `server/scripts/ext-registry.ts` for publish/deprecate/install management.
-
-Phase 2 — Bundle Storage Integration
-- [ ] Use existing S3StorageProvider (EE) at `ee/server/src/lib/storage/providers/S3StorageProvider.ts` for object access against MinIO.
-- [ ] Implement `server/src/lib/extensions/bundles.ts`:
-  - `getBundleStream(contentHash)`, `getBundleIndex(contentHash)`, `extractSubtree(contentHash, subtree, dest)` for `dist/` and `ui/`.
-- [ ] Support optional precompiled Wasmtime artifacts (cwasm) stored adjacent to raw WASM; index by target triple in `extension_bundle`.
-
-Phase 3 — Runner Service (Rust + Wasmtime)
-- [ ] Scaffold `ee/runner/` crate:
-  - `Cargo.toml`, `src/main.rs`, `src/http/server.rs` (`POST /v1/execute`), `src/models.rs`.
-  - Engine: `src/engine/mod.rs`, `src/engine/host_api.rs`, `src/engine/loader.rs`.
-  - Cache: `src/cache/lru.rs` using content-hash keyed files under `EXT_CACHE_ROOT`.
-- [ ] Configure Wasmtime: pooling allocator; Store limits (mem/table); epoch-based timeout; optional fuel metering.
-- [ ] Host imports `alga.*` in `host_api.rs`:
-  - `alga.storage.get/set/delete/list`, `alga.http.fetch` (respect egress allowlist), `alga.secrets.get`, `alga.log.info/warn/error`, `alga.metrics.emit`.
-- [ ] Module fetch/cache: pull WASM/cwasm by `content_hash` from MinIO via S3 provider; verify signature; cache LRU under `EXT_CACHE_ROOT`.
-- [ ] Execute flow: validate request; instantiate; call handler; marshal `{status, headers, body_b64}`; enforce limits; write `extension_execution_log`.
-- [ ] Errors: standardized codes (timeout, memory_limit, quota_exceeded, bad_handler, internal); unit/integration tests.
-- [ ] Containerization: `ee/runner/Dockerfile`; KService YAML `ee/runner/deploy/runner.kservice.yaml` (containerConcurrency, target concurrency, minScale).
-
-Phase 4 — Next.js API Gateway for Server-Side Handlers
-- [ ] Add `server/src/app/api/ext/[extensionId]/[...path]/route.ts` supporting GET/POST/PUT/PATCH/DELETE.
-- [ ] Helpers in `server/src/lib/extensions/gateway/`:
-  - `auth.ts`: `getTenantFromAuth(req)`; `assertAccess(tenantId, extensionId, method, path)`
-  - `registry.ts`: `getTenantInstall()`, `resolveVersion()`
-  - `endpoints.ts`: route matcher for manifest `api.endpoints` with path params
-  - `headers.ts`: `filterRequestHeaders()`, `filterResponseHeaders()`
-- [ ] Implement header policy (forward allowlist; strip end-user `authorization`), body size caps, and timeout (`EXT_GATEWAY_TIMEOUT_MS`).
-- [ ] Proxy to Runner `/v1/execute` with service token; map response back to client; emit telemetry.
-
-Phase 5 — Client Asset Fetch-and-Serve (Pod-Local Cache)
-- [ ] Add `server/src/app/ext-ui/[extensionId]/[contentHash]/[...path]/route.ts` (GET) to serve iframe apps.
-- [ ] Cache manager in `server/src/lib/extensions/assets/cache.ts`:
-  - Ensure `<EXT_CACHE_ROOT>/<contentHash>/ui/` exists; else fetch bundle and extract `ui/**/*`.
-  - LRU index persisted at `<EXT_CACHE_ROOT>/_index.json`; evict by size (1–2 GB default).
-- [ ] Static serve helper in `server/src/lib/extensions/assets/serve.ts`:
-  - Serve file with SPA fallback to `index.html`; sanitize paths; set `Cache-Control: public, max-age=31536000, immutable`, `ETag`, `Content-Type`.
-- [ ] Mime map at `server/src/lib/extensions/assets/mime.ts`.
-
-Phase 6 — Client SDK (Iframe)
-- [ ] New packages under repo root:
-  - `packages/extension-iframe-sdk/`
-  - `packages/ui-kit/`
-- [ ] `packages/extension-iframe-sdk` files:
-  - `src/index.ts`: SDK entry; handshake and message bus (postMessage)
-  - `src/bridge.ts`: message protocol types and handlers (events: `init`, `theme`, `auth`, `navigate`, `telemetry`, `resize`)
-  - `src/auth.ts`: retrieve scoped token from host via bridge
-  - `src/navigation.ts`: push/replace navigation events (host-managed routing)
-  - `src/theme.ts`: apply CSS variables from host; subscribe to theme changes
-  - `src/types.ts`: TypeScript interfaces for messages and context
-  - `README.md`: usage docs with React example
-- [ ] `packages/ui-kit` files:
-  - `src/index.ts`
-  - `src/theme/tokens.css` (CSS variables), `src/theme/index.ts`
-  - Components (React + Tailwind, a11y-first):
-    - Buttons: `Button.tsx`, `IconButton.tsx`, `LinkButton.tsx`
-    - Inputs: `TextField.tsx`, `TextArea.tsx`, `NumberField.tsx`, `Select.tsx`, `MultiSelect.tsx`, `DatePicker.tsx`, `DateRangePicker.tsx`, `Checkbox.tsx`, `Switch.tsx`, `RadioGroup.tsx`, `FileInput.tsx`
-    - Layout: `Card.tsx`, `Panel.tsx`, `Grid.tsx`, `Stack.tsx`, `Tabs.tsx`, `Toolbar.tsx`, `Modal.tsx`, `Drawer.tsx`
-    - Data display: `Table.tsx` (columns, sort, paginate), `Badge.tsx`, `Tag.tsx`, `Tooltip.tsx`, `Avatar.tsx`, `Skeleton.tsx`, `EmptyState.tsx`
-    - Feedback: `Toast.tsx`, `Alert.tsx`, `Spinner.tsx`, `ProgressBar.tsx`
-  - `src/hooks/useForm.ts` (React Hook Form integration), `src/hooks/useToast.ts`
-  - `README.md` with prop tables and code samples
-- [ ] Starter app template at `examples/extension-react-app/` (Vite + TS), using SDK and UI Kit; includes router, auth hook, and sample pages.
-- [ ] Host bridge bootstrap in `server/src/lib/extensions/ui/iframeBridge.ts` to inject theme tokens and session into iframe on load.
-
-Phase 7 — Knative Serving (Runner)
-- [ ] Create KService manifest for Runner with annotations: concurrency metric/target, `containerConcurrency`, `minScale`/`maxScale`.
-- [ ] Implement `/healthz` and `/warmup` endpoints; prefetch hot bundles on warmup.
-- [ ] Add CI/CD step to deploy Runner revision and smoke-test `/v1/execute` with a hello-world module.
-
-Phase 8 — EE Code Migration (remove legacy paths)
-- [ ] Remove/feature-flag `ee/server/src/lib/extensions/initialize.ts` filesystem scan of `process.cwd()/extensions`.
-- [ ] Remove/detour `ee/server/src/lib/extensions/ui/ExtensionRenderer.tsx` dynamic import logic; update UI to iframe embedding using `/ext-ui/{extensionId}/{content_hash}/index.html`.
-- [ ] Replace `installExtension` action to install from Registry (select version) instead of uploading files to server.
-- [ ] Update settings and details pages to reflect per-tenant installs, versions, and capabilities; add “Open Extension” buttons that navigate to iframe routes.
-
-Phase 9 — Security, Quotas, and Policy
-- [ ] Enforce capability grants at install time; block Runner host imports for missing capabilities.
-- [ ] Implement egress allowlist per tenant/extension for `http.fetch`.
-- [ ] Integrate secret manager for `secrets.get` (no plaintext storage); rotate tokens.
-- [ ] Add per-tenant/per-extension execution quotas (concurrency and rate) in gateway and Runner.
-
-Phase 10 — Observability and Ops
-- [ ] Emit structured execution logs with correlation IDs; persist to `extension_execution_log`.
-- [ ] Expose Prometheus metrics from Runner (duration, memory, fuel, egress bytes, errors).
-- [ ] Add dashboards and alerts for failure rates, timeouts, and resource breaches.
-
-Phase 11 — Docs, Samples, and Pilot
-- [ ] Write developer docs: manifest v2, building bundles, publishing, installing, and iframe app development.
-- [ ] Provide a full sample extension (server handlers + iframe UI) using the new system.
-- [ ] Pilot with a partner tenant; validate SLOs and collect feedback for iteration.
 
 ## Proposed Architecture
 
@@ -673,7 +550,7 @@ Phase 4 — Next.js API Gateway for Server-Side Handlers
 - [x] Helpers: `auth.ts`, `registry.ts`, `endpoints.ts`, `headers.ts` (scaffolds).
 - [ ] Request policy
   - [x] Header allowlist (strip `authorization`).
-  - [ ] Body size caps.
+  - [x] Body size caps.
   - [x] Timeout via `EXT_GATEWAY_TIMEOUT_MS`.
 - [ ] Proxy and telemetry
   - [x] Proxy to Runner `/v1/execute` with normalized payload.
@@ -691,9 +568,9 @@ Phase 5 — Client Asset Fetch-and-Serve (Pod-Local Cache)
 - [x] Static serve: `server/src/lib/extensions/assets/serve.ts` (SPA fallback; sanitize; caching headers).
 - [x] Mime map: `server/src/lib/extensions/assets/mime.ts`.
 - Details
-  - [ ] Tar/zip extraction for `ui/**/*` (currently placeholder).
+  - [x] Tar/zip extraction for `ui/**/*`.
   - [x] LRU index file structure recorded; [ ] eviction policy and GC.
-  - [ ] ETag generation and conditional GET support.
+  - [x] ETag generation and conditional GET support.
   - [ ] Locking/concurrency control for first-touch extraction.
   - [ ] CSP guidance for iframe pages.
 
@@ -723,8 +600,8 @@ Phase 7 — Knative Serving (Runner)
   - [ ] Rollout notes for revision updates.
 
 Phase 8 — EE Code Migration (remove legacy paths)
-- [ ] Remove/gate legacy filesystem scan loader (`ee/server/src/lib/extensions/initialize.ts`).
-- [ ] Remove host-side descriptor rendering/dynamic imports; iframe-only UI.
+- [x] Remove/gate legacy filesystem scan loader (`ee/server/src/lib/extensions/initialize.ts`).
+- [x] Remove host-side descriptor rendering/dynamic imports; iframe-only UI.
 - [x] Document CE gating and deprecation notes (`ee/docs/cleanup-notes.md`).
 
 <!-- Consolidated TODOs are canonical. Previous detailed planning content has been removed for clarity. -->
