@@ -604,10 +604,11 @@ Phase 4 — Next.js API Gateway for Server-Side Handlers
   - [x] Map response back to client.
   - [ ] Emit telemetry (tracing/metrics).
 - Details
-  - [ ] AuthN/Z: derive tenant from session/API key; enforce RBAC.
+  - [ ] AuthN/Z: derive tenant from session/API key; enforce RBAC. (Scaffolding present in `server/src/lib/extensions/gateway/auth.ts`; production wiring pending.)
   - [x] Idempotency key for non-GET; [ ] retry policy (502/503/504 with jitter).
   - [x] Propagate `x-request-id`; record correlation IDs.
   - [ ] Normalize `user-agent`.
+  - [x] Resolve `version_id → content_hash` via `extension_bundle` join in gateway helpers (`registry.ts`).
 
 Phase 5 — Client Asset Fetch-and-Serve (Pod-Local Cache)
 - [x] Route: `server/src/app/ext-ui/[extensionId]/[contentHash]/[...path]/route.ts` (GET).
@@ -619,6 +620,7 @@ Phase 5 — Client Asset Fetch-and-Serve (Pod-Local Cache)
   - [x] LRU index file structure recorded; [x] eviction policy and GC.
   - [x] ETag generation and conditional GET support.
   - [x] Locking/concurrency control for first-touch extraction.
+  - [x] Enforce tenant/contentHash match (404 on mismatch) in route handler.
   - [ ] CSP guidance for iframe pages.
 
 Phase 6 — Client SDK (Iframe)
