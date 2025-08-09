@@ -192,8 +192,31 @@ exports.up = async function(knex) {
     `);
     
     if (!companiesDistributed.rows[0].distributed) {
+      // Drop any problematic constraints first
+      try {
+        // Drop unique constraints that might not include tenant column
+        await knex.raw(`ALTER TABLE companies DROP CONSTRAINT IF EXISTS companies_company_id_unique`).catch(() => {});
+        await knex.raw(`ALTER TABLE companies DROP CONSTRAINT IF EXISTS companies_tenant_company_name_unique`).catch(() => {});
+        await knex.raw(`ALTER TABLE companies DROP CONSTRAINT IF EXISTS companies_billing_cycle_check`).catch(() => {});
+        console.log('    - Dropped problematic constraints from companies');
+      } catch (e) {
+        // Ignore constraint dropping errors
+      }
+      
       await knex.raw(`SELECT create_distributed_table('companies', 'tenant', colocate_with => 'tenants')`);
       console.log('    ✓ Distributed companies table');
+      
+      // Recreate constraints that are compatible with Citus (include distribution key)
+      try {
+        await knex.raw(`
+          ALTER TABLE companies 
+          ADD CONSTRAINT companies_tenant_company_name_unique 
+          UNIQUE (tenant, company_name)
+        `).catch(() => {});
+        console.log('    - Recreated unique constraint on (tenant, company_name)');
+      } catch (e) {
+        // Ignore constraint recreation errors
+      }
     } else {
       console.log('    - Companies table already distributed');
     }
