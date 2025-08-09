@@ -577,9 +577,9 @@ Phase 5 — Client Asset Fetch-and-Serve (Pod-Local Cache)
 Phase 6 — Client SDK (Iframe)
 - [x] Packages created: `packages/extension-iframe-sdk/`, `packages/ui-kit/`.
 - SDK files
-  - [x] `src/index.ts`, [x] `src/bridge.ts`, [x] `src/auth.ts`, [x] `src/navigation.ts`, [x] `src/theme.ts`, [x] `src/types.ts`, [x] React hooks (`src/hooks.ts`), [ ] README with React example.
+  - [x] `src/index.ts`, [x] `src/bridge.ts`, [x] `src/auth.ts`, [x] `src/navigation.ts`, [x] `src/theme.ts`, [x] `src/types.ts`, [x] React hooks (`src/hooks.ts`), [x] README with React example.
 - UI Kit
-  - [x] `src/index.ts`, [ ] theme tokens CSS and theming entry, [ ] MVP components, [ ] hooks, [ ] README.
+  - [x] `src/index.ts`, [x] theme tokens CSS and theming entry, [x] MVP components, [x] hooks, [x] README.
 - Example app
   - [ ] Vite + TS example (README stub present only).
 - Host bridge bootstrap
@@ -588,7 +588,7 @@ Phase 6 — Client SDK (Iframe)
    - [ ] Origin validation and sandbox attributes; author docs.
    - [ ] Message types include `version`.
  - Ergonomics
-   - [ ] React hooks: `useBridge`, `useTheme`, `useAuthToken`, `useResize`.
+   - [x] React hooks: `useBridge`, `useTheme`, `useAuthToken`, `useResize`.
 
 Phase 7 — Knative Serving (Runner)
 - [x] KService manifest with autoscaling annotations.
