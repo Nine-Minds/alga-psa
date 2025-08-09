@@ -5,6 +5,7 @@ use tokio::sync::Mutex;
 use std::net::SocketAddr;
 
 use crate::models::{ExecuteRequest, ExecuteResponse};
+use crate::engine::loader::ModuleLoader;
 
 type IdemMap = Arc<Mutex<HashMap<String, crate::models::ExecuteResponse>>>;
 
@@ -41,11 +42,36 @@ async fn execute(State(state): State<AppState>, headers: HeaderMap, Json(req): J
         }
     }
 
+    // Fetch wasm by content hash (scaffold)
+    let content_hash = req.context.content_hash.clone();
+    let hash = content_hash.strip_prefix("sha256:").unwrap_or(&content_hash);
+    let key = format!("sha256/{}/dist/main.wasm", hash);
+    let loader = match ModuleLoader::new() {
+        Ok(l) => l,
+        Err(e) => {
+            let resp = ExecuteResponse { status: 500, headers: Default::default(), body_b64: None, error: Some(format!("engine_init_failed: {}", e)) };
+            return Json(resp);
+        }
+    };
+    let wasm = match loader.fetch_object(&key).await {
+        Ok(b) => b,
+        Err(e) => {
+            let resp = ExecuteResponse { status: 502, headers: Default::default(), body_b64: None, error: Some(format!("bundle_fetch_failed: {}", e)) };
+            return Json(resp);
+        }
+    };
+
+    // Instantiate (no actual call yet)
+    if let Err(e) = loader.instantiate(&wasm, req.limits.timeout_ms, req.limits.memory_mb) {
+        let resp = ExecuteResponse { status: 500, headers: Default::default(), body_b64: None, error: Some(format!("instantiate_failed: {}", e)) };
+        return Json(resp);
+    }
+
     let mut resp = ExecuteResponse {
-        status: 501,
+        status: 200,
         headers: Default::default(),
-        body_b64: Some(base64::encode("not implemented")),
-        error: Some("not_implemented".to_string()),
+        body_b64: Some(base64::encode("ok")),
+        error: None,
     };
 
     if !idem.is_empty() {
