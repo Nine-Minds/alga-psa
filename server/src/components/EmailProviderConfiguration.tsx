@@ -20,6 +20,7 @@ import {
   deleteEmailProvider, 
   testEmailProviderConnection 
 } from '../lib/actions/email-actions/emailProviderActions';
+import { getCurrentUser } from '../lib/actions/user-actions/userActions';
 
 export interface EmailProvider {
   id: string;
@@ -76,14 +77,12 @@ export interface GoogleEmailProviderConfig {
 }
 
 export interface EmailProviderConfigurationProps {
-  tenant: string;
   onProviderAdded?: (provider: EmailProvider) => void;
   onProviderUpdated?: (provider: EmailProvider) => void;
   onProviderDeleted?: (providerId: string) => void;
 }
 
 export function EmailProviderConfiguration({
-  tenant,
   onProviderAdded,
   onProviderUpdated,
   onProviderDeleted
@@ -96,11 +95,27 @@ export function EmailProviderConfiguration({
   const [setupProviderType, setSetupProviderType] = useState<'microsoft' | 'google' | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<EmailProvider | null>(null);
   const [showDefaultsManager, setShowDefaultsManager] = useState(false);
+  const [tenant, setTenant] = useState<string>('');
 
   // Load existing providers on component mount
   useEffect(() => {
     loadProviders();
-  }, [tenant]);
+  }, []);
+
+  // Get tenant on mount
+  useEffect(() => {
+    const fetchTenant = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (user?.tenant) {
+          setTenant(user.tenant);
+        }
+      } catch (error) {
+        console.error('Failed to get tenant:', error);
+      }
+    };
+    fetchTenant();
+  }, []);
 
   // Update UI state based on providers
   useEffect(() => {

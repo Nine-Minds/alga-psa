@@ -43,7 +43,7 @@ interface GmailProviderFormProps {
 }
 
 export function GmailProviderForm({ 
-  tenant, 
+  tenant,
   provider, 
   onSuccess, 
   onCancel 
@@ -135,7 +135,8 @@ export function GmailProviderForm({
             token_expires_at: activeOauthData.expiresAt
           })
         }
-      };
+
+      }
 
       console.log('📤 Final payload being sent:', JSON.stringify(payload, null, 2));
 
@@ -329,7 +330,7 @@ export function GmailProviderForm({
                 type="email"
                 {...form.register('mailbox')}
                 placeholder="support@company.com"
-                className={hasAttemptedSubmit && form.formState.errors.mailbox ? 'border-red-500' : ''}
+                className={form.formState.errors.mailbox ? 'border-red-500' : ''}
               />
               {form.formState.errors.mailbox && (
                 <p className="text-sm text-red-500">{form.formState.errors.mailbox.message}</p>

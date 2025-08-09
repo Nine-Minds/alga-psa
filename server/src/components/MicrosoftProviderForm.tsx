@@ -42,7 +42,7 @@ interface MicrosoftProviderFormProps {
 }
 
 export function MicrosoftProviderForm({ 
-  tenant, 
+  tenant,
   provider, 
   onSuccess, 
   onCancel 
@@ -106,7 +106,8 @@ export function MicrosoftProviderForm({
           folder_filters: data.folderFilters ? data.folderFilters.split(',').map(f => f.trim()) : ['Inbox'],
           max_emails_per_sync: data.maxEmailsPerSync
         }
-      };
+
+      }
 
       const result = isEditing 
         ? await updateEmailProvider(provider.id, payload)

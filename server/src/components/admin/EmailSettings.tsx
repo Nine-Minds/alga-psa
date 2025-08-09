@@ -514,7 +514,6 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
         </div>
         
         <EmailProviderConfiguration 
-          tenant={tenantId || ''}
           onProviderAdded={(provider) => {
             // Optional: Handle provider added event
             console.log('Provider added:', provider);
