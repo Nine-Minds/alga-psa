@@ -577,7 +577,7 @@ Phase 5 — Client Asset Fetch-and-Serve (Pod-Local Cache)
 Phase 6 — Client SDK (Iframe)
 - [x] Packages created: `packages/extension-iframe-sdk/`, `packages/ui-kit/`.
 - SDK files
-  - [x] `src/index.ts`, [x] `src/bridge.ts`, [x] `src/auth.ts`, [x] `src/navigation.ts`, [x] `src/theme.ts`, [x] `src/types.ts`, [ ] README with React example.
+  - [x] `src/index.ts`, [x] `src/bridge.ts`, [x] `src/auth.ts`, [x] `src/navigation.ts`, [x] `src/theme.ts`, [x] `src/types.ts`, [x] React hooks (`src/hooks.ts`), [ ] README with React example.
 - UI Kit
   - [x] `src/index.ts`, [ ] theme tokens CSS and theming entry, [ ] MVP components, [ ] hooks, [ ] README.
 - Example app
