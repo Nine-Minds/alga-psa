@@ -105,10 +105,11 @@ export interface EmailConnectionStatus {
 export interface EmailQueueJob {
   id: string;
   tenant: string;
-  provider: 'microsoft' | 'google';
+  provider: 'microsoft' | 'google' | 'mailhog-test-provider';
   messageId: string;
   providerId: string;
   webhookData: any;
   attempt: number;
+  maxRetries: number;
   createdAt: string;
 }

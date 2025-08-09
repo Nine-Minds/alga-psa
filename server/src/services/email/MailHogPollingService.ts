@@ -118,6 +118,7 @@ export class MailHogPollingService {
         id: uuidv4(),
         messageId: emailData.id,
         providerId: 'mailhog-test-provider', // Special provider ID for MailHog
+        provider: 'mailhog-test-provider',
         tenant: tenantId,
         attempt: 1,
         maxRetries: 3,
@@ -188,17 +189,17 @@ export class MailHogPollingService {
   private async getDefaultTenant(): Promise<string> {
     try {
       // Import database connection dynamically to avoid circular dependencies
-      const { getKnex } = await import('../../lib/db');
-      const db = getKnex();
+      const { createTenantKnex } = await import('../../lib/db');
+      const { knex } = await createTenantKnex();
       
       // Get the first available tenant from the database
-      const tenant = await db('tenants').select('tenant').first();
+      const tenant_record = await knex('tenants').select('tenant').first();
       
-      if (!tenant) {
+      if (!tenant_record) {
         throw new Error('No tenants found in database - test setup may be incomplete');
       }
       
-      return tenant.tenant;
+      return tenant_record.tenant;
     } catch (error: any) {
       console.error('❌ Failed to get tenant for email processing:', error.message);
       // Fallback to a default tenant ID for E2E testing

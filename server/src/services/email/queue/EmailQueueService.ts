@@ -60,13 +60,14 @@ export class EmailQueueService {
   /**
    * Add an email processing job to the queue
    */
-  async addEmailJob(job: Omit<EmailQueueJob, 'id' | 'attempt' | 'createdAt'>): Promise<string> {
+  async addEmailJob(job: Omit<EmailQueueJob, 'id' | 'attempt' | 'createdAt' | 'maxRetries'>): Promise<string> {
     await this.ensureConnected();
 
     const emailJob: EmailQueueJob = {
       ...job,
       id: `email:${job.tenant}:${Date.now()}:${Math.random().toString(36).substr(2, 9)}`,
       attempt: 0,
+      maxRetries: EmailQueueService.MAX_RETRIES,
       createdAt: new Date().toISOString(),
     };
 
@@ -224,6 +225,7 @@ export class EmailQueueService {
       providerId: job.providerId,
       webhookData: job.webhookData,
       attempt: 0,
+      maxRetries: job.maxRetries ?? EmailQueueService.MAX_RETRIES,
       createdAt: job.createdAt,
     };
 
