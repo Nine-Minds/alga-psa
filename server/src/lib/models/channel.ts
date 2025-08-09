@@ -48,7 +48,7 @@ const Channel = {
       const tenant = await getCurrentTenantId();
       
       if (!tenant) {
-        throw new Error('Tenant context is required for creating channel');
+        throw new Error('Tenant context is required for creating board');
       }
 
       // Check if this is the first channel - if so, make it default
@@ -75,7 +75,7 @@ const Channel = {
       const tenant = await getCurrentTenantId();
       
       if (!tenant) {
-        throw new Error('Tenant context is required for deleting channel');
+        throw new Error('Tenant context is required for deleting board');
       }
 
       // Check if this is a default channel
@@ -88,7 +88,7 @@ const Channel = {
         .first();
 
       if (channel) {
-        throw new Error('Cannot delete the default channel');
+        throw new Error('Cannot delete the default board');
       }
 
       await knexOrTrx<IChannel>('channels')
@@ -106,7 +106,7 @@ const Channel = {
       const tenant = await getCurrentTenantId();
       
       if (!tenant) {
-        throw new Error('Tenant context is required for updating channel');
+        throw new Error('Tenant context is required for updating board');
       }
 
       // If updating is_default to false, check if this is the last default channel
@@ -116,7 +116,7 @@ const Channel = {
           .whereNot('channel_id', id);
         
         if (defaultChannels.length === 0) {
-          throw new Error('Cannot remove default status from the last default channel');
+          throw new Error('Cannot remove default status from the last default board');
         }
       }
 

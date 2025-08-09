@@ -1,14 +1,22 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
-import Editor, { Monaco } from "@monaco-editor/react";
+import React, { useEffect, useRef, useState, useCallback, Suspense } from "react";
+import dynamic from "next/dynamic";
+import { Monaco } from "@monaco-editor/react";
 import { editor, Uri } from "monaco-editor";
 import { Card } from "server/src/components/ui/Card";
 import { Button } from "server/src/components/ui/Button";
 import { ReflectionContainer } from "server/src/types/ui-reflection/ReflectionContainer";
 import { Play, Code2, AlertTriangle } from "lucide-react";
 import { getRegisteredWorkflowActions } from "server/src/lib/actions/workflow-actions/workflowActionRegistry";
-import { ActionParameterDefinition } from "@shared/workflow/core/actionRegistry.js";
+import { ActionParameterDefinition } from "@alga-psa/shared/workflow/core";
+import EditorSkeleton from "server/src/components/ui/skeletons/EditorSkeleton";
+
+// Dynamic import for Monaco Editor
+const DynamicMonacoEditor = dynamic(() => import('./DynamicMonacoEditor'), {
+  loading: () => <EditorSkeleton height="100%" showHeader={false} showButtons={false} />,
+  ssr: false
+});
 
 // Serializable version of action definition
 interface SerializableActionDefinition {
@@ -710,39 +718,41 @@ ${action.parameters.map((param: ActionParameterDefinition) => `    ${param.name}
           </div>
         </div>
         <div className="border rounded-md overflow-hidden" style={{ height }}>
-          <Editor
-            height="100%"
-            language="typescript"
-            value={isEditorInitialized ? editorValue : ""}
-            onChange={handleEditorChange}
-            onMount={handleEditorDidMount}
-            loading={<div className="flex items-center justify-center h-full">Loading editor...</div>}
-            options={{
-              readOnly,
-              minimap: { enabled: true },
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
-              formatOnPaste: true,
-              formatOnType: true,
-              tabSize: 2,
-              wordWrap: "on",
-              wrappingIndent: "indent",
-              scrollbar: {
-                vertical: "auto",
-                horizontal: "auto",
-                verticalScrollbarSize: 12,
-                horizontalScrollbarSize: 12
-              },
-              theme: "vs-dark"
-            }}
-            beforeMount={(monaco) => {
-              // Configure Monaco to treat all files as TypeScript
-              monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
-                noSemanticValidation: false,
-                noSyntaxValidation: false
-              });
-            }}
-          />
+          <Suspense fallback={<EditorSkeleton height="100%" showHeader={false} showButtons={false} />}>
+            <DynamicMonacoEditor
+              height="100%"
+              language="typescript"
+              value={isEditorInitialized ? editorValue : ""}
+              onChange={handleEditorChange}
+              onMount={handleEditorDidMount}
+              loading={<div className="flex items-center justify-center h-full">Loading editor...</div>}
+              options={{
+                readOnly,
+                minimap: { enabled: true },
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+                formatOnPaste: true,
+                formatOnType: true,
+                tabSize: 2,
+                wordWrap: "on",
+                wrappingIndent: "indent",
+                scrollbar: {
+                  vertical: "auto",
+                  horizontal: "auto",
+                  verticalScrollbarSize: 12,
+                  horizontalScrollbarSize: 12
+                },
+                theme: "vs-dark"
+              }}
+              beforeMount={(monaco) => {
+                // Configure Monaco to treat all files as TypeScript
+                monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+                  noSemanticValidation: false,
+                  noSyntaxValidation: false
+                });
+              }}
+            />
+          </Suspense>
         </div>
       </Card>
     </ReflectionContainer>

@@ -8,7 +8,6 @@ import { Pencil, Trash, Lock, CheckCircle } from 'lucide-react';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import { IComment } from 'server/src/interfaces/comment.interface';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
@@ -17,12 +16,13 @@ import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog'
 interface CommentItemProps {
   id?: string;
   conversation: IComment;
-  user: { 
-    first_name: string; 
+  user: {
+    first_name: string;
     last_name: string;
     user_id: string;
     email?: string;
   } | null;
+  currentUserId?: string | null;
   isEditing: boolean;
   currentComment: IComment | null;
   ticketId: string;
@@ -38,6 +38,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   id,
   conversation,
   user,
+  currentUserId,
   isEditing,
   currentComment,
   ticketId,
@@ -96,8 +97,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
   // Only allow users to edit their own comments
   const canEdit = useMemo(() => {
-    return user?.user_id === conversation.user_id;
-  }, [conversation.user_id, user?.user_id]);
+    return currentUserId === conversation.user_id;
+  }, [conversation.user_id, currentUserId]);
 
   const handleSave = () => {
     const updates: Partial<IComment> = {

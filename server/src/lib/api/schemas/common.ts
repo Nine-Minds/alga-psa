@@ -158,6 +158,20 @@ export const booleanTransform = z.string().transform(val => {
   throw new Error('Invalid boolean value');
 });
 
+export const arrayTransform = <T extends z.ZodTypeAny>(schema: T) =>
+  z.string().transform((val) => {
+    try {
+      const parsed = JSON.parse(val);
+      if (!Array.isArray(parsed)) {
+        throw new Error('Not an array');
+      }
+      return parsed;
+    } catch {
+      // If not JSON, try comma-separated
+      return val.split(',').map(v => v.trim());
+    }
+  }).pipe(z.array(schema));
+
 export const numberTransform = z.string().transform(val => {
   const num = Number(val);
   if (isNaN(num)) throw new Error('Invalid number value');

@@ -101,7 +101,22 @@ export default function RichTextViewer({
     }
 
     // Return all blocks up to and including the last non-empty block
-    return blocks.slice(0, i + 1);
+    // If all blocks are empty (i = -1), return at least one empty paragraph
+    const finalBlocks = i >= 0 ? blocks.slice(0, i + 1) : [{
+      type: "paragraph" as const,
+      props: {
+        textAlignment: "left" as const,
+        backgroundColor: "default" as const,
+        textColor: "default" as const
+      },
+      content: [{
+        type: "text" as const,
+        text: "",
+        styles: {}
+      }]
+    }];
+    
+    return finalBlocks;
   })();
 
   // Create editor instance with content

@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const ticketFormSchema = z.object({
     title: z.string(),
     channel_id: z.string().uuid(),
-    company_id: z.string().uuid(),
+    company_id: z.string().uuid().nullable(),
     location_id: z.string().uuid().nullable().optional(),
     contact_name_id: z.string().uuid().nullable(),
     status_id: z.string().uuid(),
@@ -29,7 +29,7 @@ export const ticketSchema = z.object({
     title: z.string(),
     url: z.string().nullable(),
     channel_id: z.string().uuid(),
-    company_id: z.string().uuid(),
+    company_id: z.string().uuid().nullable(),
     location_id: z.string().uuid().nullable().optional(),
     contact_name_id: z.string().uuid().nullable(),
     status_id: z.string().uuid(),
@@ -65,7 +65,7 @@ const baseTicketSchema = z.object({
     ticket_number: z.string(),
     title: z.string(),
     url: z.string().nullable(),
-    company_id: z.string().uuid(),
+    company_id: z.string().uuid().nullable(),
     location_id: z.string().uuid().nullable().optional(),
     contact_name_id: z.string().uuid().nullable(),
     closed_by: z.string().uuid().nullable(),
@@ -90,6 +90,7 @@ export const ticketListItemSchema = baseTicketSchema.extend({
     priority_color: z.string().optional(),
     channel_name: z.string(),
     category_name: z.string(),
+    company_name: z.string(),
     entered_by_name: z.string(),
     assigned_to_name: z.string().nullable()
 });

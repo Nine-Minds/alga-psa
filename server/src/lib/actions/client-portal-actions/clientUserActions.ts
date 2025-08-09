@@ -4,10 +4,71 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
-import { IUser } from 'server/src/interfaces/auth.interfaces';;
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser, getUserRolesWithPermissions, getUserCompanyId } from 'server/src/lib/actions/user-actions/userActions';
 import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/EntityImageService';
+import { hasPermission } from 'server/src/lib/auth/rbac';
+import { getRoles, assignRoleToUser, removeRoleFromUser, getUserRoles } from 'server/src/lib/actions/policyActions';
+import { 
+  createPortalUserInDB, 
+  getClientPortalRoles as getClientPortalRolesFromDB,
+  CreatePortalUserInput
+} from '@shared/models/userModel';
+import { IUser, IRole } from '@shared/interfaces/user.interfaces';
+
+/**
+ * Get available client portal roles
+ */
+export async function getClientPortalRoles(): Promise<IRole[]> {
+  try {
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+    
+    return await getClientPortalRolesFromDB(knex, tenant);
+  } catch (error) {
+    console.error('Error fetching client portal roles:', error);
+    return [];
+  }
+}
+
+/**
+ * Assign a role to a client user
+ */
+export async function assignClientUserRole(userId: string, roleId: string): Promise<void> {
+  try {
+    await assignRoleToUser(userId, roleId);
+  } catch (error) {
+    console.error('Error assigning role to client user:', error);
+    throw error;
+  }
+}
+
+/**
+ * Remove a role from a client user
+ */
+export async function removeClientUserRole(userId: string, roleId: string): Promise<void> {
+  try {
+    await removeRoleFromUser(userId, roleId);
+  } catch (error) {
+    console.error('Error removing role from client user:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get roles for a specific client user
+ */
+export async function getClientUserRoles(userId: string): Promise<IRole[]> {
+  try {
+    return await getUserRoles(userId);
+  } catch (error) {
+    console.error('Error getting client user roles:', error);
+    return [];
+  }
+}
+
 /**
  * Update a client user
  */
@@ -112,7 +173,8 @@ export async function createClientUser({
   contactId,
   companyId,
   firstName,
-  lastName
+  lastName,
+  roleId
 }: {
   email: string;
   password: string;
@@ -120,6 +182,7 @@ export async function createClientUser({
   companyId: string;
   firstName?: string;
   lastName?: string;
+  roleId?: string;
 }): Promise<{ success: boolean; error?: string }> {
   try {
     const { knex, tenant } = await createTenantKnex();
@@ -127,58 +190,40 @@ export async function createClientUser({
       throw new Error('Tenant not found');
     }
 
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Get all roles for tenant and find client role (case-insensitive)
-      const roles = await trx('roles').where({ tenant });
-      const clientRole = roles.find(role => 
-        role.role_name && role.role_name.toLowerCase().includes('client')
-      );
+    // Enforce RBAC: require permission to create users
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return { success: false, error: 'User not authenticated' };
+    }
+    const allowed = await hasPermission(currentUser, 'user', 'create', knex);
+    if (!allowed) {
+      return { success: false, error: 'Permission denied: Cannot create client user' };
+    }
 
-      if (!clientRole) {
-        throw new Error(`Client role not found among ${roles.length} tenant roles`);
-      }
+    // Use the shared model to create the portal user
+    const input: CreatePortalUserInput = {
+      email,
+      password,
+      contactId,
+      companyId,
+      tenantId: tenant,
+      firstName,
+      lastName,
+      roleId
+    };
 
-      // Hash the password
-      const hashedPassword = await hashPassword(password);
+    const result = await createPortalUserInDB(knex, input);
+    
+    // Revalidate paths after successful creation
+    if (result.success) {
+      revalidatePath('/client/settings/users');
+      revalidatePath('/contacts');
+    }
 
-      // Check if the password field exists in the users table
-      const hasPasswordField = await knex.schema.hasColumn('users', 'password');
-      const passwordField = hasPasswordField ? 'password' : 'hashed_password';
-      
-      console.log(`Using password field: ${passwordField}`);
-      
-      // Create the user with dynamic password field
-      const userData: any = {
-        tenant,
-        email,
-        username: email,
-        contact_id: contactId,
-        user_type: 'client',
-        is_inactive: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      
-      // Add first and last name if provided
-      if (firstName) userData.first_name = firstName;
-      if (lastName) userData.last_name = lastName;
-      
-      userData[passwordField] = hashedPassword;
-      
-      const [user] = await trx('users')
-        .insert(userData)
-        .returning('*');
-
-      // Assign the client role
-      await trx('user_roles')
-        .insert({
-          user_id: user.user_id,
-          role_id: clientRole.role_id,
-          tenant
-        });
-    });
-
-    return { success: true };
+    return {
+      success: result.success,
+      error: result.error
+    };
   } catch (error) {
     console.error('Error creating client user:', error);
     return { 
@@ -187,6 +232,7 @@ export async function createClientUser({
     };
   }
 }
+
 
 /**
  * Upload a contact avatar image
@@ -430,5 +476,46 @@ export async function deleteContactAvatar(
     });
     const message = error instanceof Error ? error.message : 'Failed to delete contact avatar';
     return { success: false, message };
+  }
+}
+
+/**
+ * Check client portal permissions for navigation
+ * Returns permissions for billing, user management, and company settings
+ */
+export async function checkClientPortalPermissions(): Promise<{
+  hasBillingAccess: boolean;
+  hasUserManagementAccess: boolean;
+  hasCompanySettingsAccess: boolean;
+}> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return {
+        hasBillingAccess: false,
+        hasUserManagementAccess: false,
+        hasCompanySettingsAccess: false
+      };
+    }
+
+    // Check permissions using the hasPermission function from rbac
+    const [hasBilling, hasUser, hasCompany] = await Promise.all([
+      hasPermission(currentUser, 'billing', 'read'),
+      hasPermission(currentUser, 'user', 'read'),
+      hasPermission(currentUser, 'client', 'read')
+    ]);
+
+    return {
+      hasBillingAccess: hasBilling,
+      hasUserManagementAccess: hasUser,
+      hasCompanySettingsAccess: hasCompany
+    };
+  } catch (error) {
+    console.error('Error checking client portal permissions:', error);
+    return {
+      hasBillingAccess: false,
+      hasUserManagementAccess: false,
+      hasCompanySettingsAccess: false
+    };
   }
 }

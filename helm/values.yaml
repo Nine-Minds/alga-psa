@@ -16,6 +16,7 @@ setup:
     tag: "latest"
   pullPolicy: Always
   runMigrations: true
+  runSeeds: true
 
 server:
   image: 
@@ -29,6 +30,14 @@ server:
   service:
     type: "ClusterIP"
     port: 3000
+  persistence:
+    enabled: false
+    size: 10Gi
+    accessModes:
+      - ReadWriteOnce
+    storageClass: ""
+    existingClaim: ""
+    annotations: {}
 
 
 hocuspocus:
@@ -43,6 +52,9 @@ hocuspocus:
     type: "ClusterIP"
     port: 1234
 
+# Development Pod Configuration
+devPod:
+  enabled: false
 
 podLabels: {}
 
@@ -229,6 +241,32 @@ google_auth:
   client_id: "get from google"
   client_secret: "get from google"
 
+# Secret Provider Configuration
+# Controls how secrets are read and written across different providers
+secrets:
+  # Comma-separated list of providers to try for reading secrets, in order
+  # Supported providers: env, filesystem, vault
+  readChain: "env,filesystem"
+  
+  # Single provider used for writing/updating secrets
+  # Supported providers: filesystem, vault
+  writeProvider: "filesystem"
+  
+  # Optional environment variable prefix for EnvSecretProvider
+  # If set, env provider will look for PREFIX_secretName in addition to secretName
+  envPrefix: ""
+  
+  # Vault configuration (only used if vault is in readChain or writeProvider)
+  vault:
+    # Vault server address (e.g., https://vault.example.com)
+    addr: ""
+    # Vault authentication token
+    token: ""
+    # Path for application secrets (default: kv/data/app/secrets)
+    appSecretPath: "kv/data/app/secrets"
+    # Path template for tenant secrets (default: kv/data/tenants/{tenantId}/secrets)
+    tenantSecretPathTemplate: "kv/data/tenants/{tenantId}/secrets"
+
 
 # Logging Configuration
 #
@@ -289,3 +327,16 @@ logging:
     path: '/print_info'
     level: 'info'
     token: 'abcd1234'
+
+# Development environment configuration
+devEnv:
+  enabled: false
+  namespace: msp-dev
+
+# Vault Agent configuration for secret injection
+vaultAgent:
+  enabled: false
+  role: alga-psa
+  secretPath: secret/data/alga-psa/server
+  sharedSecretPath: secret/data/alga-psa/shared
+

@@ -426,10 +426,32 @@ export default class Invoice {
       .first();
 
     if (tenantCompanyLink) {
-      // Step 2: Modify query - remove 'logo_url'
-      const tenantCompanyDetails = await knexOrTrx('companies')
-        .where({ company_id: tenantCompanyLink.company_id })
-        .select('company_name', 'address') // Removed 'logo_url'
+      // Step 2: Modify query - remove 'logo_url' and fix address field
+      // First try to get billing address, then fall back to default address
+      const tenantCompanyDetails = await knexOrTrx('companies as c')
+        .leftJoin('company_locations as cl', function() {
+          this.on('c.company_id', '=', 'cl.company_id')
+              .andOn('c.tenant', '=', 'cl.tenant')
+              .andOn(function() {
+                this.on('cl.is_billing_address', '=', knexOrTrx.raw('true'))
+                    .orOn('cl.is_default', '=', knexOrTrx.raw('true'));
+              });
+        })
+        .where({ 'c.company_id': tenantCompanyLink.company_id })
+        .select(
+          'c.company_name',
+          'cl.is_billing_address',
+          'cl.is_default',
+          knexOrTrx.raw(`CONCAT_WS(', ', 
+            cl.address_line1, 
+            cl.address_line2, 
+            cl.city, 
+            cl.state_province, 
+            cl.postal_code, 
+            cl.country_name
+          ) as address`)
+        )
+        .orderByRaw('cl.is_billing_address DESC NULLS LAST, cl.is_default DESC NULLS LAST')
         .first();
 
       // Step 3: Fetch Logo URL using the utility function
@@ -440,7 +462,7 @@ export default class Invoice {
         // Step 4: Update ViewModel Population
         tenantCompanyInfo = {
           name: tenantCompanyDetails.company_name,
-          address: tenantCompanyDetails.address,
+          address: tenantCompanyDetails.address || '',
           logoUrl: logoUrl, // Use the fetched logoUrl
         };
         console.log('Found tenant default company:', tenantCompanyInfo);
@@ -465,7 +487,29 @@ export default class Invoice {
         unitPrice: item.unit_price
       }))
     });
-    const company = await knexOrTrx('companies').where({ company_id: invoice.company_id }).first();
+    const company = await knexOrTrx('companies as c')
+      .leftJoin('company_locations as cl', function() {
+        this.on('c.company_id', '=', 'cl.company_id')
+            .andOn('c.tenant', '=', 'cl.tenant')
+            .andOn(function() {
+              this.on('cl.is_billing_address', '=', knexOrTrx.raw('true'))
+                  .orOn('cl.is_default', '=', knexOrTrx.raw('true'));
+            });
+      })
+      .select(
+        'c.*',
+        knexOrTrx.raw(`CONCAT_WS(', ', 
+          cl.address_line1, 
+          cl.address_line2, 
+          cl.city, 
+          cl.state_province, 
+          cl.postal_code, 
+          cl.country_name
+        ) as location_address`)
+      )
+      .where({ 'c.company_id': invoice.company_id })
+      .orderByRaw('cl.is_billing_address DESC NULLS LAST, cl.is_default DESC NULLS LAST')
+      .first();
 // Add check for company existence
     if (!company) {
       console.error(`!!! Critical Error: Company details not found for company_id ${invoice.company_id} associated with invoice ${invoiceId} !!!`);
@@ -501,7 +545,7 @@ export default class Invoice {
         company_id: invoice.company_id,
         company: { // Populate company details
           name: company.company_name || '',
-          address: company.address || '',
+          address: company.location_address || '',
           // Check tenant before calling getCompanyLogoUrl
           logo: tenant ? (await getCompanyLogoUrl(invoice.company_id, tenant)) || '' : '',
         },

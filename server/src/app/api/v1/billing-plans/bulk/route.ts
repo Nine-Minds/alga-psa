@@ -3,10 +3,10 @@
  * POST /api/v1/billing-plans/bulk - Bulk operations on billing plans
  */
 
-import { BillingPlanController } from 'server/src/lib/api/controllers/BillingPlanController';
+import { ApiBillingPlanController } from 'server/src/lib/api/controllers/ApiBillingPlanController';
 import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 
-const controller = new BillingPlanController();
+const controller = new ApiBillingPlanController();
 
 export async function POST(request: Request) {
   try {

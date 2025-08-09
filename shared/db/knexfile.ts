@@ -20,7 +20,7 @@ if (process.env.NODE_ENV === 'test') {
 }
 
 setTypeParser(20, parseFloat);
-setTypeParser(1114, str => new Date(str + 'Z'));
+setTypeParser(1114, (str: string) => new Date(str + 'Z'));
 
 import { getSecret } from '../core/getSecret.js';
 

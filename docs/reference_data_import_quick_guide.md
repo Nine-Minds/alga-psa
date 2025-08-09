@@ -2,7 +2,7 @@
 
 ## What is Reference Data Import?
 
-A feature that lets you quickly import pre-defined configurations (like ticket priorities, statuses, channels, and categories) instead of creating them manually.
+A feature that lets you quickly import pre-defined configurations (like ticket priorities, statuses, boards, and categories) instead of creating them manually.
 
 ## How to Access
 
@@ -22,24 +22,24 @@ A feature that lets you quickly import pre-defined configurations (like ticket p
 
 ### Special Case: Categories
 
-Categories require selecting a target channel:
+Categories require selecting a target board:
 
 1. Click **"Import from Standard Categories"**
-2. **Select a Channel** from dropdown (required!)
+2. **Select a Board** from dropdown (required!)
 3. Select categories to import
 4. Click **"Import Selected"**
 
 ## Understanding the Display
 
-### Channels Import Dialog
-- **Active** - Switch shows if channel is active
-- **Default** - Switch shows if it's the default channel
+### Boards Import Dialog
+- **Active** - Switch shows if board is active
+- **Default** - Switch shows if it's the default board
 - **Order** - Display sequence number
 
 ### Categories Import Dialog
 - **↳** - Indicates a subcategory
 - Parent categories import with their subcategories
-- All imported categories go to selected channel
+- All imported categories go to selected board
 
 ## Handling Conflicts
 
@@ -63,13 +63,13 @@ Categories require selecting a target channel:
 
 ❌ **DON'T:**
 - Import duplicates of existing items
-- Forget to select a channel for categories
+- Forget to select a board for categories
 - Over-complicate category hierarchies
 - Import everything - only what you need
 
 ## Common Items to Import
 
-### Channels (Organizational Groupings)
+### Boards (Organizational Groupings)
 - General Support
 - Technical Issues  
 - Administration
@@ -113,11 +113,11 @@ Categories require selecting a target channel:
 - Check your permissions
 
 **Can't see imported categories?**
-- Check the channel filter dropdown
-- Make sure you selected the right channel
+- Check the board filter dropdown
+- Make sure you selected the right board
 
 **Import succeeded but items missing?**
-- Check if filtered by channel
+- Check if filtered by board
 - Look for inactive items
 - Refresh the page
 

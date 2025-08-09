@@ -1,33 +1,15 @@
 /**
  * Team Members API Route
- * GET /api/v1/teams/[id]/members - Get team members
- * POST /api/v1/teams/[id]/members - Add member to team
+ * GET /api/v1/teams/{id}/members - Get team members
+ * POST /api/v1/teams/{id}/members - Add team member
  */
 
-import { TeamController } from 'server/src/lib/api/controllers/TeamController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiTeamController } from '@/lib/api/controllers/ApiTeamController';
 
-const controller = new TeamController();
+const controller = new ApiTeamController();
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const req = request as any;
-    req.params = params;
-    return await controller.list()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
-
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const req = request as any;
-    req.params = params;
-    return await controller.create()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+export const GET = controller.getMembers();
+export const POST = controller.addMember();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

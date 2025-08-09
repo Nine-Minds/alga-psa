@@ -3,12 +3,13 @@
 import TagDefinition, { ITagDefinition } from 'server/src/lib/models/tagDefinition';
 import TagMapping, { ITagMapping, ITagWithDefinition } from 'server/src/lib/models/tagMapping';
 import { ITag, TaggedEntityType } from 'server/src/interfaces/tag.interfaces';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { throwPermissionError } from 'server/src/lib/utils/errorHandling';
 import { Knex } from 'knex';
+import { TagModel, CreateTagInput } from '@alga-psa/shared/models/tagModel';
 
 export async function findTagsByEntityId(entityId: string, entityType: string): Promise<ITag[]> {
   const { knex: db } = await createTenantKnex();
@@ -88,6 +89,23 @@ export async function findTagById(tagId: string): Promise<ITag | undefined> {
 }
 
 export async function createTag(tag: Omit<ITag, 'tag_id' | 'tenant'>): Promise<ITag> {
+  // Validate tag text
+  if (!tag.tag_text || !tag.tag_text.trim()) {
+    throw new Error('Tag text is required');
+  }
+  
+  const tagText = tag.tag_text.trim();
+  
+  // Validate length
+  if (tagText.length > 50) {
+    throw new Error('Tag text too long (max 50 characters)');
+  }
+  
+  // Validate characters - allow letters, numbers, spaces, and common punctuation
+  if (!/^[a-zA-Z0-9\-_\s!@#$%^&*()+=\[\]{};':",./<>?]+$/.test(tagText)) {
+    throw new Error('Tag text contains invalid characters');
+  }
+  
   const { knex: db } = await createTenantKnex();
   
   // Get current user for created_by field and permission check
@@ -101,14 +119,15 @@ export async function createTag(tag: Omit<ITag, 'tag_id' | 'tenant'>): Promise<I
     try {
       // Check permissions
       // Convert tagged_type to resource name (e.g., 'project_task' -> 'project_task')
-      const entityResource = tag.tagged_type;
+      // Map 'company' to 'client' for permission checks
+      const entityResource = tag.tagged_type === 'company' ? 'client' : tag.tagged_type;
       
       if (!await hasPermission(currentUser, entityResource, 'update', trx)) {
         throwPermissionError(`update ${tag.tagged_type.replace('_', ' ')}`);
       }
       
       const existingTags = await TagDefinition.getAllByType(trx, tag.tagged_type);
-      const existingTag = existingTags.find((t: ITagDefinition) => t.tag_text === tag.tag_text);
+      const existingTag = existingTags.find((t: ITagDefinition) => t.tag_text === tagText);
       
       // Check if this is a new tag (not in existing tags) - only then require tag:create permission
       if (!existingTag && !await hasPermission(currentUser, 'tag', 'create', trx)) {
@@ -127,7 +146,7 @@ export async function createTag(tag: Omit<ITag, 'tag_id' | 'tenant'>): Promise<I
       } else if (!tagWithTenant.background_color || !tagWithTenant.text_color) {
         // Generate and save colors for new tags
         const { generateEntityColor } = await import('server/src/utils/colorUtils');
-        const colors = generateEntityColor(tag.tag_text);
+        const colors = generateEntityColor(tagText);
         tagWithTenant.background_color = tagWithTenant.background_color || colors.background;
         tagWithTenant.text_color = tagWithTenant.text_color || colors.text;
       }
@@ -135,7 +154,7 @@ export async function createTag(tag: Omit<ITag, 'tag_id' | 'tenant'>): Promise<I
       // Get or create tag definition
       const definition = await TagDefinition.getOrCreate(
         trx,
-        tagWithTenant.tag_text,
+        tagText,
         tagWithTenant.tagged_type,
         {
           channel_id: tagWithTenant.channel_id,
@@ -211,7 +230,8 @@ export async function updateTag(id: string, tag: Partial<ITag>): Promise<void> {
       }
       
       // Check permissions
-      const entityResource = existingTag.tagged_type;
+      // Map 'company' to 'client' for permission checks
+      const entityResource = existingTag.tagged_type === 'company' ? 'client' : existingTag.tagged_type;
       
       if (!await hasPermission(currentUser, entityResource, 'update', trx)) {
         throwPermissionError(`update ${existingTag.tagged_type.replace('_', ' ')}`);
@@ -280,7 +300,8 @@ export async function deleteTag(id: string): Promise<void> {
       }
       
       // Check basic update permission for entity
-      const entityResource = existingTag.tagged_type;
+      // Map 'company' to 'client' for permission checks
+      const entityResource = existingTag.tagged_type === 'company' ? 'client' : existingTag.tagged_type;
       
       if (!await hasPermission(currentUser, entityResource, 'update', trx)) {
         throwPermissionError(`update ${existingTag.tagged_type.replace('_', ' ')}`);
@@ -440,7 +461,8 @@ export async function updateTagColor(tagId: string, backgroundColor: string | nu
       }
       
       // Check permissions
-      const entityResource = tag.tagged_type;
+      // Map 'company' to 'client' for permission checks
+      const entityResource = tag.tagged_type === 'company' ? 'client' : tag.tagged_type;
       
       if (!await hasPermission(currentUser, entityResource, 'update', trx)) {
         throwPermissionError(`update ${tag.tagged_type.replace('_', ' ')}`);
@@ -521,7 +543,8 @@ export async function updateTagText(tagId: string, newTagText: string): Promise<
       }
       
       // Check permissions
-      const entityResource = tag.tagged_type;
+      // Map 'company' to 'client' for permission checks
+      const entityResource = tag.tagged_type === 'company' ? 'client' : tag.tagged_type;
       
       if (!await hasPermission(currentUser, entityResource, 'update', trx)) {
         throwPermissionError(`update ${tag.tagged_type.replace('_', ' ')}`);
@@ -608,9 +631,12 @@ export async function checkTagPermissions(taggedType: TaggedEntityType): Promise
     const { knex: db } = await createTenantKnex();
     
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Map 'company' to 'client' for permission checks
+      const permissionEntity = taggedType === 'company' ? 'client' : taggedType;
+      
       // Check all permissions in parallel
       const [entityUpdate, tagCreate, tagUpdate, tagDelete] = await Promise.all([
-        hasPermission(currentUser, taggedType, 'update', trx),
+        hasPermission(currentUser, permissionEntity, 'update', trx),
         hasPermission(currentUser, 'tag', 'create', trx),
         hasPermission(currentUser, 'tag', 'update', trx),
         hasPermission(currentUser, 'tag', 'delete', trx)
@@ -658,7 +684,8 @@ export async function deleteAllTagsByText(tagText: string, taggedType: TaggedEnt
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Check permissions
-      const entityResource = taggedType;
+      // Map 'company' to 'client' for permission checks
+      const entityResource = taggedType === 'company' ? 'client' : taggedType;
       
       if (!await hasPermission(currentUser, entityResource, 'update', trx)) {
         throwPermissionError(`update ${taggedType.replace('_', ' ')}`);

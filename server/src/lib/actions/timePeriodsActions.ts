@@ -19,7 +19,7 @@ import { formatUtcDateNoTime, toPlainDate } from '../utils/dateTimeUtils';
 import { parse } from 'path';
 import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex } from '../db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 
 // Special value to indicate end of period

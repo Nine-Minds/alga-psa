@@ -48,6 +48,8 @@ import CompanyDetails from "server/src/components/companies/CompanyDetails";
 import ContactDetailsView from "server/src/components/contacts/ContactDetailsView";
 import { addTicketResource, getTicketResources, removeTicketResource } from "server/src/lib/actions/ticketResourceActions";
 import AgentScheduleDrawer from "server/src/components/tickets/ticket/AgentScheduleDrawer";
+import { Button } from "server/src/components/ui/Button";
+import { ExternalLink } from 'lucide-react';
 import { WorkItemType } from "server/src/interfaces/workItem.interfaces";
 import { ReflectionContainer } from "server/src/types/ui-reflection/ReflectionContainer";
 import TimeEntryDialog from "server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog";
@@ -937,16 +939,40 @@ const handleClose = () => {
         }
     };
 
+    // Function to open ticket in a new window
+    const openTicketInNewWindow = useCallback(() => {
+        if (ticket.ticket_id) {
+            window.open(`/msp/tickets/${ticket.ticket_id}`, '_blank');
+        }
+    }, [ticket.ticket_id]);
+
     return (
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>
             <div className="bg-gray-100">
-                <div className="flex items-center space-x-5 mb-4">
-                    {/* Only show the Back button if NOT in a drawer, using BackNav */}
-                    {!isInDrawer && (
-                        <BackNav href="/msp/tickets">Back to Tickets</BackNav>
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-5">
+                        {/* Only show the Back button if NOT in a drawer, using BackNav */}
+                        {!isInDrawer && (
+                            <BackNav href="/msp/tickets">Back to Tickets</BackNav>
+                        )}
+                        <h6 className="text-sm font-medium">#{ticket.ticket_number}</h6>
+                        <h1 className="text-xl font-bold">{ticket.title}</h1>
+                    </div>
+                    
+                    {/* Add popout button only when in drawer */}
+                    {isInDrawer && (
+                        <Button
+                            id="ticket-popout-button"
+                            variant="outline"
+                            size="sm"
+                            onClick={openTicketInNewWindow}
+                            className="flex items-center gap-2"
+                            aria-label="Open in new tab"
+                        >
+                            <ExternalLink className="h-4 w-4" />
+                            <span>Open in new tab</span>
+                        </Button>
                     )}
-                    <h6 className="text-sm font-medium">#{ticket.ticket_number}</h6>
-                    <h1 className="text-xl font-bold">{ticket.title}</h1>
                 </div>
 
                 <div className="flex items-center space-x-5 mb-5">
@@ -1005,6 +1031,7 @@ const handleClose = () => {
                                     tags={tags}
                                     allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
                                     onTagsChange={handleTagsChange}
+                                    isInDrawer={isInDrawer}
                                 />
                             </div>
                         </Suspense>

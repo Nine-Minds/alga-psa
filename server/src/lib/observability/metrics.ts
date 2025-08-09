@@ -33,6 +33,13 @@ export class ObservabilityMetrics {
   private activeConnections: any;
   private memoryUsage: any;
 
+  // Authentication Metrics
+  private authAttempts: any;
+  private authSuccess: any;
+  private authFailures: any;
+  private authDuration: any;
+  private activeAuthSessions: any;
+
   constructor() {
     this.initializeMetrics();
   }
@@ -90,6 +97,28 @@ export class ObservabilityMetrics {
 
       this.memoryUsage = this.meter.createGauge('system_memory_usage_bytes', {
         description: 'System memory usage in bytes',
+      });
+
+      // Authentication Metrics
+      this.authAttempts = this.meter.createCounter('auth_attempts_total', {
+        description: 'Total number of authentication attempts',
+      });
+
+      this.authSuccess = this.meter.createCounter('auth_success_total', {
+        description: 'Total number of successful authentications',
+      });
+
+      this.authFailures = this.meter.createCounter('auth_failures_total', {
+        description: 'Total number of failed authentication attempts',
+      });
+
+      this.authDuration = this.meter.createHistogram('auth_duration_seconds', {
+        description: 'Authentication process duration in seconds',
+        unit: 's',
+      });
+
+      this.activeAuthSessions = this.meter.createUpDownCounter('auth_sessions_active', {
+        description: 'Number of active authenticated sessions',
       });
 
       this.isInitialized = true;
@@ -257,6 +286,60 @@ export class ObservabilityMetrics {
   }
 
   /**
+   * Record authentication attempt
+   */
+  recordAuthAttempt(
+    method: string,
+    success: boolean,
+    duration: number,
+    reason?: string,
+    tenantId?: string
+  ): void {
+    if (!this.isInitialized) return;
+
+    try {
+      const attributes = {
+        method, // e.g., 'password', 'oauth', 'sso', 'api_key'
+        ...(tenantId ? { tenant_id: tenantId } : {}),
+      };
+
+      // Record attempt
+      this.authAttempts.add(1, attributes);
+
+      // Record duration
+      this.authDuration.record(duration, attributes);
+
+      if (success) {
+        this.authSuccess.add(1, attributes);
+      } else {
+        this.authFailures.add(1, {
+          ...attributes,
+          reason: reason || 'unknown', // e.g., 'invalid_credentials', 'account_locked', 'mfa_failed'
+        });
+      }
+    } catch (error) {
+      logger.error('Failed to record authentication metrics:', error);
+    }
+  }
+
+  /**
+   * Record active authentication session changes
+   */
+  recordAuthSession(change: number, method?: string, tenantId?: string): void {
+    if (!this.isInitialized) return;
+
+    try {
+      const attributes = {
+        ...(method ? { method } : {}),
+        ...(tenantId ? { tenant_id: tenantId } : {}),
+      };
+      this.activeAuthSessions.add(change, attributes);
+    } catch (error) {
+      logger.error('Failed to record auth session metrics:', error);
+    }
+  }
+
+  /**
    * Get all available metric names for dashboard creation
    */
   getAvailableMetrics(): string[] {
@@ -272,6 +355,11 @@ export class ObservabilityMetrics {
       'user_sessions_active',
       'system_connections_active',
       'system_memory_usage_bytes',
+      'auth_attempts_total',
+      'auth_success_total',
+      'auth_failures_total',
+      'auth_duration_seconds',
+      'auth_sessions_active',
     ];
   }
 

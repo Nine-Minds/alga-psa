@@ -62,7 +62,7 @@ export async function checkPermission(
     hashed_password: '',
     is_inactive: false,
     tenant: user.tenant,
-    user_type: 'api', // Indicate this is an API-authenticated user
+    user_type: 'internal', // Treat API-authenticated user as internal for RBAC
     created_at: new Date()
   };
   

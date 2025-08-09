@@ -99,7 +99,7 @@ TicketingDashboard (Main Container)
 │   ├── Filter Controls
 │   │   ├── Status Select [id: ticketing-dashboard-status-select]
 │   │   ├── Priority Select [id: ticketing-dashboard-priority-select]
-│   │   ├── Channel Select [id: ticketing-dashboard-channel-select]
+│   │   ├── Board Select [id: ticketing-dashboard-board-select]
 │   │   ├── Category Select [id: ticketing-dashboard-category-select]
 │   │   ├── Assigned User Select [id: ticketing-dashboard-assigned-user-select]
 │   │   └── Date Range Picker [id: ticketing-dashboard-date-range]
@@ -122,7 +122,7 @@ TicketingDashboard (Main Container)
 │   └── QuickAddTicket [id: quick-add-ticket-form]
 │       ├── Company selection
 │       ├── Subject, description, priority
-│       ├── Status, channel, category
+│       ├── Status, board, category
 │       └── Assignment options
 └── Bulk Operations
     ├── Select all checkbox
@@ -197,7 +197,7 @@ TicketDetail
 - `ticketing-dashboard-company-picker` - Company filter dropdown
 - `ticketing-dashboard-status-select` - Status filter
 - `ticketing-dashboard-priority-select` - Priority filter
-- `ticketing-dashboard-channel-select` - Channel filter
+- `ticketing-dashboard-board-select` - Board filter
 - `ticketing-dashboard-category-select` - Category filter
 - `ticketing-dashboard-assigned-user-select` - Assigned user filter
 - `ticketing-dashboard-date-range` - Date range picker
@@ -214,7 +214,7 @@ TicketDetail
 **Navigation Workflow**:
 1. Click "Tickets" in sidebar (`menu-tickets`)
 2. Use search and filter controls to find specific tickets
-3. Filter by company, status, priority, channel, category, assigned user, or date range
+3. Filter by company, status, priority, board, category, assigned user, or date range
 4. View ticket list in DataTable with sortable columns
 5. Click ticket rows to view individual ticket details
 6. In details: Use tabs for different ticket aspects (Details, Comments, Time, Documents, History, Related)

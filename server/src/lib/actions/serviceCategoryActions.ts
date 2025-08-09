@@ -1,6 +1,6 @@
 'use server'
 
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { getServerSession } from "next-auth/next";
 import { options } from "server/src/app/api/auth/[...nextauth]/options";
 import { IServiceCategory } from 'server/src/interfaces/billing.interfaces';

@@ -35,6 +35,9 @@ services:
       EMAIL_USERNAME: ${EMAIL_USERNAME:-noreply@example.com}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
+      # Secret provider configuration (CE edition)
+      SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem}
+      SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
       # Workflow configuration
       WORKFLOW_DISTRIBUTED_MODE: "true"
       WORKFLOW_REDIS_STREAM_PREFIX: "workflow:events:"
@@ -100,6 +103,9 @@ services:
       EMAIL_USERNAME: ${EMAIL_USERNAME:-noreply@example.com}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
+      # Secret provider configuration for setup (CE edition)
+      SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem}
+      SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
     volumes:
       - type: bind
         source: ./setup/config.ini
@@ -159,6 +165,9 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
       LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
+      # Secret provider configuration for workflow-worker (CE edition)
+      SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem}
+      SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
       # Workflow-specific configuration
       WORKFLOW_DISTRIBUTED_MODE: "true"
       WORKFLOW_REDIS_STREAM_PREFIX: "workflow:events:"

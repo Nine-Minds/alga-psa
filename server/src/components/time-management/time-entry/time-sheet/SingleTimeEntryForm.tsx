@@ -18,6 +18,8 @@ interface SingleTimeEntryFormProps {
   onDelete: (index: number) => Promise<void>;
   onUpdateEntry: (index: number, entry: ITimeEntryWithNew) => void;
   onUpdateTimeInputs: (inputs: TimeInputs) => void;
+  date?: Date;
+  isNewEntry?: boolean;
 }
 
 const SingleTimeEntryForm = memo(function SingleTimeEntryForm({
@@ -32,7 +34,9 @@ const SingleTimeEntryForm = memo(function SingleTimeEntryForm({
   onSave,
   onDelete,
   onUpdateEntry,
-  onUpdateTimeInputs
+  onUpdateTimeInputs,
+  date,
+  isNewEntry = false
 }: SingleTimeEntryFormProps) {
   return (
     <div className="space-y-4">
@@ -50,6 +54,8 @@ const SingleTimeEntryForm = memo(function SingleTimeEntryForm({
         onUpdateEntry={onUpdateEntry}
         onUpdateTimeInputs={onUpdateTimeInputs}
         lastNoteInputRef={lastNoteInputRef}
+        date={date}
+        isNewEntry={isNewEntry}
       />
     </div>
   );

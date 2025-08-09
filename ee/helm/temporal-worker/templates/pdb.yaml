@@ -1,0 +1,21 @@
+{{- if and .Values.enabled .Values.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "temporal-worker.fullname" . }}
+  namespace: {{ include "temporal-worker.namespace" . }}
+  labels:
+    {{- include "temporal-worker.labels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal-worker
+spec:
+  {{- if .Values.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  {{- end }}
+  {{- if .Values.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .Values.podDisruptionBudget.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "temporal-worker.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: temporal-worker
+{{- end }}

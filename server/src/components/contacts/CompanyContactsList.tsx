@@ -5,10 +5,13 @@ import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { getContactsByCompany } from 'server/src/lib/actions/contact-actions/contactActions';
 import { Button } from 'server/src/components/ui/Button';
 import { DataTable } from 'server/src/components/ui/DataTable';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { Eye, ExternalLink, MoreVertical } from 'lucide-react';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import { useDrawer } from "server/src/context/DrawerContext";
 import ContactDetailsView from './ContactDetailsView';
+import ContactDetailsEdit from './ContactDetailsEdit';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/documentActions';
@@ -137,6 +140,28 @@ const CompanyContactsList: React.FC<CompanyContactsListProps> = ({ companyId, co
     }
   };
 
+  const handleEditContact = (contact: IContact) => {
+    if (!currentUser) return;
+
+    openDrawer(
+      <ContactDetailsEdit
+        initialContact={contact}
+        companies={companies}
+        isInDrawer={true}
+        onSave={(updatedContact) => {
+          setContacts(prev =>
+            prev.map(c =>
+              c.contact_name_id === updatedContact.contact_name_id ? updatedContact : c
+            )
+          );
+
+          setTimeout(() => handleViewDetails(updatedContact), 0);
+        }}
+        onCancel={() => handleViewDetails(contact)}
+      />
+    );
+  };
+
 
   const columns: ColumnDefinition<IContact>[] = [
     {
@@ -180,6 +205,46 @@ const CompanyContactsList: React.FC<CompanyContactsListProps> = ({ companyId, co
       dataIndex: 'phone_number',
       width: '30%',
       render: (value, record): React.ReactNode => record.phone_number || 'N/A',
+    },
+    {
+      title: 'Actions',
+      dataIndex: 'actions',
+      width: '5%',
+      render: (value, record): React.ReactNode => (
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger asChild>
+            <Button
+              variant="ghost"
+              id="company-contacts-actions-menu"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="sr-only">Open menu</span>
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Content
+            align="end"
+            className="bg-white rounded-md shadow-lg p-1 border border-gray-200 min-w-[120px] z-50"
+          >
+            <DropdownMenu.Item
+              className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center rounded"
+              onSelect={() => handleViewDetails(record)}
+            >
+              <Eye size={14} className="mr-2" />
+              View
+            </DropdownMenu.Item>
+            <DropdownMenu.Item
+              className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center rounded"
+              onSelect={() => handleEditContact(record)}
+            >
+              <ExternalLink size={14} className="mr-2" />
+              Quick Edit
+            </DropdownMenu.Item>
+          </DropdownMenu.Content>
+        </DropdownMenu.Root>
+      ),
     },
   ];
 

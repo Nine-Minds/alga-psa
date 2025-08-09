@@ -19,8 +19,15 @@ export async function createTenant(
 
   await db('tenants').insert({
     tenant: tenantId,
+    company_name: name,
+    phone_number: '555-0100',
+    email: `test-${tenantId.substring(0, 8)}@example.com`,
     created_at: now,
     updated_at: now,
+    payment_platform_id: `test-platform-${tenantId.substring(0, 8)}`,
+    payment_method_id: `test-method-${tenantId.substring(0, 8)}`,
+    auth_service_id: `test-auth-${tenantId.substring(0, 8)}`,
+    plan: 'test'
   });
 
   return tenantId;
@@ -47,12 +54,9 @@ export async function createCompany(
     company_id: companyId,
     company_name: name,
     tenant: tenantId,
-    billing_cycle: options.billing_cycle || 'monthly',
+    billing_cycle: options.billing_cycle || 'monthly' as BillingCycleType,
     is_tax_exempt: options.is_tax_exempt ?? false,
-    phone_no: options.phone_no || '',
-    email: options.email || '',
     url: options.url || '',
-    address: options.address || '',
     created_at: now,
     updated_at: now,
     is_inactive: options.is_inactive ?? false,
@@ -194,7 +198,9 @@ export async function createTestEnvironment(
   const companyId = await createCompany(db, tenantId, options.companyName, {
     billing_cycle: options.billingCycle || 'monthly'
   });
-  const locationId = await createCompanyLocation(db, companyId, tenantId);
+  // For now, skip location creation due to region_code foreign key constraint
+  // const locationId = await createCompanyLocation(db, companyId, tenantId);
+  const locationId = ''; // Empty for now
   const userId = await createUser(db, tenantId, {
     username: options.userName
   });

@@ -5,6 +5,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 export interface ICountry {
   code: string;
   name: string;
+  phone_code?: string;
 }
 
 export async function getAllCountries(): Promise<ICountry[]> {
@@ -16,7 +17,7 @@ export async function getAllCountries(): Promise<ICountry[]> {
   try {
     // Fetch active countries from reference table (shared across all tenants)
     const countries = await knex('countries')
-      .select('code', 'name')
+      .select('code', 'name', 'phone_code')
       .where('is_active', true)
       .orderBy('name');
     

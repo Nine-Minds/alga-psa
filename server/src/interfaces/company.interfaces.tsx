@@ -1,21 +1,18 @@
 import { BillingCycleType, TenantEntity } from './index';
 import { ISO8601String } from 'server/src/types/types.d';
 import { ITaggable } from './tag.interfaces';
+import { ICompany as SharedICompany } from '@alga-psa/shared/interfaces/company.interfaces';
 
-export interface ICompany extends TenantEntity, ITaggable {
-  company_id: string;
-  company_name: string;
-  phone_no: string;
-  credit_balance: number;
-  email: string;
+// Extend the shared ICompany interface with server-specific fields
+// We need to merge SharedICompany with TenantEntity and ITaggable
+export interface ICompany extends SharedICompany, TenantEntity, ITaggable {
+  // Override shared fields to match server expectations (non-nullable)
   url: string;
-  address?: string;
-  created_at: string;
-  updated_at: string;
   is_inactive: boolean;
-  client_type?: string;
+  
+  // Additional server-specific fields
+  credit_balance: number;
   tax_id_number?: string; 
-  notes?: string;
   notes_document_id?: string | null;
   properties?: {
     industry?: string;
@@ -41,8 +38,8 @@ export interface ICompany extends TenantEntity, ITaggable {
   preferred_payment_method?: string;
   auto_invoice?: boolean;
   invoice_delivery_method?: string;  
-  region_code?: string | null; // Replaced tax_region with region_code FK
-  tax_region?: string; // Added for backward compatibility with tests
+  region_code?: string | null;
+  tax_region?: string;
   is_tax_exempt: boolean;
   tax_exemption_certificate?: string;
   timezone?: string;
@@ -86,4 +83,11 @@ export interface ICompanyEmailSettings extends TenantEntity {
   user_id: string;
   created_at: ISO8601String;
   updated_at: ISO8601String;
+}
+
+// Type for company with default location data joined
+export interface ICompanyWithLocation extends ICompany {
+  location_email?: string;
+  location_phone?: string;
+  location_address?: string;
 }

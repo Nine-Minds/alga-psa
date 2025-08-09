@@ -64,6 +64,7 @@ export class EmailWebhookService {
           messageId: notification.resourceData.id,
           providerId,
           webhookData: notification,
+          maxRetries: 3,
         });
 
         console.log(`📧 Queued Microsoft email job: ${jobId}`);
@@ -113,6 +114,7 @@ export class EmailWebhookService {
         messageId: messageData.historyId || messageData.emailAddress, // Gmail uses historyId
         providerId,
         webhookData: messageData,
+        maxRetries: 3,
       });
 
       console.log(`📧 Queued Gmail email job: ${jobId}`);
@@ -233,7 +235,7 @@ export class EmailWebhookService {
         if (!config.webhook_notification_url?.includes('/google')) {
           errors.push('Google webhook URL should contain /google path');
         }
-        if (!config.provider_config?.pubsubTopic) {
+        if (!config.provider_config?.pubsub_topic_name) {
           errors.push('Gmail provider requires Pub/Sub topic configuration');
         }
         break;

@@ -15,6 +15,7 @@ import { Input } from 'server/src/components/ui/Input';
 import TextEditor from 'server/src/components/editor/TextEditor';
 import RichTextViewer from 'server/src/components/editor/RichTextViewer';
 import { Plus, Link, FileText, Edit3, Download } from 'lucide-react';
+import { downloadDocument } from 'server/src/lib/utils/documentUtils';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { ContainerComponent, FormFieldComponent, ButtonComponent } from 'server/src/types/ui-reflection/types';
@@ -52,7 +53,7 @@ interface DocumentsProps {
   userId: string;
   searchTermFromParent?: string;
   entityId?: string;
-  entityType?: 'ticket' | 'company' | 'contact' | 'asset';
+  entityType?: 'ticket' | 'company' | 'contact' | 'asset' | 'project_task';
   isLoading?: boolean;
   onDocumentCreated?: () => Promise<void>;
   isInDrawer?: boolean;
@@ -456,9 +457,15 @@ const Documents = ({
                   ) && (
                   <Button
                     id={`${id}-download-pdf-btn`}
-                    onClick={() => {
+                    onClick={async () => {
                       if (selectedDocument) {
-                        window.open(`/api/documents/download/${selectedDocument.document_id}?format=pdf`, '_blank');
+                        const downloadUrl = `/api/documents/download/${selectedDocument.document_id}?format=pdf`;
+                        const filename = `${selectedDocument.document_name || 'document'}.pdf`;
+                        try {
+                          await downloadDocument(downloadUrl, filename, true);
+                        } catch (error) {
+                          console.error('Download failed:', error);
+                        }
                       }
                     }}
                     variant="outline"

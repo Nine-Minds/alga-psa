@@ -18,15 +18,18 @@ export class MailHogPollingService {
   private emailQueueService: EmailQueueService;
   private pollIntervalMs: number;
   private mailhogApiUrl: string;
+  public defaultTenantId?: string;
 
   constructor(options: {
     pollIntervalMs?: number;
     mailhogApiUrl?: string;
+    defaultTenantId?: string;
   } = {}) {
     this.pollIntervalMs = options.pollIntervalMs || 2000; // Poll every 2 seconds by default
     this.mailhogApiUrl = options.mailhogApiUrl || 'http://localhost:8025/api/v1';
     this.emailProcessor = new EmailProcessor();
     this.emailQueueService = new EmailQueueService();
+    this.defaultTenantId = options.defaultTenantId;
   }
 
   /**
@@ -38,8 +41,13 @@ export class MailHogPollingService {
       return;
     }
 
-    console.log(`📧 Starting MailHog polling every ${this.pollIntervalMs}ms`);
+    console.log(`📧 Starting MailHog polling every ${this.pollIntervalMs}ms at ${this.mailhogApiUrl}`);
     this.isPolling = true;
+
+    // Do an immediate poll to check connectivity
+    this.pollForNewEmails().catch((error: any) => {
+      console.error('❌ Initial MailHog poll failed:', error.message);
+    });
 
     this.pollingInterval = setInterval(async () => {
       try {
@@ -80,7 +88,8 @@ export class MailHogPollingService {
       }
 
       const data = await response.json();
-      const messages = data.messages || [];
+      // MailHog API returns array directly, not wrapped in messages property
+      const messages = Array.isArray(data) ? data : (data.messages || []);
 
       console.log(`📧 Found ${messages.length} total messages in MailHog`);
 
@@ -112,25 +121,18 @@ export class MailHogPollingService {
       
       // Get a default tenant - in E2E tests, use the first available tenant
       const tenantId = await this.getDefaultTenant();
+      console.log(`[TENANT-DEBUG] MailHogPollingService processing email: tenant=${tenantId}, messageId=${mailhogMessage.ID}, subject=${emailData.subject}`);
       
-      // Create an email processing job
-      const emailJob: EmailQueueJob = {
-        id: uuidv4(),
-        messageId: emailData.id,
-        providerId: 'mailhog-test-provider', // Special provider ID for MailHog
-        provider: 'mailhog-test-provider',
-        tenant: tenantId,
-        attempt: 1,
-        maxRetries: 3,
-        createdAt: new Date().toISOString(),
-        webhookData: {
-          source: 'mailhog',
-          originalMessageId: mailhogMessage.ID
-        }
+      // For MailHog test emails, emit the event directly instead of using EmailProcessor
+      // which requires Microsoft Graph credentials
+      const eventData = {
+        tenantId: tenantId,  // Changed from 'tenant' to 'tenantId' to match schema
+        providerId: 'mailhog-test-provider',
+        emailData: emailData
       };
-
-      // Process the email directly (bypassing queue for simplicity in tests)
-      await this.emailProcessor.processEmail(emailJob);
+      
+      console.log(`[TENANT-DEBUG] MailHogPollingService about to emit INBOUND_EMAIL_RECEIVED event: tenant=${tenantId}, providerId=${eventData.providerId}, emailSubject=${emailData.subject}`);
+      await this.emitEmailReceivedEvent(eventData);
       
       console.log(`✅ Successfully processed MailHog email: ${emailData.subject}`);
     } catch (error: any) {
@@ -142,8 +144,8 @@ export class MailHogPollingService {
    * Convert MailHog message format to our standard email data format
    */
   private convertMailHogToEmailData(mailhogMessage: any): any {
-    const rawMessage = mailhogMessage.Raw || {};
-    const headers = rawMessage.Headers || {};
+    // MailHog stores headers in Content.Headers, not Raw.Headers
+    const headers = mailhogMessage.Content?.Headers || {};
     
     // Extract email addresses
     const fromHeader = headers.From?.[0] || '';
@@ -154,32 +156,193 @@ export class MailHogPollingService {
     const fromEmail = fromMatch ? (fromMatch[2] || fromMatch[3] || fromMatch[1]).trim() : '';
     const fromName = fromMatch && fromMatch[2] ? fromMatch[1].trim().replace(/"/g, '') : '';
     
+    // Ensure we have a valid from email
+    const validFromEmail = fromEmail && fromEmail.includes('@') ? fromEmail : 'test@example.com';
+    
     // Parse to addresses
     const toEmails = toHeader.split(',').map((email: string) => {
       const toMatch = email.trim().match(/(.*?)\s*<(.+?)>|(.+)/);
       const emailAddr = toMatch ? (toMatch[2] || toMatch[3] || toMatch[1]).trim() : '';
       const name = toMatch && toMatch[2] ? toMatch[1].trim().replace(/"/g, '') : '';
-      return { email: emailAddr, name };
-    });
+      return { email: emailAddr || 'test@example.com', name: name || '' };
+    }).filter((e: { email: string; name: string }) => e.email && e.email.includes('@')); // Filter out invalid emails
+
+    // Extract threading information
+    const messageId = headers['Message-ID']?.[0] || '';
+    const inReplyTo = headers['In-Reply-To']?.[0] || '';
+    const references = headers.References ? headers.References[0].split(/\s+/) : [];
+    
+    // For threading, we'll pass all potential identifiers to the workflow
+    // and let the database lookup find the correct existing ticket
+    // Don't try to determine threadId here - let the workflow handle it
+    let threadId = messageId; // Default to current message ID
 
     return {
-      id: mailhogMessage.ID,
+      id: messageId, // Use Message-ID header for threading compatibility
+      mailhogId: mailhogMessage.ID, // Keep MailHog's internal ID for debugging
       subject: headers.Subject?.[0] || '(No Subject)',
       from: {
-        email: fromEmail,
-        name: fromName || null
+        email: validFromEmail,
+        name: fromName || ''
       },
-      to: toEmails,
+      to: toEmails.map((to: any) => ({
+        email: to.email || 'unknown@example.com',
+        name: to.name || ''
+      })),
       body: {
         text: mailhogMessage.Content?.Body || '',
-        html: null // MailHog doesn't separate HTML/text in our simple case
+        html: '' // MailHog doesn't separate HTML/text in our simple case
       },
       receivedAt: new Date().toISOString(),
-      attachments: [], // MailHog attachments would need more complex parsing
-      threadId: headers['Message-ID']?.[0] || null,
-      inReplyTo: headers['In-Reply-To']?.[0] || null,
-      references: headers.References ? headers.References[0].split(/\s+/) : []
+      attachments: this.parseAttachments(mailhogMessage),
+      threadId: threadId,
+      inReplyTo: inReplyTo,
+      references: references
     };
+  }
+
+  /**
+   * Parse attachments from MailHog message MIME data
+   */
+  private parseAttachments(mailhogMessage: any): any[] {
+    try {
+      // Debug: Log the entire message structure to understand MailHog format
+      console.log(`🔍 [DEBUG] MailHog message structure for ${mailhogMessage.ID}:`, {
+        hasContent: !!mailhogMessage.Content,
+        hasMime: !!mailhogMessage.Content?.MIME,
+        hasContentMime: !!mailhogMessage.Content?.MIME,
+        hasRootMime: !!mailhogMessage.MIME,
+        contentKeys: mailhogMessage.Content ? Object.keys(mailhogMessage.Content) : [],
+        rootKeys: Object.keys(mailhogMessage)
+      });
+      
+      // MailHog might store MIME data in different locations
+      let mime = mailhogMessage.Content?.MIME || mailhogMessage.MIME;
+      const attachments: any[] = [];
+      
+      if (!mime) {
+        console.log(`🔍 [DEBUG] No MIME data found in message ${mailhogMessage.ID}`);
+        return attachments;
+      }
+      
+      console.log(`🔍 [DEBUG] MIME structure:`, {
+        hasParts: !!mime.Parts,
+        mimeKeys: Object.keys(mime),
+        partsLength: mime.Parts ? mime.Parts.length : 0
+      });
+      
+      if (!mime.Parts) {
+        return attachments;
+      }
+      
+      // Recursively parse MIME parts to find attachments
+      this.parseMimeParts(mime.Parts, attachments);
+      
+      console.log(`🔍 [DEBUG] Found ${attachments.length} attachments in message ${mailhogMessage.ID}`);
+      console.log(`🔍 [DEBUG] Final attachments array:`, attachments);
+      return attachments;
+    } catch (error: any) {
+      console.warn(`⚠️ Failed to parse attachments from MailHog message ${mailhogMessage.ID}:`, error.message);
+      return [];
+    }
+  }
+  
+  /**
+   * Recursively parse MIME parts to extract attachments
+   */
+  private parseMimeParts(parts: any[], attachments: any[]): void {
+    if (!Array.isArray(parts)) {
+      return;
+    }
+    
+    for (const part of parts) {
+      try {
+        const headers = part.Headers || {};
+        const contentDisposition = headers['Content-Disposition']?.[0] || '';
+        const contentType = headers['Content-Type']?.[0] || '';
+        
+        // Check if this part is an attachment
+        if (contentDisposition.includes('attachment') || contentDisposition.includes('inline')) {
+          // Extract filename from Content-Disposition header
+          const filenameMatch = contentDisposition.match(/filename[*]?=([^;\r\n]*)/i);
+          let filename = filenameMatch ? filenameMatch[1].replace(/['"]/g, '') : `attachment_${Date.now()}`;
+          
+          // If no filename in Content-Disposition, try Content-Type
+          if (filename.includes('attachment_') && contentType.includes('name=')) {
+            const nameMatch = contentType.match(/name[*]?=([^;\r\n]*)/i);
+            if (nameMatch) {
+              filename = nameMatch[1].replace(/['"]/g, '');
+            }
+          }
+          
+          // Extract content type
+          const mimeType = contentType.split(';')[0].trim() || 'application/octet-stream';
+          
+          // Get the body content (base64 encoded in MailHog)
+          const body = part.Body || '';
+          
+          // Convert base64 to buffer if needed
+          let content: Buffer;
+          try {
+            // MailHog typically stores attachment content as base64
+            content = Buffer.from(body, 'base64');
+          } catch {
+            // If not base64, treat as plain text
+            content = Buffer.from(body, 'utf-8');
+          }
+          
+          const attachment = {
+            id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name: filename,
+            contentType: mimeType,
+            size: content.length,
+            content: content.toString('base64'), // Store as base64 string for workflow processing
+            contentId: headers['Content-Id']?.[0] || null
+          };
+          
+          attachments.push(attachment);
+          console.log(`📎 Found attachment: ${filename} (${mimeType}, ${content.length} bytes)`);
+          console.log(`🔍 [DEBUG] Attachment object:`, attachment);
+          console.log(`🔍 [DEBUG] Attachments array length after push: ${attachments.length}`);
+        }
+        
+        // Recursively check nested parts
+        if (part.Parts && Array.isArray(part.Parts)) {
+          this.parseMimeParts(part.Parts, attachments);
+        }
+      } catch (error: any) {
+        console.warn(`⚠️ Failed to parse MIME part:`, error.message);
+        continue;
+      }
+    }
+  }
+
+  /**
+   * Emit email received event to EventBus for MailHog test emails
+   */
+  private async emitEmailReceivedEvent(eventData: any): Promise<void> {
+    try {
+      console.log(`📤 Emitting INBOUND_EMAIL_RECEIVED event for: ${eventData.emailData.subject}`);
+      
+      const { getEventBus } = await import('../../lib/eventBus');
+      const eventBus = getEventBus();
+      
+      await eventBus.publish({
+        eventType: 'INBOUND_EMAIL_RECEIVED',
+        payload: {
+          tenantId: eventData.tenantId,  // Changed from eventData.tenant to eventData.tenantId
+          providerId: eventData.providerId,
+          emailData: eventData.emailData
+        }
+      });
+      
+      console.log(`[TENANT-DEBUG] MailHogPollingService emitted INBOUND_EMAIL_RECEIVED event: tenant=${eventData.tenantId}, subject=${eventData.emailData.subject}`);
+      
+      console.log(`✅ Successfully emitted INBOUND_EMAIL_RECEIVED event`);
+    } catch (error: any) {
+      console.error(`❌ Failed to emit email received event:`, error.message);
+      throw error;
+    }
   }
 
   /**
@@ -187,22 +350,30 @@ export class MailHogPollingService {
    * In E2E tests, this gets the first available tenant
    */
   private async getDefaultTenant(): Promise<string> {
+    // If a default tenant ID was provided in the constructor, use it
+    if (this.defaultTenantId) {
+      console.log(`✅ Using provided tenant ID: ${this.defaultTenantId}`);
+      return this.defaultTenantId;
+    }
+    
     try {
-      // Import database connection dynamically to avoid circular dependencies
-      const { createTenantKnex } = await import('../../lib/db');
-      const { knex } = await createTenantKnex();
+      // Get the actual tenant from the database using proper transaction wrapper
+      const { withAdminTransaction } = await import('@shared/db/index.js');
       
-      // Get the first available tenant from the database
-      const tenant_record = await knex('tenants').select('tenant').first();
+      const tenantId = await withAdminTransaction(async (trx) => {
+        const tenant = await trx('tenants').select('tenant').first();
+        if (tenant) {
+          console.log(`[TENANT-DEBUG] MailHogPollingService found tenant in database: tenant=${tenant.tenant}`);
+          return tenant.tenant;
+        }
+        
+        // No tenant found - this is an error condition
+        throw new Error('No tenant found in database - cannot process emails without a valid tenant');
+      });
       
-      if (!tenant_record) {
-        throw new Error('No tenants found in database - test setup may be incomplete');
-      }
-      
-      return tenant_record.tenant;
+      return tenantId;
     } catch (error: any) {
-      console.error('❌ Failed to get tenant for email processing:', error.message);
-      // Fallback to a default tenant ID for E2E testing
+      console.warn('⚠️ Failed to get tenant from database, using default test tenant ID:', error.message);
       return '00000000-0000-0000-0000-000000000001';
     }
   }
@@ -225,6 +396,7 @@ export class MailHogPollingService {
     this.processedMessageIds.clear();
     console.log('🧹 Cleared MailHog processed message history');
   }
+  
 }
 
 // Singleton instance for use in E2E tests

@@ -26,7 +26,7 @@ interface VerifyResponse {
 
 export async function verifyRegisterUser(token: string): Promise<VerifyResponse> {
   logger.system('Verifying user registration');
-  const { errorType, userInfo } = getInfoFromToken(token);
+  const { errorType, userInfo } = await getInfoFromToken(token);
   logger.info(`User info got for email: ${userInfo?.email}`);
   if (userInfo) {
     try {
@@ -40,7 +40,9 @@ export async function verifyRegisterUser(token: string): Promise<VerifyResponse>
         role_id: 'superadmin',
         role_name: 'superadmin',
         description: 'Superadmin role',
-        permissions: []
+        permissions: [],
+        msp: true,
+        client: false
       };
       const newUser: Omit<IUserWithRoles, 'tenant'> = {
         user_id: uuidv4(),
@@ -50,7 +52,7 @@ export async function verifyRegisterUser(token: string): Promise<VerifyResponse>
         created_at: new Date(),
         roles: [superadminRole],
         is_inactive: false,
-        user_type: userInfo.user_type
+        user_type: 'internal'
       };
       await User.insert(db, newUser);
       
@@ -80,7 +82,7 @@ export async function verifyRegisterUser(token: string): Promise<VerifyResponse>
 }
 
 export async function setNewPassword(password: string, token: string): Promise<boolean> {
-  const { errorType, userInfo } = getInfoFromToken(token);
+  const { errorType, userInfo } = await getInfoFromToken(token);
   if (errorType) {
     logger.error(`Error decoding token: ${errorType}`);
     return false;
@@ -191,7 +193,9 @@ export async function registerUser({ username, email, password, companyName }: I
         role_id: 'superadmin',
         role_name: 'superadmin',
         description: 'Superadmin role',
-        permissions: []
+        permissions: [],
+        msp: true,
+        client: false
       };
       const newUser: Omit<IUserWithRoles, 'tenant'> = {        
         user_id: uuidv4(),
@@ -201,13 +205,13 @@ export async function registerUser({ username, email, password, companyName }: I
         created_at: new Date(),
         roles: [superadminRole],
         is_inactive: false,
-        user_type: 'msp'
+        user_type: 'internal'
       };
       await User.insert(db, newUser);
       
       // Track user registration (direct, no email verification)
       analytics.capture(AnalyticsEvents.USER_SIGNED_UP, {
-        user_type: 'msp',
+        user_type: 'internal',
         registration_method: 'direct',
         company_created: true,
         email_verification_required: VERIFY_EMAIL_ENABLED,

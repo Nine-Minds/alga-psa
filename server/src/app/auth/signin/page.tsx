@@ -229,7 +229,6 @@ export default function SignIn() {
                   callbackUrl={callbackUrl}
                   onError={handleError}
                   onTwoFactorRequired={() => setIsOpen2FA(true)}
-                  onRegister={() => setShowRegister(true)}
                 />
               )
             ) : (

@@ -15,6 +15,7 @@ interface DrawerHistoryEntry {
   title: string;
   content: ReactNode;
   onMount?: () => Promise<void>;
+  onClose?: () => void;
   metadata?: Record<string, any>;
 }
 
@@ -30,7 +31,7 @@ interface DrawerContentProps {
 
 interface DrawerContextType {
   // Original methods
-  openDrawer: (content: ReactNode, onMount?: () => Promise<void>) => void;
+  openDrawer: (content: ReactNode, onMount?: () => Promise<void>, onClose?: () => void) => void;
   replaceDrawer: (content: ReactNode, onMount?: () => Promise<void>) => void;
   closeDrawer: () => void;
   goBack: () => void;
@@ -68,7 +69,7 @@ interface DrawerContextType {
 
 // Define the drawer actions
 type DrawerAction =
-  | { type: 'OPEN_DRAWER'; payload: { content: ReactNode; onMount?: () => Promise<void> } }
+  | { type: 'OPEN_DRAWER'; payload: { content: ReactNode; onMount?: () => Promise<void>; onClose?: () => void } }
   | { type: 'REPLACE_DRAWER'; payload: { content: ReactNode; onMount?: () => Promise<void> } }
   | { type: 'OPEN_LIST_DRAWER'; payload: { activityType: ActivityType; title: string; content: ReactNode; onMount?: () => Promise<void>; metadata?: Record<string, any> } }
   | { type: 'OPEN_DETAIL_DRAWER'; payload: { activity: Activity; content: ReactNode; title?: string; onMount?: () => Promise<void> } }
@@ -95,13 +96,14 @@ const initialState: DrawerState = {
 function drawerReducer(state: DrawerState, action: DrawerAction): DrawerState {
   switch (action.type) {
     case 'OPEN_DRAWER': {
-      const { content, onMount } = action.payload;
+      const { content, onMount, onClose } = action.payload;
       const newEntry: DrawerHistoryEntry = {
         id: `drawer-${Date.now()}`,
         type: 'custom',
-        title: 'Drawer',
+        title: '',
         content,
         onMount,
+        onClose,
       };
       
       // If we're not at the end of the history, truncate it
@@ -121,7 +123,7 @@ function drawerReducer(state: DrawerState, action: DrawerAction): DrawerState {
       const newEntry: DrawerHistoryEntry = {
         id: `drawer-${Date.now()}`,
         type: 'custom',
-        title: 'Drawer',
+        title: '',
         content,
         onMount,
       };
@@ -248,8 +250,8 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const currentEntry = state.currentIndex >= 0 ? state.history[state.currentIndex] : null;
   
   // Original methods (for backward compatibility)
-  const openDrawer = useCallback((content: ReactNode, onMount?: () => Promise<void>) => {
-    dispatch({ type: 'OPEN_DRAWER', payload: { content, onMount } });
+  const openDrawer = useCallback((content: ReactNode, onMount?: () => Promise<void>, onClose?: () => void) => {
+    dispatch({ type: 'OPEN_DRAWER', payload: { content, onMount, onClose } });
   }, []);
 
   const replaceDrawer = useCallback((content: ReactNode, onMount?: () => Promise<void>) => {
@@ -257,8 +259,12 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   }, []);
 
   const closeDrawer = useCallback(() => {
+    // Call onClose callback for the current entry before closing
+    if (currentEntry?.onClose) {
+      currentEntry.onClose();
+    }
     dispatch({ type: 'CLOSE_DRAWER' });
-  }, []);
+  }, [currentEntry]);
 
   const goBack = useCallback(() => {
     dispatch({ type: 'GO_BACK' });
@@ -349,48 +355,64 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         drawerVariant="nested"
       >
         {currentEntry && (
-          <div className="flex flex-col h-full">
-            <div className="flex items-center justify-between mb-6 border-b pb-4">
-              <div className="flex items-center">
-                {canGoBack && (
+          <div className="flex flex-col h-full relative">
+            {/* Show full header if there's a title or navigation buttons */}
+            {(currentEntry.title || canGoBack || canGoForward) ? (
+              <div className="flex items-center justify-between mb-4 border-b pb-3">
+                <div className="flex items-center">
+                  {canGoBack && (
+                    <Button
+                      id="drawer-back-button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={goBack}
+                      className="mr-2"
+                      aria-label="Go back"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {currentEntry.title && <h2 className="text-xl font-semibold">{currentEntry.title}</h2>}
+                </div>
+                <div className="flex items-center">
+                  {canGoForward && (
+                    <Button
+                      id="drawer-forward-button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={goForward}
+                      className="mr-2"
+                      aria-label="Go forward"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button
-                    id="drawer-back-button"
+                    id="drawer-close-button"
                     variant="ghost"
                     size="sm"
-                    onClick={goBack}
-                    className="mr-2"
-                    aria-label="Go back"
+                    onClick={closeDrawer}
+                    aria-label="Close drawer"
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    <X className="h-4 w-4" />
                   </Button>
-                )}
-                <h2 className="text-xl font-semibold">{currentEntry.title}</h2>
+                </div>
               </div>
-              <div className="flex items-center">
-                {canGoForward && (
-                  <Button
-                    id="drawer-forward-button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={goForward}
-                    className="mr-2"
-                    aria-label="Go forward"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                )}
-                {/* Always show the close button for better UX */}
+            ) : (
+              /* Minimal header with just close button - takes less vertical space */
+              <div className="flex justify-end">
                 <Button
                   id="drawer-close-button"
                   variant="ghost"
                   size="sm"
                   onClick={closeDrawer}
                   aria-label="Close drawer"
+                  className="hover:bg-gray-100"
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-            </div>
+            )}
             <div className="flex-1 overflow-auto">
               <DrawerContent
                 content={currentEntry.content}

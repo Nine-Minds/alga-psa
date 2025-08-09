@@ -1,8 +1,16 @@
 'use client';
 
+import { Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { IProjectPhase, IProjectTask, ProjectStatus } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import TaskForm from './TaskForm';
+import TaskFormSkeleton from 'server/src/components/ui/skeletons/TaskFormSkeleton';
+
+// Dynamic import for TaskForm
+const TaskForm = dynamic(() => import('./TaskForm'), {
+  loading: () => <TaskFormSkeleton isEdit={false} />,
+  ssr: false
+});
 
 interface TaskQuickAddProps {
   phase: IProjectPhase;
@@ -51,20 +59,22 @@ export default function TaskQuickAdd({
   };
 
   return (
-    <TaskForm
-      task={task}
-      phase={phase}
-      onClose={() => {
-        onClose();
-        if (!task) onCancel();
-      }}
-      onSubmit={handleSubmit}
-      projectStatuses={projectStatuses}
-      defaultStatus={defaultStatus}
-      users={users}
-      mode={task ? 'edit' : 'create'}
-      onPhaseChange={handlePhaseChange}
-      projectTreeData={projectTreeData}
-    />
+    <Suspense fallback={<TaskFormSkeleton isEdit={!!task} />}>
+      <TaskForm
+        task={task}
+        phase={phase}
+        onClose={() => {
+          onClose();
+          if (!task) onCancel();
+        }}
+        onSubmit={handleSubmit}
+        projectStatuses={projectStatuses}
+        defaultStatus={defaultStatus}
+        users={users}
+        mode={task ? 'edit' : 'create'}
+        onPhaseChange={handlePhaseChange}
+        projectTreeData={projectTreeData}
+      />
+    </Suspense>
   );
 }

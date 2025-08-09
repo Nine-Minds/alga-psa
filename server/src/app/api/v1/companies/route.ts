@@ -4,26 +4,13 @@
  * POST /api/v1/companies - Create company
  */
 
-import { CompanyController } from 'server/src/lib/api/controllers/CompanyController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiCompanyController } from '@/lib/api/controllers/ApiCompanyController';
 
-const controller = new CompanyController();
+const controller = new ApiCompanyController();
 
-export async function GET(request: Request) {
-  try {
-    return await controller.list()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+export const GET = controller.list();
 
-export async function POST(request: Request) {
-  try {
-    return await controller.create()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+export const POST = controller.create();
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

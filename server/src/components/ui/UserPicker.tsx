@@ -21,6 +21,7 @@ interface UserPickerProps {
   labelStyle?: 'bold' | 'medium' | 'normal' | 'none'; 
   buttonWidth?: 'fit' | 'full'; 
   placeholder?: string;
+  userTypeFilter?: string | string[] | null; // null means no filtering, string/array for specific types
 }
 
 // Component for individual option buttons that registers with UI reflection
@@ -64,6 +65,7 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
   labelStyle = 'bold',
   buttonWidth = 'fit',
   placeholder = 'Not assigned',
+  userTypeFilter = 'internal',
   'data-automation-id': dataAutomationId,
   'data-automation-type': dataAutomationType = 'user-picker'
 }) => {
@@ -79,15 +81,35 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
   // Create stable automation ID for the picker
   const pickerId = dataAutomationId || 'account-manager-picker';
   
-  // Filter for internal users only
-  const internalUsers = users.filter(user => user.user_type === 'internal');
+  // Apply user type filter
+  const applyUserTypeFilter = (user: IUserWithRoles) => {
+    if (userTypeFilter === null) {
+      return true; // No filtering
+    }
+    if (Array.isArray(userTypeFilter)) {
+      return userTypeFilter.includes(user.user_type);
+    }
+    return user.user_type === userTypeFilter;
+  };
   
-  const currentUser = internalUsers.find(user => user.user_id === value);
+  // Find the current user first (even if inactive)
+  const currentUser = users.find(user => user.user_id === value && applyUserTypeFilter(user));
   
-  const filteredUsers = internalUsers.filter(user => {
-    const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim().toLowerCase();
-    return fullName.includes(searchQuery.toLowerCase());
-  });
+  // Filter users based on type and exclude inactive users for the dropdown
+  const filteredByType = users.filter(user => 
+    applyUserTypeFilter(user) && !user.is_inactive
+  );
+  
+  const filteredUsers = filteredByType
+    .filter(user => {
+      const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim().toLowerCase();
+      return fullName.includes(searchQuery.toLowerCase());
+    })
+    .sort((a, b) => {
+      const nameA = `${a.first_name || ''} ${a.last_name || ''}`.trim().toLowerCase();
+      const nameB = `${b.first_name || ''} ${b.last_name || ''}`.trim().toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
 
   // Calculate selected user name for display
   const selectedUserName = currentUser 
@@ -362,9 +384,7 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
                     id={`${pickerId}-option-${user.user_id}`}
                     label={userName}
                     onClick={(e) => handleSelectUser(user.user_id, e)}
-                    className={`relative flex items-center px-3 py-2 text-sm rounded cursor-pointer hover:bg-gray-100 focus:bg-gray-100 ${
-                      user.is_inactive ? 'text-gray-400 bg-gray-50' : 'text-gray-900'
-                    }`}
+                    className="relative flex items-center px-3 py-2 text-sm rounded cursor-pointer hover:bg-gray-100 focus:bg-gray-100 text-gray-900"
                     parentId={pickerId}
                   >
                     <div className="flex items-center gap-2">
@@ -375,9 +395,6 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
                         size={size === 'sm' ? 'sm' : 'md'}
                       />
                       <span>{userName}</span>
-                      {user.is_inactive && (
-                        <span className="ml-1 text-xs text-gray-400">(Inactive)</span>
-                      )}
                     </div>
                   </OptionButton>
                 );

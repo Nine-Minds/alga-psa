@@ -70,14 +70,24 @@ export async function updateTenantOnboardingStatus(
       updateData.onboarding_data = JSON.stringify(wizardData);
     }
 
-    // Upsert the tenant settings
-    await knex('tenant_settings')
-      .insert({
-        tenant,
-        ...updateData,
-      })
-      .onConflict('tenant')
-      .merge(updateData);
+    // Check if tenant settings already exist
+    const existingSettings = await knex('tenant_settings')
+      .where({ tenant })
+      .first();
+
+    if (existingSettings) {
+      // Update existing settings
+      await knex('tenant_settings')
+        .where({ tenant })
+        .update(updateData);
+    } else {
+      // Insert new settings
+      await knex('tenant_settings')
+        .insert({
+          tenant,
+          ...updateData,
+        });
+    }
 
   } catch (error) {
     console.error('Error updating tenant onboarding status:', error);
@@ -111,17 +121,28 @@ export async function saveTenantOnboardingProgress(
 
     const { knex } = await createTenantKnex();
     
-    await knex('tenant_settings')
-      .insert({
-        tenant,
-        onboarding_data: JSON.stringify(mergedData),
-        updated_at: knex.fn.now(),
-      })
-      .onConflict('tenant')
-      .merge({
-        onboarding_data: JSON.stringify(mergedData),
-        updated_at: knex.fn.now(),
-      });
+    // Check if tenant settings already exist
+    const existingRecord = await knex('tenant_settings')
+      .where({ tenant })
+      .first();
+
+    if (existingRecord) {
+      // Update existing settings
+      await knex('tenant_settings')
+        .where({ tenant })
+        .update({
+          onboarding_data: JSON.stringify(mergedData),
+          updated_at: knex.fn.now(),
+        });
+    } else {
+      // Insert new settings
+      await knex('tenant_settings')
+        .insert({
+          tenant,
+          onboarding_data: JSON.stringify(mergedData),
+          updated_at: knex.fn.now(),
+        });
+    }
 
   } catch (error) {
     console.error('Error saving tenant onboarding progress:', error);

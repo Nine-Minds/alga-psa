@@ -9,6 +9,7 @@ import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Button } from '../ui/Button';
+import { ExternalLink } from 'lucide-react';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Input } from 'server/src/components/ui/Input';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
@@ -37,6 +38,7 @@ import ContactAvatarUpload from 'server/src/components/client-portal/contacts/Co
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
 import { getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
 import CompanyDetails from 'server/src/components/companies/CompanyDetails';
+import { ContactPortalTab } from './ContactPortalTab';
 
 const SwitchDetailItem: React.FC<{
   value: boolean;
@@ -122,8 +124,16 @@ interface ContactDetailsProps {
   companies: ICompany[];
   documents?: IDocument[];
   isInDrawer?: boolean;
+  quickView?: boolean;
   userId?: string;
   onDocumentCreated?: () => Promise<void>;
+  onContactUpdated?: () => Promise<void>;
+  onChangesSaved?: () => void;
+  userPermissions?: {
+    canInvite: boolean;
+    canUpdateRoles: boolean;
+    canRead: boolean;
+  };
 }
 
 const ContactDetails: React.FC<ContactDetailsProps> = ({
@@ -132,8 +142,16 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   companies,
   documents = [],
   isInDrawer = false,
+  quickView = false,
   userId,
-  onDocumentCreated
+  onDocumentCreated,
+  onContactUpdated,
+  onChangesSaved,
+  userPermissions = {
+    canInvite: false,
+    canUpdateRoles: false,
+    canRead: false
+  }
 }) => {
   const [editedContact, setEditedContact] = useState<IContact>(contact);
   const [originalContact, setOriginalContact] = useState<IContact>(contact);
@@ -256,11 +274,21 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       
       const updatedContact = await updateContact(dataToUpdate);
       setEditedContact(updatedContact);
+      setOriginalContact(updatedContact);
       setHasUnsavedChanges(false);
+      
       toast({
         title: "Contact Updated",
         description: "Contact details have been saved successfully.",
       });
+      
+      // In quick view mode, mark that changes were saved (for refresh on drawer close)
+      // In regular mode, refresh immediately to maintain existing behavior
+      if (quickView && onChangesSaved) {
+        onChangesSaved();
+      } else if (!quickView && onContactUpdated) {
+        await onContactUpdated();
+      }
     } catch (error) {
       console.error('Error saving contact:', error);
       toast({
@@ -280,12 +308,16 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       try {
         const company = await getCompanyById(editedContact.company_id);
         if (company) {
-          // Use router to temporarily set tab to details for the drawer
-          const params = new URLSearchParams(searchParams?.toString() || '');
-          params.set('tab', 'details');
-          router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+          // In quick view mode, avoid URL manipulation to prevent navigation issues
+          if (!quickView) {
+            // Use router to temporarily set tab to details for the drawer
+            const params = new URLSearchParams(searchParams?.toString() || '');
+            params.set('tab', 'details');
+            router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+          }
           
-          // Small delay to ensure the URL is updated before opening drawer
+          // Small delay to ensure the URL is updated before opening drawer (only in non-quick view)
+          const delay = quickView ? 0 : 10;
           setTimeout(() => {
             drawer.openDrawer(
               <CompanyDetails 
@@ -295,7 +327,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
                 isInDrawer={true}
               />
             );
-          }, 10);
+          }, delay);
         } else {
           console.error('Company not found');
         }
@@ -317,6 +349,11 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   };
 
   const handleTabChange = async (tabValue: string) => {
+    // In quick view mode, we don't need to handle tab changes since only Details tab is shown
+    if (quickView) {
+      return;
+    }
+    
     const params = new URLSearchParams(searchParams?.toString() || '');
     params.set('tab', tabValue);
     router.push(`${pathname}?${params.toString()}`);
@@ -400,6 +437,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               entityType="contact"
               initialTags={tags}
               onTagsChange={handleTagsChange}
+              useInlineInput={isInDrawer}
             />
           </div>
 
@@ -485,6 +523,15 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
           />
         </div>
       )
+    },
+    {
+      label: "Portal",
+      content: (
+        <ContactPortalTab
+          contact={editedContact}
+          currentUserPermissions={userPermissions}
+        />
+      )
     }
   ];
 
@@ -501,9 +548,11 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   return (
     <ReflectionContainer id={id} label="Contact Details">
       <div className="flex items-center space-x-5 mb-4 pt-2">
-        <BackNav href={!isInDrawer ? "/msp/contacts" : undefined}>
-          {isInDrawer ? 'Back' : 'Back to Contacts'}
-        </BackNav>
+        {!quickView && (
+          <BackNav href={!isInDrawer ? "/msp/contacts" : undefined}>
+            {isInDrawer ? 'Back' : 'Back to Contacts'}
+          </BackNav>
+        )}
         
         {/* Contact Avatar Upload */}
         <div className="mr-4">
@@ -520,12 +569,25 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
         </div>
         
         <Heading size="6">{editedContact.full_name}</Heading>
+        
+        {isInDrawer && (
+          <Button
+            id={`${id}-go-to-contact-button`}
+            onClick={() => window.open(`/msp/contacts/${editedContact.contact_name_id}`, '_blank')}
+            variant="soft"
+            size="sm"
+            className="flex items-center ml-4 mr-8"
+          >
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Go to contact
+          </Button>
+        )}
       </div>
 
       {/* Content Area */}
       <div>
         <CustomTabs
-          tabs={tabContent}
+          tabs={quickView ? [tabContent[0]] : tabContent}
           defaultTab={findTabLabel(searchParams?.get('tab'))}
           onTabChange={handleTabChange}
         />

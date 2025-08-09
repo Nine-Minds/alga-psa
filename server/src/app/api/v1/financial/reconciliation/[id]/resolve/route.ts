@@ -3,18 +3,13 @@
  * POST /api/v1/financial/reconciliation/[id]/resolve - Resolve discrepancy
  */
 
-import { FinancialController } from 'server/src/lib/api/controllers/FinancialController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiFinancialController } from 'server/src/lib/api/controllers/ApiFinancialController';
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const financialController = new FinancialController();
-    const req = request as any;
-    req.params = params;
-    return await financialController.resolveReconciliationReport()(req);
-  } catch (error) {
-    return handleApiError(error);
-  }
+  const financialController = new ApiFinancialController();
+  const req = request as any;
+  req.params = params;
+  return await financialController.resolveReconciliationReport()(req);
 }
 
 export const runtime = 'nodejs';

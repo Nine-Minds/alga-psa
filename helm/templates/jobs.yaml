@@ -31,6 +31,36 @@ spec:
             - name: APP_ENV
               value: "{{ .Values.env }}"
 
+            # Secret provider configuration for setup jobs
+            - name: SECRET_READ_CHAIN
+              value: "{{ .Values.secrets_provider.readChain | default "env,filesystem" }}"
+            - name: SECRET_WRITE_PROVIDER
+              value: "{{ .Values.secrets_provider.writeProvider | default "filesystem" }}"
+            {{- if .Values.secrets_provider.envPrefix }}
+            - name: SECRET_ENV_PREFIX
+              value: "{{ .Values.secrets_provider.envPrefix }}"
+            {{- end }}
+            
+            # Vault configuration for setup jobs (only if vault is used)
+            {{- if or (contains "vault" .Values.secrets_provider.readChain) (eq .Values.secrets_provider.writeProvider "vault") }}
+            {{- if .Values.secrets_provider.vault.addr }}
+            - name: VAULT_ADDR
+              value: "{{ .Values.secrets_provider.vault.addr }}"
+            {{- end }}
+            {{- if .Values.secrets_provider.vault.token }}
+            - name: VAULT_TOKEN
+              value: "{{ .Values.secrets_provider.vault.token }}"
+            {{- end }}
+            {{- if .Values.secrets_provider.vault.appSecretPath }}
+            - name: VAULT_APP_SECRET_PATH
+              value: "{{ .Values.secrets_provider.vault.appSecretPath }}"
+            {{- end }}
+            {{- if .Values.secrets_provider.vault.tenantSecretPathTemplate }}
+            - name: VAULT_TENANT_SECRET_PATH_TEMPLATE
+              value: "{{ .Values.secrets_provider.vault.tenantSecretPathTemplate }}"
+            {{- end }}
+            {{- end }}
+
             {{- if .Values.db.enabled }}
             - name: DB_TYPE
               value: postgres

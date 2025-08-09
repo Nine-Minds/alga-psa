@@ -13,6 +13,7 @@ import {
   updateCompany, 
   importCompaniesFromCSV, 
   exportCompaniesToCSV,
+  getAllCompanyIds,
   type PaginatedCompaniesResponse 
 } from 'server/src/lib/actions/company-actions/companyActions';
 import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
@@ -22,18 +23,21 @@ import { useSearchParams } from 'next/navigation';
 import CompaniesGrid from './CompaniesGrid';
 import CompaniesList from './CompaniesList';
 import ViewSwitcher, { ViewSwitcherOption } from '../ui/ViewSwitcher';
-import { TrashIcon, MoreVertical, CloudDownload, Upload, LayoutGrid, List, Search } from 'lucide-react';
+import { TrashIcon, MoreVertical, CloudDownload, Upload, LayoutGrid, List, Search, XCircle } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import CustomSelect from '../ui/CustomSelect';
-import { getCurrentUser, getUserPreference, setUserPreference } from 'server/src/lib/actions/user-actions/userActions';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { useUserPreference } from 'server/src/hooks/useUserPreference';
 import CompaniesImportDialog from './CompaniesImportDialog';
-import { ConfirmationDialog } from '../ui/ConfirmationDialog';
-import { Dialog, DialogContent, DialogFooter } from '../ui/Dialog';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';
+import Drawer from 'server/src/components/ui/Drawer';
+import CompanyDetails from 'server/src/components/companies/CompanyDetails';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
-import { useToast } from 'server/src/hooks/use-toast';
+import toast from 'react-hot-toast';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 const COMPANY_VIEW_MODE_SETTING = 'company_list_view_mode';
 
@@ -69,15 +73,19 @@ interface CompanyResultsProps {
   onCheckboxChange: (companyId: string) => void;
   onEditCompany: (companyId: string) => void;
   onDeleteCompany: (company: ICompany) => void;
+  onQuickView?: (company: ICompany) => void;
   onTagsChange: (companyId: string, tags: ITag[]) => void;
   currentPage: number;
   pageSize: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
-  onCompanyTagsLoaded?: (companyTags: Record<string, ITag[]>, allUniqueTags: string[]) => void;
+  onCompanyTagsLoaded?: (companyTags: Record<string, ITag[]>, allUniqueTags: ITag[]) => void;
   // Add props to receive parent's tag state
   companyTags?: Record<string, ITag[]>;
-  allUniqueTagsFromParent?: string[];
+  allUniqueTagsFromParent?: ITag[];
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
+  onSortChange?: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
 }
 
 const CompanyResults = memo(({
@@ -90,6 +98,7 @@ const CompanyResults = memo(({
   onCheckboxChange,
   onEditCompany,
   onDeleteCompany,
+  onQuickView,
   onTagsChange,
   currentPage,
   pageSize,
@@ -97,13 +106,16 @@ const CompanyResults = memo(({
   onPageSizeChange,
   onCompanyTagsLoaded,
   companyTags: parentCompanyTags,
-  allUniqueTagsFromParent
+  allUniqueTagsFromParent,
+  sortBy,
+  sortDirection,
+  onSortChange
 }: CompanyResultsProps) => {
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [localCompanyTags, setLocalCompanyTags] = useState<Record<string, ITag[]>>({});
-  const [allUniqueTags, setAllUniqueTags] = useState<string[]>([]);
+  const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
   
   // Use parent's tag state if available, otherwise use local state
   const effectiveCompanyTags = parentCompanyTags || localCompanyTags;
@@ -120,7 +132,10 @@ const CompanyResults = memo(({
           statusFilter: filterStatus,
           searchTerm: searchTerm || undefined,
           clientTypeFilter,
-          loadLogos: true
+          selectedTags,
+          loadLogos: true,
+          sortBy,
+          sortDirection
         });
 
         setCompanies(response.companies);
@@ -133,7 +148,7 @@ const CompanyResults = memo(({
     };
 
     loadCompanies();
-  }, [currentPage, pageSize, filterStatus, searchTerm, clientTypeFilter]);
+  }, [currentPage, pageSize, filterStatus, searchTerm, clientTypeFilter, selectedTags, sortBy, sortDirection]);
 
   // Fetch tags when companies change
   useEffect(() => {
@@ -159,12 +174,11 @@ const CompanyResults = memo(({
         });
 
         setLocalCompanyTags(newCompanyTags);
-        const uniqueTags = allTags.map(tag => tag.tag_text);
-        setAllUniqueTags(uniqueTags);
+        setAllUniqueTags(allTags);
         
         // Notify parent component about loaded tags
         if (onCompanyTagsLoaded) {
-          onCompanyTagsLoaded(newCompanyTags, uniqueTags);
+          onCompanyTagsLoaded(newCompanyTags, allTags);
         }
       } catch (error) {
         console.error('Error fetching tags:', error);
@@ -173,32 +187,17 @@ const CompanyResults = memo(({
     fetchTags();
   }, [companies]);
 
-  // Filter companies by selected tags (client-side)
-  const filteredCompanies = companies.filter(company => {
-    if (selectedTags.length === 0) return true;
-    
-    const entityCompanyTags = effectiveCompanyTags[company.company_id] || [];
-    const companyTagTexts = entityCompanyTags.map(tag => tag.tag_text);
-    
-    return selectedTags.some(selectedTag => companyTagTexts.includes(selectedTag));
-  });
+  // No need for client-side filtering anymore since it's done server-side
+  const filteredCompanies = companies;
 
   if (isLoading) {
     return (
-      <div className="flex-1">
-        {viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3, 4, 5, 6].map((n):JSX.Element => (
-              <div key={n} className="h-48 bg-gray-200 rounded animate-pulse" />
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {[1, 2, 3, 4, 5].map((n):JSX.Element => (
-              <div key={n} className="h-16 bg-gray-200 rounded animate-pulse" />
-            ))}
-          </div>
-        )}
+      <div className="flex-1 flex items-center justify-center min-h-[400px]">
+        <LoadingIndicator 
+          text="Loading companies..." 
+          spinnerProps={{ size: 'lg' }}
+          layout="stacked"
+        />
       </div>
     );
   }
@@ -212,6 +211,7 @@ const CompanyResults = memo(({
           handleCheckboxChange={onCheckboxChange}
           handleEditCompany={onEditCompany}
           handleDeleteCompany={onDeleteCompany}
+          onQuickView={onQuickView}
           currentPage={currentPage}
           pageSize={pageSize}
           totalCount={totalCount}
@@ -229,6 +229,7 @@ const CompanyResults = memo(({
           handleCheckboxChange={onCheckboxChange}
           handleEditCompany={onEditCompany}
           handleDeleteCompany={onDeleteCompany}
+          onQuickView={onQuickView}
           currentPage={currentPage}
           pageSize={pageSize}
           totalCount={totalCount}
@@ -236,6 +237,9 @@ const CompanyResults = memo(({
           companyTags={effectiveCompanyTags}
           allUniqueTags={effectiveAllUniqueTags}
           onTagsChange={onTagsChange}
+          sortBy={sortBy}
+          sortDirection={sortDirection}
+          onSortChange={onSortChange}
         />
       )}
     </div>
@@ -245,8 +249,6 @@ const CompanyResults = memo(({
 CompanyResults.displayName = 'CompanyResults';
 
 const Companies: React.FC = () => {
-  const { toast } = useToast();
-  
   useTagPermissions(['company']);
   
 
@@ -281,6 +283,7 @@ const Companies: React.FC = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     if (searchParams) {
@@ -294,8 +297,24 @@ const Companies: React.FC = () => {
   const [companyToDelete, setCompanyToDelete] = useState<ICompany | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchInput, setSearchInput] = useState(''); // Local state for input field
-  const [viewMode, setViewMode] = useState<'grid' | 'list' | null>(null);
+  
+  // Use the custom hook for view mode preference
+  type CompanyViewMode = 'grid' | 'list';
+  const { 
+    value: viewMode, 
+    setValue: setViewModePreference,
+    isLoading: isViewModeLoading 
+  } = useUserPreference<CompanyViewMode>(
+    COMPANY_VIEW_MODE_SETTING,
+    {
+      defaultValue: 'grid',
+      localStorageKey: COMPANY_VIEW_MODE_SETTING,
+      debounceMs: 300
+    }
+  );
+  
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
+  const [isSelectAllMode, setIsSelectAllMode] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isMultiDeleteDialogOpen, setIsMultiDeleteDialogOpen] = useState(false);
@@ -304,14 +323,27 @@ const Companies: React.FC = () => {
   const [multiDeleteError, setMultiDeleteError] = useState<string | null>(null);
   const [showDeactivateOption, setShowDeactivateOption] = useState(false);
   
+  // Quick View state
+  const [quickViewCompany, setQuickViewCompany] = useState<ICompany | null>(null);
+  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
+  
+  // Edit state - removed since edit now navigates directly
+  
   // Tag-related state
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [allUniqueTags, setAllUniqueTags] = useState<string[]>([]);
+  const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
   const [companyTags, setCompanyTags] = useState<Record<string, ITag[]>>({});
+  
+  // Track if filters are applied
+  const [isFiltered, setIsFiltered] = useState(false);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10); // Default to 10 for list view
+  const [pageSize, setPageSize] = useState(viewMode === 'grid' ? 9 : 10);
+  
+  // Sorting state
+  const [sortBy, setSortBy] = useState<string>('company_name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   
   // For multi-delete functionality, we need to track companies
   const [companiesForDelete, setCompaniesForDelete] = useState<ICompany[]>([]);
@@ -327,66 +359,40 @@ const Companies: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
+  // Update isFiltered when any filter changes
+  useEffect(() => {
+    const hasFilters = 
+      searchTerm !== '' || 
+      filterStatus !== 'active' || 
+      clientTypeFilter !== 'all' || 
+      selectedTags.length > 0;
+    setIsFiltered(hasFilters);
+  }, [searchTerm, filterStatus, clientTypeFilter, selectedTags]);
+
   // Tags will be loaded by CompanyResults component
 
+  // Update page size when view mode changes
   useEffect(() => {
-    const initializeComponent = async () => {
-      try {
-        // Load user preferences
-        const currentUser = await getCurrentUser();
-
-        if (currentUser) {
-          const savedViewMode = await getUserPreference(currentUser.user_id, COMPANY_VIEW_MODE_SETTING);
-          const mode = savedViewMode === 'grid' || savedViewMode === 'list' ? savedViewMode : 'grid';
-          setViewMode(mode);
-          // Set appropriate page size based on view mode
-          setPageSize(mode === 'grid' ? 9 : 10);
-        } else {
-          setViewMode('grid'); // Default if no user or preference
-          setPageSize(9); // Default page size for grid view
-        }
-      } catch (error) {
-        console.error('Error initializing component:', error);
-        setViewMode('grid'); // Default on error
-      }
-    };
-
-    initializeComponent();
-  }, []);
-
-  // Define view mode type
-  type CompanyViewMode = 'grid' | 'list';
+    if (!isViewModeLoading) {
+      setPageSize(viewMode === 'grid' ? 9 : 10);
+    }
+  }, [viewMode, isViewModeLoading]);
 
   const viewOptions: ViewSwitcherOption<CompanyViewMode>[] = [
     { value: 'grid', label: 'Cards', icon: LayoutGrid },
     { value: 'list', label: 'Table', icon: List },
   ];
 
-  const handleViewModeChange = async (newMode: CompanyViewMode) => {
-    setViewMode(newMode);
-    
-    // Adjust page size based on view mode
-    if (newMode === 'grid') {
-      setPageSize(9); // Grid view uses 9 cards by default
-    } else {
-      setPageSize(10); // List view uses 10 rows by default
-    }
+  const handleViewModeChange = (newMode: CompanyViewMode) => {
+    setViewModePreference(newMode);
     setCurrentPage(1); // Reset to first page when changing view
-    
-    try {
-      const currentUser = await getCurrentUser();
-      if (currentUser) {
-        await setUserPreference(currentUser.user_id, COMPANY_VIEW_MODE_SETTING, newMode);
-      }
-    } catch (error) {
-      console.error('Error saving view mode preference:', error);
-    }
   };
 
 
   const handleCompanyAdded = (newCompany: ICompany) => {
     // Refresh the list after a company is added
-    refreshCompanies();
+    setRefreshKey(prev => prev + 1);
+    toast.success(`${newCompany.company_name} has been created successfully.`);
   };
 
   const handleCheckboxChange = (companyId: string) => {
@@ -397,6 +403,31 @@ const Companies: React.FC = () => {
         return [...prevSelected, companyId];
       }
     });
+    // If user manually selects/deselects, exit select all mode
+    setIsSelectAllMode(false);
+  };
+
+  const handleSelectAll = async () => {
+    if (selectedCompanies.length > 0 || isSelectAllMode) {
+      // Clear all selections
+      setSelectedCompanies([]);
+      setIsSelectAllMode(false);
+    } else {
+      // Select all companies with current filters
+      try {
+        const allIds = await getAllCompanyIds({
+          statusFilter: filterStatus,
+          searchTerm: searchTerm || undefined,
+          clientTypeFilter,
+          selectedTags
+        });
+        setSelectedCompanies(allIds);
+        setIsSelectAllMode(true);
+      } catch (error) {
+        console.error('Error selecting all companies:', error);
+        toast.error("Failed to select all companies");
+      }
+    }
   };
 
   const handleTagsChange = useCallback((companyId: string, tags: ITag[]) => {
@@ -408,22 +439,30 @@ const Companies: React.FC = () => {
     
     // Update unique tags list if needed
     setAllUniqueTags(current => {
-      const allTagTexts = new Set(current);
-      tags.forEach(tag => allTagTexts.add(tag.tag_text));
-      return Array.from(allTagTexts);
+      const currentTagTexts = new Set(current.map(t => t.tag_text));
+      const newTags = tags.filter(tag => !currentTagTexts.has(tag.tag_text));
+      return [...current, ...newTags];
     });
   }, []);
   
-  const handleCompanyTagsLoaded = useCallback((loadedCompanyTags: Record<string, ITag[]>, uniqueTags: string[]) => {
+  const handleCompanyTagsLoaded = useCallback((loadedCompanyTags: Record<string, ITag[]>, uniqueTags: ITag[]) => {
     // Update the main component's tag state when CompanyResults loads tags
     setCompanyTags(loadedCompanyTags);
     setAllUniqueTags(uniqueTags);
   }, []);
   
 
-  const handleEditCompany = (companyId: string) => {
+  const handleEditCompany = async (companyId: string) => {
+    // Navigate directly to the company page for editing
     router.push(`/msp/companies/${companyId}`);
   };
+
+  const handleQuickView = (company: ICompany) => {
+    setQuickViewCompany(company);
+    setIsQuickViewOpen(true);
+  };
+
+
 
   const handleDeleteCompany = async (company: ICompany) => {
     setCompanyToDelete(company);
@@ -447,7 +486,10 @@ const Companies: React.FC = () => {
         throw new Error(result.message || 'Failed to delete company');
       }
 
-      await refreshCompanies();
+      // Show success toast
+      toast.success(`${companyToDelete.company_name} has been deleted successfully.`);
+      
+      setRefreshKey(prev => prev + 1);
       resetDeleteState();
     } catch (error) {
       console.error('Error deleting company:', error);
@@ -462,11 +504,7 @@ const Companies: React.FC = () => {
       await updateCompany(companyToDelete.company_id, { is_inactive: true });
       await refreshCompanies();
       resetDeleteState();
-      toast({
-        title: "Company Status Updated",
-        description: `${companyToDelete.company_name} has been marked as inactive successfully.`,
-        variant: "default"
-      });
+      toast.success(`${companyToDelete.company_name} has been marked as inactive successfully.`);
     } catch (error) {
       console.error('Error marking company as inactive:', error);
       setDeleteError('An error occurred while marking the company as inactive. Please try again.');
@@ -480,12 +518,30 @@ const Companies: React.FC = () => {
 
   const refreshCompanies = async () => {
     // Force refresh by changing a key to trigger CompanyResults re-render
-    router.refresh();
+    setRefreshKey(prev => prev + 1);
   };
 
   // Memoized search input change handler to prevent re-creation on every render
   const handleSearchInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchInput(e.target.value);
+  }, []);
+
+  // Handle reset filters
+  const handleResetFilters = useCallback(() => {
+    setSearchInput('');
+    setSearchTerm('');
+    setFilterStatus('active');
+    setClientTypeFilter('all');
+    setSelectedTags([]);
+    setCurrentPage(1);
+    setIsFiltered(false);
+  }, []);
+  
+  // Handle sort change
+  const handleSortChange = useCallback((newSortBy: string, newSortDirection: 'asc' | 'desc') => {
+    setSortBy(newSortBy);
+    setSortDirection(newSortDirection);
+    setCurrentPage(1); // Reset to first page when sorting changes
   }, []);
   
   const confirmMultiDelete = async () => {
@@ -532,6 +588,10 @@ const Companies: React.FC = () => {
       if (errors.length === 0) {
         setIsMultiDeleteDialogOpen(false);
         setMultiDeleteError(null);
+        toast.success(`${successfulDeletes.length} companies have been deleted successfully.`);
+      } else if (successfulDeletes.length > 0) {
+        // Show partial success toast
+        toast.success(`${successfulDeletes.length} companies deleted. ${errors.length} could not be deleted.`);
       }
       
     } catch (error) {
@@ -606,9 +666,20 @@ const Companies: React.FC = () => {
 
   const handleExportToCSV = async () => {
     try {
-      // Export all companies with current filters
-      const allCompanies = await getAllCompanies(true);
-      const csvData = await exportCompaniesToCSV(allCompanies);
+      let companiesToExport: ICompany[];
+      
+      // If companies are selected, export only those
+      if (selectedCompanies.length > 0) {
+        const allCompanies = await getAllCompanies(true);
+        companiesToExport = allCompanies.filter(company => 
+          selectedCompanies.includes(company.company_id)
+        );
+      } else {
+        // Otherwise export all companies with current filters
+        companiesToExport = await getAllCompanies(true);
+      }
+      
+      const csvData = await exportCompaniesToCSV(companiesToExport);
       
       const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
       
@@ -622,8 +693,11 @@ const Companies: React.FC = () => {
         link.click();
         document.body.removeChild(link);
       }
+      
+      toast.success(`Exported ${companiesToExport.length} ${companiesToExport.length === 1 ? 'company' : 'companies'} to CSV`);
     } catch (error) {
       console.error('Error exporting companies to CSV:', error);
+      toast.error('Failed to export companies to CSV');
     }
   };
 
@@ -716,6 +790,20 @@ const Companies: React.FC = () => {
                 setCurrentPage(1); // Reset to first page when changing filter
               }}
             />
+
+            {/* Reset Filters Button */}
+            {isFiltered && (
+              <Button
+                id="reset-filters-button"
+                variant="outline"
+                size="sm"
+                className="whitespace-nowrap flex items-center gap-2"
+                onClick={handleResetFilters}
+              >
+                <XCircle className="h-4 w-4" />
+                Reset Filters
+              </Button>
+            )}
           </div>
 
           {/* Right side - Actions and View Switcher */}
@@ -770,15 +858,11 @@ const Companies: React.FC = () => {
           type="checkbox"
           className="form-checkbox h-4 w-4 rounded"
           checked={selectedCompanies.length > 0}
-          onChange={() => {
-            // For now, we'll just clear selections when unchecked
-            // Select all functionality would require access to current page companies
-            setSelectedCompanies(selectedCompanies.length > 0 ? [] : []);
-          }}
+          onChange={() => void handleSelectAll()}
         />
         {selectedCompanies.length > 0 &&
           <span className="text-sm font-medium text-gray-500">
-            {selectedCompanies.length} Selected
+            {isSelectAllMode ? `All ${selectedCompanies.length} companies selected` : `${selectedCompanies.length} Selected`}
           </span>}
 
         <button
@@ -793,6 +877,7 @@ const Companies: React.FC = () => {
 
       {/* Companies */}
       <CompanyResults
+        key={refreshKey}
         searchTerm={searchTerm}
         filterStatus={filterStatus}
         clientTypeFilter={clientTypeFilter}
@@ -802,6 +887,7 @@ const Companies: React.FC = () => {
         onCheckboxChange={handleCheckboxChange}
         onEditCompany={handleEditCompany}
         onDeleteCompany={handleDeleteCompany}
+        onQuickView={handleQuickView}
         onTagsChange={handleTagsChange}
         currentPage={currentPage}
         pageSize={pageSize}
@@ -813,6 +899,9 @@ const Companies: React.FC = () => {
         onCompanyTagsLoaded={handleCompanyTagsLoaded}
         companyTags={companyTags}
         allUniqueTagsFromParent={allUniqueTags}
+        sortBy={sortBy}
+        sortDirection={sortDirection}
+        onSortChange={handleSortChange}
       />
 
       {/* Multi-delete confirmation dialog */}
@@ -900,6 +989,28 @@ const Companies: React.FC = () => {
         onClose={() => setIsImportDialogOpen(false)}
         onImportComplete={(companies, updateExisting) => void handleImportComplete(companies, updateExisting)}
       />
+      
+      {/* Quick View Drawer */}
+      <Drawer
+        id="company-quick-view-drawer"
+        isOpen={isQuickViewOpen}
+        onClose={() => {
+          setIsQuickViewOpen(false);
+          setQuickViewCompany(null);
+          // Refresh companies to show any updates
+          refreshCompanies();
+        }}
+      >
+        {quickViewCompany && (
+          <CompanyDetails
+            company={quickViewCompany}
+            isInDrawer={true}
+            quickView={true}
+          />
+        )}
+      </Drawer>
+
+
     </div>
   );
 };

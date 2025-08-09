@@ -14,6 +14,7 @@ import {
   ColumnDef,
   Row,
   SortingFn,
+  SortingState,
 } from '@tanstack/react-table';
 import { ColumnDefinition, DataTableProps } from 'server/src/interfaces/dataTable.interfaces';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
@@ -120,7 +121,7 @@ const ReflectedTableCell: React.FC<ReflectedTableCellProps> = ({
       style={style}
       data-automation-id={id}
     >
-      <div className="truncate w-full">
+      <div className="break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap">
         {children}
       </div>
     </td>
@@ -143,7 +144,11 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     onPageChange,
     pageSize = 10,
     totalItems,
-    editableConfig
+    editableConfig,
+    manualSorting = false,
+    sortBy,
+    sortDirection,
+    onSortChange
   } = props;
   
   // Reference to the table container for measuring available width
@@ -159,7 +164,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     if (!tableContainerRef.current) return;
     
     const containerWidth = tableContainerRef.current.clientWidth;
-    const minColumnWidth = 150; // Minimum width for a column in pixels
+    const minColumnWidth = 120; // Reduced minimum width to show more columns with multiline content
     
     // Check if the last column is 'Actions' or 'Action' with interactive elements
     const lastColumnIndex = columns.length - 1;
@@ -207,7 +212,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
       if (!tableContainerRef.current) return;
       
       const containerWidth = tableContainerRef.current.clientWidth;
-      const minColumnWidth = 150; // Minimum width for a column in pixels
+      const minColumnWidth = 120; // Reduced minimum width to show more columns with multiline content
       
       // Check if the last column is 'Actions' or 'Action' with interactive elements
       const lastColumnIndex = columns.length - 1;
@@ -329,22 +334,56 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   const total = totalItems ?? data.length;
   const totalPages = Math.ceil(total / pageSize);
 
+  // Manage sorting state
+  const [sorting, setSorting] = React.useState<SortingState>(() => {
+    if (manualSorting && sortBy) {
+      return [{
+        id: sortBy,
+        desc: sortDirection === 'desc'
+      }];
+    }
+    return [];
+  });
+
+  // Update sorting state when props change (for manual sorting)
+  React.useEffect(() => {
+    if (manualSorting && sortBy) {
+      setSorting([{
+        id: sortBy,
+        desc: sortDirection === 'desc'
+      }]);
+    }
+  }, [manualSorting, sortBy, sortDirection]);
+
   const table = useReactTable({
     data,
     columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
+    getSortedRowModel: manualSorting ? undefined : getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     pageCount: totalPages,
     enableSortingRemoval: false,
+    manualSorting,
     state: {
       pagination: {
         pageIndex,
         pageSize: currentPageSize,
       },
+      sorting,
     },
     onPaginationChange: setPagination,
+    onSortingChange: (updater) => {
+      if (manualSorting && onSortChange) {
+        const newSorting = typeof updater === 'function' ? updater(sorting) : updater;
+        if (newSorting.length > 0) {
+          const { id, desc } = newSorting[0];
+          onSortChange(id, desc ? 'desc' : 'asc');
+        }
+      } else {
+        setSorting(updater);
+      }
+    },
     manualPagination: totalItems !== undefined,
     meta: {
       editableConfig: props.editableConfig,
@@ -482,7 +521,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                           key={`cell_${rowId}_${columnId}_${cellIndex}`}
                           id={cellId}
                           content={cellContent}
-                          className="px-6 py-4 text-[14px] text-[rgb(var(--color-text-700))] max-w-0"
+                          className="px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top"
                           style={{ width: columns.find(col => col.dataIndex === cell.column.id)?.width }}
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}

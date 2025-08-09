@@ -3,10 +3,10 @@
  * POST /api/v1/feature-access - Check feature access
  */
 
-import { PermissionRoleController } from 'server/src/lib/api/controllers/PermissionRoleController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiPermissionController } from '@/lib/api/controllers/ApiPermissionController';
+import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
 
-const controller = new PermissionRoleController();
+const controller = new ApiPermissionController();
 
 export async function POST(request: Request) {
   try {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useImperativeHandle } from 'react';
 import { IProjectTask, IProjectTaskDependency, ITaskType, DependencyType } from 'server/src/interfaces/project.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
@@ -19,6 +19,7 @@ interface TaskDependenciesProps {
   refreshDependencies?: () => void;
   users?: any[];
   phases?: any[];
+  onUnsavedChanges?: (hasUnsaved: boolean) => void;
 }
 
 const dependencyIcons: Record<DependencyType, React.ReactNode> = {
@@ -66,7 +67,12 @@ const getDependencyDisplayInfo = (dependency: IProjectTaskDependency, isPredeces
   };
 };
 
-export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
+export interface TaskDependenciesRef {
+  savePendingDependency: () => Promise<boolean>;
+  hasPendingChanges: () => boolean;
+}
+
+export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDependenciesProps>(({
   task,
   allTasksInProject,
   taskTypes,
@@ -74,8 +80,9 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
   initialSuccessors = [],
   refreshDependencies,
   users = [],
-  phases = []
-}) => {
+  phases = [],
+  onUnsavedChanges
+}, ref) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedPredecessorId, setSelectedPredecessorId] = useState('');
   const [selectedType, setSelectedType] = useState<DependencyType>('related_to');
@@ -87,10 +94,30 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
   const [predecessors, setPredecessors] = useState<IProjectTaskDependency[]>(initialPredecessors);
   const [successors, setSuccessors] = useState<IProjectTaskDependency[]>(initialSuccessors);
 
+  useImperativeHandle(ref, () => ({
+    savePendingDependency: async () => {
+      if (showAddForm && selectedPredecessorId) {
+        await handleAdd();
+        return true;
+      }
+      return false;
+    },
+    hasPendingChanges: () => {
+      return showAddForm && !!selectedPredecessorId;
+    }
+  }));
+
   useEffect(() => {
     setPredecessors(initialPredecessors);
     setSuccessors(initialSuccessors);
   }, [initialPredecessors, initialSuccessors]);
+
+  useEffect(() => {
+    // Notify parent when there are unsaved changes (form is open with data)
+    if (onUnsavedChanges) {
+      onUnsavedChanges(showAddForm && !!selectedPredecessorId);
+    }
+  }, [showAddForm, selectedPredecessorId, onUnsavedChanges]);
 
   const getTaskTypeInfo = (typeKey: string) => {
     return taskTypes.find(t => t.type_key === typeKey);
@@ -135,16 +162,6 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
 
   const handlePredecessorSelect = (predecessorId: string) => {
     setSelectedPredecessorId(predecessorId);
-    
-    const predecessor = allTasksInProject.find(t => t.task_id === predecessorId);
-    if (predecessor && task) {
-      // Auto-suggest dependency type based on task types
-      if (predecessor.task_type_key === 'bug') {
-        setSelectedType('blocks');
-      } else {
-        setSelectedType('related_to');
-      }
-    }
   };
 
   const handleAdd = async () => {
@@ -152,7 +169,25 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
       setError(null);
       setIsLoading(true);
       try {
-        await addTaskDependency(selectedPredecessorId, task.task_id, selectedType, 0, notes || undefined);
+        // Determine the correct order based on the relationship type
+        let predecessorId: string;
+        let successorId: string;
+        
+        if (selectedType === 'blocks') {
+          // Current task blocks the selected task
+          predecessorId = task.task_id;
+          successorId = selectedPredecessorId;
+        } else if (selectedType === 'blocked_by') {
+          // Current task is blocked by the selected task
+          predecessorId = selectedPredecessorId;
+          successorId = task.task_id;
+        } else {
+          // For 'related_to', order doesn't matter but we'll keep it consistent
+          predecessorId = task.task_id;
+          successorId = selectedPredecessorId;
+        }
+        
+        await addTaskDependency(predecessorId, successorId, selectedType, 0, notes || undefined);
         setShowAddForm(false);
         setSelectedPredecessorId('');
         setNotes('');
@@ -178,10 +213,33 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
     }
   };
   
-  const availableTasks = allTasksInProject.filter(t => 
-    t.task_id !== task.task_id &&
-    !predecessors.find(d => d.predecessor_task_id === t.task_id && d.dependency_type === selectedType)
-  );
+  const availableTasks = allTasksInProject.filter(t => {
+    if (t.task_id === task.task_id) return false;
+    
+    // Check based on what dependency will actually be created
+    if (selectedType === 'blocks') {
+      // Current task blocks selected task: check if this dependency exists
+      return !successors.find(d => 
+        d.successor_task_id === t.task_id && 
+        d.dependency_type === 'blocks'
+      );
+    } else if (selectedType === 'blocked_by') {
+      // Current task blocked by selected task: check if reverse exists
+      return !predecessors.find(d => 
+        d.predecessor_task_id === t.task_id && 
+        d.dependency_type === 'blocks'
+      );
+    } else {
+      // Related to - check both directions
+      return !predecessors.find(d => 
+        d.predecessor_task_id === t.task_id && 
+        d.dependency_type === 'related_to'
+      ) && !successors.find(d => 
+        d.successor_task_id === t.task_id && 
+        d.dependency_type === 'related_to'
+      );
+    }
+  });
 
   const renderTaskWithType = (taskInfo: any) => {
     const typeInfo = getTaskTypeInfo(taskInfo.task_type_key);
@@ -220,7 +278,7 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
             {predecessors.map(dep => {
               const displayInfo = getDependencyDisplayInfo(dep, true);
               return (
-                <li key={dep.dependency_id} className="flex items-center gap-2 p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800">
+                <li key={dep.dependency_id} className="flex items-center gap-2 p-2 rounded hover:bg-gray-50">
                   {displayInfo.icon}
                   <span className="text-sm text-gray-600">{displayInfo.label}</span>
                   {renderTaskWithType(dep.predecessor_task)}
@@ -241,7 +299,7 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
             {successors.map(dep => {
               const displayInfo = getDependencyDisplayInfo(dep, false);
               return (
-                <li key={dep.dependency_id} className="flex items-center gap-2 p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800">
+                <li key={dep.dependency_id} className="flex items-center gap-2 p-2 rounded hover:bg-gray-50">
                   {displayInfo.icon}
                   <span className="text-sm text-gray-600">{displayInfo.label}</span>
                   {renderTaskWithType(dep.successor_task)}
@@ -264,21 +322,10 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
       )}
 
       {showAddForm ? (
-        <div className="border rounded p-3 space-y-3 bg-gray-50 dark:bg-gray-800">
+        <div className="space-y-3">
           <p className="text-sm font-medium">Add dependency for: {task.task_name}</p>
           
           <div className="grid grid-cols-2 gap-2">
-            <CustomSelect
-              value={selectedPredecessorId}
-              onValueChange={handlePredecessorSelect}
-              disabled={isLoading}
-              placeholder="Select task"
-              options={availableTasks.map(t => ({
-                value: t.task_id,
-                label: t.task_name
-              }))}
-            />
-            
             <CustomSelect
               value={selectedType}
               onValueChange={(v: string) => setSelectedType(v as DependencyType)}
@@ -288,6 +335,17 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
                 { value: 'blocked_by', label: 'Blocked by' },
                 { value: 'related_to', label: 'Related to' }
               ]}
+            />
+            
+            <CustomSelect
+              value={selectedPredecessorId}
+              onValueChange={handlePredecessorSelect}
+              disabled={isLoading}
+              placeholder="Select task"
+              options={availableTasks.map(t => ({
+                value: t.task_id,
+                label: t.task_name
+              }))}
             />
           </div>
           
@@ -303,14 +361,7 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
             />
           </div>
           
-          <div className="flex gap-2">
-            <Button 
-              id="add-dependency" 
-              size="sm" 
-              onClick={handleAdd} 
-              disabled={!selectedPredecessorId || isLoading}>
-              Add Dependency
-            </Button>
+          <div className="flex gap-2 justify-end">
             <Button
              id="cancel-add-dependency"
              size="sm" 
@@ -319,6 +370,13 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
              { setShowAddForm(false); setError(null);}} 
              disabled={isLoading}>
               Cancel
+            </Button>
+            <Button 
+              id="add-dependency" 
+              size="sm" 
+              onClick={handleAdd} 
+              disabled={!selectedPredecessorId || isLoading}>
+              Add Dependency
             </Button>
           </div>
         </div>
@@ -334,4 +392,6 @@ export const TaskDependencies: React.FC<TaskDependenciesProps> = ({
       )}
     </div>
   );
-};
+});
+
+TaskDependencies.displayName = 'TaskDependencies';

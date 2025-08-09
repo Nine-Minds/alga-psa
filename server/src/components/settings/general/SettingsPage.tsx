@@ -1,39 +1,65 @@
 // server/src/components/settings/SettingsPage.tsx
 'use client'
 
-import React from 'react';
+import React, { Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import ZeroDollarInvoiceSettings from '../billing/ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from '../billing/CreditExpirationSettings';
 import CustomTabs, { TabContent } from "server/src/components/ui/CustomTabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
 import { Input } from "server/src/components/ui/Input";
 import { Button } from "server/src/components/ui/Button";
-import GeneralSettings from './GeneralSettings';
-import TicketingSettings from './TicketingSettings';
-import UserManagement from './UserManagement';
-import TeamManagement from './TeamManagement';
-import InteractionTypesSettings from './InteractionTypeSettings';
-import TimePeriodSettings from '../billing/TimePeriodSettings';
-import BillingSettings from '../billing/BillingSettings'; // Import the new component
-import NumberingSettings from './NumberingSettings';
-import NotificationsTab from './NotificationsTab';
-import { TaxRegionsManager } from '../tax/TaxRegionsManager'; // Import the new component
+import GeneralSettings from 'server/src/components/settings/general/GeneralSettings';
+import UserManagement from 'server/src/components/settings/general/UserManagement';
+import SettingsTabSkeleton from 'server/src/components/ui/skeletons/SettingsTabSkeleton';
+import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
+import { FeaturePlaceholder } from 'server/src/components/FeaturePlaceholder';
+
+// Dynamic imports for heavy settings components
+const TicketingSettings = dynamic(() => import('server/src/components/settings/general/TicketingSettings'), {
+  loading: () => <SettingsTabSkeleton title="Ticketing Settings" description="Loading ticketing configuration..." />,
+  ssr: false
+});
+
+const TeamManagement = dynamic(() => import('server/src/components/settings/general/TeamManagement'), {
+  loading: () => <SettingsTabSkeleton title="Team Management" description="Loading team configuration..." showTabs={false} />,
+  ssr: false
+});
+import InteractionTypesSettings from 'server/src/components/settings/general/InteractionTypeSettings';
+import TimeEntrySettings from 'server/src/components/settings/time-entry/TimeEntrySettings';
+import BillingSettings from 'server/src/components/settings/billing/BillingSettings'; // Import the new component
+import NumberingSettings from 'server/src/components/settings/general/NumberingSettings';
+import NotificationsTab from 'server/src/components/settings/general/NotificationsTab';
+import { TaxRegionsManager } from 'server/src/components/settings/tax/TaxRegionsManager'; // Import the new component
 // Removed import: import IntegrationsTabLoader from './IntegrationsTabLoader';
 import QboIntegrationSettings from '../integrations/QboIntegrationSettings'; // Import the actual settings component
-import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 // Extensions are only available in Enterprise Edition
-import { EmailSettings } from '../../admin/EmailSettings';
+import { EmailSettings } from 'server/src/components/admin/EmailSettings';
 // Removed import: import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
 // Revert to standard function component
 const SettingsPage = (): JSX.Element =>  {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
+  const billingFeatureFlag = useFeatureFlag('billing-enabled');
+  const isBillingEnabled = typeof billingFeatureFlag === 'boolean' ? billingFeatureFlag : billingFeatureFlag?.enabled;
+  const advancedFeatureFlag = useFeatureFlag('advanced-features-enabled');
+  const isAdvancedFeaturesEnabled = typeof advancedFeatureFlag === 'boolean' ? advancedFeatureFlag : advancedFeatureFlag?.enabled;
+  const emailConfigFlag = useFeatureFlag('email-configuration');
+  const isEmailConfigEnabled = typeof emailConfigFlag === 'boolean' ? emailConfigFlag : emailConfigFlag?.enabled;
   // Extensions are conditionally available based on edition
   // The webpack alias will resolve to either the EE component or empty component
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+
+  // Dynamically load the Extensions component only if EE is available
+  const DynamicExtensionsComponent = isEEAvailable ? dynamic(() => 
+    import('@ee/lib/extensions/ExtensionComponentLoader').then(mod => mod.DynamicExtensionsComponent),
+    {
+      loading: () => <div className="text-center py-8 text-gray-500">Loading extensions...</div>,
+      ssr: false
+    }
+  ) : () => <div className="text-center py-8 text-gray-500">Extensions not available in this edition</div>;
 
   // Map URL slugs (kebab-case) to Tab Labels
   const slugToLabelMap: Record<string, string> = {
@@ -96,14 +122,20 @@ const SettingsPage = (): JSX.Element =>  {
             <CardDescription>Manage teams and team members</CardDescription>
           </CardHeader>
           <CardContent>
-            <TeamManagement />
+            <Suspense fallback={<SettingsTabSkeleton title="Team Management" description="Loading team configuration..." showTabs={false} />}>
+              <TeamManagement />
+            </Suspense>
           </CardContent>
         </Card>
       ),
     },
     {
       label: "Ticketing",
-      content: <TicketingSettings />,
+      content: (
+        <Suspense fallback={<SettingsTabSkeleton title="Ticketing Settings" description="Loading ticketing configuration..." />}>
+          <TicketingSettings />
+        </Suspense>
+      ),
     },
     {
       label: "Interaction Types",
@@ -119,10 +151,10 @@ const SettingsPage = (): JSX.Element =>  {
         <Card>
           <CardHeader>
             <CardTitle>Time Entry Settings</CardTitle>
-            <CardDescription>Manage your time entry settings</CardDescription>
+            <CardDescription>Manage your time entry settings and time periods</CardDescription>
           </CardHeader>
           <CardContent>
-            <TimePeriodSettings />
+            <TimeEntrySettings />
           </CardContent>
         </Card>
       ),
@@ -143,7 +175,7 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Tax",
-      content: (
+      content: isBillingEnabled ? (
         <Card>
           <CardHeader>
             <CardTitle>Tax Settings</CardTitle>
@@ -153,11 +185,13 @@ const SettingsPage = (): JSX.Element =>  {
             <TaxRegionsManager />
           </CardContent>
         </Card>
+      ) : (
+        <FeaturePlaceholder />
       ),
     },
     {
       label: "Email",
-      content: (
+      content: isEmailConfigEnabled ? (
         <Card>
           <CardHeader>
             <CardTitle>Email Configuration</CardTitle>
@@ -167,12 +201,14 @@ const SettingsPage = (): JSX.Element =>  {
             <EmailSettings />
           </CardContent>
         </Card>
+      ) : (
+        <FeaturePlaceholder />
       ),
     },
     { // Add the new Integrations tab definition
       label: "Integrations",
       // Render the QBO settings client component directly
-      content: <QboIntegrationSettings />,
+      content: isAdvancedFeaturesEnabled ? <QboIntegrationSettings /> : <FeaturePlaceholder />,
     }
   ];
 
@@ -190,7 +226,7 @@ const SettingsPage = (): JSX.Element =>  {
               </CardHeader>
               <CardContent>
                 <div className="text-center py-8 text-gray-500">
-                  <p>Extension management is only available in Enterprise Edition.</p>
+                  <DynamicExtensionsComponent />
                 </div>
               </CardContent>
             </Card>

@@ -58,44 +58,165 @@ ee/temporal-workflows/
 └── README.md                  # This file
 ```
 
-## Quick Start
+## Quick Start - Local Development
 
 ### Prerequisites
 
 - Node.js 20+
-- Docker and Docker Compose
-- Kubernetes cluster with Temporal installed
-- PostgreSQL database
-- Access to Temporal cluster at `temporal-frontend.temporal.svc.cluster.local:7233`
+- Temporal CLI (`brew install temporal` or download from https://temporal.io/downloads)
+- Local PostgreSQL database running (or use the project's Docker containers)
 
-### Local Development
+### Step-by-Step Local Development Setup
 
-1. **Install dependencies**:
-   ```bash
-   cd ee/temporal-workflows
-   npm install
-   ```
+#### 1. Start Local Database (if not already running)
+```bash
+# From project root (~/alga-psa)
+docker ps | grep postgres  # Check if already running
 
-2. **Set up environment**:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your database and Temporal configuration
-   ```
+# If not running, start the database containers:
+docker-compose up -d postgres pgbouncer
+```
 
-3. **Build the project**:
-   ```bash
-   npm run build
-   ```
+#### 2. Start Temporal Dev Server
+```bash
+# In a dedicated terminal, keep this running:
+temporal server start-dev
 
-4. **Start the worker**:
-   ```bash
-   npm run start:worker
-   ```
+# This starts:
+# - Temporal server on port 7233
+# - Web UI on port 8233 (http://localhost:8233)
+# - Uses SQLite (no external dependencies needed!)
+```
 
-5. **Run a test workflow** (in another terminal):
-   ```bash
-   npm run start:client
-   ```
+#### 3. Configure Environment
+```bash
+cd ee/temporal-workflows
+
+# Create .env file with the following content:
+cat > .env << 'EOF'
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME_SERVER=server
+DB_USER_SERVER=postgres
+DB_PASSWORD_SERVER=postpass123
+DB_USER_ADMIN=postgres
+DB_PASSWORD_ADMIN=postpass123
+
+# Temporal Configuration (using local dev server)
+TEMPORAL_ADDRESS=localhost:7233
+TEMPORAL_NAMESPACE=default
+TEMPORAL_TASK_QUEUE=tenant-workflows
+
+# Auth Key (get from secrets/alga_auth_key)
+ALGA_AUTH_KEY=your-auth-key-here
+
+# Logging
+LOG_LEVEL=info
+
+# Worker Configuration
+MAX_CONCURRENT_ACTIVITIES=10
+MAX_CONCURRENT_WORKFLOWS=10
+
+# Health Check
+ENABLE_HEALTH_CHECK=true
+HEALTH_CHECK_PORT=8080
+
+# Environment
+NODE_ENV=development
+EOF
+
+# Set the actual auth key
+echo "ALGA_AUTH_KEY=$(cat ../../secrets/alga_auth_key 2>/dev/null || echo 'set-your-key')" >> .env
+```
+
+#### 4. Install Dependencies and Build
+```bash
+npm install
+npm run build
+```
+
+#### 5. Start the Worker
+```bash
+# Terminal 3: Start the worker
+npm run start:worker
+```
+
+#### 6. Test the Worker
+```bash
+# Terminal 4: Run test client
+npm run start:client
+```
+
+### Quick Commands Reference
+
+```bash
+# All commands from ee/temporal-workflows directory
+
+# Start everything (assuming port-forwarding is active):
+npm run build && npm run start:worker
+
+# Run tests:
+npm test                    # Unit tests
+npm run test:integration    # Integration tests
+
+# Watch mode for development:
+npm run dev                 # If available
+
+# Check worker logs:
+docker-compose logs -f temporal-worker  # If using Docker
+
+# View Temporal Web UI (after port-forwarding):
+open http://localhost:8088
+```
+
+### Troubleshooting
+
+#### Database Connection Issues
+```bash
+# Verify PostgreSQL is running:
+docker ps | grep postgres
+
+# Test connection:
+PGPASSWORD=postpass123 psql -h localhost -p 5432 -U postgres -d server -c "SELECT 1"
+
+# If connection fails, check Docker containers:
+docker-compose ps
+docker-compose up -d postgres pgbouncer
+```
+
+#### Temporal Connection Issues
+```bash
+# Verify port-forwarding is active:
+lsof -i :7233
+
+# Check Temporal service in cluster:
+kubectl get svc -n temporal | grep frontend
+
+# Restart port-forwarding:
+kubectl port-forward -n temporal svc/temporal-frontend 7233:7233
+```
+
+#### Missing Environment Variables
+```bash
+# Check required variables are set:
+grep -E "DB_|TEMPORAL_|ALGA_AUTH_KEY" .env
+
+# Get auth key from secrets:
+cat ../../secrets/alga_auth_key
+```
+
+#### Build Errors
+```bash
+# Clean and rebuild:
+rm -rf dist node_modules
+npm install
+npm run build
+```
+
+### Alternative: Docker Compose Development
+
+If you prefer to use Docker Compose for everything:
 
 ### Docker Development
 

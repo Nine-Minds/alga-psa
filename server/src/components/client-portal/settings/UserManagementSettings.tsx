@@ -22,11 +22,13 @@ import {
   getClientUsersForCompany
 } from 'server/src/lib/actions/user-actions/userActions';
 import { createOrFindContactByEmail } from 'server/src/lib/actions/contact-actions/contactActions';
-import { createClientUser } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
-import { IUser, IPermission } from 'server/src/interfaces/auth.interfaces';
+import { createClientUser, getClientPortalRoles, getClientUserRoles } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
+import type { IUser, IPermission } from 'server/src/interfaces/auth.interfaces';
+import type { IRole as SharedIRole } from '@shared/interfaces/user.interfaces';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 
 export function UserManagementSettings() {
   const router = useRouter();
@@ -35,10 +37,12 @@ export function UserManagementSettings() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showNewUserForm, setShowNewUserForm] = useState(false);
-  const [newUser, setNewUser] = useState({ firstName: '', lastName: '', email: '', password: '' });
+  const [newUser, setNewUser] = useState({ firstName: '', lastName: '', email: '', password: '', roleId: '' });
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [userToDelete, setUserToDelete] = useState<IUser | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [availableRoles, setAvailableRoles] = useState<SharedIRole[]>([]);
+  const [userRoles, setUserRoles] = useState<{ [key: string]: SharedIRole[] }>({});
   const { openDrawer } = useDrawer();
 
   useEffect(() => {
@@ -59,9 +63,9 @@ export function UserManagementSettings() {
       // Check if user has required permissions
       const hasRequiredPermissions = rolesWithPermissions.some(role => 
         role.permissions.some((permission: IPermission) => 
-          `${permission.resource}.${permission.action}` === 'client_profile.read' ||
-          `${permission.resource}.${permission.action}` === 'client_profile.update' ||
-          `${permission.resource}.${permission.action}` === 'client_profile.delete'
+          `${permission.resource}.${permission.action}` === 'user.read' ||
+          `${permission.resource}.${permission.action}` === 'user.update' ||
+          `${permission.resource}.${permission.action}` === 'user.delete'
         )
       );
 
@@ -82,6 +86,18 @@ export function UserManagementSettings() {
       // Get all users for this company - use a server action instead
       const clientUsers = await getClientUsersForCompany(userCompanyId);
       setUsers(clientUsers);
+      
+      // Fetch available roles for client portal
+      const roles = await getClientPortalRoles();
+      setAvailableRoles(roles);
+      
+      // Fetch roles for each user
+      const rolesMap: { [key: string]: SharedIRole[] } = {};
+      for (const user of clientUsers) {
+        const userRolesList = await getClientUserRoles(user.user_id);
+        rolesMap[user.user_id] = userRolesList;
+      }
+      setUserRoles(rolesMap);
       
       setLoading(false);
     } catch (error) {
@@ -111,7 +127,8 @@ export function UserManagementSettings() {
         contactId: contact.contact_name_id,
         companyId,
         firstName: newUser.firstName,
-        lastName: newUser.lastName
+        lastName: newUser.lastName,
+        roleId: newUser.roleId || undefined
       });
 
       if (!result.success) {
@@ -121,8 +138,17 @@ export function UserManagementSettings() {
       // Refresh the user list
       const updatedUsers = await getClientUsersForCompany(companyId);
       setUsers(updatedUsers);
+      
+      // Refresh user roles
+      const rolesMap: { [key: string]: SharedIRole[] } = {};
+      for (const user of updatedUsers) {
+        const userRolesList = await getClientUserRoles(user.user_id);
+        rolesMap[user.user_id] = userRolesList;
+      }
+      setUserRoles(rolesMap);
+      
       setShowNewUserForm(false);
-      setNewUser({ firstName: '', lastName: '', email: '', password: '' });
+      setNewUser({ firstName: '', lastName: '', email: '', password: '', roleId: '' });
     } catch (error) {
       console.error('Error creating user:', error);
       if (error instanceof Error && error.message.includes('EMAIL_EXISTS')) {
@@ -191,9 +217,24 @@ export function UserManagementSettings() {
       ),
     },
     {
+      title: 'Roles',
+      dataIndex: 'user_id',
+      width: '20%',
+      render: (userId) => {
+        const roles = userRoles[userId] || [];
+        return (
+          <span className="text-sm">
+            {roles.length > 0 
+              ? roles.map(role => role.role_name).join(', ')
+              : 'No roles assigned'}
+          </span>
+        );
+      },
+    },
+    {
       title: 'Status',
       dataIndex: 'is_inactive',
-      width: '15%',
+      width: '10%',
       render: (value, record) => (
         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${record.is_inactive ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
           {record.is_inactive ? 'Inactive' : 'Active'}
@@ -326,6 +367,18 @@ export function UserManagementSettings() {
                     )}
                   </button>
                 </div>
+              </div>
+              <div>
+                <Label htmlFor="role">Role</Label>
+                <CustomSelect
+                  value={newUser.roleId}
+                  onValueChange={(value) => setNewUser({ ...newUser, roleId: value })}
+                  options={availableRoles.map((role): SelectOption => ({
+                    value: role.role_id,
+                    label: role.role_name
+                  }))}
+                  placeholder="Select a role (optional)"
+                />
               </div>
               <Button id="submit-new-user-btn" onClick={handleCreateUser}>Create User</Button>
             </div>

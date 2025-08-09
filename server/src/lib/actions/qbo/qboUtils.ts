@@ -2,6 +2,7 @@
 
 // Removed WorkflowContext import
 import { QboTenantCredentials, QboApiErrorResponse, QboFault, QboErrorDetail } from './types'; // Added QboFault, QboErrorDetail
+import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider.js';
 // Import necessary HTTP client (e.g., axios, fetch) and secret management utilities
 // Using console.log as logger per user feedback
 const logger = {
@@ -31,9 +32,13 @@ export async function getTenantQboCredentials(tenantId: string, realmId: string)
       throw new Error('Placeholder getTenantQboCredentials called outside development');
   }
   // Replace with actual dev/test credentials or mock implementation
+  const secretProvider = await getSecretProviderInstance();
+  const accessToken = await secretProvider.getAppSecret('QBO_DEV_ACCESS_TOKEN') || process.env.QBO_DEV_ACCESS_TOKEN || 'dummy_access_token';
+  const refreshToken = await secretProvider.getAppSecret('QBO_DEV_REFRESH_TOKEN') || process.env.QBO_DEV_REFRESH_TOKEN || 'dummy_refresh_token';
+  
   return {
-    accessToken: process.env.QBO_DEV_ACCESS_TOKEN || 'dummy_access_token',
-    refreshToken: process.env.QBO_DEV_REFRESH_TOKEN || 'dummy_refresh_token',
+    accessToken,
+    refreshToken,
     realmId: realmId,
   };
   // --- End Placeholder ---
@@ -77,8 +82,11 @@ export async function getAppSecret(secretName: 'qbo'): Promise<{ clientId: strin
     if (process.env.NODE_ENV !== 'development') {
         throw new Error('Placeholder getAppSecret called outside development');
     }
-    const clientId = process.env.QBO_CLIENT_ID || 'dummy_client_id';
-    const clientSecret = process.env.QBO_CLIENT_SECRET || 'dummy_client_secret';
+    
+    const secretProvider = await getSecretProviderInstance();
+    const clientId = await secretProvider.getAppSecret('QBO_CLIENT_ID') || process.env.QBO_CLIENT_ID || 'dummy_client_id';
+    const clientSecret = await secretProvider.getAppSecret('QBO_CLIENT_SECRET') || process.env.QBO_CLIENT_SECRET || 'dummy_client_secret';
+    
     if (!clientId || !clientSecret) {
         console.error("QBO Client ID or Secret missing in environment variables for placeholder");
         return null;

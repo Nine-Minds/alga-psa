@@ -18,7 +18,6 @@ import {
     MobileDeviceAsset,
     PrinterAsset
 } from '../interfaces/asset.interfaces';
-import { ICompany } from '../interfaces/company.interfaces';
 
 function convertDatesToISOString<T>(obj: T): T {
     if (obj === null || obj === undefined) {
@@ -136,14 +135,11 @@ export class AssetModel extends BaseModel {
             // Get extension data
             const typeExtensionData = await getExtensionData(trx, tenant, asset.asset_id, data.asset_type);
 
-            // Transform company data
-            const transformedCompany: ICompany = {
+            // Transform company data with location fields
+            const transformedCompany = {
                 company_id: company.company_id,
                 company_name: company.company_name,
-                email: company.email ?? '',
-                phone_no: company.phone_no ?? '',
                 url: company.url ?? '',
-                address: company.address ?? '',
                 created_at: company.created_at ?? new Date().toISOString(),
                 updated_at: company.updated_at ?? new Date().toISOString(),
                 is_inactive: company.is_inactive ?? false,
@@ -184,10 +180,10 @@ export class AssetModel extends BaseModel {
             .select(
                 'assets.*',
                 'companies.company_name',
-                'companies.email',
-                'companies.phone_no',
+                'cl.email as email',
+                'cl.phone as phone_no',
                 'companies.url',
-                'companies.address',
+                'cl.address_line1 as address',
                 'companies.created_at as company_created_at',
                 'companies.updated_at as company_updated_at',
                 'companies.is_inactive',
@@ -208,6 +204,11 @@ export class AssetModel extends BaseModel {
             .leftJoin('companies', function() {
                 this.on('assets.company_id', '=', 'companies.company_id')
                     .andOn('companies.tenant', '=', knexOrTrx.raw('?', [tenant]));
+            })
+            .leftJoin('company_locations as cl', function() {
+                this.on('companies.company_id', '=', 'cl.company_id')
+                    .andOn('companies.tenant', '=', 'cl.tenant')
+                    .andOn('cl.is_default', '=', knexOrTrx.raw('true'));
             })
             .where({ 'assets.tenant': tenant, 'assets.asset_id': asset_id })
             .first();
@@ -256,10 +257,10 @@ export class AssetModel extends BaseModel {
             .select(
                 'assets.*',
                 'companies.company_name',
-                'companies.email',
-                'companies.phone_no',
+                'cl.email as email',
+                'cl.phone as phone_no',
                 'companies.url',
-                'companies.address',
+                'cl.address_line1 as address',
                 'companies.created_at as company_created_at',
                 'companies.updated_at as company_updated_at',
                 'companies.is_inactive',
@@ -280,6 +281,11 @@ export class AssetModel extends BaseModel {
             .innerJoin('companies', function() {
                 this.on('assets.company_id', '=', 'companies.company_id')
                     .andOn('companies.tenant', '=', 'assets.tenant');
+            })
+            .leftJoin('company_locations as cl', function() {
+                this.on('companies.company_id', '=', 'cl.company_id')
+                    .andOn('companies.tenant', '=', 'cl.tenant')
+                    .andOn('cl.is_default', '=', knexOrTrx.raw('true'));
             })
             .where('assets.tenant', tenant);
 

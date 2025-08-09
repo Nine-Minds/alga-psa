@@ -5,7 +5,7 @@ import * as Popover from '@radix-ui/react-popover';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { IChannel } from 'server/src/interfaces';
-import { ChevronDownIcon } from '@radix-ui/react-icons';
+import { ChevronDown } from 'lucide-react';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ContainerComponent, AutomationProps, FormFieldComponent } from 'server/src/types/ui-reflection/types';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
@@ -31,7 +31,7 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
   filterState,
   onFilterStateChange,
   fitContent = false,
-  placeholder = 'Select Channel',
+  placeholder = 'Select Board',
   "data-automation-type": dataAutomationType = 'picker'
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -145,9 +145,9 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
   };
 
   const opts = useMemo(() => [
-    { value: 'active', label: 'Active Channels' },
-    { value: 'inactive', label: 'Inactive Channels' },
-    { value: 'all', label: 'All Channels' },
+    { value: 'active', label: 'Active Boards' },
+    { value: 'inactive', label: 'Inactive Boards' },
+    { value: 'all', label: 'All Boards' },
   ], []);
 
   const handleToggle = (e: React.MouseEvent) => {
@@ -156,7 +156,7 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
   };
 
   return (
-    <ReflectionContainer id={`${id}-channel`} data-automation-type={dataAutomationType} label="Channel Picker">
+    <ReflectionContainer id={`${id}-channel`} data-automation-type={dataAutomationType} label="Board Picker">
       <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
         <Popover.Trigger asChild>
           <Button
@@ -172,7 +172,7 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
             data-automation-type={dataAutomationType}
           >
             <span className={`flex-1 text-left ${!selectedChannel ? 'text-gray-400' : ''}`}>{selectedChannel?.channel_name || placeholder}</span>
-            <ChevronDownIcon className="h-4 w-4 text-gray-500" />
+            <ChevronDown className="h-4 w-4 text-gray-500" />
           </Button>
         </Popover.Trigger>
         <Popover.Portal>
@@ -209,22 +209,22 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
               <div className="whitespace-nowrap">
                 <Input
                   id={`${id}-search`}
-                  placeholder="Search channels..."
+                  placeholder="Search boards..."
                   value={searchTerm}
                   onChange={(e) => {
                     setSearchTerm(e.target.value);
                   }}
-                  label="Search Channels"
+                  label="Search Boards"
                 />
               </div>
             </div>
             <div
               className="max-h-60 overflow-y-auto border-t bg-white"
               role="listbox"
-              aria-label="Channels"
+              aria-label="Boards"
             >
               {filteredChannels.length === 0 ? (
-                <div className="px-4 py-2 text-gray-500">No channels found</div>
+                <div className="px-4 py-2 text-gray-500">No boards found</div>
               ) : (
                 filteredChannels.map((channel): JSX.Element => (
                   <Button

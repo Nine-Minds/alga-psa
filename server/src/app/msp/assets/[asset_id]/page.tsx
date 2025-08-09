@@ -46,3 +46,5 @@ export default async function AssetPage({ params }: Props) {
     return <div>An error occurred. Please try again later.</div>;
   }
 }
+
+export const dynamic = "force-dynamic";

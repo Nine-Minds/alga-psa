@@ -9,7 +9,7 @@ export interface ITicket extends TenantEntity, ITaggable {
   title: string;
   url: string | null;
   channel_id: string;
-  company_id: string;
+  company_id: string | null;
   location_id?: string | null;
   contact_name_id: string | null;
   status_id: string;
@@ -40,6 +40,7 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   priority_color?: string;
   channel_name: string;
   category_name: string;
+  company_name: string;
   entered_by_name: string;
   assigned_to_name: string | null;
 }

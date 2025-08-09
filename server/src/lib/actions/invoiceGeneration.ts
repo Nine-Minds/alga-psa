@@ -1,6 +1,6 @@
 'use server'
 
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { NumberingService } from 'server/src/lib/services/numberingService';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
@@ -14,7 +14,7 @@ import {
 } from 'server/src/interfaces/invoice.interfaces';
 import { WasmInvoiceViewModel } from '../invoice-renderer/types';
 import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, BillingCycleType } from 'server/src/interfaces/billing.interfaces';
-import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { ICompany, ICompanyWithLocation } from 'server/src/interfaces/company.interfaces';
 import Invoice from 'server/src/lib/models/invoice';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Temporal } from '@js-temporal/polyfill';
@@ -147,7 +147,7 @@ function getPaymentTermDays(paymentTerms: string): number {
 // Adapter function to convert data to WasmInvoiceViewModel
 async function adaptToWasmViewModel(
   billingResult: IBillingResult,
-  company: ICompany | null,
+  company: ICompanyWithLocation | null,
   invoiceItems: IInvoiceItem[],
   dueDate: string,
   previewTax: number,
@@ -166,9 +166,20 @@ async function adaptToWasmViewModel(
 
     if (tenantCompanyLink) {
       const tenantCompanyDetails = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('companies')
-          .where({ company_id: tenantCompanyLink.company_id })
-          .select('company_name', 'address')
+        return await trx('companies as c')
+          .leftJoin('company_locations as cl', function() {
+            this.on('c.company_id', '=', 'cl.company_id')
+                .andOn('c.tenant', '=', 'cl.tenant')
+                .andOn('cl.is_default', '=', trx.raw('true'));
+          })
+          .select(
+            'c.company_name',
+            'cl.address_line1 as address'
+          )
+          .where({
+            'c.company_id': tenantCompanyLink.company_id,
+            'c.tenant': tenant
+          })
           .first();
       });
 
@@ -178,7 +189,7 @@ async function adaptToWasmViewModel(
         const logoUrl = await getCompanyLogoUrl(tenantCompanyLink.company_id, tenant);
         tenantCompanyInfo = {
           name: tenantCompanyDetails.company_name,
-          address: tenantCompanyDetails.address,
+          address: tenantCompanyDetails.address || 'N/A',
           logoUrl: logoUrl || null, // Use null if logoUrl is empty/null
         };
       }
@@ -200,7 +211,7 @@ async function adaptToWasmViewModel(
     dueDate: dueDate,
     customer: {
       name: company?.company_name || 'N/A',
-      address: company?.address || 'N/A',
+      address: company?.location_address || 'N/A',
     },
     tenantCompany: tenantCompanyInfo, // Use fetched tenant company info
     items: previewViewModelItems,
@@ -222,6 +233,13 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
   }
 
   const { knex, tenant } = await createTenantKnex();
+  
+  if (!tenant) {
+    return {
+      success: false,
+      error: 'No tenant found'
+    };
+  }
 
   try {
     // Get billing cycle details
@@ -269,14 +287,7 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
     }
 
     // Create invoice view model without persisting
-    const company = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('companies')
-        .where({
-          company_id,
-          tenant
-        })
-        .first();
-    });
+    const company = await getCompanyDetails(knex, tenant, company_id);
     const due_date = await getDueDate(company_id, cycleEnd); // Uses temporary import
 
     // Group charges by bundle if they have bundle information

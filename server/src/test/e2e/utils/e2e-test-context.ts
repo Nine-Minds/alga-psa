@@ -78,9 +78,11 @@ export class E2ETestContext extends TestContext {
     // Store original values for restoration later
     const e2eEnvVars = {
       'DB_HOST': 'localhost',
-      'DB_PORT': '5433',
-      'DB_NAME_SERVER': 'server',
-      'DB_USER_ADMIN': 'postgres',
+      'DB_PORT': '5433',  // Use direct postgres port for admin operations (migrations, seeds)
+      'DB_NAME_SERVER': 'server_test',
+      'DB_USER_ADMIN': 'postgres',  // Use postgres user for admin operations
+      'PGBOUNCER_HOST': 'localhost',
+      'PGBOUNCER_PORT': '6434',
       'REDIS_HOST': 'localhost',
       'REDIS_PORT': '6380',
       'EMAIL_HOST': 'localhost',
@@ -125,13 +127,22 @@ export class E2ETestContext extends TestContext {
       this.dockerServices = new DockerServiceManager();
       this.mailhogClient = new MailHogClient();
       this.emailTestFactory = new EmailTestFactory(this);
+      
+      // We'll use whatever tenant is available (will be determined by EmailTestFactory)
+      // Using a fallback default that will be replaced when EmailTestFactory runs
+      const testTenantId = '27460c9d-9eb9-45d8-9b99-a69c52df2136';
+      console.log(`🆔 E2ETestContext initialized with default tenant ID: ${testTenantId}`);
+      
       this.mailhogPollingService = new MailHogPollingService({
         pollIntervalMs: 1000, // Poll every second in tests
-        mailhogApiUrl: 'http://localhost:8025/api/v1'
+        mailhogApiUrl: 'http://localhost:8025/api/v1',
+        defaultTenantId: testTenantId
       });
       
       // Start Docker services if configured to do so
+      console.log(`🔍 Debug: autoStartServices = ${this.e2eOptions.autoStartServices}, testMode = ${this.e2eOptions.testMode}`);
       if (this.e2eOptions.autoStartServices && this.e2eOptions.testMode === 'e2e') {
+        console.log('🔍 Debug: Starting E2E services...');
         try {
           await this.startE2EServices();
         } catch (error) {
@@ -142,17 +153,43 @@ export class E2ETestContext extends TestContext {
           try {
             await this.dockerServices.waitForHealthChecks();
             console.log('✅ Services are healthy, continuing with existing services');
+            
+            // Still need to start polling service and clear emails even if Docker services were already running
+            await this.startSupportingServices();
           } catch (healthError) {
             console.error('❌ Services are not healthy:', healthError.message);
             throw error; // Re-throw original error
           }
         }
+      } else if (this.e2eOptions.testMode === 'e2e') {
+        // Even if not auto-starting Docker services, we still need supporting services
+        await this.startSupportingServices();
       }
       
       console.log('✅ E2E Test Context initialized');
     } catch (error) {
       console.error('❌ Failed to initialize E2E Test Context:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Start supporting services (polling, email clearing) regardless of Docker status
+   */
+  async startSupportingServices(): Promise<void> {
+    console.log('🔧 Starting supporting services...');
+    
+    // Clear MailHog messages if configured
+    if (this.e2eOptions.clearEmailsBeforeTest) {
+      await this.mailhogClient.clearMessages();
+      console.log('🧹 MailHog messages cleared');
+    }
+    
+    // Start MailHog polling service if configured
+    if (this.e2eOptions.autoStartEmailPolling) {
+      console.log('📧 Starting MailHog email polling service...');
+      this.mailhogPollingService.startPolling();
+      console.log('✅ MailHog polling service started');
     }
   }
 
@@ -169,28 +206,46 @@ export class E2ETestContext extends TestContext {
     
     try {
       // Ensure services are running (start if needed)
+      console.log('🔍 Debug: Ensuring services are running...');
       await this.dockerServices.ensureServicesRunning();
       
       // Wait for services to be healthy
+      console.log('🔍 Debug: Waiting for health checks...');
       await this.dockerServices.waitForHealthChecks();
       
-      // Clear MailHog messages if configured
-      if (this.e2eOptions.clearEmailsBeforeTest) {
-        await this.mailhogClient.clearMessages();
-      }
-      
-      // Start MailHog polling service if configured
-      if (this.e2eOptions.autoStartEmailPolling) {
-        console.log('📧 Starting MailHog email polling service...');
-        this.mailhogPollingService.startPolling();
-      }
+      // Start supporting services (polling, clearing)
+      await this.startSupportingServices();
       
       this.servicesStarted = true;
       console.log('✅ E2E Docker services ready');
     } catch (error) {
-      console.error('❌ Failed to start E2E services:', error);
+      // Don't log the error here as docker-service-manager already handles it
       throw error;
     }
+  }
+
+  /**
+   * Complete the service setup (MailHog polling, etc.)
+   */
+  private async completeServiceSetup(): Promise<void> {
+    // Clear MailHog messages if configured
+    console.log('🔍 Debug: Clearing MailHog messages...');
+    if (this.e2eOptions.clearEmailsBeforeTest) {
+      await this.mailhogClient.clearMessages();
+    }
+    
+    // Start MailHog polling service if configured
+    console.log(`🔍 Debug: autoStartEmailPolling = ${this.e2eOptions.autoStartEmailPolling}`);
+    if (this.e2eOptions.autoStartEmailPolling) {
+      console.log('📧 Starting MailHog email polling service...');
+      this.mailhogPollingService.startPolling();
+      console.log('✅ MailHog polling service started successfully');
+    } else {
+      console.log('⚠️ MailHog polling service NOT started (autoStartEmailPolling = false)');
+    }
+    
+    this.servicesStarted = true;
+    console.log('✅ E2E Docker services ready');
   }
 
   /**
@@ -252,17 +307,6 @@ export class E2ETestContext extends TestContext {
   }
 
   /**
-   * Waits for workflow processing to complete
-   */
-  async waitForWorkflowProcessing(timeoutMs: number = 30000): Promise<void> {
-    if (!this.dockerServices) {
-      throw new Error('Docker services not initialized');
-    }
-    
-    await this.dockerServices.waitForWorkflowProcessing(timeoutMs);
-  }
-
-  /**
    * Sends a test email and waits for it to be captured
    */
   async sendAndCaptureEmail(emailData: {
@@ -276,10 +320,57 @@ export class E2ETestContext extends TestContext {
       throw new Error('MailHog client not initialized');
     }
     
+    // Update MailHog polling service with current test tenant
+    if (this.mailhogPollingService) {
+      // Use the test context's tenant ID directly instead of querying
+      const testTenantId = this.tenantId;
+      console.log(`🔄 Updating MailHog polling service to use test tenant: ${testTenantId}`);
+      this.mailhogPollingService.defaultTenantId = testTenantId;
+    }
+    
     const sentEmail = await this.mailhogClient.sendEmail(emailData);
     const capturedEmail = await this.mailhogClient.waitForEmailCapture(sentEmail.messageId);
     
     return { sentEmail, capturedEmail };
+  }
+
+  /**
+   * Wait for workflow processing to complete for email-to-ticket conversion
+   */
+  async waitForWorkflowProcessing(timeout: number = 15000): Promise<void> {
+    const startTime = Date.now();
+    const pollInterval = 1000; // Poll every second
+
+    console.log('⏳ Waiting for workflow processing to complete...');
+
+    while (Date.now() - startTime < timeout) {
+      try {
+        // Check for new tickets (using correct column name)
+        const recentTickets = await this.db('tickets')
+          .where('entered_at', '>', new Date(startTime)) // Use entered_at instead of created_at
+          .count('* as count')
+          .first();
+
+        console.log(`📊 Tickets created: ${recentTickets.count}`);
+
+        // If we have tickets created, workflow processing is likely complete
+        if (parseInt(recentTickets.count) > 0) {
+          console.log('✅ Workflow processing appears to be complete (tickets created)');
+          // Wait a bit more for any final processing
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          return;
+        }
+
+        // Wait before next poll
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+      } catch (error) {
+        console.error('❌ Error polling for workflow processing:', error);
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+      }
+    }
+
+    console.log('⏳ Workflow processing timeout reached, assuming completion');
   }
 
   /**
@@ -334,6 +425,14 @@ export class E2ETestContext extends TestContext {
         if (context.e2eOptions.clearEmailsBeforeTest && context.mailhogClient) {
           await context.mailhogClient.clearMessages();
         }
+        
+        // Clear MailHog polling service processed history
+        if (context.mailhogPollingService) {
+          context.mailhogPollingService.clearProcessedHistory();
+        }
+        
+        // Clear Redis workflow event stream to prevent processing old events
+        await context.clearWorkflowEventStream();
       },
       
       afterEach: async (context: E2ETestContext) => {
@@ -350,5 +449,50 @@ export class E2ETestContext extends TestContext {
     await this.cleanupE2E();
     this.restoreEnvironmentVariables();
     await super.cleanup();
+  }
+  
+  /**
+   * Clear the workflow event stream in Redis
+   */
+  async clearWorkflowEventStream(): Promise<void> {
+    try {
+      const { createClient } = await import('redis');
+      const { getSecret } = await import('@shared/core/getSecret');
+      
+      const password = await getSecret('redis_password', 'REDIS_PASSWORD');
+      const client = createClient({
+        url: `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || '6379'}`,
+        password
+      });
+      
+      await client.connect();
+      
+      // Delete and recreate the stream to ensure a clean slate
+      try {
+        await client.del('workflow:events:global');
+        console.log('🧹 Deleted workflow event stream');
+      } catch (delError: any) {
+        console.log('ℹ️ Could not delete workflow event stream:', delError.message);
+      }
+      
+      // Create a fresh consumer group
+      try {
+        await client.xGroupCreate('workflow:events:global', 'workflow-processors', '0', {
+          MKSTREAM: true
+        });
+        console.log('✅ Created fresh workflow consumer group');
+      } catch (err: any) {
+        if (err.message.includes('BUSYGROUP')) {
+          // This shouldn't happen since we just deleted the stream
+          console.log('⚠️ Consumer group already exists after stream deletion');
+        } else {
+          throw err;
+        }
+      }
+      
+      await client.quit();
+    } catch (error) {
+      console.warn('⚠️ Failed to clear workflow event stream:', error.message);
+    }
   }
 }

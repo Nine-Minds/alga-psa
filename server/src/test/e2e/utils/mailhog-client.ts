@@ -67,7 +67,9 @@ export class MailHogClient {
       host: 'localhost',
       port: this.config.smtpPort,
       secure: false, // MailHog doesn't use TLS
-      auth: false // MailHog doesn't require auth
+      ignoreTLS: true, // Don't attempt STARTTLS
+      requireTLS: false, // Don't require TLS
+      // Don't set auth at all for MailHog
     });
   }
 

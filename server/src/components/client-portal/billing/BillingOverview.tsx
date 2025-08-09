@@ -93,20 +93,20 @@ export default function BillingOverview() {
   const [isBucketUsageLoading, setIsBucketUsageLoading] = useState(false);
   const [isHoursLoading, setIsHoursLoading] = useState(false);
   const [isUsageMetricsLoading, setIsUsageMetricsLoading] = useState(false);
-  const [hasInvoiceAccess, setHasInvoiceAccess] = useState(false);
-  const [isClient, setIsClient] = useState(false);
+  const [hasInvoiceAccess, setHasInvoiceAccess] = useState(true); // Default to true to avoid hydration mismatch
+  const [isLoading, setIsLoading] = useState(true);
   const [dateRange, setDateRange] = useState({
-    startDate: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
-    endDate: format(new Date(), 'yyyy-MM-dd')
+    startDate: '',
+    endDate: ''
   });
 
-  // Set isClient to true when component mounts (client-side only)
+  // Set date range after mount to avoid hydration issues
   useEffect(() => {
-    setIsClient(true);
-    return () => {
-      // Cleanup function to prevent memory leaks
-      setIsClient(false);
-    };
+    const now = new Date();
+    setDateRange({
+      startDate: format(subDays(now, 30), 'yyyy-MM-dd'),
+      endDate: format(now, 'yyyy-MM-dd')
+    });
   }, []);
 
   // Load billing data
@@ -155,6 +155,10 @@ export default function BillingOverview() {
       } catch (error) {
         if (!isMounted) return;
         console.error('Error loading billing data:', error);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
@@ -299,7 +303,7 @@ export default function BillingOverview() {
               invoices={invoices}
               bucketUsage={bucketUsage}
               isBucketUsageLoading={isBucketUsageLoading}
-              isClient={isClient}
+              isLoading={isLoading}
               formatCurrency={formatCurrency}
               formatDate={formatDate}
               onViewAllInvoices={handleViewAllInvoices}
@@ -362,7 +366,7 @@ export default function BillingOverview() {
     invoices,
     bucketUsage,
     isBucketUsageLoading,
-    isClient,
+    isLoading,
     hasInvoiceAccess,
     currentPage,
     hoursByService,

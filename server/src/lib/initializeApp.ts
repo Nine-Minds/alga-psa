@@ -2,14 +2,14 @@ import { isEnterprise } from './features';
 import { parsePolicy } from './auth/ee';
 import { initializeEventBus, cleanupEventBus } from './eventBus/initialize';
 import { initializeScheduledJobs } from './jobs/initializeScheduledJobs';
-import logger from '@shared/core/logger';
-import { initializeServerWorkflows } from '@shared/workflow/init/serverInit';
+import { logger } from '@alga-psa/shared/core';
+import { initializeServerWorkflows } from '@alga-psa/shared/workflow';
 import { syncStandardTemplates } from './startupTasks';
 import { validateEnv } from 'server/src/config/envConfig';
+import { validateRequiredConfiguration, validateDatabaseConnectivity, validateSecretUniqueness } from 'server/src/config/criticalEnvValidation';
 import { config } from 'dotenv';
 import User from 'server/src/lib/models/user';
-import { hashPassword } from 'server/src/utils/encryption/encryption';
-import crypto from 'crypto';
+import { hashPassword, generateSecurePassword } from 'server/src/utils/encryption/encryption';
 import { JobScheduler, IJobScheduler } from 'server/src/lib/jobs/jobScheduler';
 import { JobService } from 'server/src/services/job.service';
 import { InvoiceZipJobHandler } from 'server/src/lib/jobs/handlers/invoiceZipHandler';
@@ -20,6 +20,8 @@ import { createNextTimePeriod } from './actions/timePeriodsActions';
 import { TimePeriodSettings } from './models/timePeriodSettings';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { initializeScheduler } from 'server/src/lib/jobs';
+import { CompositeSecretProvider, FileSystemSecretProvider, getSecretProviderInstance, ISecretProvider, EnvSecretProvider } from '@alga-psa/shared/core';
+import { validateEmailConfiguration, logEmailConfigWarnings } from './validation/emailConfigValidation';
 
 let isFunctionExecuted = false;
 
@@ -33,7 +35,53 @@ export async function initializeApp() {
   try {
     // Load environment configuration
     config();
+    
+    // Validate secret uniqueness first (must succeed)
+    try {
+      await validateSecretUniqueness();
+      logger.info('Secret uniqueness validation passed');
+    } catch (error) {
+      logger.error('Secret uniqueness validation failed:', error);
+      throw error; // Cannot continue with conflicting secrets
+    }
+    
+    // Validate critical configuration (must succeed)
+    try {
+      await validateRequiredConfiguration();
+      logger.info('Critical configuration validation passed');
+    } catch (error) {
+      logger.error('Critical configuration validation failed:', error);
+      throw error; // Cannot continue without critical configuration
+    }
+
+    let secretProvider: ISecretProvider = await getSecretProviderInstance();
+    let nextAuthSecret: string | undefined = await secretProvider.getAppSecret('NEXTAUTH_SECRET');
+    process.env.NEXTAUTH_SECRET = nextAuthSecret || process.env.NEXTAUTH_SECRET;    
+
+    // Validate database connectivity (critical - must succeed)
+    try {
+      await validateDatabaseConnectivity();
+      logger.info('Database connectivity validation passed');
+    } catch (error) {
+      logger.error('Database connectivity validation failed:', error);
+      throw error; // Cannot continue without database
+    }
+    
+    // Run general environment validation
     validateEnv();
+
+    // Validate email configuration (non-critical but important)
+    try {
+      const emailValidation = validateEmailConfiguration();
+      if (emailValidation.warnings.length > 0) {
+        logEmailConfigWarnings(emailValidation.warnings);
+      } else if (process.env.EMAIL_ENABLE === 'true') {
+        logger.info('Email configuration validation passed');
+      }
+    } catch (error) {
+      logger.error('Failed to validate email configuration:', error);
+      // Continue startup - email validation is not critical
+    }
 
     // Initialize event bus (critical - must succeed)
     try {
@@ -178,13 +226,17 @@ function logConfiguration() {
   });
 
   // Email Configuration
+  const emailProviderType = process.env.EMAIL_PROVIDER_TYPE || 
+    (process.env.RESEND_API_KEY ? 'resend' : 'smtp');
+  
   logger.info('Email Configuration:', {
     EMAIL_ENABLE: process.env.EMAIL_ENABLE,
+    EMAIL_PROVIDER_TYPE: emailProviderType,
     EMAIL_FROM: process.env.EMAIL_FROM,
     EMAIL_HOST: process.env.EMAIL_HOST,
     EMAIL_PORT: process.env.EMAIL_PORT,
     EMAIL_USERNAME: process.env.EMAIL_USERNAME,
-    // Password intentionally omitted for security
+    // Password and API keys intentionally omitted for security
   });
 
   // Auth Configuration
@@ -198,7 +250,6 @@ function logConfiguration() {
 // Helper function to initialize job scheduler
 async function initializeJobScheduler(storageService: StorageService) {
   // Initialize job scheduler and register jobs
-  const rootKnex = await getConnection(null);
   const jobService = await JobService.create();
   const jobScheduler: IJobScheduler = await JobScheduler.getInstance(jobService, storageService);
   
@@ -300,15 +351,6 @@ async function initializeJobScheduler(storageService: StorageService) {
 
 // Helper function to setup development environment
 async function setupDevelopmentEnvironment() {
-  const generateSecurePassword = () => {
-    const length = 16;
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-    return Array.from(
-      { length },
-      () => chars[crypto.randomInt(chars.length)]
-    ).join('');
-  };
-
   let newPassword;
   const glinda = await User.findUserByEmail("glinda@emeraldcity.oz");
   if (glinda) {

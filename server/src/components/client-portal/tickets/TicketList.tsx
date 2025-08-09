@@ -207,6 +207,24 @@ export function TicketList() {
 
   const columns: ColumnDefinition<ITicketListItem>[] = [
     {
+      title: 'Ticket Number',
+      dataIndex: 'ticket_number',
+      width: '75px',
+      render: (value: string, record: ITicketListItem) => (
+        <div
+          className="font-medium cursor-pointer hover:text-blue-600"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (record.ticket_id) {
+              setSelectedTicketId(record.ticket_id);
+            }
+          }}
+        >
+          {value}
+        </div>
+      ),
+    },
+    {
       title: 'Title',
       dataIndex: 'title',
       width: '25%',
@@ -273,8 +291,8 @@ export function TicketList() {
       render: (value: string, record: ITicketListItem) => (
         <div className="flex items-center gap-2">
           <div 
-            className="w-3 h-3 rounded-full border border-gray-300" 
-            style={{ backgroundColor: record.priority_color || '#6B7280' }}
+            className={`w-3 h-3 rounded-full border border-gray-300 ${!record.priority_color ? 'bg-gray-500' : ''}`}
+            style={record.priority_color ? { backgroundColor: record.priority_color } : undefined}
           />
           <span className="capitalize">{value}</span>
         </div>

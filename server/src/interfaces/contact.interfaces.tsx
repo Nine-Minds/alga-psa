@@ -1,17 +1,18 @@
 import { TenantEntity } from '.';
 import { ITaggable } from './tag.interfaces';
-export interface IContact extends TenantEntity, ITaggable {
-  contact_name_id: string;
-  full_name: string;
-  company_id: string | null;
+import { IContact as SharedIContact } from '@alga-psa/shared/interfaces/contact.interfaces';
+
+// Extend the shared IContact interface with server-specific fields
+export interface IContact extends SharedIContact, TenantEntity, ITaggable {
+  // Override shared fields to match existing server expectations (non-nullable)
   phone_number: string;
   email: string;
   role: string;
-  created_at: string;
-  updated_at: string;
   is_inactive: boolean;
-  notes?: string;
+  
+  // Server-specific fields
   avatarUrl?: string | null;
+  is_client_admin?: boolean;
 }
 
 export interface ICSVColumnMapping {
@@ -57,7 +58,7 @@ export type MappableField =
   | 'full_name'
   | 'phone_number'
   | 'email'
-  | 'company_name'
+  | 'company'
   | 'role'
   | 'notes'
   | 'tags';

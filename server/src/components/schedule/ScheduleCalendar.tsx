@@ -1,12 +1,17 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
 import type { MouseEvent } from 'react';
-import { Calendar, momentLocalizer, NavigateAction, View, ToolbarProps } from 'react-big-calendar';
-import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
-import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
+import dynamic from 'next/dynamic';
+import { momentLocalizer, NavigateAction, View, ToolbarProps } from 'react-big-calendar';
 import moment from 'moment';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
+import CalendarSkeleton from 'server/src/components/ui/skeletons/CalendarSkeleton';
+
+// Dynamic import for react-big-calendar
+const DynamicBigCalendar = dynamic(() => import('./DynamicBigCalendar'), {
+  loading: () => <CalendarSkeleton height="100%" view="week" showSidebar={false} />,
+  ssr: false
+});
 import { Button } from '../ui/Button';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import Spinner from 'server/src/components/ui/Spinner';
@@ -20,7 +25,8 @@ import { produce } from 'immer';
 import { Dialog } from 'server/src/components/ui/Dialog';
 import { WorkItemType, IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { useUsers } from 'server/src/hooks/useUsers';
-import { getCurrentUser, getCurrentUserPermissions, getUserPreference, setUserPreference } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser, getCurrentUserPermissions } from 'server/src/lib/actions/user-actions/userActions';
+import { useUserPreference } from 'server/src/hooks/useUserPreference';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { WorkItemDrawer } from 'server/src/components/time-management/time-entry/time-sheet/WorkItemDrawer';
 import { useDrawer } from "server/src/context/DrawerContext";
@@ -31,10 +37,21 @@ import { Label } from 'server/src/components/ui/Label';
 
 const localizer = momentLocalizer(moment);
 
-const DnDCalendar = withDragAndDrop(Calendar);
-
 const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
-  const [view, setView] = useState<View>("week");
+  // Use the custom hook for schedule view preference
+  const { 
+    value: view, 
+    setValue: setView,
+    isLoading: isViewPreferenceLoading 
+  } = useUserPreference<View>(
+    'defaultScheduleView',
+    {
+      defaultValue: 'week',
+      localStorageKey: 'defaultScheduleView',
+      debounceMs: 300
+    }
+  );
+  
   const [events, setEvents] = useState<IScheduleEntry[]>([]);
   const [showEntryPopup, setShowEntryPopup] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<IScheduleEntry | null>(null);
@@ -175,17 +192,7 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
           // Initialize with empty comparison list
           setComparisonTechnicianIds([]);
 
-          // Load saved view preference
-          try {
-            const savedView = await getUserPreference(user.user_id, 'defaultScheduleView');
-            if (savedView && ['month', 'week', 'day'].includes(savedView)) {
-              setView(savedView as View);
-            }
-          } catch (err) {
-            console.log('No saved view preference found, using default');
-          } finally {
-            setIsLoadingPreferences(false);
-          }
+          setIsLoadingPreferences(false);
         } catch (err: any) {
            console.error("Failed to fetch user permissions:", err);
            setError(err.message || "Failed to load permissions.");
@@ -293,7 +300,8 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
     
     setSelectedSlot({
       ...adjustedSlotInfo,
-      defaultAssigneeId: focusedTechnicianId
+      defaultAssigneeId: focusedTechnicianId,
+      assigned_user_ids: focusedTechnicianId ? [focusedTechnicianId] : [currentUserId]
     });
     setShowEntryPopup(true);
   };
@@ -601,16 +609,8 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
       onNavigate(action);
     };
 
-    const handleViewChange = async (newView: string) => {
+    const handleViewChange = (newView: string) => {
       onView(newView as View);
-      // Save the view preference
-      if (currentUserId) {
-        try {
-          await setUserPreference(currentUserId, 'defaultScheduleView', newView);
-        } catch (err) {
-          console.error('Failed to save view preference:', err);
-        }
-      }
     }
 
     return (
@@ -849,63 +849,57 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
             const scrollToTime = new Date();
             scrollToTime.setHours(8, 0, 0, 0);
             return (
-              <DnDCalendar
-                localizer={localizer}
-                events={events}
-                startAccessor={(event: object) => new Date((event as IScheduleEntry).scheduled_start)}
-                endAccessor={(event: object) => new Date((event as IScheduleEntry).scheduled_end)}
-                eventPropGetter={(event: object) => ({
-                  style: {
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    borderRadius: '0px',
-                    padding: '0px',
-                    boxShadow: 'none',
-                    color: 'inherit',
-                  }
-                })}
-                style={{ height: '100%' }}
-                view={view}
-                date={date}
-                scrollToTime={scrollToTime}
-                onView={async (newView) => {
-                  setView(newView);
-                  // Save the view preference when changed via calendar navigation
-                  if (currentUserId) {
-                    try {
-                      await setUserPreference(currentUserId, 'defaultScheduleView', newView);
-                    } catch (err) {
-                      console.error('Failed to save view preference:', err);
+              <Suspense fallback={<CalendarSkeleton height="100%" view={view === 'agenda' ? 'week' : view as 'month' | 'week' | 'day'} showSidebar={false} />}>
+                <DynamicBigCalendar
+                  localizer={localizer}
+                  events={events}
+                  startAccessor={(event: object) => new Date((event as IScheduleEntry).scheduled_start)}
+                  endAccessor={(event: object) => new Date((event as IScheduleEntry).scheduled_end)}
+                  eventPropGetter={(event: object) => ({
+                    style: {
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      borderRadius: '0px',
+                      padding: '0px',
+                      boxShadow: 'none',
+                      color: 'inherit',
                     }
-                  }
-                }}
-                onNavigate={handleNavigate}
-                selectable
-                onSelectSlot={handleSelectSlot}
-                onSelectEvent={handleSelectEvent}
-                resizableAccessor={(event: object) => {
-                  const scheduleEvent = event as IScheduleEntry;
-                  return focusedTechnicianId !== null &&
-                        scheduleEvent?.assigned_user_ids &&
-                        scheduleEvent.assigned_user_ids.includes(focusedTechnicianId);
-                }}
-                draggableAccessor={(event: object) => {
-                  const scheduleEvent = event as IScheduleEntry;
-                  return focusedTechnicianId !== null &&
-                        scheduleEvent?.assigned_user_ids &&
-                        scheduleEvent.assigned_user_ids.includes(focusedTechnicianId);
-                }}
-                onEventResize={handleEventResize}
-                onEventDrop={handleEventDrop}
-                step={15}
-                timeslots={4}
-                components={{
-                  toolbar: CustomToolbar,
-                  event: EventComponent
-                }}
-                defaultView="week"
-                views={['month', 'week', 'day']}
-              />
+                  })}
+                  style={{ height: '100%' }}
+                  view={view}
+                  date={date}
+                  scrollToTime={scrollToTime}
+                  onView={(newView) => {
+                    setView(newView);
+                  }}
+                  onNavigate={handleNavigate}
+                  selectable
+                  onSelectSlot={handleSelectSlot}
+                  onSelectEvent={handleSelectEvent}
+                  resizableAccessor={(event: object) => {
+                    const scheduleEvent = event as IScheduleEntry;
+                    return focusedTechnicianId !== null &&
+                          scheduleEvent?.assigned_user_ids &&
+                          scheduleEvent.assigned_user_ids.includes(focusedTechnicianId);
+                  }}
+                  draggableAccessor={(event: object) => {
+                    const scheduleEvent = event as IScheduleEntry;
+                    return focusedTechnicianId !== null &&
+                          scheduleEvent?.assigned_user_ids &&
+                          scheduleEvent.assigned_user_ids.includes(focusedTechnicianId);
+                  }}
+                  onEventResize={handleEventResize}
+                  onEventDrop={handleEventDrop}
+                  step={15}
+                  timeslots={4}
+                  components={{
+                    toolbar: CustomToolbar,
+                    event: EventComponent
+                  }}
+                  defaultView="week"
+                  views={['month', 'week', 'day']}
+                />
+              </Suspense>
             );
           })()}
         </div>

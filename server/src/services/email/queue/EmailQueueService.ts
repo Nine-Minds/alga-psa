@@ -226,6 +226,7 @@ export class EmailQueueService {
       webhookData: job.webhookData,
       attempt: 0,
       maxRetries: job.maxRetries ?? EmailQueueService.MAX_RETRIES,
+
       createdAt: job.createdAt,
     };
 

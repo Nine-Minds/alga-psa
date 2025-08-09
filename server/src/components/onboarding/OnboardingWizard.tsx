@@ -22,34 +22,40 @@ import {
 } from 'server/src/lib/actions/onboarding-actions/onboardingActions';
 
 interface OnboardingWizardProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   testMode?: boolean;
   debugMode?: boolean;
   initialData?: Partial<WizardData>;
   onComplete?: (data: WizardData) => void;
+  fullPage?: boolean;
 }
 
 export function OnboardingWizard({
-  open,
+  open = true,
   onOpenChange,
   testMode = false,
   debugMode = false,
   initialData = {},
   onComplete,
+  fullPage = false,
 }: OnboardingWizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<number, string>>({});
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  const [attemptedSteps, setAttemptedSteps] = useState<Set<number>>(new Set());
   const [wizardData, setWizardData] = useState<WizardData>({
     // Company Info
     firstName: '',
     lastName: '',
     companyName: '',
     email: '',
+    newPassword: '',
+    confirmPassword: '',
 
     // Team Members
-    teamMembers: [{ firstName: '', lastName: '', email: '', role: 'Technician' }],
+    teamMembers: [{ firstName: '', lastName: '', email: '', role: 'technician' }],
 
     // Client Info
     clientName: '',
@@ -66,13 +72,14 @@ export function OnboardingWizard({
     serviceName: '',
     serviceDescription: '',
     servicePrice: '',
-    planName: 'monthly',
+    planName: 'hourly',
 
     // Ticketing
     channelName: '',
+    channelId: undefined,
     supportEmail: '',
-    categories: ['Technical Support', 'Network Issue', 'Software Issue'],
-    priorities: ['Low', 'Medium', 'High', 'Critical'],
+    categories: [],
+    priorities: [],
     
     ...initialData,
   });
@@ -100,7 +107,8 @@ export function OnboardingWizard({
             firstName: wizardData.firstName,
             lastName: wizardData.lastName,
             companyName: wizardData.companyName,
-            email: wizardData.email
+            email: wizardData.email,
+            newPassword: wizardData.newPassword
           });
           if (!companyResult.success) {
             setErrors(prev => ({ ...prev, [stepIndex]: companyResult.error || 'Failed to save company info' }));
@@ -109,11 +117,24 @@ export function OnboardingWizard({
           break;
           
         case 1: // Team Members
-          if (wizardData.teamMembers.some(m => m.firstName && m.lastName && m.email)) {
-            const teamResult = await addTeamMembers(wizardData.teamMembers.filter(m => m.firstName && m.lastName && m.email));
+          const validMembers = wizardData.teamMembers.filter(m => m.firstName && m.lastName && m.email);
+          
+          // Filter out already created team members
+          const existingEmails = wizardData.createdTeamMemberEmails || [];
+          const newMembers = validMembers.filter(m => !existingEmails.includes(m.email));
+          
+          
+          if (newMembers.length > 0) {
+            const teamResult = await addTeamMembers(newMembers);
             if (!teamResult.success) {
               setErrors(prev => ({ ...prev, [stepIndex]: teamResult.error || 'Failed to add team members' }));
               return false;
+            }
+            
+            // Track created team member emails
+            if (teamResult.data?.created && teamResult.data.created.length > 0) {
+              const allCreated = [...new Set([...existingEmails, ...teamResult.data.created])];
+              setWizardData(prev => ({ ...prev, createdTeamMemberEmails: allCreated }));
             }
           }
           break;
@@ -124,44 +145,64 @@ export function OnboardingWizard({
               clientName: wizardData.clientName,
               clientEmail: wizardData.clientEmail,
               clientPhone: wizardData.clientPhone,
-              clientUrl: wizardData.clientUrl
+              clientUrl: wizardData.clientUrl,
+              clientId: wizardData.clientId // Pass existing ID if available for updates
             });
             if (!clientResult.success) {
-              setErrors(prev => ({ ...prev, [stepIndex]: clientResult.error || 'Failed to create client' }));
+              setErrors(prev => ({ ...prev, [stepIndex]: clientResult.error || 'Failed to save client' }));
               return false;
             }
-            // Store client ID for contact step
-            setWizardData(prev => ({ ...prev, clientId: clientResult.data?.clientId }));
+            // Store client ID for contact step (if it's a new client)
+            if (clientResult.data?.clientId && !wizardData.clientId) {
+              setWizardData(prev => ({ ...prev, clientId: clientResult.data.clientId }));
+            }
           }
           break;
           
         case 3: // Client Contact
           if (wizardData.contactName && wizardData.clientId) {
-            const contactResult = await addClientContact({
-              contactName: wizardData.contactName,
-              contactEmail: wizardData.contactEmail,
-              contactRole: wizardData.contactRole,
-              clientId: wizardData.clientId
-            });
-            if (!contactResult.success) {
-              setErrors(prev => ({ ...prev, [stepIndex]: contactResult.error || 'Failed to add contact' }));
-              return false;
+            // Check if we already have a contactId (contact was already created)
+            if (!wizardData.contactId) {
+              const contactResult = await addClientContact({
+                contactName: wizardData.contactName,
+                contactEmail: wizardData.contactEmail,
+                contactRole: wizardData.contactRole,
+                clientId: wizardData.clientId
+              });
+              if (!contactResult.success) {
+                setErrors(prev => ({ ...prev, [stepIndex]: contactResult.error || 'Failed to add contact' }));
+                return false;
+              }
+              // Store contact ID
+              if (contactResult.data?.contactId) {
+                setWizardData(prev => ({ ...prev, contactId: contactResult.data.contactId }));
+              }
             }
+            // If contactId exists, we've already created this contact, just proceed
           }
           break;
           
         case 4: // Billing
           if (wizardData.serviceName) {
-            const billingResult = await setupBilling({
-              serviceName: wizardData.serviceName,
-              serviceDescription: wizardData.serviceDescription,
-              servicePrice: wizardData.servicePrice,
-              planName: wizardData.planName
-            });
-            if (!billingResult.success) {
-              setErrors(prev => ({ ...prev, [stepIndex]: billingResult.error || 'Failed to setup billing' }));
-              return false;
+            // Check if we already have a serviceId (service was already created)
+            if (!wizardData.serviceId) {
+              const billingResult = await setupBilling({
+                serviceName: wizardData.serviceName,
+                serviceDescription: wizardData.serviceDescription,
+                servicePrice: wizardData.servicePrice,
+                planName: wizardData.planName,
+                serviceTypeId: wizardData.serviceTypeId
+              });
+              if (!billingResult.success) {
+                setErrors(prev => ({ ...prev, [stepIndex]: billingResult.error || 'Failed to setup billing' }));
+                return false;
+              }
+              // Store service ID
+              if (billingResult.data?.serviceId) {
+                setWizardData(prev => ({ ...prev, serviceId: billingResult.data.serviceId }));
+              }
             }
+            // If serviceId exists, we've already created this service, just proceed
           }
           break;
       }
@@ -175,9 +216,13 @@ export function OnboardingWizard({
   };
 
   const handleNext = async () => {
+    // Mark the current step as attempted
+    setAttemptedSteps(prev => new Set([...prev, currentStep]));
+    
     if (currentStep < STEPS.length - 1) {
       const saved = await saveStepData(currentStep);
       if (saved) {
+        setCompletedSteps(prev => new Set([...prev, currentStep]));
         setCurrentStep(currentStep + 1);
       }
     }
@@ -191,12 +236,18 @@ export function OnboardingWizard({
 
   const handleSkip = () => {
     if (currentStep < STEPS.length - 1 && !REQUIRED_STEPS.includes(currentStep)) {
+      // Don't mark as completed when skipping
       setCurrentStep(currentStep + 1);
     }
   };
 
   const handleStepClick = (stepIndex: number) => {
-    if (stepIndex === 0 || isFirstStepValid()) {
+    // Allow navigation to:
+    // 1. First step (always)
+    // 2. Any completed step
+    // 3. The step immediately after the last completed step
+    if (stepIndex === 0 || completedSteps.has(stepIndex) || 
+        (stepIndex > 0 && completedSteps.has(stepIndex - 1))) {
       setCurrentStep(stepIndex);
     }
   };
@@ -211,12 +262,17 @@ export function OnboardingWizard({
     setIsLoading(true);
     try {
       // Save final step (ticketing)
-      if (wizardData.channelName) {
+      if (wizardData.channelName || wizardData.channelId) {
         const ticketingResult = await configureTicketing({
           channelName: wizardData.channelName,
           supportEmail: wizardData.supportEmail,
           categories: wizardData.categories,
-          priorities: wizardData.priorities
+          priorities: wizardData.priorities,
+          ticketPrefix: wizardData.ticketPrefix,
+          ticketPaddingLength: wizardData.ticketPaddingLength,
+          ticketStartNumber: wizardData.ticketStartNumber,
+          channelId: wizardData.channelId,
+          statuses: wizardData.statuses
         });
         
         if (!ticketingResult.success) {
@@ -233,7 +289,9 @@ export function OnboardingWizard({
       }
       
       onComplete?.(wizardData);
-      onOpenChange(false);
+      if (!fullPage && onOpenChange) {
+        onOpenChange(false);
+      }
     } catch (error) {
       console.error('Error completing onboarding:', error);
       setErrors(prev => ({ ...prev, [5]: error instanceof Error ? error.message : 'Unknown error' }));
@@ -243,13 +301,31 @@ export function OnboardingWizard({
   };
 
   const isFirstStepValid = () => {
-    const { firstName, lastName, companyName, email } = wizardData;
-    return !!(firstName && lastName && companyName && email);
+    const { firstName, lastName, companyName, email, newPassword, confirmPassword } = wizardData;
+    
+    // Basic field validation
+    if (!firstName || !lastName || !companyName || !email || !newPassword || !confirmPassword) {
+      return false;
+    }
+    
+    // Password validation
+    if (newPassword.length < 8) {
+      return false;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      return false;
+    }
+    
+    return true;
   };
 
   const isTicketingStepValid = () => {
-    const { channelName, categories, priorities } = wizardData;
-    return !!(channelName && channelName.trim() && categories.length > 0 && priorities.length > 0);
+    const { channelName, channelId, priorities } = wizardData;
+    // Check if we have either a channel name or channel ID (from import)
+    const hasChannel = (channelName && channelName.trim()) || channelId;
+    // Categories are optional, but we need at least one priority
+    return !!(hasChannel && priorities.length > 0);
   };
 
   const hasAtLeastOneFieldFilled = () => {
@@ -262,13 +338,20 @@ export function OnboardingWizard({
         return !!(wizardData.clientName || wizardData.clientEmail || 
                  wizardData.clientPhone || wizardData.clientUrl);
       case 3: // Contact
+        // If we have a clientId (from saved data or previous step), validate normally
+        if (wizardData.clientId) {
+          return !!(wizardData.contactName || wizardData.contactEmail || wizardData.contactRole);
+        }
+        // If no clientId, check if client info was provided in the previous step
         const hasClientInfo = !!(wizardData.clientName || wizardData.clientEmail || 
                                wizardData.clientPhone || wizardData.clientUrl);
-        if (!hasClientInfo) return false;
+        if (!hasClientInfo) {
+          // If client step was skipped, allow skipping this step too
+          return true;
+        }
         return !!(wizardData.contactName || wizardData.contactEmail || wizardData.contactRole);
       case 4: // Billing
-        return !!(wizardData.serviceName || wizardData.serviceDescription || 
-                 wizardData.servicePrice || wizardData.planName);
+        return !!(wizardData.serviceTypeId && wizardData.serviceName);
       default:
         return true;
     }
@@ -277,6 +360,15 @@ export function OnboardingWizard({
   const isStepValid = () => {
     if (currentStep === 0) return isFirstStepValid();
     if (currentStep === 5) return isTicketingStepValid();
+    
+    // For optional steps with dependencies, check if the dependency was skipped
+    if (currentStep === 3) { // Contact step
+      // If client step was skipped (no client data), this step is valid to proceed
+      const hasClientInfo = !!(wizardData.clientName || wizardData.clientEmail || 
+                             wizardData.clientPhone || wizardData.clientUrl || wizardData.clientId);
+      if (!hasClientInfo) return true;
+    }
+    
     return hasAtLeastOneFieldFilled();
   };
 
@@ -291,7 +383,7 @@ export function OnboardingWizard({
       case 3:
         return <ClientContactStep data={wizardData} updateData={updateData} />;
       case 4:
-        return <BillingSetupStep data={wizardData} updateData={updateData} />;
+        return <BillingSetupStep data={wizardData} updateData={updateData} attemptedToProceed={attemptedSteps.has(4)} />;
       case 5:
         return <TicketingConfigStep data={wizardData} updateData={updateData} />;
       default:
@@ -299,53 +391,81 @@ export function OnboardingWizard({
     }
   };
 
-  return (
-    <Dialog isOpen={open} onClose={() => onOpenChange(false)} title="Setup Your System" className="max-w-4xl">
-        <div className="max-h-[90vh] overflow-y-auto">
-          <WizardProgress
-            steps={STEPS}
-            currentStep={currentStep}
-            onStepClick={handleStepClick}
-            canNavigateToStep={(stepIndex) => stepIndex === 0 || isFirstStepValid()}
-          />
+  const wizardContent = (
+    <>
+      <WizardProgress
+        steps={STEPS}
+        currentStep={currentStep}
+        completedSteps={completedSteps}
+        onStepClick={handleStepClick}
+        canNavigateToStep={(stepIndex) => 
+          stepIndex === 0 || 
+          stepIndex === currentStep ||  // Current step is always navigable
+          completedSteps.has(stepIndex) || 
+          (stepIndex > 0 && completedSteps.has(stepIndex - 1))
+        }
+      />
 
-          <div className="mt-8 mb-4">
-            {renderStep()}
-          </div>
+      <div className="mt-8 mb-4">
+        {renderStep()}
+      </div>
 
-          {debugMode && (
-            <div className="mt-4 p-4 bg-gray-100 rounded text-xs">
-              <p className="font-bold mb-2">Debug Info:</p>
-              <p>Current Step: {currentStep} ({STEPS[currentStep]})</p>
-              <p>Is Valid: {isStepValid() ? 'Yes' : 'No'}</p>
-              <p>Is Required: {REQUIRED_STEPS.includes(currentStep) ? 'Yes' : 'No'}</p>
-              <details className="mt-2">
-                <summary className="cursor-pointer">View Data</summary>
-                <pre className="mt-2 text-xs overflow-auto">
-                  {JSON.stringify(wizardData, null, 2)}
-                </pre>
-              </details>
-            </div>
-          )}
-
-          {errors[currentStep] && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-red-700 text-sm">{errors[currentStep]}</p>
-            </div>
-          )}
-
-          <WizardNavigation
-            currentStep={currentStep}
-            totalSteps={STEPS.length}
-            onBack={handleBack}
-            onNext={handleNext}
-            onSkip={handleSkip}
-            onFinish={handleFinish}
-            isNextDisabled={!isStepValid() || isLoading}
-            isSkipDisabled={REQUIRED_STEPS.includes(currentStep)}
-            isLoading={isLoading}
-          />
+      {debugMode && (
+        <div className="mt-4 p-4 bg-gray-100 rounded text-xs">
+          <p className="font-bold mb-2">Debug Info:</p>
+          <p>Current Step: {currentStep} ({STEPS[currentStep]})</p>
+          <p>Is Valid: {isStepValid() ? 'Yes' : 'No'}</p>
+          <p>Is Required: {REQUIRED_STEPS.includes(currentStep) ? 'Yes' : 'No'}</p>
+          <details className="mt-2">
+            <summary className="cursor-pointer">View Data</summary>
+            <pre className="mt-2 text-xs overflow-auto">
+              {JSON.stringify(wizardData, null, 2)}
+            </pre>
+          </details>
         </div>
+      )}
+
+      {errors[currentStep] && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+          <p className="text-red-700 text-sm">{errors[currentStep]}</p>
+        </div>
+      )}
+
+      <WizardNavigation
+        currentStep={currentStep}
+        totalSteps={STEPS.length}
+        onBack={handleBack}
+        onNext={handleNext}
+        onSkip={handleSkip}
+        onFinish={handleFinish}
+        isNextDisabled={!isStepValid() || isLoading}
+        isSkipDisabled={REQUIRED_STEPS.includes(currentStep)}
+        isLoading={isLoading}
+      />
+    </>
+  );
+
+  if (fullPage) {
+    return (
+      <div className="min-h-screen bg-white">
+        <div className="mx-auto max-w-5xl px-4 py-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900">Setup Your System</h1>
+            <p className="mt-2 text-lg text-gray-600">Let's get your workspace configured and ready to use.</p>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            {wizardContent}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Dialog isOpen={open} onClose={() => onOpenChange?.(false)} title="Setup Your System" className="max-w-4xl">
+      <div className="max-h-[90vh] overflow-y-auto">
+        {wizardContent}
+      </div>
     </Dialog>
   );
 }

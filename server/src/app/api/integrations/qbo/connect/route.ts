@@ -3,10 +3,10 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server'; // Keep only one import
 import crypto from 'crypto';
 // --- Import Actual Implementations ---
-import { ISecretProvider } from '@shared/core/ISecretProvider'; // Import the interface
-import { getSecretProviderInstance } from '@shared/core/secretProvider';
+import { ISecretProvider } from '@alga-psa/shared/core'; // Import the interface
+import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider.js';
 import { createTenantKnex } from '../../../../../lib/db'; // Import createTenantKnex
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 // TODO: Import the actual CSRF token storage mechanism
 // import { storeCsrfToken } from '../../../../../lib/auth/csrf'; // Hypothetical path removed
@@ -23,7 +23,7 @@ export async function GET(
 ) {
   let tenantId: string | null = null;
   // Get the secret provider instance
-  const secretProvider = getSecretProviderInstance();
+  const secretProvider = await getSecretProviderInstance();
 
   try {
     // Get tenant ID from knex

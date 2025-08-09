@@ -7,7 +7,7 @@ import CustomSelect from 'server/src/components/ui/CustomSelect'
 import { createService, getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions'
 import { getActiveTaxRegions, getTaxRates } from 'server/src/lib/actions/taxSettingsActions'; // Added getTaxRates
 import { ITaxRate, ITaxRegion } from 'server/src/interfaces/tax.interfaces';
-import { UnitOfMeasureInput } from './UnitOfMeasureInput';
+import { UnitOfMeasureInput } from 'server/src/components/ui/UnitOfMeasureInput';
 import { toast } from 'react-hot-toast';
 
 export const ServiceForm: React.FC = () => {

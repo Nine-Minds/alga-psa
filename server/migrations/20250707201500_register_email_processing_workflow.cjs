@@ -16,8 +16,8 @@ const emailProcessingWorkflowDefinition = {
   executeFn: `
     async function execute(context) {
       // This is a placeholder - the actual execution happens in
-      // /shared/workflow/workflows/system-email-processing-workflow.ts
-      const { systemEmailProcessingWorkflow } = await import('/shared/workflow/workflows/system-email-processing-workflow.ts');
+      // @shared/workflow/workflows/system-email-processing-workflow.ts
+      const { systemEmailProcessingWorkflow } = await import('@shared/workflow/workflows/system-email-processing-workflow.js');
       return await systemEmailProcessingWorkflow(context);
     }
   `,

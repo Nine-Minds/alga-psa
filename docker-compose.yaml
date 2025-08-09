@@ -64,6 +64,13 @@ x-environment: &shared-environment
   NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
   NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
 
+  # ---- SECRET PROVIDER ----
+  # Composite secret provider configuration
+  # Default: env -> filesystem chain for reads, filesystem for writes
+  # Override these in production for vault integration
+  SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem}
+  SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
+
   # ---- DEPLOY INFO  ----
   PROJECT_NAME: ${PROJECT_NAME}
   EXPOSE_DB_PORT: ${EXPOSE_DB_PORT:-5432}

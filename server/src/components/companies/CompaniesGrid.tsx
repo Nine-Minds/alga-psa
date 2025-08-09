@@ -10,13 +10,14 @@ interface CompaniesGridProps {
     handleCheckboxChange: (companyId: string) => void;
     handleEditCompany: (companyId: string) => void;
     handleDeleteCompany: (company: ICompany) => void;
+    onQuickView?: (company: ICompany) => void;
     currentPage: number;
     pageSize: number;
     totalCount: number;
     onPageChange: (page: number) => void;
     onPageSizeChange: (size: number) => void;
     companyTags?: Record<string, ITag[]>;
-    allUniqueTags?: string[];
+    allUniqueTags?: ITag[];
     onTagsChange?: (companyId: string, tags: ITag[]) => void;
 }
 
@@ -28,6 +29,7 @@ const CompaniesGrid = ({
     handleCheckboxChange, 
     handleEditCompany, 
     handleDeleteCompany,
+    onQuickView,
     currentPage,
     pageSize,
     totalCount,
@@ -56,8 +58,9 @@ const CompaniesGrid = ({
                             handleCheckboxChange={handleCheckboxChange}
                             handleEditCompany={handleEditCompany}
                             handleDeleteCompany={handleDeleteCompany}
+                            onQuickView={onQuickView}
                             tags={companyTags[company.company_id] || []}
-                            allUniqueTags={allUniqueTags}
+                            allUniqueTags={allUniqueTags.map(tag => tag.tag_text)}
                             onTagsChange={onTagsChange}
                         />
                     </div>

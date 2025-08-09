@@ -1,5 +1,6 @@
 import { Context } from '@temporalio/activity';
 import { Resend } from 'resend';
+import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider.js';
 
 const logger = () => Context.current().log;
 
@@ -347,10 +348,10 @@ export class ProductionEmailService implements EmailServiceInterface {
  * Email Service Factory
  * Creates the appropriate email service based on environment configuration
  */
-export function createEmailService(config?: {
+export async function createEmailService(config?: {
   provider?: 'mock' | 'resend' | 'aws-ses' | 'sendgrid' | 'smtp';
   options?: Record<string, any>;
-}): EmailServiceInterface {
+}): Promise<EmailServiceInterface> {
   const provider = config?.provider || process.env.EMAIL_PROVIDER || 'mock';
   const options = config?.options || {};
 
@@ -362,7 +363,8 @@ export function createEmailService(config?: {
       });
     
     case 'resend':
-      const apiKey = process.env.RESEND_API_KEY;
+      const secretProvider = await getSecretProviderInstance();
+      const apiKey = await secretProvider.getAppSecret('RESEND_API_KEY') || process.env.RESEND_API_KEY;
       if (!apiKey) {
         throw new Error('RESEND_API_KEY environment variable is required for resend provider');
       }
@@ -383,4 +385,5 @@ export function createEmailService(config?: {
 }
 
 // Export singleton instance for use in activities
+// Note: This is now a Promise since createEmailService is async
 export const emailService = createEmailService();

@@ -51,11 +51,15 @@ RUN mkdir -p /app/secrets && \
     echo "secure-email-password-placeholder" > /app/secrets/email_password && \
     echo "secure-oauth-client-id-placeholder" > /app/secrets/google_oauth_client_id && \
     echo "secure-oauth-client-secret-placeholder" > /app/secrets/google_oauth_client_secret && \
+    echo "secure-ee-gmail-client-secret-placeholder" > /app/secrets/EE_GMAIL_CLIENT_SECRET && \
+    echo "secure-ee-microsoft-client-secret-placeholder" > /app/secrets/EE_MICROSOFT_CLIENT_SECRET && \
     chmod 600 /app/secrets/*
 
-# Copy example environment file
+# Copy example environment file and set Enterprise Edition
 COPY .env.example /app/.env   
 COPY .env.example /app/server/.env  
+RUN sed -i 's/NEXT_PUBLIC_EDITION=community/NEXT_PUBLIC_EDITION=enterprise/' /app/.env && \
+    sed -i 's/NEXT_PUBLIC_EDITION=community/NEXT_PUBLIC_EDITION=enterprise/' /app/server/.env  
 
 WORKDIR /app
 RUN npm run build:ee
@@ -76,6 +80,8 @@ COPY tsconfig.base.json ./
 COPY server/setup /app/server/setup
 COPY .env.example /app/.env   
 COPY .env.example /app/server/.env  
+RUN sed -i 's/NEXT_PUBLIC_EDITION=community/NEXT_PUBLIC_EDITION=enterprise/' /app/.env && \
+    sed -i 's/NEXT_PUBLIC_EDITION=community/NEXT_PUBLIC_EDITION=enterprise/' /app/server/.env  
 
 # Copy built application and node_modules from earlier stages -- minimalist approach
 COPY --from=builder /app/shared ./shared
@@ -89,6 +95,7 @@ COPY --from=builder /app/server/knexfile.cjs ./server/
 COPY --from=builder /app/server/migrations/ ./server/migrations/
 COPY --from=builder /app/server/seeds/ ./server/seeds/
 COPY --from=builder /app/server/src/ ./server/src/
+COPY --from=builder /app/secrets ./secrets
 COPY --from=deps /app/node_modules ./node_modules
 
 # Copy EE migrations (they get merged during build-enterprise.sh)
@@ -102,5 +109,15 @@ RUN echo "BUILD_TIME=$(date)" > /app/build-info.txt && \
     echo "BUILD_EPOCH=$(date +%s)" >> /app/build-info.txt
 
 EXPOSE 3000
+
+# Environment configuration
 ENV NODE_ENV=production
+ENV NEXT_PUBLIC_EDITION=enterprise
+
+# Secret provider configuration
+# Default configuration for composite secret system
+# Can be overridden in docker-compose or deployment environments
+ENV SECRET_READ_CHAIN="env,filesystem"
+ENV SECRET_WRITE_PROVIDER="filesystem"
+
 ENTRYPOINT ["/app/entrypoint.sh"]

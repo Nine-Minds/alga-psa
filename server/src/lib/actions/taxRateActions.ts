@@ -1,6 +1,6 @@
 'use server'
 
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { ITaxRate, IService } from 'server/src/interfaces/billing.interfaces';
 import { TaxService } from 'server/src/lib/services/taxService';
 import { v4 as uuid4 } from 'uuid';
@@ -21,7 +21,7 @@ export async function getTaxRates(): Promise<ITaxRate[]> {
       throw new Error('No authenticated user found');
     }
 
-    if (!await hasPermission(currentUser, 'tax', 'read')) {
+    if (!await hasPermission(currentUser, 'billing', 'read')) {
       throw new Error('Permission denied: Cannot read tax rates');
     }
 
@@ -44,7 +44,7 @@ export async function addTaxRate(taxRateData: Omit<ITaxRate, 'tax_rate_id'>): Pr
       throw new Error('No authenticated user found');
     }
 
-    if (!await hasPermission(currentUser, 'tax', 'create')) {
+    if (!await hasPermission(currentUser, 'billing', 'create')) {
       throw new Error('Permission denied: Cannot create tax rates');
     }
 
@@ -84,7 +84,7 @@ export async function updateTaxRate(taxRateData: ITaxRate): Promise<ITaxRate> {
       throw new Error('No authenticated user found');
     }
 
-    if (!await hasPermission(currentUser, 'tax', 'update')) {
+    if (!await hasPermission(currentUser, 'billing', 'update')) {
       throw new Error('Permission denied: Cannot update tax rates');
     }
 
@@ -121,8 +121,8 @@ export async function updateTaxRate(taxRateData: ITaxRate): Promise<ITaxRate> {
       );
     }
 
-    // Clean up the data before update
-    const updateData = { ...taxRateData };
+    // Clean up the data before update and exclude partition key (tenant)
+    const { tenant: _, ...updateData } = { ...taxRateData };
     if (updateData.end_date === '') {
       updateData.end_date = null;
     }
@@ -153,11 +153,11 @@ export async function deleteTaxRate(taxRateId: string): Promise<DeleteTaxRateRes
     }
 
     // Need both read and delete permissions since we're checking for affected services and potentially deleting
-    if (!await hasPermission(currentUser, 'tax', 'read')) {
+    if (!await hasPermission(currentUser, 'billing', 'read')) {
       throw new Error('Permission denied: Cannot read tax rate information');
     }
 
-    if (!await hasPermission(currentUser, 'tax', 'delete')) {
+    if (!await hasPermission(currentUser, 'billing', 'delete')) {
       throw new Error('Permission denied: Cannot delete tax rates');
     }
 
@@ -201,7 +201,7 @@ export async function confirmDeleteTaxRate(taxRateId: string): Promise<void> {
     }
 
     // Need delete permission for tax rates and update permission for services
-    if (!await hasPermission(currentUser, 'tax', 'delete')) {
+    if (!await hasPermission(currentUser, 'billing', 'delete')) {
       throw new Error('Permission denied: Cannot delete tax rates');
     }
 

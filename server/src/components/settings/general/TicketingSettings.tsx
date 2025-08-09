@@ -80,8 +80,8 @@ function SettingSection<T extends object>({
 
   const getPlaceholder = (): string => {
     switch (title) {
-      case "Channels":
-        return "New Channel";
+      case "Boards":
+        return "New Board";
       case "Ticket Statuses":
         return "New Status";
       case "Priorities":
@@ -97,7 +97,7 @@ function SettingSection<T extends object>({
     if (editingItem && editInputRef.current?.value.trim()) {
       let propertyName: string;
       switch (title) {
-        case "Channels":
+        case "Boards":
           propertyName = "channel_name";
           break;
         case "Ticket Statuses":
@@ -1049,7 +1049,7 @@ const TicketingSettings = (): JSX.Element => {
       },
     },
     {
-      title: 'Channel',
+      title: 'Board',
       dataIndex: 'channel_id',
       render: (value) => {
         const channel = channels.find(ch => ch.channel_id === value);
@@ -1064,7 +1064,7 @@ const TicketingSettings = (): JSX.Element => {
       content: <NumberingSettings entityType="TICKET" />
     },
     {
-      label: "Channels",
+      label: "Boards",
       content: <ChannelsSettings />
     },
     {
@@ -1418,6 +1418,9 @@ const TicketingSettings = (): JSX.Element => {
                     required
                   />
                   <p className="text-xs text-gray-500 mt-1">
+                    Controls the order in which priorities appear in dropdown menus throughout the platform. Higher numbers appear first for priorities.
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
                     {(() => {
                       const prioritiesOfType = priorities.filter(p => 
                         'item_type' in p && p.item_type === selectedPriorityType
@@ -1735,6 +1738,9 @@ const TicketingSettings = (): JSX.Element => {
                   })()}
                   required
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Controls the order in which statuses appear in dropdown menus throughout the platform. Lower numbers appear first.
+                </p>
                 <p className="text-xs text-gray-500 mt-1">
                   {(() => {
                     const statusesOfType = statuses.filter(s => s.status_type === selectedStatusType);

@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { Flex, Text, TextArea } from '@radix-ui/themes';
-import { createPolicy, updatePolicy, deletePolicy, getPolicies } from '../../../../../../server/src/lib/actions/policyActions';
-import { IPolicy } from '../../../../../../server/src/interfaces/auth.interfaces';
-import { parsePolicy } from '../../../lib/auth/policyParser';
-import { DataTable } from '../../../../../../server/src/components/ui/DataTable';
-import { ColumnDefinition } from '../../../../../../server/src/interfaces/dataTable.interfaces';
-import { Button } from '../../../../../../server/src/components/ui/Button';
+import { createPolicy, updatePolicy, deletePolicy, getPolicies } from '/home/coder/alga-psa/server/src/lib/actions/policyActions';
+import { IPolicy } from '/home/coder/alga-psa/server/src/interfaces/auth.interfaces';
+import { parsePolicy } from '/home/coder/alga-psa/ee/server/src/lib/auth/policyParser';
+import { DataTable } from '/home/coder/alga-psa/server/src/components/ui/DataTable';
+import { ColumnDefinition } from '/home/coder/alga-psa/server/src/interfaces/dataTable.interfaces';
+import { Button } from '/home/coder/alga-psa/server/src/components/ui/Button';
 
 export default function PolicyManagement() {
   const [policies, setPolicies] = useState<IPolicy[]>([]);

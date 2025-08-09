@@ -527,7 +527,7 @@ export function QuickAddTicket({
                       selectedChannelId={channelId}
                       onFilterStateChange={setQuickAddChannelFilterState}
                       filterState={quickAddChannelFilterState}
-                      placeholder="Select Channel *"
+                      placeholder="Select Board *"
                     />
                   </div>
 

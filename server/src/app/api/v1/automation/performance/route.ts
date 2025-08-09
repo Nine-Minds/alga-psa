@@ -3,16 +3,13 @@
  * GET /api/v1/automation/performance - Get automation performance metrics
  */
 
-import { AutomationController } from 'server/src/lib/api/controllers/AutomationController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { NextRequest } from 'next/server';
+import { ApiAutomationController } from 'server/src/lib/api/controllers/ApiAutomationController';
 
-export async function GET(request: Request) {
-  try {
-    const controller = new AutomationController();
-    return await controller.getAutomationPerformance()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
+const controller = new ApiAutomationController();
+
+export async function GET(request: NextRequest) {
+  return controller.getAutomationPerformance()(request);
 }
 
 export const runtime = 'nodejs';

@@ -4,25 +4,19 @@
  * DELETE /api/v1/teams/bulk - Bulk delete teams
  */
 
-import { TeamController } from 'server/src/lib/api/controllers/TeamController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiTeamController } from '@/lib/api/controllers/ApiTeamController';
+import { NextRequest } from 'next/server';
 
-export async function PUT(request: Request) {
-  try {
-    const controller = new TeamController();
-    return await controller.bulkUpdate()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
+const controller = new ApiTeamController();
+
+export async function PUT(request: NextRequest) {
+  // Bulk update teams
+  return controller.bulkUpdate()(request);
 }
 
-export async function DELETE(request: Request) {
-  try {
-    const controller = new TeamController();
-    return await controller.bulkDelete()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
+export async function DELETE(request: NextRequest) {
+  // Bulk delete teams
+  return controller.bulkDelete()(request);
 }
 
 export const runtime = 'nodejs';

@@ -5,7 +5,7 @@ import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog'
 import { IDocument } from 'server/src/interfaces/document.interface';
 import Spinner from 'server/src/components/ui/Spinner';
 import { getDocumentPreview } from 'server/src/lib/actions/document-actions/documentActions';
-import { getDocumentDownloadUrl } from 'server/src/lib/utils/documentUtils';
+import { getDocumentDownloadUrl, downloadDocument } from 'server/src/lib/utils/documentUtils';
 import { Button } from 'server/src/components/ui/Button';
 import {
     Download,
@@ -135,9 +135,15 @@ function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoMo
                 </p>
                 <Button
                     id={`download-video-${fileId}`}
-                    onClick={() => {
+                    onClick={async () => {
                         const downloadUrl = getDocumentDownloadUrl(documentId);
-                        window.open(downloadUrl, '_blank');
+                        const filename = fileName || 'download';
+                        try {
+                            // Try using File System Access API for modern browsers
+                            await downloadDocument(downloadUrl, filename, true);
+                        } catch (error) {
+                            console.error('Download failed:', error);
+                        }
                     }}
                     className="mb-2"
                 >
@@ -260,8 +266,14 @@ export default function DocumentStorageCard({
         }
     };
 
-    const handleView = () => {
-        if (!document.file_id) return;
+    const handleView = async () => {
+        // For in-app documents (no file_id), trigger onClick to open editor instead
+        if (!document.file_id) {
+            if (onClick) {
+                onClick();
+            }
+            return;
+        }
         
         // For images, videos, and PDFs, show in modal
         if (document.mime_type?.startsWith('image/') || 
@@ -271,7 +283,12 @@ export default function DocumentStorageCard({
         } else {
             // For other files, download
             const downloadUrl = getDocumentDownloadUrl(document.file_id);
-            window.open(downloadUrl, '_blank');
+            const filename = document.document_name || 'download';
+            try {
+                await downloadDocument(downloadUrl, filename, true);
+            } catch (error) {
+                console.error('Download failed:', error);
+            }
         }
     };
 
@@ -303,9 +320,9 @@ export default function DocumentStorageCard({
 
     return (<>
         <ReflectionContainer id={id} label={`Document Card - ${document.document_name}`}>
-            <div className={`bg-white rounded-lg border border-[rgb(var(--color-border-200))] shadow-sm p-4 h-full flex flex-col transition-all hover:border-[rgb(var(--color-border-300))] ${isContentDocument ? 'cursor-pointer' : ''
+            <div className={`bg-white rounded-lg border border-[rgb(var(--color-border-200))] shadow-sm p-4 h-full flex flex-col transition-all hover:border-[rgb(var(--color-border-300))] ${(isContentDocument || !document.file_id) ? 'cursor-pointer' : ''
                 }`}
-                onClick={isContentDocument && onClick ? (e) => {
+                onClick={(isContentDocument || !document.file_id) && onClick ? (e) => {
                     // Prevent click event if it's coming from the delete button
                     if (e.target instanceof Element &&
                         (e.target.closest('button[id^="delete-document"]') ||
@@ -314,8 +331,8 @@ export default function DocumentStorageCard({
                     }
                     onClick();
                 } : undefined}
-                role={isContentDocument ? "button" : undefined}
-                tabIndex={isContentDocument ? 0 : undefined}
+                role={(isContentDocument || !document.file_id) ? "button" : undefined}
+                tabIndex={(isContentDocument || !document.file_id) ? 0 : undefined}
             >
                 <div className="flex-1">
                     <div className="flex items-start justify-between mb-3">
@@ -402,7 +419,7 @@ export default function DocumentStorageCard({
                                 </div>
                             ) : previewContent.content ? (
                                 <div
-                                    className="text-sm text-[rgb(var(--color-text-700))] max-h-[200px] overflow-hidden p-3 rounded-md bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-200))] cursor-pointer hover:bg-[rgb(var(--color-border-100))] transition-colors"
+                                    className={`text-sm text-[rgb(var(--color-text-700))] max-h-[200px] overflow-hidden p-3 rounded-md bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-200))] ${!document.file_id ? '' : 'cursor-pointer hover:bg-[rgb(var(--color-border-100))] transition-colors'}`}
                                     style={{
                                         display: '-webkit-box',
                                         WebkitLineClamp: '8',
@@ -410,9 +427,9 @@ export default function DocumentStorageCard({
                                         whiteSpace: 'pre-wrap'
                                     }}
                                     dangerouslySetInnerHTML={{ __html: previewContent.content || '' }}
-                                    onClick={handleFullSizeView}
-                                    role="button"
-                                    tabIndex={0}
+                                    onClick={!document.file_id ? undefined : handleFullSizeView}
+                                    role={!document.file_id ? undefined : "button"}
+                                    tabIndex={!document.file_id ? undefined : 0}
                                 />
                             ) : null}
                         </div>
@@ -425,7 +442,7 @@ export default function DocumentStorageCard({
                             id={`download-document-${document.document_id}-button`}
                             variant="ghost"
                             size="sm"
-                            onClick={(e) => {
+                            onClick={async (e) => {
                                 e.stopPropagation();
                                 const isPdfTarget = document.type_name === 'text/plain' ||
                                                     document.type_name === 'text/markdown' ||
@@ -439,7 +456,14 @@ export default function DocumentStorageCard({
                                 }
                                 
                                 if (downloadUrl !== '#') {
-                                    window.open(downloadUrl, '_blank');
+                                    const filename = isPdfTarget ? 
+                                        `${document.document_name || 'document'}.pdf` : 
+                                        (document.document_name || 'download');
+                                    try {
+                                        await downloadDocument(downloadUrl, filename, true);
+                                    } catch (error) {
+                                        console.error('Download failed:', error);
+                                    }
                                 }
                             }}
                             disabled={isLoading}
@@ -563,9 +587,14 @@ export default function DocumentStorageCard({
                                     <p className="text-[rgb(var(--color-text-500))]">Preview not available for this file type.</p>
                                     <Button
                                         id={`${id}-download-modal-button`}
-                                        onClick={() => {
+                                        onClick={async () => {
                                             const downloadUrl = getDocumentDownloadUrl(document.file_id!);
-                                            window.open(downloadUrl, '_blank');
+                                            const filename = document.document_name || 'download';
+                                            try {
+                                                await downloadDocument(downloadUrl, filename, true);
+                                            } catch (error) {
+                                                console.error('Download failed:', error);
+                                            }
                                         }}
                                         className="mt-4"
                                     >

@@ -27,6 +27,7 @@ import {
   ProjectSearchData,
   ProjectExportQuery
 } from '../schemas/project';
+import { NotFoundError } from '../middleware/apiMiddleware';
 import ProjectModel from 'server/src/lib/models/project';
 import ProjectTaskModel from 'server/src/lib/models/projectTask';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
@@ -185,13 +186,29 @@ export class ProjectService extends BaseService<IProject> {
       // Generate WBS code
       const wbsCode = await ProjectModel.generateNextWbsCode(trx, '');
       
-      // Get default status
-      const defaultStatus = await this.getDefaultProjectStatus(context);
+      // Get default status if not provided
+      let status = data.status;
+      if (!data.status) {
+        try {
+          const defaultStatus = await this.getDefaultProjectStatus(context);
+          status = defaultStatus?.status_id;
+        } catch (error) {
+          // If status lookup fails, throw error since status is required
+          console.error('Could not get default project status:', error);
+          throw new Error('Unable to determine project status. Please ensure project statuses are configured.');
+        }
+      } else if (!this.isUUID(data.status)) {
+        // Convert status name to UUID
+        status = await this.resolveStatusNameToId(data.status, context);
+      }
       
-      const projectData = {
-        ...data,
+      // Remove fields that don't belong in the database
+      const { create_default_phase, tags, budgeted_hours, ...dataForInsert } = data;
+      
+      const projectData: any = {
+        ...dataForInsert,
         wbs_code: wbsCode,
-        status: data.status || defaultStatus.status_id,
+        status: status, // Status is required in the database
         tenant: context.tenant,
         created_at: new Date(),
         updated_at: new Date()
@@ -243,8 +260,15 @@ export class ProjectService extends BaseService<IProject> {
       const { knex } = await this.getKnex();
       
       return withTransaction(knex, async (trx) => {
+        // Handle status name to UUID conversion if needed
+        let statusId = data.status;
+        if (data.status && !this.isUUID(data.status)) {
+          statusId = await this.resolveStatusNameToId(data.status, context);
+        }
+
         const updateData = {
           ...data,
+          status: statusId,
           updated_at: new Date()
         };
   
@@ -254,7 +278,12 @@ export class ProjectService extends BaseService<IProject> {
           .returning('*');
   
         if (!project) {
-          throw new Error('Project not found');
+          throw new NotFoundError('Project not found');
+        }
+        
+        // If status is requested in response, resolve it back to the expected format
+        if (data.status && !this.isUUID(data.status)) {
+          project.status = data.status;
         }
   
         // Publish event
@@ -283,7 +312,7 @@ export class ProjectService extends BaseService<IProject> {
           .del();
   
         if (result === 0) {
-          throw new Error('Project not found');
+          throw new NotFoundError('Project not found');
         }
   
         // Publish event
@@ -319,7 +348,7 @@ export class ProjectService extends BaseService<IProject> {
       return withTransaction(knex, async (trx) => {
         const project = await this.getById(projectId, context);
         if (!project) {
-          throw new Error('Project not found');
+          throw new NotFoundError('Project not found');
         }
   
         const phases = await this.getPhases(projectId, context);
@@ -386,7 +415,7 @@ export class ProjectService extends BaseService<IProject> {
           .returning('*');
   
         if (!phase) {
-          throw new Error('Project phase not found');
+          throw new NotFoundError('Project phase not found');
         }
   
         return phase;
@@ -402,7 +431,7 @@ export class ProjectService extends BaseService<IProject> {
         .del();
   
       if (result === 0) {
-        throw new Error('Project phase not found');
+        throw new NotFoundError('Project phase not found');
       }
     }
 
@@ -410,6 +439,22 @@ export class ProjectService extends BaseService<IProject> {
   // Project tasks
   async getTasks(projectId: string, context: ServiceContext): Promise<IProjectTask[]> {
       const { knex } = await this.getKnex();
+      
+      // First check if the project exists
+      const project = await this.getById(projectId, context);
+      if (!project) {
+        throw new NotFoundError('Project not found');
+      }
+      
+      // Check if there are any phases for this project
+      const phases = await knex('project_phases')
+        .where({ project_id: projectId, tenant: context.tenant })
+        .select('phase_id');
+        
+      if (phases.length === 0) {
+        // No phases means no tasks
+        return [];
+      }
       
       return knex('project_tasks')
         .join('project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')
@@ -434,7 +479,7 @@ export class ProjectService extends BaseService<IProject> {
           .first();
   
         if (!phase) {
-          throw new Error('Phase not found');
+          throw new NotFoundError('Phase not found');
         }
   
         const tasks = await trx('project_tasks')
@@ -501,7 +546,7 @@ export class ProjectService extends BaseService<IProject> {
           .returning('*');
   
         if (!task) {
-          throw new Error('Project task not found');
+          throw new NotFoundError('Project task not found');
         }
   
         return task;
@@ -517,7 +562,7 @@ export class ProjectService extends BaseService<IProject> {
         .del();
   
       if (result === 0) {
-        throw new Error('Project task not found');
+        throw new NotFoundError('Project task not found');
       }
     }
 
@@ -654,25 +699,33 @@ export class ProjectService extends BaseService<IProject> {
       const tableName = this.tableName;
       
       const stats = await knex(tableName)
+        .leftJoin('statuses', function() {
+          this.on(`${tableName}.status`, '=', 'statuses.status_id')
+              .andOn(`${tableName}.tenant`, '=', 'statuses.tenant');
+        })
         .where(`${tableName}.tenant`, context.tenant)
         .select([
           knex.raw('COUNT(*) as total_projects'),
-          knex.raw(`COUNT(CASE WHEN status = 'active' THEN 1 END) as active_projects`),
-          knex.raw(`COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_projects`),
-          knex.raw(`COUNT(CASE WHEN status = 'on_hold' THEN 1 END) as on_hold_projects`),
-          knex.raw(`COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_projects`),
-          knex.raw(`COUNT(CASE WHEN end_date < NOW() AND status != 'completed' THEN 1 END) as overdue_projects`),
-          knex.raw('SUM(budgeted_hours) as total_budgeted_hours'),
-          knex.raw(`COUNT(CASE WHEN created_at >= date_trunc('month', NOW()) THEN 1 END) as projects_created_this_month`),
-          knex.raw(`COUNT(CASE WHEN status = 'completed' AND updated_at >= date_trunc('month', NOW()) THEN 1 END) as projects_completed_this_month`)
+          knex.raw(`COUNT(CASE WHEN statuses.name = 'Active' THEN 1 END) as active_projects`),
+          knex.raw(`COUNT(CASE WHEN statuses.name = 'Completed' THEN 1 END) as completed_projects`),
+          knex.raw(`COUNT(CASE WHEN statuses.name = 'On Hold' THEN 1 END) as on_hold_projects`),
+          knex.raw(`COUNT(CASE WHEN statuses.name = 'Cancelled' THEN 1 END) as cancelled_projects`),
+          knex.raw(`COUNT(CASE WHEN ${tableName}.end_date < NOW() AND statuses.name != 'Completed' THEN 1 END) as overdue_projects`),
+          knex.raw(`SUM(${tableName}.budgeted_hours) as total_budgeted_hours`),
+          knex.raw(`COUNT(CASE WHEN ${tableName}.created_at >= date_trunc('month', NOW()) THEN 1 END) as projects_created_this_month`),
+          knex.raw(`COUNT(CASE WHEN statuses.name = 'Completed' AND ${tableName}.updated_at >= date_trunc('month', NOW()) THEN 1 END) as projects_completed_this_month`)
         ])
         .first();
   
       // Get projects by status
       const projectsByStatus = await knex(tableName)
+        .leftJoin('statuses', function() {
+          this.on(`${tableName}.status`, '=', 'statuses.status_id')
+              .andOn(`${tableName}.tenant`, '=', 'statuses.tenant');
+        })
         .where(`${tableName}.tenant`, context.tenant)
-        .groupBy('status')
-        .select('status', knex.raw('COUNT(*) as count'));
+        .groupBy('statuses.name')
+        .select('statuses.name as status', knex.raw('COUNT(*) as count'));
   
       // Get projects by company
       const projectsByCompany = await knex(tableName)
@@ -683,7 +736,15 @@ export class ProjectService extends BaseService<IProject> {
         .limit(10);
   
       return {
-        ...stats,
+        total_projects: parseInt(stats.total_projects as string),
+        active_projects: parseInt(stats.active_projects as string),
+        completed_projects: parseInt(stats.completed_projects as string),
+        on_hold_projects: parseInt(stats.on_hold_projects as string),
+        cancelled_projects: parseInt(stats.cancelled_projects as string),
+        overdue_projects: parseInt(stats.overdue_projects as string),
+        total_budgeted_hours: parseFloat(stats.total_budgeted_hours as string) || 0,
+        projects_created_this_month: parseInt(stats.projects_created_this_month as string),
+        projects_completed_this_month: parseInt(stats.projects_completed_this_month as string),
         projects_by_status: projectsByStatus.reduce((acc: any, row: any) => {
           acc[row.status] = parseInt(row.count);
           return acc;
@@ -700,14 +761,25 @@ export class ProjectService extends BaseService<IProject> {
   private async getDefaultProjectStatus(context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
       
-      const status = await knex('statuses')
+      // First try to find a status marked as default
+      let status = await knex('statuses')
         .where({ 
           tenant: context.tenant,
           item_type: 'project',
-          is_active: true
+          is_default: true
         })
-        .orderBy('display_order')
         .first();
+      
+      // If no default status, get the first one by order
+      if (!status) {
+        status = await knex('statuses')
+          .where({ 
+            tenant: context.tenant,
+            item_type: 'project'
+          })
+          .orderBy('order_number')
+          .first();
+      }
   
       if (!status) {
         throw new Error('No default project status found');
@@ -716,12 +788,49 @@ export class ProjectService extends BaseService<IProject> {
       return status;
     }
 
+  // Helper method to check if a string is a valid UUID
+  private isUUID(str: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
+  }
+
+  // Helper method to resolve status names to UUIDs
+  private async resolveStatusNameToId(statusName: string, context: ServiceContext): Promise<string> {
+    const { knex } = await this.getKnex();
+    
+    // Map common status names to database names
+    const statusNameMap: Record<string, string> = {
+      'planning': 'Planning',
+      'active': 'Active', 
+      'on_hold': 'On Hold',
+      'completed': 'Completed',
+      'cancelled': 'Cancelled',
+      'in_progress': 'Active' // Map in_progress to Active
+    };
+
+    const dbStatusName = statusNameMap[statusName.toLowerCase()] || statusName;
+    
+    const status = await knex('statuses')
+      .where({
+        tenant: context.tenant,
+        item_type: 'project',
+        name: dbStatusName
+      })
+      .first();
+
+    if (!status) {
+      throw new Error(`Invalid status: ${statusName}`);
+    }
+
+    return status.status_id;
+  }
+
 
   private async setupDefaultStatusMappings(projectId: string, context: ServiceContext): Promise<void> {
       const { knex } = await this.getKnex();
       
       const standardStatuses = await knex('standard_statuses')
-        .where({ item_type: 'project_task', is_active: true })
+        .where({ item_type: 'project_task' })
         .orderBy('display_order');
   
       for (const status of standardStatuses) {
@@ -806,5 +915,197 @@ export class ProjectService extends BaseService<IProject> {
         .select('user_id', 'first_name', 'last_name', 'email')
         .first();
     }
+
+  // Service method aliases for controller compatibility
+  async searchProjects(searchData: any, context: ServiceContext): Promise<any[]> {
+    return this.search(searchData, context);
+  }
+
+  async getProjectStats(context: ServiceContext): Promise<any> {
+    return this.getStatistics(context);
+  }
+
+  async exportProjects(filters: any, format: string, context: ServiceContext): Promise<any> {
+    const { knex } = await this.getKnex();
+    const query = knex(this.tableName)
+      .leftJoin('companies', `${this.tableName}.company_id`, 'companies.company_id')
+      .leftJoin('contacts', `${this.tableName}.contact_name_id`, 'contacts.contact_name_id')
+      .leftJoin('users', `${this.tableName}.assigned_to`, 'users.user_id')
+      .where(`${this.tableName}.tenant`, context.tenant)
+      .select(
+        `${this.tableName}.*`,
+        'companies.company_name',
+        'contacts.full_name as contact_name',
+        knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as assigned_user_name`)
+      )
+      .orderBy(`${this.tableName}.project_name`);
+
+    // Apply filters
+    if (filters.project_name) {
+      query.where(`${this.tableName}.project_name`, 'ilike', `%${filters.project_name}%`);
+    }
+    if (filters.company_id) {
+      query.where(`${this.tableName}.company_id`, filters.company_id);
+    }
+    if (filters.status) {
+      query.where(`${this.tableName}.status`, filters.status);
+    }
+    if (filters.assigned_to) {
+      query.where(`${this.tableName}.assigned_to`, filters.assigned_to);
+    }
+    if (filters.start_date_from) {
+      query.where(`${this.tableName}.start_date`, '>=', filters.start_date_from);
+    }
+    if (filters.start_date_to) {
+      query.where(`${this.tableName}.start_date`, '<=', filters.start_date_to);
+    }
+    if (filters.is_inactive !== undefined) {
+      query.where(`${this.tableName}.is_inactive`, filters.is_inactive);
+    }
+
+    const projects = await query;
+
+    if (format === 'csv') {
+      return this.convertToCSV(projects);
+    }
+
+    return projects;
+  }
+
+  async getProjectTasks(projectId: string, context: ServiceContext): Promise<any[]> {
+    // Use existing getTasks method
+    return this.getTasks(projectId, context);
+  }
+
+  async getProjectTickets(projectId: string, pagination: any, context: ServiceContext): Promise<{data: any[], total: number}> {
+    const { knex } = await this.getKnex();
+    
+    // Get tickets related to this project through project_ticket_links
+    const baseQuery = knex('project_ticket_links')
+      .leftJoin('tickets', 'project_ticket_links.ticket_id', 'tickets.ticket_id')
+      .leftJoin('companies', 'tickets.company_id', 'companies.company_id')
+      .leftJoin('users', 'tickets.assigned_to', 'users.user_id')
+      .where({
+        'project_ticket_links.project_id': projectId,
+        'project_ticket_links.tenant': context.tenant
+      })
+      .select(
+        'tickets.*',
+        'companies.company_name',
+        knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as assigned_user_name`),
+        'project_ticket_links.created_at as link_created_at'
+      );
+
+    // Get total count
+    const countQuery = baseQuery.clone().clearSelect().count('* as count');
+    const [{ count }] = await countQuery;
+
+    // Apply pagination
+    const page = pagination.page || 1;
+    const limit = pagination.limit || 25;
+    const offset = (page - 1) * limit;
+    
+    const tickets = await baseQuery
+      .limit(limit)
+      .offset(offset)
+      .orderBy('project_ticket_links.created_at', 'desc');
+
+    return {
+      data: tickets,
+      total: parseInt(count as string)
+    };
+  }
+
+  // Helper method to convert data to CSV
+  private convertToCSV(data: any[]): string {
+    if (data.length === 0) return '';
+    
+    const headers = Object.keys(data[0]);
+    const csvHeaders = headers.join(',');
+    const csvRows = data.map(row => 
+      headers.map(header => {
+        const value = row[header];
+        // Escape quotes and wrap in quotes if contains comma
+        if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+          return `"${value.replace(/"/g, '""')}"`;
+        }
+        return value;
+      }).join(',')
+    );
+    
+    return [csvHeaders, ...csvRows].join('\n');
+  }
+
+  /**
+   * Bulk update projects - custom implementation
+   */
+  async bulkUpdateProjects(projectIds: string[], updates: any, context: ServiceContext): Promise<IProject[]> {
+    const { knex } = await this.getKnex();
+    
+    return withTransaction(knex, async (trx) => {
+      const results = [];
+      
+      for (const projectId of projectIds) {
+        const project = await this.update(projectId, updates, context);
+        results.push(project);
+      }
+      
+      return results;
+    });
+  }
+
+  /**
+   * Bulk assign projects
+   */
+  async bulkAssign(projectIds: string[], assignToUserId: string, context: ServiceContext): Promise<IProject[]> {
+    return this.bulkUpdateProjects(projectIds, { assigned_to: assignToUserId }, context);
+  }
+
+  /**
+   * Bulk status update
+   */
+  async bulkStatusUpdate(projectIds: string[], status: string, context: ServiceContext): Promise<IProject[]> {
+    return this.bulkUpdateProjects(projectIds, { status }, context);
+  }
+
+  /**
+   * List project phases
+   */
+  async listPhases(projectId: string, context: ServiceContext): Promise<IProjectPhase[]> {
+    return this.getPhases(projectId, context);
+  }
+
+  /**
+   * List tasks for a phase
+   */
+  async listPhaseTasks(phaseId: string, context: ServiceContext): Promise<IProjectTask[]> {
+    const { knex } = await this.getKnex();
+    
+    const tasks = await knex('project_tasks')
+      .where({
+        phase_id: phaseId,
+        tenant: context.tenant
+      })
+      .orderBy('sort_order');
+
+    return tasks;
+  }
+
+  /**
+   * Get task by ID
+   */
+  async getTaskById(taskId: string, context: ServiceContext): Promise<IProjectTask | null> {
+    const { knex } = await this.getKnex();
+    
+    const task = await knex('project_tasks')
+      .where({
+        task_id: taskId,
+        tenant: context.tenant
+      })
+      .first();
+
+    return task || null;
+  }
+
 
 }

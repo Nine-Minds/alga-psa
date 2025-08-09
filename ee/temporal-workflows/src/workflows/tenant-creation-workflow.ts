@@ -5,7 +5,8 @@ import {
   setHandler, 
   log, 
   condition,
-  sleep
+  sleep,
+  workflowInfo
 } from '@temporalio/workflow';
 import type {
   TenantCreationInput,
@@ -17,7 +18,9 @@ import type {
   CreateAdminUserActivityResult,
   SetupTenantDataActivityResult,
   SendWelcomeEmailActivityInput,
-  SendWelcomeEmailActivityResult
+  SendWelcomeEmailActivityResult,
+  CreatePortalUserActivityInput,
+  CreatePortalUserActivityResult
 } from '../types/workflow-types.js';
 
 // Define activity proxies with appropriate timeouts and retry policies
@@ -36,9 +39,40 @@ const activities = proxyActivities<{
     companyId?: string;
     billingPlan?: string;
   }): Promise<SetupTenantDataActivityResult>;
+  run_onboarding_seeds(tenantId: string): Promise<{ success: boolean; seedsApplied: string[] }>;
   sendWelcomeEmail(input: SendWelcomeEmailActivityInput): Promise<SendWelcomeEmailActivityResult>;
   rollbackTenant(tenantId: string): Promise<void>;
   rollbackUser(userId: string, tenantId: string): Promise<void>;
+  updateCheckoutSessionStatus(input: {
+    checkoutSessionId: string;
+    workflowStatus: 'pending' | 'started' | 'in_progress' | 'completed' | 'failed';
+    workflowId?: string;
+    error?: string;
+  }): Promise<void>;
+  // Customer tracking activities
+  createCustomerCompanyActivity(input: {
+    tenantName: string;
+    adminUserEmail: string;
+  }): Promise<{ customerId: string }>;
+  createCustomerContactActivity(input: {
+    companyId: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  }): Promise<{ contactId: string }>;
+  tagCustomerCompanyActivity(input: {
+    companyId: string;
+    tagText: string;
+  }): Promise<{ tagId: string }>;
+  deleteCustomerCompanyActivity(input: {
+    companyId: string;
+  }): Promise<void>;
+  deleteCustomerContactActivity(input: {
+    contactId: string;
+  }): Promise<void>;
+  getManagementTenantId(): Promise<{ tenantId: string }>;
+  createPortalUser(input: CreatePortalUserActivityInput): Promise<CreatePortalUserActivityResult>;
+  rollbackPortalUser(userId: string, tenantId: string): Promise<void>;
 }>({
   startToCloseTimeout: '5m',
   retry: {
@@ -62,8 +96,11 @@ export const getWorkflowStateQuery = defineQuery<TenantCreationWorkflowState>('g
  * 
  * This workflow orchestrates the creation of a new tenant, including:
  * 1. Creating the tenant record in the database
- * 2. Creating an admin user for the tenant
- * 3. Setting up initial tenant data (billing plans, default settings, etc.)
+ * 2. Running onboarding seeds (roles, permissions, tax settings)
+ * 3. Creating an admin user for the tenant
+ * 4. Setting up initial tenant data (billing plans, default settings, etc.)
+ * 5. Creating customer tracking records in nineminds tenant
+ * 6. Sending welcome email to the admin user
  * 
  * The workflow supports cancellation and provides detailed state tracking.
  */
@@ -81,6 +118,13 @@ export async function tenantCreationWorkflow(
   let userCreated = false;
   let temporaryPassword = '';
   let emailSent = false;
+  
+  // Customer tracking variables
+  let customerCompanyId: string | undefined;
+  let customerContactId: string | undefined;
+  let customerTagId: string | undefined;
+  let portalUserId: string | undefined;
+  let portalUserCreated = false;
 
   // Set up signal handlers
   setHandler(cancelWorkflowSignal, (signal: TenantCreationCancelSignal) => {
@@ -101,6 +145,23 @@ export async function tenantCreationWorkflow(
 
   try {
     log.info('Starting tenant creation workflow', { input });
+    
+    // Update checkout session status to in_progress if we have a sessionId
+    if (input.checkoutSessionId) {
+      try {
+        await activities.updateCheckoutSessionStatus({
+          checkoutSessionId: input.checkoutSessionId,
+          workflowStatus: 'in_progress',
+          workflowId: workflowInfo().workflowId,
+        });
+      } catch (statusError) {
+        // Log but don't fail the workflow if status update fails
+        log.warn('Failed to update checkout session status to in_progress', {
+          error: statusError instanceof Error ? statusError.message : 'Unknown error',
+          checkoutSessionId: input.checkoutSessionId,
+        });
+      }
+    }
     
     // Step 1: Create tenant
     workflowState.step = 'creating_tenant';
@@ -127,9 +188,23 @@ export async function tenantCreationWorkflow(
       companyId: tenantResult.companyId 
     });
 
-    // Step 2: Create admin user
-    workflowState.step = 'creating_admin_user';
+    // Step 2: Run onboarding seeds (roles, permissions, etc.)
+    workflowState.step = 'running_onboarding_seeds';
+    workflowState.progress = 40;
+
+    if (cancelled) {
+      throw new Error(`Workflow cancelled: ${cancelReason}`);
+    }
+
+    log.info('Running onboarding seeds for tenant');
+    const seedsResult = await activities.run_onboarding_seeds(tenantResult.tenantId);
+    
     workflowState.progress = 50;
+    log.info('Onboarding seeds completed', { seedsApplied: seedsResult.seedsApplied });
+
+    // Step 3: Create admin user (now with proper roles/permissions in place)
+    workflowState.step = 'creating_admin_user';
+    workflowState.progress = 60;
 
     if (cancelled) {
       throw new Error(`Workflow cancelled: ${cancelReason}`);
@@ -147,16 +222,16 @@ export async function tenantCreationWorkflow(
     userCreated = true;
     workflowState.adminUserId = userResult.userId;
     temporaryPassword = userResult.temporaryPassword;
-    workflowState.progress = 60;
+    workflowState.progress = 70;
 
     log.info('Admin user created successfully', { 
       userId: userResult.userId, 
       roleId: userResult.roleId 
     });
 
-    // Step 3: Setup tenant data
+    // Step 4: Setup tenant data
     workflowState.step = 'setting_up_data';
-    workflowState.progress = 70;
+    workflowState.progress = 80;
 
     if (cancelled) {
       throw new Error(`Workflow cancelled: ${cancelReason}`);
@@ -170,13 +245,102 @@ export async function tenantCreationWorkflow(
       billingPlan: input.billingPlan,
     });
 
-    workflowState.progress = 85;
+    workflowState.progress = 90;
 
     log.info('Tenant data setup completed', { setupSteps: setupResult.setupSteps });
 
-    // Step 4: Send welcome email
+    // Step 5: Create customer tracking records (optional, non-blocking)
+    // This tracks the new tenant as a customer in the nineminds management tenant
+    try {
+      workflowState.step = 'creating_customer_tracking';
+      workflowState.progress = 85;
+
+      if (cancelled) {
+        throw new Error(`Workflow cancelled: ${cancelReason}`);
+      }
+
+      log.info('Creating customer tracking records in nineminds tenant');
+      
+      // Create customer company
+      const customerCompanyResult = await activities.createCustomerCompanyActivity({
+        tenantName: input.tenantName,
+        adminUserEmail: input.adminUser.email,
+      });
+      customerCompanyId = customerCompanyResult.customerId;
+      
+      log.info('Customer company created', { customerId: customerCompanyId });
+
+      // Create customer contact
+      const customerContactResult = await activities.createCustomerContactActivity({
+        companyId: customerCompanyId,
+        firstName: input.adminUser.firstName,
+        lastName: input.adminUser.lastName,
+        email: input.adminUser.email,
+      });
+      customerContactId = customerContactResult.contactId;
+      
+      log.info('Customer contact created', { contactId: customerContactId });
+
+      // Tag company as PSA Customer
+      const tagResult = await activities.tagCustomerCompanyActivity({
+        companyId: customerCompanyId,
+        tagText: 'PSA Customer',
+      });
+      customerTagId = tagResult.tagId;
+      
+      log.info('Customer company tagged', { tagId: customerTagId });
+      
+      // Create portal user in Nine Minds tenant for the new customer
+      // This allows them to access a client portal in the Nine Minds system
+      if (customerContactId) {
+        try {
+          log.info('Creating portal user in Nine Minds tenant for customer');
+          
+          // Get the Nine Minds management tenant ID
+          const { tenantId: ninemindsTenantId } = await activities.getManagementTenantId();
+          
+          const portalUserResult = await activities.createPortalUser({
+            tenantId: ninemindsTenantId,
+            email: input.adminUser.email,
+            password: temporaryPassword, // Use the same password as the admin user
+            contactId: customerContactId,
+            companyId: customerCompanyId,
+            firstName: input.adminUser.firstName,
+            lastName: input.adminUser.lastName,
+            isClientAdmin: true // Make them a client admin in the portal
+          });
+          
+          portalUserId = portalUserResult.userId;
+          portalUserCreated = true;
+          
+          log.info('Portal user created in Nine Minds tenant', { 
+            portalUserId,
+            roleId: portalUserResult.roleId,
+            tenantId: ninemindsTenantId
+          });
+        } catch (portalUserError) {
+          // Log the error but don't fail the workflow - portal user creation is optional
+          log.error('Failed to create portal user in Nine Minds tenant (non-fatal)', {
+            error: portalUserError instanceof Error ? portalUserError.message : 'Unknown error',
+            email: input.adminUser.email,
+          });
+          // Continue with the workflow - this is not a critical failure
+        }
+      }
+      
+      workflowState.progress = 90;
+    } catch (customerTrackingError) {
+      // Log the error but don't fail the workflow - customer tracking is optional
+      log.error('Failed to create customer tracking records (non-fatal)', {
+        error: customerTrackingError instanceof Error ? customerTrackingError.message : 'Unknown error',
+        tenantName: input.tenantName,
+      });
+      // Continue with the workflow - this is not a critical failure
+    }
+
+    // Step 6: Send welcome email
     workflowState.step = 'sending_welcome_email';
-    workflowState.progress = 90;
+    workflowState.progress = 95;
 
     if (cancelled) {
       throw new Error(`Workflow cancelled: ${cancelReason}`);
@@ -208,6 +372,23 @@ export async function tenantCreationWorkflow(
       emailSent,
     });
 
+    // Update checkout session status to completed if we have a sessionId
+    if (input.checkoutSessionId) {
+      try {
+        await activities.updateCheckoutSessionStatus({
+          checkoutSessionId: input.checkoutSessionId,
+          workflowStatus: 'completed',
+          workflowId: workflowInfo().workflowId,
+        });
+      } catch (statusError) {
+        // Log but don't fail the workflow if status update fails
+        log.warn('Failed to update checkout session status to completed', {
+          error: statusError instanceof Error ? statusError.message : 'Unknown error',
+          checkoutSessionId: input.checkoutSessionId,
+        });
+      }
+    }
+
     return {
       tenantId: tenantResult.tenantId,
       adminUserId: userResult.userId,
@@ -216,6 +397,9 @@ export async function tenantCreationWorkflow(
       emailSent,
       success: true,
       createdAt: new Date().toISOString(),
+      // Include customer tracking IDs if they were created
+      customerCompanyId,
+      customerContactId,
     };
 
   } catch (error) {
@@ -228,8 +412,63 @@ export async function tenantCreationWorkflow(
       userCreated 
     });
 
+    // Update checkout session status to failed if we have a sessionId
+    if (input.checkoutSessionId) {
+      try {
+        await activities.updateCheckoutSessionStatus({
+          checkoutSessionId: input.checkoutSessionId,
+          workflowStatus: 'failed',
+          workflowId: workflowInfo().workflowId,
+          error: workflowState.error,
+        });
+      } catch (statusError) {
+        // Log but don't fail the workflow if status update fails
+        log.warn('Failed to update checkout session status to failed', {
+          error: statusError instanceof Error ? statusError.message : 'Unknown error',
+          checkoutSessionId: input.checkoutSessionId,
+        });
+      }
+    }
+
     // Rollback operations in reverse order
     try {
+      // Rollback portal user if created
+      if (portalUserCreated && portalUserId) {
+        try {
+          // Get the Nine Minds tenant ID for rollback
+          const { tenantId: ninemindsTenantId } = await activities.getManagementTenantId();
+          log.info('Rolling back portal user', { userId: portalUserId, tenantId: ninemindsTenantId });
+          await activities.rollbackPortalUser(portalUserId, ninemindsTenantId);
+        } catch (portalRollbackError) {
+          log.warn('Failed to rollback portal user (non-critical)', {
+            error: portalRollbackError instanceof Error ? portalRollbackError.message : 'Unknown error'
+          });
+        }
+      }
+      
+      // Rollback customer tracking if created
+      if (customerContactId) {
+        try {
+          log.info('Rolling back customer contact', { contactId: customerContactId });
+          await activities.deleteCustomerContactActivity({ contactId: customerContactId });
+        } catch (customerRollbackError) {
+          log.warn('Failed to rollback customer contact (non-critical)', { 
+            error: customerRollbackError instanceof Error ? customerRollbackError.message : 'Unknown error'
+          });
+        }
+      }
+      
+      if (customerCompanyId) {
+        try {
+          log.info('Rolling back customer company', { companyId: customerCompanyId });
+          await activities.deleteCustomerCompanyActivity({ companyId: customerCompanyId });
+        } catch (customerRollbackError) {
+          log.warn('Failed to rollback customer company (non-critical)', { 
+            error: customerRollbackError instanceof Error ? customerRollbackError.message : 'Unknown error'
+          });
+        }
+      }
+
       if (userCreated && workflowState.adminUserId && workflowState.tenantId) {
         log.info('Rolling back user creation', { userId: workflowState.adminUserId });
         await activities.rollbackUser(workflowState.adminUserId, workflowState.tenantId);

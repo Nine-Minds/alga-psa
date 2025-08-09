@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide covers the reference data management features available in the Settings area of the application. Reference data includes system-wide configurations like priorities, statuses, channels, and categories that are used throughout the ticketing and project management systems.
+This guide covers the reference data management features available in the Settings area of the application. Reference data includes system-wide configurations like priorities, statuses, boards, and categories that are used throughout the ticketing and project management systems.
 
 ## Accessing Reference Data Settings
 
@@ -21,7 +21,7 @@ The Ticketing Settings page contains multiple tabs:
 
 - **Priorities** - Urgency levels for tickets
 - **Statuses** - Workflow states for tickets  
-- **Channels** - Communication channels
+- **Boards** - Organizational boards for ticket grouping
 - **Categories** - Ticket categorization
 - **Service Types** - Types of billable services
 - **Interaction Types** - Customer communication methods
@@ -37,30 +37,30 @@ All reference data types share these features:
 5. **Pagination** - Navigate through large datasets
 6. **Ordering** - Control display sequence
 
-## Managing Channels
+## Managing Boards
 
-Channels are organizational containers that group related ticket categories, similar to boards or high-level groupings (e.g., General Support, Technical Issues, Administration, Security & Compliance).
+Boards are organizational containers that group related ticket categories, similar to departments or high-level groupings (e.g., General Support, Technical Issues, Administration, Security & Compliance).
 
 ### Features
 
-- **Active/Inactive Toggle** - Enable or disable channels
-- **Default Channel** - Set the default channel for client portal ticket submissions
+- **Active/Inactive Toggle** - Enable or disable boards
+- **Default Board** - Set the default board for client portal ticket submissions
 - **Description** - Add context for each organizational grouping
 - **Display Order** - Control the sequence in channel lists
 
 ### Import Process
 
-1. Click **Import from Standard Channels**
-2. Select channel groupings to import using checkboxes
+1. Click **Import from Standard Boards**
+2. Select board groupings to import using checkboxes
 3. Review Active/Default status (shown as switches)
 4. Click **Import Selected**
 
 ### Best Practices
 
-- Keep at least one channel active
-- Set a sensible default channel for client portal
+- Keep at least one board active
+- Set a sensible default board for client portal
 - Use clear, descriptive names that reflect organizational areas
-- Consider how categories will be grouped under each channel
+- Consider how categories will be grouped under each board
 
 ## Managing Categories
 
@@ -69,7 +69,7 @@ Categories provide hierarchical organization for tickets and projects.
 ### Unique Features
 
 - **Parent-Child Relationships** - Create category hierarchies
-- **Channel Assignment** - Categories belong to specific channels
+- **Board Assignment** - Categories belong to specific boards
 - **Hierarchical Display** - Subcategories shown indented under parents
 
 ### Creating Categories
@@ -77,7 +77,7 @@ Categories provide hierarchical organization for tickets and projects.
 #### Parent Categories
 1. Click **Add Category**
 2. Enter category name
-3. Select a channel (required)
+3. Select a board (required)
 4. Set display order
 5. Click **Create**
 
@@ -86,29 +86,29 @@ Categories provide hierarchical organization for tickets and projects.
 2. Enter category name
 3. Select a parent category from dropdown
 4. Display order is auto-calculated
-5. Channel is inherited from parent
+5. Board is inherited from parent
 6. Click **Create**
 
 ### Editing Categories
 
-- **Parent Categories**: Can change name, order, and channel
+- **Parent Categories**: Can change name, order, and board
 - **Subcategories**: Can change name and order only
-- **Channel Changes**: Changing a parent's channel affects all subcategories
+- **Board Changes**: Changing a parent's board affects all subcategories
 
 ### Import Process
 
 1. Click **Import from Standard Categories**
-2. **Select Target Channel** (required)
+2. **Select Target Board** (required)
 3. Select categories to import
    - Parent categories import with their subcategories
    - Maintain hierarchical structure
 4. Click **Import Selected**
 
-### Channel Filtering
+### Board Filtering
 
-Use the channel dropdown to filter categories:
-- "All Channels" shows everything
-- Individual channels show only their categories
+Use the board dropdown to filter categories:
+- "All Boards" shows everything
+- Individual boards show only their categories
 - Hierarchy is maintained in filtered views
 
 ## Managing Service Categories

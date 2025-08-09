@@ -60,7 +60,7 @@ const TicketCategory = {
         .first();
 
       if (!channel) {
-        throw new Error(`Channel with id ${channelId} not found in tenant ${tenant}`);
+        throw new Error(`Board with id ${channelId} not found in tenant ${tenant}`);
       }
 
       const categories = await knexOrTrx<ITicketCategory>('categories')
@@ -70,7 +70,7 @@ const TicketCategory = {
         });
       return categories;
     } catch (error) {
-      console.error('Error getting ticket categories by channel:', error);
+      console.error('Error getting ticket categories by board:', error);
       throw error;
     }
   },
@@ -87,7 +87,7 @@ const TicketCategory = {
       }
 
       if (!category.channel_id) {
-        throw new Error('Channel ID is required');
+        throw new Error('Board ID is required');
       }
 
       // Verify channel exists in the current tenant
@@ -99,7 +99,7 @@ const TicketCategory = {
         .first();
 
       if (!channel) {
-        throw new Error(`Channel with id ${category.channel_id} not found in tenant ${tenant}`);
+        throw new Error(`Board with id ${category.channel_id} not found in tenant ${tenant}`);
       }
 
       // Check if category with same name exists in the channel
@@ -112,7 +112,7 @@ const TicketCategory = {
         .first();
 
       if (existingCategory) {
-        throw new Error(`A ticket category with name "${category.category_name}" already exists in this channel in tenant ${tenant}`);
+        throw new Error(`A ticket category with name "${category.category_name}" already exists in this board in tenant ${tenant}`);
       }
 
       // Ensure tenant is set and cannot be overridden
@@ -166,7 +166,7 @@ const TicketCategory = {
           .first();
 
         if (!newChannel) {
-          throw new Error(`Channel with id ${category.channel_id} not found in tenant ${tenant}`);
+          throw new Error(`Board with id ${category.channel_id} not found in tenant ${tenant}`);
         }
       }
 
@@ -182,7 +182,7 @@ const TicketCategory = {
           .first();
 
         if (duplicateCategory) {
-          throw new Error(`A ticket category with name "${category.category_name}" already exists in this channel in tenant ${tenant}`);
+          throw new Error(`A ticket category with name "${category.category_name}" already exists in this board in tenant ${tenant}`);
         }
       }
 

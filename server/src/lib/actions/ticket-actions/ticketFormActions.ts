@@ -32,7 +32,7 @@ export async function getTicketFormData(prefilledCompanyId?: string): Promise<Ti
 
     // Fetch required data first
     const [users, channels, statuses, priorities, companies] = await Promise.all([
-      getAllUsers().catch(error => {
+      getAllUsers(false).catch(error => {
         console.error('Error fetching users:', error);
         return [];
       }),
@@ -86,6 +86,40 @@ export async function getTicketFormData(prefilledCompanyId?: string): Promise<Ti
   } catch (error) {
     console.error('Error fetching ticket form data:', error);
     // Return empty data instead of throwing
+    return {
+      users: [],
+      channels: [],
+      statuses: [],
+      priorities: [],
+      companies: [],
+    };
+  }
+}
+
+export async function getClientTicketFormData(): Promise<Partial<TicketFormData>> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    // Client portal users only need priorities for ticket creation
+    // Companies are handled automatically based on the user's associated company
+    const priorities = await getAllPriorities('ticket').catch(error => {
+      console.error('Error fetching priorities:', error);
+      return [];
+    });
+
+    return {
+      priorities,
+      // Other fields are not needed for client portal ticket creation
+      users: [],
+      channels: [],
+      statuses: [],
+      companies: [],
+    };
+  } catch (error) {
+    console.error('Error fetching client ticket form data:', error);
     return {
       users: [],
       channels: [],

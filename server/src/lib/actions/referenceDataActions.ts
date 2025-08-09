@@ -1,7 +1,7 @@
 'use server';
 
 import { createTenantKnex } from '../db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { IStandardPriority, IPriority } from 'server/src/interfaces/ticket.interfaces';
 import { IStandardStatus, IStatus } from 'server/src/interfaces/status.interface';
@@ -15,7 +15,7 @@ interface ReferenceDataConfig {
   sourceTable: string;
   targetTable: string;
   mapFields: (sourceData: any, tenantId: string, userId: string, options?: any) => any;
-  conflictCheck?: (data: any, tenantId: string) => Promise<boolean>;
+  conflictCheck?: (data: any, tenantId: string, trx?: Knex.Transaction) => Promise<boolean>;
 }
 
 const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
@@ -30,8 +30,8 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
       tenant: tenantId,
       created_by: userId
     }),
-    conflictCheck: async (data: any, tenantId: string) => {
-      const { knex: db } = await createTenantKnex();
+    conflictCheck: async (data: any, tenantId: string, trx?: Knex.Transaction) => {
+      const db = trx || (await createTenantKnex()).knex;
       const existing = await db('priorities')
         .where({
           tenant: tenantId,
@@ -55,8 +55,8 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
       tenant: tenantId,
       created_by: userId
     }),
-    conflictCheck: async (data: any, tenantId: string) => {
-      const { knex: db } = await createTenantKnex();
+    conflictCheck: async (data: any, tenantId: string, trx?: Knex.Transaction) => {
+      const db = trx || (await createTenantKnex()).knex;
       const existing = await db('statuses')
         .where({
           tenant: tenantId,
@@ -79,8 +79,8 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
       standard_service_type_id: source.id,
       order_number: source.display_order || 0
     }),
-    conflictCheck: async (data: any, tenantId: string) => {
-      const { knex: db } = await createTenantKnex();
+    conflictCheck: async (data: any, tenantId: string, trx?: Knex.Transaction) => {
+      const db = trx || (await createTenantKnex()).knex;
       const existing = await db('service_types')
         .where({
           tenant: tenantId,
@@ -103,8 +103,8 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
       tenant: tenantId,
       created_by: userId
     }),
-    conflictCheck: async (data: any, tenantId: string) => {
-      const { knex: db } = await createTenantKnex();
+    conflictCheck: async (data: any, tenantId: string, trx?: Knex.Transaction) => {
+      const db = trx || (await createTenantKnex()).knex;
       const existing = await db('custom_task_types')
         .where({
           tenant: tenantId,
@@ -127,8 +127,8 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
       tenant: tenantId,
       created_by: userId
     }),
-    conflictCheck: async (data: any, tenantId: string) => {
-      const { knex: db } = await createTenantKnex();
+    conflictCheck: async (data: any, tenantId: string, trx?: Knex.Transaction) => {
+      const db = trx || (await createTenantKnex()).knex;
       const existing = await db('interaction_types')
         .where({
           tenant: tenantId,
@@ -147,8 +147,8 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
       display_order: source.display_order,
       tenant: tenantId
     }),
-    conflictCheck: async (data: any, tenantId: string) => {
-      const { knex: db } = await createTenantKnex();
+    conflictCheck: async (data: any, tenantId: string, trx?: Knex.Transaction) => {
+      const db = trx || (await createTenantKnex()).knex;
       const existing = await db('service_categories')
         .where({
           tenant: tenantId,
@@ -168,8 +168,8 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
       channel_id: options?.channel_id,
       created_by: userId
     }),
-    conflictCheck: async (data: any, tenantId: string) => {
-      const { knex: db } = await createTenantKnex();
+    conflictCheck: async (data: any, tenantId: string, trx?: Knex.Transaction) => {
+      const db = trx || (await createTenantKnex()).knex;
       const existing = await db('categories')
         .where({
           tenant: tenantId,
@@ -190,8 +190,8 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
       is_default: source.is_default || false,
       tenant: tenantId
     }),
-    conflictCheck: async (data: any, tenantId: string) => {
-      const { knex: db } = await createTenantKnex();
+    conflictCheck: async (data: any, tenantId: string, trx?: Knex.Transaction) => {
+      const db = trx || (await createTenantKnex()).knex;
       const existing = await db('channels')
         .where({
           tenant: tenantId,
@@ -256,39 +256,41 @@ export async function checkImportConflicts(
   const config = referenceDataConfigs[dataType];
   const { knex: db } = await createTenantKnex();
   
-  let referenceData = await getReferenceData(dataType, filters);
-  
-  if (referenceIds && referenceIds.length > 0) {
-    referenceData = referenceData.filter((item: any) => 
-      referenceIds.includes(item.id || item.priority_id || item.standard_status_id || item.status_id || item.type_id)
-    );
-  }
-  
-  const conflicts: ImportConflict[] = [];
-  
-  for (const item of referenceData) {
-    const mappedData = config.mapFields(item, currentUser.tenant, currentUser.user_id, filters);
+  // Wrap in transaction
+  return await withTransaction(db, async (trx) => {
+    let referenceData = await getReferenceData(dataType, filters);
     
-    let hasNameConflict = false;
-    let hasOrderConflict = false;
-    
-    // Check name conflict
-    if (config.conflictCheck) {
-      hasNameConflict = await config.conflictCheck(mappedData, currentUser.tenant);
-      if (hasNameConflict) {
-        conflicts.push({
-          referenceItem: item,
-          conflictType: 'name',
-          existingItem: hasNameConflict
-        });
-      }
+    if (referenceIds && referenceIds.length > 0) {
+      referenceData = referenceData.filter((item: any) => 
+        referenceIds.includes(item.id || item.priority_id || item.standard_status_id || item.status_id || item.type_id)
+      );
     }
+    
+    const conflicts: ImportConflict[] = [];
+    
+    for (const item of referenceData) {
+      const mappedData = config.mapFields(item, currentUser.tenant, currentUser.user_id, filters);
+      
+      let hasNameConflict = false;
+      let hasOrderConflict = false;
+      
+      // Check name conflict
+      if (config.conflictCheck) {
+        hasNameConflict = await config.conflictCheck(mappedData, currentUser.tenant, trx);
+        if (hasNameConflict) {
+          conflicts.push({
+            referenceItem: item,
+            conflictType: 'name',
+            existingItem: hasNameConflict
+          });
+        }
+      }
     
     // Check order conflict for data types that have order (even if there's a name conflict)
     if (dataType === 'priorities' || dataType === 'statuses' || dataType === 'service_types' || 
         dataType === 'interaction_types' || dataType === 'service_categories' || 
         dataType === 'categories' || dataType === 'channels') {
-      const orderField = dataType === 'priorities' ? 'order_number' : 'display_order';
+      const orderField = (dataType === 'priorities' || dataType === 'service_types' || dataType === 'statuses') ? 'order_number' : 'display_order';
       const orderValue = mappedData[orderField];
       
       if (orderValue && !hasNameConflict) { // Only check order if no name conflict
@@ -304,7 +306,7 @@ export async function checkImportConflicts(
           whereClause.item_type = mappedData.item_type;
         }
         
-        const existingWithOrder = await db(config.targetTable)
+        const existingWithOrder = await trx(config.targetTable)
           .where(whereClause)
           .first();
           
@@ -321,7 +323,7 @@ export async function checkImportConflicts(
             maxOrderWhereClause.item_type = mappedData.item_type;
           }
           
-          const maxOrder = await db(config.targetTable)
+          const maxOrder = await trx(config.targetTable)
             .where(maxOrderWhereClause)
             .max(orderField + ' as max')
             .first();
@@ -338,7 +340,8 @@ export async function checkImportConflicts(
     }
   }
   
-  return conflicts;
+    return conflicts;
+  });
 }
 
 export async function importReferenceData(
@@ -354,30 +357,33 @@ export async function importReferenceData(
   
   // Validate required filters for specific data types
   if (dataType === 'categories' && !filters?.channel_id) {
-    throw new Error('Channel ID is required when importing categories');
+    throw new Error('Board ID is required when importing categories');
   }
 
   const config = referenceDataConfigs[dataType];
   const { knex: db } = await createTenantKnex();
   
-  let referenceData = await getReferenceData(dataType, filters);
-  
-  if (referenceIds && referenceIds.length > 0) {
-    referenceData = referenceData.filter((item: any) => 
-      referenceIds.includes(item.id || item.priority_id || item.standard_status_id || item.status_id || item.type_id)
-    );
-  }
-  
-  const importedItems = [];
-  const skippedItems = [];
-  
-  for (const item of referenceData) {
+  // Wrap everything in a transaction
+  return await withTransaction(db, async (trx) => {
+    let referenceData = await getReferenceData(dataType, filters);
+    
+    if (referenceIds && referenceIds.length > 0) {
+      referenceData = referenceData.filter((item: any) => 
+        referenceIds.includes(item.id || item.priority_id || item.standard_status_id || item.status_id || item.type_id)
+      );
+    }
+    
+    const importedItems = [];
+    const skippedItems = [];
+    
+    for (const item of referenceData) {
     const itemId = item.id || item.priority_id || item.standard_status_id || item.status_id || item.type_id;
     const resolution = conflictResolutions?.[itemId];
     
     if (resolution?.action === 'skip') {
+      const itemName = item.name || item.priority_name || item.type_name || item.service_type || item.category_name || item.channel_name;
       skippedItems.push({
-        name: item.name || item.priority_name || item.type_name || item.service_type,
+        name: itemName,
         reason: 'Skipped by user'
       });
       continue;
@@ -394,19 +400,64 @@ export async function importReferenceData(
     }
     
     if (resolution?.action === 'reorder' && resolution.newOrder !== undefined) {
-      const orderField = dataType === 'priorities' ? 'order_number' : 'display_order';
+      const orderField = (dataType === 'priorities' || dataType === 'service_types' || dataType === 'statuses') ? 'order_number' : 'display_order';
       mappedData[orderField] = resolution.newOrder;
     }
     
     // Check for name conflict one more time after resolution
     if (config.conflictCheck && !resolution) {
-      const hasConflict = await config.conflictCheck(mappedData, currentUser.tenant);
+      const hasConflict = await config.conflictCheck(mappedData, currentUser.tenant, trx);
       if (hasConflict) {
+        const itemName = item.name || item.priority_name || item.type_name || item.service_type || item.category_name || item.channel_name;
         skippedItems.push({
-          name: item.name || item.priority_name || item.type_name || item.service_type,
+          name: itemName,
           reason: 'Already exists'
         });
         continue;
+      }
+    }
+    
+    // Check for order conflicts proactively for data types with orders
+    const orderField = (dataType === 'priorities' || dataType === 'service_types' || dataType === 'statuses') ? 'order_number' : 'display_order';
+    const hasOrderField = dataType === 'priorities' || dataType === 'statuses' || 
+                          dataType === 'service_types' || dataType === 'interaction_types' || 
+                          dataType === 'service_categories' || dataType === 'categories' || 
+                          dataType === 'channels';
+    
+    if (hasOrderField && mappedData[orderField] !== undefined) {
+      const orderCheckClause: any = {
+        tenant: currentUser.tenant,
+        [orderField]: mappedData[orderField]
+      };
+      
+      // Add type-specific constraints for order checking
+      if (dataType === 'statuses' && mappedData.status_type) {
+        orderCheckClause.status_type = mappedData.status_type;
+      } else if (dataType === 'priorities' && mappedData.item_type) {
+        orderCheckClause.item_type = mappedData.item_type;
+      }
+      
+      const existingWithOrder = await trx(config.targetTable)
+        .where(orderCheckClause)
+        .first();
+      
+      if (existingWithOrder) {
+        // Find next available order
+        const maxOrderWhereClause: any = { tenant: currentUser.tenant };
+        
+        if (dataType === 'statuses' && mappedData.status_type) {
+          maxOrderWhereClause.status_type = mappedData.status_type;
+        } else if (dataType === 'priorities' && mappedData.item_type) {
+          maxOrderWhereClause.item_type = mappedData.item_type;
+        }
+        
+        const maxOrderResult = await trx(config.targetTable)
+          .where(maxOrderWhereClause)
+          .max(orderField + ' as max')
+          .first();
+        
+        const nextOrder = (maxOrderResult?.max || 0) + 1;
+        mappedData[orderField] = nextOrder;
       }
     }
     
@@ -415,13 +466,13 @@ export async function importReferenceData(
       if (dataType === 'categories' && item.parent_category_uuid) {
         // We need to map the standard parent UUID to the tenant's parent category
         // First, find the standard parent category
-        const standardParentCategory = await db('standard_categories')
+        const standardParentCategory = await trx('standard_categories')
           .where('id', item.parent_category_uuid)
           .first();
           
         if (standardParentCategory) {
           // Now find the corresponding category in the tenant
-          const parentCategory = await db('categories')
+          const parentCategory = await trx('categories')
             .where({
               tenant: currentUser.tenant,
               category_name: standardParentCategory.category_name,
@@ -442,39 +493,36 @@ export async function importReferenceData(
         }
       }
       
-      const [savedItem] = await db(config.targetTable)
+      const [savedItem] = await trx(config.targetTable)
         .insert(mappedData)
         .returning('*');
       importedItems.push(savedItem);
     } catch (insertError: any) {
       console.error('Error inserting item:', insertError);
       
-      // Check if it's a duplicate order error
-      if (insertError.code === '23505' && insertError.constraint === 'unique_tenant_type_order') {
+      if (insertError.code === '23505') {
+        // Unique constraint violation
+        const itemName = item.name || item.priority_name || item.type_name || item.service_type || item.category_name || item.channel_name;
         skippedItems.push({
-          name: item.name || item.priority_name || item.type_name || item.service_type,
-          reason: `Order number ${mappedData.order_number} is already in use`
-        });
-      } else if (insertError.code === '23505') {
-        // Other unique constraint violation
-        skippedItems.push({
-          name: item.name || item.priority_name || item.type_name || item.service_type,
+          name: itemName,
           reason: 'Already exists'
         });
       } else {
+        const itemName = item.name || item.priority_name || item.type_name || item.service_type || item.category_name || item.channel_name;
         skippedItems.push({
-          name: item.name || item.priority_name || item.type_name || item.service_type,
+          name: itemName,
           reason: insertError.message || 'Unknown error'
         });
       }
     }
   }
   
-  return {
-    imported: importedItems,
-    skipped: skippedItems,
-    totalProcessed: referenceData.length
-  };
+    return {
+      imported: importedItems,
+      skipped: skippedItems,
+      totalProcessed: referenceData.length
+    };
+  });
 }
 
 export async function getAvailableReferenceData(dataType: ReferenceDataType, filters?: any) {
@@ -483,23 +531,135 @@ export async function getAvailableReferenceData(dataType: ReferenceDataType, fil
     throw new Error('User not authenticated or tenant not found');
   }
 
-  const referenceData = await getReferenceData(dataType, filters);
-  const config = referenceDataConfigs[dataType];
+  const { knex: db } = await createTenantKnex();
   
-  const availableItems = [];
-  
-  for (const item of referenceData) {
-    const mappedData = config.mapFields(item, currentUser.tenant, currentUser.user_id, filters);
+  // Wrap in transaction to avoid multiple connections
+  return await withTransaction(db, async (trx) => {
+    const referenceData = await getReferenceData(dataType, filters);
+    const config = referenceDataConfigs[dataType];
     
-    if (config.conflictCheck) {
-      const hasConflict = await config.conflictCheck(mappedData, currentUser.tenant);
-      if (!hasConflict) {
+    const availableItems = [];
+    
+    for (const item of referenceData) {
+      const mappedData = config.mapFields(item, currentUser.tenant, currentUser.user_id, filters);
+      
+      if (config.conflictCheck) {
+        const hasConflict = await config.conflictCheck(mappedData, currentUser.tenant, trx);
+        if (!hasConflict) {
+          availableItems.push(item);
+        }
+      } else {
         availableItems.push(item);
       }
-    } else {
-      availableItems.push(item);
     }
+    
+    return availableItems;
+  });
+}
+
+export async function deleteReferenceDataItem(
+  dataType: ReferenceDataType,
+  itemId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.user_id || !currentUser?.tenant) {
+      throw new Error('User not authenticated or tenant not found');
+    }
+
+    const config = referenceDataConfigs[dataType];
+    const { knex: db } = await createTenantKnex();
+
+    // Define the ID field name for each data type
+    const idFieldMap: Record<ReferenceDataType, string> = {
+      priorities: 'priority_id',
+      statuses: 'status_id',
+      service_types: 'id',
+      task_types: 'id',
+      interaction_types: 'id',
+      service_categories: 'id',
+      categories: 'category_id',
+      channels: 'channel_id'
+    };
+
+    const idField = idFieldMap[dataType];
+    if (!idField) {
+      throw new Error(`Unknown ID field for data type: ${dataType}`);
+    }
+
+    await withTransaction(db, async (trx) => {
+      // Check if the item exists and belongs to the tenant
+      const existing = await trx(config.targetTable)
+        .where({
+          [idField]: itemId,
+          tenant: currentUser.tenant
+        })
+        .first();
+
+      if (!existing) {
+        throw new Error('Item not found or access denied');
+      }
+
+      // Special handling for channels - check if it has categories
+      if (dataType === 'channels') {
+        const categoryCount = await trx('categories')
+          .where({
+            channel_id: itemId,
+            tenant: currentUser.tenant
+          })
+          .count('* as count')
+          .first();
+
+        if (categoryCount && parseInt(categoryCount.count as string) > 0) {
+          throw new Error('Cannot delete board with existing categories. Please delete all categories first.');
+        }
+      }
+
+      // Special handling for categories - check if it has subcategories
+      if (dataType === 'categories') {
+        const subcategoryCount = await trx('categories')
+          .where({
+            parent_category: itemId,
+            tenant: currentUser.tenant
+          })
+          .count('* as count')
+          .first();
+
+        if (subcategoryCount && parseInt(subcategoryCount.count as string) > 0) {
+          throw new Error('Cannot delete category with existing subcategories. Please delete all subcategories first.');
+        }
+      }
+
+      // Special handling for service_types - check if it has service catalog entries
+      if (dataType === 'service_types') {
+        const serviceCount = await trx('service_catalog')
+          .where({
+            custom_service_type_id: itemId,
+            tenant: currentUser.tenant
+          })
+          .count('* as count')
+          .first();
+
+        if (serviceCount && parseInt(serviceCount.count as string) > 0) {
+          throw new Error('Cannot delete service type that is being used by services. Please update or delete the services first.');
+        }
+      }
+
+      // Delete the item
+      await trx(config.targetTable)
+        .where({
+          [idField]: itemId,
+          tenant: currentUser.tenant
+        })
+        .delete();
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting reference data item:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
   }
-  
-  return availableItems;
 }

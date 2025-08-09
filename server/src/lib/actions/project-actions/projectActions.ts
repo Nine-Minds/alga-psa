@@ -11,7 +11,7 @@ import { getContactByContactNameId } from 'server/src/lib/actions/contact-action
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { validateData, validateArray } from '../../utils/validation';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { z } from 'zod';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
@@ -704,6 +704,77 @@ export async function deleteProject(projectId: string): Promise<void> {
         });
     } catch (error) {
         console.error('Error deleting project:', error);
+        throw error;
+    }
+}
+
+export async function getProjectMetadata(projectId: string): Promise<{
+    project: IProject;
+    phases: IProjectPhase[];
+    statuses: ProjectStatus[];
+    users: IUserWithRoles[];
+    contact?: { full_name: string };
+    assignedUser: IUserWithRoles | null;
+    companies: ICompany[];
+}> {
+    try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser) {
+            throw new Error("user not found");
+        }
+        const {knex} = await createTenantKnex();
+        
+        // Fetch data that doesn't need to be in a transaction
+        const [statuses, users, companies] = await Promise.all([
+            getProjectTaskStatuses(projectId),
+            getAllUsers(),
+            getAllCompanies()
+        ]);
+        
+        // Fetch project-specific data within a transaction
+        const projectData = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            await checkPermission(currentUser, 'project', 'read', trx);
+            const [project, phases] = await Promise.all([
+                ProjectModel.getById(trx, projectId),
+                ProjectModel.getPhases(trx, projectId)
+            ]);
+            
+            return { project, phases };
+        });
+        
+        const { project, phases } = projectData;
+        if (!project) {
+            throw new Error('Project not found');
+        }
+        
+        // Fetch assigned user details if assigned_to exists
+        let assignedUser: IUserWithRoles | null = null;
+        if (project.assigned_to) {
+            const user = await findUserById(project.assigned_to);
+            assignedUser = user || null;
+        }
+        
+        // Fetch contact details if needed
+        let contact: { full_name: string } | undefined;
+        if (project.contact_name_id) {
+            const contactData = await knex('contacts')
+                .where({ contact_name_id: project.contact_name_id })
+                .select('full_name')
+                .first();
+            contact = contactData;
+        }
+        
+        return {
+            project,
+            phases,
+            statuses,
+            users,
+            contact,
+            assignedUser,
+            companies
+        };
+    } catch (error) {
+        console.error('Error getting project metadata:', error);
         throw error;
     }
 }

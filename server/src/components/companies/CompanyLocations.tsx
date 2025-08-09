@@ -15,6 +15,7 @@ import { ITaxRegion } from 'server/src/interfaces/tax.interfaces';
 import CountryPicker from 'server/src/components/ui/CountryPicker';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
+import { PhoneInput } from 'server/src/components/ui/PhoneInput';
 import { Label } from 'server/src/components/ui/Label';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
@@ -507,25 +508,30 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
     return addressParts.join(', ');
   };
 
-  // Read-only mode - show default location card or "No locations"
+  // Read-only mode - show all locations
   if (!isEditing) {
-    const defaultLocation = locations.find(loc => loc.is_default);
-    if (defaultLocation) {
+    if (locations.length === 0) {
       return (
-        <LocationCard
-          location={defaultLocation}
-          onEdit={() => {}} // No-op in read-only mode
-          onDelete={() => {}} // No-op in read-only mode
-          onSetDefault={() => {}} // No-op in read-only mode
-          formatAddress={formatAddress}
-          showActions={false}
-        />
+        <div className="text-center py-4 text-gray-500">
+          <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+          <p className="text-sm">No locations added yet</p>
+        </div>
       );
     }
+    
     return (
-      <div className="text-center py-4 text-gray-500">
-        <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-        <p className="text-sm">No locations added yet</p>
+      <div className="space-y-3">
+        {locations.map((location) => (
+          <LocationCard
+            key={location.location_id}
+            location={location}
+            onEdit={() => {}} // No-op in read-only mode
+            onDelete={() => {}} // No-op in read-only mode
+            onSetDefault={() => {}} // No-op in read-only mode
+            formatAddress={formatAddress}
+            showActions={false}
+          />
+        ))}
       </div>
     );
   }
@@ -651,93 +657,136 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
               />
             </div>
             
-            <div {...(() => {
-              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
-                id: 'city-field',
-                type: 'formField',
-                fieldType: 'textField',
-                label: 'City',
-                value: formData.city,
-                helperText: 'City name (required)'
-              });
-              return automationIdProps;
-            })()}>
-              <Label htmlFor="city-input">City *</Label>
-              <Input
-                id="city-input"
-                value={formData.city}
-                onChange={(e) => {
-                  setFormData(prev => ({ ...prev, city: e.target.value }));
-                  clearErrorIfSubmitted();
-                }}
-                placeholder="Enter city *"
-                className={hasAttemptedSubmit && !formData.city.trim() ? 'border-red-500' : ''}
-                required
-              />
-            </div>
-            
-            <div {...(() => {
-              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
-                id: 'state-province-field',
-                type: 'formField',
-                fieldType: 'textField',
-                label: 'State/Province',
-                value: formData.state_province,
-                helperText: 'State or province name'
-              });
-              return automationIdProps;
-            })()}>
-              <Label htmlFor="state-province-input">State/Province</Label>
-              <Input
-                id="state-province-input"
-                value={formData.state_province}
-                onChange={(e) => setFormData(prev => ({ ...prev, state_province: e.target.value }))}
-              />
-            </div>
-            
-            <div {...(() => {
-              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
-                id: 'postal-code-field',
-                type: 'formField',
-                fieldType: 'textField',
-                label: 'Postal Code',
-                value: formData.postal_code,
-                helperText: 'ZIP or postal code'
-              });
-              return automationIdProps;
-            })()}>
-              <Label htmlFor="postal-code-input">Postal Code</Label>
-              <Input
-                id="postal-code-input"
-                value={formData.postal_code}
-                onChange={(e) => setFormData(prev => ({ ...prev, postal_code: e.target.value }))}
-              />
-            </div>
-            
-            <div {...(() => {
-              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
-                id: 'country-picker-field',
-                type: 'formField',
-                fieldType: 'select',
-                label: 'Country',
-                value: formData.country_code,
-                helperText: 'Select country (required)'
-              });
-              return automationIdProps;
-            })()}>
-              <Label htmlFor="country-picker">Country *</Label>
-              <div className={hasAttemptedSubmit && (!formData.country_code || !formData.country_name) ? 'ring-1 ring-red-500 rounded-lg' : ''}>
-                <CountryPicker
-                  data-automation-id="country-picker"
-                  value={formData.country_code}
-                  onValueChange={(code, name) => {
-                    handleCountryChange(code, name);
+            <div className="grid grid-cols-2 gap-4">
+              <div {...(() => {
+                const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                  id: 'city-field',
+                  type: 'formField',
+                  fieldType: 'textField',
+                  label: 'City',
+                  value: formData.city,
+                  helperText: 'City name (required)'
+                });
+                return automationIdProps;
+              })()}>
+                <Label htmlFor="city-input">City *</Label>
+                <Input
+                  id="city-input"
+                  value={formData.city}
+                  onChange={(e) => {
+                    setFormData(prev => ({ ...prev, city: e.target.value }));
                     clearErrorIfSubmitted();
                   }}
-                  countries={countries}
-                  disabled={isLoadingCountries || isLoading}
-                  placeholder={isLoadingCountries ? "Loading countries..." : "Select Country *"}
-                  buttonWidth="full"
+                  placeholder="Enter city *"
+                  className={hasAttemptedSubmit && !formData.city.trim() ? 'border-red-500' : ''}
+                  required
+                />
+              </div>
+              
+              <div {...(() => {
+                const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                  id: 'state-province-field',
+                  type: 'formField',
+                  fieldType: 'textField',
+                  label: 'State/Province',
+                  value: formData.state_province,
+                  helperText: 'State or province name'
+                });
+                return automationIdProps;
+              })()}>
+                <Label htmlFor="state-province-input">State/Province</Label>
+                <Input
+                  id="state-province-input"
+                  value={formData.state_province}
+                  onChange={(e) => setFormData(prev => ({ ...prev, state_province: e.target.value }))}
+                />
+              </div>
+              
+              <div {...(() => {
+                const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                  id: 'postal-code-field',
+                  type: 'formField',
+                  fieldType: 'textField',
+                  label: 'Postal Code',
+                  value: formData.postal_code,
+                  helperText: 'ZIP or postal code'
+                });
+                return automationIdProps;
+              })()}>
+                <Label htmlFor="postal-code-input">Postal Code</Label>
+                <Input
+                  id="postal-code-input"
+                  value={formData.postal_code}
+                  onChange={(e) => setFormData(prev => ({ ...prev, postal_code: e.target.value }))}
+                />
+              </div>
+              
+              <div {...(() => {
+                const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                  id: 'country-picker-field',
+                  type: 'formField',
+                  fieldType: 'select',
+                  label: 'Country',
+                  value: formData.country_code,
+                  helperText: 'Select country (required)'
+                });
+                return automationIdProps;
+              })()}>
+                <Label htmlFor="country-picker">Country *</Label>
+                <div className={hasAttemptedSubmit && (!formData.country_code || !formData.country_name) ? 'ring-1 ring-red-500 rounded-lg' : ''}>
+                  <CountryPicker
+                    data-automation-id="country-picker"
+                    value={formData.country_code}
+                    onValueChange={(code, name) => {
+                      handleCountryChange(code, name);
+                      clearErrorIfSubmitted();
+                    }}
+                    countries={countries}
+                    disabled={isLoadingCountries || isLoading}
+                    placeholder={isLoadingCountries ? "Loading countries..." : "Select Country *"}
+                    buttonWidth="full"
+                  />
+                </div>
+              </div>
+              
+              <div {...(() => {
+                const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                  id: 'phone-field',
+                  type: 'formField',
+                  fieldType: 'textField',
+                  label: 'Phone',
+                  value: formData.phone,
+                  helperText: 'Phone number for this location'
+                });
+                return automationIdProps;
+              })()}>
+                <PhoneInput
+                  label="Phone"
+                  value={formData.phone || ''}
+                  onChange={(value) => setFormData(prev => ({ ...prev, phone: value }))}
+                  countryCode={formData.country_code}
+                  phoneCode={countries.find(c => c.code === formData.country_code)?.phone_code}
+                  data-automation-id="phone-input"
+                />
+              </div>
+              
+              <div {...(() => {
+                const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                  id: 'email-field',
+                  type: 'formField',
+                  fieldType: 'textField',
+                  label: 'Email',
+                  value: formData.email,
+                  helperText: 'Email address for this location'
+                });
+                return automationIdProps;
+              })()}>
+                <Label htmlFor="email-input">Email</Label>
+                <Input
+                  id="email-input"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                 />
               </div>
             </div>
@@ -766,45 +815,6 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
                   }))
                 ]}
                 placeholder="Select a tax region..."
-              />
-            </div>
-            
-            <div {...(() => {
-              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
-                id: 'phone-field',
-                type: 'formField',
-                fieldType: 'textField',
-                label: 'Phone',
-                value: formData.phone,
-                helperText: 'Phone number for this location'
-              });
-              return automationIdProps;
-            })()}>
-              <Label htmlFor="phone-input">Phone</Label>
-              <Input
-                id="phone-input"
-                value={formData.phone}
-                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-              />
-            </div>
-            
-            <div {...(() => {
-              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
-                id: 'email-field',
-                type: 'formField',
-                fieldType: 'textField',
-                label: 'Email',
-                value: formData.email,
-                helperText: 'Email address for this location'
-              });
-              return automationIdProps;
-            })()}>
-              <Label htmlFor="email-input">Email</Label>
-              <Input
-                id="email-input"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
               />
             </div>
             

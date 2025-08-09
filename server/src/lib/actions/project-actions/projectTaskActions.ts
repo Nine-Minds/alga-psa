@@ -12,7 +12,7 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { validateData, validateArray } from 'server/src/lib/utils/validation';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { omit } from 'lodash';
 import { 
     createTaskSchema, 
@@ -414,6 +414,69 @@ export async function getTaskTicketLinksAction(taskId: string): Promise<IProject
         });
     } catch (error) {
         console.error('Error getting task ticket links:', error);
+        throw error;
+    }
+}
+
+export async function getTasksForPhase(phaseId: string): Promise<{
+    tasks: IProjectTask[];
+    ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] };
+    taskResources: { [taskId: string]: any[] };
+}> {
+    try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser) {
+            throw new Error("user not found");
+        }
+        const {knex: db} = await createTenantKnex();
+        return await withTransaction(db, async (trx: Knex.Transaction) => {
+            await checkPermission(currentUser, 'project', 'read', trx);
+            
+            // Get phase to get its WBS code
+            const phase = await trx('project_phases')
+                .where({ phase_id: phaseId })
+                .first();
+                
+            if (!phase) {
+                throw new Error('Phase not found');
+            }
+            
+            // Get all tasks for this phase
+            const tasks = await ProjectTaskModel.getTasksByPhase(trx, phaseId);
+            
+            // Get all related data in parallel
+            const taskIds = tasks.map(t => t.task_id);
+            const [ticketLinksArray, taskResourcesArray] = await Promise.all([
+                taskIds.length > 0 ? ProjectTaskModel.getTaskTicketLinksForTasks(trx, taskIds) : [],
+                taskIds.length > 0 ? ProjectTaskModel.getTaskResourcesForTasks(trx, taskIds) : []
+            ]);
+            
+            // Convert arrays to maps
+            const ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] } = {};
+            const taskResources: { [taskId: string]: any[] } = {};
+            
+            for (const link of ticketLinksArray) {
+                if (link.task_id) {
+                    if (!ticketLinks[link.task_id]) {
+                        ticketLinks[link.task_id] = [];
+                    }
+                    ticketLinks[link.task_id].push(link);
+                }
+            }
+            
+            for (const resource of taskResourcesArray) {
+                if (resource.task_id) {
+                    if (!taskResources[resource.task_id]) {
+                        taskResources[resource.task_id] = [];
+                    }
+                    taskResources[resource.task_id].push(resource);
+                }
+            }
+            
+            return { tasks, ticketLinks, taskResources };
+        });
+    } catch (error) {
+        console.error('Error getting tasks for phase:', error);
         throw error;
     }
 }
@@ -1176,17 +1239,29 @@ export async function addTaskDependency(
     return await withTransaction(db, async (trx) => {
         await checkPermission(currentUser, 'project', 'update', trx);
         
-        if (!dependencyType) {
+        // Handle 'blocked_by' by swapping the tasks and using 'blocks' instead
+        let actualPredecessorId = predecessorTaskId;
+        let actualSuccessorId = successorTaskId;
+        let actualDependencyType = dependencyType;
+        
+        if (dependencyType === 'blocked_by') {
+            // Swap the tasks: "A blocked_by B" becomes "B blocks A"
+            actualPredecessorId = successorTaskId;
+            actualSuccessorId = predecessorTaskId;
+            actualDependencyType = 'blocks';
+        }
+        
+        if (!actualDependencyType) {
             const [predecessor, successor] = await Promise.all([
-                trx('project_tasks').where({ task_id: predecessorTaskId, tenant }).first(),
-                trx('project_tasks').where({ task_id: successorTaskId, tenant }).first()
+                trx('project_tasks').where({ task_id: actualPredecessorId, tenant }).first(),
+                trx('project_tasks').where({ task_id: actualSuccessorId, tenant }).first()
             ]);
             
             if (!predecessor || !successor) {
                 throw new Error('One or both tasks not found');
             }
             
-            dependencyType = TaskDependencyModel.suggestDependencyType(
+            actualDependencyType = TaskDependencyModel.suggestDependencyType(
                 predecessor.task_type_key || 'task',
                 successor.task_type_key || 'task'
             );
@@ -1194,9 +1269,9 @@ export async function addTaskDependency(
         
         return await TaskDependencyModel.addDependency(
             trx,
-            predecessorTaskId, 
-            successorTaskId, 
-            dependencyType, 
+            actualPredecessorId, 
+            actualSuccessorId, 
+            actualDependencyType, 
             leadLagDays, 
             notes
         );

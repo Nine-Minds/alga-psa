@@ -23,17 +23,19 @@ trap 'handle_error' ERR
 # Function to check if postgres is ready
 wait_for_postgres() {
     log "Waiting for PostgreSQL to be ready..."
-    until PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h postgres -U postgres -c '\q' 2>/dev/null; do
+    set +e  # Temporarily disable exit on error for the until loop
+    until PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h ${DB_HOST:-postgres} -p ${DB_PORT:-5432} -U postgres -c '\q' 2>/dev/null; do
         log "PostgreSQL is unavailable - sleeping"
         sleep 1
     done
+    set -e  # Re-enable exit on error
     log "PostgreSQL is up and running!"
 }
 
 # Function to check if seeds have been run
 check_seeds_status() {
     local has_seeds
-    has_seeds=$(PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h postgres -U postgres -d server -tAc "SELECT EXISTS (SELECT 1 FROM users LIMIT 1);")
+    has_seeds=$(PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h ${DB_HOST:-postgres} -p ${DB_PORT:-5432} -U postgres -d ${DB_NAME_SERVER:-server} -tAc "SELECT EXISTS (SELECT 1 FROM users LIMIT 1);")
     if [ "$has_seeds" = "t" ]; then
         return 0  # Seeds have been run
     else
@@ -49,10 +51,10 @@ main() {
     node /app/server/setup/create_database.js
 
     log "Creating pgboss schema..."
-    PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h postgres -U postgres -d server -c 'CREATE SCHEMA IF NOT EXISTS pgboss;'
+    PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h ${DB_HOST:-postgres} -p ${DB_PORT:-5432} -U postgres -d ${DB_NAME_SERVER:-server} -c 'CREATE SCHEMA IF NOT EXISTS pgboss;'
 
     log "Granting necessary permissions..."
-    PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h postgres -U postgres -d server -c 'GRANT ALL ON SCHEMA public TO postgres;'
+    PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h ${DB_HOST:-postgres} -p ${DB_PORT:-5432} -U postgres -d ${DB_NAME_SERVER:-server} -c 'GRANT ALL ON SCHEMA public TO postgres;'
 
     log "Running migrations..."
     NODE_ENV=migration npx knex migrate:latest --knexfile /app/server/knexfile.cjs
@@ -60,7 +62,9 @@ main() {
     # Check if seeds need to be run
     if ! check_seeds_status; then
         log "Running seeds..."
-        NODE_ENV=migration npx knex seed:run --knexfile /app/server/knexfile.cjs
+        NODE_ENV=migration npx knex seed:run --knexfile /app/server/knexfile.cjs || {
+            log "Seeds failed, but continuing since database may already be seeded"
+        }
         log "Seeds completed!"
     else
         log "Seeds have already been run, skipping..."

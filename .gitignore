@@ -85,6 +85,7 @@ yarn-error.log*
 .roo/
 .mcp.json
 CLAUDE.md
+.claude/
 
 # vercel
 .vercel
@@ -125,6 +126,7 @@ secrets/
 .secrets
 .clinerules
 data/
+uploads/
 shared/dist
 temp_wasm_compile
 venv/
@@ -135,3 +137,5 @@ venv/
 OpenCode.md
 opencode.md
 .opencode
+shared/core/*.d.ts
+shared/core/*.js

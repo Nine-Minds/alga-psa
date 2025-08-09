@@ -3,16 +3,11 @@
  * POST /api/v1/financial/bulk/credits - Bulk credit operations
  */
 
-import { FinancialController } from 'server/src/lib/api/controllers/FinancialController';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { ApiFinancialController } from 'server/src/lib/api/controllers/ApiFinancialController';
 
 export async function POST(request: Request) {
-  try {
-    const controller = new FinancialController();
-    return await controller.bulkInvoiceOperations()(request as any);
-  } catch (error) {
-    return handleApiError(error);
-  }
+  const controller = new ApiFinancialController();
+  return await controller.bulkCreditOperations()(request as any);
 }
 
 export const runtime = 'nodejs';

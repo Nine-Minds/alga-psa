@@ -1,0 +1,223 @@
+# E2E Testing Configuration for Local Development
+# This configuration excludes the setup container since tests handle their own DB setup
+# Run from the alga-psa root directory
+
+services:
+  # Test-specific PostgreSQL instance
+  postgres-test:
+    image: ankane/pgvector:latest
+    container_name: ${APP_NAME:-sebastian}_postgres_test
+    environment:
+      POSTGRES_DB: server_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    ports:
+      - "5433:5432"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d server_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Test-specific Redis instance
+  redis-test:
+    build:
+      context: .
+      dockerfile: redis/Dockerfile
+    container_name: ${APP_NAME:-sebastian}_redis_test
+    environment:
+      REDIS_PASSWORD_FILE: /run/secrets/redis_password
+    secrets:
+      - redis_password
+    ports:
+      - "6380:6379"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Test-specific PgBouncer instance
+  pgbouncer-test:
+    build:
+      context: ./pgbouncer
+      dockerfile: Dockerfile
+    container_name: ${APP_NAME:-sebastian}_pgbouncer_test
+    environment:
+      POSTGRES_USER: postgres
+      # Override database configuration for test
+      DATABASES_HOST: postgres-test
+      DATABASES_PORT: 5432
+      DATABASES_DBNAME: server_test
+    secrets:
+      - postgres_password
+      - db_password_server
+    ports:
+      - "6434:6432"  # Different port from main pgbouncer
+    networks:
+      - app-network
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+
+  # Workflow Worker Service - Dev mode with volume mounts
+  workflow-worker-test:
+    image: node:20.9-alpine
+    container_name: ${APP_NAME:-sebastian}_workflow_worker_test
+    working_dir: /app
+    command: sh -c "apk add --no-cache curl postgresql-client && cd /app/services/workflow-worker && npm run dev"
+    environment:
+      # Database configuration
+      DB_TYPE: postgres
+      DB_HOST: postgres-test
+      DB_PORT: 5432
+      DB_NAME_SERVER: server_test
+      DB_USER_SERVER: app_user
+      POSTGRES_HOST: postgres-test  # Also set POSTGRES_HOST for entrypoint script
+      
+      # Redis configuration
+      REDIS_HOST: redis-test
+      REDIS_PORT: 6379
+      
+      # Workflow worker configuration
+      WORKER_COUNT: 2
+      POLL_INTERVAL_MS: 300000  # 5 minutes in milliseconds
+      BATCH_SIZE: 5
+      MAX_RETRIES: 3
+      CONCURRENCY_LIMIT: 3
+      HEALTH_CHECK_INTERVAL_MS: 300000  # 5 minutes
+      METRICS_REPORTING_INTERVAL_MS: 300000  # 5 minutes
+      
+      # Logging
+      LOG_LEVEL: debug
+      LOG_IS_FORMAT_JSON: false
+      LOG_IS_FULL_DETAILS: true
+      
+      # App info
+      APP_NAME: ${APP_NAME:-sebastian}
+      APP_ENV: test
+      NODE_ENV: test
+      VERSION: e2e-test
+      
+      # Security
+      CRYPTO_SALT_BYTES: 32
+      CRYPTO_ITERATION: 10000
+      CRYPTO_KEY_LENGTH: 64
+      CRYPTO_ALGORITHM: aes-256-gcm
+      TOKEN_EXPIRES: 3600
+    networks:
+      - app-network
+    volumes:
+      # Mount the entire project for development
+      - type: bind
+        source: .
+        target: /app
+        read_only: false
+      # Mount secrets
+      - type: bind
+        source: ./secrets/db_password_server
+        target: /run/secrets/db_password_server
+        read_only: true
+      - type: bind
+        source: ./secrets/redis_password
+        target: /run/secrets/redis_password
+        read_only: true
+      - type: bind
+        source: ./secrets/crypto_key
+        target: /run/secrets/crypto_key
+        read_only: true
+      - type: bind
+        source: ./secrets/token_secret_key
+        target: /run/secrets/token_secret_key
+        read_only: true
+    secrets:
+      - db_password_server
+      - redis_password
+      - crypto_key
+      - token_secret_key
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+      # No dependency on setup-test since tests handle their own setup
+    ports:
+      - "4001:3001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # MailHog for email testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: ${APP_NAME:-sebastian}_mailhog_test
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8025"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # WireMock for webhook mocking
+  webhook-mock:
+    image: wiremock/wiremock:latest
+    container_name: ${APP_NAME:-sebastian}_webhook_mock_test
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./test-config/wiremock:/home/wiremock
+    networks:
+      - app-network
+    command: ["--global-response-templating", "--verbose"]
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/__admin/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # WireMock for OAuth mocking
+  oauth-mock:
+    image: wiremock/wiremock:3.9.2
+    container_name: ${APP_NAME:-sebastian}_oauth_mock_test
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./test-config/wiremock-oauth:/home/wiremock
+    networks:
+      - app-network
+    command: ["--global-response-templating", "--verbose"]
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/__admin/health"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password
+  db_password_server:
+    file: ./secrets/db_password_server
+  redis_password:
+    file: ./secrets/redis_password
+  crypto_key:
+    file: ./secrets/crypto_key
+  token_secret_key:
+    file: ./secrets/token_secret_key
+
+networks:
+  app-network:
+    name: ${APP_NAME:-sebastian}_app-network-test
+    driver: bridge

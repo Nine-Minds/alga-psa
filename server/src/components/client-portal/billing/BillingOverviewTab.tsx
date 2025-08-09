@@ -21,7 +21,7 @@ interface BillingOverviewTabProps {
   invoices: InvoiceViewModel[];
   bucketUsage: ClientBucketUsageResult[];
   isBucketUsageLoading: boolean;
-  isClient: boolean;
+  isLoading: boolean;
   formatCurrency: (amount: number) => string;
   formatDate: (date: string | { toString(): string } | undefined | null) => string;
   onViewAllInvoices?: () => void;
@@ -32,7 +32,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
   invoices,
   bucketUsage,
   isBucketUsageLoading,
-  isClient,
+  isLoading,
   formatCurrency,
   formatDate,
   onViewAllInvoices
@@ -122,23 +122,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
         {SHOW_USAGE_FEATURES && (
         <Card id="bucket-usage-card" className="p-6">
           <h3 className="text-lg font-semibold mb-4">Bucket Usage</h3>
-          {!isClient ? (
-            // Server-side placeholder
-            <div className="grid gap-6 md:grid-cols-2">
-              {[...Array(2)].map((_, i) => (
-                <div key={i} className="animate-pulse">
-                  <Skeleton className="h-6 w-1/2 mb-2" />
-                  <Skeleton className="h-4 w-1/3 mb-4" />
-                  <Skeleton className="h-4 w-full mb-2" />
-                  <Skeleton className="h-2 w-full mb-1" />
-                  <div className="flex justify-between">
-                    <Skeleton className="h-3 w-1/4" />
-                    <Skeleton className="h-3 w-1/4" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : isBucketUsageLoading ? (
+          {isBucketUsageLoading || isLoading ? (
             // Client-side loading state with skeleton
             <div className="grid gap-6 md:grid-cols-2">
               {[...Array(2)].map((_, i) => (

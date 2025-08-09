@@ -1,0 +1,48 @@
+# Test values for temporal-worker chart
+enabled: true
+
+# Override database configuration for testing
+db:
+  host: "postgresql.default.svc.cluster.local"
+  port: "5432"
+  serverDatabase: "msp_server"
+  user: "msp_server"
+  serverPasswordSecret:
+    name: "alga-psa-db-secrets"
+    key: "server-password"
+  adminPasswordSecret:
+    name: "alga-psa-db-secrets"
+    key: "admin-password"
+
+# Override email configuration
+email:
+  resendApiKeySecret:
+    name: "alga-psa-secrets"
+    key: "RESEND_API_KEY"
+
+# Application URL
+applicationUrl: "https://test.algapsa.com"
+
+# Test with local secrets (not Vault)
+vault:
+  enabled: false
+
+secrets:
+  internalApiSharedSecret: "test-internal-api-secret"
+  algaAuthKey: "test-alga-auth-key"
+
+# Reduced resources for testing
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+# Disable autoscaling for testing
+autoscaling:
+  enabled: false
+
+# Single replica for testing
+replicaCount: 1

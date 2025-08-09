@@ -2,9 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { OnboardingWizard } from './OnboardingWizard';
-import { getTenantSettings, updateTenantOnboardingStatus, saveTenantOnboardingProgress } from '@/lib/actions/tenant-settings-actions/tenantSettingsActions';
-import { WizardData } from './types';
+import { useRouter, usePathname } from 'next/navigation';
+import { getTenantSettings } from '@/lib/actions/tenant-settings-actions/tenantSettingsActions';
 
 interface OnboardingProviderProps {
   children: React.ReactNode;
@@ -12,8 +11,8 @@ interface OnboardingProviderProps {
 
 export function OnboardingProvider({ children }: OnboardingProviderProps) {
   const { data: session, status } = useSession();
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [initialData, setInitialData] = useState<Partial<WizardData>>({});
+  const router = useRouter();
+  const pathname = usePathname();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,19 +27,20 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     try {
       const settings = await getTenantSettings();
       
-      // Only show onboarding if both settings exist and are explicitly set to false
-      // If settings don't exist or are incomplete, don't show onboarding wizard
+      // Skip check if already on onboarding page
+      if (pathname === '/msp/onboarding') {
+        setLoading(false);
+        return;
+      }
+      
+      // Redirect to onboarding if not completed and not skipped
       if (settings && 
           settings.hasOwnProperty('onboarding_completed') && 
           settings.hasOwnProperty('onboarding_skipped') &&
           !settings.onboarding_completed && 
           !settings.onboarding_skipped) {
-        setShowOnboarding(true);
-        
-        // Load any saved progress
-        if (settings?.onboarding_data) {
-          setInitialData(settings.onboarding_data);
-        }
+        router.push('/msp/onboarding');
+        return;
       }
     } catch (error) {
       console.error('Error checking onboarding status:', error);
@@ -49,28 +49,8 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     }
   };
 
-  const handleOnboardingComplete = async (data: WizardData) => {
-    try {
-      // Mark onboarding as completed
-      await updateTenantOnboardingStatus(true, data, false);
-      setShowOnboarding(false);
-      
-      // Refresh the page to ensure all data is loaded
-      window.location.reload();
-    } catch (error) {
-      console.error('Error completing onboarding:', error);
-      alert('Failed to save onboarding data. Please try again.');
-    }
-  };
-
-  const handleOnboardingClose = async () => {
-    // For now, just close without skipping
-    // Users can access it again from the menu
-    setShowOnboarding(false);
-  };
-
-  // Don't block rendering while checking onboarding status
-  if (loading && status === 'loading') {
+  // Block rendering while checking onboarding status to prevent flash of content
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
@@ -81,23 +61,5 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     );
   }
 
-  return (
-    <>
-      {children}
-      {showOnboarding && (
-        <OnboardingWizard
-          open={showOnboarding}
-          onOpenChange={(open) => {
-            if (!open) {
-              handleOnboardingClose();
-            }
-          }}
-          initialData={initialData}
-          onComplete={handleOnboardingComplete}
-          testMode={false}
-          debugMode={process.env.NODE_ENV === 'development'}
-        />
-      )}
-    </>
-  );
+  return <>{children}</>;
 }

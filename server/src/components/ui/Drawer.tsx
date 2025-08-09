@@ -46,11 +46,11 @@ const Drawer: React.FC<DrawerProps & AutomationProps> = ({
     }}>
       <Dialog.Portal>
         <Dialog.Overlay
-          className="fixed inset-0 bg-black/50 transition-opacity duration-300 data-[state=closed]:opacity-0 data-[state=open]:opacity-100"
+          className={`fixed inset-0 bg-black/50 transition-opacity duration-300 data-[state=closed]:opacity-0 data-[state=open]:opacity-100 ${isInDrawer ? 'z-[60]' : 'z-50'}`}
           onClick={() => onClose()} // Explicitly handle overlay clicks
         />
         <Dialog.Content 
-          className={`fixed inset-y-0 right-0 w-fit max-w-[60vw] bg-white shadow-lg focus:outline-none overflow-y-auto transform transition-all duration-300 ease-in-out data-[state=open]:translate-x-0 data-[state=closed]:translate-x-full data-[state=closed]:opacity-0 data-[state=open]:opacity-100 ${drawerVariant === 'document' ? 'ticket-document-drawer' : ''}`}
+          className={`fixed inset-y-0 right-0 w-fit max-w-[60vw] bg-white shadow-lg focus:outline-none overflow-y-auto transform transition-all duration-300 ease-in-out data-[state=open]:translate-x-0 data-[state=closed]:translate-x-full data-[state=closed]:opacity-0 data-[state=open]:opacity-100 ${drawerVariant === 'document' ? 'ticket-document-drawer' : ''} ${isInDrawer ? 'z-[61]' : 'z-50'}`}
           onCloseAutoFocus={(e) => e.preventDefault()}
         >
           <SessionProvider>

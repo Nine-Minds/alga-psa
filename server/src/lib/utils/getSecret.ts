@@ -1,5 +1,5 @@
-import { getSecretProviderInstance } from '@shared/core/secretProvider';
-import logger from '@shared/core/logger.js'; // Corrected import path
+import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider.js';
+import { logger } from '@alga-psa/shared/core';
 
 /**
  * Gets a secret value using the configured secret provider, with fallbacks.
@@ -15,7 +15,7 @@ import logger from '@shared/core/logger.js'; // Corrected import path
  */
 export async function getSecret(secretName: string, envVar: string, defaultValue: string = ''): Promise<string> {
   // 1. Try the configured secret provider first
-  const secrets = getSecretProviderInstance();
+  const secrets = await getSecretProviderInstance();
   const providerSecret = await secrets.getAppSecret(secretName);
 
   if (providerSecret !== undefined && providerSecret !== '') {

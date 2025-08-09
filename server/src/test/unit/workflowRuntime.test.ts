@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { TypeScriptWorkflowRuntime, getWorkflowRuntime } from '../../lib/workflow/core/workflowRuntime';
-import { ActionRegistry } from '../../lib/workflow/core/actionRegistry';
-import { WorkflowDefinition } from '../../lib/workflow/core/workflowDefinition';
-import { WorkflowContext } from '../../lib/workflow/core/workflowContext';
+import { TypeScriptWorkflowRuntime, getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
+import { ActionRegistry } from '@shared/workflow/core/actionRegistry';
+import { WorkflowDefinition } from '@shared/workflow/core/workflowDefinition';
+import { WorkflowContext } from '@shared/workflow/core/workflowContext';
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({

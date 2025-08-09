@@ -14,10 +14,8 @@ export interface GmailPubSubSetupOptions {
   serviceAccountKey?: any;
 }
 
-export interface GmailWebhookSetupResult {
+export interface GmailWatchRegistrationResult {
   success: boolean;
-  topicName?: string;
-  subscriptionName?: string;
   historyId?: string;
   expiration?: string;
   error?: string;
@@ -34,51 +32,38 @@ export class GmailWebhookService {
   }
 
   /**
-   * Set up complete Gmail webhook integration
-   * This includes creating Pub/Sub topic, subscription, and Gmail watch
+   * Register Gmail watch subscription only (no Pub/Sub setup)
+   * Pub/Sub topic and subscription should already be created by configureGmailProvider
    */
-  async setupGmailWebhook(
+  async registerWatch(
     providerConfig: EmailProviderConfig,
     pubsubOptions: GmailPubSubSetupOptions
-  ): Promise<GmailWebhookSetupResult> {
+  ): Promise<GmailWatchRegistrationResult> {
     try {
-      console.log(`📧 Setting up Gmail webhook for: ${providerConfig.mailbox}`);
+      console.log(`📧 Registering Gmail watch for: ${providerConfig.mailbox}`);
 
-      // Step 1: Ensure Pub/Sub topic exists
-      const topicResult = await this.ensurePubSubTopic(pubsubOptions);
-      if (!topicResult.success) {
-        return { success: false, error: topicResult.error };
-      }
-
-      // Step 2: Ensure Pub/Sub subscription exists
-      const subscriptionResult = await this.ensurePubSubSubscription(pubsubOptions);
-      if (!subscriptionResult.success) {
-        return { success: false, error: subscriptionResult.error };
-      }
-
-      // Step 3: Set up Gmail watch with the topic
+      // Register Gmail watch with the existing Pub/Sub topic
       const gmailAdapter = new GmailAdapter(providerConfig);
-      const watchResult = await gmailAdapter.initializeWebhook(pubsubOptions.webhookUrl);
+      await gmailAdapter.registerWebhookSubscription();
       
-      if (!watchResult.success) {
-        return { success: false, error: watchResult.error };
-      }
+      console.log(`✅ Gmail watch registration completed for: ${providerConfig.mailbox}`);
 
-      console.log(`✅ Gmail webhook setup completed for: ${providerConfig.mailbox}`);
+      // Get the real historyId and expiration from the Gmail adapter after registration
+      const adapterConfig = gmailAdapter.getConfig();
+      const historyId = adapterConfig.provider_config?.history_id || undefined;
+      const expiration = adapterConfig.provider_config?.watch_expiration || undefined;
 
       return {
         success: true,
-        topicName: topicResult.topicName,
-        subscriptionName: subscriptionResult.subscriptionName,
-        historyId: watchResult.subscriptionId,
-        expiration: 'TODO: Extract from Gmail API response'
+        historyId: historyId,
+        expiration: expiration
       };
 
     } catch (error: any) {
-      console.error('❌ Failed to setup Gmail webhook:', error);
+      console.error('❌ Failed to register Gmail watch:', error);
       return {
         success: false,
-        error: `Gmail webhook setup failed: ${error.message}`
+        error: `Gmail watch registration failed: ${error.message}`
       };
     }
   }
@@ -113,78 +98,7 @@ export class GmailWebhookService {
     }
   }
 
-  /**
-   * Ensure Google Cloud Pub/Sub topic exists
-   */
-  private async ensurePubSubTopic(options: GmailPubSubSetupOptions): Promise<{
-    success: boolean;
-    topicName?: string;
-    error?: string;
-  }> {
-    try {
-      console.log(`🔧 Ensuring Pub/Sub topic exists: ${options.topicName}`);
-
-      // TODO: Implement actual Google Cloud Pub/Sub topic creation
-      // This would use the Google Cloud Pub/Sub client library
-      // const {PubSub} = require('@google-cloud/pubsub');
-      // const pubsub = new PubSub({projectId: options.projectId});
-      // const topic = pubsub.topic(options.topicName);
-      // const [exists] = await topic.exists();
-      // if (!exists) {
-      //   await topic.create();
-      // }
-
-      console.log(`[MOCK] Pub/Sub topic ensured: ${options.topicName}`);
-
-      return {
-        success: true,
-        topicName: `projects/${options.projectId}/topics/${options.topicName}`
-      };
-
-    } catch (error: any) {
-      return {
-        success: false,
-        error: `Failed to ensure Pub/Sub topic: ${error.message}`
-      };
-    }
-  }
-
-  /**
-   * Ensure Google Cloud Pub/Sub subscription exists
-   */
-  private async ensurePubSubSubscription(options: GmailPubSubSetupOptions): Promise<{
-    success: boolean;
-    subscriptionName?: string;
-    error?: string;
-  }> {
-    try {
-      console.log(`🔧 Ensuring Pub/Sub subscription exists: ${options.subscriptionName}`);
-
-      // TODO: Implement actual Google Cloud Pub/Sub subscription creation
-      // This would:
-      // 1. Check if subscription exists
-      // 2. Create subscription if it doesn't exist
-      // 3. Configure push endpoint to our webhook URL
-      
-      const fullSubscriptionName = `projects/${options.projectId}/subscriptions/${options.subscriptionName}`;
-      const fullTopicName = `projects/${options.projectId}/topics/${options.topicName}`;
-
-      console.log(`[MOCK] Pub/Sub subscription ensured: ${fullSubscriptionName}`);
-      console.log(`[MOCK] Push endpoint: ${options.webhookUrl}`);
-      console.log(`[MOCK] Topic: ${fullTopicName}`);
-
-      return {
-        success: true,
-        subscriptionName: fullSubscriptionName
-      };
-
-    } catch (error: any) {
-      return {
-        success: false,
-        error: `Failed to ensure Pub/Sub subscription: ${error.message}`
-      };
-    }
-  }
+  // Note: Pub/Sub topic and subscription creation is now handled by the setupPubSub function
 
   /**
    * Stop Gmail watch for a provider

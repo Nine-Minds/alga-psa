@@ -16,10 +16,8 @@ get_secret() {
     if [ -f "$secret_path" ]; then
         cat "$secret_path"
     elif [ ! -z "${!env_var}" ]; then
-        log "Using $env_var environment variable instead of Docker secret"
         echo "${!env_var}"
     else
-        log "Neither secret file $secret_path nor $env_var environment variable found, using default value"
         echo "$default_value"
     fi
 }
@@ -28,7 +26,7 @@ get_secret() {
 wait_for_postgres() {
     log "Waiting for PostgreSQL to be ready..."
     local db_password_server=$(get_secret "db_password_server" "DB_PASSWORD_SERVER")
-    until pg_isready -h ${POSTGRES_HOST:-postgres} -p ${POSTGRES_PORT:-5432} -U ${DB_USER_SERVER:-postgres} 2>/dev/null; do
+    until pg_isready -h ${DB_HOST:-postgres} -p ${DB_PORT:-5432} -U ${DB_USER_SERVER:-postgres} 2>/dev/null; do
         log "PostgreSQL is unavailable - sleeping"
         sleep 1
     done
@@ -50,7 +48,7 @@ wait_for_redis() {
 start_workflow_worker() {
     # Set up application database connection using app_user
     local db_password_server=$(get_secret "db_password_server" "DB_PASSWORD_SERVER")
-    export DATABASE_URL="postgresql://$DB_USER_SERVER:$db_password_server@postgres:5432/server"
+    export DATABASE_URL="postgresql://$DB_USER_SERVER:$db_password_server@${DB_HOST:-postgres}:${DB_PORT:-5432}/${DB_NAME_SERVER:-server}"
     
     # Set NEXTAUTH_SECRET from Docker secret if not already set
     log "Setting NEXTAUTH_SECRET from secret file..."
@@ -59,8 +57,14 @@ start_workflow_worker() {
     log "Starting workflow worker..."
     
     # Start the workflow worker process
-    log "Starting workflow worker process..."
-    cd /app/services/workflow-worker && npm run start
+    log "DEV_MODE is set to: '$DEV_MODE'"
+    if [ "$DEV_MODE" = "true" ]; then
+        log "Starting workflow worker in DEVELOPMENT mode with hot reload..."
+        cd /app/services/workflow-worker && npm run dev
+    else
+        log "Starting workflow worker in PRODUCTION mode..."
+        cd /app/services/workflow-worker && npm run start
+    fi
 }
 
 # Main startup process
