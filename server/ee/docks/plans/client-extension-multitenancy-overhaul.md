@@ -1,6 +1,6 @@
 # Client Extension Multi-Tenancy Overhaul Plan
 
-Last updated: 2025-08-08
+Last updated: 2025-08-09
 
 ## Context & Findings
 
@@ -622,6 +622,105 @@ Phase 4 – Migration & Deprecation
 - Define bundle manifest schema and signing model.
 - Draft DB migrations for the data model above with RLS.
 - Build a minimal runner prototype with one event flow E2E.
+
+## Consolidated TODOs (Status)
+
+This consolidated list supersedes the separate "Phased TODO" and "Detailed Planning" sections. Items are marked complete where scaffolding or implementation exists in this repo.
+
+Phase 0 — Foundations and Switches
+- [x] EE-only wiring: confirm extension init only in EE builds (gated by `isEnterprise` in `initializeApp.ts`).
+- [x] Env/config: add EE `.env.example` with S3, cache, runner, and trust bundle vars.
+- [x] Manifest v2 JSON Schema and example bundle layout under `ee/docs/examples/extension-bundle-v2/`.
+
+Phase 1 — Database Schema and Registry Services
+- [x] Migrations (EE): create base tables
+  - [x] `extension_registry`
+  - [x] `extension_version`
+  - [x] `extension_bundle` (includes `precompiled` map)
+  - [x] `tenant_extension_install`
+  - [x] `extension_event_subscription`
+  - [x] `extension_execution_log`
+  - [x] `extension_quota_usage`
+  - [ ] RLS plan and enforcement for tenant-scoped tables
+- [x] Registry service scaffold (`ee/server/src/lib/extensions/registry-v2.ts`).
+- [x] Tenant install service scaffold (`ee/server/src/lib/extensions/install-v2.ts`).
+- [x] Signature verification util (stub) in `server/src/lib/extensions/signing.ts`.
+- [ ] Admin CLI for publish/deprecate/install flows.
+- Details
+  - [x] PK/FK relationships and cascade deletes confirmed in migrations.
+  - [x] Indexes: `execution_log (tenant_id, created_at)`, `event_subscription (tenant_id, topic)`, `tenant_install (tenant_id)`.
+  - [ ] Consider `extension_id` normalization vs. `registry_id` lookups.
+
+Phase 2 — Bundle Storage Integration
+- [ ] EE S3 provider implemented against MinIO (scaffold exists).
+- [x] CE bundle helpers added in `server/src/lib/extensions/bundles.ts` (placeholders for EE wiring).
+- [x] Precompiled cwasm support in schema (DB) and manifest; [ ] runtime selection logic in loader.
+- Details
+  - [x] Canonical content-address layout documented.
+  - [ ] Hash verification on fetch and before use.
+  - [ ] Signature format decision and trust bundle format.
+
+Phase 3 — Runner Service (Rust + Wasmtime)
+- [x] Runner crate scaffolding: `Cargo.toml`, `src/main.rs`, `src/http/server.rs` (`POST /v1/execute`), `src/models.rs`.
+- [x] Engine/loader/cache modules created (placeholders).
+- [ ] Wasmtime configuration: pooling allocator, store limits, epoch timeouts, optional fuel.
+- [ ] Host imports (`alga.*`): storage/http/secrets/log/metrics.
+- [ ] Module fetch/cache from S3 with signature verification.
+- [ ] Execute flow: validate → instantiate → call handler → marshal response → log execution.
+- [ ] Errors/tests: standardized error codes + unit/integration tests.
+- [x] Containerization: `ee/runner/Dockerfile` and KService YAML with `/healthz` and `/warmup`.
+- Details
+  - [ ] Observability: tracing fields and metrics; persist execution logs.
+  - [ ] Idempotency handling with gateway-provided key.
+
+Phase 4 — Next.js API Gateway for Server-Side Handlers
+- [x] Route added: `src/app/api/ext/[extensionId]/[...path]/route.ts` (GET/POST/PUT/PATCH/DELETE).
+- [x] Helpers: `auth.ts`, `registry.ts`, `endpoints.ts`, `headers.ts` (scaffolds).
+- [ ] Request policy
+  - [x] Header allowlist (strip `authorization`).
+  - [ ] Body size caps.
+  - [x] Timeout via `EXT_GATEWAY_TIMEOUT_MS`.
+- [ ] Proxy and telemetry
+  - [x] Proxy to Runner `/v1/execute` with normalized payload.
+  - [x] Map response back to client.
+  - [ ] Emit telemetry (tracing/metrics).
+- Details
+  - [ ] AuthN/Z: derive tenant from session/API key; enforce RBAC.
+  - [ ] Idempotency key for non-GET and retry policy (502/503/504 with jitter).
+
+Phase 5 — Client Asset Fetch-and-Serve (Pod-Local Cache)
+- [x] Route: `src/app/ext-ui/[extensionId]/[contentHash]/[...path]/route.ts` (GET).
+- [x] Cache manager: `server/src/lib/extensions/assets/cache.ts` (ensure and basic index write).
+- [x] Static serve: `server/src/lib/extensions/assets/serve.ts` (SPA fallback; sanitize; caching headers).
+- [x] Mime map: `server/src/lib/extensions/assets/mime.ts`.
+- Details
+  - [ ] Tar/zip extraction for `ui/**/*` (currently placeholder).
+  - [x] LRU index file structure recorded; [ ] eviction policy and GC.
+  - [ ] ETag generation and conditional GET support.
+
+Phase 6 — Client SDK (Iframe)
+- [x] Packages created: `packages/extension-iframe-sdk/`, `packages/ui-kit/`.
+- SDK files
+  - [x] `src/index.ts`, [x] `src/bridge.ts`, [x] `src/auth.ts`, [x] `src/navigation.ts`, [x] `src/theme.ts`, [x] `src/types.ts`, [ ] README with React example.
+- UI Kit
+  - [x] `src/index.ts`, [ ] theme tokens CSS and theming entry, [ ] MVP components, [ ] hooks, [ ] README.
+- Example app
+  - [ ] Vite + TS example (README stub present only).
+- Host bridge bootstrap
+  - [ ] `server/src/lib/extensions/ui/iframeBridge.ts` to inject theme tokens and session.
+
+Phase 7 — Knative Serving (Runner)
+- [x] KService manifest with autoscaling annotations.
+- [x] `/healthz` and `/warmup` endpoints implemented.
+- [ ] CI/CD step to build/publish runner and smoke-test `/v1/execute`.
+- Details
+  - [ ] Autoscale tuning; resource requests/limits aligned to memory caps.
+  - [ ] Warmup prefetch strategy for hot bundles.
+
+Phase 8 — EE Code Migration (remove legacy paths)
+- [ ] Remove/gate legacy filesystem scan loader (`ee/server/src/lib/extensions/initialize.ts`).
+- [ ] Remove host-side descriptor rendering/dynamic imports; iframe-only UI.
+- [x] Document CE gating and deprecation notes (`ee/docs/cleanup-notes.md`).
 
 ## Detailed Planning (Expanded TODOs)
 
