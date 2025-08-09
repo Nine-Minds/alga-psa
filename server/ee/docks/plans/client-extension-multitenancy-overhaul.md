@@ -535,10 +535,57 @@ Phase 2 — Bundle Storage Integration
 Phase 3 — Runner Service (Rust + Wasmtime)
 - [x] Runner crate scaffolding: `Cargo.toml`, `src/main.rs`, `src/http/server.rs` (`POST /v1/execute`), `src/models.rs`.
 - [x] Engine/loader/cache modules created (placeholders).
-- [ ] Wasmtime configuration: pooling allocator, store limits, epoch timeouts, optional fuel.
-- [ ] Host imports (`alga.*`): storage/http/secrets/log/metrics.
-- [ ] Module fetch/cache from S3 with signature verification.
-- [ ] Execute flow: validate → instantiate → call handler → marshal response → log execution.
+- Wasmtime configuration
+  - [x] Engine/Config: async enabled, epoch_interruption on
+  - [x] PoolingAllocationConfig with conservative caps
+  - [x] Static/dynamic guard sizes; static max size set
+  - [x] Store limits: custom ResourceLimiter and Store.limiter installed
+  - [x] Timeouts: epoch-based deadline mapped from timeout_ms with background engine.increment_epoch
+  - [ ] Fuel: optional fuel metering toggle and budgeting (currently disabled)
+- Host imports (alga.*)
+  - Logging
+    - [x] alga.log_info(ptr,len)
+    - [x] alga.log_error(ptr,len)
+  - HTTP
+    - [x] alga.http.fetch(req_ptr,req_len,out_ptr) async via reqwest
+    - [x] EXT_EGRESS_ALLOWLIST enforcement (exact/subdomain host match)
+    - [ ] Limits/policy: size/time caps; header allowlist; method/body policy
+  - Storage (KV/doc)
+    - [ ] alga.storage.* (API design + stubs)
+  - Secrets
+    - [ ] alga.secrets.get (API design + stubs)
+  - Metrics/observability
+    - [ ] alga.metrics.* (counters/timers) or host-collected hooks
+- Module fetch/cache from S3
+  - Source
+    - [x] Fetch via BUNDLE_STORE_BASE + content-addressed key
+  - Caching
+    - [x] In-memory per-process cache (HashMap)
+    - [ ] Pod-local LRU with capacity limits (disk/mem)
+  - Integrity
+    - [x] SHA-256 verification against key path (sha256/<hash>/…)
+    - [ ] Signature verification using SIGNING_TRUST_BUNDLE (deferred)
+  - Precompiled
+    - [ ] Precompiled module fetch/use (optional), keyed by hash+target
+- Execute flow
+  - Input handling
+    - [x] Normalize ExecuteRequest → guest input JSON (context + http)
+    - [x] Idempotency cache (in-memory) based on x-idempotency-key
+    - [ ] Additional validation of method/path/header/body limits
+  - Instantiate
+    - [x] Engine/Store with limits + linker imports
+  - ABI call
+    - [x] Require guest exports: memory, alloc, handler(req_ptr, req_len, out_ptr)
+    - [x] Optional dealloc support
+    - [x] Read resp tuple (ptr,len) → bytes
+  - Response
+    - [x] Parse as normalized response JSON {status, headers, body_b64}
+    - [x] Fallback: if not JSON, base64 opaque bytes
+  - Logging/metrics
+    - [x] Start/end logging with request_id, tenant, extension, status
+    - [x] duration_ms, resp_b64_len, configured timeout/mem
+    - [ ] Counters/histograms (egress bytes, status code buckets), per-tenant metrics
+    - [ ] Structured error codes mapping
 - [ ] Errors/tests: standardized error codes + unit/integration tests.
 - [x] Containerization: `ee/runner/Dockerfile` and KService YAML with `/healthz` and `/warmup`.
 - Details
