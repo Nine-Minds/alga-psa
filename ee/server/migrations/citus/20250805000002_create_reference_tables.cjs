@@ -24,15 +24,16 @@ exports.up = async function(knex) {
   // These are lookup/configuration tables that are shared across all tenants
   // Ordered to handle dependencies (notification tables first, then system tables that reference them)
   const referenceTables = [
-    // Add notification_subtypes back - needed by system_email_templates
-    'notification_subtypes',
+    // Notification tables - BOTH are needed as a pair
+    'notification_categories',  // Must come first
+    'notification_subtypes',     // Depends on notification_categories
     
     // Document-related tables (only truly shared ones)
     'shared_document_types',
     
     // Standard lookup tables (without tenant columns)
     'countries',
-    'currencies',
+    // 'currencies', - removed as requested
     // 'invoice_templates', - Has tenant column, moved to distributed tables
     'standard_categories',
     'standard_channels',
@@ -42,20 +43,22 @@ exports.up = async function(knex) {
     // 'standard_statuses', - Has tenant column and FKs to distributed tables, must remain distributed
     'standard_task_types',
     
-    // System configuration tables (some depend on notification tables)
-    'system_email_templates',
-    // 'system_event_catalog', - Has triggers, cannot be distributed with Citus
-    'system_interaction_types',
-    'system_workflow_event_attachments',
+    // System workflow tables - order matters for dependencies
+    'system_workflow_registrations',        // Must come first
+    'system_workflow_registration_versions', // Depends on registrations
+    'system_workflow_event_attachments',    // Depends on registrations
     'system_workflow_form_definitions',
-    'system_workflow_registration_versions',
-    'system_workflow_registrations',
     'system_workflow_task_definitions',
     
+    // System configuration tables
+    'system_email_templates',  // Now after notification tables
+    // 'system_event_catalog', - Has triggers, cannot be distributed with Citus
+    'system_interaction_types',
+    
     // Other configuration tables
+    'workflow_event_mappings',
     // 'time_period_settings', - Has tenant column, moved to distributed tables
     // 'verification_tokens', - Has tenant column, moved to distributed tables
-    'workflow_event_mappings',
     // 'tenant_companies', - Has tenant_id column, moved to distributed tables
   ];
   
@@ -152,7 +155,6 @@ exports.down = async function(knex) {
       
       // Standard lookup tables (without tenant columns)
       'countries',
-      'currencies',
       // 'invoice_templates', - Has tenant column, moved to distributed tables
       'standard_categories',
       'standard_channels',
@@ -173,6 +175,7 @@ exports.down = async function(knex) {
       'system_workflow_task_definitions',
       
       // Notification tables
+      'notification_categories',
       'notification_subtypes',
       
       // Other configuration tables
