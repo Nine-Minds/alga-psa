@@ -99,7 +99,7 @@ WASM-only runner model:
 - Security: Sandbox iframes (`allow-scripts` by default; add `allow-same-origin` only if needed by SDK). All API calls go through `/api/ext/...` gateway. Prevent directory traversal in asset serving.
 
 ### Client Asset Serving via Gateway (pod-local cache)
-- Entry route: `src/app/ext-ui/[extensionId]/[contentHash]/[...path]/route.ts` (GET)
+- Entry route: `server/src/app/ext-ui/[extensionId]/[contentHash]/[...path]/route.ts` (GET)
   - Resolves tenant install → `content_hash` (the URL’s `[contentHash]` must match; otherwise 404) to avoid serving stale assets.
   - Ensures `ui/**/*` for `[contentHash]` exists in the pod-local cache directory, otherwise pulls and extracts just the `ui` subtree from the bundle archive.
   - Serves files from `<CACHE_ROOT>/<contentHash>/ui/` with SPA fallback to `index.html` when `path` is missing or not found.
@@ -159,7 +159,7 @@ spec:
  - Contract: Runner HTTP execute endpoint accepts `method`, `path`, `query`, `headers`, and `body` plus context (tenant_id, extension_id, content_hash), returning `status`, `headers`, and `body`. Inside WASM, the handler receives a normalized request object and returns a normalized response.
 
 ### Next.js API Router/Proxy (design)
-- Route structure: `src/app/api/ext/[extensionId]/[...path]/route.ts`
+- Route structure: `server/src/app/api/ext/[extensionId]/[...path]/route.ts`
 - Methods: Support GET, POST, PUT, PATCH, DELETE. All methods follow the same pipeline.
 - Env/config: `RUNNER_BASE_URL`, `BUNDLE_STORE_BASE`, `SIGNING_TRUST_BUNDLE`, `EXT_GATEWAY_TIMEOUT_MS`.
 
@@ -215,7 +215,7 @@ Security and limits:
 
 Example Next.js handler (abridged):
 ```
-// src/app/api/ext/[extensionId]/[...path]/route.ts
+// server/src/app/api/ext/[extensionId]/[...path]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function handler(req: NextRequest, ctx: { params: { extensionId: string; path: string[] } }) {
@@ -593,7 +593,7 @@ Phase 3 — Runner Service (Rust + Wasmtime)
   - [x] Idempotency handling with gateway-provided key.
 
 Phase 4 — Next.js API Gateway for Server-Side Handlers
-- [x] Route added: `src/app/api/ext/[extensionId]/[...path]/route.ts` (GET/POST/PUT/PATCH/DELETE).
+- [x] Route added: `server/src/app/api/ext/[extensionId]/[...path]/route.ts` (GET/POST/PUT/PATCH/DELETE).
 - [x] Helpers: `auth.ts`, `registry.ts`, `endpoints.ts`, `headers.ts` (scaffolds).
 - [ ] Request policy
   - [x] Header allowlist (strip `authorization`).
@@ -610,7 +610,7 @@ Phase 4 — Next.js API Gateway for Server-Side Handlers
   - [ ] Normalize `user-agent`.
 
 Phase 5 — Client Asset Fetch-and-Serve (Pod-Local Cache)
-- [x] Route: `src/app/ext-ui/[extensionId]/[contentHash]/[...path]/route.ts` (GET).
+- [x] Route: `server/src/app/ext-ui/[extensionId]/[contentHash]/[...path]/route.ts` (GET).
 - [x] Cache manager: `server/src/lib/extensions/assets/cache.ts` (ensure and basic index write).
 - [x] Static serve: `server/src/lib/extensions/assets/serve.ts` (SPA fallback; sanitize; caching headers).
 - [x] Mime map: `server/src/lib/extensions/assets/mime.ts`.
@@ -622,7 +622,7 @@ Phase 5 — Client Asset Fetch-and-Serve (Pod-Local Cache)
   - [ ] CSP guidance for iframe pages.
 
 Phase 6 — Client SDK (Iframe)
-- [x] Packages created: `packages/extension-iframe-sdk/`, `packages/ui-kit/`.
+- [x] Packages created: `ee/server/packages/extension-iframe-sdk/`, `ee/server/packages/ui-kit/`.
 - SDK files
   - [x] `src/index.ts`, [x] `src/bridge.ts`, [x] `src/auth.ts`, [x] `src/navigation.ts`, [x] `src/theme.ts`, [x] `src/types.ts`, [x] React hooks (`src/hooks.ts`), [x] README with React example.
 - UI Kit
@@ -630,7 +630,7 @@ Phase 6 — Client SDK (Iframe)
 - Example app
   - [ ] Vite + TS example (README stub present only).
 - Host bridge bootstrap
-  - [ ] `server/src/lib/extensions/ui/iframeBridge.ts` to inject theme tokens and session.
+  - [ ] `ee/server/src/lib/extensions/ui/iframeBridge.ts` to inject theme tokens and session.
  - Protocol & security
    - [ ] Origin validation and sandbox attributes; author docs.
    - [ ] Message types include `version`.

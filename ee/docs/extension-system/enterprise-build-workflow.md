@@ -13,20 +13,18 @@ This guide explains the Enterprise Edition (EE) build workflow relevant to the n
 ```
 alga-psa/
 ├── ee/server/src/                    # SOURCE (Enterprise Edition)
-│   ├── lib/extensions/               # Registry, bundles, gateway helpers, assets cache
-│   ├── app/api/ext/                  # Gateway route (EE‑gated)
-│   └── app/ext-ui/                   # UI asset route (EE‑gated)
+│   └── lib/extensions/               # Registry, bundles, helpers, assets cache
 ├── server/src/                       # TARGET (Main Server)
-│   ├── lib/extensions/               # ← Copied from EE
-│   ├── app/api/ext/                  # ← Copied from EE
-│   └── app/ext-ui/                   # ← Copied from EE
+│   ├── lib/extensions/               # EE helpers + server-side assets/gateway utils
+│   ├── app/api/ext/                  # Gateway route to Runner (implemented here)
+│   └── app/ext-ui/                   # Iframe UI asset route (implemented here)
 └── scripts/
     └── build-enterprise.sh           # Build Script
 ```
 
 Deprecated paths (should not be copied anymore):
 - `app/msp/extensions/...` pages that render tenant JS in host
-- `lib/extensions/ui/ExtensionRenderer.tsx` and descriptor rendering code
+- `ee/server/src/lib/extensions/ui/ExtensionRenderer.tsx` and descriptor rendering code
 - `/api/extensions/[extensionId]/...` routes that serve raw JS modules
 
 ## Build Flow
@@ -54,8 +52,6 @@ The script should:
 
 | EE Source                                   | Main Server Target                         | Purpose                            |
 |---------------------------------------------|--------------------------------------------|------------------------------------|
-| `ee/server/src/app/api/ext/`                | `server/src/app/api/ext/`                  | Gateway routes to Runner           |
-| `ee/server/src/app/ext-ui/`                 | `server/src/app/ext-ui/`                   | Iframe UI asset serve (pod cache)  |
 | `ee/server/src/lib/extensions/**`           | `server/src/lib/extensions/**`             | Registry, bundles, cache, helpers  |
 
 ## Environment & Config (Phase 0)
