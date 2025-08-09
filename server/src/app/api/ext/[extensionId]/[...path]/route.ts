@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'node:crypto';
 import { getTenantFromAuth, assertAccess } from 'server/src/lib/extensions/gateway/auth';
 import { getTenantInstall, resolveVersion } from 'server/src/lib/extensions/gateway/registry';
 import { filterRequestHeaders, filterResponseHeaders } from 'server/src/lib/extensions/gateway/headers';
@@ -17,8 +18,17 @@ async function handle(req: NextRequest, ctx: { params: { extensionId: string; pa
     const { content_hash, version_id } = await resolveVersion(install);
 
     const headers = filterRequestHeaders(req.headers);
-    const bodyB64 = req.body ? Buffer.from(await req.arrayBuffer()).toString('base64') : undefined;
-    const requestId = req.headers.get('x-request-id') || undefined;
+    headers['x-alga-tenant'] = tenantId;
+    headers['x-alga-extension'] = extensionId;
+    const maxBody = 10 * 1024 * 1024; // 10MB cap
+    let bodyB64: string | undefined;
+    if (req.method !== 'GET') {
+      const buf = Buffer.from(await req.arrayBuffer());
+      if (buf.length > maxBody) return NextResponse.json({ error: 'payload_too_large' }, { status: 413 });
+      bodyB64 = buf.toString('base64');
+    }
+    const requestId = req.headers.get('x-request-id') || crypto.randomUUID();
+    const idempotencyKey = req.method === 'GET' ? undefined : (req.headers.get('x-idempotency-key') || requestId);
 
     const runnerUrl = process.env.RUNNER_BASE_URL || 'http://localhost:8080';
     const timeoutMs = Number(process.env.EXT_GATEWAY_TIMEOUT_MS || '5000');
@@ -28,7 +38,11 @@ async function handle(req: NextRequest, ctx: { params: { extensionId: string; pa
     try {
       const resp = await fetch(`${runnerUrl}/v1/execute`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          'content-type': 'application/json',
+          'x-request-id': requestId,
+          ...(idempotencyKey ? { 'x-idempotency-key': idempotencyKey } : {}),
+        },
         body: JSON.stringify({
           context: { request_id: requestId, tenant_id: tenantId, extension_id: extensionId, content_hash, version_id },
           http: { method, path, query: Object.fromEntries(req.nextUrl.searchParams.entries()), headers, body_b64: bodyB64 },
