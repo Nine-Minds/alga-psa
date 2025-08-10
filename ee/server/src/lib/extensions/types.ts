@@ -1,7 +1,7 @@
 /**
  * Types for the extension system
  */
-
+ 
 /**
  * Extension manifest format
  */

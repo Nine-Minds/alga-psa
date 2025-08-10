@@ -1,6 +1,6 @@
 /**
  * Extension System
- * 
+ *
  * Main entry point for the extension system
  */
 
@@ -10,9 +10,10 @@ export * from './errors';
 
 // Export registry and validation
 export { ExtensionRegistry } from './registry';
-export { validateManifest } from './validator';
-export { isValidPermission } from './schemas/permissions.schema';
-export { isValidExtensionPoint } from './schemas/extension-points.schema';
+
+// Manifest v2-first exports
+export { manifestV2Schema, validateManifestV2 } from './schemas/manifest-v2.schema';
+export type { ManifestV2 } from './schemas/manifest-v2.schema';
 
 // Export UI components
 export * from './ui';

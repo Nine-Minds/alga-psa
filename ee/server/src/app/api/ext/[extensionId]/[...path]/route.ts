@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { matchEndpoint, pathnameFromParts, filterRequestHeaders, filterResponseHeaders, getTimeoutMs } from '../../../../../lib/extensions/lib/gateway-utils';
+import { getRegistryFacade } from '../../../../../lib/extensions/lib/gateway-registry';
 export const dynamic = 'force-dynamic';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -23,102 +25,48 @@ function json(status: number, body: any, headers: HeadersInit = {}) {
   });
 }
 
-// Allowlist for request headers forwarded to runner
-const REQUEST_HEADER_ALLOWLIST = new Set([
-  'accept',
-  'content-type',
-  'accept-encoding',
-  'user-agent',
-  // injected by gateway:
-  'x-request-id',
-  'x-alga-tenant',
-  'x-alga-extension',
-  'x-idempotency-key',
-]);
-
-// Allowlist for response headers returned to client
-const RESPONSE_HEADER_ALLOWLIST = new Set([
-  'content-type',
-  'cache-control',
-  // custom extension headers
-  'x-ext-request-id',
-  'x-ext-warning',
-]);
-
-function filterRequestHeaders(req: NextRequest, tenantId: string, extensionId: string, requestId: string): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [k, v] of req.headers.entries()) {
-    const key = k.toLowerCase();
-    if (key === 'authorization') continue; // strip end-user auth
-    if (REQUEST_HEADER_ALLOWLIST.has(key)) {
-      out[key] = v;
-    }
-  }
-  // Gateway-injected headers
-  out['x-request-id'] = requestId;
-  out['x-alga-tenant'] = tenantId;
-  out['x-alga-extension'] = extensionId;
-
-  // Idempotency for non-GET
-  if (req.method !== 'GET') {
-    out['x-idempotency-key'] = out['x-idempotency-key'] || crypto.randomUUID();
-  }
-
-  return out;
-}
-
-function filterResponseHeaders(headers: Record<string, string | string[] | undefined> | undefined): HeadersInit {
-  const res: Record<string, string> = {};
-  if (!headers) return res;
-  for (const [k, v] of Object.entries(headers)) {
-    const key = k.toLowerCase();
-    if (!RESPONSE_HEADER_ALLOWLIST.has(key)) continue;
-    if (Array.isArray(v)) {
-      res[key] = v.join(', ');
-    } else if (typeof v === 'string') {
-      res[key] = v;
-    }
-  }
-  return res;
-}
 
 // TODO: wire to real auth/session
+// In non-production, return a deterministic tenant for local testing.
+// In production, return null (401 will be returned by caller).
+// Reference: ee/docs/extension-system/api-routing-guide.md
 async function getTenantIdFromAuth(_req: NextRequest): Promise<string | null> {
-  // Placeholder: replace with real tenant resolution
-  return 'tenant-dev';
+  if (process.env.NODE_ENV !== 'production') {
+    return 'tenant-dev';
+  }
+  // TODO: integrate with real auth/session to resolve tenant context
+  return null;
 }
 
 // TODO: implement RBAC check
-async function assertAccess(_tenantId: string, _extensionId: string, _method: Method, _pathname: string): Promise<void> {
+async function assertAccess(tenantId: string, extensionId: string, method: Method, pathname: string): Promise<void> {
+  // Placeholder: allow all, but log for audit visibility
+  console.info('[ext-gateway] access check allow', { tenantId, extensionId, method, pathname });
+  // TODO: integrate with RBAC service/policies
   return;
 }
 
-// TODO: wire to Registry v2 install resolution (tenant -> install -> version -> content_hash)
-async function resolveInstall(_tenantId: string, extensionId: string): Promise<{ version_id: string; content_hash: string } | null> {
-  // Placeholder until Registry v2 is wired
-  console.warn('[ext-gateway] resolveInstall placeholder for extension:', extensionId);
-  return null;
+// Resolve tenant install via the Registry V2 facade seam
+// Returns active version_id and content_hash
+async function resolveInstall(tenantId: string, extensionId: string): Promise<{ version_id: string; content_hash: string } | null> {
+  const facade = getRegistryFacade();
+  const install = await facade.getTenantInstall(tenantId, extensionId);
+  if (!install) return null;
+  return { version_id: install.version_id, content_hash: install.content_hash };
 }
 
-// TODO: load manifest v2 for version_id and match endpoint
+// Load manifest v2 for version_id and match endpoint (method + path)
 async function resolveEndpoint(
-  _versionId: string,
+  versionId: string,
   method: Method,
   pathname: string
 ): Promise<{ handler: string } | null> {
-  console.warn('[ext-gateway] resolveEndpoint placeholder for', method, pathname);
-  return null;
+  const facade = getRegistryFacade();
+  const manifest = await facade.getManifest(versionId);
+  if (!manifest?.api?.endpoints) return null;
+  return matchEndpoint(manifest.api.endpoints as any, method, pathname);
 }
 
-function pathnameFromParts(parts: string[]): string {
-  return '/' + parts.filter(Boolean).join('/');
-}
-
-function getTimeoutMs(): number {
-  const raw = process.env.EXT_GATEWAY_TIMEOUT_MS;
-  const n = raw ? Number(raw) : 5000;
-  return Number.isFinite(n) && n > 0 ? n : 5000;
-}
 
 async function handle(req: NextRequest, { params }: { params: { extensionId: string; path: string[] } }) {
   const method = req.method as Method;
@@ -157,7 +105,7 @@ async function handle(req: NextRequest, { params }: { params: { extensionId: str
         method,
         path: pathname,
         query: Object.fromEntries(url.searchParams.entries()),
-        headers: filterRequestHeaders(req, tenantId, extensionId, requestId),
+        headers: filterRequestHeaders(req.headers, tenantId, extensionId, requestId, method),
         body_b64: bodyBuf ? bodyBuf.toString('base64') : undefined,
       },
       limits: { timeout_ms: timeoutMs },
