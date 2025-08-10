@@ -18,7 +18,15 @@ export default [
       "eslint-plugin-custom-rules/**/*",
       "eslint.config.js",
       "**/eslint.config.js",
-      "ee/server/migrations/**/*" // Ignore EE migration files (usually .cjs)
+      "ee/server/migrations/**/*", // Ignore EE migration files (usually .cjs)
+      "ee/extensions/**/*", // Exclude extension bundles/examples from lint to reduce load and avoid false positives
+      "dist/**/*",
+      "**/.next/**/*",
+      "**/out/**/*",
+      "tools/**/*",
+      ".ai/**/*",
+      "**/build/**/*",
+      "server/public/**/*"
     ],
 
     // Define language options
@@ -80,6 +88,7 @@ export default [
       // Custom rules as warnings
       "custom-rules/map-return-type": "off",
       "custom-rules/check-required-props": "error",
+      "custom-rules/no-legacy-ext-imports": "error",
 
       // Base ESLint rules
       "no-unused-vars": "off", // Turn off in favor of @typescript-eslint/no-unused-vars
