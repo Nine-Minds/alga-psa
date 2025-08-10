@@ -1,6 +1,6 @@
 /**
- * Distribute ticket-related tables
- * Dependencies: companies, contacts, users must be distributed first
+ * Distribute service and schedule tables
+ * Dependencies: companies, users must be distributed first
  */
 exports.config = { transaction: false };
 
@@ -17,14 +17,14 @@ exports.up = async function(knex) {
     return;
   }
 
-  console.log('Distributing ticket tables...');
+  console.log('Distributing service and schedule tables...');
   
   const tables = [
-    'tickets',
-    'ticket_resources'
-    // 'ticket_comments', // Table doesn't exist yet
-    // 'ticket_links', // Table doesn't exist yet
-    // 'ticket_assignments' // Table doesn't exist yet
+    'service_categories',
+    'service_catalog',
+    'schedules', 
+    'schedule_entries',
+    'schedule_conflicts'
   ];
   
   for (const table of tables) {
@@ -62,7 +62,7 @@ exports.up = async function(knex) {
         }
       }
       
-      // Step 2: Drop unique constraints
+      // Step 2: Drop unique constraints with CASCADE
       console.log(`  Dropping unique constraints for ${table}...`);
       const uniqueConstraints = await knex.raw(`
         SELECT conname
@@ -73,7 +73,6 @@ exports.up = async function(knex) {
       
       for (const constraint of uniqueConstraints.rows) {
         try {
-          // Use CASCADE for constraints that might have dependencies
           await knex.raw(`ALTER TABLE ${table} DROP CONSTRAINT ${constraint.conname} CASCADE`);
           console.log(`    ✓ Dropped constraint: ${constraint.conname} with CASCADE`);
         } catch (e) {
@@ -81,7 +80,7 @@ exports.up = async function(knex) {
         }
       }
       
-      // Step 2b: Also handle any check constraints that might block distribution
+      // Step 2b: Drop check constraints
       console.log(`  Dropping check constraints for ${table}...`);
       const checkConstraints = await knex.raw(`
         SELECT conname
@@ -111,45 +110,38 @@ exports.up = async function(knex) {
     }
   }
   
-  // After all tables are distributed, recreate critical FKs between distributed tables
+  // Recreate important FKs between distributed tables
   console.log('\nRecreating foreign keys between distributed tables...');
   
-  // Removed ticket_comments FK since table doesn't exist yet
-  
   try {
-    // ticket_resources -> tickets
+    // schedule_entries -> schedules
     await knex.raw(`
-      ALTER TABLE ticket_resources 
-      ADD CONSTRAINT ticket_resources_tenant_ticket_id_foreign 
-      FOREIGN KEY (tenant, ticket_id) 
-      REFERENCES tickets(tenant, ticket_id) 
+      ALTER TABLE schedule_entries 
+      ADD CONSTRAINT schedule_entries_tenant_schedule_id_foreign 
+      FOREIGN KEY (tenant, schedule_id) 
+      REFERENCES schedules(tenant, schedule_id) 
       ON DELETE CASCADE
     `);
-    console.log('  ✓ Recreated FK: ticket_resources -> tickets');
+    console.log('  ✓ Recreated FK: schedule_entries -> schedules');
   } catch (e) {
-    console.log(`  - Could not recreate FK ticket_resources -> tickets: ${e.message}`);
+    console.log(`  - Could not recreate FK schedule_entries -> schedules: ${e.message}`);
   }
   
   try {
-    // tickets -> companies
+    // service_catalog -> service_categories
     await knex.raw(`
-      ALTER TABLE tickets 
-      ADD CONSTRAINT tickets_tenant_company_id_foreign 
-      FOREIGN KEY (tenant, company_id) 
-      REFERENCES companies(tenant, company_id) 
-      ON DELETE CASCADE
+      ALTER TABLE service_catalog 
+      ADD CONSTRAINT service_catalog_tenant_category_id_foreign 
+      FOREIGN KEY (tenant, category_id) 
+      REFERENCES service_categories(tenant, category_id) 
+      ON DELETE SET NULL
     `);
-    console.log('  ✓ Recreated FK: tickets -> companies');
+    console.log('  ✓ Recreated FK: service_catalog -> service_categories');
   } catch (e) {
-    console.log(`  - Could not recreate FK tickets -> companies: ${e.message}`);
+    console.log(`  - Could not recreate FK service_catalog -> service_categories: ${e.message}`);
   }
   
-  // Note: tickets -> contacts FK cannot be recreated as it needs both columns in the FK
-  // The contacts table primary key is just (tenant, contact_name_id) but tickets 
-  // only has contact_name_id without tenant prefix, so the FK cannot be established
-  console.log('  Note: tickets -> contacts FK skipped (column structure incompatible)');
-  
-  console.log('\n✓ All ticket tables distributed successfully');
+  console.log('\n✓ All service and schedule tables distributed successfully');
 };
 
 exports.down = async function(knex) {
@@ -163,12 +155,14 @@ exports.down = async function(knex) {
     return;
   }
 
-  console.log('Undistributing ticket tables...');
+  console.log('Undistributing service and schedule tables...');
   
   const tables = [
-    'ticket_resources',
-    'tickets'
-    // Removed non-existent tables
+    'schedule_conflicts',
+    'schedule_entries',
+    'schedules',
+    'service_catalog',
+    'service_categories'
   ];
   
   for (const table of tables) {

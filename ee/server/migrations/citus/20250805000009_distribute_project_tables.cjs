@@ -144,19 +144,10 @@ exports.up = async function(knex) {
     console.log(`  - Could not recreate FK project_tasks -> project_phases: ${e.message}`);
   }
   
-  try {
-    // time_entries -> project_tasks
-    await knex.raw(`
-      ALTER TABLE time_entries 
-      ADD CONSTRAINT time_entries_tenant_task_id_foreign 
-      FOREIGN KEY (tenant, task_id) 
-      REFERENCES project_tasks(tenant, task_id) 
-      ON DELETE CASCADE
-    `);
-    console.log('  ✓ Recreated FK: time_entries -> project_tasks');
-  } catch (e) {
-    console.log(`  - Could not recreate FK time_entries -> project_tasks: ${e.message}`);
-  }
+  // Note: time_entries uses work_item_id which can reference various work item types
+  // (tickets, project_tasks, etc) via work_item_type column, so we cannot create
+  // a direct FK to project_tasks
+  console.log('  Note: time_entries -> project_tasks FK skipped (polymorphic reference via work_item_id)');
   
   try {
     // projects -> companies
