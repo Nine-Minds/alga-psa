@@ -24,7 +24,8 @@ exports.up = async function(knex) {
     'interactions',
     'channels',
     'categories',
-    'tags'
+    'tag_definitions',
+    'tag_mappings'
   ];
   
   for (const table of tables) {
@@ -128,6 +129,23 @@ exports.up = async function(knex) {
     }
   }
   
+  // Recreate important FKs between distributed tables
+  console.log('\nRecreating foreign keys between distributed tables...');
+  
+  try {
+    // tag_mappings -> tag_definitions
+    await knex.raw(`
+      ALTER TABLE tag_mappings 
+      ADD CONSTRAINT tag_mappings_tenant_tag_id_foreign 
+      FOREIGN KEY (tenant, tag_id) 
+      REFERENCES tag_definitions(tenant, tag_id) 
+      ON DELETE CASCADE
+    `);
+    console.log('  ✓ Recreated FK: tag_mappings -> tag_definitions');
+  } catch (e) {
+    console.log(`  - Could not recreate FK tag_mappings -> tag_definitions: ${e.message}`);
+  }
+  
   console.log('\n✓ All document and interaction tables distributed successfully');
 };
 
@@ -145,7 +163,8 @@ exports.down = async function(knex) {
   console.log('Undistributing document and interaction tables...');
   
   const tables = [
-    'tags',
+    'tag_mappings',
+    'tag_definitions',
     'categories',
     'channels',
     'interactions',
