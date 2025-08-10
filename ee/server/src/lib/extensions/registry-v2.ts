@@ -1,5 +1,8 @@
 // EE-only registry service v2 (Knex-backed)
 import type { Knex } from 'knex';
+import type { ManifestV2, ManifestEndpoint } from './bundles/manifest';
+import { isValidSemverLike } from './bundles/manifest';
+import type { SignatureVerificationResult } from './bundles/verify';
 
 export type RegistryId = string;
 export type VersionId = string;
@@ -285,4 +288,255 @@ export class ExtensionRegistryServiceV2 {
     return hashOk && sigOk;
   }
 }
+
+// ========= M1 Task Additions: Adapter-agnostic registry v2 with content-hash version methods =========
+
+// 1) Types
+
+export interface CreateExtensionIfMissingInput {
+  name: string; // manifest.name
+  publisher?: string;
+}
+
+export interface CreateExtensionVersionInput {
+  extensionId: string;              // FK to extension registry record
+  version: string;                  // manifest.version
+  contentHash: string;              // sha256 hex (no prefix)
+  runtime: string;                  // manifest.runtime
+  uiEntry?: string;                 // sanitized UI entry if present
+  endpoints: Array<{ method: string; path: string; handler: string }>;
+  capabilities: string[];
+  signature?: {
+    required: boolean;
+    verified: boolean;
+    algorithm?: 'cosign' | 'x509' | 'pgp';
+    subject?: string;
+    issuer?: string;
+    timestamp?: string;
+    reason?: string;
+  };
+}
+
+export interface ExtensionRecord {
+  id: string;
+  name: string;
+  publisher?: string;
+  createdAt: Date;
+}
+
+export interface ExtensionVersionRecord {
+  id: string;
+  extensionId: string;
+  version: string;
+  contentHash: string;
+  runtime: string;
+  uiEntry?: string;
+  endpoints: Array<{ method: string; path: string; handler: string }>;
+  capabilities: string[];
+  signature?: CreateExtensionVersionInput['signature'];
+  createdAt: Date;
+}
+
+// 2) Repository interfaces (adapter seam). TODO: wire real DAL implementation.
+
+interface ExtensionsRepo {
+  findByNamePublisher(name: string, publisher?: string): Promise<ExtensionRecord | null>;
+  create(input: { name: string; publisher?: string }): Promise<ExtensionRecord>;
+}
+
+interface VersionsRepo {
+  create(input: Omit<ExtensionVersionRecord, 'id' | 'createdAt'>): Promise<ExtensionVersionRecord>;
+  findByHash(contentHash: string): Promise<ExtensionVersionRecord | null>;
+  findLatestForExtension(extensionId: string): Promise<ExtensionVersionRecord | null>;
+  findByExtensionAndVersion(extensionId: string, version: string): Promise<ExtensionVersionRecord | null>;
+}
+
+interface RegistryV2Repository {
+  extensions: ExtensionsRepo;
+  versions: VersionsRepo;
+}
+
+// Module-level repository injection point
+let registryV2Repo: RegistryV2Repository | null = null;
+
+export function setRegistryV2Repository(repo: RegistryV2Repository) {
+  registryV2Repo = repo;
+}
+
+function requireRepo(): RegistryV2Repository {
+  if (!registryV2Repo) {
+    throw new Error('[registry-v2] Repository not configured. Call setRegistryV2Repository() with a concrete adapter.');
+  }
+  return registryV2Repo;
+}
+
+// 3) Validation / normalization helpers
+
+const HASH_HEX_RE = /^[0-9a-f]{64}$/; // lowercase hex only, no prefix
+
+function validateContentHash(hex: string): string {
+  const v = (hex || '').trim();
+  if (!HASH_HEX_RE.test(v)) {
+    throw new Error('Invalid contentHash: expected 64-char lowercase hex without prefix');
+  }
+  return v;
+}
+
+function validateSemverLike(version: string): string {
+  const v = (version || '').trim();
+  if (!isValidSemverLike(v)) {
+    throw new Error('Invalid version: expected semver-like string');
+  }
+  return v;
+}
+
+function ensureLeadingSlash(p: string): string {
+  if (!p) return '/';
+  return p.startsWith('/') ? p : `/${p}`;
+}
+
+function normalizeEndpoints(endpoints: Array<{ method: string; path: string; handler: string }>): Array<{ method: string; path: string; handler: string }> {
+  const eps = Array.isArray(endpoints) ? endpoints : [];
+  return eps.map((e) => ({
+    method: String(e.method || '').toUpperCase(),
+    path: ensureLeadingSlash(String(e.path || '').replace(/\/{2,}/g, '/').replace(/^\.\//, '')),
+    handler: String(e.handler || '').replace(/\/{2,}/g, '/').replace(/^\.\//, ''),
+  }));
+}
+
+function normalizeCapabilities(capabilities?: string[]): string[] {
+  if (!Array.isArray(capabilities)) return [];
+  return capabilities.filter((c) => typeof c === 'string' && c.trim().length > 0);
+}
+
+// 4) Service methods (exported)
+
+export async function getExtensionByNamePublisher(name: string, publisher?: string): Promise<ExtensionRecord | null> {
+  const repo = requireRepo();
+  return repo.extensions.findByNamePublisher(name, publisher);
+}
+
+export async function createExtensionIfMissing(input: CreateExtensionIfMissingInput): Promise<ExtensionRecord> {
+  const repo = requireRepo();
+  const name = (input.name || '').trim();
+  const publisher = typeof input.publisher === 'string' ? input.publisher.trim() : undefined;
+  if (!name) throw new Error("Missing required 'name'");
+  // Find by unique (name,publisher)
+  const existing = await repo.extensions.findByNamePublisher(name, publisher);
+  if (existing) return existing;
+  // Create
+  // TODO: handle unique race with retry if underlying DB throws unique violation
+  return repo.extensions.create({ name, publisher });
+}
+
+export async function createExtensionVersion(input: CreateExtensionVersionInput): Promise<ExtensionVersionRecord> {
+  const repo = requireRepo();
+  const extensionId = (input.extensionId || '').trim();
+  if (!extensionId) throw new Error("Missing required 'extensionId'");
+
+  const version = validateSemverLike(input.version);
+  const contentHash = validateContentHash(input.contentHash);
+  const runtime = (input.runtime || '').trim();
+  if (!runtime) throw new Error("Missing required 'runtime'");
+
+  const endpoints = normalizeEndpoints(input.endpoints || []);
+  const capabilities = normalizeCapabilities(input.capabilities);
+  const uiEntry = input.uiEntry ? String(input.uiEntry).trim() || undefined : undefined;
+  const signature = input.signature
+    ? {
+        required: !!input.signature.required,
+        verified: !!input.signature.verified,
+        algorithm: input.signature.algorithm,
+        subject: input.signature.subject,
+        issuer: input.signature.issuer,
+        timestamp: input.signature.timestamp,
+        reason: input.signature.reason,
+      }
+    : undefined;
+
+  // Enforce uniqueness on (extensionId, version)
+  const exists = await repo.versions.findByExtensionAndVersion(extensionId, version);
+  if (exists) {
+    throw new Error('version already exists');
+  }
+
+  // Allow same contentHash under different versions (no uniqueness by hash)
+  const createInput: Omit<ExtensionVersionRecord, 'id' | 'createdAt'> = {
+    extensionId,
+    version,
+    contentHash,
+    runtime,
+    uiEntry,
+    endpoints,
+    capabilities,
+    signature,
+  };
+  return repo.versions.create(createInput);
+}
+
+export async function getExtensionVersionByHash(contentHash: string): Promise<ExtensionVersionRecord | null> {
+  const repo = requireRepo();
+  const ch = validateContentHash(contentHash);
+  return repo.versions.findByHash(ch);
+}
+
+export async function getLatestVersionForExtension(extensionId: string): Promise<ExtensionVersionRecord | null> {
+  const repo = requireRepo();
+  const id = (extensionId || '').trim();
+  if (!id) throw new Error("Missing required 'extensionId'");
+  return repo.versions.findLatestForExtension(id);
+}
+
+// 5) Higher-level helper for finalize flow
+
+export interface UpsertVersionFromManifestInput {
+  manifest: ManifestV2;
+  contentHash: string;
+  parsed: {
+    uiEntry?: string;
+    endpoints: ManifestEndpoint[];
+    runtime: string;
+    capabilities: string[];
+  };
+  signature: SignatureVerificationResult;
+}
+
+export async function upsertVersionFromManifest(
+  input: UpsertVersionFromManifestInput
+): Promise<{ extension: ExtensionRecord; version: ExtensionVersionRecord }> {
+  const { manifest, contentHash, parsed, signature } = input;
+
+  // Ensure extension registry record exists
+  const extension = await createExtensionIfMissing({
+    name: manifest.name,
+    publisher: manifest.publisher,
+  });
+
+  // Prepare signature payload mapping
+  const sig = {
+    required: !!signature.required,
+    verified: !!signature.verified,
+    algorithm: signature.algorithm,
+    subject: signature.subject,
+    issuer: signature.issuer,
+    timestamp: signature.timestamp,
+    reason: signature.reason,
+  } as CreateExtensionVersionInput['signature'];
+
+  // Create version; enforce uniqueness on (extensionId, version)
+  const versionRecord = await createExtensionVersion({
+    extensionId: extension.id,
+    version: manifest.version, // semver-like validated in createExtensionVersion
+    contentHash,               // validated in createExtensionVersion
+    runtime: parsed.runtime,
+    uiEntry: parsed.uiEntry,
+    endpoints: normalizeEndpoints(parsed.endpoints as Array<{ method: string; path: string; handler: string }>),
+    capabilities: normalizeCapabilities(parsed.capabilities),
+    signature: sig,
+  });
+
+  return { extension, version: versionRecord };
+}
+
+// ===== End M1 additions =====
 
