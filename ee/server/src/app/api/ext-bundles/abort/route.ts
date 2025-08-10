@@ -8,8 +8,7 @@ TODO: Replace pragmatic header RBAC with project auth/session RBAC integration.
 TODO: Replace in-process rate limiting with centralized (e.g., Redis) in production.
 */
 
-import { DeleteObjectCommand } from "@aws-sdk/client-s3";
-import { getS3Client, getBucket } from "../../../../lib/storage/s3-client";
+import { extAbortUpload } from "../../../../lib/actions/extBundleActions";
 
 type AbortRequest = {
   key: string;
@@ -129,37 +128,15 @@ export async function POST(req: Request) {
     log("ext_bundles.abort.reason", { actor, reason, key });
   }
 
-  const isStaging = key.startsWith("sha256/_staging/");
-  log("ext_bundles.abort.start", { actor, key, area: isStaging ? "staging" : "canonical" });
-
-  if (!isStaging) {
-    // Canonical area is immutable; no-op
-    log("ext_bundles.abort.success", { actor, key, status: "noop" });
-    return jsonResponse({ status: "noop", key, area: "canonical" });
-  }
-
-  // Staging area: attempt deletion
-  const client = getS3Client();
-  const Bucket = getBucket();
-  const Key = key;
-
   try {
-    await client.send(new DeleteObjectCommand({ Bucket, Key }));
-    // S3 DeleteObject is idempotent; treat as success even if object didn't exist
-    log("ext_bundles.abort.success", { actor, key, status: "deleted" });
-    return jsonResponse({ status: "deleted", key, area: "staging" });
+    const result = await extAbortUpload({ key, reason });
+    log("ext_bundles.abort.success", { actor, key, status: result.status });
+    return jsonResponse(result);
   } catch (e: any) {
-    const status = e?.$metadata?.httpStatusCode;
-    const code = e?.name ?? e?.Code ?? e?.code;
-
-    // Some S3-compatible providers could return 404; treat as success (idempotent)
-    if (status === 404 || code === "NotFound") {
-      log("ext_bundles.abort.success", { actor, key, status: "deleted" });
-      return jsonResponse({ status: "deleted", key, area: "staging" });
-    }
-
+    const status = e?.status ?? 500;
+    const code = e?.code ?? "INTERNAL_ERROR";
     const message = typeof e?.message === "string" ? e.message : "Unexpected error during delete";
-    log("ext_bundles.abort.error", { actor, key, message });
-    return jsonResponse({ error: message, code: "INTERNAL_ERROR" }, 500);
+    log("ext_bundles.abort.error", { actor, key, message, code, status });
+    return jsonResponse({ error: message, code }, status);
   }
 }

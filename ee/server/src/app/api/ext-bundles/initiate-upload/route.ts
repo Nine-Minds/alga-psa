@@ -14,12 +14,8 @@
  * TODO: Replace pragmatic header RBAC with project auth/session RBAC integration.
  * TODO: Replace in-process rate limiting with centralized (e.g., Redis) in production.
  */
-import { createS3BundleStore } from "../../../../lib/storage/bundles/s3-bundle-store";
-import {
-  isValidSha256Hash,
-  objectKeyFor,
-  normalizeBasePrefix,
-} from "../../../../lib/storage/bundles/types";
+import { isValidSha256Hash } from "../../../../lib/storage/bundles/types";
+import { extInitiateUpload } from "../../../../lib/actions/extBundleActions";
 
 const MAX_BUNDLE_SIZE_BYTES = 200 * 1024 * 1024; // 200 MiB
 const DEFAULT_CONTENT_TYPE = "application/octet-stream";
@@ -226,78 +222,40 @@ export async function POST(req: Request) {
       hash = declaredHash;
     }
 
-    // Build object key
-    const basePrefix = normalizeBasePrefix("sha256/"); // ensures "sha256/"
-    let key: string;
-    let strategy: "canonical" | "staging";
-
-    if (hash) {
-      // Canonical content-addressed key
-      key = objectKeyFor({ algorithm: "sha256", hash }, "bundle.tar.zst", { basePrefix });
-      strategy = "canonical";
-    } else {
-      // Staging object under sha256 namespace to simplify later copy
-      // Use crypto.randomUUID() for collision-avoidance
-      const id = globalThis.crypto?.randomUUID
-        ? globalThis.crypto.randomUUID()
-        : // Fallback if not available (very unlikely in Node 18+ / Next runtime)
-          Math.random().toString(36).slice(2) + Date.now().toString(36);
-      key = `${basePrefix}_staging/${id}/bundle.tar.zst`;
-      strategy = "staging";
-    }
-
-    // Presign PUT with immutability headers
-    const store = createS3BundleStore();
-    const url = await store.getPresignedPutUrl(key, {
+    // Delegate to server action
+    const result = await extInitiateUpload({
+      filename,
+      size,
+      declaredHash: hash,
       contentType,
       cacheControl: cacheControl as string | undefined,
-      ifNoneMatch: "*",
-      expiresSeconds: EXPIRES_SECONDS,
     });
-
-    // Required headers for the client to send with PUT
-    const requiredHeaders: Record<string, string> = {
-      "content-type": contentType,
-      "if-none-match": "*",
-    };
-    if (typeof cacheControl === "string" && cacheControl.length > 0) {
-      requiredHeaders["cache-control"] = cacheControl;
-    }
-
-    const responseBody = {
-      filename,
-      size,
-      ...(hash ? { declaredHash: hash } : {}),
-      upload: {
-        key,
-        url,
-        method: "PUT" as const,
-        expiresSeconds: EXPIRES_SECONDS,
-        requiredHeaders,
-        strategy,
-      },
-    };
-
+ 
     log("ext_bundles.initiate_upload.success", {
       actor,
-      key,
-      strategy,
-      expiresSeconds: EXPIRES_SECONDS,
-      filename,
-      size,
+      key: result.upload.key,
+      strategy: result.upload.strategy,
+      expiresSeconds: result.upload.expiresSeconds,
+      filename: result.filename,
+      size: result.size,
     });
-
-    return new Response(JSON.stringify(responseBody), {
+ 
+    return new Response(JSON.stringify(result), {
       status: 200,
       headers: { "content-type": "application/json" },
     });
   } catch (err) {
+    const anyErr = err as any;
+    const status = anyErr?.status;
+    const code = anyErr?.code ?? (status ? "ERROR" : "INTERNAL_ERROR");
     const message =
-      (err as any)?.message ?? "An unexpected error occurred while initiating upload";
-    log("ext_bundles.initiate_upload.error", { message });
-    return new Response(
-      JSON.stringify({ error: String(message), code: "INTERNAL_ERROR" }),
-      { status: 500, headers: { "content-type": "application/json" } }
-    );
+      (anyErr?.message as string) ??
+      "An unexpected error occurred while initiating upload";
+    log("ext_bundles.initiate_upload.error", { message, code, status });
+    const body = { error: String(message), code, ...(anyErr?.details ? { details: anyErr.details } : {}) };
+    return new Response(JSON.stringify(body), {
+      status: typeof status === "number" ? status : 500,
+      headers: { "content-type": "application/json" },
+    });
   }
 }
