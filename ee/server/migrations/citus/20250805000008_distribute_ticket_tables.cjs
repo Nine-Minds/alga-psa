@@ -21,10 +21,10 @@ exports.up = async function(knex) {
   
   const tables = [
     'tickets',
-    'ticket_comments',
-    'ticket_resources',
-    'ticket_links',
-    'ticket_assignments'
+    'ticket_resources'
+    // 'ticket_comments', // Table doesn't exist yet
+    // 'ticket_links', // Table doesn't exist yet
+    // 'ticket_assignments' // Table doesn't exist yet
   ];
   
   for (const table of tables) {
@@ -114,19 +114,7 @@ exports.up = async function(knex) {
   // After all tables are distributed, recreate critical FKs between distributed tables
   console.log('\nRecreating foreign keys between distributed tables...');
   
-  try {
-    // ticket_comments -> tickets
-    await knex.raw(`
-      ALTER TABLE ticket_comments 
-      ADD CONSTRAINT ticket_comments_tenant_ticket_id_foreign 
-      FOREIGN KEY (tenant, ticket_id) 
-      REFERENCES tickets(tenant, ticket_id) 
-      ON DELETE CASCADE
-    `);
-    console.log('  ✓ Recreated FK: ticket_comments -> tickets');
-  } catch (e) {
-    console.log(`  - Could not recreate FK ticket_comments -> tickets: ${e.message}`);
-  }
+  // Removed ticket_comments FK since table doesn't exist yet
   
   try {
     // ticket_resources -> tickets
@@ -187,11 +175,9 @@ exports.down = async function(knex) {
   console.log('Undistributing ticket tables...');
   
   const tables = [
-    'ticket_comments',
     'ticket_resources',
-    'ticket_links',
-    'ticket_assignments',
     'tickets'
+    // Removed non-existent tables
   ];
   
   for (const table of tables) {

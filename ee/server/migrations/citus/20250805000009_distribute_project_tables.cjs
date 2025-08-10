@@ -21,12 +21,13 @@ exports.up = async function(knex) {
   
   const tables = [
     'projects',
+    'project_phases',
     'project_tasks',
-    'project_task_links',
-    'project_status_mappings',
     'project_ticket_links',
-    'time_entries',
-    'time_entry_extensions'
+    'time_entries'
+    // 'project_task_links', // Table doesn't exist yet
+    // 'project_status_mappings', // Table doesn't exist yet
+    // 'time_entry_extensions' // Table doesn't exist yet
   ];
   
   for (const table of tables) {
@@ -116,17 +117,31 @@ exports.up = async function(knex) {
   console.log('\nRecreating foreign keys between distributed tables...');
   
   try {
-    // project_tasks -> projects
+    // project_phases -> projects
     await knex.raw(`
-      ALTER TABLE project_tasks 
-      ADD CONSTRAINT project_tasks_tenant_project_id_foreign 
+      ALTER TABLE project_phases 
+      ADD CONSTRAINT project_phases_tenant_project_id_foreign 
       FOREIGN KEY (tenant, project_id) 
       REFERENCES projects(tenant, project_id) 
       ON DELETE CASCADE
     `);
-    console.log('  ✓ Recreated FK: project_tasks -> projects');
+    console.log('  ✓ Recreated FK: project_phases -> projects');
   } catch (e) {
-    console.log(`  - Could not recreate FK project_tasks -> projects: ${e.message}`);
+    console.log(`  - Could not recreate FK project_phases -> projects: ${e.message}`);
+  }
+  
+  try {
+    // project_tasks -> project_phases
+    await knex.raw(`
+      ALTER TABLE project_tasks 
+      ADD CONSTRAINT project_tasks_tenant_phase_id_foreign 
+      FOREIGN KEY (tenant, phase_id) 
+      REFERENCES project_phases(tenant, phase_id) 
+      ON DELETE CASCADE
+    `);
+    console.log('  ✓ Recreated FK: project_tasks -> project_phases');
+  } catch (e) {
+    console.log(`  - Could not recreate FK project_tasks -> project_phases: ${e.message}`);
   }
   
   try {
@@ -174,13 +189,12 @@ exports.down = async function(knex) {
   console.log('Undistributing project tables...');
   
   const tables = [
-    'time_entry_extensions',
     'time_entries',
-    'project_task_links',
-    'project_status_mappings',
     'project_ticket_links',
     'project_tasks',
+    'project_phases',
     'projects'
+    // Removed non-existent tables
   ];
   
   for (const table of tables) {
