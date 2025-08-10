@@ -38,7 +38,8 @@ export default function Root() {
 ## Auth & Requests
 
 - Use `context.authHeaders` for gateway calls; do not forward end‑user tokens
-- Always call `/api/ext/${extensionId}/...` paths
+- Always call `/api/ext/${extensionId}/...` paths (the Gateway proxies to Runner `POST /v1/execute`)
+- Gateway reference: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
 
 ## Navigation
 
@@ -58,6 +59,7 @@ export default function Root() {
 
 - Do not evaluate code at runtime (no template engines)
 - Avoid cross‑origin requests; route everything via the gateway
-- Keep assets immutable and cacheable; the host serves files at `/ext-ui/{extensionId}/{content_hash}/...`
+- UI assets are served by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]` (no Next.js route for ext-ui)
+- Iframe src is constructed by [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38) and bootstrapped via [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45)
 
 See also: [DataTable Integration Guide](datatable-integration-guide.md), [Manifest v2](manifest_schema.md), and [API Routing Guide](api-routing-guide.md).

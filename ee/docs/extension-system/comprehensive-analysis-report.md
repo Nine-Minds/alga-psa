@@ -1,66 +1,63 @@
-# Comprehensive Extension System Analysis Report (Superseded → Overhaul Alignment)
+# Comprehensive Extension System Analysis Report (Enterprise v2)
 
 Date: Aug 2025
 
-This report updates prior analysis to align with the Multi‑Tenancy Overhaul. Earlier assessments focused on a descriptor‑based, in‑process model. Those approaches are now deprecated in favor of signed bundles, an out‑of‑process Runner, and iframe‑only UI delivery.
+This report describes the Enterprise v2 extension architecture and the design decisions behind it. The system prioritizes multi‑tenant isolation, signed and content‑addressed artifacts, a strict API Gateway, and iframe‑only UI hosted by the Runner.
 
 ## Executive Summary
 
-Findings from the legacy implementation (in‑process dynamic code execution, filesystem‑based bundles, descriptor rendering in host) presented unacceptable multi‑tenant risk and operational fragility. The overhaul adopts:
-- Out‑of‑process execution (Runner, Wasmtime)
-- Signed, content‑addressed bundles in object storage
-- Gateway proxy (`/api/ext/...`) with strict header/size/time policies
-- UI via sandboxed iframes and a Client SDK
+The v2 model provides:
+- Out‑of‑process execution in a dedicated Runner (Rust + Wasmtime) with resource limits and capability‑scoped host APIs
+- Signed, content‑addressed bundles stored in object storage and verified at install and load time
+- A Next.js API Gateway at `/api/ext/[extensionId]/[...path]` that resolves manifest endpoints and proxies to Runner `POST /v1/execute` with strict header/size/time policies
+- UI delivered exclusively via sandboxed iframes; static assets are served by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`
 
-This model materially improves isolation, provenance, security, and operability with a clear migration path.
+These choices materially improve isolation, provenance, security, and operability.
 
-## Key Risks in Legacy Design → Mitigations
+## Target Architecture
 
-1) In‑process code import (server and browser)
-- Risk: Arbitrary extension code executed in the app process; blast radius across tenants
-- Mitigation: Runner executes WASM modules out‑of‑process with quotas and capability‑scoped host APIs; no raw code imported into the host
-
-2) Filesystem‑based, mutable bundles
-- Risk: Path‑based loading from `process.cwd()/extensions` with weak provenance
-- Mitigation: Signed, content‑addressed bundles in S3‑compatible store; signature and hash verified on install and load
-
-3) Cross‑tenant registration and weak isolation
-- Risk: Global discovery/registration and shared resources
-- Mitigation: Per‑tenant installs; RLS‑enforced data model; quotas and egress allowlists per tenant/extension
-
-4) Dynamic import of tenant JS into host UI
-- Risk: CSP/privilege escalation and injection into host runtime
-- Mitigation: Iframe‑only UI with strict CSP; postMessage bridge; asset serving from cached, signed bundles
-
-## Target Architecture (Brief)
-
-- Runner (Rust + Wasmtime): pooling allocator, epoch timeouts, memory caps, optional fuel; host APIs: `storage.*`, `http.fetch`, `secrets.get`, `log.*`, `metrics.*`
-- Registry & Bundles: `extension_registry`, `extension_version`, `extension_bundle`, `tenant_extension_install`, signatures and SBOM refs
-- Gateway: Next.js handler at `/api/ext/[extensionId]/[...path]`; resolves manifest endpoints and proxies to Runner `/v1/execute`
-- UI Delivery: `/ext-ui/{extensionId}/{content_hash}/[...]` serves cached static assets per content hash
+- Runner (Rust + Wasmtime)
+  - Pooling allocator, epoch timeouts, memory caps, optional fuel
+  - Capability‑scoped host APIs: storage, http egress, secrets, logging, metrics
+  - Static UI hosting by content hash at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`
+  - Execute endpoint: `POST /v1/execute`
+- Registry & Bundles
+  - Tables: `extension_registry`, `extension_version`, `extension_bundle`, `tenant_extension_install`, `extension_event_subscription`, `extension_execution_log`, `extension_quota_usage`
+  - Version metadata includes `content_hash`, signatures, runtime, optional precompiled artifacts
+- Gateway (Next.js)
+  - Route: `/api/ext/[extensionId]/[...path]`
+  - Resolves tenant install → version → manifest endpoint
+  - Normalizes request and proxies to Runner `POST /v1/execute`
+- UI Delivery (Runner‑hosted)
+  - Immutable static assets at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`
+  - Host constructs iframe src via [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38) and bootstraps via [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45)
 
 ## Data Model (Initial)
 
-- `extension_registry`, `extension_version`, `extension_bundle`, `tenant_extension_install`, `extension_event_subscription`, `extension_execution_log`, `extension_quota_usage`
+- `extension_registry`, `extension_version`, `extension_bundle`
+- `tenant_extension_install`, `extension_event_subscription`
+- `extension_execution_log`, `extension_quota_usage`
 
 See: [registry_implementation.md](registry_implementation.md) and [manifest_schema.md](manifest_schema.md)
 
-## Migration Notes
+## Security and Policy
 
-- Descriptor rendering and dynamic module serving are deprecated
-- Any legacy endpoints under `/api/extensions/...` should be migrated to `/api/ext/...` and declared in Manifest v2
-- UI must be converted to iframe apps using the Client SDK (`@alga/extension-iframe-sdk`) and UI kit
+- No tenant code executes in the core app process
+- Signed, content‑addressed bundles (sha256:…) with verification against a trust bundle
+- Capability‑based host APIs; deny‑by‑default egress with allowlists
+- Gateway header allowlists and size/time limits; Runner response header allowlists
+- Sandboxed iframe UI; origin validation aligned with `RUNNER_PUBLIC_BASE`
 
-## Acceptance Criteria
+## Observability
 
-- 0 in‑process execution of tenant code in host app
-- All extension executions go through Runner; all bundles signed and verified
-- Per‑tenant isolation of execution, storage, and egress with quotas
-- Observability: structured execution logs, metrics, traces
+- Structured execution logs with correlation IDs (request/tenant/extension/version/content_hash)
+- Metrics for invocation duration, memory, fuel, egress bytes, and errors
 
 ## References
 
-- Overhaul plan (internal): Multi‑Tenancy Overhaul (Aug 2025)
 - [API Routing Guide](api-routing-guide.md)
 - [Security & Signing](security_signing.md)
 - [Overview](overview.md)
+- Gateway route scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
+- Iframe bootstrap and src builder: [ee/server/src/lib/extensions/ui/iframeBridge.ts](ee/server/src/lib/extensions/ui/iframeBridge.ts:38)
+- Registry service scaffold: [ExtensionRegistryServiceV2](ee/server/src/lib/extensions/registry-v2.ts:48)

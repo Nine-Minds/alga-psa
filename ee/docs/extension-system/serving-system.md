@@ -1,47 +1,36 @@
 # Extension Serving and Execution System (EE)
-> Status
->
-> This document outlines the target UI delivery system. Client-side iframe bootstrap and security controls are implemented, but the server route for static UI delivery (`/ext-ui/{extensionId}/{content_hash}/[...]`) is not yet present in `ee/server`. See the implemented iframe bootstrap behavior in [iframeBridge.ts](ee/server/src/lib/extensions/ui/iframeBridge.ts) and the migration notice in [ExtensionRenderer.tsx](ee/server/src/lib/extensions/ui/ExtensionRenderer.tsx).
 
-Implementation notes:
-- Iframe bootstrap behavior (implemented):
-  - Defaults sandbox to `allow-scripts` (no implicit `allow-same-origin`)
-  - Validates origins when `RUNNER_PUBLIC_BASE` is absolute, and enforces postMessage target origin
-  - Bridges theme tokens into `:root` and via postMessage; handles `ready`, `resize`, and `navigate` messages
-  - See [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45) and helpers in [iframeBridge.ts](ee/server/src/lib/extensions/ui/iframeBridge.ts).
-- Server delivery (planned):
-  - Immutable path: `/ext-ui/{extensionId}/{content_hash}/[...]`
-  - Pod-local caching keyed by `content_hash`
-  - Alignment with URL builder used by the iframe bridge
+This document specifies the v2-only serving and execution model. All extension server handlers execute out-of-process in the Runner, and all UI assets are served by the Runner. The host app never dynamically imports tenant code and does not serve ext-ui via Next.js.
 
-This document explains how extensions are served and executed in the Enterprise Edition. It covers module resolution, bundle fetching from S3/MinIO, pod‑local caching, request routing via the Next.js gateway, and execution in the Runner service on Knative. Diagrams are included to illustrate flows.
+Key guarantees:
+- API Gateway route: `/api/ext/[extensionId]/[...path]` proxies to Runner `POST /v1/execute`
+- Static UI: Runner serves iframe assets at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`
+- Iframe bootstrap: host constructs the src via [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38) and initializes via [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45)
 
 ## Overview
 
-- Out‑of‑process execution: All server‑side handlers run in a separate Runner service (Wasmtime).
-- Content‑addressed bundles: Extensions are immutable bundles stored in object storage (S3/MinIO) keyed by `sha256/<hash>`.
-- Pod‑local caches: API pods and the Runner keep small ephemeral caches keyed by content hash.
-- Secure gateway: The host exposes a stable gateway under `/api/ext/[extensionId]/[...]` that resolves tenant → version → manifest endpoint and invokes the Runner.
-- UI via iframe: Client UI assets are served at `/ext-ui/[extensionId]/[contentHash]/[...]` from pod‑local cache only, never injected into the host app.
+- Out-of-process execution: Extension handlers run in a separate Runner service (Wasmtime).
+- Signed, content-addressed bundles: Stored in object storage (e.g., S3/MinIO), addressed by `sha256/<hash>`, with signature verification.
+- Secure Gateway: Host exposes `/api/ext/[extensionId]/[...]`, resolves tenant install → version → manifest endpoint, and invokes Runner.
+- UI via iframe (Runner-hosted): Client UI assets are served by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`. There is no Next.js route for ext-ui.
 
 ## Components (by concern)
 
 - API Gateway (Next.js): `server/src/app/api/ext/[extensionId]/[...path]/route.ts`
-  - Resolves tenant install, version/content hash, manifest endpoint, and proxies to Runner.
-  - Enforces header/size/time restrictions and RBAC.
-
-- UI Asset Route (Next.js): `server/src/app/ext-ui/[extensionId]/[contentHash]/[...path]/route.ts`
-  - Ensures `ui/**/*` subtree for the content hash exists in pod‑local cache; otherwise fetches and extracts it from object storage.
-  - Serves files with SPA fallback and strong caching headers.
-
-- Registry + Services (EE): `ee/server/src/lib/extensions/**`
-  - Registry/read models, installation flow, S3 provider, and related helpers.
+  - Resolves tenant install, version/content hash, manifest endpoint, and proxies to the Runner.
+  - Enforces header/size/time restrictions, RBAC, and request normalization.
+  - Reference scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
 
 - Runner (EE): `ee/runner/...`
-  - Rust service embedding Wasmtime; runs as a Knative Service; fetches modules by content hash; executes with strict capability‑scoped Host API.
+  - Rust service embedding Wasmtime; fetches modules by content hash; verifies integrity/signatures; enforces capability-scoped Host API.
+  - Serves static UI assets for iframe delivery at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`.
+
+- Registry + Services (EE): `ee/server/src/lib/extensions/**`
+  - Registry/read models, installation flow, bundle resolution, and signature/trust-bundle integration.
+  - Registry v2 service scaffold: [ExtensionRegistryServiceV2](ee/server/src/lib/extensions/registry-v2.ts:48)
 
 - Object Storage (S3/MinIO):
-  - Stores published bundles at content‑addressed keys, plus optional precompiled Wasmtime artifacts.
+  - Stores published bundles at content-addressed keys, plus optional precompiled Wasmtime artifacts.
 
 ## Bundle Layout (canonical)
 
@@ -57,23 +46,25 @@ sha256/<content_hash>/
 ```
 
 Notes:
-- The Runner verifies that the path matches the hash and (optionally) verifies signatures before use.
-- UI subtree (`ui/**/*`) is only used by the UI asset route; server never dynamic‑imports tenant JS.
+- The Runner verifies path-integrity (content hash) and verifies signatures against a trust bundle (when configured).
+- The `ui/**/*` subtree is served by the Runner as immutable static assets; the server does not dynamic-import tenant JS.
 
-## Pod‑Local Cache Layout (illustrative)
+## Pod-/Process-Local Caches (illustrative)
+
+Runner and API pods may maintain caches keyed by `content_hash`:
 
 ```
 <CACHE_ROOT>/
   └── <content_hash>/
       ├── index.json               # cache index/metadata
-      ├── ui/                      # extracted UI subtree
+      ├── ui/                      # extracted UI subtree (Runner-managed)
       ├── entry.wasm               # fetched module or extracted
       └── precompiled/<target>.cwasm
 ```
 
-Eviction follows LRU with capacity constraints (size/file count). Integrity is verified by SHA‑256.
+Eviction follows LRU with capacity constraints. Integrity is verified by SHA-256. Signatures checked at install/load per policy.
 
-## Server‑Side Handler Flow (Gateway → Runner)
+## Server-Side Handler Flow (Gateway → Runner)
 
 Mermaid sequence diagram:
 
@@ -82,124 +73,107 @@ sequenceDiagram
   participant FE as Frontend Client
   participant GW as API Gateway (Next.js)
   participant REG as Registry/DB
-  participant RUN as Runner (Knative)
-  participant S3 as MinIO (S3)
+  participant RUN as Runner
+  participant S3 as Object Storage
 
   FE->>GW: HTTP /api/ext/{extensionId}/{...}
   GW->>REG: Resolve tenant install → version → content_hash
   REG-->>GW: {version_id, content_hash}
   GW->>GW: Resolve manifest endpoint (method, path → handler)
   GW->>RUN: POST /v1/execute {context, http, limits}
-  RUN->>RUN: Check in‑proc cache for module by content_hash
+  RUN->>RUN: Check cache for module by content_hash
   alt cache miss
     RUN->>S3: GET sha256/<hash>/entry.wasm (or bundle.tar.zst)
     S3-->>RUN: bytes
-    RUN->>RUN: Verify hash (+ signature optional)
+    RUN->>RUN: Verify hash (+ signature)
     RUN->>RUN: Optionally persist precompiled module in cache
   end
-  RUN->>RUN: Instantiate Wasmtime with Host API (limited)
-  RUN->>RUN: Execute handler: enforce time/mem/egress policy
+  RUN->>RUN: Instantiate Wasmtime with Host API (scoped)
+  RUN->>RUN: Execute handler with limits (time/memory/egress)
   RUN-->>GW: {status, headers, body_b64}
-  GW-->>FE: HTTP response (normalized headers/body)
+  GW-->>FE: HTTP response (normalized)
 ```
 
 Key points:
-- Gateway derives tenant context, validates RBAC, and normalizes request.
-- Runner enforces execution limits and capability policies.
-- No ambient filesystem access; egress controlled by allowlist.
+- Gateway derives tenant context, validates RBAC, and normalizes request/headers/body.
+- Runner enforces execution limits and capability policies; egress is allowlisted.
 
-## UI Asset Serving Flow (Cache‑then‑Serve)
+## UI Asset Serving Flow (Runner-hosted)
 
 Mermaid sequence diagram:
 
 ```mermaid
 sequenceDiagram
   participant BR as Browser (iframe)
-  participant UI as UI Route (Next.js)
-  participant S3 as MinIO (S3)
+  participant RUN as Runner (Static UI Host)
+  participant S3 as Object Storage
 
-  BR->>UI: GET /ext-ui/{extensionId}/{contentHash}/index.html
-  UI->>UI: ensureUiCached(contentHash)
+  BR->>RUN: GET ${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{contentHash}/index.html
+  RUN->>RUN: ensureUiCached(contentHash)
   alt not cached
-    UI->>S3: GET sha256/<hash>/bundle.tar.zst
-    S3-->>UI: bytes
-    UI->>UI: Verify hash: extract ui/**/* to cache
+    RUN->>S3: GET sha256/<hash>/bundle.tar.zst
+    S3-->>RUN: bytes
+    RUN->>RUN: Verify hash; extract ui/**/* to cache
   end
-  UI-->>BR: 200 OK (file) + ETag + immutable Cache-Control
+  RUN-->>BR: 200 OK (file) + ETag + immutable Cache-Control
 ```
 
-The URL embeds `contentHash`, enabling long‑lived immutable caching for UI assets.
+The URL embeds `contentHash`, enabling long‑lived immutable caching for UI assets. The host app constructs the iframe src via [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38) and initializes postMessage bridge via [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45).
 
-## Cache Decision Flow (UI route)
+## Iframe Bootstrap (Host App)
 
-```mermaid
-flowchart TD
-  A[Request for contentHash + path] --> B{Cache exists?}
-  B -- Yes --> C[Serve file from cache]
-  B -- No --> D[Fetch bundle.tar.zst from S3]
-  D --> E[Verify sha256]
-  E --> F[Extract ui/**/* to <CACHE_ROOT>/<hash>/ui]
-  F --> G[Write/Update index.json]
-  G --> C[Serve file]
-```
+Client bootstrap features implemented in the host:
+- Defaults sandbox to `allow-scripts` (no implicit `allow-same-origin`).
+- Validates origins based on `RUNNER_PUBLIC_BASE` and enforces postMessage target origin.
+- Bridges theme tokens into `:root` and via postMessage; handles `ready`, `resize`, and `navigate` messages.
 
-## Knative Runner (Deployment Profile)
-
-- Runner runs as a Knative Service (KService) with concurrency‑based autoscaling.
-- Configure `containerConcurrency` aligned to memory limits set in Wasmtime.
-- Optional warmup endpoint can prefetch hot bundles and initialize engine state.
-- Limit egress via network policies and enforce allowlist at Host API.
-
-Example (abridged) KService highlights:
-- Autoscaling metric: concurrency
-- Min/max scale bounds
-- Readiness probe + optional warmup
-- Runner exposes `/v1/execute`, `/healthz`, and `/warmup`
+References:
+- [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38)
+- [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45)
 
 ## Environment & Configuration
 
-Server/Gateway:
-- `RUNNER_BASE_URL` — URL for Runner service
+Gateway:
+- `RUNNER_BASE_URL` — internal URL for Runner (`POST /v1/execute`)
 - `EXT_GATEWAY_TIMEOUT_MS` — default gateway timeout (ms)
 
+Runner:
+- `RUNNER_PUBLIC_BASE` — public base for serving ext-ui assets
+- `SIGNING_TRUST_BUNDLE` — trust anchors for signature verification
+- `EXT_EGRESS_ALLOWLIST` — hostnames allowed for `alga.http.fetch`
+- Memory/timeouts — enforced per invocation
+
 Object Storage (S3/MinIO):
-- `BUNDLE_STORE_BASE` — base URL/prefix for bundles (used by gateway/runner helpers)
+- `BUNDLE_STORE_BASE` — content-addressed root/prefix
 - `STORAGE_S3_ENDPOINT`, `STORAGE_S3_ACCESS_KEY`, `STORAGE_S3_SECRET_KEY`
 - `STORAGE_S3_BUCKET`, `STORAGE_S3_REGION`, `STORAGE_S3_FORCE_PATH_STYLE`
 
-Runner:
-- `BUNDLE_STORE_BASE` — content‑addressed root (same as above)
-- `SIGNING_TRUST_BUNDLE` — optional trust anchors for signature verification
-- `EXT_EGRESS_ALLOWLIST` — hostnames allowed for `alga.http.fetch`
-- Memory/timeouts: configured in Runner and enforced per invocation
-
-Pod‑Local Cache:
-- `EXT_CACHE_ROOT` — directory for cached artifacts on API pods
-- Runner maintains its own in‑proc and optional pod‑local cache
+Caches:
+- Runner manages its own in-proc/pod-local cache for modules and UI assets.
 
 ## Security Properties
 
-- No in‑process tenant code execution in the app; isolated WASM runtime in Runner.
-- Capability‑scoped Host API; no preopened filesystem; egress deny‑by‑default.
-- Content‑addressed artifacts; hash verification on use; optional signature verification.
+- No in-process tenant code execution in the app; isolated WASM runtime in the Runner.
+- Capability-scoped Host API; no preopened filesystem; egress deny-by-default with allowlist.
+- Content-addressed artifacts; hash verification on use; signature verification against trust bundle.
 - Quotas/limits: memory caps, timeouts, and concurrency per tenant/extension.
+- UI isolation: sandboxed iframes; origin validation aligned with `RUNNER_PUBLIC_BASE`.
 
 ## Error Handling & Retries
 
-- Gateway: short timeouts; idempotency keys for non‑GET; limited retries on 502/503/504.
-- Runner: structured errors for policy violations; quarantine misbehaving extensions.
-- UI route: 404 on path mismatch; 412/304 via ETag; safe defaults for mime types.
+- Gateway: short timeouts; idempotency keys for non-GET; limited retries on 502/503/504.
+- Runner: structured errors for policy violations; quarantine or disable misbehaving extensions.
+- UI assets (Runner): 404 on path mismatch; immutable caching with ETag; safe defaults for mime types.
 
 ## Local Development Notes
 
-- Use MinIO locally; set `BUNDLE_STORE_BASE` to the content‑address root.
+- Use MinIO (or compatible) locally; set `BUNDLE_STORE_BASE` to the content-address root.
 - Publish a test bundle (with `manifest.json` and `ui/**/*`) and record its content hash.
-- Access UI via `/ext-ui/{extensionId}/{contentHash}/index.html` and APIs via `/api/ext/{extensionId}/...`.
+- Access UI via `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{contentHash}/index.html` and APIs via `/api/ext/{extensionId}/...`.
 
 ## Related Sources
 
-- API Gateway route: `server/src/app/api/ext/[extensionId]/[...path]/route.ts`
-- UI Asset route: `server/src/app/ext-ui/[extensionId]/[contentHash]/[...path]/route.ts`
-- EE extensions services: `ee/server/src/lib/extensions/**`
-- Runner (Wasmtime): `ee/runner/`
-
+- Gateway route scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
+- Iframe bootstrap + src builder: [ee/server/src/lib/extensions/ui/iframeBridge.ts](ee/server/src/lib/extensions/ui/iframeBridge.ts:38)
+- Registry v2 service scaffold: [ExtensionRegistryServiceV2](ee/server/src/lib/extensions/registry-v2.ts:48)
+- Runner overview: [runner.md](runner.md)
