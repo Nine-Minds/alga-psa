@@ -73,10 +73,30 @@ exports.up = async function(knex) {
       
       for (const constraint of uniqueConstraints.rows) {
         try {
-          await knex.raw(`ALTER TABLE ${table} DROP CONSTRAINT ${constraint.conname}`);
-          console.log(`    ✓ Dropped constraint: ${constraint.conname}`);
+          // Use CASCADE for constraints that might have dependencies
+          await knex.raw(`ALTER TABLE ${table} DROP CONSTRAINT ${constraint.conname} CASCADE`);
+          console.log(`    ✓ Dropped constraint: ${constraint.conname} with CASCADE`);
         } catch (e) {
           console.log(`    - Could not drop ${constraint.conname}: ${e.message}`);
+        }
+      }
+      
+      // Step 2b: Also handle any check constraints that might block distribution
+      console.log(`  Dropping check constraints for ${table}...`);
+      const checkConstraints = await knex.raw(`
+        SELECT conname
+        FROM pg_constraint
+        WHERE conrelid = '${table}'::regclass
+        AND contype = 'c'
+        AND conname NOT LIKE '%_not_null'
+      `);
+      
+      for (const constraint of checkConstraints.rows) {
+        try {
+          await knex.raw(`ALTER TABLE ${table} DROP CONSTRAINT ${constraint.conname} CASCADE`);
+          console.log(`    ✓ Dropped check constraint: ${constraint.conname}`);
+        } catch (e) {
+          console.log(`    - Could not drop check ${constraint.conname}: ${e.message}`);
         }
       }
       
