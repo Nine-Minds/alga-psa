@@ -1,0 +1,25 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: alga-ext-runner
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/metric: concurrency
+        autoscaling.knative.dev/target: "10"
+        autoscaling.knative.dev/minScale: "1"
+    spec:
+      containerConcurrency: 8
+      containers:
+        - image: ghcr.io/alga/runner:dev
+          env:
+            - name: BUNDLE_STORE_BASE
+              value: https://s3.example.com/alga-ext/
+            - name: SIGNING_TRUST_BUNDLE
+              value: /etc/alga/trust/trust.pem
+            - name: RUNTIME_LIMITS
+              value: '{"memory_mb":512,"timeout_ms":5000,"fuel":null}'
+          ports:
+            - containerPort: 8080
+

@@ -1,0 +1,29 @@
+{
+  "name": "@alga/ui-kit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./theme.css": "./src/theme/tokens.css"
+  },
+  "files": [
+    "dist",
+    "src/theme/tokens.css"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "react": "^18",
+    "react-dom": "^18"
+  },
+  "devDependencies": {
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "typescript": "^5.4.0"
+  }
+}
+

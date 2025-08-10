@@ -1,102 +1,68 @@
-# Alga PSA Extension System - 80/20 Approach
+# Alga PSA EE Extension System — Out-of-Process, Multi‑Tenant
 
-This directory contains documentation for the Alga PSA Extension System, which enables third-party developers to extend and customize the functionality of Alga PSA. This feature is part of the Alga PSA Enterprise Edition.
+This directory contains the Enterprise Edition documentation for the Alga PSA Extension System. The system is being overhauled to provide strong multi‑tenant isolation, signed/reproducible artifacts, and a secure, capability‑based execution model.
+
+Status: This documentation reflects the target architecture and phased rollout (Aug 2025). Legacy, in‑process patterns are deprecated and noted as such.
 
 ## Documentation Index
 
 ### Core Architecture
-- [Overview](overview.md) - Core architecture and focused approach
-- [Development Guide](development_guide.md) - Guide for extension developers
-- [Implementation Plan](implementation_plan.md) - Phased implementation with 80/20 focus
+- [Overview](overview.md) — Goals, isolation model, components
+- [Implementation Plan](implementation_plan.md) — Phased plan aligned with the overhaul
+- [Development Guide](development_guide.md) — Building extensions (server handlers + iframe UI)
 
 ### Technical Guides
-- [API Routing Guide](api-routing-guide.md) - Dynamic API routing with [extensionId] pattern
-- [Template System Guide](template-system-guide.md) - Template variables and expression evaluation
-- [DataTable Integration Guide](datatable-integration-guide.md) - DataTable component integration
-- [Enterprise Build Workflow](enterprise-build-workflow.md) - EE build process and best practices
+- [API Routing Guide](api-routing-guide.md) — Gateway pattern `/api/ext/[extensionId]/[...]` to Runner
+- [Client UI Template/SDK Guide](template-system-guide.md) — Iframe SDK and UI kit usage (replaces descriptor rendering)
+- [DataTable Integration Guide](datatable-integration-guide.md) — Using the UI kit DataTable in iframe apps
+- [Enterprise Build Workflow](enterprise-build-workflow.md) — EE build, packaging, and publish
 
 ### Reference
-- [Manifest Schema](manifest_schema.md) - Extension manifest format and examples
-- [Sample Template](sample_template.md) - Working extension example
+- [Manifest Schema](manifest_schema.md) — Manifest v2 (runtime, endpoints, ui, capabilities)
+- [Registry Implementation](registry_implementation.md) — Data model and services
+- [Security & Signing](security_signing.md) — Bundle signing, verification, quotas
+- [Sample Extension](sample_template.md) — Server handler + iframe UI example
+- [Index](index.md) — Topical map
 
 ## Purpose
 
-The extension system allows third-party developers and customers to:
+The extension system enables:
+1. Server‑side handlers executed out‑of‑process via a Runner (WASM first)
+2. UI extensions rendered exclusively via sandboxed iframes with a bridge SDK
+3. Controlled integrations with external systems via brokered Host APIs
 
-1. Add custom UI components to the Alga PSA interface (primary focus)
-2. Create custom API endpoints (primary focus)
-3. Add custom pages for specific functionality (primary focus)
-4. Integrate with external systems
-5. Extend the system with future capabilities
+Design goals:
+- No tenant code executes in the core app process
+- Per‑tenant isolation for compute, storage, and egress
+- Signed, content‑addressed bundles with verified provenance
+- Capability‑based, least‑privilege host APIs and clear quotas
 
-## Current Implementation Status
+## Architecture Snapshot (Target)
 
-The extension system has been successfully implemented with the following features:
+- Out‑of‑process Runner (Rust + Wasmtime): executes handlers from signed bundles with strict resource limits
+- Extension Registry + Bundle Store (S3‑compatible): content‑addressed artifacts (`sha256/<hash>`) and signatures
+- API Gateway (Next.js): `/api/ext/[extensionId]/[...]` resolves manifest endpoints → calls Runner `/v1/execute`
+- UI Delivery: `/ext-ui/{extensionId}/{content_hash}/[...]` serves cached static assets for iframe apps
+- Client SDKs: `@alga/extension-iframe-sdk` (postMessage bridge) and `@alga/ui-kit` (components + theming)
 
-### ✅ Completed Features
+## What Changed (Deprecations)
 
-- **Descriptor-Based Architecture**: JSON-based UI definitions with template expression evaluation
-- **Dynamic API Routing**: Support for `[extensionId]` pattern enabling multi-tenant extensions
-- **DataTable Integration**: Full integration with Alga PSA's DataTable component
-- **Template System**: Comprehensive template variable substitution and JavaScript expression evaluation
-- **Enterprise Build Workflow**: Automated EE → main server file copying process
-- **Component Registry**: Automatic mapping of descriptor types to real React components
-- **Extension Pages**: Full page rendering with breadcrumbs and navigation
-- **Server Actions**: Secure server-side extension operations
+The following legacy concepts are removed or in the process of removal:
+- Descriptor‑based UI rendering inside the host app → replaced by iframe apps using the Client SDK
+- Dynamic import of tenant JS from `/api/extensions/...` → no raw module serving into host; use gateway + Runner
+- Uploading extension code into server filesystem → replaced by signed bundles published to the registry
 
-### 🚀 Key Architectural Improvements
-
-- **Security**: Sandboxed template evaluation with controlled contexts
-- **Performance**: Automatic data loading and caching for table components  
-- **Developer Experience**: Declarative JSON descriptors instead of complex React components
-- **Maintainability**: Clear separation between EE source files and main server targets
-- **Extensibility**: Template expressions support complex JavaScript operations
-
-### 📊 Real-World Example
-
-The SoftwareOne extension demonstrates the full capabilities:
-- Dynamic agreement and statement management
-- Rich DataTable with sorting, pagination, and filtering
-- Template-driven status badges and formatted numbers
-- Click handlers for navigation and actions
-- API integration with dummy data endpoints
-
-## Recent Updates (Latest Implementation)
-
-### Dynamic API Routing System
-- **Pattern**: `/api/extensions/[extensionId]/{endpoint}`
-- **Benefits**: Multi-tenant support, no hardcoded extension IDs
-- **Template Variables**: Automatic `{{extensionId}}` substitution in descriptors
-
-### Advanced Template Expression Engine
-- **Simple Variables**: `{{row.name}}`, `{{params.id}}`
-- **Complex Expressions**: `{{row.status === 'active' ? 'success' : 'warning'}}`
-- **Method Calls**: `{{row.amount.toLocaleString()}}`
-- **Safe Evaluation**: Sandboxed execution with controlled context
-
-### Professional DataTable Integration
-- **Real Component**: Uses Alga PSA's production DataTable component
-- **Rich Features**: Sorting, pagination, filtering, selection
-- **Custom Cells**: Template-driven cell rendering with event handlers
-- **Loading States**: Automatic loading spinners and error handling
-
-### Enterprise Build System
-- **Source Control**: EE files as single source of truth
-- **Automated Copying**: `build-enterprise.sh` script handles deployment
-- **Workflow Protection**: Prevents accidental overwrites of changes
-
-## Future Expansion
-
-After delivering the core functionality, we'll expand to include:
-
-- Advanced security features (certificate-based signing)
-- Entity page extensions and form customizations
-- Workflow integration (actions, triggers, forms)
-- Data extensions (custom fields, reports)
-- Extension marketplace
+Any remaining references in docs are marked Legacy and will be fully removed after migration.
 
 ## Getting Started
 
-For developers looking to create extensions, start with the [Development Guide](development_guide.md) and review the [Sample Template](sample_template.md).
+- Read the [Overview](overview.md) to understand the multi‑tenant model
+- Review the [Manifest Schema](manifest_schema.md) and [Security & Signing](security_signing.md)
+- Follow the [Development Guide](development_guide.md) to build:
+  - Server handlers targeting the Runner (WASM first)
+  - An iframe UI that uses the Client SDK and UI kit
+- See [Sample Extension](sample_template.md) for an end‑to‑end example
 
-For implementers, review the [Implementation Plan](implementation_plan.md) for details on the phased approach focused on delivering high-value features first.
+## Roadmap & Phases
+
+The overhaul proceeds in phases (registry/bundles → runner/host API → gateway/UI → migration). See the [Implementation Plan](implementation_plan.md) for the detailed checklist and acceptance criteria.

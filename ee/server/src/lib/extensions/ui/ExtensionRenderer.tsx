@@ -221,44 +221,13 @@ export function ExtensionRenderer({
     return <Loading />;
   }
 
-  // Otherwise, use the existing component loading logic
-  console.log(`[ExtensionRenderer] Loading as regular component: ${componentPath}`);
-  const cacheKey = `${extensionId}:${componentPath}`;
-
-  if (!componentCache.has(cacheKey)) {
-    console.log(`[ExtensionRenderer] Creating lazy component for: ${componentPath}`);
-    const LazyComponent = React.lazy(() => {
-        const componentUrl = `${window.location.origin}/api/extensions/${extensionId}/components/${componentPath}`;
-        console.log(`[ExtensionRenderer] Loading component from: ${componentUrl}`);
-        return import(/* webpackIgnore: true */ /* @vite-ignore */ componentUrl)
-            .then(module => {
-                console.log(`[ExtensionRenderer] Component loaded successfully:`, module);
-                return module;
-            })
-            .catch(err => {
-                console.error(`[ExtensionRenderer] Failed to load component: ${componentPath}`, err);
-                onError?.(err);
-                return { default: () => <ErrorDisplay error={err} componentPath={componentPath} /> };
-            });
-    });
-    componentCache.set(cacheKey, LazyComponent);
-  }
-
-  const LazyComponent = componentCache.get(cacheKey)!;
-
-  const combinedProps = {
-    ...defaultProps,
-    ...slotProps,
-    extensionId,
-  };
-
-  console.log(`[ExtensionRenderer] Rendering component with props:`, combinedProps);
-
+  // Descriptorless components via dynamic import are deprecated.
+  // Render a placeholder indicating iframe-only UI per the new model.
   return (
-    <ExtensionErrorBoundary extensionId={extensionId} onError={onError}>
-      <Suspense fallback={<Loading />}>
-        <LazyComponent {...combinedProps} />
-      </Suspense>
-    </ExtensionErrorBoundary>
+    <div className="p-4 border rounded bg-amber-50 text-amber-900">
+      <p className="font-semibold mb-2">Extension UI migration in progress</p>
+      <p className="text-sm mb-2">Dynamic importing tenant-supplied JS is disabled. UI must be served via sandboxed iframe bundles.</p>
+      <p className="text-xs">Extension: <code>{extensionId}</code>, requested: <code>{componentPath}</code></p>
+    </div>
   );
 }

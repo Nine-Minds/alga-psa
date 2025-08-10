@@ -166,7 +166,8 @@
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0",
     "ws": "^8.18.0",
-    "zod": "^3.25.67"
+    "zod": "^3.25.67",
+    "tar": "^7.4.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",

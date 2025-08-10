@@ -1,0 +1,5 @@
+/* Public CSS entry point for UI Kit theme tokens.
+   Usage:
+     import '@alga/ui-kit/tokens.css';
+*/
+@import "./src/theme/tokens.css";
