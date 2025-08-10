@@ -11,7 +11,7 @@ Key references:
 
 Terminology and target paths:
 - Gateway route: /api/ext/[extensionId]/[...path] implemented under [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
-- Iframe UI delivery: /ext-ui/{extensionId}/{content_hash}/[...] implemented under [ee/server/src/app/ext-ui/[extensionId]/[content_hash]/[...path]/route.ts](ee/server/src/app/ext-ui/%5BextensionId%5D/%5Bcontent_hash%5D/%5B...path%5D/route.ts)
+- Iframe UI delivery: served by Runner at ${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...] (no Next.js route in ee/server)
 - Manifest v2 validator: [ee/server/src/lib/extensions/schemas/manifest-v2.schema.ts](ee/server/src/lib/extensions/schemas/manifest-v2.schema.ts)
 - v2-only exports: [ee/server/src/lib/extensions/index.ts](ee/server/src/lib/extensions/index.ts)
 
@@ -46,11 +46,11 @@ Commit checkpoint:
   - [ ] Header policy (allowlist/strip)
   - [ ] Timeout/error mapping (404/413/502/504)
 
-2) Static UI delivery route
-- [ ] Create Next.js route: [ee/server/src/app/ext-ui/[extensionId]/[content_hash]/[...path]/route.ts](ee/server/src/app/ext-ui/%5BextensionId%5D/%5Bcontent_hash%5D/%5B...path%5D/route.ts)
-- [ ] Serve immutable UI assets from object storage or pod-local cache keyed by `content_hash`
-- [ ] Set `Cache-Control: public, max-age=31536000, immutable`
-- [ ] Align URLs with builder: buildExtUiSrc() → [ee/server/src/lib/extensions/ui/iframeBridge.ts](ee/server/src/lib/extensions/ui/iframeBridge.ts:38)
+2) Runner UI delivery confirmation
+- [ ] Confirm Runner serves iframe UI assets at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]` (content-addressed, immutable)
+- [ ] Ensure host URL builder parity: [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38) constructs correct src for Runner public base
+- [ ] Document and enforce immutable cache headers at Runner; only static file types are served
+- [ ] Do NOT implement a Next.js ext-ui route in ee/server; the Runner is the sole static UI host
 
 3) Manifest v2 validator/types
 - [ ] Add manifest v2 schema: [ee/server/src/lib/extensions/schemas/manifest-v2.schema.ts](ee/server/src/lib/extensions/schemas/manifest-v2.schema.ts)
