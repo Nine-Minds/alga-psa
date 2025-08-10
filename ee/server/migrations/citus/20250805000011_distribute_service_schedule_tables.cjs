@@ -22,7 +22,7 @@ exports.up = async function(knex) {
   const tables = [
     'service_categories',
     'service_catalog',
-    'schedules', 
+    // 'schedules', // Table was removed in migration 20250515102600
     'schedule_entries',
     'schedule_conflicts'
   ];
@@ -131,19 +131,7 @@ exports.up = async function(knex) {
   // Recreate important FKs between distributed tables
   console.log('\nRecreating foreign keys between distributed tables...');
   
-  try {
-    // schedule_entries -> schedules
-    await knex.raw(`
-      ALTER TABLE schedule_entries 
-      ADD CONSTRAINT schedule_entries_tenant_schedule_id_foreign 
-      FOREIGN KEY (tenant, schedule_id) 
-      REFERENCES schedules(tenant, schedule_id) 
-      ON DELETE CASCADE
-    `);
-    console.log('  ✓ Recreated FK: schedule_entries -> schedules');
-  } catch (e) {
-    console.log(`  - Could not recreate FK schedule_entries -> schedules: ${e.message}`);
-  }
+  // Note: schedule_entries doesn't have FK to schedules (schedules table was removed)
   
   try {
     // service_catalog -> service_categories
@@ -178,7 +166,7 @@ exports.down = async function(knex) {
   const tables = [
     'schedule_conflicts',
     'schedule_entries',
-    'schedules',
+    // 'schedules', // Removed  
     'service_catalog',
     'service_categories'
   ];
