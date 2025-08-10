@@ -1,4 +1,8 @@
 # Alga PSA Extension System Documentation (Enterprise)
+> Status
+>
+> This documentation set describes the target Enterprise Extension System. Parts are implemented today; others are in progress. See per‑page status banners and the Overview’s “What is live now / What’s next” for details.
+
 
 ## Overview
 

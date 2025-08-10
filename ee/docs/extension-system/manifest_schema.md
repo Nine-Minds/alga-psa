@@ -1,4 +1,29 @@
 # Alga PSA Extension Manifest v2
+> Status
+>
+> Manifest v2 in this document is the target specification. The server currently validates a legacy, descriptor-based manifest (tabs/navigation/dashboard/custom-page) and does not yet enforce Manifest v2. See legacy schema in [ee/server/src/lib/extensions/schemas/manifest.schema.ts](ee/server/src/lib/extensions/schemas/manifest.schema.ts).
+
+## Migration mapping (legacy → v2)
+
+- Legacy (current validation)
+  - Discriminated union of component types with props:
+    - Tab extensions, navigation items, dashboard widgets, custom pages
+    - See component schema union (see [ee/server/src/lib/extensions/schemas/manifest.schema.ts](ee/server/src/lib/extensions/schemas/manifest.schema.ts)).
+  - Components reference in-process UI renderers (now deprecated).
+
+- Target (v2)
+  - Runtime-first with out-of-process execution and iframe-only UI:
+    - api.endpoints: explicit HTTP surface
+    - ui.type: "iframe" with an entry point
+    - capabilities: least-privilege host APIs
+  - No dynamic importing of tenant code into the host.
+  - Route via `/api/ext/[extensionId]/[...]` (implementation spec; pending server route).
+  - UI served via `/ext-ui/{extensionId}/{content_hash}/[...]` (pending server route).
+
+Notes:
+- While authoring for v2, keep the examples below as canonical. For production deployments today, ensure legacy manifests pass the legacy schema validator (see [ee/server/src/lib/extensions/schemas/manifest.schema.ts](ee/server/src/lib/extensions/schemas/manifest.schema.ts)).
+- Registry v2 types exist but are scaffolds and not DB-wired yet (see [ee/server/src/lib/extensions/registry-v2.ts](ee/server/src/lib/extensions/registry-v2.ts)).
+
 
 Manifest v2 defines signed, content‑addressed bundles executed out‑of‑process and rendered via iframe UI.
 

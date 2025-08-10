@@ -1,4 +1,13 @@
 # Extension Security & Signing
+> Status
+>
+> This document specifies the target signing and provenance model for Enterprise bundles. Registry validation and signature enforcement are planned; full verification is not yet wired in `ee/server`. Registry v2 scaffolding exists (see [ee/server/src/lib/extensions/registry-v2.ts](ee/server/src/lib/extensions/registry-v2.ts)) and should implement trust bundle loading and signature checks during publish/install.
+
+Implementation notes (planned):
+- Content-addressed bundles using SHA256 (`content_hash`)
+- Detached signature persisted alongside registry metadata; verification on install and on load
+- Trust bundle configured via environment (e.g., `SIGNING_TRUST_BUNDLE`) containing accepted publisher certificates
+- Quota and egress policies enforced by Gateway/Runner
 
 This document describes the security model for the Enterprise extension system with a focus on bundle signing, verification, isolation, and policy enforcement.
 

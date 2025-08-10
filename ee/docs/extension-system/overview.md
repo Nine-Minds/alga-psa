@@ -1,4 +1,26 @@
 # Alga PSA Extension System (Enterprise Overview)
+> Status
+>
+> This page describes the target Enterprise Extension System. Parts of this architecture are implemented, while others are in progress. See "What is live now" and "What’s next" below for the current state.
+
+## What is live now
+
+- Legacy filesystem scanning for tenant code is disabled; initialization does not load tenant code into the host process.
+  - Evidence: initializeExtensions() logs indicate the legacy scan is disabled (see [ee/server/src/lib/extensions/initialize.ts](ee/server/src/lib/extensions/initialize.ts)).
+- Dynamic import of tenant-supplied UI into the host is deprecated; the UI model is migrating to iframe-only.
+  - Evidence: The renderer displays a migration notice indicating iframe-only UI (see [ee/server/src/lib/extensions/ui/ExtensionRenderer.tsx](ee/server/src/lib/extensions/ui/ExtensionRenderer.tsx)).
+- Iframe bootstrap and security behavior (sandbox defaults, origin validation, theme token bridge, message protocol) are implemented on the client side.
+  - Evidence: The iframe bridge enforces sandbox="allow-scripts", validates origins (based on RUNNER_PUBLIC_BASE), injects theme tokens, and handles postMessage for ready/resize/navigate (see [ee/server/src/lib/extensions/ui/iframeBridge.ts](ee/server/src/lib/extensions/ui/iframeBridge.ts)).
+- Registry v2 service/types exist as scaffolding and are not yet wired to the database.
+  - Evidence: ExtensionRegistryServiceV2 methods return placeholders and do not integrate with DB (see [ee/server/src/lib/extensions/registry-v2.ts](ee/server/src/lib/extensions/registry-v2.ts)).
+
+## What’s next (planned/in progress)
+
+- Implement API gateway route /api/ext/[extensionId]/[...path] that proxies to the Runner with strict header/timeout/body policies (as specified in the API Routing Guide).
+- Implement ext-ui asset serving path /ext-ui/{extensionId}/{content_hash}/[...] with immutable cache semantics.
+- Enforce Manifest v2 (runtime, capabilities, endpoints, ui) in server validation and routing; maintain a migration from legacy descriptor-based manifests.
+- Wire Registry v2 to the database, implement publish/install flows, and signature verification against a trust bundle.
+
 
 This document describes the Enterprise Edition extension architecture focused on strong multi‑tenant isolation, signed/reproducible artifacts, and a secure, capability‑based runtime.
 

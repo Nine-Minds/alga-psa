@@ -1,4 +1,8 @@
 # Extension Registry Implementation (v2)
+> Status
+>
+> This document describes the target Registry v2. In the codebase today, the service and types are scaffolded but not wired to the database or full APIs. See ExtensionRegistryServiceV2 in [ee/server/src/lib/extensions/registry-v2.ts](ee/server/src/lib/extensions/registry-v2.ts).
+
 
 The registry catalogs extensions, versions, and bundles and tracks per‑tenant installs with granted capabilities and configuration.
 

@@ -1,4 +1,8 @@
 # Extension API Routing Guide (Gateway → Runner)
+> Status
+>
+> This guide is the implementation specification. The Next.js route `/api/ext/[extensionId]/[...]` is not yet present in `ee/server`. A temporary dev/mock route exists at `/api/extensions` (see [ee/server/src/app/api/extensions/route.ts](ee/server/src/app/api/extensions/route.ts)). Use this document to implement the gateway.
+
 
 This guide describes the extension API gateway pattern used to route tenant requests to out‑of‑process extension handlers executed by the Runner service.
 

@@ -1,4 +1,11 @@
 # Alga PSA Extension Development Guide (Runner + Iframe UI)
+> Status
+>
+> This guide targets the Enterprise architecture. The API gateway route `/api/ext/[extensionId]/[...]` and Runner-backed execution are in progress; a dev/mock route exists at `/api/extensions` (see [ee/server/src/app/api/extensions/route.ts](ee/server/src/app/api/extensions/route.ts)). Dynamic import of tenant UI in the host is deprecated; build iframe-only UIs (see [ee/server/src/lib/extensions/ui/ExtensionRenderer.tsx](ee/server/src/lib/extensions/ui/ExtensionRenderer.tsx) and [ee/server/src/lib/extensions/ui/iframeBridge.ts](ee/server/src/lib/extensions/ui/iframeBridge.ts)).
+
+Notes for current development:
+- Gateway usage examples below are specification examples; until `/api/ext/...` lands, wire your local UI to mocks or a local Runner stub.
+- Follow iframe security expectations: default sandbox is `allow-scripts`, avoid `allow-same-origin` unless explicitly approved, and respect origin validation and the bootstrap postMessage contract (see [ee/server/src/lib/extensions/ui/iframeBridge.ts](ee/server/src/lib/extensions/ui/iframeBridge.ts)).
 
 This guide explains how to build Enterprise Edition extensions for Alga PSA using the new multi‑tenant architecture:
 - Server‑side handlers executed by an out‑of‑process Runner (WASM first)

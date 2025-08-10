@@ -1,4 +1,18 @@
 # Extension Serving and Execution System (EE)
+> Status
+>
+> This document outlines the target UI delivery system. Client-side iframe bootstrap and security controls are implemented, but the server route for static UI delivery (`/ext-ui/{extensionId}/{content_hash}/[...]`) is not yet present in `ee/server`. See the implemented iframe bootstrap behavior in [iframeBridge.ts](ee/server/src/lib/extensions/ui/iframeBridge.ts) and the migration notice in [ExtensionRenderer.tsx](ee/server/src/lib/extensions/ui/ExtensionRenderer.tsx).
+
+Implementation notes:
+- Iframe bootstrap behavior (implemented):
+  - Defaults sandbox to `allow-scripts` (no implicit `allow-same-origin`)
+  - Validates origins when `RUNNER_PUBLIC_BASE` is absolute, and enforces postMessage target origin
+  - Bridges theme tokens into `:root` and via postMessage; handles `ready`, `resize`, and `navigate` messages
+  - See [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45) and helpers in [iframeBridge.ts](ee/server/src/lib/extensions/ui/iframeBridge.ts).
+- Server delivery (planned):
+  - Immutable path: `/ext-ui/{extensionId}/{content_hash}/[...]`
+  - Pod-local caching keyed by `content_hash`
+  - Alignment with URL builder used by the iframe bridge
 
 This document explains how extensions are served and executed in the Enterprise Edition. It covers module resolution, bundle fetching from S3/MinIO, pod‑local caching, request routing via the Next.js gateway, and execution in the Runner service on Knative. Diagrams are included to illustrate flows.
 
