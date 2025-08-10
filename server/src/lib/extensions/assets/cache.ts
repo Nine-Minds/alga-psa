@@ -1,3 +1,10 @@
+/**
+ * Deprecated when EXT_UI_HOST_MODE === 'rust'. Retained for legacy mode only.
+ *
+ * This module supports legacy Next.js-based serving of extension UI bundles.
+ * When EXT_UI_HOST_MODE is set to "rust" (default in EE), callers should not
+ * invoke ensureUiCached(); the Rust host under /ext-ui is authoritative.
+ */
 import { mkdirSync, existsSync, writeFileSync, readFileSync, statSync, rmSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { extractSubtree } from 'server/src/lib/extensions/bundles';
@@ -54,6 +61,16 @@ function maybeEvict(maxBytes: number) {
 }
 
 export async function ensureUiCached(contentHash: string): Promise<string> {
+  const mode = (process.env.EXT_UI_HOST_MODE || 'rust').toLowerCase();
+  if (mode === 'rust') {
+    // Guard to prevent accidental usage in EE rust mode
+    console.warn(JSON.stringify({
+      module: 'assets/cache',
+      action: 'deprecated_in_rust_mode',
+      note: 'EXT_UI_HOST_MODE is rust; ensureUiCached() should not be called'
+    }));
+  }
+
   const dir = join(root(), contentHash.replace('sha256:', ''), 'ui');
   if (!existsSync(dir)) {
     // simple lock to avoid double-extract

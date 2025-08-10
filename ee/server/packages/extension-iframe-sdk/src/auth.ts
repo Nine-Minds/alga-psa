@@ -1,14 +1,20 @@
 import { IframeBridge } from './bridge';
 
+/**
+ * Returns the current short-lived session token after bootstrap.
+ * Resolves immediately if already available, otherwise waits for the next bootstrap.
+ */
 export async function getToken(bridge: IframeBridge): Promise<string> {
+  const existing = bridge.getSessionToken?.();
+  if (existing) return existing;
+
   return new Promise((resolve) => {
     const off = bridge.on((evt: any) => {
-      if (evt.type === 'auth' && evt.payload?.token) {
+      if (evt.type === 'bootstrap' && evt.payload?.session?.token) {
         off();
-        resolve(evt.payload.token);
+        resolve(evt.payload.session.token);
       }
     });
-    bridge.emitToHost('auth.request', {});
   });
 }
 

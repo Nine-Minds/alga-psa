@@ -1,3 +1,9 @@
+/**
+ * Deprecated when EXT_UI_HOST_MODE === 'rust'. Retained for legacy mode only.
+ *
+ * Legacy static file responder used by Next.js route when EXT_UI_HOST_MODE === "nextjs".
+ * In rust mode, the unified Rust host under /ext-ui is authoritative.
+ */
 import { readFileSync, existsSync } from 'node:fs';
 import { join, normalize } from 'node:path';
 import { NextResponse, NextRequest } from 'next/server';
@@ -5,6 +11,15 @@ import { createHash } from 'node:crypto';
 import { contentTypeFor } from 'server/src/lib/extensions/assets/mime';
 
 export function serveFrom(req: NextRequest, dir: string, reqPath: string): NextResponse {
+  const mode = (process.env.EXT_UI_HOST_MODE || 'rust').toLowerCase();
+  if (mode === 'rust') {
+    console.warn(JSON.stringify({
+      module: 'assets/serve',
+      action: 'deprecated_in_rust_mode',
+      note: 'EXT_UI_HOST_MODE is rust; serveFrom() is legacy and should not be used in EE'
+    }));
+  }
+
   const safe = sanitizePath(reqPath);
   const full = join(dir, safe);
   let path = full;

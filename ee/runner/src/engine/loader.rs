@@ -6,8 +6,13 @@ use std::time::Duration;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use std::collections::HashMap;
+use std::path::Path;
 
 use super::host_api::{add_host_imports, HostApiConfig};
+use url::Url;
+use tokio_util::io::StreamReader;
+use tokio::io::AsyncReadExt as _;
+use crate::cache::fs as cache_fs;
 
 pub struct ModuleLoader {
     pub engine: Engine,
@@ -173,5 +178,80 @@ impl ModuleLoader {
         }
         Ok(out)
     }
+}
+
+/// Fetch a URL (bundle/object) and write atomically to a destination file.
+/// Currently buffers response fully; can be optimized later to chunked write.
+pub async fn fetch_to_file(url: &str, dest_tmp: &Path) -> anyhow::Result<()> {
+    let client = reqwest::Client::builder().build()?;
+    let resp = client.get(url).send().await?;
+    if !resp.status().is_success() {
+        anyhow::bail!("fetch_to_file failed: {}", resp.status());
+    }
+    let bytes = resp.bytes().await?;
+    cache_fs::write_atomic(dest_tmp, &bytes).await?;
+    Ok(())
+}
+
+/// Build the bundle URL from BUNDLE_STORE_BASE and a content hash "sha256:<hex>" or "<hex>".
+/// Result: <base>/sha256/<hex>/bundle.tar.gz
+pub fn bundle_url(bundle_store_base: &Url, content_hash: &str) -> anyhow::Result<Url> {
+    let hex = content_hash.strip_prefix("sha256:").unwrap_or(content_hash);
+    if hex.is_empty() {
+        anyhow::bail!("empty content hash");
+    }
+    let mut base = bundle_store_base.clone();
+    // Ensure trailing slash handling
+    let path = format!("sha256/{}/bundle.tar.gz", hex);
+    let joined = base.join(&path)?;
+    Ok(joined)
+}
+
+/// Stream a bundle archive to a temp file while computing sha256, verifying against expected hex.
+/// On success returns the path to the temp file. On mismatch deletes the temp and returns IntegrityError::ArchiveHashMismatch.
+pub async fn verify_archive_sha256(url: &Url, expected_hex: &str) -> anyhow::Result<std::path::PathBuf> {
+    use sha2::{Digest, Sha256};
+    use tokio::fs as tfs;
+    use tokio::io::AsyncWriteExt;
+    use rand::{distributions::Alphanumeric, Rng};
+
+    let expected_lower = expected_hex.to_ascii_lowercase();
+    let cache_root = cache_fs::ext_cache_root_from_env();
+    let tmp_dir = cache_root.join("tmp");
+    cache_fs::ensure_dir(&tmp_dir).await?;
+    let rand_suffix: String = rand::thread_rng().sample_iter(&Alphanumeric).take(6).map(char::from).collect();
+    let tmp_path = tmp_dir.join(format!("{}.{}.tar.gz", expected_lower, rand_suffix));
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(60))
+        .build()?;
+
+    let mut resp = client.get(url.clone()).send().await?;
+    if !resp.status().is_success() {
+        anyhow::bail!("verify_archive_sha256 fetch failed: {}", resp.status());
+    }
+
+    let mut hasher = Sha256::new();
+    let mut file = tfs::File::create(&tmp_path).await?;
+
+    // Stream using reqwest Response::chunk to avoid extra deps
+    while let Some(bytes) = resp.chunk().await? {
+        hasher.update(&bytes);
+        file.write_all(&bytes).await?;
+    }
+    file.flush().await?;
+    let _ = file.sync_all().await;
+
+    let got = hex::encode(hasher.finalize());
+    if !got.eq_ignore_ascii_case(&expected_lower) {
+        // Integrity failure: remove temp file and return structured error
+        let _ = tfs::remove_file(&tmp_path).await;
+        return Err(crate::util::errors::IntegrityError::ArchiveHashMismatch {
+            expected_hex: expected_lower,
+            computed_hex: got,
+        }.into());
+    }
+
+    Ok(tmp_path)
 }
 

@@ -1,0 +1,134 @@
+use anyhow::Result;
+use async_trait::async_trait;
+use moka::future::Cache;
+use serde::Deserialize;
+use std::{sync::Arc, time::Duration};
+use tokio::time::timeout;
+use url::Url;
+
+/// Registry validation client trait. Validates a tenant/extension/content-hash mapping.
+#[async_trait]
+pub trait RegistryClient: Send + Sync {
+    async fn validate_install(&self, tenant_id: &str, extension_id: &str, content_hash: &str) -> Result<bool>;
+}
+
+/// HTTP-backed client with a short TTL cache. When strict validation is disabled (EXT_STATIC_STRICT_VALIDATION != "true"),
+/// this client will always return Ok(true).
+pub struct HttpRegistryClient {
+    strict: bool,
+    base_url: Option<Url>,
+    cache: Cache<String, bool>,
+    http: reqwest::Client,
+}
+
+impl HttpRegistryClient {
+    pub fn new() -> Result<Self> {
+        let strict = std::env::var("EXT_STATIC_STRICT_VALIDATION")
+            .map(|v| v.trim().eq_ignore_ascii_case("true"))
+            .unwrap_or(true);
+
+        let base_url = std::env::var("REGISTRY_BASE_URL").ok().and_then(|s| Url::parse(&s).ok());
+
+        let cache = Cache::builder()
+            .max_capacity(10_000)
+            .time_to_live(Duration::from_secs(45))
+            .build();
+
+        let http = reqwest::Client::builder().build()?;
+
+        Ok(Self {
+            strict,
+            base_url,
+            cache,
+            http,
+        })
+    }
+
+    fn cache_key(tenant_id: &str, extension_id: &str, content_hash: &str) -> String {
+        format!("{}:{}:{}", tenant_id, extension_id, content_hash)
+    }
+}
+
+#[async_trait]
+impl RegistryClient for HttpRegistryClient {
+    async fn validate_install(&self, tenant_id: &str, extension_id: &str, content_hash: &str) -> Result<bool> {
+        // Short-circuit if strict validation disabled.
+        if !self.strict {
+            return Ok(true);
+        }
+
+        // Missing base URL in strict mode - treat as not validated.
+        let Some(base) = &self.base_url else {
+            return Ok(false);
+        };
+
+        let key = Self::cache_key(tenant_id, extension_id, content_hash);
+        if let Some(v) = self.cache.get(&key).await {
+            return Ok(v);
+        }
+
+        // Compose a GET to something like: {base}/api/installs/validate?tenant=...&extension=...&hash=...
+        let mut url = base.clone();
+        // Minimal stub endpoint path - subject to change when real registry is wired
+        let path = "api/installs/validate";
+        url.set_path(path);
+        url.query_pairs_mut()
+            .append_pair("tenant", tenant_id)
+            .append_pair("extension", extension_id)
+            .append_pair("hash", content_hash);
+
+        // Keep fast timeout
+        let req = self.http.get(url).build()?;
+        let fut = self.http.execute(req);
+
+        // 750ms budget to avoid head-of-line blocking on hot path
+        let resp = match timeout(Duration::from_millis(750), fut).await {
+            Ok(Ok(r)) => r,
+            _ => {
+                // On timeout/error in strict mode, be conservative and deny
+                self.cache.insert(key, false).await;
+                return Ok(false);
+            }
+        };
+
+        // Interpret JSON { valid: bool } or truthy status 200 with "true"
+        let valid = if resp.status().is_success() {
+            // Try JSON first
+            let maybe_json = resp.json::<serde_json::Value>().await.ok();
+            if let Some(v) = maybe_json {
+                v.get("valid").and_then(|b| b.as_bool()).unwrap_or(false)
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+
+        self.cache.insert(key, valid).await;
+        Ok(valid)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    struct AllowAll;
+    #[async_trait]
+    impl RegistryClient for AllowAll {
+        async fn validate_install(&self, _tenant_id: &str, _extension_id: &str, _content_hash: &str) -> Result<bool> {
+            Ok(true)
+        }
+    }
+
+    #[tokio::test]
+    async fn cache_key_format() {
+        let k = HttpRegistryClient::cache_key("t", "e", "h");
+        assert_eq!(k, "t:e:h");
+    }
+
+    #[tokio::test]
+    async fn trait_object_smoke() {
+        let c: Arc<dyn RegistryClient + Send + Sync> = Arc::new(AllowAll);
+        assert!(c.validate_install("t", "e", "sha256:abc").await.unwrap());
+    }
+}

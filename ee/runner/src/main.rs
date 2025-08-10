@@ -1,6 +1,9 @@
 mod http;
 mod models;
 mod engine;
+mod cache;
+mod util;
+mod registry;
 
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 

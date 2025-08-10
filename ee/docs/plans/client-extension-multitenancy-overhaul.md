@@ -21,6 +21,31 @@ Last updated: 2025-08-09
 - Auditable execution with traceability, quotas, and rate limits per tenant.
 - Backwards-compatible migration path, with clear deprecation of unsafe paths.
 
+## Overarching Phases
+
+Phase 1 — Static Rendering via Rust Host (MinIO proxy)
+- Scope: Serve prebuilt UI bundles (iframe apps) as immutable static assets via a Rust host that proxies reads from MinIO/S3, with strict path sanitation, tenant/contentHash validation, ETag/Cache-Control, and pod-local caching optional.
+- Purpose: Quickly replace any dynamic module loading in the app with safe, static delivery. No guest code execution. Focus on asset integrity and isolation.
+- Deliverables:
+  - Rust static asset service (MinIO/S3 proxy) with SPA fallback and CSP guidance for iframes
+  - URL model: /ext-ui/{extensionId}/{content_hash}/... mapped to object storage layout (sha256/<hash>/ui/...)
+  - Basic registry/install wiring to resolve content_hash per tenant (read-only for UI)
+  - Signing/hash verification for assets at fetch time (optional signature; hash required)
+  - Docs + Client SDK usage for iframe embedding
+
+Phase 2 — Dynamic WASM Features
+- Scope: Out-of-process Runner (Rust + Wasmtime), Host API v1 (capability-based), Next.js API gateway to Runner, event-driven execution, quotas/limits, and per-tenant auditability.
+- Purpose: Safely execute extension logic outside the app process with strong isolation and provenance.
+- Deliverables:
+  - Runner service with Wasmtime limits, host imports, and signature verification
+  - Registry + bundle signing/publishing, versioning, and warmup/prefetch
+  - API gateway for /api/ext/... to invoke handlers in Runner
+  - Event subscriptions, logs/metrics, idempotency, and quota enforcement
+
+Mapping to detailed sections
+- Phase 1 aligns with: "Client UI Delivery (iframe-only)", "Client Asset Serving via Gateway", and parts of "Bundle Storage Integration" focused on static ui assets and integrity.
+- Phase 2 aligns with: "Runner Service Design", "HTTP Routing for Plugin Endpoints", "Next.js API Router/Proxy", "Runtime Decision: Wasmtime", and remaining bundle signing/execute paths.
+
 ## Non-Goals (for this overhaul)
 
 - Supporting all languages. Start with JS/TS to WASM or isolate; consider additional languages later.
@@ -33,7 +58,293 @@ Last updated: 2025-08-09
 - Storage: Use S3-compatible storage via our existing S3StorageProvider against local MinIO only. No alternative providers. Canonical bucket and prefix are defined via env.
 - UI: Iframe-only Client SDK approach. React-based example and docs only for SDK; no descriptor renderer.
 - Fetch/serve model: Object storage is source of truth. Pods fetch bundles/UI on-demand into a pod-local cache and serve directly via Next.js/Knative.
+- Framework: Use Axum 0.7 + tower-http for the unified Rust application server. Static asset routes (/ext-ui/...) and execute routes (/v1/execute) live in the same binary. This keeps Phase 1 minimal and allows Wasmtime to be bolted in for Phase 2 without changing frameworks. See [ee/runner/src/http/server.rs](ee/runner/src/http/server.rs:1) and dependency updates in [ee/runner/Cargo.toml](ee/runner/Cargo.toml).
 
+
+## Executive Summary
+
+We are splitting the extension overhaul into two phases: Phase 1 focuses on safe, static UI delivery via a Rust host proxying MinIO/S3 (no dynamic module loading, no guest code execution), and Phase 2 delivers dynamic WASM execution with a Rust Runner (Wasmtime), a capability-based Host API, and a Next.js API gateway. This preserves security and isolation while enabling a clear migration path.
+
+## Proposed Document Map
+
+Unified service approach
+- We will deploy a single Rust application server that serves both static assets (/ext-ui/...) and the execute API (/v1/execute). CDN fronts /ext-ui with immutable caching by contentHash. Route-level isolation and config separation keep static and execute concerns safe within one binary.
+
+- Phase 1 — Static Rendering via Rust Host (MinIO proxy)
+  - See: Phase 1 section below. Consolidates: "Client UI Delivery (iframe-only)", "Client Asset Serving via Gateway", and the UI-asset portions of "Distributed Bundles, Assets, and Caching".
+- Phase 2 — Dynamic WASM Features
+  - See: Phase 2 section below. Consolidates: "Runner Service Design (Rust + Wasmtime)", "HTTP Routing for Plugin Endpoints", "Next.js API Router/Proxy", "Runtime Decision: Wasmtime", and WASM/precompiled portions of caching.
+- Shared Foundations
+  - See: Data Model and Registry section. Consolidates: "Data Model (initial)" and "Public APIs (EE)".
+
+## Phase 1 — Static Rendering via Rust Host (MinIO proxy)
+
+Scope & Objectives
+- Serve prebuilt iframe UI bundles as immutable static assets from MinIO/S3 via a Rust host. Validate tenant/contentHash; sanitize paths; set strong caching and security headers. No dynamic JS import into host app.
+
+Architecture
+- Implementation: Served by the unified Rust application server within a dedicated route group (/ext-ui/...)
+- URL model: /ext-ui/{extensionId}/{contentHash}/[...path]
+- Object storage layout: sha256/<hash>/ui/**/* (extracted from bundle) or tar subtree on first touch; integrity via contentHash
+- Caching: CDN as primary (immutable by contentHash); pod-local cache optional/minimal for origin efficiency; SPA fallback to index.html
+
+Security
+- Tenant/contentHash validation with registry lookups
+- Path sanitization, file size caps, immutable caching, ETag/If-None-Match
+- CSP for iframes (summary; full guidance in Appendix A)
+
+Deployment & Operations
+- Env: EXT_BUNDLE_STORE_URL, STORAGE_S3_*, EXT_CACHE_*, EXT_STATIC_STRICT_VALIDATION; health checks; metrics; autoscaling profile
+- CDN: front /ext-ui with long-lived immutable caching keyed by full path; origin shielding to reduce S3 reads
+
+Test Plan
+- Unit/integration for sanitization, 404/304/200 paths, cache eviction, large file handling; load tests for warm/cold cache; S3 failure modes
+
+References to detailed content in this doc
+- Client UI Delivery (iframe-only with SDK)
+- Client Asset Serving via Gateway (pod-local cache)
+- Distributed Bundles, Assets, and Caching (UI aspects)
+
+### Phase 1 — TODOs (Status)
+
+1.a Client Asset Fetch-and-Serve (Pod-Local Cache)
+- [x] Route: `server/src/app/ext-ui/[extensionId]/[contentHash]/[...path]/route.ts` (GET).
+- [x] Cache manager: `server/src/lib/extensions/assets/cache.ts` (ensure and basic index write).
+- [x] Static serve: `server/src/lib/extensions/assets/serve.ts` (SPA fallback; sanitize; caching headers).
+- [x] Mime map: `server/src/lib/extensions/assets/mime.ts`.
+- Details
+  - [x] Tar/zip extraction for `ui/**/*`.
+  - [x] LRU index file structure recorded; [x] eviction policy and GC.
+  - [x] ETag generation and conditional GET support.
+  - [x] Locking/concurrency control for first-touch extraction.
+  - [x] Enforce tenant/contentHash match (404 on mismatch) in route handler.
+  - [ ] CSP guidance for iframe pages.
+
+1.b Client SDK (Iframe)
+- [x] Packages created: `ee/server/packages/extension-iframe-sdk/`, `ee/server/packages/ui-kit/`.
+- SDK files
+  - [x] `src/index.ts`, [x] `src/bridge.ts`, [x] `src/auth.ts`, [x] `src/navigation.ts`, [x] `src/theme.ts`, [x] `src/types.ts`, [x] React hooks (`src/hooks.ts`), [x] README with React example and security guidance.
+- UI Kit
+  - [x] `src/index.ts`, [x] theme tokens CSS and theming entry, [x] MVP components, [x] hooks, [x] README (tokens + usage updated).
+- Example app
+  - [x] Vite + TS example (under `ee/server/packages/extension-iframe-sdk/examples/vite-react/`) with README and static build output.
+- Host bridge bootstrap
+  - [x] `ee/server/src/lib/extensions/ui/iframeBridge.ts` to inject theme tokens and session.
+- Protocol & security
+  - [x] Origin validation and sandbox attributes; author docs.
+  - [x] Message types include `version`.
+- Ergonomics
+  - [x] React hooks: `useBridge`, `useTheme`, `useAuthToken`, `useResize`.
+
+1.c Bundle Storage Integration (UI integrity)
+- Details
+  - [x] Hash verification on fetch and before use.
+    - Archive integrity: archive sha256 is verified against the URL content-address (sha256/<hex>/bundle.tar.gz) during download. On mismatch, the request returns 502 (code: archive_hash_mismatch) and nothing is cached.
+    - Per-file integrity: on every GET, a strong ETag is computed from the served file bytes using SHA-256 and returned as a quoted value: "sha256-<hex>". If the client supplies If-None-Match with this exact value, the server returns 304.
+    - Operational note: URLs include the contentHash making CDN caching safe and immutable; origin fails closed on integrity mismatches and never serves partially extracted assets.
+
+1.d Unified Rust Static Asset Host (MinIO/S3 proxy)
+- Routing
+  - [ ] Add GET route group in [ee/runner/src/http/server.rs](ee/runner/src/http/server.rs:1): `/ext-ui/{extensionId}/{contentHash}/*path`
+  - [ ] Implement SPA fallback: serve `index.html` when file missing or path is a directory; honor `?path=/...` for client router hydration
+  - [ ] Strict path sanitation: reject `..`, absolute paths, and illegal chars; normalize and ensure access remains within cache root
+- Framework and dependencies
+  - [ ] Framework: continue with Axum 0.7; add tower-http layers/services to simplify static hosting
+  - [ ] Use `tower_http::services::ServeDir` for on-disk cache under `${EXT_CACHE_ROOT}/{hash}/ui/`; wrap with a custom handler for tenant/contentHash validation and SPA fallback
+  - [ ] Add `mime_guess` for content-type mapping
+  - [ ] Keep `reqwest` S3-compatible HTTP via `BUNDLE_STORE_BASE`; optionally switch to `aws-sdk-s3` if Range/HEAD origin features are required
+  - [ ] Update [ee/runner/Cargo.toml](ee/runner/Cargo.toml:1) with:
+    - `tower-http = "0.5"` features ["fs","compression","set-header","trace"]
+    - `mime_guess = "2"`
+    - `tar = "0.4"` and `flate2 = { version = "1", features = ["gzip"] }` or `async-compression`
+    - optional `aws-sdk-s3 = { version = "1", features = ["rustls"] }`
+- Registry/contentHash validation
+  - [ ] Add lightweight registry validation client (HTTP or DB per deployment) to confirm tenant install → version → `content_hash` before serving
+  - [ ] On mismatch or missing install/version, return 404 and never serve from cache
+  - [ ] Short TTL (30–60s) cache for registry lookups keyed by `{tenant_id, extension_id, content_hash}`
+- Object storage integration
+  - [ ] Extend [ee/runner/src/engine/loader.rs](ee/runner/src/engine/loader.rs) with `fetch_object_range()` and `fetch_to_file()` helpers for large reads
+  - [ ] Fetch bundle archive and extract only `ui/**/*` into cache on first touch
+  - [ ] Enforce layout `sha256/<hash>/ui/**/*` and verify `sha256` during extract (per-file or archive-level validation)
+- Pod-local cache
+  - [ ] Introduce [ee/runner/src/cache/fs.rs](ee/runner/src/cache/fs.rs) with helpers to:
+    - compute cache paths under `${EXT_CACHE_ROOT}/<hash>/ui/...`
+    - write files atomically (temp + rename)
+    - set read-only permissions after write
+  - [-] Implement capacity-based LRU eviction (bytes and/or file-count) reusing [ee/runner/src/cache/lru.rs](ee/runner/src/cache/lru.rs) -- DELAY
+  - [-] Background GC task and on-demand eviction on put; record cache index with last-access timestamps -- DELAY
+- Headers and correctness
+  - [ ] Content-Type mapping by extension (fallback `application/octet-stream`)
+  - [ ] `Cache-Control: public, max-age=31536000, immutable` (URLs are content-hash addressed)
+  - [ ] ETag generation from file content; support `If-None-Match` → 304
+  - [ ] Optional range requests: `Accept-Ranges`, 206 `Content-Range` for large assets - DELAY
+  - [ ] File size caps and response size caps; return 413/416 as appropriate
+- Security
+  - [ ] Enforce tenant/contentHash validation before any serve; never trust URL alone
+  - [ ] Disallow directory traversal and hidden files; consider allowlist of extensions (html, js, css, json, map, svg, png, jpg, webp, woff, woff2)
+  - [ ] CSP guidance for iframe pages; document default CSP and sandbox attributes
+- Configuration and ops
+  - [ ] Env: `BUNDLE_STORE_BASE`, `STORAGE_S3_*`, `EXT_CACHE_ROOT`, `EXT_CACHE_MAX_BYTES`, `EXT_STATIC_STRICT_VALIDATION`, `EXT_STATIC_MAX_FILE_BYTES`
+  - [ ] Enhance `/healthz` in [ee/runner/src/http/server.rs](ee/runner/src/http/server.rs:1) to check cache dir writable and object store reachable (HEAD on bucket/prefix)
+  - [ ] `/warmup` supports prefetch of `{contentHash}` UI subtree into cache
+  - [ ] Structured tracing fields on serve: `request_id`, `tenant`, `extension`, `content_hash`, `file_path`, `status`, `duration_ms`, `cache_status` (hit/miss)
+- Tests
+  - [ ] Unit: path sanitizer; content-type mapper; ETag calc; cache LRU; extract-only-UI correctness
+  - [ ] Integration: cold fetch → extract → 200; repeat with `If-None-Match` → 304; tenant/contentHash mismatch → 404; large file → 413; traversal attempts → 400/404
+- Docs
+  - [ ] Update Client SDK README to reference iframe `src="/ext-ui/{extensionId}/{content_hash}/index.html?path=/..."` and CSP/sandbox guidance
+
+## Phase 2 — Dynamic WASM Features
+
+Implementation note
+- Phase 2 routes (/v1/execute) are served by the same unified Rust application server. The Wasmtime engine, egress allowlists, and secrets are only wired into the execute route group; static routes remain read-only and do not mount runner secrets.
+
+Scope & Objectives
+- Out-of-process execution with Rust Runner (Wasmtime), capability-based Host API, Next.js API gateway, events, quotas, provenance (signed bundles).
+
+Architecture
+- Runner Service Design (Rust + Wasmtime)
+- HTTP Routing for Plugin Endpoints and API gateway
+- Runtime Decision: Wasmtime (WASM-only)
+- Distributed Bundles and Caching (WASM/precompiled aspects)
+
+Security & Isolation
+- Resource limits, egress allowlists, secrets brokering, audit logs, idempotency
+
+Deployment & Operations
+- Knative Serving profile, autoscaling, warmup/precompile
+
+Test Plan
+- Execute API behavior, policy enforcement, quotas, error codes, telemetry
+
+References to detailed content in this doc
+- Runner Service Design (Rust + Wasmtime)
+- HTTP Routing for Plugin Endpoints
+- Next.js API Router/Proxy (design)
+
+### Phase 2 — TODOs (Status)
+
+2.a Database Schema and Registry Services
+- [x] Migrations (EE): create base tables
+  - [x] `extension_registry`
+  - [x] `extension_version`
+  - [x] `extension_bundle` (includes `precompiled` map)
+  - [x] `tenant_extension_install`
+  - [x] `extension_event_subscription`
+  - [x] `extension_execution_log`
+  - [x] `extension_quota_usage`
+  - [ ] RLS plan and enforcement for tenant-scoped tables
+- [x] Registry service scaffold (`ee/server/src/lib/extensions/registry-v2.ts`).
+- [x] Tenant install service scaffold (`ee/server/src/lib/extensions/install-v2.ts`).
+- [x] Signature verification util (stub) in `server/src/lib/extensions/signing.ts`.
+- [ ] Admin CLI for publish/deprecate/install flows.
+- Details
+  - [x] PK/FK relationships and cascade deletes confirmed in migrations.
+  - [x] Indexes: `execution_log (tenant_id, created_at)`, `event_subscription (tenant_id, topic)`, `tenant_install (tenant_id)`.
+  - [ ] Consider `extension_id` normalization vs. `registry_id` lookups.
+
+2.b Bundle Storage Integration (signing and precompiled)
+- [x] EE S3 provider implemented against MinIO (scaffold).
+- [x] CE bundle helpers added in `server/src/lib/extensions/bundles.ts` (placeholders for EE wiring).
+- [x] Precompiled cwasm support in schema (DB) and manifest; [ ] runtime selection logic in loader.
+- Details
+  - [x] Canonical content-address layout documented.
+  - [ ] Signature format decision and trust bundle format.
+  - [ ] Signature verification: runner mandatory; gateway optional.
+
+2.c Runner Service (Rust + Wasmtime)
+- [x] Runner crate scaffolding: `Cargo.toml`, `src/main.rs`, `src/http/server.rs` (`POST /v1/execute`), `src/models.rs`.
+- [x] Engine/loader/cache modules created (placeholders).
+- Wasmtime configuration
+  - [x] Engine/Config: async enabled, epoch_interruption on
+  - [x] PoolingAllocationConfig with conservative caps
+  - [x] Static/dynamic guard sizes; static max size set
+  - [x] Store limits: custom ResourceLimiter and Store.limiter installed
+  - [x] Timeouts: epoch-based deadline mapped from timeout_ms with background engine.increment_epoch
+  - [ ] Fuel: optional fuel metering toggle and budgeting (currently disabled)
+- Host imports (alga.*)
+  - Logging
+    - [x] alga.log_info(ptr,len)
+    - [x] alga.log_error(ptr,len)
+  - HTTP
+    - [x] alga.http.fetch(req_ptr,req_len,out_ptr) async via reqwest
+    - [x] EXT_EGRESS_ALLOWLIST enforcement (exact/subdomain host match)
+    - [ ] Limits/policy: size/time caps; header allowlist; method/body policy
+  - Storage (KV/doc)
+    - [ ] alga.storage.* (API design + stubs)
+  - Secrets
+    - [ ] alga.secrets.get (API design + stubs)
+  - Metrics/observability
+    - [ ] alga.metrics.* (counters/timers) or host-collected hooks
+- Module fetch/cache from S3
+  - Source
+    - [x] Fetch via BUNDLE_STORE_BASE + content-addressed key
+  - Caching
+    - [x] In-memory per-process cache (HashMap)
+    - [ ] Pod-local LRU with capacity limits (disk/mem)
+  - Integrity
+    - [x] SHA-256 verification against key path (sha256/<hash>/…)
+    - [ ] Signature verification using SIGNING_TRUST_BUNDLE (deferred)
+  - Precompiled
+    - [ ] Precompiled module fetch/use (optional), keyed by hash+target
+- Execute flow
+  - Input handling
+    - [x] Normalize ExecuteRequest → guest input JSON (context + http)
+    - [x] Idempotency cache (in-memory) based on x-idempotency-key
+    - [ ] Additional validation of method/path/header/body limits
+  - Instantiate
+    - [x] Engine/Store with limits + linker imports
+  - ABI call
+    - [x] Require guest exports: memory, alloc, handler(req_ptr, req_len, out_ptr)
+    - [x] Optional dealloc support
+    - [x] Read resp tuple (ptr,len) → bytes
+  - Response
+    - [x] Parse as normalized response JSON {status, headers, body_b64}
+    - [x] Fallback: if not JSON, base64 opaque bytes
+  - Logging/metrics
+    - [x] Start/end logging with request_id, tenant, extension, status
+    - [x] duration_ms, resp_b64_len, configured timeout/mem
+    - [ ] Counters/histograms (egress bytes, status code buckets), per-tenant metrics
+    - [ ] Structured error codes mapping
+- [ ] Errors/tests: standardized error codes + unit/integration tests.
+- [x] Containerization: `ee/runner/Dockerfile` and KService YAML with `/healthz` and `/warmup`.
+- Details
+  - [ ] Observability: tracing fields and metrics; persist execution logs.
+  - [x] Idempotency handling with gateway-provided key.
+
+2.d Next.js API Gateway for Server-Side Handlers
+- [x] Route added: `server/src/app/api/ext/[extensionId]/[...path]/route.ts` (GET/POST/PUT/PATCH/DELETE).
+- [x] Helpers: `auth.ts`, `registry.ts`, `endpoints.ts`, `headers.ts` (scaffolds).
+- [ ] Request policy
+  - [x] Header allowlist (strip `authorization`).
+  - [x] Body size caps.
+  - [x] Timeout via `EXT_GATEWAY_TIMEOUT_MS`.
+- [ ] Proxy and telemetry
+  - [x] Proxy to Runner `/v1/execute` with normalized payload.
+  - [x] Map response back to client.
+  - [ ] Emit telemetry (tracing/metrics).
+- Details
+  - [ ] AuthN/Z: derive tenant from session/API key; enforce RBAC. (Scaffolding present in `server/src/lib/extensions/gateway/auth.ts`; production wiring pending.)
+  - [x] Idempotency key for non-GET; [ ] retry policy (502/503/504 with jitter).
+  - [x] Propagate `x-request-id`; record correlation IDs.
+  - [ ] Normalize `user-agent`.
+  - [x] Resolve `version_id → content_hash` via `extension_bundle` join in gateway helpers (`registry.ts`).
+
+2.e Knative Serving (Runner)
+- [x] KService manifest with autoscaling annotations.
+- [x] `/healthz` and `/warmup` endpoints implemented.
+- [ ] CI/CD step to build/publish runner and smoke-test `/v1/execute`.
+- Details
+  - [ ] Autoscale tuning; resource requests/limits aligned to memory caps.
+  - [ ] Warmup prefetch strategy for hot bundles.
+  - [ ] Rollout notes for revision updates.
+- Runtime Decision: Wasmtime (WASM-only)
+
+## Data Model and Registry (Shared Foundations)
+
+- Consolidates: Data Model (initial) and Public APIs (EE)
+- Used by Phase 1 for read-only UI delivery (install → version → content_hash)
+- Used by Phase 2 for full execution, logging, and quotas
 
 ## Proposed Architecture
 
@@ -108,11 +419,11 @@ WASM-only runner model:
 - Safety: Sanitize path, disallow `..` segments, and restrict to the cached directory. Limit individual file size and total cache size.
 
 ### Knative Serving Profile (initial)
-- Serving only (no Eventing initially). The Runner ships as a Knative Service (KService) to leverage revisioning and concurrency-based autoscaling.
+- Serving only (no Eventing initially). The unified Rust application server ships as a Knative Service (KService) to leverage revisioning and concurrency-based autoscaling. It exposes both /ext-ui (static) and /v1/execute (execute) routes.
 - Autoscaling metric: concurrency. Configure `containerConcurrency` (e.g., 4–16 depending on per-invocation memory) and use the Knative Pod Autoscaler (KPA) with a simple target concurrency (e.g., 10) as a starting point. Final SLOs/policies to be tuned later.
-- Scale policy: keep `minScale` configurable (0 for non-critical, 1+ for production to reduce cold starts). Set `maxScale` to cap cost. Revisions roll out runner code safely; extension versions are handled at the bundle layer, not via Knative revisions.
+- Scale policy: keep `minScale` configurable (0 for non-critical, 1+ for production to reduce cold starts). Set `maxScale` to cap cost. Revisions roll out code safely; extension versions are handled at the bundle layer, not via Knative revisions. Prefer CDN to absorb /ext-ui traffic so autoscaling is driven by execute workloads.
 - Probes and warmup: add a warmup endpoint to prefetch common bundles and initialize Wasmtime; use readiness probes that succeed only after caches are primed if needed.
-- Security: run under a restricted ServiceAccount with egress policies; use Kubernetes secrets for broker credentials and object store credentials.
+- Security: run under a restricted ServiceAccount with egress policies; use Kubernetes secrets for broker credentials and object store credentials. Static routes do not require runner secrets; ensure secret mounts are scoped to execute path usage.
 
 Example KService (abridged):
 ```
@@ -493,164 +804,3 @@ Phase 4 – Migration & Deprecation
 - Which sandbox runtime to standardize on first: WASM (Wasmtime/WASI) vs V8 isolates? Preference: WASM for stronger capability discipline; allow a container tier for heavy/legacy cases.
 - Initial capability set scope: finalize MVP host APIs.
 - Pricing/billing alignment with quotas and egress costs.
-
-## Consolidated TODOs (Status)
-
-This consolidated list supersedes the separate "Phased TODO" and "Detailed Planning" sections. Items are marked complete where scaffolding or implementation exists in this repo.
-
-Phase 0 — Foundations and Switches
-- [x] EE-only wiring: confirm extension init only in EE builds (gated by `isEnterprise` in `initializeApp.ts`).
-- [x] Env/config: add EE `.env.example` with S3, cache, runner, and trust bundle vars.
-- [x] Manifest v2 JSON Schema and example bundle layout under `ee/docs/examples/extension-bundle-v2/`.
-
-Phase 1 — Database Schema and Registry Services
-- [x] Migrations (EE): create base tables
-  - [x] `extension_registry`
-  - [x] `extension_version`
-  - [x] `extension_bundle` (includes `precompiled` map)
-  - [x] `tenant_extension_install`
-  - [x] `extension_event_subscription`
-  - [x] `extension_execution_log`
-  - [x] `extension_quota_usage`
-  - [ ] RLS plan and enforcement for tenant-scoped tables
-- [x] Registry service scaffold (`ee/server/src/lib/extensions/registry-v2.ts`).
-- [x] Tenant install service scaffold (`ee/server/src/lib/extensions/install-v2.ts`).
-- [x] Signature verification util (stub) in `server/src/lib/extensions/signing.ts`.
-- [ ] Admin CLI for publish/deprecate/install flows.
-- Details
-  - [x] PK/FK relationships and cascade deletes confirmed in migrations.
-  - [x] Indexes: `execution_log (tenant_id, created_at)`, `event_subscription (tenant_id, topic)`, `tenant_install (tenant_id)`.
-  - [ ] Consider `extension_id` normalization vs. `registry_id` lookups.
-
-Phase 2 — Bundle Storage Integration
-- [x] EE S3 provider implemented against MinIO (scaffold).
-- [x] CE bundle helpers added in `server/src/lib/extensions/bundles.ts` (placeholders for EE wiring).
-- [x] Precompiled cwasm support in schema (DB) and manifest; [ ] runtime selection logic in loader.
-- Details
-  - [x] Canonical content-address layout documented.
-  - [ ] Hash verification on fetch and before use.
-  - [ ] Signature format decision and trust bundle format.
-  - [ ] Signature verification: runner mandatory; gateway optional.
-
-Phase 3 — Runner Service (Rust + Wasmtime)
-- [x] Runner crate scaffolding: `Cargo.toml`, `src/main.rs`, `src/http/server.rs` (`POST /v1/execute`), `src/models.rs`.
-- [x] Engine/loader/cache modules created (placeholders).
-- Wasmtime configuration
-  - [x] Engine/Config: async enabled, epoch_interruption on
-  - [x] PoolingAllocationConfig with conservative caps
-  - [x] Static/dynamic guard sizes; static max size set
-  - [x] Store limits: custom ResourceLimiter and Store.limiter installed
-  - [x] Timeouts: epoch-based deadline mapped from timeout_ms with background engine.increment_epoch
-  - [ ] Fuel: optional fuel metering toggle and budgeting (currently disabled)
-- Host imports (alga.*)
-  - Logging
-    - [x] alga.log_info(ptr,len)
-    - [x] alga.log_error(ptr,len)
-  - HTTP
-    - [x] alga.http.fetch(req_ptr,req_len,out_ptr) async via reqwest
-    - [x] EXT_EGRESS_ALLOWLIST enforcement (exact/subdomain host match)
-    - [ ] Limits/policy: size/time caps; header allowlist; method/body policy
-  - Storage (KV/doc)
-    - [ ] alga.storage.* (API design + stubs)
-  - Secrets
-    - [ ] alga.secrets.get (API design + stubs)
-  - Metrics/observability
-    - [ ] alga.metrics.* (counters/timers) or host-collected hooks
-- Module fetch/cache from S3
-  - Source
-    - [x] Fetch via BUNDLE_STORE_BASE + content-addressed key
-  - Caching
-    - [x] In-memory per-process cache (HashMap)
-    - [ ] Pod-local LRU with capacity limits (disk/mem)
-  - Integrity
-    - [x] SHA-256 verification against key path (sha256/<hash>/…)
-    - [ ] Signature verification using SIGNING_TRUST_BUNDLE (deferred)
-  - Precompiled
-    - [ ] Precompiled module fetch/use (optional), keyed by hash+target
-- Execute flow
-  - Input handling
-    - [x] Normalize ExecuteRequest → guest input JSON (context + http)
-    - [x] Idempotency cache (in-memory) based on x-idempotency-key
-    - [ ] Additional validation of method/path/header/body limits
-  - Instantiate
-    - [x] Engine/Store with limits + linker imports
-  - ABI call
-    - [x] Require guest exports: memory, alloc, handler(req_ptr, req_len, out_ptr)
-    - [x] Optional dealloc support
-    - [x] Read resp tuple (ptr,len) → bytes
-  - Response
-    - [x] Parse as normalized response JSON {status, headers, body_b64}
-    - [x] Fallback: if not JSON, base64 opaque bytes
-  - Logging/metrics
-    - [x] Start/end logging with request_id, tenant, extension, status
-    - [x] duration_ms, resp_b64_len, configured timeout/mem
-    - [ ] Counters/histograms (egress bytes, status code buckets), per-tenant metrics
-    - [ ] Structured error codes mapping
-- [ ] Errors/tests: standardized error codes + unit/integration tests.
-- [x] Containerization: `ee/runner/Dockerfile` and KService YAML with `/healthz` and `/warmup`.
-- Details
-  - [ ] Observability: tracing fields and metrics; persist execution logs.
-  - [x] Idempotency handling with gateway-provided key.
-
-Phase 4 — Next.js API Gateway for Server-Side Handlers
-- [x] Route added: `server/src/app/api/ext/[extensionId]/[...path]/route.ts` (GET/POST/PUT/PATCH/DELETE).
-- [x] Helpers: `auth.ts`, `registry.ts`, `endpoints.ts`, `headers.ts` (scaffolds).
-- [ ] Request policy
-  - [x] Header allowlist (strip `authorization`).
-  - [x] Body size caps.
-  - [x] Timeout via `EXT_GATEWAY_TIMEOUT_MS`.
-- [ ] Proxy and telemetry
-  - [x] Proxy to Runner `/v1/execute` with normalized payload.
-  - [x] Map response back to client.
-  - [ ] Emit telemetry (tracing/metrics).
-- Details
-  - [ ] AuthN/Z: derive tenant from session/API key; enforce RBAC. (Scaffolding present in `server/src/lib/extensions/gateway/auth.ts`; production wiring pending.)
-  - [x] Idempotency key for non-GET; [ ] retry policy (502/503/504 with jitter).
-  - [x] Propagate `x-request-id`; record correlation IDs.
-  - [ ] Normalize `user-agent`.
-  - [x] Resolve `version_id → content_hash` via `extension_bundle` join in gateway helpers (`registry.ts`).
-
-Phase 5 — Client Asset Fetch-and-Serve (Pod-Local Cache)
-- [x] Route: `server/src/app/ext-ui/[extensionId]/[contentHash]/[...path]/route.ts` (GET).
-- [x] Cache manager: `server/src/lib/extensions/assets/cache.ts` (ensure and basic index write).
-- [x] Static serve: `server/src/lib/extensions/assets/serve.ts` (SPA fallback; sanitize; caching headers).
-- [x] Mime map: `server/src/lib/extensions/assets/mime.ts`.
-- Details
-  - [x] Tar/zip extraction for `ui/**/*`.
-  - [x] LRU index file structure recorded; [x] eviction policy and GC.
-  - [x] ETag generation and conditional GET support.
-  - [x] Locking/concurrency control for first-touch extraction.
-  - [x] Enforce tenant/contentHash match (404 on mismatch) in route handler.
-  - [ ] CSP guidance for iframe pages.
-
-Phase 6 — Client SDK (Iframe)
-- [x] Packages created: `ee/server/packages/extension-iframe-sdk/`, `ee/server/packages/ui-kit/`.
-- SDK files
-  - [x] `src/index.ts`, [x] `src/bridge.ts`, [x] `src/auth.ts`, [x] `src/navigation.ts`, [x] `src/theme.ts`, [x] `src/types.ts`, [x] React hooks (`src/hooks.ts`), [x] README with React example.
-- UI Kit
-  - [x] `src/index.ts`, [x] theme tokens CSS and theming entry, [x] MVP components, [x] hooks, [x] README.
-- Example app
-  - [ ] Vite + TS example (README stub present only).
-- Host bridge bootstrap
-  - [ ] `ee/server/src/lib/extensions/ui/iframeBridge.ts` to inject theme tokens and session.
- - Protocol & security
-   - [ ] Origin validation and sandbox attributes; author docs.
-   - [ ] Message types include `version`.
- - Ergonomics
-   - [x] React hooks: `useBridge`, `useTheme`, `useAuthToken`, `useResize`.
-
-Phase 7 — Knative Serving (Runner)
-- [x] KService manifest with autoscaling annotations.
-- [x] `/healthz` and `/warmup` endpoints implemented.
-- [ ] CI/CD step to build/publish runner and smoke-test `/v1/execute`.
-- Details
-  - [ ] Autoscale tuning; resource requests/limits aligned to memory caps.
-  - [ ] Warmup prefetch strategy for hot bundles.
-  - [ ] Rollout notes for revision updates.
-
-Phase 8 — EE Code Migration (remove legacy paths)
-- [x] Remove/gate legacy filesystem scan loader (`ee/server/src/lib/extensions/initialize.ts`).
-- [x] Remove host-side descriptor rendering/dynamic imports; iframe-only UI.
-- [x] Document CE gating and deprecation notes (`ee/docs/cleanup-notes.md`).
-
-<!-- Consolidated TODOs are canonical. Previous detailed planning content has been removed for clarity. -->
