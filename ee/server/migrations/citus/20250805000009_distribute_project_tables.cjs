@@ -1,6 +1,6 @@
 /**
- * Distribute billing-related tables
- * Dependencies: companies, contacts must be distributed first
+ * Distribute project-related tables
+ * Dependencies: companies must be distributed first
  */
 exports.config = { transaction: false };
 
@@ -17,14 +17,16 @@ exports.up = async function(knex) {
     return;
   }
 
-  console.log('Distributing billing tables...');
+  console.log('Distributing project tables...');
   
   const tables = [
-    'invoices',
-    'invoice_items'
-    // 'payments', // Table doesn't exist yet
-    // 'credits', // Table doesn't exist yet
-    // 'billing_cycles' // Table doesn't exist yet
+    'projects',
+    'project_tasks',
+    'project_task_links',
+    'project_status_mappings',
+    'project_ticket_links',
+    'time_entries',
+    'time_entry_extensions'
   ];
   
   for (const table of tables) {
@@ -62,7 +64,7 @@ exports.up = async function(knex) {
         }
       }
       
-      // Step 2: Drop unique constraints
+      // Step 2: Drop unique constraints with CASCADE
       console.log(`  Dropping unique constraints for ${table}...`);
       const uniqueConstraints = await knex.raw(`
         SELECT conname
@@ -73,7 +75,6 @@ exports.up = async function(knex) {
       
       for (const constraint of uniqueConstraints.rows) {
         try {
-          // Use CASCADE for constraints that might have dependencies
           await knex.raw(`ALTER TABLE ${table} DROP CONSTRAINT ${constraint.conname} CASCADE`);
           console.log(`    ✓ Dropped constraint: ${constraint.conname} with CASCADE`);
         } catch (e) {
@@ -81,7 +82,7 @@ exports.up = async function(knex) {
         }
       }
       
-      // Step 2b: Also handle any check constraints that might block distribution
+      // Step 2b: Drop check constraints
       console.log(`  Dropping check constraints for ${table}...`);
       const checkConstraints = await knex.raw(`
         SELECT conname
@@ -115,36 +116,48 @@ exports.up = async function(knex) {
   console.log('\nRecreating foreign keys between distributed tables...');
   
   try {
-    // invoice_items -> invoices
+    // project_tasks -> projects
     await knex.raw(`
-      ALTER TABLE invoice_items 
-      ADD CONSTRAINT invoice_items_tenant_invoice_id_foreign 
-      FOREIGN KEY (tenant, invoice_id) 
-      REFERENCES invoices(tenant, invoice_id) 
+      ALTER TABLE project_tasks 
+      ADD CONSTRAINT project_tasks_tenant_project_id_foreign 
+      FOREIGN KEY (tenant, project_id) 
+      REFERENCES projects(tenant, project_id) 
       ON DELETE CASCADE
     `);
-    console.log('  ✓ Recreated FK: invoice_items -> invoices');
+    console.log('  ✓ Recreated FK: project_tasks -> projects');
   } catch (e) {
-    console.log(`  - Could not recreate FK invoice_items -> invoices: ${e.message}`);
+    console.log(`  - Could not recreate FK project_tasks -> projects: ${e.message}`);
   }
   
-  // Removed payments FK since table doesn't exist yet
+  try {
+    // time_entries -> project_tasks
+    await knex.raw(`
+      ALTER TABLE time_entries 
+      ADD CONSTRAINT time_entries_tenant_task_id_foreign 
+      FOREIGN KEY (tenant, task_id) 
+      REFERENCES project_tasks(tenant, task_id) 
+      ON DELETE CASCADE
+    `);
+    console.log('  ✓ Recreated FK: time_entries -> project_tasks');
+  } catch (e) {
+    console.log(`  - Could not recreate FK time_entries -> project_tasks: ${e.message}`);
+  }
   
   try {
-    // invoices -> companies
+    // projects -> companies
     await knex.raw(`
-      ALTER TABLE invoices 
-      ADD CONSTRAINT invoices_tenant_company_id_foreign 
+      ALTER TABLE projects 
+      ADD CONSTRAINT projects_tenant_company_id_foreign 
       FOREIGN KEY (tenant, company_id) 
       REFERENCES companies(tenant, company_id) 
       ON DELETE CASCADE
     `);
-    console.log('  ✓ Recreated FK: invoices -> companies');
+    console.log('  ✓ Recreated FK: projects -> companies');
   } catch (e) {
-    console.log(`  - Could not recreate FK invoices -> companies: ${e.message}`);
+    console.log(`  - Could not recreate FK projects -> companies: ${e.message}`);
   }
   
-  console.log('\n✓ All billing tables distributed successfully');
+  console.log('\n✓ All project tables distributed successfully');
 };
 
 exports.down = async function(knex) {
@@ -158,12 +171,16 @@ exports.down = async function(knex) {
     return;
   }
 
-  console.log('Undistributing billing tables...');
+  console.log('Undistributing project tables...');
   
   const tables = [
-    'invoice_items',
-    'invoices'
-    // Removed non-existent tables
+    'time_entry_extensions',
+    'time_entries',
+    'project_task_links',
+    'project_status_mappings',
+    'project_ticket_links',
+    'project_tasks',
+    'projects'
   ];
   
   for (const table of tables) {
