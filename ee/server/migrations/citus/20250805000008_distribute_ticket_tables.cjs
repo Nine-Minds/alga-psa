@@ -100,7 +100,25 @@ exports.up = async function(knex) {
         }
       }
       
-      // Step 3: Distribute the table
+      // Step 3: Drop triggers if any
+      console.log(`  Dropping triggers for ${table}...`);
+      const triggers = await knex.raw(`
+        SELECT tgname
+        FROM pg_trigger
+        WHERE tgrelid = '${table}'::regclass
+        AND tgisinternal = false
+      `);
+      
+      for (const trigger of triggers.rows) {
+        try {
+          await knex.raw(`DROP TRIGGER IF EXISTS ${trigger.tgname} ON ${table}`);
+          console.log(`    ✓ Dropped trigger: ${trigger.tgname}`);
+        } catch (e) {
+          console.log(`    - Could not drop trigger ${trigger.tgname}: ${e.message}`);
+        }
+      }
+      
+      // Step 4: Distribute the table
       console.log(`  Distributing ${table}...`);
       await knex.raw(`SELECT create_distributed_table('${table}', 'tenant', colocate_with => 'tenants')`);
       console.log(`    ✓ Distributed ${table}`);
