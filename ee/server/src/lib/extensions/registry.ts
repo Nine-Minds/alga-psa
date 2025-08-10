@@ -15,7 +15,7 @@ import {
   ExtensionInitOptions,
   ExtensionRegistry as IExtensionRegistry
 } from './types';
-import { validateManifest } from './validator';
+import { validateManifestV2 } from './schemas/manifest-v2.schema';
 import {
   ExtensionError,
   ExtensionNotFoundError,
@@ -44,12 +44,12 @@ export class ExtensionRegistry implements IExtensionRegistry {
     manifest: ExtensionManifest,
     options: ExtensionInitOptions
   ): Promise<Extension> {
-    // Validate the manifest
-    const validationResult = validateManifest(manifest);
-    if (!validationResult.isValid) {
+    // Validate against Manifest v2
+    const v2 = validateManifestV2(manifest);
+    if (!v2.valid) {
       throw new ExtensionValidationError(
-        'Invalid extension manifest',
-        validationResult.errors
+        'Invalid extension manifest (v2)',
+        (v2.errors || []).map((msg) => ({ path: '', message: msg }))
       );
     }
 

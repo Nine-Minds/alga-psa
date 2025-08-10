@@ -1,11 +1,11 @@
-# Extension System Implementation Plan (Multi‑Tenant Overhaul)
+# Extension System Implementation Plan (Enterprise v2)
 
-This implementation plan aligns with the multi‑tenant overhaul and replaces prior 80/20, in‑process designs.
+This plan specifies the v2 Enterprise extension architecture: out-of-process execution in the Runner, signed/content-addressed bundles, a Next.js API Gateway proxying to Runner /v1/execute, and iframe-only UI served by the Runner.
 
 ## Phase 0 — Foundations and Switches
-- EE‑only wiring: ensure extension code paths are included only in enterprise builds
-- Env/config for MinIO/object store, cache root, gateway timeout, and Runner base URL
-- Draft Manifest v2 schema and example bundle layout
+- EE-only wiring: ensure extension code paths are included only in enterprise builds
+- Env/config for object store, gateway timeout, Runner base/public URL, and trust bundle
+- Finalize Manifest v2 schema and example bundle layout
 
 ## Phase 1 — Database Schema and Registry Services
 - Add EE migrations:
@@ -18,53 +18,54 @@ This implementation plan aligns with the multi‑tenant overhaul and replaces pr
 - Implement signature verification utility (trust bundle)
 
 ## Phase 2 — Bundle Storage Integration
-- Use S3‑compatible storage provider against MinIO
+- Use S3‑compatible storage provider (e.g., MinIO)
 - Implement bundle helpers: `getBundleStream`, `getBundleIndex`, `extractSubtree` for `dist/` and `ui/`
 - Support optional precompiled artifacts (cwasm) indexed by target triple
 
 ## Phase 3 — Runner Service (Rust + Wasmtime)
-- Scaffold runner crate and HTTP API `POST /v1/execute`
+- Runner HTTP API: POST /v1/execute
 - Configure Wasmtime (pooling allocator, store limits, epoch timeouts, optional fuel)
 - Implement host imports: `alga.storage.*`, `alga.http.fetch`, `alga.secrets.get`, `alga.log.*`, `alga.metrics.emit`
-- Fetch/verify/cache modules by `content_hash`; LRU under `EXT_CACHE_ROOT`
-- Return normalized `{status, headers, body_b64}` with standardized error codes; add tests
+- Fetch/verify/cache modules by `content_hash`; LRU policy
+- Return normalized `{status, headers, body_b64}` with standardized error codes and traces
 
 ## Phase 4 — Next.js API Gateway
-- Add route: `server/src/app/api/ext/[extensionId]/[...path]/route.ts`
+- Add route scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
 - Implement helpers: auth/tenant, registry resolution, endpoint matching, header filtering
-- Proxy to Runner `/v1/execute` with service token, timeouts, retries; enforce quotas and size caps
+- Proxy to Runner `POST ${RUNNER_BASE_URL}/v1/execute` with service token, timeouts, limited retries
+- Enforce quotas and body/header size caps via configuration (`EXT_GATEWAY_TIMEOUT_MS`, etc.)
 
-## Phase 5 — Client Asset Fetch‑and‑Serve (Pod‑Local Cache)
-- Add route: `server/src/app/ext-ui/[extensionId]/[contentHash]/[...path]/route.ts`
-- Implement cache manager: ensure `<EXT_CACHE_ROOT>/<contentHash>/ui/**/*` exists; LRU index; eviction policy
-- Implement static serving with SPA fallback, ETag/immutable cache headers, and safe MIME mapping
+## Phase 5 — Runner Static UI Hosting
+- Serve iframe UI assets from Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`
+- Immutable caching (ETag + `Cache-Control: immutable`)
+- Runner-managed cache for `ui/**/*` by `content_hash`
+- Host constructs iframe URL using [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38) and bootstraps via [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45)
 
 ## Phase 6 — Client SDK and UI Kit
-- Create packages:
-  - `@alga/extension-iframe-sdk` (handshake, postMessage bridge, auth, navigation, theme)
+- Packages:
+  - `@alga/extension-iframe-sdk` (handshake, postMessage, auth, navigation, theme)
   - `@alga/ui-kit` (components, tokens, hooks)
-- Provide starter React app template using SDK and UI kit
-- Implement host bridge bootstrap to inject theme tokens/session
+- Provide starter React template using SDK and UI kit
+- Implement host bridge bootstrap with theme tokens/session propagation
 
 ## Phase 7 — Knative Serving (Runner)
-- KService manifest with concurrency/scale annotations; health and warmup endpoints
+- KService manifest with concurrency/scale bounds; health and warmup endpoints
 - CI/CD step to deploy Runner revision and smoke test `/v1/execute`
 
-## Phase 8 — EE Code Migration (remove legacy paths)
-- Remove filesystem scans and dynamic imports
-- Replace upload flows with “Install from Registry”
-- Update settings/details pages for per‑tenant installs, versions, and capabilities; add “Open Extension” (iframe) links
+## Phase 8 — Admin UX and Install Flows
+- Admin UI for per‑tenant installs, versions, and capability grants
+- “Open Extension” navigates to iframe app constructed from Runner public base and the installed version’s `content_hash`
 
 ## Phase 9 — Security, Quotas, Policy
-- Enforce capability grants; block host imports when missing
-- Implement per‑tenant egress allowlists for `http.fetch`
-- Integrate secrets manager; rotate tokens
-- Add per‑tenant/per‑extension quotas and rate limits
+- Enforce capability grants; deny host imports when missing
+- Per‑tenant egress allowlists for `http.fetch`
+- Integrate secrets manager; enforce rotation policies
+- Configure per‑tenant/per‑extension quotas and rate limits
 
 ## Phase 10 — Observability and Ops
 - Structured execution logs with correlation IDs; persist to DB
-- Prometheus metrics from Runner (duration, memory, fuel, egress bytes, errors)
-- Dashboards and alerts for failure rates, timeouts, and resource breaches
+- Prometheus metrics from Runner: duration, memory, fuel, egress bytes, errors
+- Dashboards and alerts for failure rates, timeouts, resource breaches
 
 ## Phase 11 — Docs, Samples, Pilot
 - Developer docs for manifest, building, publishing, installing, and iframe development
@@ -72,13 +73,15 @@ This implementation plan aligns with the multi‑tenant overhaul and replaces pr
 - Pilot with a partner tenant; validate SLOs and collect feedback
 
 ## Acceptance Criteria (Milestones)
-- M1: Registry + Bundle Store + Signing in place; install signed bundles
+- M1: Registry + Bundle Store + Signing operational; can install signed bundles
 - M2: Runner executes hello‑world with quotas/timeouts and audit logs
-- M3: Client SDK (iframe) + asset serving operational; CSP enforced
-- M4: First partner extension migrated end‑to‑end
+- M3: Client SDK (iframe) + Runner UI hosting operational; CSP and sandbox enforced
+- M4: First partner extension on v2 end‑to‑end
 
-## Backwards Compatibility
-- Temporary proxying of legacy external HTTP integrations via Runner where needed
-- Provide adapter library for repackaging common patterns into bundles
-
-For technical details see: [Overview](overview.md), [API Routing Guide](api-routing-guide.md), [Security & Signing](security_signing.md), and [Registry Implementation](registry_implementation.md).
+## References
+- Overview: [overview.md](overview.md)
+- Routing: [api-routing-guide.md](api-routing-guide.md)
+- Security & Signing: [security_signing.md](security_signing.md)
+- Registry: [registry_implementation.md](registry_implementation.md)
+- Gateway route scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
+- Iframe bootstrap and src builder: [ee/server/src/lib/extensions/ui/iframeBridge.ts](ee/server/src/lib/extensions/ui/iframeBridge.ts:38)

@@ -1,11 +1,12 @@
 # Extension API Routing Guide (Gateway → Runner)
 
-This guide describes the extension API gateway pattern used to route tenant requests to out‑of‑process extension handlers executed by the Runner service.
+This guide specifies the v2-only extension API gateway pattern used to route tenant requests to out-of-process extension handlers executed by the Runner service.
 
 Key points:
-- Route pattern: `/api/ext/[extensionId]/[...]`
+- Route pattern: `/api/ext/[extensionId]/[...path]`
 - Resolve tenant install → version → content_hash → manifest endpoint mapping
-- Proxy to Runner `POST /v1/execute` with strict header and size policies
+- Proxy to Runner `POST /v1/execute` with strict header and size/time policies
+- Reference gateway scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
 
 ## Route Structure
 
@@ -140,8 +141,8 @@ Response allowlist:
 - Integration‑test end‑to‑end proxy behavior and error mapping
 - Inject fake Runner responses to validate header/body handling and timeouts
 
-## Migration Notes
+## Related References
 
-- Legacy routes under `/api/extensions/[extensionId]/...` and descriptor‑driven substitutions are deprecated
-- Update clients to call `/api/ext/[extensionId]/...`; any dynamic code loading into the host is disallowed
-- Endpoints must be declared in Manifest v2 (`api.endpoints`) and executed via the Runner
+- Gateway route scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
+- Runner execution API: `POST /v1/execute` (see Runner responsibilities in [runner.md](runner.md))
+- Registry v2 integration for resolution: [ExtensionRegistryServiceV2](ee/server/src/lib/extensions/registry-v2.ts:48)

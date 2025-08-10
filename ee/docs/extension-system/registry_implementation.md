@@ -1,6 +1,6 @@
 # Extension Registry Implementation (v2)
 
-The registry catalogs extensions, versions, and bundles and tracks per‑tenant installs with granted capabilities and configuration.
+The registry catalogs extensions, versions, and bundles and tracks per‑tenant installs with granted capabilities and configuration. This is the authoritative source for manifest resolution, content hashes, signatures, and install state in the v2 architecture.
 
 ## Data Model (Initial)
 
@@ -50,6 +50,8 @@ Tenant isolation enforced via RLS and query predicates.
   3. Load manifest for that version and match endpoint `{method, path}`
   4. Call Runner `/v1/execute` with normalized request
 
+Gateway scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
+
 ## Observability
 
 - Execution logs persisted to `extension_execution_log` with correlation IDs
@@ -62,9 +64,9 @@ Tenant isolation enforced via RLS and query predicates.
 - Secrets retrieved via secret manager handles (no plaintext storage)
 - Quotas enforced at gateway and Runner
 
-## Migration Notes
+## References
 
-- Filesystem scans and dynamic imports are removed
-- Install/update flows operate on signed bundles from registry
-
-See also: [Manifest v2](manifest_schema.md), [API Routing Guide](api-routing-guide.md), [Security & Signing](security_signing.md).
+- [Manifest v2](manifest_schema.md)
+- [API Routing Guide](api-routing-guide.md)
+- [Security & Signing](security_signing.md)
+- Registry v2 service scaffold: [ExtensionRegistryServiceV2](ee/server/src/lib/extensions/registry-v2.ts:48)

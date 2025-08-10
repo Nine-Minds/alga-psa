@@ -1,0 +1,35 @@
+name: ext-v2 guardrails
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+
+jobs:
+  guardrails:
+    name: Run ext-v2 guard and ESLint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run legacy extension grep guard
+        run: npm run guard:ext-v2
+
+      - name: Run ESLint
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
+        run: npm run lint

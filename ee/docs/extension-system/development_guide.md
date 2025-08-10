@@ -1,15 +1,25 @@
 # Alga PSA Extension Development Guide (Runner + Iframe UI)
 
-This guide explains how to build Enterprise Edition extensions for Alga PSA using the new multi‑tenant architecture:
-- Server‑side handlers executed by an out‑of‑process Runner (WASM first)
-- UI rendered exclusively via sandboxed iframes
-- Signed, content‑addressed bundles with Manifest v2
+This guide describes how to build Enterprise Edition (v2) extensions for Alga PSA:
+- Server-side handlers execute out-of-process in the Runner (WASM-first)
+- UI is rendered exclusively in sandboxed iframes
+- Bundles are signed and content-addressed (sha256:...) and validated by the Registry
+
+Core rules:
+- All HTTP calls use the Gateway route: `/api/ext/[extensionId]/[...path]`, which proxies to Runner `POST /v1/execute`
+- UI assets are served by the Runner only at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`
+- Iframe src is constructed by [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38) and initialized via [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45)
+
+Reference gateway scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
 
 ## Prerequisites
 
 - Node.js 18+
-- Rust toolchain (for Runner‑targeted modules where applicable) or AssemblyScript toolchain
-- Familiarity with TypeScript, React (for UI), and basic security best practices
+- WASM toolchain:
+  - AssemblyScript or Rust targeting WASI-compatible WASM
+- Familiarity with:
+  - TypeScript, React (for UI)
+  - Security best practices and least-privilege design
 
 ## Project Layout (Example)
 
@@ -43,11 +53,8 @@ See [Manifest Schema](manifest_schema.md) for full details.
   "publisher": "Acme Inc.",
   "version": "1.0.0",
   "runtime": "wasm-js@1",
-  "capabilities": ["http.fetch", "storage.kv"],
-  "ui": {
-    "type": "iframe",
-    "entry": "ui/index.html"
-  },
+  "capabilities": ["http.fetch", "storage.kv", "secrets.get"],
+  "ui": { "type": "iframe", "entry": "ui/index.html" },
   "api": {
     "endpoints": [
       { "method": "GET", "path": "/agreements", "handler": "dist/handlers/http/list_agreements" },
@@ -58,32 +65,42 @@ See [Manifest Schema](manifest_schema.md) for full details.
 }
 ```
 
+Key points:
+- ui.entry points to your iframe HTML within the bundle
+- api.endpoints define the HTTP surface area your extension exposes via the Gateway
+- capabilities request access to host features and are granted at install time
+
 ## Building Server Handlers (WASM)
 
-- Author handlers in AssemblyScript or Rust targeting WASI‑compatible WASM
-- Use the Host API types to call `storage`, `http.fetch`, `secrets`, `log`, `metrics`
+- Author handlers in AssemblyScript or Rust targeting WASI-compatible WASM
+- Use host APIs (capability-scoped) to perform work:
+  - storage.kv, http.fetch, secrets.get, log, metrics
 
-Handler shape (conceptual):
+Conceptual handler shape:
 ```ts
 export async function list_agreements(ctx) {
-  const items = await ctx.storage.list({ namespace: 'agreements' });
+  const items = await ctx.storage.list({ namespace: "agreements" });
   return {
     status: 200,
-    headers: { 'content-type': 'application/json' },
+    headers: { "content-type": "application/json" },
     body: { data: items }
   };
 }
 ```
 
-Compile steps depend on the chosen language; your CI should produce `dist/main.wasm` and any additional handler modules.
+CI should produce `dist/main.wasm` and any handler modules referenced by `api.endpoints.handler`.
 
 ## Building the Iframe UI
 
 - Use the provided SDKs:
   - `@alga/extension-iframe-sdk` for host communication (auth, theme, navigation)
   - `@alga/ui-kit` for accessible, consistent components
+- Iframe bootstrap and URL construction are handled by the host via:
+  - [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38)
+  - [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45)
+- UI assets are served by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]` with immutable caching
 
-Fetching via the gateway:
+Fetching via the Gateway from your UI:
 ```ts
 const url = `/api/ext/${context.extensionId}/agreements`;
 const res = await fetch(url, { headers: context.authHeaders });
@@ -92,47 +109,50 @@ const data = await res.json();
 
 ## Signing and Packaging
 
-- Produce a content‑addressed bundle:
-  - Include `manifest.json`, WASM artifacts under `dist/`, UI assets under `ui/`, and optional precompiled artifacts
-- Generate a SHA256 of the canonical bundle, sign it with your developer certificate, and include `SIGNATURE`
-- CI should output an artifact ready for publish (e.g., `bundle.tar.zst`)
+- Produce a content-addressed bundle including:
+  - `manifest.json`
+  - WASM artifacts under `dist/`
+  - UI assets under `ui/`
+  - Optional precompiled artifacts (cwasm) under `precompiled/`
+- Generate a SHA256 for the canonical bundle; sign with your publisher certificate; include `SIGNATURE`
+- CI outputs an artifact ready for publish (e.g., `bundle.tar.zst`)
 
-See [Security & Signing](security_signing.md) for details.
+See [Security & Signing](security_signing.md).
 
 ## Publish and Install
 
 - Publish the bundle and metadata to the Registry
-- Admin installs a specific version for a tenant and grants capabilities
-- No code is uploaded to the app server filesystem
+- Admin installs a version for a tenant and grants capabilities
+- The app server does not store or execute tenant code; bundles are verified and referenced via `content_hash`
 
 ## Calling Your Handlers (Gateway)
 
-- The host exposes `/api/ext/[extensionId]/[...path]`
-- Endpoints must be declared in your manifest and will be resolved at runtime
-- The gateway proxies to Runner `/v1/execute` under strict header/time/size policies
+- Host exposes `/api/ext/[extensionId]/[...path]`
+- Endpoints must be declared in your manifest
+- Gateway resolves install → version → endpoint and calls Runner `POST /v1/execute`
+- Header/time/size policies are enforced by the Gateway and Runner
+
+Reference route scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
 
 ## Local Development Tips
 
-- Stub handlers in a local Runner or use mock responses while building UI
-- Keep UI bundles small; use code splitting where appropriate
-- Use the SDK’s theme APIs to adapt to host styling
+- Use a local Runner or mock responses while iterating on UI
+- Keep UI bundles small; leverage code splitting where appropriate
+- Use the iframe SDK’s theme APIs to adapt to host styling
+- Validate endpoint inputs/outputs and include clear error responses
 
 ## Best Practices
 
-- Principle of least privilege: request only needed capabilities
-- Validate and bound inputs; design clear error responses
-- Avoid large responses; paginate and filter on server side
-- Emit structured logs and metrics via the Host API
-
-## Migration Notes (Legacy → New)
-
-- Descriptor rendering inside host is deprecated; build iframe UI instead
-- Replace `/api/extensions/...` with `/api/ext/...`
-- Publish signed bundles; do not upload code to the server
+- Least privilege: request only necessary capabilities
+- Input validation and resource bounds: avoid large responses; paginate/filter server-side
+- Emit structured logs/metrics via Host API to support observability
+- Prefer deterministic builds; maintain SBOMs; update dependencies proactively
 
 ## References
 
 - [Manifest Schema](manifest_schema.md)
 - [API Routing Guide](api-routing-guide.md)
 - [Security & Signing](security_signing.md)
+- [Runner](runner.md)
 - [Sample Extension](sample_template.md)
+- Iframe bootstrap and src builder: [ee/server/src/lib/extensions/ui/iframeBridge.ts](ee/server/src/lib/extensions/ui/iframeBridge.ts:38)

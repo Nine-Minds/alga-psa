@@ -1,23 +1,39 @@
-# Descriptor Architecture Implementation Plan (Deprecated)
+# Enterprise Extension System v2 — Final Outcomes and References
 
-This document previously outlined a path to a descriptor‑based, in‑process extension model. As of Aug 2025, that approach is deprecated in favor of the Multi‑Tenancy Overhaul:
+This document presents the v2-only extension model and points to the canonical specifications and guides. It supersedes any prior plans or notes that explored descriptor-based or in‑process rendering models.
 
-- Out‑of‑process Runner (Rust + Wasmtime)
-- Signed, content‑addressed bundles in object storage
-- Gateway proxy at `/api/ext/[extensionId]/[...]`
-- Iframe‑only UI using the Client SDK and UI kit
+## v2 Architecture Outcomes
 
-Please refer to the following documents for the authoritative plan and technical details:
-- [Implementation Plan](implementation_plan.md) — phase breakdown and acceptance criteria
-- [Overview](overview.md) — architecture and components
-- [Manifest Schema](manifest_schema.md) — Manifest v2 surface (endpoints, ui, capabilities)
-- [Security & Signing](security_signing.md) — signing, verification, quotas, egress policy
+- Out-of-process execution in a dedicated Runner (Rust + Wasmtime), with strict isolation, quotas, and capability-scoped Host APIs.
+- Signed, content-addressed bundles (sha256:...) verified on publish/install and on load, with provenance tracked in the Registry.
+- API Gateway route `/api/ext/[extensionId]/[...path]` that resolves manifest endpoints and proxies to Runner `POST /v1/execute` with strict header/size/time policies.
+- UI delivered exclusively via sandboxed iframes; static assets are served by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`.
+- No dynamic import of tenant code in the host; no in‑process execution of tenant UI.
 
-## Migration Mapping (Legacy → New)
+## Authoring Model
 
-- Descriptor rendering in host → Iframe apps using `@alga/extension-iframe-sdk`
-- Dynamic import of tenant JS → No in‑process imports; Runner executes handlers
-- `/api/extensions/...` routes → `/api/ext/[extensionId]/[...]` via gateway
-- Upload to filesystem → Publish signed bundles to registry; install by version
+- Manifest v2 is authoritative:
+  - runtime, capabilities, api.endpoints, ui.iframe entry, precompiled artifacts, assets.
+- Server handlers target the Runner; UI apps run in iframes and use the extension SDK and UI kit.
+- Bundles are immutable and content-addressed; signatures are validated against a trust bundle.
 
-This file is retained for historical context only and will be removed after migration is complete.
+## Integration Points (clickable references)
+
+- Gateway route scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
+- Iframe URL builder and bootstrap: [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38), [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45)
+- Registry v2 service scaffold: [ExtensionRegistryServiceV2](ee/server/src/lib/extensions/registry-v2.ts:48)
+
+## Canonical Docs
+
+- Architecture overview and goals: [overview.md](overview.md)
+- API routing specifics: [api-routing-guide.md](api-routing-guide.md)
+- Manifest v2 schema: [manifest_schema.md](manifest_schema.md)
+- Security and signing model: [security_signing.md](security_signing.md)
+- Runner responsibilities and configuration: [runner.md](runner.md)
+- Development workflow and examples: [development_guide.md](development_guide.md), [sample_template.md](sample_template.md)
+
+## Operational Rules
+
+- All extension HTTP calls traverse `/api/ext/[extensionId]/[...]` and are proxied to the Runner `POST /v1/execute`.
+- UI assets are served by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]` (no Next.js route for ext-ui).
+- The host constructs iframe src via [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38) and initializes via [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45).

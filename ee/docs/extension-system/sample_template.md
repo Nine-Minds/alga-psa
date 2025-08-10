@@ -1,9 +1,15 @@
 # Sample Extension Template (Runner + Iframe UI)
 
-This template outlines a minimal extension composed of:
+This template outlines a minimal v2 extension composed of:
 - Server handlers compiled to WASM and executed by the Runner
 - An iframe UI built with React using the Alga UI kit and SDK
 - A Manifest v2 that declares endpoints and the UI entry
+
+Core rules:
+- All server calls go through the Gateway: `/api/ext/[extensionId]/[...path]` → Runner `POST /v1/execute`
+- UI assets are served by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`
+- Iframe src is constructed via [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38) and initialized with [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45)
+- Gateway scaffold reference: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
 
 ## File Structure
 
@@ -94,20 +100,27 @@ createRoot(document.getElementById('root')!).render(
 ## Packaging & Signing
 
 - Produce bundle with `manifest.json`, WASM artifacts under `dist/`, UI assets under `ui/`
-- Compute SHA256 over canonical bundle
+- Compute SHA256 over the canonical bundle
 - Sign using your publisher certificate; write `SIGNATURE`
 - Publish to the Registry (CI step)
+
+See: [security_signing.md](security_signing.md)
 
 ## Install & Use
 
 - Tenant admin installs a specific version and grants capabilities
-- UI entry can be opened at `/ext-ui/{extensionId}/{content_hash}/index.html`
-- Client and internal code call handlers via `/api/ext/{extensionId}/...`
+- UI entry is served by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/index.html`
+- Client/UI code calls handlers via `/api/ext/{extensionId}/...` (Gateway proxies to Runner)
 
 ## Notes
 
-- Do not rely on server filesystem paths; all artifacts are loaded from object storage by content hash
+- Do not rely on server filesystem paths; artifacts are fetched by content hash
 - Keep responses small; paginate lists
-- Use the SDK‑provided headers for authentication; do not forward end‑user tokens
+- Use SDK‑provided headers for authentication; do not forward end‑user tokens
+- Validate inputs; return structured errors
 
-See also: [Development Guide](development_guide.md), [Manifest v2](manifest_schema.md), and [API Routing Guide](api-routing-guide.md).
+Related references:
+- Gateway route scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
+- Iframe bridge: [ee/server/src/lib/extensions/ui/iframeBridge.ts](ee/server/src/lib/extensions/ui/iframeBridge.ts:38)
+- Runner overview: [runner.md](runner.md)
+- Manifest schema: [manifest_schema.md](manifest_schema.md)
