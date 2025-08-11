@@ -151,14 +151,6 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
                     align="end"
                   >
                       <DropdownMenu.Item
-                        id="account-nav-item"
-                        className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer"
-                        onSelect={() => router.push('/client-portal/account')}
-                      >
-                        <User className="mr-2 h-3.5 w-3.5" />
-                        <span>Account</span>
-                      </DropdownMenu.Item>
-                      <DropdownMenu.Item
                         className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer"
                         onSelect={() => router.push('/client-portal/profile')}
                       >
