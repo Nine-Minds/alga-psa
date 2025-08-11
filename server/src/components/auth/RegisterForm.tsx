@@ -84,11 +84,11 @@ export default function RegisterForm() {
             email_domain: email.split('@')[1]
           });
         } else {
-          // Allow any email to register - no domain restrictions
-          setShowNameFields(true);
-          setEmailStatus('valid');
-          posthog?.capture('registration_email_verified', {
-            verification_type: 'new_registration',
+          // Registration only allowed for existing contacts
+          setShowNameFields(false);
+          setEmailStatus('invalid');
+          posthog?.capture('registration_email_rejected', {
+            rejection_reason: 'not_a_contact',
             email_domain: email.split('@')[1]
           });
         }
@@ -110,6 +110,7 @@ export default function RegisterForm() {
     const validationErrors = [];
     if (!email.trim()) validationErrors.push('Email');
     if (!email.includes('@')) validationErrors.push('Valid email address');
+    if (emailStatus !== 'valid') validationErrors.push('Verified contact email');
     if (!password.trim()) validationErrors.push('Password');
     if (passwordStrength === 'weak') validationErrors.push('Stronger password');
     if (showNameFields && !firstName.trim()) validationErrors.push('First Name');
@@ -220,12 +221,12 @@ export default function RegisterForm() {
           )}
           {emailStatus === 'invalid' && (
             <p className="text-red-500">
-              This email domain is not authorized for registration
+              Registration is only available for existing contacts. Please contact your administrator.
             </p>
           )}
-          {emailStatus === 'valid' && showNameFields && (
+          {emailStatus === 'valid' && !showNameFields && (
             <p className="text-green-500">
-              Email domain verified. Please provide your details.
+              Contact verified. Please create your password.
             </p>
           )}
         </div>
