@@ -19,33 +19,43 @@ exports.up = async function up(knex) {
   // 1) extension_registry
   const hasExtReg = await knex.schema.hasTable('extension_registry');
   if (hasExtReg) {
-    await knex.schema.alterTable('extension_registry', (t) => {
-      // Ensure an index for (publisher, name)
-      t.index(['publisher', 'name'], 'extension_registry_publisher_name_idx');
-      // Make timestamps default NOT NULL if possible (best-effort)
-    });
-    // Prefer DB default UUID (optional; if extension is available)
-    try {
-      await knex.raw(`
-        ALTER TABLE extension_registry
-        ALTER COLUMN id SET DEFAULT gen_random_uuid()
-      `);
-    } catch (_e) {
-      // gen_random_uuid might not be available; ignore
-    }
-    // Ensure timestamps are NOT NULL with default
-    try {
-      await knex.raw(`
-        ALTER TABLE extension_registry
-        ALTER COLUMN created_at SET DEFAULT now()
-      `);
-      await knex.raw(`
-        ALTER TABLE extension_registry
-        ALTER COLUMN updated_at SET DEFAULT now()
-      `);
-    } catch (_e) {
-      // ignore
-    }
+    // Ensure an index for (publisher, name)
+    await knex.raw(
+      `CREATE INDEX IF NOT EXISTS extension_registry_publisher_name_idx ON extension_registry (publisher, name)`
+    );
+    // Prefer DB default UUID if gen_random_uuid is available
+    await knex.raw(`
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM pg_proc p
+          JOIN pg_namespace n ON n.oid = p.pronamespace
+          WHERE p.proname = 'gen_random_uuid' AND n.nspname IN ('pgcrypto','public')
+        ) THEN
+          EXECUTE 'ALTER TABLE extension_registry ALTER COLUMN id SET DEFAULT gen_random_uuid()';
+        END IF;
+      END
+      $$;
+    `);
+    // Ensure timestamps have defaults if columns exist
+    await knex.raw(`
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'extension_registry' AND column_name = 'created_at'
+        ) THEN
+          EXECUTE 'ALTER TABLE extension_registry ALTER COLUMN created_at SET DEFAULT now()';
+        END IF;
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'extension_registry' AND column_name = 'updated_at'
+        ) THEN
+          EXECUTE 'ALTER TABLE extension_registry ALTER COLUMN updated_at SET DEFAULT now()';
+        END IF;
+      END
+      $$;
+    `);
   }
 
   // 2) extension_version
@@ -74,19 +84,23 @@ exports.up = async function up(knex) {
         await knex.raw(`UPDATE extension_version SET api_endpoints = '[]'::jsonb`);
       }
     }
-    // Ensure capabilities is jsonb default '[]'
-    try {
-      await knex.raw(`
-        ALTER TABLE extension_version
-        ALTER COLUMN capabilities SET DEFAULT '[]'::jsonb
-      `);
-    } catch (_e) {
-      // ignore
-    }
+    // Ensure capabilities is jsonb default '[]' if column exists
+    await knex.raw(`
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'extension_version' AND column_name = 'capabilities'
+        ) THEN
+          EXECUTE 'ALTER TABLE extension_version ALTER COLUMN capabilities SET DEFAULT ''[]''::jsonb';
+        END IF;
+      END
+      $$;
+    `);
     // Index for (registry_id, version)
-    await knex.schema.alterTable('extension_version', (t) => {
-      t.index(['registry_id', 'version'], 'extension_version_registry_version_idx');
-    });
+    await knex.raw(
+      `CREATE INDEX IF NOT EXISTS extension_version_registry_version_idx ON extension_version (registry_id, version)`
+    );
   }
 
   // 3) extension_bundle
@@ -105,9 +119,9 @@ exports.up = async function up(knex) {
         t.bigInteger('size_bytes').defaultTo(null);
       });
     }
-    await knex.schema.alterTable('extension_bundle', (t) => {
-      t.index(['content_hash'], 'extension_bundle_content_hash_idx');
-    });
+    await knex.raw(
+      `CREATE INDEX IF NOT EXISTS extension_bundle_content_hash_idx ON extension_bundle (content_hash)`
+    );
   }
 
   // 4) tenant_extension_install
@@ -138,16 +152,18 @@ exports.up = async function up(knex) {
       await knex.schema.alterTable('tenant_extension_install', (t) => {
         t.text('status').notNullable().defaultTo('enabled');
       });
-      // Add check constraint for status (enabled|disabled|pending)
-      try {
-        await knex.raw(`
-          ALTER TABLE tenant_extension_install
-          ADD CONSTRAINT tenant_extension_install_status_chk
-          CHECK (status IN ('enabled','disabled','pending'))
-        `);
-      } catch (_e) {
-        // constraint may already exist
-      }
+      // Add check constraint for status (enabled|disabled|pending) only if missing
+      await knex.raw(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint WHERE conname = 'tenant_extension_install_status_chk'
+          ) THEN
+            EXECUTE 'ALTER TABLE tenant_extension_install ADD CONSTRAINT tenant_extension_install_status_chk CHECK (status IN (''enabled'',''disabled'',''pending''))';
+          END IF;
+        END
+        $$;
+      `);
     }
     // Ensure is_enabled exists and is boolean not null default true
     const hasIsEnabled = await knex.schema.hasColumn('tenant_extension_install', 'is_enabled');
@@ -157,9 +173,9 @@ exports.up = async function up(knex) {
       });
     }
     // Ensure index for (tenant_id, registry_id)
-    await knex.schema.alterTable('tenant_extension_install', (t) => {
-      t.index(['tenant_id', 'registry_id'], 'tenant_extension_install_tenant_registry_idx');
-    });
+    await knex.raw(
+      `CREATE INDEX IF NOT EXISTS tenant_extension_install_tenant_registry_idx ON tenant_extension_install (tenant_id, registry_id)`
+    );
   }
 
   // 5) extension_execution_log (recreate to match spec; preserve old as *_old)
