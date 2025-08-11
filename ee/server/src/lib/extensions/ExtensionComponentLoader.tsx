@@ -15,8 +15,9 @@ export const DynamicExtensionsComponent = dynamic<ExtensionsProps>(
 );
 
 export const DynamicInstallExtensionComponent = dynamic<ExtensionsProps>(
-  () => import('@ee/components/settings/extensions/InstallExtensionSimple').then(mod => mod.default),
-  { 
+  // Use EE Installer Panel that conforms to Server UI standards
+  () => import('@ee/components/settings/extensions/InstallerPanel').then(mod => mod.default as any),
+  {
     ssr: false,
     loading: () => <div>Loading...</div>
   }

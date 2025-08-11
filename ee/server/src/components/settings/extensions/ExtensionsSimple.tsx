@@ -116,15 +116,6 @@ export default function Extensions() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold text-gray-900">Extensions</h2>
-        <Link
-          href="/msp/settings/extensions/install"
-          className="px-4 py-2 bg-blue-600 text-white rounded-md flex items-center gap-2 hover:bg-blue-700 transition-colors"
-        >
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          <span>Add Extension</span>
-        </Link>
       </div>
       
       {loading && (
@@ -154,15 +145,6 @@ export default function Extensions() {
           <p className="text-gray-600 mb-4">
             Install extensions to add new features and functionality to Alga PSA.
           </p>
-          <Link
-            href="/msp/settings/extensions/install"
-            className="px-4 py-2 bg-blue-600 text-white rounded-md inline-flex items-center gap-2 hover:bg-blue-700 transition-colors"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            <span>Add Extension</span>
-          </Link>
         </div>
       )}
       

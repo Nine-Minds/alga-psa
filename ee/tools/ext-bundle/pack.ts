@@ -20,7 +20,7 @@
  *   - System tools: tar, zstd (recommended)
  */
 
-import { statSync, accessSync, constants, createReadStream, writeFileSync, mkdirSync } from 'node:fs';
+import { statSync, accessSync, constants, createReadStream, writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { join, resolve, basename, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -53,10 +53,8 @@ function fileSha256HexSync(filePath: string): string {
 
 // Since top-level await isn't used, provide a blocking read helper:
 function sha256Sync(filePath: string): string {
-  // Fallback to reading in chunks synchronously via fs.readFileSync would load entire file.
-  // Here, for simplicity and reliability, we load entire file.
-  const fs = require('node:fs');
-  const data = fs.readFileSync(filePath);
+  // Read the entire file and compute sha256 (ESM-friendly, no require)
+  const data = readFileSync(filePath);
   const h = createHash('sha256');
   h.update(data);
   return h.digest('hex');

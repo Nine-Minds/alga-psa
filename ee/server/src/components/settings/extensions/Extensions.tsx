@@ -7,12 +7,12 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ReflectionContainer } from '../../../../../server/src/lib/ui-reflection/ReflectionContainer';
-import { useAutomationIdAndRegister } from '../../../../../server/src/lib/ui-reflection/useAutomationIdAndRegister';
-import { ContainerComponent } from '../../../../../server/src/lib/ui-reflection/types';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ContainerComponent } from 'server/src/types/ui-reflection/types';
 import { Extension } from '../../../lib/extensions/types';
 import { PlusIcon, AlertCircleIcon, CheckCircleIcon, XCircleIcon, Settings, EyeIcon } from 'lucide-react';
-import { logger } from '../../../../../server/src/utils/logger';
+import logger from 'server/src/utils/logger';
 import { fetchExtensions, toggleExtension, uninstallExtension } from '../../../lib/actions/extensionActions';
 
 /**
@@ -27,8 +27,7 @@ export default function Extensions() {
   const { automationIdProps } = useAutomationIdAndRegister<ContainerComponent>({
     id: 'extensions-page',
     type: 'container',
-    label: 'Extensions Management',
-    variant: 'default'
+    label: 'Extensions Management'
   });
   
   // Fetch extensions
@@ -38,14 +37,16 @@ export default function Extensions() {
         const extensionsData = await fetchExtensions();
         setExtensions(extensionsData);
         setLoading(false);
-      } catch (err) {
-        logger.error('Failed to fetch extensions', { error: err });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'unknown error';
+        logger.error('Failed to fetch extensions', { error: msg });
         setError('Failed to load extensions');
         setLoading(false);
       }
     };
-    
-    fetchExtensionsData();
+  
+    // Fire and forget is okay here; internal awaits handled
+    void fetchExtensionsData();
   }, []);
   
   // Handle enabling/disabling extensions
@@ -56,17 +57,18 @@ export default function Extensions() {
         alert(result.message);
         return;
       }
-      
-      // Update local state
-      setExtensions(prevExtensions => 
-        prevExtensions.map(ext => 
-          ext.id === id ? { ...ext, isEnabled: !currentStatus } : ext
+  
+      // Update local state (use is_enabled)
+      setExtensions(prevExtensions =>
+        prevExtensions.map(ext =>
+          ext.id === id ? { ...ext, is_enabled: !currentStatus } : ext
         )
       );
-      
+  
       logger.info(`Extension ${currentStatus ? 'disabled' : 'enabled'}`, { id });
-    } catch (err) {
-      logger.error('Failed to toggle extension', { id, error: err });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'unknown error';
+      logger.error('Failed to toggle extension', { id, error: msg });
       alert(`Failed to ${currentStatus ? 'disable' : 'enable'} extension`);
     }
   };
@@ -76,22 +78,23 @@ export default function Extensions() {
     if (!confirm('Are you sure you want to remove this extension? This action cannot be undone.')) {
       return;
     }
-    
+  
     try {
       const result = await uninstallExtension(id);
       if (!result.success) {
         alert(result.message);
         return;
       }
-      
+  
       // Update local state
-      setExtensions(prevExtensions => 
+      setExtensions(prevExtensions =>
         prevExtensions.filter(ext => ext.id !== id)
       );
-      
+  
       logger.info('Extension removed', { id });
-    } catch (err) {
-      logger.error('Failed to remove extension', { id, error: err });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'unknown error';
+      logger.error('Failed to remove extension', { id, error: msg });
       alert('Failed to remove extension');
     }
   };
@@ -101,14 +104,6 @@ export default function Extensions() {
       <div className="p-6" {...automationIdProps}>
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-semibold text-gray-900">Extensions</h1>
-          <Link
-            href="/msp/settings/extensions/install"
-            className="px-4 py-2 bg-primary-600 text-white rounded-md flex items-center gap-2 hover:bg-primary-700 transition-colors"
-            data-automation-id="add-extension-button"
-          >
-            <PlusIcon className="h-4 w-4" />
-            <span>Add Extension</span>
-          </Link>
         </div>
         
         {loading && (
@@ -136,13 +131,6 @@ export default function Extensions() {
             <p className="text-gray-600 mb-4">
               Install extensions to add new features and functionality to Alga PSA.
             </p>
-            <Link
-              href="/msp/settings/extensions/install"
-              className="px-4 py-2 bg-primary-600 text-white rounded-md inline-flex items-center gap-2 hover:bg-primary-700 transition-colors"
-            >
-              <PlusIcon className="h-4 w-4" />
-              <span>Add Extension</span>
-            </Link>
           </div>
         )}
         
@@ -189,15 +177,17 @@ export default function Extensions() {
                       <div className="text-sm text-gray-900">{extension.version}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{extension.author || 'Unknown'}</div>
+                      <div className="text-sm text-gray-900">
+                        {(extension.manifest as any)?.publisher || (extension.manifest as any)?.author || 'Unknown'}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        extension.isEnabled 
-                          ? 'bg-green-100 text-green-800' 
+                        extension.is_enabled
+                          ? 'bg-green-100 text-green-800'
                           : 'bg-gray-100 text-gray-800'
                       }`}>
-                        {extension.isEnabled ? 'Enabled' : 'Disabled'}
+                        {extension.is_enabled ? 'Enabled' : 'Disabled'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -219,15 +209,15 @@ export default function Extensions() {
                           Settings
                         </Link>
                         <button
-                          onClick={() => handleToggleExtension(extension.id, extension.isEnabled)}
+                          onClick={() => { void handleToggleExtension(extension.id, extension.is_enabled); }}
                           className={`inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md ${
-                            extension.isEnabled
+                            extension.is_enabled
                               ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
                               : 'bg-green-100 text-green-700 hover:bg-green-200'
                           } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500`}
                           data-automation-id={`extension-toggle-${extension.id}`}
                         >
-                          {extension.isEnabled ? (
+                          {extension.is_enabled ? (
                             <>
                               <XCircleIcon className="h-3.5 w-3.5 mr-1" />
                               Disable
@@ -240,7 +230,7 @@ export default function Extensions() {
                           )}
                         </button>
                         <button
-                          onClick={() => handleRemoveExtension(extension.id)}
+                          onClick={() => { void handleRemoveExtension(extension.id); }}
                           className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-red-100 text-red-700 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                           data-automation-id={`extension-remove-${extension.id}`}
                         >

@@ -286,8 +286,31 @@ export async function extFinalizeUpload(params: FinalizeParams): Promise<Finaliz
     );
   }
 
+  // Temporary debug logging to disambiguate flows and surface parse issues
+  try {
+    // eslint-disable-next-line no-console
+    console.info("ext.finalize.debug.input", {
+      hasManifestJson: typeof manifestJson === "string",
+      manifestLength: typeof manifestJson === "string" ? manifestJson.length : 0,
+      key,
+      hasSignature: Boolean(signature?.text),
+      sigAlg: signature?.algorithm,
+    });
+  } catch {
+    // ignore logging errors
+  }
+
   const parsed = parseManifestJson(manifestJson);
   if (!parsed.manifest) {
+    try {
+      // eslint-disable-next-line no-console
+      console.info("ext.finalize.debug.invalid_manifest", {
+        issues: parsed.issues,
+        key,
+      });
+    } catch {
+      // ignore
+    }
     throw new HttpError(400, "INVALID_MANIFEST", "Invalid manifest", { issues: parsed.issues });
   }
 
@@ -336,6 +359,22 @@ export async function extFinalizeUpload(params: FinalizeParams): Promise<Finaliz
 
   // Registry upsert
   const runtime = parsedRuntime ?? manifest.runtime;
+
+  try {
+    // eslint-disable-next-line no-console
+    console.info("ext.finalize.debug.upsert_start", {
+      name: manifest.name,
+      version: manifest.version,
+      publisher: manifest.publisher,
+      runtime,
+      hasUi: Boolean(parsedUiEntry),
+      endpointsCount: parsedEndpoints.length,
+      contentHash: computedHash,
+    });
+  } catch {
+    // ignore
+  }
+
   const upsertResult = await upsertVersionFromManifest({
     manifest,
     contentHash: `sha256:${computedHash}`,
@@ -347,6 +386,16 @@ export async function extFinalizeUpload(params: FinalizeParams): Promise<Finaliz
     },
     signature: sigResult,
   });
+
+  try {
+    // eslint-disable-next-line no-console
+    console.info("ext.finalize.debug.upsert_ok", {
+      extensionId: upsertResult.extension.id,
+      versionId: upsertResult.version.id,
+    });
+  } catch {
+    // ignore
+  }
 
   return {
     extension: {
