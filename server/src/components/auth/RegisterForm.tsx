@@ -9,7 +9,6 @@ import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { Eye, EyeOff } from 'lucide-react';
 import { verifyContactEmail } from 'server/src/lib/actions/user-actions/userActions';
 import { initiateRegistration } from 'server/src/lib/actions/user-actions/registrationActions';
-import { verifyEmailSuffix } from 'server/src/lib/actions/company-settings/emailSettings';
 import { usePostHog } from 'posthog-js/react';
 
 export default function RegisterForm() {
@@ -75,10 +74,7 @@ export default function RegisterForm() {
       setIsCheckingEmail(true);
       setEmailStatus('checking');
       try {
-        const [verifyResult, isValidSuffix] = await Promise.all([
-          verifyContactEmail(email),
-          verifyEmailSuffix(email)
-        ]);
+        const verifyResult = await verifyContactEmail(email);
 
         if (verifyResult.exists) {
           setShowNameFields(false);
@@ -87,17 +83,12 @@ export default function RegisterForm() {
             verification_type: 'existing_contact',
             email_domain: email.split('@')[1]
           });
-        } else if (isValidSuffix) {
+        } else {
+          // Allow any email to register - no domain restrictions
           setShowNameFields(true);
           setEmailStatus('valid');
           posthog?.capture('registration_email_verified', {
-            verification_type: 'valid_suffix',
-            email_domain: email.split('@')[1]
-          });
-        } else {
-          setEmailStatus('invalid');
-          setShowNameFields(false);
-          posthog?.capture('registration_email_invalid', {
+            verification_type: 'new_registration',
             email_domain: email.split('@')[1]
           });
         }
@@ -118,7 +109,7 @@ export default function RegisterForm() {
   const validateForm = () => {
     const validationErrors = [];
     if (!email.trim()) validationErrors.push('Email');
-    if (emailStatus !== 'valid') validationErrors.push('Valid email address');
+    if (!email.includes('@')) validationErrors.push('Valid email address');
     if (!password.trim()) validationErrors.push('Password');
     if (passwordStrength === 'weak') validationErrors.push('Stronger password');
     if (showNameFields && !firstName.trim()) validationErrors.push('First Name');
@@ -152,16 +143,14 @@ export default function RegisterForm() {
     posthog?.capture('registration_submitted', {
       form_completion_time: Date.now() - journeyStartTime.current,
       password_strength: passwordStrength,
-      registration_type: showNameFields ? 'email_suffix' : 'existing_contact'
+      registration_type: showNameFields ? 'new_registration' : 'existing_contact'
     });
 
     try {
-      // For both contact-based and email suffix registration
+      // For contact-based registration only
       const result = await initiateRegistration(
         email,
-        password,
-        firstName,
-        lastName
+        password
       );
 
       if (!result.success) {
@@ -169,15 +158,8 @@ export default function RegisterForm() {
         posthog?.capture('registration_failed', {
           error_message: result.error,
           submission_duration: Date.now() - submissionStartTime,
-          registration_type: showNameFields ? 'email_suffix' : 'existing_contact'
+          registration_type: showNameFields ? 'new_registration' : 'existing_contact'
         });
-      } else if (result.registrationId) {
-        // Email suffix registration - needs verification
-        posthog?.capture('registration_success_pending_verification', {
-          submission_duration: Date.now() - submissionStartTime,
-          total_journey_time: Date.now() - journeyStartTime.current
-        });
-        router.push(`/auth/verify?registrationId=${result.registrationId}`);
       } else {
         // Contact-based registration - direct to login
         posthog?.capture('registration_success_immediate', {
