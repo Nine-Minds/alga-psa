@@ -14,6 +14,7 @@ exports.up = async function(knex) {
   
   // Undistribute pending_registrations if it's distributed (required for Citus)
   // First check if we're using Citus by checking if the undistribute_table function exists
+  // NOTE: These are system catalog queries that don't need tenant conditions
   try {
     const citusCheck = await knex.raw(`
       SELECT EXISTS (
@@ -24,6 +25,7 @@ exports.up = async function(knex) {
     
     if (citusCheck.rows[0].has_citus) {
       // We have Citus, check if the table is distributed
+      // NOTE: pg_dist_partition is a Citus system catalog, no tenant needed
       const distCheck = await knex.raw(`
         SELECT EXISTS (
           SELECT 1 FROM pg_dist_partition 
@@ -51,61 +53,8 @@ exports.up = async function(knex) {
 };
 
 exports.down = async function(knex) {
-  // Recreate tables if rolling back (not recommended - these tables should stay removed)
-  
-  // Recreate company_email_settings table
-  await knex.schema.createTable('company_email_settings', function(table) {
-    table.uuid('setting_id').primary();
-    table.uuid('company_id').notNullable();
-    table.uuid('tenant').notNullable();
-    table.string('email_suffix').notNullable();
-    table.boolean('self_registration_enabled').defaultTo(true);
-    table.timestamp('created_at').defaultTo(knex.fn.now());
-    table.timestamp('updated_at').defaultTo(knex.fn.now());
-    
-    table.unique(['company_id', 'email_suffix']);
-    table.index(['email_suffix', 'tenant']);
-  });
-  
-  // Try to add foreign key constraint, but don't fail if companies table doesn't exist
-  try {
-    await knex.schema.alterTable('company_email_settings', function(table) {
-      table.foreign(['company_id', 'tenant']).references(['company_id', 'tenant']).inTable('companies');
-    });
-  } catch (err) {
-    console.log('Could not add foreign key to companies table:', err.message);
-  }
-  
-  // Recreate verification_tokens table
-  await knex.schema.createTable('verification_tokens', function(table) {
-    table.uuid('token_id').primary();
-    table.uuid('tenant').notNullable();
-    table.uuid('registration_id').notNullable();
-    table.uuid('company_id').notNullable();
-    table.string('token').notNullable().unique();
-    table.timestamp('expires_at').notNullable();
-    table.timestamp('used_at').nullable();
-    table.timestamp('created_at').defaultTo(knex.fn.now());
-    
-    table.index(['token']);
-    table.index(['registration_id']);
-  });
-  
-  // Recreate pending_registrations table
-  await knex.schema.createTable('pending_registrations', function(table) {
-    table.uuid('registration_id').primary();
-    table.uuid('tenant').notNullable();
-    table.string('email').notNullable();
-    table.string('hashed_password').notNullable();
-    table.string('first_name').notNullable();
-    table.string('last_name').notNullable();
-    table.uuid('company_id').notNullable();
-    table.enum('status', ['PENDING_VERIFICATION', 'VERIFIED', 'COMPLETED', 'EXPIRED']).defaultTo('PENDING_VERIFICATION');
-    table.timestamp('expires_at').notNullable();
-    table.timestamp('completed_at').nullable();
-    table.timestamp('created_at').defaultTo(knex.fn.now());
-    
-    table.index(['email', 'tenant']);
-    table.index(['status']);
-  });
+  // NO-OP: Security-driven removal should not be rolled back
+  // These tables were removed for security reasons and should not be recreated
+  console.log('Email domain registration tables were removed for security reasons and will not be recreated');
+  return;
 };
