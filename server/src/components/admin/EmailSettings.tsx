@@ -30,6 +30,8 @@ import {
 } from '../../lib/actions/email-actions/emailDomainActions';
 import { EmailProviderConfiguration } from '../EmailProviderConfiguration';
 import { useTenant } from '../TenantProvider';
+import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
+import { FeaturePlaceholder } from 'server/src/components/FeaturePlaceholder';
 
 interface EmailSettingsProps {
   // Remove tenantId prop since we'll use the tenant context
@@ -51,6 +53,8 @@ interface DomainStatus {
 
 export const EmailSettings: React.FC<EmailSettingsProps> = () => {
   const tenantId = useTenant();
+  const inboundFlag = useFeatureFlag('email-configuration');
+  const isInboundEnabled = typeof inboundFlag === 'boolean' ? inboundFlag : inboundFlag?.enabled;
   const [settings, setSettings] = useState<TenantEmailSettings | null>(null);
   const [domains, setDomains] = useState<DomainStatus[]>([]);
   const [loading, setLoading] = useState(true);
@@ -509,24 +513,29 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
       </TabsContent>
 
       <TabsContent value="inbound" className="space-y-6">
-        <div className="text-sm text-muted-foreground mb-4">
-          Configure email providers to receive and process emails as tickets
-        </div>
-        
-        <EmailProviderConfiguration 
-          onProviderAdded={(provider) => {
-            // Optional: Handle provider added event
-            console.log('Provider added:', provider);
-          }}
-          onProviderUpdated={(provider) => {
-            // Optional: Handle provider updated event
-            console.log('Provider updated:', provider);
-          }}
-          onProviderDeleted={(providerId) => {
-            // Optional: Handle provider deleted event
-            console.log('Provider deleted:', providerId);
-          }}
-        />
+        {isInboundEnabled ? (
+          <>
+            <div className="text-sm text-muted-foreground mb-4">
+              Configure email providers to receive and process emails as tickets
+            </div>
+            <EmailProviderConfiguration 
+              onProviderAdded={(provider) => {
+                // Optional: Handle provider added event
+                console.log('Provider added:', provider);
+              }}
+              onProviderUpdated={(provider) => {
+                // Optional: Handle provider updated event
+                console.log('Provider updated:', provider);
+              }}
+              onProviderDeleted={(providerId) => {
+                // Optional: Handle provider deleted event
+                console.log('Provider deleted:', providerId);
+              }}
+            />
+          </>
+        ) : (
+          <FeaturePlaceholder />
+        )}
       </TabsContent>
     </Tabs>
   );
