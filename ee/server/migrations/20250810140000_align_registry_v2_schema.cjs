@@ -54,18 +54,19 @@ exports.up = async function up(knex) {
     const hasApiEndpoints = await knex.schema.hasColumn('extension_version', 'api_endpoints');
     if (!hasApiEndpoints) {
       await knex.schema.alterTable('extension_version', (t) => {
-        t.jsonb('api_endpoints').notNullable().defaultTo('{}');
+        // api_endpoints is always a JSON array; default to []
+        t.jsonb('api_endpoints').notNullable().defaultTo(knex.raw(`'[]'::jsonb`));
       });
       // Backfill api_endpoints from existing "api" column if present
       const hasApi = await knex.schema.hasColumn('extension_version', 'api');
       if (hasApi) {
         // If "api" is an array of endpoints, copy directly.
-        // If "api" is an object that contains "endpoints", copy that.
+        // If "api" is an object and its "endpoints" is an array, copy that; otherwise []
         await knex.raw(`
           UPDATE extension_version
           SET api_endpoints = CASE
             WHEN jsonb_typeof(api) = 'array' THEN api
-            WHEN jsonb_typeof(api) = 'object' AND api ? 'endpoints' THEN api->'endpoints'
+            WHEN jsonb_typeof(api) = 'object' AND jsonb_typeof(api->'endpoints') = 'array' THEN api->'endpoints'
             ELSE '[]'::jsonb
           END
         `);
