@@ -1,108 +1,117 @@
-# Enterprise Build Workflow Guide (EE‑Only Wiring)
+# Enterprise Build Workflow: pack → sign → publish
 
-This guide explains the Enterprise Edition (EE) build workflow relevant to the v2 extension architecture. EE code remains the source of truth for extension services and wiring; the build copies EE sources into the main server where appropriate. The host never injects or serves tenant UI modules; iframe UI assets are served by the Runner.
+This guide outlines the enterprise pipeline to build, package, sign, and publish extension bundles to S3-compatible storage (e.g., MinIO), and references related docs and APIs.
 
-## Overview
+References
+- Development Guide: [ee/docs/extension-system/development_guide.md](ee/docs/extension-system/development_guide.md:1)
+- Runner S3 Integration: [ee/docs/extension-system/runner-s3-integration.md](ee/docs/extension-system/runner-s3-integration.md:1)
+- Initiate Upload API: [ee/server/src/app/api/ext-bundles/initiate-upload/route.ts](ee/server/src/app/api/ext-bundles/initiate-upload/route.ts:1)
+- Finalize API: [ee/server/src/app/api/ext-bundles/finalize/route.ts](ee/server/src/app/api/ext-bundles/finalize/route.ts:1)
 
-- EE‑only logic (registry, bundles, gateway helpers, install flows) lives under `ee/server/`
-- The build script copies EE sources into `server/` for enterprise builds
-- No tenant‑supplied code is copied into server filesystem at runtime; extensions are installed from signed, content‑addressed bundles and executed by the Runner
-- UI assets are served by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]` (there is no Next.js route for ext-ui)
+## Objectives and Pipeline
 
-## Directory Structure (Updated)
+The enterprise pipeline is responsible for taking a compiled extension, producing an integrity-verifiable bundle, optionally signing it, and publishing it to the canonical, immutable S3 location based on its content hash.
 
-```
-alga-psa/
-├── ee/server/src/                    # SOURCE (Enterprise Edition)
-│   └── lib/extensions/               # Registry, bundles, helpers
-├── server/src/                       # TARGET (Main Server)
-│   ├── lib/extensions/               # EE helpers + gateway utils
-│   └── app/api/ext/                  # API Gateway route to Runner (implemented here)
-└── scripts/
-    └── build-enterprise.sh           # Build Script
-```
+Stages:
+1) Build: Produce compiled assets (e.g., entry.wasm, UI assets, manifest.json) in a dist directory.
+2) Pack: Create bundle.tar.zst from the dist directory and compute sha256.
+3) Sign (optional): Produce a SIGNATURE file tied to the bundle with the chosen algorithm.
+4) Publish: Use the server API to initiate upload, PUT the bundle to storage via presigned URL, and finalize with manifest/signature.
 
-Removed/Deprecated paths (should not be copied or (re)introduced):
-- Any pages that render tenant JS in the host
-- Descriptor rendering code (e.g., ExtensionRenderer.tsx) or descriptor artifacts
-- Legacy `/api/extensions/[extensionId]/...` routes that served raw JS modules
-- Any Next.js ext-ui route; UI is exclusively served by the Runner
+Output:
+- S3 canonical objects are written to:
+  - sha256/<hash>/bundle.tar.zst
+  - sha256/<hash>/manifest.json
 
-## Build Flow
+## Example Commands
 
-```
-EE Source Files → Build Script → Main Server Files → Application
-     ↓               ↓              ↓               ↓
-   Edit Here     Copies Files    Do not edit     Runtime
-```
+Assumptions:
+- Your extension build outputs to ./my-extension/dist and includes manifest.json at that path.
+- You have Node 18+ available.
 
-## Enterprise Build Script
+- Pack
+  node ee/tools/ext-bundle/pack.ts ./my-extension/dist ./out/bundle.tar.zst
 
-Location:
-```
-scripts/build-enterprise.sh
-```
+- Sign (optional; placeholder)
+  node ee/tools/ext-bundle/sign.ts ./out/bundle.tar.zst --algorithm cosign
 
-The script should:
-1) Verify `NEXT_PUBLIC_EDITION=enterprise`
-2) Create target directories in `server/src`
-3) Copy EE extension modules (registry, bundles, gateway, assets helpers)
-4) Skip legacy/removed paths and any UI-serving routes in Next.js
+- Publish
+  node ee/tools/ext-bundle/publish.ts --bundle ./out/bundle.tar.zst --manifest ./my-extension/dist/manifest.json --declared-hash <sha256>
 
-## File Mapping (Updated)
+Notes:
+- The pack step writes a sidecar SHA file (bundle.sha256 or <basename>.sha256). You can use this value as the --declared-hash in publish to enforce integrity at the server.
+- The sign step currently writes a placeholder SIGNATURE file next to the bundle. If provided to publish (via --signature and --signature-algorithm), it will be forwarded to finalize. Replace with real signing logic in your environment.
 
-| EE Source                             | Main Server Target                     | Purpose                           |
-|---------------------------------------|----------------------------------------|-----------------------------------|
-| `ee/server/src/lib/extensions/**`     | `server/src/lib/extensions/**`         | Registry, bundles, helpers        |
-| `ee/server/src/app/api/ext/**` (if any templates) | `server/src/app/api/ext/**`   | Gateway (proxy to Runner)         |
+## Environment Requirements and Local MinIO
 
-## Environment & Config (Phase 0)
+Server/Storage configuration (server process):
+- STORAGE_ENDPOINT: e.g., http://localhost:9000
+- STORAGE_BUCKET: e.g., alga-bundles
+- STORAGE_REGION: e.g., us-east-1
+- STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY: MinIO credentials
+- STORAGE_USE_PATH_STYLE: true (required for MinIO)
+- EXT_BUNDLES_ALLOW_INSECURE: true (for local/manual validation), or send header x-alga-admin: true
+- RUNNER_* not required for publishing (see Runner doc for serving/execution config)
 
-Template and document the following in `.env` and EE `.env.example`:
-- `RUNNER_BASE_URL` — internal URL used by the gateway to call Runner `POST /v1/execute`
-- `RUNNER_PUBLIC_BASE` — public base used to construct ext-ui iframe src
-- `EXT_GATEWAY_TIMEOUT_MS` — default timeout for gateway→runner calls
-- `EXT_CACHE_ROOT` — optional cache root for server-side helpers (if used)
-- `STORAGE_S3_ENDPOINT`
-- `STORAGE_S3_ACCESS_KEY`
-- `STORAGE_S3_SECRET_KEY`
-- `STORAGE_S3_BUCKET`
-- `STORAGE_S3_REGION`
-- `STORAGE_S3_FORCE_PATH_STYLE`
-- `EXT_BUNDLE_STORE_URL` or equivalent bundle store prefix (if applicable)
-- `SIGNING_TRUST_BUNDLE` — trust anchors for signature verification
+MinIO local setup:
+- Run MinIO locally and create the configured bucket.
+- Ensure path-style access and credentials align with the server config.
+- Validate access using the E2E walkthrough: [ee/docs/extension-system/e2e-minio-walkthrough.md](ee/docs/extension-system/e2e-minio-walkthrough.md:1)
 
-## Development Workflow
+CLI scripts (no external deps; Node 18+):
+- Pack: [ee/tools/ext-bundle/pack.ts](ee/tools/ext-bundle/pack.ts:1)
+- Sign: [ee/tools/ext-bundle/sign.ts](ee/tools/ext-bundle/sign.ts:1)
+- Publish: [ee/tools/ext-bundle/publish.ts](ee/tools/ext-bundle/publish.ts:1)
 
-1) Edit EE sources only
-```
-# Example
-vim ee/server/src/lib/extensions/registry-v2.ts
-```
-2) Run enterprise build
-```
-NEXT_PUBLIC_EDITION=enterprise ./scripts/build-enterprise.sh
-```
-3) Build the application (if needed)
-```
-cd server && NEXT_PUBLIC_EDITION=enterprise npm run build
-```
+Auth for local/manual runs:
+- Set ALGA_ADMIN_HEADER=true in the environment to automatically inject x-alga-admin: true on API calls from publish.ts.
 
-## Common Issues
+## CI Example Outline
 
-- Changes disappear: ensure you edited `ee/server/` sources, not `server/`
-- Legacy files copied: update the build script to exclude deprecated paths
-- Import path errors: prefer relative/shared imports that resolve identically in EE and main
-- UI not loading: ensure iframe src uses `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]` built via [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38)
+This is an outline; adapt to your CI system (GitHub Actions, GitLab CI, Jenkins, etc.).
 
-## CI/CD Integration
+Environment variables/secrets (CI):
+- SERVER_BASE: Base URL of the server (e.g., https://ee.example.com or http://localhost:3000 in local CI)
+- ALGA_ADMIN_HEADER=true (for non-production/internal pipelines only)
+- STORAGE_* vars should be set on the server side; CI does not require them unless testing end-to-end with a local server+MinIO instance.
 
-- Run the enterprise build prior to the app build in enterprise pipelines
-- Include environment validation and artifact checks
+Pipeline steps:
+- Step 1: Build extension
+  - Run your package build (e.g., npm ci && npm run build) producing ./my-extension/dist with manifest.json.
+- Step 2: Pack
+  - node ee/tools/ext-bundle/pack.ts ./my-extension/dist ./out/bundle.tar.zst
+  - Extract the sha256 from ./out/bundle.sha256 for later steps (or capture console output).
+- Step 3: Sign (optional)
+  - node ee/tools/ext-bundle/sign.ts ./out/bundle.tar.zst --algorithm cosign
+  - Store SIGNATURE as an artifact if you need auditability.
+- Step 4: Publish
+  - node ee/tools/ext-bundle/publish.ts \
+      --bundle ./out/bundle.tar.zst \
+      --manifest ./my-extension/dist/manifest.json \
+      --declared-hash <sha256> \
+      --server "$SERVER_BASE" \
+      --signature ./out/bundle.tar.zst.SIGNATURE \
+      --signature-algorithm cosign
+  - Parse the output JSON { extension, version, contentHash } for downstream steps or notifications.
+- Step 5: Validate (optional)
+  - Optionally perform a GET on server endpoints or MinIO to confirm the objects exist at sha256/<contentHash>/...
+  - For end-to-end UI checks, consider a smoke test that loads the extension UI in a test environment.
 
-## Notes
+## Notes and Best Practices
 
-- Do not reintroduce any path that uploads or executes tenant code in process
-- All extension execution flows must traverse the Gateway and Runner
-- UI must be delivered by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]` only
-- API Gateway route scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
+- Immutability:
+  - Ensure published bundles are content-addressed via sha256; treat canonical paths as immutable.
+- Caching:
+  - Downstream Runner and browser clients should leverage immutable URLs and ETag/If-None-Match semantics for efficient serving. See: [ee/docs/extension-system/runner-s3-integration.md](ee/docs/extension-system/runner-s3-integration.md:1)
+- Manifests:
+  - Keep manifest.json minimal but sufficient: extension, version, entry.wasm path, and UI asset mapping. Validate JSON strictly in CI.
+- Error handling:
+  - The publish script prints detailed errors for initiate/PUT/finalize failures. Monitor CI logs and surface them in notifications.
+
+## Related Docs
+
+- Development Guide: [ee/docs/extension-system/development_guide.md](ee/docs/extension-system/development_guide.md:1)
+- E2E Walkthrough (MinIO): [ee/docs/extension-system/e2e-minio-walkthrough.md](ee/docs/extension-system/e2e-minio-walkthrough.md:1)
+- Runner S3 Integration: [ee/docs/extension-system/runner-s3-integration.md](ee/docs/extension-system/runner-s3-integration.md:1)
+- Initiate Upload API: [ee/server/src/app/api/ext-bundles/initiate-upload/route.ts](ee/server/src/app/api/ext-bundles/initiate-upload/route.ts:1)
+- Finalize API: [ee/server/src/app/api/ext-bundles/finalize/route.ts](ee/server/src/app/api/ext-bundles/finalize/route.ts:1)
