@@ -223,13 +223,13 @@ spec:
           - name: STORAGE_S3_ACCESS_KEY
             valueFrom:
               secretKeyRef:
-                name: storage-credentials
-                key: S3_ACCESS_KEY
+                name: {{ .Values.config.storage.providers.s3.credentialsSecret.name | default "minio-credentials" }}
+                key: {{ .Values.config.storage.providers.s3.credentialsSecret.accessKeyKey | default "MINIO_ACCESS_KEY" }}
           - name: STORAGE_S3_SECRET_KEY
             valueFrom:
               secretKeyRef:
-                name: storage-credentials
-                key: S3_SECRET_KEY
+                name: {{ .Values.config.storage.providers.s3.credentialsSecret.name | default "minio-credentials" }}
+                key: {{ .Values.config.storage.providers.s3.credentialsSecret.secretKeyKey | default "MINIO_SECRET_KEY" }}
           {{- if .Values.config.storage.providers.s3.endpoint }}
           - name: STORAGE_S3_ENDPOINT
             value: "{{ .Values.config.storage.providers.s3.endpoint }}"

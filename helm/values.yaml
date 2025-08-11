@@ -131,8 +131,15 @@ config:
         enabled: false  # Set to true to enable S3 in enterprise edition
         region: 'us-west-2'
         bucket: 'company-files'
-        access_key: ''  # AWS access key
-        secret_key: ''  # AWS secret key
+        # Credentials are read from an existing Kubernetes Secret in the same namespace.
+        # Defaults match common MinIO deployments: secret name `minio-credentials` with keys
+        # `MINIO_ACCESS_KEY` and `MINIO_SECRET_KEY`.
+        credentialsSecret:
+          name: "minio-credentials"
+          accessKeyKey: "MINIO_ACCESS_KEY"
+          secretKeyKey: "MINIO_SECRET_KEY"
+        access_key: ''  # Optional: if using storage.yaml secret instead of K8s secret
+        secret_key: ''  # Optional: if using storage.yaml secret instead of K8s secret
         endpoint: ''    # Optional custom endpoint for S3-compatible services
         # Storage quotas and limits
         max_file_size: 524288000  # 500MB in bytes
@@ -339,4 +346,3 @@ vaultAgent:
   role: alga-psa
   secretPath: secret/data/alga-psa/server
   sharedSecretPath: secret/data/alga-psa/shared
-
