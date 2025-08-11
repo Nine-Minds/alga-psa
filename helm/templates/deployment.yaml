@@ -330,6 +330,20 @@ spec:
             value: "{{ .Values.google_auth.client_secret }}"
           {{- end }}
 
+          # ----------- GMAIL INTEGRATION (Enterprise Edition) ----------------
+          {{- if .Values.gmail_integration.enabled }}
+          - name: EE_GMAIL_CLIENT_ID
+            value: "{{ .Values.gmail_integration.client_id }}"
+          - name: EE_GMAIL_CLIENT_SECRET
+            value: "{{ .Values.gmail_integration.client_secret }}"
+          - name: EE_GMAIL_PROJECT_ID
+            value: "{{ .Values.gmail_integration.project_id }}"
+          {{- if .Values.gmail_integration.redirect_uri }}
+          - name: EE_GMAIL_REDIRECT_URI
+            value: "{{ .Values.gmail_integration.redirect_uri }}"
+          {{- end }}
+          {{- end }}
+
           # ----------- SECRET PROVIDER ----------------
           # Composite secret provider configuration
           - name: SECRET_READ_CHAIN
