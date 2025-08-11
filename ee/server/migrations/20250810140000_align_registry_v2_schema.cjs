@@ -180,27 +180,32 @@ exports.up = async function up(knex) {
 
   // 5) extension_execution_log (recreate to match spec; preserve old as *_old)
   const hasExecLog = await knex.schema.hasTable('extension_execution_log');
-  if (hasExecLog) {
-    // If schema differs, preserve old data by renaming table and create new
-    await knex.schema.renameTable('extension_execution_log', 'extension_execution_log_old');
-    // Ensure old PK constraint/index does not conflict with new table
-    try {
-      await knex.raw(
-        `ALTER TABLE extension_execution_log_old RENAME CONSTRAINT extension_execution_log_pkey TO extension_execution_log_old_pkey`
-      );
-    } catch (_e) {
-      // ignore if constraint already renamed or not present
-    }
-  }
-  // If a previous attempt already renamed to *_old, ensure its PK name won't collide
   const hasExecLogOld = await knex.schema.hasTable('extension_execution_log_old');
-  if (hasExecLogOld) {
-    try {
-      await knex.raw(
-        `ALTER TABLE extension_execution_log_old RENAME CONSTRAINT extension_execution_log_pkey TO extension_execution_log_old_pkey`
-      );
-    } catch (_e) {}
+  if (hasExecLog && !hasExecLogOld) {
+    // Preserve old data by renaming current table to *_old
+    await knex.schema.renameTable('extension_execution_log', 'extension_execution_log_old');
+  } else if (hasExecLog && hasExecLogOld) {
+    // We already have *_old; drop current table to allow clean recreate
+    await knex.schema.dropTable('extension_execution_log');
   }
+  // Ensure old PK constraint/index does not conflict with new table
+  const ensureExecOldPkRename = `
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'extension_execution_log_old'
+      ) THEN
+        IF EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'extension_execution_log_pkey'
+        ) THEN
+          EXECUTE 'ALTER TABLE extension_execution_log_old RENAME CONSTRAINT extension_execution_log_pkey TO extension_execution_log_old_pkey';
+        END IF;
+      END IF;
+    END
+    $$;
+  `;
+  await knex.raw(ensureExecOldPkRename);
   await knex.schema.createTable('extension_execution_log', (t) => {
     t.uuid('id').primary();
     t.string('tenant_id').notNullable();
@@ -217,26 +222,29 @@ exports.up = async function up(knex) {
 
   // 6) extension_quota_usage (recreate to match spec; preserve old as *_old)
   const hasQuota = await knex.schema.hasTable('extension_quota_usage');
-  if (hasQuota) {
-    await knex.schema.renameTable('extension_quota_usage', 'extension_quota_usage_old');
-    // Ensure old PK constraint/index does not conflict with new table
-    try {
-      await knex.raw(
-        `ALTER TABLE extension_quota_usage_old RENAME CONSTRAINT extension_quota_usage_pkey TO extension_quota_usage_old_pkey`
-      );
-    } catch (_e) {
-      // ignore if constraint already renamed or not present
-    }
-  }
-  // If a previous attempt already renamed to *_old, ensure its PK name won't collide
   const hasQuotaOld = await knex.schema.hasTable('extension_quota_usage_old');
-  if (hasQuotaOld) {
-    try {
-      await knex.raw(
-        `ALTER TABLE extension_quota_usage_old RENAME CONSTRAINT extension_quota_usage_pkey TO extension_quota_usage_old_pkey`
-      );
-    } catch (_e) {}
+  if (hasQuota && !hasQuotaOld) {
+    await knex.schema.renameTable('extension_quota_usage', 'extension_quota_usage_old');
+  } else if (hasQuota && hasQuotaOld) {
+    await knex.schema.dropTable('extension_quota_usage');
   }
+  const ensureQuotaOldPkRename = `
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'extension_quota_usage_old'
+      ) THEN
+        IF EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'extension_quota_usage_pkey'
+        ) THEN
+          EXECUTE 'ALTER TABLE extension_quota_usage_old RENAME CONSTRAINT extension_quota_usage_pkey TO extension_quota_usage_old_pkey';
+        END IF;
+      END IF;
+    END
+    $$;
+  `;
+  await knex.raw(ensureQuotaOldPkRename);
   await knex.schema.createTable('extension_quota_usage', (t) => {
     t.string('tenant_id').notNullable();
     t.uuid('registry_id').notNullable();
