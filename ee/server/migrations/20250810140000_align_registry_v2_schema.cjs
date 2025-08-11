@@ -167,6 +167,23 @@ exports.up = async function up(knex) {
   if (hasExecLog) {
     // If schema differs, preserve old data by renaming table and create new
     await knex.schema.renameTable('extension_execution_log', 'extension_execution_log_old');
+    // Ensure old PK constraint/index does not conflict with new table
+    try {
+      await knex.raw(
+        `ALTER TABLE extension_execution_log_old RENAME CONSTRAINT extension_execution_log_pkey TO extension_execution_log_old_pkey`
+      );
+    } catch (_e) {
+      // ignore if constraint already renamed or not present
+    }
+  }
+  // If a previous attempt already renamed to *_old, ensure its PK name won't collide
+  const hasExecLogOld = await knex.schema.hasTable('extension_execution_log_old');
+  if (hasExecLogOld) {
+    try {
+      await knex.raw(
+        `ALTER TABLE extension_execution_log_old RENAME CONSTRAINT extension_execution_log_pkey TO extension_execution_log_old_pkey`
+      );
+    } catch (_e) {}
   }
   await knex.schema.createTable('extension_execution_log', (t) => {
     t.uuid('id').primary();
@@ -186,6 +203,23 @@ exports.up = async function up(knex) {
   const hasQuota = await knex.schema.hasTable('extension_quota_usage');
   if (hasQuota) {
     await knex.schema.renameTable('extension_quota_usage', 'extension_quota_usage_old');
+    // Ensure old PK constraint/index does not conflict with new table
+    try {
+      await knex.raw(
+        `ALTER TABLE extension_quota_usage_old RENAME CONSTRAINT extension_quota_usage_pkey TO extension_quota_usage_old_pkey`
+      );
+    } catch (_e) {
+      // ignore if constraint already renamed or not present
+    }
+  }
+  // If a previous attempt already renamed to *_old, ensure its PK name won't collide
+  const hasQuotaOld = await knex.schema.hasTable('extension_quota_usage_old');
+  if (hasQuotaOld) {
+    try {
+      await knex.raw(
+        `ALTER TABLE extension_quota_usage_old RENAME CONSTRAINT extension_quota_usage_pkey TO extension_quota_usage_old_pkey`
+      );
+    } catch (_e) {}
   }
   await knex.schema.createTable('extension_quota_usage', (t) => {
     t.string('tenant_id').notNullable();
