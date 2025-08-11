@@ -14,7 +14,7 @@ import CustomSelect from '../ui/CustomSelect';
 import { Switch } from '../ui/Switch';
 import { Badge } from '../ui/Badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/Tabs';
-import { Mail, Globe, Settings, CheckCircle, XCircle, Clock, Eye, EyeOff, Send, Inbox } from 'lucide-react';
+import { Mail, Settings, Eye, EyeOff, Send, Inbox } from 'lucide-react';
 import {
   TenantEmailSettings,
   EmailProviderConfig
@@ -23,11 +23,6 @@ import {
   getEmailSettings, 
   updateEmailSettings 
 } from '../../lib/actions/email-actions/emailSettingsActions';
-import { 
-  getEmailDomains, 
-  addEmailDomain, 
-  verifyEmailDomain
-} from '../../lib/actions/email-actions/emailDomainActions';
 import { EmailProviderConfiguration } from '../EmailProviderConfiguration';
 import { useTenant } from '../TenantProvider';
 import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
@@ -37,30 +32,15 @@ interface EmailSettingsProps {
   // Remove tenantId prop since we'll use the tenant context
 }
 
-interface DomainStatus {
-  domain: string;
-  status: 'pending' | 'verified' | 'failed';
-  dnsRecords?: Array<{
-    type: string;
-    name: string;
-    value: string;
-  }>;
-  verifiedAt?: string;
-  createdAt?: string;
-  providerId?: string;
-  providerDomainId?: string;
-}
 
 export const EmailSettings: React.FC<EmailSettingsProps> = () => {
   const tenantId = useTenant();
   const outboundFlag = useFeatureFlag('email-configuration');
   const isOutboundEnabled = typeof outboundFlag === 'boolean' ? outboundFlag : outboundFlag?.enabled;
   const [settings, setSettings] = useState<TenantEmailSettings | null>(null);
-  const [domains, setDomains] = useState<DomainStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [newDomain, setNewDomain] = useState('');
   const [selectedProvider, setSelectedProvider] = useState<'smtp' | 'resend'>('smtp');
   const [showPassword, setShowPassword] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
@@ -68,7 +48,6 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
 
   useEffect(() => {
     loadEmailSettings();
-    loadDomains();
   }, []);
 
   useEffect(() => {
@@ -89,15 +68,6 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
     }
   };
 
-  const loadDomains = async () => {
-    try {
-      const data = await getEmailDomains();
-      setDomains(data);
-    } catch (err: any) {
-      console.error('Failed to load domains:', err);
-    }
-  };
-
   const saveSettings = async () => {
     if (!settings) return;
     
@@ -110,27 +80,6 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
       setError(err.message || 'Failed to save settings');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const addDomain = async () => {
-    if (!newDomain.trim()) return;
-    
-    try {
-      await addEmailDomain(newDomain.trim());
-      setNewDomain('');
-      await loadDomains();
-    } catch (err: any) {
-      setError(err.message || 'Failed to add domain');
-    }
-  };
-
-  const verifyDomain = async (domain: string) => {
-    try {
-      await verifyEmailDomain(domain);
-      await loadDomains();
-    } catch (err: any) {
-      setError(err.message || 'Failed to verify domain');
     }
   };
 
@@ -301,64 +250,9 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
             onChange={(e) => updateProviderConfig(config.providerId, { from: e.target.value })}
           />
           <p className="text-sm text-gray-500 mt-1">
-            Must be from a verified domain. Use the Domains tab to add custom domains.
+            Must be from a verified domain in Resend.
           </p>
         </div>
-      </div>
-    );
-  };
-
-  const renderDomainStatus = (domain: DomainStatus) => {
-    const getStatusIcon = () => {
-      switch (domain.status) {
-        case 'verified': return <CheckCircle className="h-4 w-4 text-green-500" />;
-        case 'failed': return <XCircle className="h-4 w-4 text-red-500" />;
-        default: return <Clock className="h-4 w-4 text-yellow-500" />;
-      }
-    };
-
-    const getStatusBadge = () => {
-      switch (domain.status) {
-        case 'verified': return <Badge variant="default" className="bg-green-100 text-green-800">Verified</Badge>;
-        case 'failed': return <Badge variant="error">Failed</Badge>;
-        default: return <Badge variant="secondary">Pending</Badge>;
-      }
-    };
-
-    return (
-      <div key={domain.domain} className="border rounded-lg p-4">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            {getStatusIcon()}
-            <span className="font-medium">{domain.domain}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            {getStatusBadge()}
-            {domain.status === 'pending' && (
-              <Button
-                id={`verify-domain-${domain.domain}`}
-                size="sm"
-                variant="outline"
-                onClick={() => verifyDomain(domain.domain)}
-              >
-                Verify
-              </Button>
-            )}
-          </div>
-        </div>
-        
-        {domain.dnsRecords && domain.status !== 'verified' && (
-          <div className="mt-3">
-            <p className="text-sm text-gray-600 mb-2">Required DNS Records:</p>
-            <div className="space-y-2 text-sm">
-              {domain.dnsRecords.map((record, idx) => (
-                <div key={idx} className="bg-gray-50 p-2 rounded font-mono text-xs">
-                  <strong>{record.type}</strong> {record.name} → {record.value}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     );
   };
@@ -470,39 +364,6 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Custom Domains Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Globe className="h-5 w-5" />
-                Custom Domains
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="example.com"
-                  value={newDomain}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewDomain(e.target.value)}
-                  onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                    if (e.key === 'Enter') {
-                      addDomain();
-                    }
-                  }}
-                />
-                <Button 
-                  id="add-domain-button"
-                  onClick={addDomain} 
-                  disabled={!newDomain.trim()}
-                >
-                  Add Domain
-                </Button>
-              </div>
-              
-              {domains.map(renderDomainStatus)}
             </CardContent>
           </Card>
 

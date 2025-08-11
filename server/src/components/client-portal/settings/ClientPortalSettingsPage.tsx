@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { CustomTabs } from 'server/src/components/ui/CustomTabs';
-import EmailRegistrationContainer from './EmailRegistrationContainer';
 import { CompanyDetailsSettings } from './CompanyDetailsSettings';
 import { UserManagementSettings } from './UserManagementSettings';
 import ClientAccount from '../account/ClientAccount';
@@ -34,10 +33,6 @@ export default function ClientPortalSettingsPage() {
     {
       label: 'Company Details',
       content: <CompanyDetailsSettings />
-    },
-    {
-      label: 'Email Registration',
-      content: <EmailRegistrationContainer />
     }
   ];
   
