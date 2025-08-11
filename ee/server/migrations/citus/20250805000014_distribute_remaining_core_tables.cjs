@@ -1,5 +1,5 @@
 /**
- * Distribute time tracking and billing related tables
+ * Distribute remaining core tables
  */
 exports.config = { transaction: false };
 
@@ -16,15 +16,17 @@ exports.up = async function(knex) {
     return;
   }
 
-  console.log('Distributing time tracking and billing tables...');
+  console.log('Distributing remaining core tables...');
   
   const tables = [
-    'billing_plans',
-    // 'bucket_plans', // Table was dropped in migration 20250403170555
-    'bucket_usage',
-    'time_sheets',
-    'time_periods',
-    'tenant_time_period_settings'
+    'comments',
+    'document_types',
+    'interaction_types',
+    'usage_tracking',
+    'resources',
+    'teams',
+    'team_members',
+    'user_roles'
   ];
   
   for (const table of tables) {
@@ -132,20 +134,62 @@ exports.up = async function(knex) {
   console.log('\nRecreating foreign keys between distributed tables...');
   
   try {
-    // time_sheets -> users
+    // team_members -> teams
     await knex.raw(`
-      ALTER TABLE time_sheets 
-      ADD CONSTRAINT time_sheets_tenant_user_id_foreign 
+      ALTER TABLE team_members 
+      ADD CONSTRAINT team_members_tenant_team_id_foreign 
+      FOREIGN KEY (tenant, team_id) 
+      REFERENCES teams(tenant, team_id) 
+      ON DELETE CASCADE
+    `);
+    console.log('  ✓ Recreated FK: team_members -> teams');
+  } catch (e) {
+    console.log(`  - Could not recreate FK team_members -> teams: ${e.message}`);
+  }
+  
+  try {
+    // team_members -> users
+    await knex.raw(`
+      ALTER TABLE team_members 
+      ADD CONSTRAINT team_members_tenant_user_id_foreign 
       FOREIGN KEY (tenant, user_id) 
       REFERENCES users(tenant, user_id) 
       ON DELETE CASCADE
     `);
-    console.log('  ✓ Recreated FK: time_sheets -> users');
+    console.log('  ✓ Recreated FK: team_members -> users');
   } catch (e) {
-    console.log(`  - Could not recreate FK time_sheets -> users: ${e.message}`);
+    console.log(`  - Could not recreate FK team_members -> users: ${e.message}`);
   }
   
-  console.log('\n✓ All time tracking and billing tables distributed successfully');
+  try {
+    // user_roles -> users  
+    await knex.raw(`
+      ALTER TABLE user_roles 
+      ADD CONSTRAINT user_roles_tenant_user_id_foreign 
+      FOREIGN KEY (tenant, user_id) 
+      REFERENCES users(tenant, user_id) 
+      ON DELETE CASCADE
+    `);
+    console.log('  ✓ Recreated FK: user_roles -> users');
+  } catch (e) {
+    console.log(`  - Could not recreate FK user_roles -> users: ${e.message}`);
+  }
+  
+  try {
+    // user_roles -> roles
+    await knex.raw(`
+      ALTER TABLE user_roles 
+      ADD CONSTRAINT user_roles_tenant_role_id_foreign 
+      FOREIGN KEY (tenant, role_id) 
+      REFERENCES roles(tenant, role_id) 
+      ON DELETE CASCADE
+    `);
+    console.log('  ✓ Recreated FK: user_roles -> roles');
+  } catch (e) {
+    console.log(`  - Could not recreate FK user_roles -> roles: ${e.message}`);
+  }
+  
+  console.log('\n✓ All remaining core tables distributed successfully');
 };
 
 exports.down = async function(knex) {
@@ -159,15 +203,17 @@ exports.down = async function(knex) {
     return;
   }
 
-  console.log('Undistributing time tracking and billing tables...');
+  console.log('Undistributing remaining core tables...');
   
   const tables = [
-    'tenant_time_period_settings',
-    'time_periods',
-    'time_sheets',
-    'bucket_usage',
-    // 'bucket_plans', // Removed
-    'billing_plans'
+    'user_roles',
+    'team_members',
+    'teams',
+    'resources',
+    'usage_tracking',
+    'interaction_types',
+    'document_types',
+    'comments'
   ];
   
   for (const table of tables) {
