@@ -209,7 +209,7 @@ export function TicketList() {
     {
       title: 'Ticket Number',
       dataIndex: 'ticket_number',
-      width: '75px',
+      width: '150px',
       render: (value: string, record: ITicketListItem) => (
         <div
           className="font-medium cursor-pointer hover:text-blue-600"
