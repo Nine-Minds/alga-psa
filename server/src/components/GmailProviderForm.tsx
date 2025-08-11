@@ -17,7 +17,7 @@ import { Alert, AlertDescription } from './ui/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
 import { ExternalLink, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
-import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from '../lib/actions/email-actions/emailProviderActions';
+import { createEmailProvider, updateEmailProvider, upsertEmailProvider, initiateOAuth } from '../lib/actions/email-actions/emailProviderActions';
 import { pubsub } from 'googleapis/build/src/apis/pubsub';
 
 const gmailProviderSchema = z.object({
@@ -194,25 +194,19 @@ export function GmailProviderForm({
         providerId = result.provider.id;
       }
 
-      // Get OAuth URL from API
-      const response = await fetch('/api/email/oauth/initiate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          provider: 'google',
-          redirectUri: formData.redirectUri,
-          providerId: providerId
-        })
+      // Get OAuth URL from server action
+      const oauthResult = await initiateOAuth({
+        provider: 'google',
+        redirectUri: formData.redirectUri,
+        providerId: providerId,
+        hosted: process.env.NEXT_PUBLIC_EDITION === 'enterprise'
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to initiate OAuth');
+      if (!oauthResult.success || !oauthResult.authUrl) {
+        throw new Error(oauthResult.error || 'Failed to initiate OAuth');
       }
 
-      const { authUrl } = await response.json();
+      const authUrl = oauthResult.authUrl;
 
       // Open OAuth popup
       const popup = window.open(
@@ -300,6 +294,48 @@ export function GmailProviderForm({
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
+      {/* Error Display */}
+      {hasAttemptedSubmit && Object.keys(form.formState.errors).length > 0 && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            <p className="font-medium mb-2">Please fill in the required fields:</p>
+            <ul className="list-disc list-inside space-y-1">
+              {form.formState.errors.providerName && <li>Provider Name</li>}
+              {form.formState.errors.mailbox && <li>Gmail Address</li>}
+              {form.formState.errors.projectId && <li>Google Cloud Project ID</li>}
+              {form.formState.errors.clientId && <li>Client ID</li>}
+              {form.formState.errors.clientSecret && <li>Client Secret</li>}
+              {form.formState.errors.redirectUri && <li>Redirect URI</li>}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* OAuth Warning */}
+      {oauthStatus !== 'success' && (
+        <div className="bg-yellow-50 border-2 border-yellow-200 p-4 rounded-lg">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                <span className="text-yellow-600 font-semibold">⚠</span>
+              </div>
+            </div>
+            <div className="ml-3">
+              <h4 className="font-medium text-yellow-800">OAuth Authorization Required</h4>
+              <p className="text-sm text-yellow-700">
+                You must complete OAuth authorization above before {isEditing ? 'updating' : 'adding'} the provider to enable Gmail notifications.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Basic Configuration */}
       <Card>
         <CardHeader>
@@ -548,48 +584,6 @@ export function GmailProviderForm({
           </div>
         </CardContent>
       </Card>
-
-      {/* Error Display */}
-      {hasAttemptedSubmit && Object.keys(form.formState.errors).length > 0 && (
-        <Alert variant="destructive">
-          <AlertDescription>
-            <p className="font-medium mb-2">Please fill in the required fields:</p>
-            <ul className="list-disc list-inside space-y-1">
-              {form.formState.errors.providerName && <li>Provider Name</li>}
-              {form.formState.errors.mailbox && <li>Gmail Address</li>}
-              {form.formState.errors.projectId && <li>Google Cloud Project ID</li>}
-              {form.formState.errors.clientId && <li>Client ID</li>}
-              {form.formState.errors.clientSecret && <li>Client Secret</li>}
-              {form.formState.errors.redirectUri && <li>Redirect URI</li>}
-            </ul>
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* OAuth Warning */}
-      {oauthStatus !== 'success' && (
-        <div className="bg-yellow-50 border-2 border-yellow-200 p-4 rounded-lg">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                <span className="text-yellow-600 font-semibold">⚠</span>
-              </div>
-            </div>
-            <div className="ml-3">
-              <h4 className="font-medium text-yellow-800">OAuth Authorization Required</h4>
-              <p className="text-sm text-yellow-700">
-                You must complete OAuth authorization above before {isEditing ? 'updating' : 'adding'} the provider to enable Gmail notifications.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Form Actions */}
       <div className="flex items-center justify-end space-x-2">

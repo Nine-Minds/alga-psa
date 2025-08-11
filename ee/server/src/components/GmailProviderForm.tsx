@@ -130,6 +130,7 @@ export function GmailProviderForm({
   };
 
   const handleOAuthAuthorization = async () => {
+    console.log('🔑 Starting Gmail OAuth authorization');
     try {
       setOauthStatus('authorizing');
       setError(null);
