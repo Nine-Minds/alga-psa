@@ -2,6 +2,7 @@
 
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { extInitiateUpload, extFinalizeUpload, extAbortUpload } from '../../../../../lib/actions/extBundleActions';
 
 // Types matching API contracts
 type InitiateResponse = {
@@ -101,17 +102,9 @@ export default function Page() {
     // Attempt best-effort abort if we have a staging key and not finalized
     try {
       if (initiateInfo && step !== 'finalized') {
-        // Fire and forget abort; server may clean up staging objects
-        // POST /api/ext-bundles/abort { key }
+        // Fire and forget abort via server action; server may clean up staging objects
         // Not required by acceptance, but provided as a good citizen
-        void fetch('/api/ext-bundles/abort', {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/json',
-            'x-alga-admin': 'true',
-          },
-          body: JSON.stringify({ key: initiateInfo.upload.key }),
-        });
+        void extAbortUpload({ key: initiateInfo.upload.key, reason: 'user_reset' });
       }
     } catch {
       // ignore
@@ -195,23 +188,7 @@ export default function Page() {
         ...(cacheControl.trim() ? { cacheControl: cacheControl.trim() } : {}),
       };
 
-      const res = await fetch('/api/ext-bundles/initiate-upload', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-alga-admin': 'true', // RBAC header
-        },
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) {
-        const j = (await res.json().catch(() => ({}))) as ApiError;
-        setInitiateError(j.error ? j : { error: 'Failed to initiate upload' });
-        setInitiating(false);
-        return;
-      }
-
-      const data = (await res.json()) as InitiateResponse;
+      const data = (await extInitiateUpload(body)) as InitiateResponse;
       setInitiateInfo(data);
       setStep('initiated');
 
@@ -222,7 +199,12 @@ export default function Page() {
         expiresSeconds: data.upload.expiresSeconds,
       });
     } catch (e: any) {
-      setInitiateError({ error: e?.message ?? 'Unexpected error' });
+      setInitiateError({
+        error: e?.message ?? 'Unexpected error',
+        code: e?.code,
+        details: e?.details,
+        issues: (e?.details as any)?.issues,
+      });
     } finally {
       setInitiating(false);
     }
@@ -340,25 +322,7 @@ export default function Page() {
             : undefined,
       };
 
-      const res = await fetch('/api/ext-bundles/finalize', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-alga-admin': 'true', // RBAC header
-        },
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) {
-        const j = (await res.json().catch(() => ({}))) as ApiError;
-        setFinalizeError(j.error ? j : { error: 'Finalize failed' });
-        setFinalizing(false);
-        // eslint-disable-next-line no-console
-        console.info('install.finalize.error', { status: res.status, code: j?.code });
-        return;
-      }
-
-      const data = (await res.json()) as FinalizeSuccess;
+      const data = (await extFinalizeUpload(body)) as FinalizeSuccess;
       setFinalizeResult(data);
       setStep('finalized');
 
@@ -370,9 +334,14 @@ export default function Page() {
         contentHash: data.contentHash,
       });
     } catch (e: any) {
-      setFinalizeError({ error: e?.message ?? 'Unexpected error in finalize' });
+      setFinalizeError({
+        error: e?.message ?? 'Unexpected error in finalize',
+        code: e?.code,
+        details: e?.details,
+        issues: (e?.details as any)?.issues,
+      });
       // eslint-disable-next-line no-console
-      console.info('install.finalize.error', { message: e?.message });
+      console.info('install.finalize.error', { message: e?.message, code: e?.code });
     } finally {
       setFinalizing(false);
     }
