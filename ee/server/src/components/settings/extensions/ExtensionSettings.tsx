@@ -280,6 +280,7 @@ export default function ExtensionSettings() {
           <h2 className="text-xl font-medium">Extension not found</h2>
           <p className="text-gray-500 mt-2">The extension you're looking for doesn't exist or you don't have access to it.</p>
           <Button
+            id="back-to-extensions-button"
             variant="outline"
             className="mt-4"
             onClick={() => router.push('/msp/settings/extensions')}
@@ -299,6 +300,7 @@ export default function ExtensionSettings() {
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center">
             <Button
+              id="back-to-extension-button"
               variant="ghost"
               size="sm"
               className="mr-2"
@@ -313,6 +315,7 @@ export default function ExtensionSettings() {
           
           <div className="flex gap-2">
             <Button 
+              id="reset-to-defaults-button"
               variant="outline" 
               onClick={handleResetToDefaults}
               disabled={isLoading}
@@ -320,6 +323,7 @@ export default function ExtensionSettings() {
               Reset to Defaults
             </Button>
             <Button 
+              id="save-settings-button"
               onClick={handleSaveSettings}
               disabled={isLoading || !hasChanges}
             >
