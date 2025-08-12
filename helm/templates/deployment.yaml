@@ -330,16 +330,16 @@ spec:
             value: "{{ .Values.google_auth.client_secret }}"
           {{- end }}
 
-          # ----------- GMAIL INTEGRATION (Enterprise Edition) ----------------
+          # ----------- GMAIL INTEGRATION ----------------
           {{- if .Values.gmail_integration.enabled }}
-          - name: EE_GMAIL_CLIENT_ID
+          - name: GOOGLE_CLIENT_ID
             value: "{{ .Values.gmail_integration.client_id }}"
-          - name: EE_GMAIL_CLIENT_SECRET
+          - name: GOOGLE_CLIENT_SECRET
             value: "{{ .Values.gmail_integration.client_secret }}"
-          - name: EE_GMAIL_PROJECT_ID
+          - name: GOOGLE_PROJECT_ID
             value: "{{ .Values.gmail_integration.project_id }}"
           {{- if .Values.gmail_integration.redirect_uri }}
-          - name: EE_GMAIL_REDIRECT_URI
+          - name: GOOGLE_REDIRECT_URI
             value: "{{ .Values.gmail_integration.redirect_uri }}"
           {{- end }}
           {{- end }}
@@ -405,4 +405,3 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
 {{- end }}
-
