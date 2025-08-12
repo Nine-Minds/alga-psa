@@ -15,6 +15,7 @@ import InteractionsFeed from 'server/src/components/interactions/InteractionsFee
 import { IInteraction } from 'server/src/interfaces/interaction.interfaces';
 import { TagManager } from 'server/src/components/tags';
 import { getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
+import { updateContact } from 'server/src/lib/actions/contact-actions/contactActions';
 import Documents from 'server/src/components/documents/Documents';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
@@ -23,6 +24,7 @@ import { ButtonComponent, ContainerComponent } from 'server/src/types/ui-reflect
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/documentActions';
+import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 
 interface ContactDetailsViewProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -74,6 +76,10 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
   const [error, setError] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [isEditingCompany, setIsEditingCompany] = useState(false);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(contact.company_id || null);
+  const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('all');
+  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const { openDrawer, goBack } = useDrawer();
 
   useEffect(() => {
@@ -218,6 +224,30 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
       );
     });
   };
+
+  const handleCompanyChange = async (companyId: string | null) => {
+    try {
+      setError(null);
+      setSelectedCompanyId(companyId);
+      
+      const updatedContact = await updateContact({
+        ...contact,
+        company_id: companyId || ''
+      });
+      
+      setContact(updatedContact);
+      setIsEditingCompany(false);
+    } catch (err) {
+      console.error('Error updating company:', err);
+      if (err instanceof Error) {
+        setError(`Failed to update company: ${err.message}`);
+      } else {
+        setError('Failed to update company. Please try again.');
+      }
+      // Revert the selection on error
+      setSelectedCompanyId(contact.company_id || null);
+    }
+  };
   
   return (
     <ReflectionContainer id={id} label={`Contact Details - ${contact.full_name}`}>
@@ -288,11 +318,48 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
             <TableRow label="Full Name" value={contact.full_name} />
             <TableRow label="Email" value={contact.email} />
             <TableRow label="Phone" value={contact.phone_number} />
-            <TableRow 
-              label="Company" 
-              value={getCompanyName(contact.company_id!)}
-              onClick={handleCompanyClick}
-            />
+            <tr>
+              <td className="py-2 font-semibold">Company:</td>
+              <td className="py-2">
+                {isEditingCompany ? (
+                  <div className="flex-1">
+                    <CompanyPicker
+                      id="contact-company-picker"
+                      companies={companies}
+                      onSelect={handleCompanyChange}
+                      selectedCompanyId={selectedCompanyId}
+                      filterState={filterState}
+                      onFilterStateChange={setFilterState}
+                      clientTypeFilter={clientTypeFilter}
+                      onClientTypeFilterChange={setClientTypeFilter}
+                      fitContent={false}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    {contact.company_id ? (
+                      <button
+                        onClick={handleCompanyClick}
+                        className="text-blue-600 hover:underline focus:outline-none"
+                      >
+                        {getCompanyName(contact.company_id)}
+                      </button>
+                    ) : (
+                      <span className="text-gray-500 italic">No company assigned</span>
+                    )}
+                    <Button
+                      id="edit-company-btn"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsEditingCompany(true)}
+                      className="p-1 ml-2"
+                    >
+                      <Pen className="h-3 w-3 text-gray-600" />
+                    </Button>
+                  </div>
+                )}
+              </td>
+            </tr>
             <TableRow label="Role" value={contact.role || 'Not set'} />
             <TableRow label="Status" value={contact.is_inactive ? 'Inactive' : 'Active'} />
             <TableRow label="Created At" value={new Date(contact.created_at).toLocaleString()} />

@@ -318,6 +318,24 @@ export const CompanyPicker: React.FC<CompanyPickerProps & AutomationProps> = ({
                 role="listbox"
                 aria-label="Companies"
               >
+                {/* Add clear/none option */}
+                <OptionButton
+                  id={`${id}-company-picker-none`}
+                  label="None"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onSelect(null);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full justify-start px-2 py-2 cursor-pointer hover:bg-gray-100 ${
+                    !selectedCompanyId ? 'bg-blue-100 hover:bg-blue-200' : ''
+                  }`}
+                >
+                  <div className="flex items-center space-x-2 flex-grow">
+                    <span className="text-gray-500 italic">No Company</span>
+                  </div>
+                </OptionButton>
                 {isOpen && filteredCompanies.length === 0 ? (
                   <div className="px-4 py-2 text-gray-500">No clients found</div>
                 ) : (

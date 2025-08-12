@@ -3,34 +3,60 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import UserList from './UserList';
-import { getAllUsers, addUser, getUserWithRoles, deleteUser, getMSPRoles } from 'server/src/lib/actions/user-actions/userActions';
+import { getAllUsers, addUser, getUserWithRoles, deleteUser, getMSPRoles, getClientPortalRoles } from 'server/src/lib/actions/user-actions/userActions';
+import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
+import { addContact } from 'server/src/lib/actions/contact-actions/contactActions';
 import { IUser, IRole } from 'server/src/interfaces/auth.interfaces';
+import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
+import ViewSwitcher, { ViewSwitcherOption } from 'server/src/components/ui/ViewSwitcher';
 import { Search, Eye, EyeOff } from 'lucide-react';
 
 const UserManagement = (): JSX.Element => {
   const [users, setUsers] = useState<IUser[]>([]);
   const [roles, setRoles] = useState<IRole[]>([]);
+  const [companies, setCompanies] = useState<ICompany[]>([]);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showNewUserForm, setShowNewUserForm] = useState(false);
-  const [newUser, setNewUser] = useState({ firstName: '', lastName: '', email: '', password: '', role: '' });
   const [showPassword, setShowPassword] = useState(false);
+  const [portalType, setPortalType] = useState<'msp' | 'client'>('msp');
+  const [newUser, setNewUser] = useState({ 
+    firstName: '', 
+    lastName: '', 
+    email: '', 
+    password: '', 
+    role: '',
+    companyId: ''
+  });
 
   useEffect(() => {
+    setLoading(true);
     fetchUsers();
     fetchRoles();
-  }, []);
+    if (portalType === 'client') {
+      fetchCompanies();
+    }
+  }, [portalType]);
 
   const fetchUsers = async (): Promise<void> => {
     try {
       const fetchedUsers = await getAllUsers(true);
-      const sortedUsers = [...fetchedUsers].sort((a, b) =>
+      console.log('All fetched users:', fetchedUsers);
+      
+      // Filter users based on portal type
+      const filteredByType = portalType === 'msp' 
+        ? fetchedUsers.filter(user => user.user_type === 'internal' || !user.user_type)
+        : fetchedUsers.filter(user => user.user_type === 'client');
+      
+      console.log(`Filtered ${portalType} users:`, filteredByType);
+      
+      const sortedUsers = [...filteredByType].sort((a, b) =>
         (a.first_name || '').toLowerCase().localeCompare((b.first_name || '').toLowerCase())
       );
       setUsers(sortedUsers);
@@ -44,16 +70,33 @@ const UserManagement = (): JSX.Element => {
 
   const fetchRoles = async (): Promise<void> => {
     try {
-      const fetchedRoles = await getMSPRoles();
+      const fetchedRoles = portalType === 'msp' 
+        ? await getMSPRoles()
+        : await getClientPortalRoles();
+      
+      console.log(`Fetched ${portalType} roles:`, fetchedRoles);
       setRoles(fetchedRoles);
 
       // Set default role to the first role in the list
       if (fetchedRoles.length > 0) {
         setNewUser(prevState => ({ ...prevState, role: fetchedRoles[0].role_id }));
+      } else {
+        console.warn(`No ${portalType} roles found`);
       }
     } catch (err) {
       console.error('Error fetching roles:', err);
       setError('Failed to fetch roles');
+    }
+  };
+
+  const fetchCompanies = async (): Promise<void> => {
+    try {
+      const fetchedCompanies = await getAllCompanies();
+      console.log('Fetched companies:', fetchedCompanies);
+      setCompanies(fetchedCompanies);
+    } catch (err) {
+      console.error('Error fetching companies:', err);
+      setError('Failed to fetch companies');
     }
   };
 
@@ -75,29 +118,71 @@ const UserManagement = (): JSX.Element => {
       // Clear any previous errors
       setError(null);
       
-      const createdUser = await addUser({
-        firstName: newUser.firstName,
-        lastName: newUser.lastName,
-        email: newUser.email,
-        password: newUser.password,
-        roleId: newUser.role || (roles.length > 0 ? roles[0].role_id : undefined) // Use first role as fallback
-      });
+      // Validate required fields
+      if (!newUser.firstName || !newUser.lastName || !newUser.email || !newUser.password) {
+        setError('Please fill in all required fields');
+        return;
+      }
 
-      // Fetch the updated user with roles
-      const updatedUser = await getUserWithRoles(createdUser.user_id);
+      if (portalType === 'client') {
+        // Create contact first for client portal users
+        const contact = await addContact({
+          full_name: `${newUser.firstName} ${newUser.lastName}`,
+          email: newUser.email,
+          company_id: newUser.companyId || undefined,
+          is_inactive: false
+        });
 
-      if (updatedUser) {
-        setUsers([...users, updatedUser]);
+        // Then create the user with client portal role
+        const createdUser = await addUser({
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+          email: newUser.email,
+          password: newUser.password,
+          roleId: newUser.role || (roles.length > 0 ? roles[0].role_id : undefined),
+          userType: 'client',
+          contactId: contact.contact_name_id
+        });
+
+        // Fetch the updated user with roles
+        const updatedUser = await getUserWithRoles(createdUser.user_id);
+        if (updatedUser) {
+          await fetchUsers(); // Refresh the entire list
+        }
+      } else {
+        // Create MSP user
+        const createdUser = await addUser({
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+          email: newUser.email,
+          password: newUser.password,
+          roleId: newUser.role || (roles.length > 0 ? roles[0].role_id : undefined)
+        });
+
+        // Fetch the updated user with roles
+        const updatedUser = await getUserWithRoles(createdUser.user_id);
+        if (updatedUser) {
+          setUsers([...users, updatedUser]);
+        }
       }
 
       setShowNewUserForm(false);
       // Reset newUser state with the default role
-      setNewUser({ firstName: '', lastName: '', email: '', password: '', role: roles.length > 0 ? roles[0].role_id : '' });
+      setNewUser({ 
+        firstName: '', 
+        lastName: '', 
+        email: '', 
+        password: '', 
+        role: roles.length > 0 ? roles[0].role_id : '',
+        companyId: ''
+      });
     } catch (error: any) {
       console.error('Error creating user:', error);
       // Display specific error message if available
       if (error.message === "A user with this email address already exists") {
         setError('This email address is already in use. Please use a different email address.');
+      } else if (error.message.includes("Cannot assign")) {
+        setError('Please select an appropriate role for this user type');
       } else {
         setError(error.message || 'Failed to create user');
       }
@@ -114,17 +199,47 @@ const UserManagement = (): JSX.Element => {
     }
   };
 
+  const handlePortalTypeChange = (type: 'msp' | 'client') => {
+    setPortalType(type);
+    setShowNewUserForm(false);
+    setNewUser({ 
+      firstName: '', 
+      lastName: '', 
+      email: '', 
+      password: '', 
+      role: '',
+      companyId: ''
+    });
+    setError(null);
+  };
+
   const statusOptions = [
     { value: 'all', label: 'All Users' },
     { value: 'active', label: 'Active Users' },
     { value: 'inactive', label: 'Inactive Users' }
   ];
 
+  const viewOptions: ViewSwitcherOption<'msp' | 'client'>[] = [
+    { value: 'msp', label: 'MSP' },
+    { value: 'client', label: 'Client Portal' }
+  ];
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>User Management</CardTitle>
-        <CardDescription>Manage users and permissions</CardDescription>
+        <div className="flex justify-between items-center">
+          <div>
+            <CardTitle>User Management</CardTitle>
+            <CardDescription>
+              Manage {portalType === 'msp' ? 'MSP users and permissions' : 'client portal users and their access'}
+            </CardDescription>
+          </div>
+          <ViewSwitcher
+            currentView={portalType}
+            onChange={handlePortalTypeChange}
+            options={viewOptions}
+          />
+        </div>
       </CardHeader>
       <CardContent>
         <div className="flex justify-between mb-4">
@@ -148,11 +263,18 @@ const UserManagement = (): JSX.Element => {
               />
             </div>
           </div>
-          <Button id="create-new-user-btn" onClick={() => setShowNewUserForm(true)}>Create New User</Button>
+          <Button 
+            id={`create-new-${portalType}-user-btn`} 
+            onClick={() => setShowNewUserForm(true)}
+          >
+            Create New {portalType === 'msp' ? 'User' : 'Client User'}
+          </Button>
         </div>
         {showNewUserForm && (
           <div className="mb-4 p-4 border rounded-md">
-            <h3 className="text-lg font-semibold mb-2">Create New User</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              Create New {portalType === 'msp' ? 'MSP User' : 'Client Portal User'}
+            </h3>
             <div className="space-y-2">
               <div>
                 <Label htmlFor="firstName">First Name</Label>
@@ -202,6 +324,20 @@ const UserManagement = (): JSX.Element => {
                   </button>
                 </div>
               </div>
+              {portalType === 'client' && (
+                <div className="relative z-20">
+                  <CustomSelect
+                    label="Client Company"
+                    value={newUser.companyId}
+                    onValueChange={(value) => setNewUser({ ...newUser, companyId: value })}
+                    options={companies.map((company): SelectOption => ({ 
+                      value: company.company_id, 
+                      label: company.company_name 
+                    }))}
+                    placeholder="Select Company (Optional)"
+                  />
+                </div>
+              )}
               <div className="relative z-20">
                 <CustomSelect
                   label="Primary Role"
@@ -215,7 +351,32 @@ const UserManagement = (): JSX.Element => {
                 />
               </div>
               {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-              <Button id="submit-new-user-btn" onClick={handleCreateUser}>Create User</Button>
+              <div className="flex gap-2">
+                <Button 
+                  id={`submit-new-${portalType}-user-btn`} 
+                  onClick={handleCreateUser}
+                >
+                  Create {portalType === 'msp' ? 'User' : 'Client User'}
+                </Button>
+                <Button 
+                  id={`cancel-new-${portalType}-user-btn`} 
+                  variant="outline"
+                  onClick={() => {
+                    setShowNewUserForm(false);
+                    setNewUser({ 
+                      firstName: '', 
+                      lastName: '', 
+                      email: '', 
+                      password: '', 
+                      role: roles.length > 0 ? roles[0].role_id : '',
+                      companyId: ''
+                    });
+                    setError(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
           </div>
         )}
