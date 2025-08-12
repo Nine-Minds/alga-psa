@@ -124,9 +124,10 @@ export async function GET(request: NextRequest) {
 
     // Get OAuth client credentials - check if this is a hosted EE flow
     const secretProvider = await getSecretProviderInstance();
-    const isHostedFlow = process.env.NEXT_PUBLIC_EDITION === 'enterprise' && 
-                        stateData.redirectUri && 
-                        stateData.redirectUri.includes('api.algapsa.com');
+    // Prefer server-side NEXTAUTH_URL for hosted detection; allow state flag as backup
+    const nextauthUrl = process.env.NEXTAUTH_URL || (await secretProvider.getAppSecret('NEXTAUTH_URL')) || '';
+    const isHostedByEnv = nextauthUrl.startsWith('https://algapsa.com');
+    const isHostedFlow = isHostedByEnv || stateData.hosted === true;
     
     let clientId: string | null = null;
     let clientSecret: string | null = null;

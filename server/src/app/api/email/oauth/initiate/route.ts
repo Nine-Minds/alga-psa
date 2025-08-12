@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { provider, redirectUri, hosted } = body;
+    const { provider, redirectUri } = body;
 
     if (!provider || !['microsoft', 'google'].includes(provider)) {
       return NextResponse.json({ error: 'Invalid provider' }, { status: 400 });
@@ -27,7 +27,11 @@ export async function POST(request: NextRequest) {
     let clientId: string | null = null;
     let effectiveRedirectUri = redirectUri;
 
-    if (hosted && process.env.NEXT_PUBLIC_EDITION === 'enterprise') {
+    // Prefer server-side NEXTAUTH_URL for hosted detection
+    const nextauthUrl = process.env.NEXTAUTH_URL || (await secretProvider.getAppSecret('NEXTAUTH_URL')) || '';
+    const isHosted = nextauthUrl.startsWith('https://algapsa.com');
+
+    if (isHosted) {
       // Use hosted configuration for Enterprise Edition
       if (provider === 'google') {
         clientId = await secretProvider.getAppSecret('EE_GMAIL_CLIENT_ID') || null;
@@ -56,7 +60,8 @@ export async function POST(request: NextRequest) {
       providerId: body.providerId,
       redirectUri: effectiveRedirectUri || `${await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')}/api/auth/${provider}/callback`,
       timestamp: Date.now(),
-      nonce: generateNonce()
+      nonce: generateNonce(),
+      hosted: true
     };
 
     // Generate authorization URL

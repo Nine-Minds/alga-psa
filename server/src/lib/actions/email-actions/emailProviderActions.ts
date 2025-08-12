@@ -627,7 +627,9 @@ export async function initiateOAuth(params: {
     let clientId: string | null = null;
     let effectiveRedirectUri = params.redirectUri;
 
-    const isHosted = params.hosted !== undefined ? params.hosted : process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+    // Prefer server-side NEXTAUTH_URL for hosted detection
+    const nextauthUrl = process.env.NEXTAUTH_URL || (await secretProvider.getAppSecret('NEXTAUTH_URL')) || '';
+    const isHosted = nextauthUrl.startsWith('https://algapsa.com');
 
     if (isHosted) {
       // Use hosted configuration for Enterprise Edition
@@ -659,7 +661,8 @@ export async function initiateOAuth(params: {
       providerId: params.providerId,
       redirectUri: effectiveRedirectUri || `${await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')}/api/auth/${params.provider}/callback`,
       timestamp: Date.now(),
-      nonce: generateNonce()
+      nonce: generateNonce(),
+      hosted: !!isHosted
     };
 
     // Generate authorization URL
