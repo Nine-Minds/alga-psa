@@ -102,6 +102,11 @@ config:
   redis: # Redis configuration only if redis enabled is true
     host: redis
     port: 6379
+    # Prefer using a secret for the password.
+    # If not provided, falls back to literal `password` below (legacy).
+    passwordSecret:
+      name: ""     # e.g., "redis-credentials"
+      key:  ""     # e.g., "REDIS_PASSWORD"
     password: password
     db: 0
   llm:
@@ -347,4 +352,3 @@ vaultAgent:
   role: alga-psa
   secretPath: secret/data/alga-psa/server
   sharedSecretPath: secret/data/alga-psa/shared
-
