@@ -1,3 +1,7 @@
+// Disable transaction for Citus compatibility
+// undistribute_table() and DROP TABLE CASCADE are not allowed in transactions
+exports.config = { transaction: false };
+
 exports.up = async function(knex) {
   // Drop tables related to email domain registration
   // These were used for allowing self-registration based on email domains
