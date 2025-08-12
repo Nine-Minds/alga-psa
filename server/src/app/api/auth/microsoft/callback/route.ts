@@ -120,15 +120,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get OAuth client credentials - check for hosted (EE) configuration first
+    // Get OAuth client credentials - prefer server-side NEXTAUTH_URL for hosted detection
     const secretProvider = await getSecretProviderInstance();
     let clientId: string | null = null;
     let clientSecret: string | null = null;
+    const nextauthUrl = process.env.NEXTAUTH_URL || (await secretProvider.getAppSecret('NEXTAUTH_URL')) || '';
+    const isHostedFlow = nextauthUrl.startsWith('https://algapsa.com');
     
-    if (process.env.NEXT_PUBLIC_EDITION === 'enterprise') {
-      // Use hosted EE configuration
-      clientId = await secretProvider.getAppSecret('EE_MICROSOFT_CLIENT_ID') || null;
-      clientSecret = await secretProvider.getAppSecret('EE_MICROSOFT_CLIENT_SECRET') || null;
+    if (isHostedFlow) {
+      // Use app-level configuration
+      clientId = await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID') || null;
+      clientSecret = await secretProvider.getAppSecret('MICROSOFT_CLIENT_SECRET') || null;
     } else {
       // Use tenant-specific or fallback credentials
       clientId = process.env.MICROSOFT_CLIENT_ID || await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_client_id') || null;

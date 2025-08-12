@@ -32,13 +32,13 @@ export async function POST(request: NextRequest) {
     const isHosted = nextauthUrl.startsWith('https://algapsa.com');
 
     if (isHosted) {
-      // Use hosted configuration for Enterprise Edition
+      // Use app-level configuration
       if (provider === 'google') {
-        clientId = await secretProvider.getAppSecret('EE_GMAIL_CLIENT_ID') || null;
-        effectiveRedirectUri = await secretProvider.getAppSecret('EE_GMAIL_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/google/callback';
+        clientId = await secretProvider.getAppSecret('GOOGLE_CLIENT_ID') || null;
+        effectiveRedirectUri = await secretProvider.getAppSecret('GOOGLE_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/google/callback';
       } else if (provider === 'microsoft') {
-        clientId = await secretProvider.getAppSecret('EE_MICROSOFT_CLIENT_ID') || null;
-        effectiveRedirectUri = await secretProvider.getAppSecret('EE_MICROSOFT_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/microsoft/callback';
+        clientId = await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID') || null;
+        effectiveRedirectUri = await secretProvider.getAppSecret('MICROSOFT_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/microsoft/callback';
       }
     } else {
       // Use tenant-specific or fallback credentials

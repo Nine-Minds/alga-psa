@@ -133,9 +133,9 @@ export async function GET(request: NextRequest) {
     let clientSecret: string | null = null;
     
     if (isHostedFlow) {
-      // Use hosted configuration for Enterprise Edition
-      clientId = await secretProvider.getAppSecret('EE_GMAIL_CLIENT_ID') || null;
-      clientSecret = await secretProvider.getAppSecret('EE_GMAIL_CLIENT_SECRET') || null;
+      // Use app-level configuration
+      clientId = await secretProvider.getAppSecret('GOOGLE_CLIENT_ID') || null;
+      clientSecret = await secretProvider.getAppSecret('GOOGLE_CLIENT_SECRET') || null;
     } else {
       // Use tenant-specific or fallback credentials
       clientId = await secretProvider.getAppSecret('GOOGLE_CLIENT_ID') || await secretProvider.getTenantSecret(stateData.tenant, 'google_client_id') || null;
