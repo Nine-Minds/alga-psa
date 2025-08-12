@@ -1,3 +1,4 @@
+
 export default {
   meta: {
     type: 'problem',
@@ -21,11 +22,14 @@ export default {
           typeof src === 'string' &&
           (
             src.endsWith('/ui/Button') ||
+            src.endsWith('/ui/button') ||
             src === 'server/src/components/ui/Button' ||
             src === '../../components/ui/Button' ||
             src === '../components/ui/Button' ||
             src === '../ui/Button' ||
-            src === './ui/Button'
+            src === './ui/Button' ||
+            src === '@/components/ui/button' ||
+            src === '@/components/ui/Button'
           )
         ) {
           for (const spec of node.specifiers || []) {

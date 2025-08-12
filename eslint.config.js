@@ -26,7 +26,8 @@ export default [
       "tools/**/*",
       ".ai/**/*",
       "**/build/**/*",
-      "server/public/**/*"
+      "server/public/**/*",
+      "shared/workflow/workflows/system-email-processing-workflow.ts" // Plain JS for workflow runtime compatibility
     ],
 
     // Define language options
@@ -44,6 +45,7 @@ export default [
           path.join(__dirname, 'server/tsconfig.json'),
           path.join(__dirname, 'ee/server/tsconfig.json'),
           path.join(__dirname, 'shared/tsconfig.json'),
+          path.join(__dirname, 'services/workflow-worker/tsconfig.json'),
         ],
         ecmaFeatures: {
           jsx: true
