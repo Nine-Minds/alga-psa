@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
-import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
+import { createTenantKnex, runWithTenant } from '../../../../../lib/db';
+import { configureGmailProvider } from '../../../../../lib/actions/email-actions/configureGmailProvider';
 import axios from 'axios';
 
 // make this dynamic
@@ -202,10 +203,16 @@ export async function GET(request: NextRequest) {
       if (stateData.providerId) {
         try {
           console.log(`💾 Saving OAuth tokens to database for provider: ${stateData.providerId}`);
-          const knex = await getAdminConnection();
+          const { knex, tenant } = await createTenantKnex();
           
           await knex('google_email_provider_config')
             .where('email_provider_id', stateData.providerId)
+            .modify((qb: any) => {
+              // Use the current tenant from context/cookies when available
+              if (tenant) {
+                qb.andWhere('tenant', tenant);
+              }
+            })
             .update({
               access_token: access_token,
               refresh_token: refresh_token || null,
@@ -220,6 +227,35 @@ export async function GET(request: NextRequest) {
         }
       } else {
         console.log('⚠️  No provider ID in state, skipping database token save');
+      }
+
+      // After saving tokens, try to finalize Gmail setup (Pub/Sub + Watch) for this provider
+      // Run with the tenant from state to avoid cookie/header mismatch
+      if (stateData.providerId && stateData.tenant) {
+        try {
+          await runWithTenant(stateData.tenant, async () => {
+            const { knex } = await createTenantKnex();
+            const googleConfig = await knex('google_email_provider_config')
+              .select('project_id')
+              .where('email_provider_id', stateData.providerId)
+              .andWhere('tenant', stateData.tenant)
+              .first();
+
+            if (googleConfig?.project_id) {
+              console.log(`🔁 Finalizing Gmail provider after OAuth for provider ${stateData.providerId}`);
+              await configureGmailProvider({
+                tenant: stateData.tenant,
+                providerId: stateData.providerId,
+                projectId: googleConfig.project_id,
+                force: true
+              });
+            } else {
+              console.warn('⚠️ Skipping Gmail finalize: project_id missing');
+            }
+          });
+        } catch (finalizeError: any) {
+          console.error('⚠️ Failed to finalize Gmail provider after OAuth:', finalizeError?.message || finalizeError);
+        }
       }
 
       // Return success with tokens
