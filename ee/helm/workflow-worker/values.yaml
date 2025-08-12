@@ -1,0 +1,135 @@
+# Default values for workflow-worker.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Enable/disable the workflow worker deployment
+enabled: true
+
+# Image configuration
+image:
+  repository: harbor.nineminds.com/nineminds/workflow-worker
+  tag: latest
+  pullPolicy: Always
+  is_private: true
+  credentials: harbor-credentials
+
+# Number of replicas
+replicaCount: 1
+
+# Rolling update configuration
+rollingUpdate:
+  maxSurge: 1
+  maxUnavailable: 0
+
+# Service configuration (used for health/metrics only)
+service:
+  type: ClusterIP
+  port: 4000
+
+# Logging configuration
+logLevel: info
+
+# Worker configuration
+workflow:
+  distributedMode: true
+  redis:
+    host: "redis.msp.svc.cluster.local"
+    port: "6379"
+    passwordSecret:
+      name: "redis-secrets"
+      key: "password"
+    streamPrefix: "workflow:events:"
+    consumerGroup: "workflow-workers"
+    batchSize: 10
+    idleTimeoutMs: 60000
+  pollIntervalMs: 300000
+  concurrencyLimit: 5
+  maxRetries: 3
+  healthCheckIntervalMs: 30000
+  metricsReportingIntervalMs: 60000
+
+# Database configuration
+db:
+  host: "pgbouncer.msp.svc.cluster.local"
+  port: "6432"
+  serverDatabase: "server"
+  user: "app_user"
+  serverPasswordSecret:
+    name: "db-secrets"
+    key: "server-password"
+
+# Application configuration
+applicationUrl: "https://algapsa.com"
+
+# Secrets (used when Vault is disabled)
+secrets:
+  nextauthSecret: "change-me-in-prod"
+  tokenSecretKey: "change-me-in-prod"
+  cryptoKey: "change-me-in-prod"
+
+# Vault configuration for secret management (optional)
+vault:
+  enabled: false
+  role: workflow-worker
+  secretPath: secret/data/alga-psa/workflow-worker
+
+# Health check probe configuration
+livenessProbe:
+  initialDelaySeconds: 30
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+  successThreshold: 1
+
+readinessProbe:
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+  successThreshold: 1
+
+# Resource limits and requests
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 200m
+    memory: 512Mi
+
+# Horizontal Pod Autoscaler configuration
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Pod Disruption Budget configuration
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Pod annotations/labels
+podAnnotations: {}
+podLabels: {}
+
+# Pod security context
+podSecurityContext: {}
+
+# Security context
+securityContext: {}
+
+# Scheduling
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Additional env/volumes if needed
+extraEnv: []
+extraVolumes: []
+extraVolumeMounts: []
+
+# Namespace override (default to msp)
+namespace: "msp"
+
