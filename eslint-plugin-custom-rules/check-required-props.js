@@ -91,6 +91,15 @@ export default {
           return true;
         }
 
+        // Accept spreads from variables ending with 'Props' (e.g., filterButtonProps)
+        // These are typically from useAutomationIdAndRegister hook
+        if (
+          arg.type === 'Identifier' &&
+          (arg.name.endsWith('Props') || arg.name.endsWith('ButtonProps'))
+        ) {
+          return true;
+        }
+
         return false;
       });
     }
