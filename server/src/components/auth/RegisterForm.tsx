@@ -14,12 +14,9 @@ import { usePostHog } from 'posthog-js/react';
 export default function RegisterForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
-  const [showNameFields, setShowNameFields] = useState(false);
   const [emailStatus, setEmailStatus] = useState<'checking' | 'valid' | 'invalid' | null>(null);
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
@@ -77,7 +74,6 @@ export default function RegisterForm() {
         const verifyResult = await verifyContactEmail(email);
 
         if (verifyResult.exists) {
-          setShowNameFields(false);
           setEmailStatus('valid');
           posthog?.capture('registration_email_verified', {
             verification_type: 'existing_contact',
@@ -85,7 +81,6 @@ export default function RegisterForm() {
           });
         } else {
           // Registration only allowed for existing contacts
-          setShowNameFields(false);
           setEmailStatus('invalid');
           posthog?.capture('registration_email_rejected', {
             rejection_reason: 'not_a_contact',
@@ -113,8 +108,6 @@ export default function RegisterForm() {
     if (emailStatus !== 'valid') validationErrors.push('Verified contact email');
     if (!password.trim()) validationErrors.push('Password');
     if (passwordStrength === 'weak') validationErrors.push('Stronger password');
-    if (showNameFields && !firstName.trim()) validationErrors.push('First Name');
-    if (showNameFields && !lastName.trim()) validationErrors.push('Last Name');
     return validationErrors;
   };
 
@@ -144,7 +137,7 @@ export default function RegisterForm() {
     posthog?.capture('registration_submitted', {
       form_completion_time: Date.now() - journeyStartTime.current,
       password_strength: passwordStrength,
-      registration_type: showNameFields ? 'new_registration' : 'existing_contact'
+      registration_type: 'existing_contact'
     });
 
     try {
@@ -159,7 +152,7 @@ export default function RegisterForm() {
         posthog?.capture('registration_failed', {
           error_message: result.error,
           submission_duration: Date.now() - submissionStartTime,
-          registration_type: showNameFields ? 'new_registration' : 'existing_contact'
+          registration_type: 'existing_contact'
         });
       } else {
         // Contact-based registration - direct to login
@@ -224,60 +217,13 @@ export default function RegisterForm() {
               Registration is only available for existing contacts. Please contact your administrator.
             </p>
           )}
-          {emailStatus === 'valid' && !showNameFields && (
+          {emailStatus === 'valid' && (
             <p className="text-green-500">
               Contact verified. Please create your password.
             </p>
           )}
         </div>
       </div>
-
-      {showNameFields && (
-        <>
-          <div className="space-y-2">
-            <Label htmlFor="firstName">First Name *</Label>
-            <Input
-              id="firstName"
-              name="firstName"
-              type="text"
-              autoComplete="given-name"
-              required
-              value={firstName}
-              onChange={(e) => {
-                setFirstName(e.target.value);
-                clearErrorIfSubmitted();
-              }}
-              onFocus={() => {
-                posthog?.capture('registration_field_focused', {
-                  field_name: 'first_name'
-                });
-              }}
-              disabled={isLoading}
-              className={`mt-1 ${hasAttemptedSubmit && !firstName.trim() ? 'border-red-500' : ''}`}
-              placeholder="Enter your first name"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="lastName">Last Name *</Label>
-            <Input
-              id="lastName"
-              name="lastName"
-              type="text"
-              autoComplete="family-name"
-              required
-              value={lastName}
-              onChange={(e) => {
-                setLastName(e.target.value);
-                clearErrorIfSubmitted();
-              }}
-              disabled={isLoading}
-              className={`mt-1 ${hasAttemptedSubmit && !lastName.trim() ? 'border-red-500' : ''}`}
-              placeholder="Enter your last name"
-            />
-          </div>
-        </>
-      )}
 
       <div className="space-y-2">
           <Label htmlFor="password">Password *</Label>
@@ -357,8 +303,7 @@ export default function RegisterForm() {
         type="submit"
         disabled={isLoading}
         className={`w-full ${
-          !email.trim() || emailStatus !== 'valid' || !password.trim() || passwordStrength === 'weak' ||
-          (showNameFields && (!firstName.trim() || !lastName.trim()))
+          !email.trim() || emailStatus !== 'valid' || !password.trim() || passwordStrength === 'weak'
             ? 'opacity-50' : ''
         }`}
       >

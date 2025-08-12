@@ -3,9 +3,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/ui/Card';
 import { Table } from 'server/src/components/ui/Table';
-// import { Button } from 'server/src/components/ui/Button';
-// import { toast } from 'react-hot-toast';
-
 import { getClientCompany } from 'server/src/lib/actions/client-portal-actions/client-company';
 import { getClientBillingPlan, getClientInvoices } from 'server/src/lib/actions/client-portal-actions/client-billing';
 

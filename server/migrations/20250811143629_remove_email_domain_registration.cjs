@@ -36,12 +36,12 @@ exports.up = async function(knex) {
       if (distCheck.rows[0].is_distributed) {
         // Table is distributed, undistribute it
         await knex.raw('SELECT undistribute_table(\'pending_registrations\')');
-        console.log('Undistributed pending_registrations table');
+        // Successfully undistributed pending_registrations table
       }
     }
   } catch (err) {
     // Any error here is not critical - continue with dropping tables
-    console.log('Note: Citus check/undistribute step skipped:', err.message);
+    // Note: Citus check/undistribute step skipped
   }
   
   // Now drop all tables with CASCADE to handle any remaining dependencies
@@ -49,12 +49,12 @@ exports.up = async function(knex) {
   await knex.raw('DROP TABLE IF EXISTS verification_tokens CASCADE');
   await knex.raw('DROP TABLE IF EXISTS pending_registrations CASCADE');
   
-  console.log('Successfully dropped email domain registration tables');
+  // Successfully dropped email domain registration tables
 };
 
 exports.down = async function(knex) {
   // NO-OP: Security-driven removal should not be rolled back
   // These tables were removed for security reasons and should not be recreated
-  console.log('Email domain registration tables were removed for security reasons and will not be recreated');
+  // Email domain registration tables were removed for security reasons and will not be recreated
   return;
 };
