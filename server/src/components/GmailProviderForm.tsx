@@ -120,10 +120,10 @@ export function GmailProviderForm({
 
       console.log('📤 Final payload being sent:', JSON.stringify(payload, null, 2));
 
-      // For normal saves (not OAuth), skip automation to prevent duplicate Pub/Sub setup
+      // After OAuth, run automation once to set up Pub/Sub + watch
       const result = isEditing 
-        ? await updateEmailProvider(provider.id, payload, true) // skipAutomation: true
-        : await createEmailProvider(payload, true); // skipAutomation: true
+        ? await updateEmailProvider(provider.id, payload, false) // skipAutomation: false
+        : await createEmailProvider(payload, false); // skipAutomation: false
 
       onSuccess(result.provider);
 
