@@ -137,9 +137,7 @@ export function EmailProviderSelector({
       {/* Help Text */}
       <div className="text-center">
         <p className="text-xs text-muted-foreground max-w-2xl mx-auto">
-          Need help deciding? Gmail works well for Google Workspace organizations, 
-          while Microsoft 365 is ideal for organizations using Microsoft services. 
-          You can change this selection later by removing and reconfiguring your email provider.
+          Choose the provider your organization already uses. If you use Google Workspace, pick Gmail; if you use Microsoft 365, pick Microsoft 365. You can change this later by removing and reconfiguring your email provider.
         </p>
       </div>
     </div>

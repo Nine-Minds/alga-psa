@@ -64,7 +64,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
   const [selectedProvider, setSelectedProvider] = useState<'smtp' | 'resend'>('smtp');
   const [showPassword, setShowPassword] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
-  const [activeTab, setActiveTab] = useState('outbound');
+  const [activeTab, setActiveTab] = useState('inbound');
 
   useEffect(() => {
     loadEmailSettings();
@@ -374,13 +374,13 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
       <TabsList className="grid w-full grid-cols-2 mb-6">
-        <TabsTrigger value="outbound" className="flex items-center gap-2">
-          <Send className="h-4 w-4" />
-          Outbound Email
-        </TabsTrigger>
         <TabsTrigger value="inbound" className="flex items-center gap-2">
           <Inbox className="h-4 w-4" />
           Inbound Email
+        </TabsTrigger>
+        <TabsTrigger value="outbound" className="flex items-center gap-2">
+          <Send className="h-4 w-4" />
+          Outbound Email
         </TabsTrigger>
       </TabsList>
 
