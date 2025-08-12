@@ -3,6 +3,7 @@ import pluginJs from "@eslint/js";
 import tseslint from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 import pluginReact from "eslint-plugin-react";
+import pluginReactHooks from "eslint-plugin-react-hooks";
 import customRules from "./eslint-plugin-custom-rules/index.js";
 import { fileURLToPath } from 'url';
 import path from 'path';
@@ -58,6 +59,7 @@ export default [
     // Add base rules and plugins
     plugins: {
       "@typescript-eslint": tseslint,
+      "react-hooks": pluginReactHooks,
       "custom-rules": customRules,
     },
 
@@ -86,6 +88,10 @@ export default [
       "@typescript-eslint/restrict-template-expressions": "warn",
       "@typescript-eslint/unbound-method": "warn",
       "@typescript-eslint/no-non-null-assertion": "warn",
+
+      // React hooks rules
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
 
       // Custom rules as warnings
       "custom-rules/map-return-type": "off",
