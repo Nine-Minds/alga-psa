@@ -9,7 +9,7 @@ import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Button } from '../ui/Button';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Pencil } from 'lucide-react';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Input } from 'server/src/components/ui/Input';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
@@ -161,6 +161,10 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [tags, setTags] = useState<ITag[]>([]);
   const { tags: allTags } = useTags();
+  const [isEditingCompany, setIsEditingCompany] = useState(false);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(contact.company_id || null);
+  const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('all');
+  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [ticketFormOptions, setTicketFormOptions] = useState<{
     statusOptions: SelectOption[];
     priorityOptions: SelectOption[];
@@ -198,6 +202,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   useEffect(() => {
     setEditedContact(contact);
     setOriginalContact(contact);
+    setSelectedCompanyId(contact.company_id || null);
     setHasUnsavedChanges(false);
   }, [contact]);
 
@@ -383,29 +388,52 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
             />
             <div className="space-y-2">
               <Text as="label" size="2" className="text-gray-700 font-medium">Company</Text>
-              {originalContact.company_id ? (
-                // Display company as clickable link if contact already has a company
-                <div className="flex items-center gap-2 py-2 cursor-pointer hover:bg-gray-50 rounded px-2" onClick={handleCompanyClick}>
-                  <CompanyAvatar 
-                    companyId={editedContact.company_id!}
-                    companyName={getCompanyName(editedContact.company_id!)}
-                    logoUrl={companies.find(c => c.company_id === editedContact.company_id!)?.logoUrl || null}
-                    size="sm"
-                  />
-                  <span className="text-blue-500 hover:underline text-sm">{getCompanyName(editedContact.company_id!)}</span>
+              {isEditingCompany ? (
+                // Show company picker when editing
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <CompanyPicker
+                      id="contact-company-picker"
+                      onSelect={(companyId) => {
+                        handleFieldChange('company_id', companyId || '');
+                        setSelectedCompanyId(companyId);
+                        setIsEditingCompany(false);
+                      }}
+                      selectedCompanyId={selectedCompanyId}
+                      companies={companies}
+                      filterState={filterState}
+                      onFilterStateChange={setFilterState}
+                      clientTypeFilter={clientTypeFilter}
+                      onClientTypeFilterChange={setClientTypeFilter}
+                    />
+                  </div>
                 </div>
               ) : (
-                // Allow company selection if contact has no company originally
-                <CompanyPicker
-                  id="contact-company-picker"
-                  onSelect={(companyId) => handleFieldChange('company_id', companyId || '')}
-                  selectedCompanyId={editedContact.company_id}
-                  companies={companies}
-                  filterState="active"
-                  onFilterStateChange={() => {}}
-                  clientTypeFilter="all"
-                  onClientTypeFilterChange={() => {}}
-                />
+                // Display company with edit button
+                <div className="flex items-center justify-between">
+                  {editedContact.company_id ? (
+                    <div className="flex items-center gap-2 py-2 cursor-pointer hover:bg-gray-50 rounded px-2 flex-1" onClick={handleCompanyClick}>
+                      <CompanyAvatar 
+                        companyId={editedContact.company_id}
+                        companyName={getCompanyName(editedContact.company_id)}
+                        logoUrl={companies.find(c => c.company_id === editedContact.company_id)?.logoUrl || null}
+                        size="sm"
+                      />
+                      <span className="text-blue-500 hover:underline text-sm">{getCompanyName(editedContact.company_id)}</span>
+                    </div>
+                  ) : (
+                    <span className="text-gray-500 italic text-sm py-2 px-2">No company assigned</span>
+                  )}
+                  <Button
+                    id="edit-company-btn"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsEditingCompany(true)}
+                    className="p-1"
+                  >
+                    <Pencil className="h-3 w-3 text-gray-600" />
+                  </Button>
+                </div>
               )}
             </div>
             <TextDetailItem

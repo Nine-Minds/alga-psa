@@ -549,8 +549,8 @@ export async function updateContact(contactData: Partial<IContact>): Promise<ICo
       }
     }
 
-    // If company_id is being updated, verify it exists
-    if (contactData.company_id) {
+    // If company_id is being updated, verify it exists (but allow null to remove association)
+    if ('company_id' in contactData && contactData.company_id) {
       const company = await db('companies')
         .where({ company_id: contactData.company_id, tenant })
         .first();

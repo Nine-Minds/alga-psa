@@ -42,9 +42,15 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
 
   useEffect(() => {
     fetchUserDetails();
-    fetchAvailableRoles();
     fetchCurrentUser();
   }, [userId]);
+
+  // Fetch available roles after user is loaded to get correct role type
+  useEffect(() => {
+    if (user) {
+      fetchAvailableRoles();
+    }
+  }, [user]);
 
   const fetchCurrentUser = async () => {
     try {
@@ -88,9 +94,18 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
   const fetchAvailableRoles = async () => {
     try {
       const allRoles = await getRoles();
-      // Filter to only show MSP roles for MSP users
-      const mspRoles = allRoles.filter(role => role.msp);
-      setAvailableRoles(mspRoles);
+      // Filter roles based on user type
+      if (user) {
+        const isClientUser = user.user_type === 'client';
+        const filteredRoles = isClientUser 
+          ? allRoles.filter(role => role.client)
+          : allRoles.filter(role => role.msp);
+        setAvailableRoles(filteredRoles);
+      } else {
+        // Default to MSP roles if user not loaded yet
+        const mspRoles = allRoles.filter(role => role.msp);
+        setAvailableRoles(mspRoles);
+      }
     } catch (err) {
       console.error('Error fetching available roles:', err);
       setError('Failed to load available roles.');
