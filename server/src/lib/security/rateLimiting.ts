@@ -10,16 +10,6 @@ const registrationLimiter = new RateLimiterMemory({
   duration: 3600, // per hour
 });
 
-const verificationLimiter = new RateLimiterMemory({
-  points: 3, // 3 attempts
-  duration: 300, // per 5 minutes
-});
-
-const emailLimiter = new RateLimiterMemory({
-  points: 3, // 3 emails
-  duration: 3600, // per hour
-});
-
 // Add new auth verification limiter
 const authVerificationLimiter = new RateLimiterMemory({
   points: 5, // 5 attempts
@@ -59,43 +49,7 @@ export async function checkRegistrationLimit(email: string): Promise<RateLimitRe
   }
 }
 
-export async function checkVerificationLimit(token: string): Promise<RateLimitResult> {
-  try {
-    const rateLimitInfo = await verificationLimiter.consume(token);
-    return {
-      success: true,
-      remainingPoints: rateLimitInfo.remainingPoints,
-      msBeforeNext: rateLimitInfo.msBeforeNext,
-    };
-  } catch (error) {
-    if (error instanceof Error) {
-      return {
-        success: false,
-        msBeforeNext: error.message ? parseInt(error.message) : undefined,
-      };
-    }
-    return { success: false };
-  }
-}
-
-export async function checkEmailLimit(email: string): Promise<RateLimitResult> {
-  try {
-    const rateLimitInfo = await emailLimiter.consume(email);
-    return {
-      success: true,
-      remainingPoints: rateLimitInfo.remainingPoints,
-      msBeforeNext: rateLimitInfo.msBeforeNext,
-    };
-  } catch (error) {
-    if (error instanceof Error) {
-      return {
-        success: false,
-        msBeforeNext: error.message ? parseInt(error.message) : undefined,
-      };
-    }
-    return { success: false };
-  }
-}
+// Email verification rate limiting functions removed - no longer needed
 
 // Add new function for auth verification rate limiting
 export async function checkAuthVerificationLimit(identifier: string): Promise<RateLimitResult> {
@@ -157,8 +111,8 @@ export async function logSecurityEvent(
   
   await auditLog(knex, {
     operation: eventType,
-    tableName: 'pending_registrations',
-    recordId: eventDetails.registrationId || 'unknown',
+    tableName: eventDetails.tableName || 'audit_log',
+    recordId: eventDetails.recordId || 'unknown',
     changedData: {},
     details: {
       ...eventDetails,

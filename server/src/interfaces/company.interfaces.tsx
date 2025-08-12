@@ -76,15 +76,6 @@ export interface ICompanyLocation extends TenantEntity {
   updated_at?: ISO8601String;
 }
 
-export interface ICompanyEmailSettings extends TenantEntity {
-  company_id: string;
-  email_suffix: string;
-  self_registration_enabled: boolean;
-  user_id: string;
-  created_at: ISO8601String;
-  updated_at: ISO8601String;
-}
-
 // Type for company with default location data joined
 export interface ICompanyWithLocation extends ICompany {
   location_email?: string;
