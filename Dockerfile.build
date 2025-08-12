@@ -69,8 +69,10 @@ RUN mkdir -p /app/secrets && \
     echo "secure-email-password-placeholder" > /app/secrets/email_password && \
     echo "secure-oauth-client-id-placeholder" > /app/secrets/google_oauth_client_id && \
     echo "secure-oauth-client-secret-placeholder" > /app/secrets/google_oauth_client_secret && \
-    echo "secure-ee-gmail-client-secret-placeholder" > /app/secrets/EE_GMAIL_CLIENT_SECRET && \
-    echo "secure-ee-microsoft-client-secret-placeholder" > /app/secrets/EE_MICROSOFT_CLIENT_SECRET && \
+    echo "secure-gmail-client-id-placeholder" > /app/secrets/GOOGLE_CLIENT_ID && \
+    echo "secure-gmail-client-secret-placeholder" > /app/secrets/GOOGLE_CLIENT_SECRET && \
+    echo "secure-ms-client-id-placeholder" > /app/secrets/MICROSOFT_CLIENT_ID && \
+    echo "secure-ms-client-secret-placeholder" > /app/secrets/MICROSOFT_CLIENT_SECRET && \
     chmod 600 /app/secrets/*
 # Copy example environment file
 COPY .env.example /app/.env   

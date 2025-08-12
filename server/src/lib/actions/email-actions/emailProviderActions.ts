@@ -30,19 +30,13 @@ async function generatePubSubNames(tenantId: string) {
  * Get hosted Gmail configuration for Enterprise Edition
  */
 export async function getHostedGmailConfig() {
-  const isEnterprise = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
-  
-  if (!isEnterprise) {
-    return null;
-  }
-  
   const secretProvider = await getSecretProviderInstance();
   
   return {
-    client_id: await secretProvider.getAppSecret('EE_GMAIL_CLIENT_ID'),
-    client_secret: await secretProvider.getAppSecret('EE_GMAIL_CLIENT_SECRET'),
-    project_id: await secretProvider.getAppSecret('EE_GMAIL_PROJECT_ID'),
-    redirect_uri: await secretProvider.getAppSecret('EE_GMAIL_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/google/callback'
+    client_id: await secretProvider.getAppSecret('GOOGLE_CLIENT_ID'),
+    client_secret: await secretProvider.getAppSecret('GOOGLE_CLIENT_SECRET'),
+    project_id: await secretProvider.getAppSecret('GOOGLE_PROJECT_ID'),
+    redirect_uri: await secretProvider.getAppSecret('GOOGLE_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/google/callback'
   };
 }
 
@@ -50,19 +44,13 @@ export async function getHostedGmailConfig() {
  * Get hosted Microsoft configuration for Enterprise Edition
  */
 export async function getHostedMicrosoftConfig() {
-  const isEnterprise = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
-  
-  if (!isEnterprise) {
-    return null;
-  }
-  
   const secretProvider = await getSecretProviderInstance();
   
   return {
-    client_id: await secretProvider.getAppSecret('EE_MICROSOFT_CLIENT_ID'),
-    client_secret: await secretProvider.getAppSecret('EE_MICROSOFT_CLIENT_SECRET'),
-    tenant_id: await secretProvider.getAppSecret('EE_MICROSOFT_TENANT_ID') || 'common',
-    redirect_uri: await secretProvider.getAppSecret('EE_MICROSOFT_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/microsoft/callback'
+    client_id: await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID'),
+    client_secret: await secretProvider.getAppSecret('MICROSOFT_CLIENT_SECRET'),
+    tenant_id: await secretProvider.getAppSecret('MICROSOFT_TENANT_ID') || 'common',
+    redirect_uri: await secretProvider.getAppSecret('MICROSOFT_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/microsoft/callback'
   };
 }
 
@@ -603,3 +591,97 @@ export async function testEmailProviderConnection(providerId: string): Promise<{
 
 // Re-export setupPubSub from the actual implementation
 // export { setupPubSub } from './setupPubSub';
+
+/**
+ * Initiate OAuth flow for email provider
+ */
+export async function initiateOAuth(params: {
+  provider: 'google' | 'microsoft';
+  redirectUri?: string;
+  providerId?: string;
+  hosted?: boolean;
+}): Promise<{
+  success: boolean;
+  authUrl?: string;
+  error?: string;
+}> {
+  try {
+    const user = await assertAuthenticated();
+    
+    if (!params.provider || !['microsoft', 'google'].includes(params.provider)) {
+      return { success: false, error: 'Invalid provider' };
+    }
+
+    // Import OAuth helpers
+    const { generateMicrosoftAuthUrl, generateGoogleAuthUrl, generateNonce } = await import('../../../utils/email/oauthHelpers');
+    type OAuthState = import('../../../utils/email/oauthHelpers').OAuthState;
+    
+    // Get OAuth credentials - use hosted credentials for EE or tenant-specific secrets for CE
+    const secretProvider = await getSecretProviderInstance();
+    let clientId: string | null = null;
+    let effectiveRedirectUri = params.redirectUri;
+
+    // Prefer server-side NEXTAUTH_URL for hosted detection
+    const nextauthUrl = process.env.NEXTAUTH_URL || (await secretProvider.getAppSecret('NEXTAUTH_URL')) || '';
+    const isHosted = nextauthUrl.startsWith('https://algapsa.com');
+
+    if (isHosted) {
+      // Use app-level configuration
+      if (params.provider === 'google') {
+        clientId = await secretProvider.getAppSecret('GOOGLE_CLIENT_ID') || null;
+        effectiveRedirectUri = await secretProvider.getAppSecret('GOOGLE_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/google/callback';
+      } else if (params.provider === 'microsoft') {
+        clientId = await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID') || null;
+        effectiveRedirectUri = await secretProvider.getAppSecret('MICROSOFT_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/microsoft/callback';
+      }
+    } else {
+      // Use tenant-specific or fallback credentials
+      clientId = params.provider === 'microsoft'
+        ? await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID') || await secretProvider.getTenantSecret(user.tenant, 'microsoft_client_id') || null
+        : await secretProvider.getAppSecret('GOOGLE_CLIENT_ID') || await secretProvider.getTenantSecret(user.tenant, 'google_client_id') || null;
+    }
+
+    if (!clientId) {
+      return { 
+        success: false,
+        error: `${params.provider} OAuth client ID not configured` 
+      };
+    }
+
+    // Generate OAuth state
+    const state: OAuthState = {
+      tenant: user.tenant,
+      userId: user.user_id,
+      providerId: params.providerId,
+      redirectUri: effectiveRedirectUri || `${await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')}/api/auth/${params.provider}/callback`,
+      timestamp: Date.now(),
+      nonce: generateNonce(),
+      hosted: !!isHosted
+    };
+
+    // Generate authorization URL
+    const authUrl = params.provider === 'microsoft'
+      ? generateMicrosoftAuthUrl(
+          clientId,
+          state.redirectUri,
+          state
+        )
+      : generateGoogleAuthUrl(
+          clientId,
+          state.redirectUri,
+          state
+        );
+
+    return {
+      success: true,
+      authUrl
+    };
+
+  } catch (error: any) {
+    console.error('Error initiating OAuth:', error);
+    return { 
+      success: false, 
+      error: error.message || 'Failed to initiate OAuth' 
+    };
+  }
+}

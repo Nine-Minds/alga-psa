@@ -11,6 +11,7 @@ export interface OAuthState {
   redirectUri: string;
   timestamp: number;
   nonce: string;
+  hosted?: boolean; // indicates EE hosted credential flow
 }
 
 /**

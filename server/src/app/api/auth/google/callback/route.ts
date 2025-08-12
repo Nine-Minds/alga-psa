@@ -124,17 +124,18 @@ export async function GET(request: NextRequest) {
 
     // Get OAuth client credentials - check if this is a hosted EE flow
     const secretProvider = await getSecretProviderInstance();
-    const isHostedFlow = process.env.NEXT_PUBLIC_EDITION === 'enterprise' && 
-                        stateData.redirectUri && 
-                        stateData.redirectUri.includes('api.algapsa.com');
+    // Prefer server-side NEXTAUTH_URL for hosted detection; allow state flag as backup
+    const nextauthUrl = process.env.NEXTAUTH_URL || (await secretProvider.getAppSecret('NEXTAUTH_URL')) || '';
+    const isHostedByEnv = nextauthUrl.startsWith('https://algapsa.com');
+    const isHostedFlow = isHostedByEnv || stateData.hosted === true;
     
     let clientId: string | null = null;
     let clientSecret: string | null = null;
     
     if (isHostedFlow) {
-      // Use hosted configuration for Enterprise Edition
-      clientId = await secretProvider.getAppSecret('EE_GMAIL_CLIENT_ID') || null;
-      clientSecret = await secretProvider.getAppSecret('EE_GMAIL_CLIENT_SECRET') || null;
+      // Use app-level configuration
+      clientId = await secretProvider.getAppSecret('GOOGLE_CLIENT_ID') || null;
+      clientSecret = await secretProvider.getAppSecret('GOOGLE_CLIENT_SECRET') || null;
     } else {
       // Use tenant-specific or fallback credentials
       clientId = await secretProvider.getAppSecret('GOOGLE_CLIENT_ID') || await secretProvider.getTenantSecret(stateData.tenant, 'google_client_id') || null;

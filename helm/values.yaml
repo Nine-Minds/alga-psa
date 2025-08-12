@@ -241,6 +241,14 @@ google_auth:
   client_id: "get from google"
   client_secret: "get from google"
 
+# Gmail Integration (Enterprise Edition)
+gmail_integration:
+  enabled: false
+  client_id: ""
+  client_secret: ""
+  project_id: ""
+  redirect_uri: ""
+
 # Secret Provider Configuration
 # Controls how secrets are read and written across different providers
 secrets:
