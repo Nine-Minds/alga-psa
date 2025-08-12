@@ -53,6 +53,8 @@ workflow:
 
 # Database configuration
 db:
+  # Database type and connection details
+  type: postgres
   # Generic cluster-local PgBouncer/Postgres service (override as needed)
   host: "pgbouncer.default.svc.cluster.local"
   port: "6432"
@@ -61,6 +63,11 @@ db:
   serverPasswordSecret:
     name: "db-secrets"
     key: "server-password"
+  # Optional admin user and secret (rendered only if provided)
+  adminUser: "postgres"
+  adminPasswordSecret:
+    name: ""
+    key: ""
 
 # Application configuration
 applicationUrl: "https://algapsa.com"

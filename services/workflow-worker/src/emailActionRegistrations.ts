@@ -4,7 +4,7 @@
  * server dependencies in the shared package
  */
 
-import { ActionRegistry, ActionExecutionContext } from '@alga-psa/shared/workflow/core';
+import { ActionRegistry, ActionExecutionContext } from '@alga-psa/shared/workflow/core/index.js';
 import logger from '@alga-psa/shared/core/logger.js';
 
 /**

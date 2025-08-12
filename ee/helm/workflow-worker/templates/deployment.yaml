@@ -99,6 +99,8 @@ spec:
               value: "{{ .Values.service.port }}"
 
             # DB configuration (app user)
+            - name: DB_TYPE
+              value: "{{ .Values.db.type | default "postgres" }}"
             - name: DB_HOST
               value: "{{ .Values.db.host }}"
             - name: DB_PORT
@@ -112,6 +114,17 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.db.serverPasswordSecret.name }}
                   key: {{ .Values.db.serverPasswordSecret.key }}
+
+            # DB admin configuration (optional)
+            {{- if and .Values.db.adminPasswordSecret.name .Values.db.adminPasswordSecret.key }}
+            - name: DB_USER_ADMIN
+              value: "{{ .Values.db.adminUser | default "postgres" }}"
+            - name: DB_PASSWORD_ADMIN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.adminPasswordSecret.name }}
+                  key: {{ .Values.db.adminPasswordSecret.key }}
+            {{- end }}
 
             # Redis configuration
             - name: REDIS_HOST
@@ -211,4 +224,3 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
 {{- end }}
-

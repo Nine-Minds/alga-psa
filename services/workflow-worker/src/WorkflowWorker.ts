@@ -3,14 +3,14 @@ import os from 'os';
 import {
   getRedisStreamClient,
   RedisStreamClient
-} from '@alga-psa/shared/workflow/streams';
-import { WorkflowEventBase, WorkflowEventBaseSchema } from '@alga-psa/shared/workflow/streams';
-import { TypeScriptWorkflowRuntime } from '@alga-psa/shared/workflow/core';
+} from '@alga-psa/shared/workflow/streams/index.js';
+import { WorkflowEventBase, WorkflowEventBaseSchema } from '@alga-psa/shared/workflow/streams/index.js';
+import { TypeScriptWorkflowRuntime } from '@alga-psa/shared/workflow/core/index.js';
 import { createClient } from 'redis';
 import logger from '@alga-psa/shared/core/logger.js';
-import { getSecret } from '@alga-psa/shared/core';
+import { getSecret } from '@alga-psa/shared/core/index.js';
 import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
-import { withAdminTransaction } from '@alga-psa/shared/db';
+import { withAdminTransaction } from '@alga-psa/shared/db/index.js';
 import { Knex } from 'knex';
 
 // TODO: These utilities would need to be properly implemented or moved
