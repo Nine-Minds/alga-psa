@@ -310,11 +310,12 @@ async function persistGoogleConfig(
       auto_process_emails = EXCLUDED.auto_process_emails,
       max_emails_per_sync = EXCLUDED.max_emails_per_sync,
       label_filters = EXCLUDED.label_filters,
-      access_token = EXCLUDED.access_token,
-      refresh_token = EXCLUDED.refresh_token,
-      token_expires_at = EXCLUDED.token_expires_at,
-      history_id = EXCLUDED.history_id,
-      watch_expiration = EXCLUDED.watch_expiration,
+      -- Preserve existing sensitive values if the new value is NULL
+      access_token = COALESCE(EXCLUDED.access_token, google_email_provider_config.access_token),
+      refresh_token = COALESCE(EXCLUDED.refresh_token, google_email_provider_config.refresh_token),
+      token_expires_at = COALESCE(EXCLUDED.token_expires_at, google_email_provider_config.token_expires_at),
+      history_id = COALESCE(EXCLUDED.history_id, google_email_provider_config.history_id),
+      watch_expiration = COALESCE(EXCLUDED.watch_expiration, google_email_provider_config.watch_expiration),
       updated_at = CURRENT_TIMESTAMP
     RETURNING *
   `, [
