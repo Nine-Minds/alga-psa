@@ -162,6 +162,22 @@ export async function POST(request: NextRequest) {
       console.log(`✅ Recorded historyId ${notification.historyId} as processed for provider ${provider.id}`);
     
 
+      // Guard: ensure OAuth tokens exist before attempting Gmail API calls
+      if (!googleConfig.access_token || !googleConfig.refresh_token) {
+        console.warn(`⚠️  Gmail OAuth tokens missing for provider ${provider.id}. Skipping fetch and marking provider as error.`);
+        try {
+          await trx('email_providers')
+            .where('id', provider.id)
+            .update({
+              connection_status: 'error',
+              connection_error_message: 'Gmail OAuth tokens missing. Reconnect the Gmail provider to continue.'
+            });
+        } catch (updateErr) {
+          console.warn('Failed to update provider connection_status when tokens missing:', updateErr);
+        }
+        return; // Exit transaction early; webhook will be acked below without events
+      }
+
       // Build EmailProviderConfig for GmailAdapter
       const providerConfig: EmailProviderConfig = {
         id: provider.id,
