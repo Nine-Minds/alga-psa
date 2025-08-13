@@ -151,7 +151,7 @@ export default [
 
   // Configuration for test files
   {
-    files: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx", "**/*.playwright.test.ts"],
+    files: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx", "**/*.playwright.test.ts", "**/__tests__/**/*.ts", "**/__tests__/**/*.tsx"],
     languageOptions: {
       globals: {
         ...globals.node,
