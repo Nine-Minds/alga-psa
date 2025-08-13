@@ -210,8 +210,10 @@ export async function POST(request: NextRequest) {
         const adapter = new GmailAdapter(providerConfig);
         await adapter.connect();
 
-        console.log(`🔎 Listing Gmail messages since historyId ${notification.historyId}`);
-        const messageIds = await adapter.listMessagesSince(notification.historyId);
+        // Per Gmail docs, list history since our last saved history_id, not the incoming one
+        const startHistoryId = String(googleConfig.history_id || ((Number(notification.historyId) || 0) - 1));
+        console.log(`🔎 Listing Gmail messages since saved historyId ${startHistoryId} (notification ${notification.historyId})`);
+        const messageIds = await adapter.listMessagesSince(startHistoryId);
 
         if (!messageIds || messageIds.length === 0) {
           console.log(`ℹ️ No new Gmail messages since historyId ${notification.historyId} for ${provider.mailbox}`);
@@ -237,6 +239,16 @@ export async function POST(request: NextRequest) {
           } catch (detailErr: any) {
             console.warn(`⚠️ Failed to fetch/publish Gmail message ${msgId}: ${detailErr.message}`);
           }
+        }
+
+        // Advance our stored history cursor to the latest notification's historyId
+        try {
+          await trx('google_email_provider_config')
+            .where('email_provider_id', provider.id)
+            .update({ history_id: String(notification.historyId), updated_at: trx.fn.now() });
+          console.log(`📝 Updated stored Gmail history_id to ${notification.historyId} for provider ${provider.id}`);
+        } catch (updateHistoryErr: any) {
+          console.warn('⚠️ Failed to persist updated history_id:', updateHistoryErr?.message || updateHistoryErr);
         }
       } catch (oauthErr: any) {
         const msg = oauthErr?.message || String(oauthErr);
