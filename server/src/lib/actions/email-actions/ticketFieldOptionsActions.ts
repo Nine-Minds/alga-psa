@@ -34,9 +34,10 @@ export async function getTicketFieldOptions(): Promise<{ options: TicketFieldOpt
           is_default: Boolean(row.is_default) 
         }))),
 
-      // Statuses  
+      // Statuses (ticket-only)
       knex('statuses')
-        .where({ tenant })
+        .where({ tenant, status_type: 'ticket' })
+        .orderBy('order_number', 'asc')
         .orderBy('name', 'asc')
         .select('status_id as id', 'name', 'is_default')
         .then(rows => rows.map(row => ({ 
@@ -45,26 +46,28 @@ export async function getTicketFieldOptions(): Promise<{ options: TicketFieldOpt
           is_default: Boolean(row.is_default)
         }))),
 
-      // Priorities
+      // Priorities (ticket-only; no is_default column)
       knex('priorities')
-        .where({ tenant })
+        .where({ tenant, item_type: 'ticket' })
+        .orderBy('order_number', 'asc')
         .orderBy('priority_name', 'asc')
-        .select('priority_id as id', 'priority_name as name', 'is_default')
+        .select('priority_id as id', 'priority_name as name')
         .then(rows => rows.map(row => ({ 
           id: row.id, 
-          name: row.name,
-          is_default: Boolean(row.is_default)
+          name: row.name
         }))),
 
-      // Categories (including subcategories)
+      // Categories (including subcategories) - parent_category is the correct column
       knex('categories')
         .where({ tenant })
+        .orderBy('display_order', 'asc')
         .orderBy('category_name', 'asc')
-        .select('category_id as id', 'category_name as name', 'parent_category_uuid as parent_id')
+        .select('category_id as id', 'category_name as name', 'parent_category as parent_id', 'channel_id')
         .then(rows => rows.map(row => ({ 
           id: row.id, 
           name: row.name,
-          parent_id: row.parent_id
+          parent_id: row.parent_id,
+          channel_id: row.channel_id
         }))),
 
       // Companies
@@ -90,8 +93,8 @@ export async function getTicketFieldOptions(): Promise<{ options: TicketFieldOpt
           username: row.username
         }))),
 
-      // Locations
-      knex('locations')
+      // Locations (stored in company_locations)
+      knex('company_locations')
         .where({ tenant })
         .orderBy('location_name', 'asc')
         .select('location_id as id', 'location_name as name', 'company_id')
@@ -101,6 +104,8 @@ export async function getTicketFieldOptions(): Promise<{ options: TicketFieldOpt
           company_id: row.company_id
         })))
     ]);
+
+    console.log('categories', categories);
 
     return {
       options: {
@@ -165,7 +170,8 @@ export async function getAvailableStatuses(): Promise<{ statuses: TicketFieldOpt
   
   try {
     const statuses = await knex('statuses')
-      .where({ tenant })
+      .where({ tenant, status_type: 'ticket' })
+      .orderBy('order_number', 'asc')
       .orderBy('name', 'asc')
       .select('status_id as id', 'name', 'is_default')
       .then(rows => rows.map(row => ({ 
@@ -191,13 +197,13 @@ export async function getAvailablePriorities(): Promise<{ priorities: TicketFiel
   
   try {
     const priorities = await knex('priorities')
-      .where({ tenant })
+      .where({ tenant, item_type: 'ticket' })
+      .orderBy('order_number', 'asc')
       .orderBy('priority_name', 'asc')
-      .select('priority_id as id', 'priority_name as name', 'is_default')
+      .select('priority_id as id', 'priority_name as name')
       .then(rows => rows.map(row => ({ 
         id: row.id, 
-        name: row.name,
-        is_default: Boolean(row.is_default)
+        name: row.name
       })));
 
     return { priorities };
@@ -218,17 +224,79 @@ export async function getAvailableCategories(): Promise<{ categories: TicketFiel
   try {
     const categories = await knex('categories')
       .where({ tenant })
+      .orderBy('display_order', 'asc')
       .orderBy('category_name', 'asc')
-      .select('category_id as id', 'category_name as name', 'parent_category_uuid as parent_id')
+      .select('category_id as id', 'category_name as name', 'parent_category as parent_id', 'channel_id')
       .then(rows => rows.map(row => ({ 
-        id: row.id, 
+        id: row.id,
         name: row.name,
-        parent_id: row.parent_id
+        parent_id: row.parent_id,
+        channel_id: row.channel_id
       })));
 
     return { categories };
   } catch (error) {
     console.error('Failed to load categories:', error);
+    return { categories: [] };
+  }
+}
+
+// Server-side filtered categories by channel
+export async function getCategoriesByChannel(channelId: string | null): Promise<{ categories: TicketFieldOptions['categories'] }> {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  try {
+    console.log('[TicketFieldOptions] getCategoriesByChannel: start', {
+      tenant,
+      channelId
+    });
+
+    if (!channelId) {
+      console.log('[TicketFieldOptions] getCategoriesByChannel: no channelId provided, returning empty list');
+      return { categories: [] };
+    }
+
+    console.time('[TicketFieldOptions] getCategoriesByChannel:query');
+    const rows = await knex('categories')
+      .where({ tenant, channel_id: channelId })
+      .orderBy('display_order', 'asc')
+      .orderBy('category_name', 'asc')
+      .select('category_id as id', 'category_name as name', 'parent_category as parent_id', 'channel_id')
+    console.timeEnd('[TicketFieldOptions] getCategoriesByChannel:query');
+
+    const categories = rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      parent_id: row.parent_id,
+      channel_id: row.channel_id
+    }));
+
+    const total = categories.length;
+    const topLevel = categories.filter(c => !c.parent_id).length;
+    const withParents = total - topLevel;
+    const sample = categories.slice(0, Math.min(5, total));
+
+    console.log('[TicketFieldOptions] getCategoriesByChannel: results', {
+      tenant,
+      channelId,
+      total,
+      topLevel,
+      withParents,
+      sample
+    });
+
+    return { categories };
+  } catch (error) {
+    console.error('[TicketFieldOptions] getCategoriesByChannel: error', {
+      tenant,
+      channelId,
+      error
+    });
     return { categories: [] };
   }
 }

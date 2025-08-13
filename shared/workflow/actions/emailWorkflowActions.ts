@@ -457,14 +457,32 @@ export async function saveEmailClientAssociation(
  * Resolve default inbound ticket settings for a tenant
  */
 export async function resolveInboundTicketDefaults(
-  tenant: string
+  tenant: string,
+  providerId?: string
 ): Promise<any> {
   const { withAdminTransaction } = await import('@shared/db/index.js');
   
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
-      // Get the default inbound ticket configuration for this tenant
-      const defaults = await trx('inbound_ticket_defaults')
-        .where({ tenant, is_default: true, is_active: true })
+      // Require provider-specific defaults; no tenant-level fallback
+      let defaults: any | null = null;
+
+      if (!providerId) {
+        console.warn('resolveInboundTicketDefaults: providerId is required but missing');
+        return null;
+      }
+
+      const provider = await trx('email_providers')
+        .select('inbound_ticket_defaults_id')
+        .where({ id: providerId, tenant })
+        .first();
+
+      if (!provider || !provider.inbound_ticket_defaults_id) {
+        console.warn(`No inbound_ticket_defaults_id set for provider ${providerId} in tenant ${tenant}`);
+        return null;
+      }
+
+      defaults = await trx('inbound_ticket_defaults')
+        .where({ tenant, id: provider.inbound_ticket_defaults_id, is_active: true })
         .select(
           'channel_id',
           'status_id',
