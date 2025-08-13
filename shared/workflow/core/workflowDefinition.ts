@@ -6,6 +6,7 @@ import logger from '@alga-psa/shared/core/logger.js';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import tsModule from 'typescript';
+import type { ScriptTarget } from 'typescript';
 const ts: typeof import('typescript') = (tsModule as any).default ?? (tsModule as any);
 
 /**
@@ -95,7 +96,7 @@ export function deserializeWorkflowFunction(fnString: string): WorkflowFunction 
     const wrappedCode = fnString;
     
     // Check if ES2020 is available, fallback to ES2018 or ES5
-    let targetVersion: ts.ScriptTarget;
+    let targetVersion: ScriptTarget;
     
     if (ts.ScriptTarget.ES2020 !== undefined) {
       targetVersion = ts.ScriptTarget.ES2020;
