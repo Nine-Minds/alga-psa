@@ -68,7 +68,7 @@ test('debug tenant context in authentication', async ({ page }) => {
     await page.fill('#msp-password-field', tenantData.adminUser.temporaryPassword);
     
     // Listen for network requests to see authentication calls
-    const requests: any[] = [];
+    const requests: { url: string; method: string; postData: string | null }[] = [];
     page.on('request', request => {
       if (request.url().includes('auth') || request.url().includes('signin')) {
         requests.push({
