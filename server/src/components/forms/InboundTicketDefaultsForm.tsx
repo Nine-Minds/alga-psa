@@ -266,12 +266,10 @@ export function InboundTicketDefaultsForm({
             <CustomSelect
               id="company_id"
               value={formData.company_id}
-              onValueChange={(value) => handleDefaultChange('company_id', value)}
-              options={[
-                { value: '', label: 'None' },
-                ...fieldOptions.companies.map(c => ({ value: c.id, label: c.name }))
-              ]}
+              onValueChange={(value) => handleDefaultChange('company_id', value || '')}
+              options={fieldOptions.companies.map(c => ({ value: c.id, label: c.name }))}
               placeholder="Select company"
+              allowClear
             />
           </div>
 
@@ -280,14 +278,12 @@ export function InboundTicketDefaultsForm({
             <CustomSelect
               id="category_id"
               value={formData.category_id}
-              onValueChange={(value) => handleDefaultChange('category_id', value)}
-              options={[
-                { value: '', label: 'None' },
-                ...fieldOptions.categories
-                  .filter(c => !c.parent_id)
-                  .map(c => ({ value: c.id, label: c.name }))
-              ]}
+              onValueChange={(value) => handleDefaultChange('category_id', value || '')}
+              options={fieldOptions.categories
+                .filter(c => !c.parent_id)
+                .map(c => ({ value: c.id, label: c.name }))}
               placeholder="Select category"
+              allowClear
             />
           </div>
 
@@ -296,15 +292,13 @@ export function InboundTicketDefaultsForm({
             <CustomSelect
               id="subcategory_id"
               value={formData.subcategory_id}
-              onValueChange={(value) => handleDefaultChange('subcategory_id', value)}
-              options={[
-                { value: '', label: 'None' },
-                ...fieldOptions.categories
-                  .filter(c => c.parent_id === formData.category_id)
-                  .map(c => ({ value: c.id, label: c.name }))
-              ]}
+              onValueChange={(value) => handleDefaultChange('subcategory_id', value || '')}
+              options={fieldOptions.categories
+                .filter(c => c.parent_id === formData.category_id)
+                .map(c => ({ value: c.id, label: c.name }))}
               placeholder="Select subcategory"
               disabled={!formData.category_id}
+              allowClear
             />
           </div>
 

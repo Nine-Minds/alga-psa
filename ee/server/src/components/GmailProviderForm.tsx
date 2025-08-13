@@ -19,6 +19,8 @@ import { BasicConfigCard } from 'server/src/components/providers/gmail/BasicConf
 import { ProcessingSettingsCard } from 'server/src/components/providers/gmail/ProcessingSettingsCard';
 import { OAuthSection } from 'server/src/components/providers/gmail/OAuthSection';
 import { baseGmailProviderSchema } from 'server/src/components/providers/gmail/schemas';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { getInboundTicketDefaults } from 'server/src/lib/actions/email-actions/inboundTicketDefaultsActions';
 
 type EEGmailProviderFormData = import('server/src/components/providers/gmail/schemas').BaseGmailProviderFormData;
 
@@ -39,6 +41,7 @@ export function GmailProviderForm({
   const [error, setError] = useState<string | null>(null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const { oauthStatus, oauthData, autoSubmitCountdown, openOAuthPopup, cancelAutoSubmit, setOauthStatus } = useOAuthPopup<any>({ provider: 'google', countdownSeconds: 0 });
+  const [defaultsOptions, setDefaultsOptions] = useState<{ value: string; label: string }[]>([]);
 
   const isEditing = !!provider;
 
@@ -52,14 +55,33 @@ export function GmailProviderForm({
       isActive: provider.isActive,
       autoProcessEmails: provider.googleConfig.auto_process_emails ?? true,
       labelFilters: provider.googleConfig.label_filters?.join(', ') || '',
-      maxEmailsPerSync: provider.googleConfig.max_emails_per_sync ?? 50
+      maxEmailsPerSync: provider.googleConfig.max_emails_per_sync ?? 50,
+      inboundTicketDefaultsId: (provider as any).inboundTicketDefaultsId || undefined
     } : {
       isActive: true,
       autoProcessEmails: true,
       labelFilters: '',
-      maxEmailsPerSync: 50
+      maxEmailsPerSync: 50,
+      inboundTicketDefaultsId: undefined
     }
   });
+
+  // Load inbound ticket defaults options and listen for refresh
+  React.useEffect(() => {
+    const loadDefaults = async () => {
+      try {
+        const res = await getInboundTicketDefaults();
+        const options = (res.defaults || []).map((d) => ({ value: d.id, label: d.display_name || d.short_name }));
+        setDefaultsOptions(options);
+      } catch (e) {
+        console.error('Failed to load inbound defaults', e);
+      }
+    };
+    loadDefaults();
+    const onUpdate = () => loadDefaults();
+    window.addEventListener('inbound-defaults-updated', onUpdate as any);
+    return () => window.removeEventListener('inbound-defaults-updated', onUpdate as any);
+  }, []);
 
   const onSubmit = async (data: EEGmailProviderFormData, providedOauthData?: any) => {
     setHasAttemptedSubmit(true);
@@ -84,6 +106,7 @@ export function GmailProviderForm({
         providerName: data.providerName,
         mailbox: data.mailbox,
         isActive: data.isActive,
+        inboundTicketDefaultsId: (form.getValues() as any).inboundTicketDefaultsId || undefined,
         googleConfig: {
           // EE hosted environment handles OAuth credentials automatically
           auto_process_emails: data.autoProcessEmails,
@@ -144,6 +167,7 @@ export function GmailProviderForm({
           providerName: formData.providerName,
           mailbox: formData.mailbox,
           isActive: formData.isActive,
+          inboundTicketDefaultsId: (form.getValues() as any).inboundTicketDefaultsId || undefined,
           googleConfig: {
             auto_process_emails: formData.autoProcessEmails,
             label_filters: formData.labelFilters ? formData.labelFilters.split(',').map(l => l.trim()) : ['INBOX'],
@@ -234,6 +258,41 @@ export function GmailProviderForm({
         title="Email Processing Settings"
         description="Configure how emails are processed and imported"
       />
+
+      {/* Ticket Defaults selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Ticket Defaults</CardTitle>
+          <CardDescription>
+            Select defaults to apply to email-created tickets
+            <Button
+              id="manage-defaults-link"
+              type="button"
+              variant="link"
+              className="ml-2 p-0 h-auto"
+              onClick={() => window.dispatchEvent(new CustomEvent('open-defaults-tab'))}
+            >
+              Manage defaults
+            </Button>
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CustomSelect
+            id="ee-gmail-inbound-defaults-select"
+            label="Inbound Ticket Defaults"
+            value={(form.watch('inboundTicketDefaultsId') as any) || ''}
+            onValueChange={(v) => form.setValue('inboundTicketDefaultsId', v || undefined)}
+            options={defaultsOptions}
+            placeholder="Select defaults (optional)"
+            allowClear
+          />
+          <div className="text-right">
+            <Button id="refresh-defaults-list" type="button" variant="outline" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('inbound-defaults-updated'))}>
+              Refresh list
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Error Display */}
       {hasAttemptedSubmit && Object.keys(form.formState.errors).length > 0 && (

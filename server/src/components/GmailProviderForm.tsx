@@ -87,6 +87,9 @@ export function GmailProviderForm({
       }
     };
     loadDefaults();
+    const onUpdate = () => loadDefaults();
+    window.addEventListener('inbound-defaults-updated', onUpdate as any);
+    return () => window.removeEventListener('inbound-defaults-updated', onUpdate as any);
   }, []);
 
   const onSubmit = async (data: GmailProviderFormData, providedOauthData?: any) => {
@@ -382,7 +385,18 @@ export function GmailProviderForm({
   <Card>
     <CardHeader>
       <CardTitle>Ticket Defaults</CardTitle>
-      <CardDescription>Select defaults to apply to email-created tickets</CardDescription>
+      <CardDescription>
+        Select defaults to apply to email-created tickets
+        <Button
+          id="manage-defaults-link"
+          type="button"
+          variant="link"
+          className="ml-2 p-0 h-auto"
+          onClick={() => window.dispatchEvent(new CustomEvent('open-defaults-tab'))}
+        >
+          Manage defaults
+        </Button>
+      </CardDescription>
     </CardHeader>
     <CardContent>
       <CustomSelect
@@ -394,6 +408,11 @@ export function GmailProviderForm({
         placeholder="Select defaults (optional)"
         allowClear
       />
+      <div className="text-right">
+        <Button id="refresh-defaults-list" type="button" variant="outline" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('inbound-defaults-updated'))}>
+          Refresh list
+        </Button>
+      </div>
     </CardContent>
   </Card>
 

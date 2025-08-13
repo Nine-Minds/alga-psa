@@ -119,6 +119,13 @@ export function EmailProviderConfiguration({
     fetchTenant();
   }, []);
 
+  // Listen for requests to open defaults tab from child forms
+  useEffect(() => {
+    const openDefaults = () => setActiveSection('defaults');
+    window.addEventListener('open-defaults-tab', openDefaults);
+    return () => window.removeEventListener('open-defaults-tab', openDefaults);
+  }, []);
+
   // Update UI state based on providers
   useEffect(() => {
     if (!loading) {
@@ -448,15 +455,13 @@ export function EmailProviderConfiguration({
         {activeSection === 'providers' ? (
           renderProvidersContent()
         ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle>Inbound Ticket Defaults</CardTitle>
-              <CardDescription>Configure default values for tickets created from email processing</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <InboundTicketDefaultsManager onDefaultsChange={loadProviders} />
-            </CardContent>
-          </Card>
+          <div className="space-y-4">
+            <InboundTicketDefaultsManager onDefaultsChange={() => {
+              // Refresh providers and notify forms to reload defaults lists
+              loadProviders();
+              window.dispatchEvent(new CustomEvent('inbound-defaults-updated'));
+            }} />
+          </div>
         )}
       </div>
     </div>

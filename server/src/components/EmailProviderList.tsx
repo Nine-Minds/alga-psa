@@ -30,6 +30,9 @@ import {
   Repeat
 } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { getInboundTicketDefaults } from 'server/src/lib/actions/email-actions/inboundTicketDefaultsActions';
+import { updateEmailProvider } from 'server/src/lib/actions/email-actions/emailProviderActions';
 
 interface EmailProviderListProps {
   providers: EmailProvider[];
@@ -48,7 +51,42 @@ export function EmailProviderList({
   onRefresh,
   onRefreshWatchSubscription
 }: EmailProviderListProps) {
-  
+  const [defaultsOptions, setDefaultsOptions] = React.useState<{ value: string; label: string }[]>([]);
+  const [updatingProviderId, setUpdatingProviderId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const loadDefaults = async () => {
+      try {
+        const res = await getInboundTicketDefaults();
+        const options = (res.defaults || []).map((d) => ({ value: d.id, label: d.display_name || d.short_name }));
+        setDefaultsOptions(options);
+      } catch (e) {
+        // Non-fatal; keep options empty
+        console.error('Failed to load inbound defaults', e);
+      }
+    };
+    loadDefaults();
+  }, []);
+
+  const handleChangeDefaults = async (provider: EmailProvider, newDefaultsId?: string) => {
+    try {
+      setUpdatingProviderId(provider.id);
+      await updateEmailProvider(provider.id, {
+        tenant: provider.tenant,
+        providerType: provider.providerType,
+        providerName: provider.providerName,
+        mailbox: provider.mailbox,
+        isActive: provider.isActive,
+        inboundTicketDefaultsId: newDefaultsId || undefined,
+      } as any);
+      onRefresh();
+    } catch (e) {
+      console.error('Failed to update provider defaults', e);
+    } finally {
+      setUpdatingProviderId(null);
+    }
+  };
+
   const getStatusIcon = (status: EmailProvider['status']) => {
     switch (status) {
       case 'connected':
@@ -241,6 +279,20 @@ export function EmailProviderList({
                     </>
                   )}
                 </div>
+              </div>
+
+              {/* Ticket Defaults Selector */}
+              <div className="mt-4">
+                <CustomSelect
+                  id={`provider-defaults-select-${provider.id}`}
+                  label="Ticket Defaults"
+                  value={provider.inboundTicketDefaultsId || ''}
+                  onValueChange={(v) => handleChangeDefaults(provider, v || undefined)}
+                  options={defaultsOptions}
+                  placeholder={defaultsOptions.length ? 'Select defaults...' : 'No defaults available'}
+                  allowClear
+                  disabled={updatingProviderId === provider.id}
+                />
               </div>
             </CardContent>
           </Card>

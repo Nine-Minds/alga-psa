@@ -96,6 +96,9 @@ export function MicrosoftProviderForm({
       }
     };
     loadDefaults();
+    const onUpdate = () => loadDefaults();
+    window.addEventListener('inbound-defaults-updated', onUpdate as any);
+    return () => window.removeEventListener('inbound-defaults-updated', onUpdate as any);
   }, []);
 
   const onSubmit = async (data: MicrosoftProviderFormData) => {
@@ -307,11 +310,22 @@ export function MicrosoftProviderForm({
       </CardContent>
     </Card>
 
-    {/* Ticket Defaults selection */}
+    {/* Ticket Defaults selection */
     <Card>
       <CardHeader>
         <CardTitle>Ticket Defaults</CardTitle>
-        <CardDescription>Select defaults to apply to email-created tickets</CardDescription>
+        <CardDescription>
+          Select defaults to apply to email-created tickets
+          <Button
+            id="manage-defaults-link"
+            type="button"
+            variant="link"
+            className="ml-2 p-0 h-auto"
+            onClick={() => window.dispatchEvent(new CustomEvent('open-defaults-tab'))}
+          >
+            Manage defaults
+          </Button>
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <CustomSelect
@@ -323,6 +337,11 @@ export function MicrosoftProviderForm({
           placeholder="Select defaults (optional)"
           allowClear
         />
+        <div className="text-right">
+          <Button id="refresh-defaults-list" type="button" variant="outline" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('inbound-defaults-updated'))}>
+            Refresh list
+          </Button>
+        </div>
       </CardContent>
     </Card>
 
@@ -442,15 +461,6 @@ export function MicrosoftProviderForm({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="autoProcessEmails"
-              checked={form.watch('autoProcessEmails')}
-              onCheckedChange={(checked: boolean) => form.setValue('autoProcessEmails', checked)}
-            />
-            <Label htmlFor="autoProcessEmails">Automatically process new emails</Label>
-          </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="folderFilters">Folder Filters</Label>
