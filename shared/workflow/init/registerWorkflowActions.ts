@@ -2100,6 +2100,9 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
           .select('channel_id as id', 'channel_name as name', 'description', 'is_default')
           .where({ tenant: context.tenant, channel_name: params.name, is_active: true })
           .first();
+        if (!channel) {
+          logger.warn(`[ACTION] find_channel_by_name: No active channel found for tenant=${context.tenant}, name='${params.name}'`);
+        }
         
         return {
           success: !!channel,
@@ -2170,6 +2173,10 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
         }
         
         const status = await query.first();
+        if (!status) {
+          const it = params.item_type ? `, item_type='${params.item_type}'` : '';
+          logger.warn(`[ACTION] find_status_by_name: No active status found for tenant=${context.tenant}, name='${params.name}'${it}`);
+        }
         
         return {
           success: !!status,
@@ -2199,6 +2206,9 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
           .select('priority_id as id', 'priority_name as name', 'priority_level', 'color')
           .where({ tenant: context.tenant, priority_name: params.name })
           .first();
+        if (!priority) {
+          logger.warn(`[ACTION] find_priority_by_name: No priority found for tenant=${context.tenant}, name='${params.name}'`);
+        }
         
         return {
           success: !!priority,
