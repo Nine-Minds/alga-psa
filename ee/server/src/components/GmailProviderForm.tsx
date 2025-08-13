@@ -171,7 +171,7 @@ export function GmailProviderForm({
           googleConfig: {
             auto_process_emails: formData.autoProcessEmails,
             label_filters: formData.labelFilters ? formData.labelFilters.split(',').map(l => l.trim()) : ['INBOX'],
-            max_emails_per_sync: formData.maxEmailsPerSync,
+            max_emails_per_sync: formData.maxEmailsPerSync ?? 50,
             project_id: hostedConfig.project_id,
             client_id: hostedConfig.client_id,
             client_secret: hostedConfig.client_secret,

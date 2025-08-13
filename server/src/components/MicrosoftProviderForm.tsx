@@ -310,7 +310,7 @@ export function MicrosoftProviderForm({
       </CardContent>
     </Card>
 
-    {/* Ticket Defaults selection */
+    {/* Ticket Defaults selection */}
     <Card>
       <CardHeader>
         <CardTitle>Ticket Defaults</CardTitle>

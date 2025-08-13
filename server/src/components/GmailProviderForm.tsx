@@ -190,7 +190,7 @@ export function GmailProviderForm({
             redirect_uri: formData.redirectUri,
             auto_process_emails: formData.autoProcessEmails,
             label_filters: formData.labelFilters ? formData.labelFilters.split(',').map(l => l.trim()) : ['INBOX'],
-            max_emails_per_sync: formData.maxEmailsPerSync
+            max_emails_per_sync: formData.maxEmailsPerSync ?? 50
           }
         };
         const result = await upsertEmailProvider(payload); // allow automation for initial setup

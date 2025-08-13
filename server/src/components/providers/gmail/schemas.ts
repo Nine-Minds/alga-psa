@@ -9,6 +9,7 @@ export const baseGmailProviderSchema = z.object({
   labelFilters: z.string().optional(),
   // Max per sync is not used; keep optional for backward compatibility
   maxEmailsPerSync: z.number().min(1).max(1000).optional(),
+  inboundTicketDefaultsId: z.string().optional(),
 });
 
 export type BaseGmailProviderFormData = z.infer<typeof baseGmailProviderSchema>;
