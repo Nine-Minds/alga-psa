@@ -221,7 +221,7 @@ export async function deleteInboundTicketDefaults(id: string): Promise<void> {
   const { knex, tenant } = await createTenantKnex();
   
   try {
-    // Check if any email providers are using this defaults configuration
+    // Prevent delete if any email providers reference this defaults configuration
     const providersUsing = await knex('email_providers')
       .where({ tenant, inbound_ticket_defaults_id: id })
       .count('* as count')

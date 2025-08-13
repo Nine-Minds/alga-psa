@@ -12,7 +12,7 @@ import {
   createInboundTicketDefaults, 
   updateInboundTicketDefaults 
 } from '../../lib/actions/email-actions/inboundTicketDefaultsActions';
-import { getTicketFieldOptions } from '../../lib/actions/email-actions/ticketFieldOptionsActions';
+import { getTicketFieldOptions, getCategoriesByChannel } from '../../lib/actions/email-actions/ticketFieldOptionsActions';
 import type { InboundTicketDefaults, TicketFieldOptions } from '../../types/email.types';
 
 export interface InboundTicketDefaultsFormProps {
@@ -55,10 +55,45 @@ export function InboundTicketDefaultsForm({
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Derived option lists for performance and clarity
+  const topLevelCategoriesForChannel = React.useMemo(() => {
+    const ch = String(formData.channel_id || '');
+    return fieldOptions.categories
+      .filter(c => !c.parent_id && String(c.channel_id || '') === ch)
+      .map(c => ({ value: c.id, label: c.name }));
+  }, [fieldOptions.categories, formData.channel_id]);
+
+  const subcategoriesForSelection = React.useMemo(() => {
+    const ch = String(formData.channel_id || '');
+    const parent = String(formData.category_id || '');
+    return fieldOptions.categories
+      .filter(c => String(c.parent_id || '') === parent && String(c.channel_id || '') === ch)
+      .map(c => ({ value: c.id, label: c.name }));
+  }, [fieldOptions.categories, formData.channel_id, formData.category_id]);
+
   // Load field options on mount
   useEffect(() => {
     loadFieldOptions();
   }, []);
+
+  // Load categories when channel changes (server-side filtered)
+  useEffect(() => {
+    const loadCategoriesForChannel = async () => {
+      if (!formData.channel_id) {
+        // Clear categories if no channel selected
+        setFieldOptions(prev => ({ ...prev, categories: [] }));
+        return;
+      }
+      try {
+        const { categories } = await getCategoriesByChannel(formData.channel_id);
+        setFieldOptions(prev => ({ ...prev, categories }));
+      } catch (err) {
+        // On error, keep categories empty for safety
+        setFieldOptions(prev => ({ ...prev, categories: [] }));
+      }
+    };
+    loadCategoriesForChannel();
+  }, [formData.channel_id]);
 
   // Populate form when editing
   useEffect(() => {
@@ -140,10 +175,22 @@ export function InboundTicketDefaultsForm({
   };
 
   const handleDefaultChange = (field: string, value: string | null) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => {
+      const next = { ...prev, [field]: value } as typeof prev;
+      // Clear dependent fields when parents change
+      if (field === 'channel_id') {
+        next.category_id = '';
+        next.subcategory_id = '';
+      }
+      if (field === 'category_id') {
+        next.subcategory_id = '';
+      }
+      if (field === 'company_id' && prev.company_id !== value) {
+        // Clear location if company changes
+        next.location_id = '';
+      }
+      return next;
+    });
   };
 
   if (loadingOptions) {
@@ -271,6 +318,9 @@ export function InboundTicketDefaultsForm({
               placeholder="Select company"
               allowClear
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              Used as a catch-all when no company can be matched from the email; otherwise ignored.
+            </p>
           </div>
 
           <div>
@@ -279,12 +329,15 @@ export function InboundTicketDefaultsForm({
               id="category_id"
               value={formData.category_id}
               onValueChange={(value) => handleDefaultChange('category_id', value || '')}
-              options={fieldOptions.categories
-                .filter(c => !c.parent_id)
-                .map(c => ({ value: c.id, label: c.name }))}
+              options={topLevelCategoriesForChannel}
               placeholder="Select category"
+              disabled={!formData.channel_id}
               allowClear
             />
+            {/* Helper when no categories match selected channel */}
+            {formData.channel_id && topLevelCategoriesForChannel.length === 0 && (
+              <p className="text-xs text-muted-foreground mt-1">No categories found for the selected channel.</p>
+            )}
           </div>
 
           <div>
@@ -293,13 +346,29 @@ export function InboundTicketDefaultsForm({
               id="subcategory_id"
               value={formData.subcategory_id}
               onValueChange={(value) => handleDefaultChange('subcategory_id', value || '')}
-              options={fieldOptions.categories
-                .filter(c => c.parent_id === formData.category_id)
-                .map(c => ({ value: c.id, label: c.name }))}
+              options={subcategoriesForSelection}
               placeholder="Select subcategory"
               disabled={!formData.category_id}
               allowClear
             />
+          </div>
+
+          <div>
+            <Label htmlFor="location_id">Location</Label>
+            <CustomSelect
+              id="location_id"
+              value={formData.location_id}
+              onValueChange={(value) => handleDefaultChange('location_id', value || '')}
+              options={fieldOptions.locations
+                .filter(l => !formData.company_id || l.company_id === formData.company_id)
+                .map(l => ({ value: l.id, label: l.name }))}
+              placeholder={formData.company_id ? 'Select location' : 'Select company first (optional)'}
+              disabled={!formData.company_id}
+              allowClear
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Only applied when the catch-all company is used (no match case).
+            </p>
           </div>
 
           <div>
@@ -315,7 +384,7 @@ export function InboundTicketDefaultsForm({
               placeholder="Select user or system"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              System tickets will show "System" as creator
+              Used only when we cannot match a contact or company. System tickets will show "System" as creator.
             </p>
           </div>
         </div>

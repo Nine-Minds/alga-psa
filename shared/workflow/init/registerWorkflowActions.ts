@@ -1928,14 +1928,15 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
 
   actionRegistry.registerSimpleAction(
     'resolve_inbound_ticket_defaults',
-    'Resolve default inbound ticket settings for a tenant',
+    'Resolve inbound ticket defaults (provider-specific required)',
     [
-      { name: 'tenant', type: 'string', required: true }
+      { name: 'tenant', type: 'string', required: true },
+      { name: 'providerId', type: 'string', required: true }
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
         const { resolveInboundTicketDefaults } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions.js');
-        const defaults = await resolveInboundTicketDefaults(params.tenant);
+        const defaults = await resolveInboundTicketDefaults(params.tenant, params.providerId);
         
         return defaults;
       } catch (error: any) {
