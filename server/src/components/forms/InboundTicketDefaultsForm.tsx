@@ -318,6 +318,9 @@ export function InboundTicketDefaultsForm({
               placeholder="Select company"
               allowClear
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              Used as a catch-all when no company can be matched from the email; otherwise ignored.
+            </p>
           </div>
 
           <div>
@@ -363,6 +366,9 @@ export function InboundTicketDefaultsForm({
               disabled={!formData.company_id}
               allowClear
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              Only applied when the catch-all company is used (no match case).
+            </p>
           </div>
 
           <div>
@@ -378,7 +384,7 @@ export function InboundTicketDefaultsForm({
               placeholder="Select user or system"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              System tickets will show "System" as creator
+              Used only when we cannot match a contact or company. System tickets will show "System" as creator.
             </p>
           </div>
         </div>

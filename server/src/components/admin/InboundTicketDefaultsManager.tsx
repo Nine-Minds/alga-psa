@@ -83,7 +83,7 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
   if (loading) {
     return (
       <Card>
-        <CardContent className="p-6">
+        <CardContent className="p-6 !pt-6">
           <div className="flex items-center justify-center">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
             <span className="ml-2">Loading ticket defaults...</span>
@@ -156,7 +156,7 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
         <div className="grid gap-4">
           {defaults.map((defaultConfig) => (
             <Card key={defaultConfig.id}>
-              <CardContent className="p-6">
+              <CardContent className="p-6 !pt-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
