@@ -143,8 +143,8 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
 
       {/* Defaults List */}
       {defaults.length === 0 ? (
-        <Card>
-          <CardContent className="p-6 text-center">
+        <Card className="mt-4">
+          <CardContent className="px-6 text-center !pt-12 !pb-12">
             <Settings className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
             <p className="text-muted-foreground">No ticket defaults configured</p>
             <p className="text-sm text-muted-foreground mt-1">

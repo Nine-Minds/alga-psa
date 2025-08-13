@@ -21,6 +21,8 @@ import { BasicConfigCard } from './providers/gmail/BasicConfigCard';
 import { ProcessingSettingsCard } from './providers/gmail/ProcessingSettingsCard';
 import { OAuthSection } from './providers/gmail/OAuthSection';
 import { ceGmailProviderSchema } from './providers/gmail/schemas';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { getInboundTicketDefaults } from 'server/src/lib/actions/email-actions/inboundTicketDefaultsActions';
 
 type GmailProviderFormData = import('./providers/gmail/schemas').CEGmailProviderFormData;
 
@@ -42,6 +44,7 @@ export function GmailProviderForm({
   const [showClientSecret, setShowClientSecret] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const { oauthStatus, oauthData, autoSubmitCountdown, openOAuthPopup, cancelAutoSubmit, setOauthStatus } = useOAuthPopup<any>({ provider: 'google', countdownSeconds: 0 });
+  const [defaultsOptions, setDefaultsOptions] = useState<{ value: string; label: string }[]>([]);
 
   const isEditing = !!provider;
 
@@ -59,15 +62,35 @@ export function GmailProviderForm({
       isActive: provider.isActive,
       autoProcessEmails: provider.googleConfig.auto_process_emails ?? true,
       labelFilters: provider.googleConfig.label_filters?.join(', ') || '',
-      maxEmailsPerSync: provider.googleConfig.max_emails_per_sync ?? 50
+      maxEmailsPerSync: provider.googleConfig.max_emails_per_sync ?? 50,
+      inboundTicketDefaultsId: (provider as any).inboundTicketDefaultsId || undefined
     } : {
       redirectUri: `${window.location.origin}/api/auth/google/callback`,
       isActive: true,
       autoProcessEmails: true,
       labelFilters: '',
-      maxEmailsPerSync: 50
+      maxEmailsPerSync: 50,
+      inboundTicketDefaultsId: undefined
     }
   });
+
+  // Load inbound ticket defaults options
+  React.useEffect(() => {
+    const loadDefaults = async () => {
+      try {
+        const res = await getInboundTicketDefaults();
+        const options = (res.defaults || []).map((d) => ({ value: d.id, label: d.display_name || d.short_name }));
+        setDefaultsOptions(options);
+      } catch (e) {
+        // Non-fatal
+        console.error('Failed to load inbound defaults', e);
+      }
+    };
+    loadDefaults();
+    const onUpdate = () => loadDefaults();
+    window.addEventListener('inbound-defaults-updated', onUpdate as any);
+    return () => window.removeEventListener('inbound-defaults-updated', onUpdate as any);
+  }, []);
 
   const onSubmit = async (data: GmailProviderFormData, providedOauthData?: any) => {
     setHasAttemptedSubmit(true);
@@ -100,6 +123,7 @@ export function GmailProviderForm({
         providerName: data.providerName,
         mailbox: data.mailbox,
         isActive: data.isActive,
+        inboundTicketDefaultsId: (form.getValues() as any).inboundTicketDefaultsId || undefined,
         googleConfig: {
           client_id: data.clientId,
           client_secret: data.clientSecret,
@@ -158,6 +182,7 @@ export function GmailProviderForm({
           providerName: formData.providerName,
           mailbox: formData.mailbox,
           isActive: formData.isActive,
+          inboundTicketDefaultsId: (form.getValues() as any).inboundTicketDefaultsId || undefined,
           googleConfig: {
             client_id: formData.clientId,
             client_secret: formData.clientSecret,
@@ -165,7 +190,7 @@ export function GmailProviderForm({
             redirect_uri: formData.redirectUri,
             auto_process_emails: formData.autoProcessEmails,
             label_filters: formData.labelFilters ? formData.labelFilters.split(',').map(l => l.trim()) : ['INBOX'],
-            max_emails_per_sync: formData.maxEmailsPerSync
+            max_emails_per_sync: formData.maxEmailsPerSync ?? 50
           }
         };
         const result = await upsertEmailProvider(payload); // allow automation for initial setup
@@ -338,23 +363,58 @@ export function GmailProviderForm({
             )}
           </div>
 
-          <OAuthSection
-            oauthStatus={oauthStatus}
-            onAuthorize={handleOAuthAuthorization}
-            authorizeButtonId="gmail-oauth-btn"
-            buttonDisabled={!form.watch('clientId') || !form.watch('redirectUri')}
-            isEditing={isEditing}
-            labels={{
-              title: 'Step 1: OAuth Authorization',
-              descriptionIdle: 'Complete OAuth flow to grant access to Gmail',
-              descriptionSuccess: 'Successfully authorized! Saving your settings...',
-              buttonIdleText: 'Authorize Access',
-              buttonAuthorizingText: 'Authorizing...',
-              buttonSuccessText: 'Authorized',
-            }}
-          />
-        </CardContent>
-      </Card>
+      <OAuthSection
+        oauthStatus={oauthStatus}
+        onAuthorize={handleOAuthAuthorization}
+        authorizeButtonId="gmail-oauth-btn"
+        buttonDisabled={!form.watch('clientId') || !form.watch('redirectUri')}
+        isEditing={isEditing}
+        labels={{
+          title: 'Step 1: OAuth Authorization',
+          descriptionIdle: 'Complete OAuth flow to grant access to Gmail',
+          descriptionSuccess: 'Successfully authorized! Saving your settings...',
+          buttonIdleText: 'Authorize Access',
+          buttonAuthorizingText: 'Authorizing...',
+          buttonSuccessText: 'Authorized',
+        }}
+      />
+    </CardContent>
+  </Card>
+
+  {/* Ticket Defaults selection */}
+  <Card>
+    <CardHeader>
+      <CardTitle>Ticket Defaults</CardTitle>
+      <CardDescription>
+        Select defaults to apply to email-created tickets
+        <Button
+          id="manage-defaults-link"
+          type="button"
+          variant="link"
+          className="ml-2 p-0 h-auto"
+          onClick={() => window.dispatchEvent(new CustomEvent('open-defaults-tab'))}
+        >
+          Manage defaults
+        </Button>
+      </CardDescription>
+    </CardHeader>
+    <CardContent>
+      <CustomSelect
+        id="gmail-inbound-defaults-select"
+        label="Inbound Ticket Defaults"
+        value={(form.watch('inboundTicketDefaultsId') as any) || ''}
+        onValueChange={(v) => form.setValue('inboundTicketDefaultsId', v || undefined)}
+        options={defaultsOptions}
+        placeholder="Select defaults (optional)"
+        allowClear
+      />
+      <div className="text-right">
+        <Button id="refresh-defaults-list" type="button" variant="outline" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('inbound-defaults-updated'))}>
+          Refresh list
+        </Button>
+      </div>
+    </CardContent>
+  </Card>
 
 
       <ProcessingSettingsCard
