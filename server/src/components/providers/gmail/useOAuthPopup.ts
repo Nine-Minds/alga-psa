@@ -99,24 +99,29 @@ export function useOAuthPopup<T = any>(options: UseOAuthPopupOptions) {
               setOauthStatus("success");
               handlers.onAfterSuccess?.(data);
 
-              // Begin countdown
-              setAutoSubmitCountdown(countdownSeconds);
-              if (countdownIntervalRef.current) {
-                window.clearInterval(countdownIntervalRef.current);
-              }
-              countdownIntervalRef.current = window.setInterval(() => {
-                setAutoSubmitCountdown((prev) => {
-                  if (prev === null || prev <= 1) {
-                    if (countdownIntervalRef.current) {
-                      window.clearInterval(countdownIntervalRef.current);
-                      countdownIntervalRef.current = null;
+              // If countdownSeconds <= 0, submit immediately to avoid user confusion
+              if (!countdownSeconds || countdownSeconds <= 0) {
+                handlers.onAutoSubmit(data);
+              } else {
+                // Begin countdown
+                setAutoSubmitCountdown(countdownSeconds);
+                if (countdownIntervalRef.current) {
+                  window.clearInterval(countdownIntervalRef.current);
+                }
+                countdownIntervalRef.current = window.setInterval(() => {
+                  setAutoSubmitCountdown((prev) => {
+                    if (prev === null || prev <= 1) {
+                      if (countdownIntervalRef.current) {
+                        window.clearInterval(countdownIntervalRef.current);
+                        countdownIntervalRef.current = null;
+                      }
+                      handlers.onAutoSubmit(data);
+                      return null;
                     }
-                    handlers.onAutoSubmit(data);
-                    return null;
-                  }
-                  return prev - 1;
-                });
-              }, 1000);
+                    return prev - 1;
+                  });
+                }, 1000);
+              }
             } else {
               setOauthStatus("error");
               const message =
@@ -148,4 +153,3 @@ export function useOAuthPopup<T = any>(options: UseOAuthPopupOptions) {
     setOauthStatus, // exposed in case caller needs to reset to idle
   } as const;
 }
-
