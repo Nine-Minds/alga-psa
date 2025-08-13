@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
 import { withTransaction } from '@alga-psa/shared/db';
 import { publishEvent } from '@alga-psa/shared/events/publisher.js';
+import { GmailAdapter } from '@/services/email/providers/GmailAdapter';
+import type { EmailProviderConfig } from '@/interfaces/email.interfaces';
 import { OAuth2Client } from 'google-auth-library';
 
 interface GooglePubSubMessage {
@@ -160,34 +162,65 @@ export async function POST(request: NextRequest) {
       console.log(`✅ Recorded historyId ${notification.historyId} as processed for provider ${provider.id}`);
     
 
-      // Publish INBOUND_EMAIL_RECEIVED event
-      console.log(`📤 Publishing INBOUND_EMAIL_RECEIVED event for provider ${provider.id}`);
-      await publishEvent({
-        eventType: 'INBOUND_EMAIL_RECEIVED',
+      // Build EmailProviderConfig for GmailAdapter
+      const providerConfig: EmailProviderConfig = {
+        id: provider.id,
         tenant: provider.tenant,
-        payload: {
-          providerId: provider.id,
-          providerType: 'google',
-          mailbox: provider.mailbox,
-          historyId: notification.historyId,
-          webhookData: {
-            emailAddress: notification.emailAddress,
-            historyId: notification.historyId,
-            messageId: payloadData.messageId,
-            publishTime: payloadData.publishTime,
-            subscription: payloadData.subscription,
-            timestamp: new Date().toISOString()
-          }
-        }
-      });
+        name: provider.name || provider.mailbox,
+        provider_type: 'google',
+        mailbox: provider.mailbox,
+        folder_to_monitor: 'Inbox',
+        active: provider.is_active,
+        webhook_notification_url: provider.webhook_notification_url,
+        connection_status: provider.connection_status || 'connected',
+        created_at: provider.created_at,
+        updated_at: provider.updated_at,
+        provider_config: {
+          project_id: googleConfig.project_id,
+          pubsub_topic_name: googleConfig.pubsub_topic_name,
+          pubsub_subscription_name: googleConfig.pubsub_subscription_name,
+          client_id: googleConfig.client_id,
+          client_secret: googleConfig.client_secret,
+          access_token: googleConfig.access_token,
+          refresh_token: googleConfig.refresh_token,
+          token_expires_at: googleConfig.token_expires_at,
+          history_id: googleConfig.history_id,
+          watch_expiration: googleConfig.watch_expiration,
+        },
+      } as any;
 
-      processed = true;
-      console.log(`✅ Published INBOUND_EMAIL_RECEIVED event for Gmail:`, {
-        email: notification.emailAddress,
-        historyId: notification.historyId,
-        providerId: provider.id,
-        tenant: provider.tenant
-      });
+      // Use GmailAdapter to fetch message IDs since historyId and publish enriched events
+      const adapter = new GmailAdapter(providerConfig);
+      await adapter.connect();
+
+      console.log(`🔎 Listing Gmail messages since historyId ${notification.historyId}`);
+      const messageIds = await adapter.listMessagesSince(notification.historyId);
+
+      if (!messageIds || messageIds.length === 0) {
+        console.log(`ℹ️ No new Gmail messages since historyId ${notification.historyId} for ${provider.mailbox}`);
+      } else {
+        console.log(`📬 Found ${messageIds.length} new Gmail message(s) to publish`);
+      }
+
+      // Publish one INBOUND_EMAIL_RECEIVED per Gmail message with full emailData
+      for (const msgId of messageIds) {
+        try {
+          const details = await adapter.getMessageDetails(msgId);
+          await publishEvent({
+            eventType: 'INBOUND_EMAIL_RECEIVED',
+            tenant: provider.tenant,
+            payload: {
+              tenantId: provider.tenant,
+              providerId: provider.id,
+              emailData: details,
+            },
+          });
+          console.log(`✅ Published INBOUND_EMAIL_RECEIVED with emailData for ${msgId}`);
+          processed = true;
+        } catch (detailErr: any) {
+          console.warn(`⚠️ Failed to fetch/publish Gmail message ${msgId}: ${detailErr.message}`);
+        }
+      }
     });
 
     // Acknowledge the message
