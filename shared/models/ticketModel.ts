@@ -1045,6 +1045,20 @@ export class TicketModel {
     const commentId = uuidv4();
     const now = new Date();
 
+    // Map legacy/alias author types to current enum: internal | client | unknown
+    const dbAuthorType = (() => {
+      switch (validatedData.author_type) {
+        case 'internal':
+          return 'internal';
+        case 'contact':
+          return 'client';
+        case 'system':
+          return 'internal';
+        default:
+          return 'unknown';
+      }
+    })();
+
     const commentData = {
       comment_id: commentId,
       tenant,
@@ -1052,7 +1066,7 @@ export class TicketModel {
       note: validatedData.content,
       is_internal: validatedData.is_internal || false,
       is_resolution: validatedData.is_resolution || false,
-      author_type: validatedData.author_type || 'system',
+      author_type: dbAuthorType as any,
       user_id: validatedData.author_id || null,
       metadata: validatedData.metadata ? JSON.stringify(validatedData.metadata) : null,
       created_at: now,
@@ -1070,7 +1084,7 @@ export class TicketModel {
           commentId: commentId,
           userId: userId,
           metadata: {
-            author_type: validatedData.author_type || 'system',
+            author_type: dbAuthorType,
             is_internal: validatedData.is_internal,
             is_resolution: validatedData.is_resolution
           }
@@ -1087,7 +1101,7 @@ export class TicketModel {
           ticket_id: validatedData.ticket_id,
           is_internal: validatedData.is_internal || false,
           is_resolution: validatedData.is_resolution || false,
-          author_type: validatedData.author_type || 'system',
+          author_type: dbAuthorType,
           created_via: 'manual'
         }, userId);
       } catch (error) {
