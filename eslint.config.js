@@ -148,4 +148,17 @@ export default [
       }
     }
   },
+
+  // Configuration for test files
+  {
+    files: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx", "**/*.playwright.test.ts"],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        ...globals.browser,
+        React: true,
+        JSX: true
+      }
+    }
+  }
 ];

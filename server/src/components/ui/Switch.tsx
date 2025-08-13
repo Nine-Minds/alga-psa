@@ -17,8 +17,8 @@ const Switch = React.forwardRef<
   React.ElementRef<typeof SwitchPrimitives.Root>,
   SwitchProps & AutomationProps
 >(({ className, label, id, required, checked, disabled, ...props }, ref) => {
-  // Register with UI reflection system if id is provided
-  const updateMetadata = id ? useRegisterUIComponent<FormFieldComponent>({
+  // Register with UI reflection system
+  const updateMetadata = useRegisterUIComponent<FormFieldComponent>(id ? {
     type: 'formField',
     fieldType: 'checkbox',
     id,
@@ -26,7 +26,7 @@ const Switch = React.forwardRef<
     value: checked,
     disabled,
     required
-  }) : undefined;
+  } : null);
 
   // Update metadata when field props change
   React.useEffect(() => {

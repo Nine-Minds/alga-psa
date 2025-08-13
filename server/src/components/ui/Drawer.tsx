@@ -33,13 +33,13 @@ const Drawer: React.FC<DrawerProps & AutomationProps> = ({
   drawerVariant
 }) => {
   // Always register drawer when mounted, but track open state
-  const updateMetadata = id ? useRegisterUIComponent<DrawerComponent>({
+  const updateMetadata = useRegisterUIComponent<DrawerComponent>(id ? {
     type: 'drawer',
     id,
     open: isOpen,
     width: isInDrawer ? '40%' : '50%',
     children: reflectionChildren
-  }) : undefined;
+  } : null);
   return (
     <Dialog.Root modal open={isOpen} onOpenChange={(open) => {
       if (!open) onClose(); // Ensure onClose is called when dialog is closed

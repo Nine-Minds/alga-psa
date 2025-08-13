@@ -102,11 +102,11 @@ const ReflectedTableCell: React.FC<ReflectedTableCellProps> = ({
   style 
 }) => {
   // Register the cell with UI reflection system
-  const updateCellMetadata = id ? useRegisterChild<TextComponent>({
+  const updateCellMetadata = useRegisterChild<TextComponent>(id ? {
     id,
     type: 'text',
     text: content
-  }) : undefined;
+  } : null);
   
   // Only update metadata when content changes
   useEffect(() => {
@@ -280,7 +280,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   }, [columns, visibleColumnIds]);
 
   // Register with UI reflection system with stable references
-  const updateMetadata = id ? useRegisterUIComponent<DataTableComponent>({
+  const updateMetadata = useRegisterUIComponent<DataTableComponent>(id ? {
     id: `${id}-table`,
     type: 'dataTable',
     columns: columnConfig,
@@ -297,7 +297,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
       values: row as Record<string, unknown>
     })),
     isEditable: !!editableConfig
-  }) : undefined;
+  } : null);
 
   // Create stable column definitions, filtering out columns that shouldn't be visible
   const tableColumns = useMemo<ColumnDef<T>[]>(

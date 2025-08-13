@@ -36,31 +36,31 @@ const ContactPickerDialog: React.FC<ContactPickerDialogProps & AutomationProps> 
   const [filteredContacts, setFilteredContacts] = useState<IContact[]>([]);
 
   // Only register dialog and its children with UI reflection system when open
-  const updateDialog = id && isOpen ? useRegisterUIComponent<DialogComponent>({
+  const updateDialog = useRegisterUIComponent<DialogComponent>(id && isOpen ? {
     type: 'dialog',
     id,
     title: 'Select Contact',
     open: true
-  }) : undefined;
+  } : null);
 
   // Only register search input when dialog is open
-  const updateSearchInput = id && isOpen ? useRegisterUIComponent<FormFieldComponent>({
+  const updateSearchInput = useRegisterUIComponent<FormFieldComponent>(id && isOpen ? {
     type: 'formField',
     fieldType: 'textField',
     id: `${id}-search`,
     label: 'Search',
     value: searchTerm,
     parentId: id
-  }) : undefined;
+  } : null);
 
   // Only register cancel button when dialog is open
-  const updateCancelButton = id && isOpen ? useRegisterUIComponent<ButtonComponent>({
+  const updateCancelButton = useRegisterUIComponent<ButtonComponent>(id && isOpen ? {
     type: 'button',
     id: `${id}-cancel`,
     label: 'Cancel',
     variant: 'ghost',
     parentId: id
-  }) : undefined;
+  } : null);
 
   // Update search input value when it changes
   useEffect(() => {
