@@ -91,6 +91,8 @@ export async function POST(request: NextRequest) {
             eventType: 'INBOUND_EMAIL_RECEIVED',
             tenant: provider.tenant,
             payload: {
+              tenantId: provider.tenant,
+              tenant: provider.tenant,
               providerId: provider.id,
               providerType: 'microsoft',
               mailbox: provider.mailbox,

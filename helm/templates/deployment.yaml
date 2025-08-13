@@ -102,7 +102,14 @@ spec:
           - name: REDIS_DB
             value: "{{ .Values.config.redis.db }}"
           - name: REDIS_PASSWORD
-            value: "{{ .Values.config.redis.password }}"
+            {{- if and .Values.config.redis.passwordSecret.name .Values.config.redis.passwordSecret.key }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.config.redis.passwordSecret.name | quote }}
+                key: {{ .Values.config.redis.passwordSecret.key | quote }}
+            {{- else }}
+            value: {{ .Values.config.redis.password | quote }}
+            {{- end }}
           {{- end }}
 
           # ----------- DB ----------------

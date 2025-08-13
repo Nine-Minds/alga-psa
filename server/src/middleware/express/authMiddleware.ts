@@ -92,6 +92,16 @@ export async function apiKeyAuthMiddleware(
     return next();
   }
 
+  // Skip authentication for Google email webhook (verified by signature in route)
+  if (req.path === '/api/email/webhooks/google' || req.path === '/api/email/webhooks/google/') {
+    return next();
+  }
+
+  // Skip authentication for Microsoft email webhook (validated in route)
+  if (req.path === '/api/email/webhooks/microsoft' || req.path === '/api/email/webhooks/microsoft/') {
+    return next();
+  }
+
   const apiKey = req.headers['x-api-key'] as string;
   
   if (!apiKey) {

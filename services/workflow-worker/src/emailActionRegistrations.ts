@@ -4,7 +4,7 @@
  * server dependencies in the shared package
  */
 
-import { ActionRegistry, ActionExecutionContext } from '@alga-psa/shared/workflow/core';
+import { ActionRegistry, ActionExecutionContext } from '@alga-psa/shared/workflow/core/index.js';
 import logger from '@alga-psa/shared/core/logger.js';
 
 /**
@@ -169,6 +169,26 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
         const knex = await getAdminConnection();
         
         const comment_id = await withTransaction(knex, async (trx) => {
+          // Normalize/Map legacy author_type values to current enum (internal|client|unknown)
+          const dbAuthorType = (() => {
+            const raw = (params.author_type || '').toString().toLowerCase();
+            switch (raw) {
+              case 'internal':
+                return 'internal';
+              case 'contact':
+              case 'client':
+                return 'client';
+              case 'system':
+                return 'internal';
+              default:
+                return 'unknown';
+            }
+          })();
+
+          if (params.author_type && params.author_type !== dbAuthorType) {
+            logger.warn(`[ACTION] create_comment_from_email: Mapped author_type '${params.author_type}' to '${dbAuthorType}' for tenant=${context.tenant}`);
+          }
+
           const [comment] = await trx('comments')
             .insert({
               tenant: context.tenant,
@@ -176,7 +196,7 @@ export function registerEmailActions(actionRegistry: ActionRegistry): void {
               note: params.content,
               is_internal: false,
               is_resolution: false,
-              author_type: params.author_type || 'internal',
+              author_type: dbAuthorType,
               markdown_content: params.content, // Add markdown content column
               created_at: new Date(),
               updated_at: new Date()

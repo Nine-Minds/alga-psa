@@ -339,6 +339,7 @@ export class MailHogPollingService {
         eventType: 'INBOUND_EMAIL_RECEIVED',
         payload: {
           tenantId: eventData.tenantId,  // Changed from eventData.tenant to eventData.tenantId
+          tenant: eventData.tenantId,
           providerId: eventData.providerId,
           emailData: eventData.emailData
         }

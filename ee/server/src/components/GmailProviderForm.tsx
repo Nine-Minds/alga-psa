@@ -38,7 +38,7 @@ export function GmailProviderForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
-  const { oauthStatus, oauthData, autoSubmitCountdown, openOAuthPopup, cancelAutoSubmit, setOauthStatus } = useOAuthPopup<any>({ provider: 'google', countdownSeconds: 10 });
+  const { oauthStatus, oauthData, autoSubmitCountdown, openOAuthPopup, cancelAutoSubmit, setOauthStatus } = useOAuthPopup<any>({ provider: 'google', countdownSeconds: 0 });
 
   const isEditing = !!provider;
 
@@ -217,12 +217,10 @@ export function GmailProviderForm({
             authorizeButtonId="gmail-oauth-btn"
             buttonDisabled={!form.watch('mailbox')}
             isEditing={isEditing}
-            autoSubmitCountdown={autoSubmitCountdown}
-            onCancelAutoSubmit={cancelAutoSubmit}
             labels={{
               title: 'Gmail Connection',
               descriptionIdle: 'Authorize access to your Gmail account',
-              descriptionSuccess: 'Successfully connected! Complete setup by saving below.',
+              descriptionSuccess: 'Successfully connected! Saving your settings...',
               buttonIdleText: 'Connect Gmail',
               buttonAuthorizingText: 'Connecting...',
               buttonSuccessText: 'Connected',
