@@ -3,6 +3,7 @@
 import { createTenantKnex } from '../../db';
 import { getCurrentUser } from '../user-actions/userActions';
 import type { TicketFieldOptions } from '../../../types/email.types';
+import { hasPermission } from '../../auth/rbac';
 
 export async function getTicketFieldOptions(): Promise<{ options: TicketFieldOptions }> {
   const user = await getCurrentUser();
@@ -11,6 +12,11 @@ export async function getTicketFieldOptions(): Promise<{ options: TicketFieldOpt
   }
 
   const { knex, tenant } = await createTenantKnex();
+  // RBAC: require ticket settings read permission
+  const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
+  if (!permitted) {
+    throw new Error('Unauthorized');
+  }
   
   try {
     // Get all ticket field options in parallel
@@ -141,6 +147,10 @@ export async function getAvailableChannels(): Promise<{ channels: TicketFieldOpt
   }
 
   const { knex, tenant } = await createTenantKnex();
+  const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
+  if (!permitted) {
+    throw new Error('Unauthorized');
+  }
   
   try {
     const channels = await knex('channels')
@@ -167,6 +177,10 @@ export async function getAvailableStatuses(): Promise<{ statuses: TicketFieldOpt
   }
 
   const { knex, tenant } = await createTenantKnex();
+  const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
+  if (!permitted) {
+    throw new Error('Unauthorized');
+  }
   
   try {
     const statuses = await knex('statuses')
@@ -194,6 +208,10 @@ export async function getAvailablePriorities(): Promise<{ priorities: TicketFiel
   }
 
   const { knex, tenant } = await createTenantKnex();
+  const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
+  if (!permitted) {
+    throw new Error('Unauthorized');
+  }
   
   try {
     const priorities = await knex('priorities')
@@ -220,6 +238,10 @@ export async function getAvailableCategories(): Promise<{ categories: TicketFiel
   }
 
   const { knex, tenant } = await createTenantKnex();
+  const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
+  if (!permitted) {
+    throw new Error('Unauthorized');
+  }
   
   try {
     const categories = await knex('categories')
@@ -249,6 +271,10 @@ export async function getCategoriesByChannel(channelId: string | null): Promise<
   }
 
   const { knex, tenant } = await createTenantKnex();
+  const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
+  if (!permitted) {
+    throw new Error('Unauthorized');
+  }
 
   try {
     console.log('[TicketFieldOptions] getCategoriesByChannel: start', {
@@ -308,6 +334,10 @@ export async function getAvailableCompanies(): Promise<{ companies: TicketFieldO
   }
 
   const { knex, tenant } = await createTenantKnex();
+  const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
+  if (!permitted) {
+    throw new Error('Unauthorized');
+  }
   
   try {
     const companies = await knex('companies')
@@ -333,6 +363,10 @@ export async function getAvailableUsers(): Promise<{ users: TicketFieldOptions['
   }
 
   const { knex, tenant } = await createTenantKnex();
+  const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
+  if (!permitted) {
+    throw new Error('Unauthorized');
+  }
   
   try {
     const users = await knex('users')

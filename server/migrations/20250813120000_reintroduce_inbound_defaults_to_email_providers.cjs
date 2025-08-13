@@ -9,15 +9,6 @@ exports.up = async function(knex) {
     await knex.schema.alterTable('email_providers', (table) => {
       table.uuid('inbound_ticket_defaults_id').nullable();
     });
-    // Add FK if table exists; ignore if not supported in environment
-    try {
-      await knex.schema.alterTable('email_providers', (table) => {
-        table
-          .foreign('inbound_ticket_defaults_id')
-          .references('id')
-          .inTable('inbound_ticket_defaults');
-      });
-    } catch (_) {}
     // Helpful index for lookups by tenant + defaults
     try {
       await knex.schema.alterTable('email_providers', (table) => {
@@ -36,4 +27,3 @@ exports.down = async function(knex) {
     });
   }
 };
-
