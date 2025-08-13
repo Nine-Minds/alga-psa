@@ -100,28 +100,42 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
         throw new Error(invitationResult.error || 'Failed to create invitation');
       }
 
-      // Get company information for email template
-      const company = await trx('companies')
-        .where({ tenant, company_id: contact.company_id })
+      // Get the tenant's default company (MSP company) for reply-to email
+      const tenantDefaultCompany = await trx('tenant_companies')
+        .join('companies', 'companies.company_id', 'tenant_companies.company_id')
+        .where({ 
+          'tenant_companies.tenant': tenant,
+          'tenant_companies.is_default': true 
+        })
+        .select('companies.*')
         .first();
       
-      // Get company's default location for contact information
-      const defaultLocation = await trx('company_locations')
+      if (!tenantDefaultCompany) {
+        throw new Error('No default company configured for this tenant. Please set a default company in General Settings.');
+      }
+      
+      // Get MSP company's default location for reply-to email
+      const mspLocation = await trx('company_locations')
         .where({ 
           tenant, 
-          company_id: contact.company_id,
+          company_id: tenantDefaultCompany.company_id,
           is_default: true,
           is_active: true
         })
         .first();
       
-      if (!defaultLocation) {
-        throw new Error('Company must have a default location configured to send portal invitations');
+      if (!mspLocation) {
+        throw new Error('Default company must have a default location configured to send portal invitations');
       }
       
-      if (!defaultLocation.email) {
-        throw new Error('Company\'s default location must have a contact email configured');
+      if (!mspLocation.email) {
+        throw new Error('Default company\'s location must have a contact email configured');
       }
+      
+      // Get the client's company info for the email template
+      const clientCompany = contact.company_id ? await trx('companies')
+        .where({ tenant, company_id: contact.company_id })
+        .first() : null;
 
       // Generate portal setup URL
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
@@ -134,13 +148,13 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
       await sendPortalInvitationEmail({
         email: contact.email,
         contactName: contact.full_name,
-        companyName: company?.company_name || 'Your Company',
+        companyName: clientCompany?.company_name || tenantDefaultCompany.company_name,  // Client's company name or MSP name
         portalLink: portalSetupUrl,
         expirationTime: expirationTime,
         tenant: tenant,
-        companyLocationEmail: defaultLocation.email,
-        companyLocationPhone: defaultLocation.phone || 'Not provided',
-        fromName: `${company?.company_name || 'Your Company'} Portal`
+        companyLocationEmail: mspLocation.email,  // MSP's email for reply-to
+        companyLocationPhone: mspLocation.phone || 'Not provided',  // MSP's phone
+        fromName: `${tenantDefaultCompany.company_name} Portal`  // MSP's name for the portal
       });
 
       return {
