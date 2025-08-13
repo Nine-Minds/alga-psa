@@ -189,36 +189,59 @@ export async function POST(request: NextRequest) {
         },
       } as any;
 
-      // Use GmailAdapter to fetch message IDs since historyId and publish enriched events
-      const adapter = new GmailAdapter(providerConfig);
-      await adapter.connect();
+      try {
+        // Use GmailAdapter to fetch message IDs since historyId and publish enriched events
+        const adapter = new GmailAdapter(providerConfig);
+        await adapter.connect();
 
-      console.log(`🔎 Listing Gmail messages since historyId ${notification.historyId}`);
-      const messageIds = await adapter.listMessagesSince(notification.historyId);
+        console.log(`🔎 Listing Gmail messages since historyId ${notification.historyId}`);
+        const messageIds = await adapter.listMessagesSince(notification.historyId);
 
-      if (!messageIds || messageIds.length === 0) {
-        console.log(`ℹ️ No new Gmail messages since historyId ${notification.historyId} for ${provider.mailbox}`);
-      } else {
-        console.log(`📬 Found ${messageIds.length} new Gmail message(s) to publish`);
-      }
+        if (!messageIds || messageIds.length === 0) {
+          console.log(`ℹ️ No new Gmail messages since historyId ${notification.historyId} for ${provider.mailbox}`);
+        } else {
+          console.log(`📬 Found ${messageIds.length} new Gmail message(s) to publish`);
+        }
 
-      // Publish one INBOUND_EMAIL_RECEIVED per Gmail message with full emailData
-      for (const msgId of messageIds) {
-        try {
-          const details = await adapter.getMessageDetails(msgId);
-          await publishEvent({
-            eventType: 'INBOUND_EMAIL_RECEIVED',
-            tenant: provider.tenant,
-            payload: {
-              tenantId: provider.tenant,
-              providerId: provider.id,
-              emailData: details,
-            },
-          });
-          console.log(`✅ Published INBOUND_EMAIL_RECEIVED with emailData for ${msgId}`);
-          processed = true;
-        } catch (detailErr: any) {
-          console.warn(`⚠️ Failed to fetch/publish Gmail message ${msgId}: ${detailErr.message}`);
+        // Publish one INBOUND_EMAIL_RECEIVED per Gmail message with full emailData
+        for (const msgId of messageIds) {
+          try {
+            const details = await adapter.getMessageDetails(msgId);
+            await publishEvent({
+              eventType: 'INBOUND_EMAIL_RECEIVED',
+              tenant: provider.tenant,
+              payload: {
+                tenantId: provider.tenant,
+                providerId: provider.id,
+                emailData: details,
+              },
+            });
+            console.log(`✅ Published INBOUND_EMAIL_RECEIVED with emailData for ${msgId}`);
+            processed = true;
+          } catch (detailErr: any) {
+            console.warn(`⚠️ Failed to fetch/publish Gmail message ${msgId}: ${detailErr.message}`);
+          }
+        }
+      } catch (oauthErr: any) {
+        const msg = oauthErr?.message || String(oauthErr);
+        const raw = typeof oauthErr === 'object' ? JSON.stringify(oauthErr) : String(oauthErr);
+        console.error('[GOOGLE] OAuth error while fetching Gmail messages:', { message: msg, raw });
+        if (msg.includes('invalid_grant') || msg.includes('invalid_rapt')) {
+          console.error('⚠️ Gmail OAuth requires re-authorization (invalid_grant/invalid_rapt). Marking provider as error.');
+          try {
+            await trx('email_providers')
+              .where('id', provider.id)
+              .update({
+                connection_status: 'error',
+                connection_error_message: 'Gmail requires re-authorization (invalid_grant/invalid_rapt). Visit settings to reconnect.'
+              });
+          } catch (updateErr) {
+            console.warn('Failed to update provider connection_status after OAuth error:', updateErr);
+          }
+          // Do not throw; acknowledge webhook without publishing events to avoid retries storm
+        } else {
+          // Unknown error; log and continue (acknowledge webhook)
+          console.error('Unhandled Gmail fetch error:', msg);
         }
       }
     });
