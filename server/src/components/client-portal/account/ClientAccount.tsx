@@ -3,9 +3,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/ui/Card';
 import { Table } from 'server/src/components/ui/Table';
-import { Button } from 'server/src/components/ui/Button';
-import { toast } from 'react-hot-toast';
-
 import { getClientCompany } from 'server/src/lib/actions/client-portal-actions/client-company';
 import { getClientBillingPlan, getClientInvoices } from 'server/src/lib/actions/client-portal-actions/client-billing';
 
@@ -73,9 +70,9 @@ export default function ClientAccount() {
     return () => { mounted = false; };
   }, []);
 
-  const onCancelSubscription = () => {
-    toast('Cancel subscription is not implemented yet.');
-  };
+  // const onCancelSubscription = () => {
+  //   toast('Cancel subscription is not implemented yet.');
+  // };
 
   if (isLoading) {
     return (
@@ -132,11 +129,11 @@ export default function ClientAccount() {
                 <div className="text-base font-medium">{billingPlan.plan_name}</div>
                 <div className="text-sm text-gray-600">{billingPlan.billing_frequency || '—'}</div>
               </div>
-              <div className="flex items-center gap-2">
+              {/* <div className="flex items-center gap-2">
                 <Button id="cancel-subscription-button" variant="outline" onClick={onCancelSubscription}>
                   Cancel Subscription
                 </Button>
-              </div>
+              </div> */}
             </div>
           ) : (
             <div className="text-gray-600">No active plan found.</div>

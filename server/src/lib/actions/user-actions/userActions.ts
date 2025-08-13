@@ -12,7 +12,6 @@ import { Knex } from 'knex';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
 import Tenant from 'server/src/lib/models/tenant';
 import UserPreferences from 'server/src/lib/models/userPreferences';
-import { verifyEmailSuffix, getCompanyByEmailSuffix } from 'server/src/lib/actions/company-settings/emailSettings';
 import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/EntityImageService';
 import { hasPermission } from 'server/src/lib/auth/rbac';
@@ -55,7 +54,15 @@ export async function checkEmailExistsGlobally(email: string): Promise<boolean> 
   }
 }
 
-export async function addUser(userData: { firstName: string; lastName: string; email: string, password: string, roleId?: string }): Promise<IUser> {
+export async function addUser(userData: { 
+  firstName: string; 
+  lastName: string; 
+  email: string;
+  password: string;
+  roleId?: string;
+  userType?: 'internal' | 'client';
+  contactId?: string;
+}): Promise<IUser> {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
@@ -73,7 +80,7 @@ export async function addUser(userData: { firstName: string; lastName: string; e
         throw new Error("Role is required");
       }
 
-      // Validate that the role exists and is an MSP role
+      // Validate that the role exists
       const role = await trx('roles')
         .where({ role_id: userData.roleId, tenant: tenant || undefined })
         .first();
@@ -82,7 +89,12 @@ export async function addUser(userData: { firstName: string; lastName: string; e
         throw new Error("Invalid role");
       }
       
-      if (!role.msp) {
+      // Validate role matches user type
+      const isClientUser = userData.userType === 'client';
+      if (isClientUser && !role.client) {
+        throw new Error("Cannot assign MSP role to client portal user");
+      }
+      if (!isClientUser && !role.msp) {
         throw new Error("Cannot assign client portal role to MSP user");
       }
 
@@ -101,7 +113,8 @@ export async function addUser(userData: { firstName: string; lastName: string; e
           is_inactive: false,
           hashed_password: await hashPassword(userData.password),
           tenant: tenant || undefined,
-          user_type: 'internal' // Explicitly set user_type for MSP users
+          user_type: userData.userType || 'internal', // Default to 'internal' for backward compatibility
+          contact_id: userData.contactId || undefined
         }).returning('*');
 
       await trx('user_roles').insert({
@@ -382,6 +395,27 @@ export async function getMSPRoles(): Promise<IRole[]> {
   }
 }
 
+/**
+ * Get Client Portal roles only (roles with client flag = true)
+ */
+export async function getClientPortalRoles(): Promise<IRole[]> {
+  try {
+    const {knex: db, tenant} = await createTenantKnex();
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const roles = await trx('roles')
+        .where({ 
+          tenant: tenant || undefined,
+          client: true 
+        })
+        .select('*');
+      return roles;
+    });
+  } catch (error) {
+    console.error('Failed to fetch client portal roles:', error);
+    throw new Error('Failed to fetch client portal roles');
+  }
+}
+
 export async function getUserRolesWithPermissions(userId: string, knexConnection?: Knex | Knex.Transaction): Promise<IRoleWithPermissions[]> {
   try {
     const currentUser = await getCurrentUser();
@@ -546,21 +580,7 @@ export async function setUserPreference(userId: string, settingName: string, set
 
 export async function verifyContactEmail(email: string): Promise<{ exists: boolean; isActive: boolean; companyId?: string; tenant?: string }> {
   try {
-    // First check if email matches any company email suffixes
-    const isValidSuffix = await verifyEmailSuffix(email);
-    if (isValidSuffix) {
-      const result = await getCompanyByEmailSuffix(email);
-      if (result) {
-        return {
-          exists: false, // Not a contact, but valid email suffix
-          isActive: true,
-          companyId: result.companyId,
-          tenant: result.tenant
-        };
-      }
-    }
-
-    // If not a valid suffix, check contacts
+    // Email suffix functionality removed for security - only check contacts
     const contact = await withAdminTransaction(async (trx: Knex.Transaction) => {
       return await trx('contacts')
         .join('companies', function() {
@@ -793,19 +813,8 @@ export async function getUserCompanyId(userId: string): Promise<string | null> {
         }
       }
 
-      // If no contact or no company found, try to get company from user's email domain
-      const emailDomain = user.email.split('@')[1];
-      if (!emailDomain) return null;
-
-      const emailSetting = await trx('company_email_settings')
-        .where({
-          email_suffix: emailDomain,
-          tenant: tenant
-        })
-        .select('company_id')
-        .first();
-
-      return emailSetting?.company_id || null;
+      // Email suffix functionality removed for security
+      return null;
     });
   } catch (error) {
     console.error('Error getting user company ID:', error);
