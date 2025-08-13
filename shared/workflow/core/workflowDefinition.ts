@@ -1,6 +1,12 @@
 import { WorkflowFunction } from './workflowContext.js';
 import logger from '@alga-psa/shared/core/logger.js';
-import * as ts from 'typescript';
+// Ensure TypeScript loads correctly under ESM <-> CJS interop
+// When importing a CommonJS module (TypeScript) from ESM, the exports land on `default`
+// so `import * as ts` would yield `ts.default.ScriptTarget`. Normalize here.
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import tsModule from 'typescript';
+const ts: typeof import('typescript') = (tsModule as any).default ?? (tsModule as any);
 
 /**
  * Interface for workflow metadata
