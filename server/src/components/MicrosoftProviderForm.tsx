@@ -18,6 +18,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { ExternalLink, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
 import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from '../lib/actions/email-actions/emailProviderActions';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { getInboundTicketDefaults } from 'server/src/lib/actions/email-actions/inboundTicketDefaultsActions';
 
 const microsoftProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),
@@ -29,7 +31,8 @@ const microsoftProviderSchema = z.object({
   isActive: z.boolean(),
   autoProcessEmails: z.boolean(),
   folderFilters: z.string().optional(),
-  maxEmailsPerSync: z.number().min(1).max(1000)
+  maxEmailsPerSync: z.number().min(1).max(1000),
+  inboundTicketDefaultsId: z.string().uuid().optional()
 });
 
 type MicrosoftProviderFormData = z.infer<typeof microsoftProviderSchema>;
@@ -53,6 +56,7 @@ export function MicrosoftProviderForm({
   const [oauthStatus, setOauthStatus] = useState<'idle' | 'authorizing' | 'success' | 'error'>('idle');
   const [oauthData, setOauthData] = useState<any>(null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [defaultsOptions, setDefaultsOptions] = useState<{ value: string; label: string }[]>([]);
 
   const isEditing = !!provider;
 
@@ -68,15 +72,31 @@ export function MicrosoftProviderForm({
       isActive: provider.isActive,
       autoProcessEmails: provider.microsoftConfig.auto_process_emails ?? true,
       folderFilters: provider.microsoftConfig.folder_filters?.join(', ') || '',
-      maxEmailsPerSync: provider.microsoftConfig.max_emails_per_sync ?? 50
+      maxEmailsPerSync: provider.microsoftConfig.max_emails_per_sync ?? 50,
+      inboundTicketDefaultsId: (provider as any).inboundTicketDefaultsId || undefined
     } : {
       redirectUri: `${window.location.origin}/api/auth/microsoft/callback`,
       isActive: true,
       autoProcessEmails: true,
       folderFilters: '',
-      maxEmailsPerSync: 50
+      maxEmailsPerSync: 50,
+      inboundTicketDefaultsId: undefined
     }
   });
+
+  // Load inbound ticket defaults options
+  React.useEffect(() => {
+    const loadDefaults = async () => {
+      try {
+        const res = await getInboundTicketDefaults();
+        const options = (res.defaults || []).map((d) => ({ value: d.id, label: d.display_name || d.short_name }));
+        setDefaultsOptions(options);
+      } catch (e) {
+        console.error('Failed to load inbound defaults', e);
+      }
+    };
+    loadDefaults();
+  }, []);
 
   const onSubmit = async (data: MicrosoftProviderFormData) => {
     setHasAttemptedSubmit(true);
@@ -97,6 +117,7 @@ export function MicrosoftProviderForm({
         providerName: data.providerName,
         mailbox: data.mailbox,
         isActive: data.isActive,
+        inboundTicketDefaultsId: data.inboundTicketDefaultsId,
         microsoftConfig: {
           client_id: data.clientId,
           client_secret: data.clientSecret,
@@ -146,6 +167,7 @@ export function MicrosoftProviderForm({
           providerName: formData.providerName,
           mailbox: formData.mailbox,
           isActive: formData.isActive,
+          inboundTicketDefaultsId: (form.getValues() as any).inboundTicketDefaultsId || undefined,
           microsoftConfig: {
             client_id: formData.clientId,
             client_secret: formData.clientSecret,
@@ -282,8 +304,27 @@ export function MicrosoftProviderForm({
             />
             <Label htmlFor="isActive">Enable this provider</Label>
           </div>
-        </CardContent>
-      </Card>
+      </CardContent>
+    </Card>
+
+    {/* Ticket Defaults selection */}
+    <Card>
+      <CardHeader>
+        <CardTitle>Ticket Defaults</CardTitle>
+        <CardDescription>Select defaults to apply to email-created tickets</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <CustomSelect
+          id="microsoft-inbound-defaults-select"
+          label="Inbound Ticket Defaults"
+          value={(form.watch('inboundTicketDefaultsId') as any) || ''}
+          onValueChange={(v) => form.setValue('inboundTicketDefaultsId', v || undefined)}
+          options={defaultsOptions}
+          placeholder="Select defaults (optional)"
+          allowClear
+        />
+      </CardContent>
+    </Card>
 
       {/* Microsoft OAuth Configuration */}
       <Card>

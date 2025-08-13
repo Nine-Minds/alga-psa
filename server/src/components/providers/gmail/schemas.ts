@@ -7,7 +7,8 @@ export const baseGmailProviderSchema = z.object({
   isActive: z.boolean(),
   autoProcessEmails: z.boolean(),
   labelFilters: z.string().optional(),
-  maxEmailsPerSync: z.number().min(1).max(1000),
+  // Max per sync is not used; keep optional for backward compatibility
+  maxEmailsPerSync: z.number().min(1).max(1000).optional(),
 });
 
 export type BaseGmailProviderFormData = z.infer<typeof baseGmailProviderSchema>;
@@ -21,4 +22,3 @@ export const ceGmailProviderSchema = baseGmailProviderSchema.extend({
 });
 
 export type CEGmailProviderFormData = z.infer<typeof ceGmailProviderSchema>;
-

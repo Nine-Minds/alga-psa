@@ -228,8 +228,6 @@ export function EmailProviderList({
                 <div className="text-xs text-muted-foreground space-x-4">
                   {provider.providerType === 'microsoft' && provider.microsoftConfig && (
                     <>
-                      <span>Auto-process: {provider.microsoftConfig.auto_process_emails ? 'Enabled' : 'Disabled'}</span>
-                      <span>Max per sync: {provider.microsoftConfig.max_emails_per_sync || 50}</span>
                       {provider.microsoftConfig.folder_filters && provider.microsoftConfig.folder_filters.length > 0 && (
                         <span>Folders: {provider.microsoftConfig.folder_filters.join(', ')}</span>
                       )}
@@ -237,8 +235,6 @@ export function EmailProviderList({
                   )}
                   {provider.providerType === 'google' && provider.googleConfig && (
                     <>
-                      <span>Auto-process: {provider.googleConfig.auto_process_emails ? 'Enabled' : 'Disabled'}</span>
-                      <span>Max per sync: {provider.googleConfig.max_emails_per_sync || 50}</span>
                       {provider.googleConfig.label_filters && provider.googleConfig.label_filters.length > 0 && (
                         <span>Labels: {provider.googleConfig.label_filters.join(', ')}</span>
                       )}

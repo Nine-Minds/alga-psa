@@ -67,6 +67,7 @@ const PROVIDER_COLUMNS = [
   'status',
   'last_sync_at as lastSyncAt',
   'error_message as errorMessage',
+  'inbound_ticket_defaults_id as inboundTicketDefaultsId',
   'created_at as createdAt',
   'updated_at as updatedAt'
 ];
@@ -93,6 +94,7 @@ async function getOrCreateProvider(
     providerName: string;
     mailbox: string;
     isActive: boolean;
+    inboundTicketDefaultsId?: string;
   },
   providerId?: string
 ) {
@@ -105,6 +107,7 @@ async function getOrCreateProvider(
         provider_name: data.providerName,
         mailbox: data.mailbox,
         is_active: data.isActive,
+        inbound_ticket_defaults_id: data.inboundTicketDefaultsId || null,
         updated_at: trx.fn.now()
       })
       .returning(PROVIDER_COLUMNS);
@@ -127,6 +130,7 @@ async function getOrCreateProvider(
           provider_type: data.providerType,
           provider_name: data.providerName,
           is_active: data.isActive,
+          inbound_ticket_defaults_id: data.inboundTicketDefaultsId || null,
           updated_at: trx.fn.now()
         })
         .returning(PROVIDER_COLUMNS);
@@ -143,6 +147,7 @@ async function getOrCreateProvider(
           mailbox: data.mailbox,
           is_active: data.isActive,
           status: 'configuring',
+          inbound_ticket_defaults_id: data.inboundTicketDefaultsId || null,
           created_at: trx.fn.now(),
           updated_at: trx.fn.now()
         })
@@ -435,6 +440,7 @@ export async function upsertEmailProvider(data: {
   providerName: string;
   mailbox: string;
   isActive: boolean;
+  inboundTicketDefaultsId?: string;
   microsoftConfig?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
 }, skipAutomation?: boolean): Promise<{ provider: EmailProvider }> {
@@ -482,6 +488,7 @@ export async function createEmailProvider(data: {
   providerName: string;
   mailbox: string;
   isActive: boolean;
+  inboundTicketDefaultsId?: string;
   microsoftConfig?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
 }, skipAutomation?: boolean): Promise<{ provider: EmailProvider }> {
@@ -497,6 +504,7 @@ export async function updateEmailProvider(
     providerName: string;
     mailbox: string;
     isActive: boolean;
+    inboundTicketDefaultsId?: string;
     microsoftConfig?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
     googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   },
