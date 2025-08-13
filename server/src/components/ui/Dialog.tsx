@@ -141,7 +141,7 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
           {/* Drag handle area - always present for consistent dragging */}
           <div 
             data-drag-handle
-            className={`${draggable ? 'cursor-move hover:bg-gray-50' : ''} ${title ? 'px-6 py-3 pb-2' : 'p-2'} ${title ? 'border-b border-gray-100' : ''} rounded-t-lg transition-colors`}
+            className={`${draggable ? 'cursor-move hover:bg-gray-50' : ''} ${title ? 'px-6 pt-6 pb-4' : 'p-2'} ${title ? 'border-b border-gray-100' : ''} rounded-t-lg transition-colors`}
             onMouseDown={handleMouseDown}
           >
             {title ? (
