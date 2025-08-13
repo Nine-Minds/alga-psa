@@ -344,12 +344,10 @@ export function GmailProviderForm({
             authorizeButtonId="gmail-oauth-btn"
             buttonDisabled={!form.watch('clientId') || !form.watch('redirectUri')}
             isEditing={isEditing}
-            autoSubmitCountdown={autoSubmitCountdown}
-            onCancelAutoSubmit={cancelAutoSubmit}
             labels={{
               title: 'Step 1: OAuth Authorization',
               descriptionIdle: 'Complete OAuth flow to grant access to Gmail',
-              descriptionSuccess: `Successfully authorized! Now click "${isEditing ? 'Update Provider' : 'Add Provider'}" below to complete setup.`,
+              descriptionSuccess: 'Successfully authorized! Saving your settings...',
               buttonIdleText: 'Authorize Access',
               buttonAuthorizingText: 'Authorizing...',
               buttonSuccessText: 'Authorized',

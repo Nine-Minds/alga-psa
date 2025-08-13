@@ -21,8 +21,6 @@ interface Props {
   authorizeButtonId: string;
   buttonDisabled: boolean;
   isEditing: boolean;
-  autoSubmitCountdown: number | null;
-  onCancelAutoSubmit: () => void;
   labels: Labels;
 }
 
@@ -32,8 +30,6 @@ export function OAuthSection({
   authorizeButtonId,
   buttonDisabled,
   isEditing,
-  autoSubmitCountdown,
-  onCancelAutoSubmit,
   labels,
 }: Props) {
   return (
@@ -72,41 +68,7 @@ export function OAuthSection({
         </div>
       </div>
 
-      {oauthStatus === 'success' && (
-        <div className="bg-amber-50 border-2 border-amber-200 p-4 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
-                  <span className="text-amber-600 font-semibold">2</span>
-                </div>
-              </div>
-              <div className="ml-3">
-                <h4 className="font-medium text-amber-800">Complete Setup</h4>
-                <p className="text-sm text-amber-700">
-                  {autoSubmitCountdown !== null ? (
-                    <>Auto-completing in <strong>{autoSubmitCountdown}</strong> seconds, or click "<strong>{isEditing ? 'Update Provider' : 'Add Provider'}</strong>" below now.</>
-                  ) : (
-                    <>Click "<strong>{isEditing ? 'Update Provider' : 'Add Provider'}</strong>" below to finish configuration.</>
-                  )}
-                </p>
-              </div>
-            </div>
-            {autoSubmitCountdown !== null && (
-              <Button
-                id="cancel-auto-submit"
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={onCancelAutoSubmit}
-              >
-                Cancel Auto-Submit
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Success state is conveyed in the header above; no countdown or extra steps. */}
     </div>
   );
 }
-

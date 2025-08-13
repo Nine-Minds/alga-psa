@@ -217,12 +217,10 @@ export function GmailProviderForm({
             authorizeButtonId="gmail-oauth-btn"
             buttonDisabled={!form.watch('mailbox')}
             isEditing={isEditing}
-            autoSubmitCountdown={autoSubmitCountdown}
-            onCancelAutoSubmit={cancelAutoSubmit}
             labels={{
               title: 'Gmail Connection',
               descriptionIdle: 'Authorize access to your Gmail account',
-              descriptionSuccess: 'Successfully connected! Complete setup by saving below.',
+              descriptionSuccess: 'Successfully connected! Saving your settings...',
               buttonIdleText: 'Connect Gmail',
               buttonAuthorizingText: 'Connecting...',
               buttonSuccessText: 'Connected',
