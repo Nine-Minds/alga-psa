@@ -144,6 +144,7 @@ export class EmailProcessor {
         eventType: 'INBOUND_EMAIL_RECEIVED',
         payload: {
           tenantId: eventData.tenant,
+          tenant: eventData.tenant,
           providerId: eventData.providerId,
           emailData: eventData.emailData
         }

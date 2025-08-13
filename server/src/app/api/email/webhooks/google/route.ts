@@ -230,6 +230,7 @@ export async function POST(request: NextRequest) {
               tenant: provider.tenant,
               payload: {
                 tenantId: provider.tenant,
+                tenant: provider.tenant,
                 providerId: provider.id,
                 emailData: details,
               },
