@@ -11,7 +11,16 @@ import {
   getInboundTicketDefaults, 
   deleteInboundTicketDefaults 
 } from '../../lib/actions/email-actions/inboundTicketDefaultsActions';
-import type { InboundTicketDefaults } from '../../types/email.types';
+import type { InboundTicketDefaults, TicketFieldOptions } from '../../types/email.types';
+import { getTicketFieldOptions } from '../../lib/actions/email-actions/ticketFieldOptionsActions';
+import { MoreVertical } from 'lucide-react';
+import { 
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator
+} from 'server/src/components/ui/DropdownMenu';
 
 export interface InboundTicketDefaultsManagerProps {
   onDefaultsChange?: () => void;
@@ -24,9 +33,31 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
   const [showForm, setShowForm] = useState(false);
   const [editingDefaults, setEditingDefaults] = useState<InboundTicketDefaults | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [fieldOptions, setFieldOptions] = useState<TicketFieldOptions>({
+    channels: [],
+    statuses: [],
+    priorities: [],
+    categories: [],
+    companies: [],
+    users: [],
+    locations: []
+  });
 
   useEffect(() => {
     loadDefaults();
+  }, []);
+
+  useEffect(() => {
+    // Load option names for display mapping
+    const loadOptions = async () => {
+      try {
+        const data = await getTicketFieldOptions();
+        setFieldOptions(data.options);
+      } catch (err) {
+        // Keep options empty on failure; UI will fall back to IDs
+      }
+    };
+    loadOptions();
   }, []);
 
   const loadDefaults = async () => {
@@ -73,6 +104,18 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
     } finally {
       setDeleting(null);
     }
+  };
+
+  const nameById = (list: { id: string; name: string }[], id?: string | null): string => {
+    if (!id) return 'Not set';
+    const found = list.find(x => String(x.id) === String(id));
+    return found?.name || id;
+  };
+
+  const userNameById = (id?: string | null): string => {
+    if (!id) return 'System';
+    const u = fieldOptions.users.find(x => String(x.id) === String(id));
+    return u ? (u.name || u.username || id) : id;
   };
 
   const handleCancel = () => {
@@ -188,44 +231,46 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
                     {/* Defaults Preview */}
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <span className="font-medium">Channel:</span> {defaultConfig.channel_id || 'Not set'}
+                        <span className="font-medium">Channel:</span> {nameById(fieldOptions.channels, defaultConfig.channel_id)}
                       </div>
                       <div>
-                        <span className="font-medium">Status:</span> {defaultConfig.status_id || 'Not set'}
+                        <span className="font-medium">Status:</span> {nameById(fieldOptions.statuses, defaultConfig.status_id)}
                       </div>
                       <div>
-                        <span className="font-medium">Priority:</span> {defaultConfig.priority_id || 'Not set'}
+                        <span className="font-medium">Priority:</span> {nameById(fieldOptions.priorities, defaultConfig.priority_id)}
                       </div>
                       <div>
-                        <span className="font-medium">Entered By:</span> {defaultConfig.entered_by || 'System'}
+                        <span className="font-medium">Entered By:</span> {userNameById(defaultConfig.entered_by)}
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 ml-4">
-                    <Button
-                      id={`edit-defaults-${defaultConfig.id}`}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(defaultConfig)}
-                      disabled={showForm || !!editingDefaults || deleting === defaultConfig.id}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      id={`delete-defaults-${defaultConfig.id}`}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(defaultConfig.id)}
-                      disabled={showForm || !!editingDefaults || deleting === defaultConfig.id}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      {deleting === defaultConfig.id ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </Button>
+                  <div className="ml-4">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button id={`defaults-menu-${defaultConfig.id}`} variant="outline" size="sm">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          id={`defaults-menu-edit-${defaultConfig.id}`}
+                          onClick={() => handleEdit(defaultConfig)}
+                          disabled={showForm || !!editingDefaults || deleting === defaultConfig.id}
+                        >
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          id={`defaults-menu-delete-${defaultConfig.id}`}
+                          onClick={() => handleDelete(defaultConfig.id)}
+                          disabled={showForm || !!editingDefaults || deleting === defaultConfig.id}
+                          className="text-red-600 focus:text-red-700"
+                        >
+                          {deleting === defaultConfig.id ? 'Deleting…' : 'Delete'}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </CardContent>
