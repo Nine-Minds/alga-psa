@@ -76,20 +76,13 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
       return { success: false, error: errorMessage };
     }
 
-    // Validate contact is portal admin
+    // Get contact details
     const contact = await knex('contacts')
       .where({ tenant, contact_name_id: contactId })
       .first();
 
     if (!contact) {
       return { success: false, error: 'Contact not found' };
-    }
-
-    if (!contact.is_client_admin) {
-      return { 
-        success: false, 
-        error: 'Contact must be marked as a client admin to receive portal invitations' 
-      };
     }
 
     // Use a transaction to ensure atomicity
@@ -281,6 +274,32 @@ export async function completePortalSetup(
       } catch (error) {
         console.error('Error creating user account:', error);
         return { success: false, error: error instanceof Error ? error.message : 'Failed to create user account' } as CompleteSetupResult;
+      }
+
+      // Assign appropriate role based on contact's is_client_admin flag
+      try {
+        // Get the full contact details to check is_client_admin
+        const fullContact = await knex('contacts')
+          .where({ tenant, contact_name_id: contact.contact_name_id })
+          .first();
+        
+        // Find the appropriate role
+        const roleName = fullContact?.is_client_admin ? 'Client Admin' : 'Client User';
+        const role = await knex('roles')
+          .where({ tenant, role_name: roleName, client: true })
+          .first();
+        
+        if (role) {
+          // Assign the role to the user
+          await knex('user_roles').insert({
+            user_id: newUser.user_id,
+            role_id: role.role_id,
+            tenant
+          });
+        }
+      } catch (roleError) {
+        console.warn('Failed to assign role to user:', roleError);
+        // Continue even if role assignment fails - user can still login
       }
 
       // Mark that the user has set their password (not using a temporary password)
