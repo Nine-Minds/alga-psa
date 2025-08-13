@@ -221,6 +221,24 @@ export async function GET(request: NextRequest) {
             });
             
           console.log(`✅ OAuth tokens saved successfully for provider: ${stateData.providerId}`);
+
+          // Mark provider connection as connected and clear any previous error
+          try {
+            await knex('email_providers')
+              .where('id', stateData.providerId)
+              .modify((qb: any) => {
+                if (tenant) qb.andWhere('tenant', tenant);
+              })
+              .update({
+                connection_status: 'connected',
+                status: 'connected',
+                connection_error_message: null,
+                updated_at: knex.fn.now(),
+              });
+            console.log(`🔗 Provider ${stateData.providerId} marked as connected`);
+          } catch (statusErr: any) {
+            console.warn(`⚠️ Failed to update provider connection status for ${stateData.providerId}: ${statusErr.message}`);
+          }
         } catch (dbError: any) {
           console.error(`❌ Failed to save OAuth tokens to database: ${dbError.message}`, dbError);
           // Don't fail the OAuth flow - tokens will still be returned to frontend
