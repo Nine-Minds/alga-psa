@@ -53,6 +53,7 @@
 
   /* Sidebar scrollbar styles */
   .sidebar-nav {
+    overscroll-behavior: contain;
     scrollbar-width: thin;
     scrollbar-color: rgb(var(--color-border-300)) var(--color-sidebar-bg);
   }
