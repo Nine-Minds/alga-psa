@@ -2099,7 +2099,8 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
         
         const channel = await knex('channels')
           .select('channel_id as id', 'channel_name as name', 'description', 'is_default')
-          .where({ tenant: context.tenant, channel_name: params.name, is_active: true })
+          .where({ tenant: context.tenant, channel_name: params.name })
+          .andWhere('is_inactive', false)
           .first();
         if (!channel) {
           logger.warn(`[ACTION] find_channel_by_name: No active channel found for tenant=${context.tenant}, name='${params.name}'`);
@@ -2166,8 +2167,8 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
         const knex = await getAdminConnection();
         
         const query = knex('statuses')
-          .select('status_id as id', 'name', 'item_type', 'color')
-          .where({ tenant: context.tenant, name: params.name, is_active: true });
+          .select('status_id as id', 'name', 'item_type', 'is_closed')
+          .where({ tenant: context.tenant, name: params.name });
         
         if (params.item_type) {
           query.where('item_type', params.item_type);
@@ -2203,8 +2204,8 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
         const { getAdminConnection } = await import('@alga-psa/shared/db/admin.js');
         const knex = await getAdminConnection();
         
-        const priority = await knex('ticket_priorities')
-          .select('priority_id as id', 'priority_name as name', 'priority_level', 'color')
+        const priority = await knex('priorities')
+          .select('priority_id as id', 'priority_name as name', 'order_number', 'color', 'item_type')
           .where({ tenant: context.tenant, priority_name: params.name })
           .first();
         if (!priority) {
