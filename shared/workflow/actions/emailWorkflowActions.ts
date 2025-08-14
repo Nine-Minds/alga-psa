@@ -607,8 +607,7 @@ export async function createCommentFromEmail(
         is_internal: false,
         is_resolution: false,
         author_type: commentData.author_type as any || 'system',
-        author_id: commentData.author_id,
-        metadata: commentData.metadata
+        author_id: commentData.author_id
       }, tenant, trx, eventPublisher, analyticsTracker, userId);
 
       return result.comment_id;
