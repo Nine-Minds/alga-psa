@@ -1046,20 +1046,32 @@ export class TicketModel {
     const now = new Date();
 
     // Map legacy/alias author types to current enum: internal | client | unknown
+    // Map to DB enum/text values: prefer 'user' | 'contact' | 'unknown'
     const dbAuthorType = (() => {
       switch (validatedData.author_type) {
         case 'internal':
-          return 'internal';
-        case 'contact':
-          return 'client';
         case 'system':
-          return 'internal';
+          return 'user';
+        case 'contact':
+          return 'contact';
         default:
           return 'unknown';
       }
     })();
 
-    const commentData = {
+    // Some deployments may not have a 'metadata' column on comments.
+    // Detect presence and omit if absent to avoid 42703 errors.
+    let includeMetadata = false;
+    try {
+      const col = await trx.raw(
+        "SELECT 1 FROM information_schema.columns WHERE table_name = 'comments' AND column_name = 'metadata' LIMIT 1"
+      );
+      includeMetadata = Array.isArray(col?.rows) && col.rows.length > 0;
+    } catch (_) {
+      includeMetadata = false;
+    }
+
+    const baseCommentData: any = {
       comment_id: commentId,
       tenant,
       ticket_id: validatedData.ticket_id,
@@ -1068,12 +1080,14 @@ export class TicketModel {
       is_resolution: validatedData.is_resolution || false,
       author_type: dbAuthorType as any,
       user_id: validatedData.author_id || null,
-      metadata: validatedData.metadata ? JSON.stringify(validatedData.metadata) : null,
       created_at: now,
       updated_at: now
     };
+    if (includeMetadata && validatedData.metadata) {
+      baseCommentData.metadata = JSON.stringify(validatedData.metadata);
+    }
 
-    await trx('comments').insert(commentData);
+    await trx('comments').insert(baseCommentData);
 
     // Publish comment event if publisher provided
     if (eventPublisher) {
