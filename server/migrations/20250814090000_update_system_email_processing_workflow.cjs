@@ -5,8 +5,30 @@
 const fs = require('fs');
 const path = require('path');
 
+// Helper: minimal TS→JS sanitization (strip casts and simple type annotations)
+function sanitizeTsToJs(source) {
+  let s = source;
+  // Remove " as any" casts
+  s = s.replace(/\s+as\s+any\b/g, '');
+  // Normalize catch parameter annotations like "catch (e: any)"
+  s = s.replace(/catch\s*\(\s*([A-Za-z_$][\w$]*)\s*:\s*any\s*\)/g, 'catch ($1)');
+  // Also cover rare arrow/param annotations inside inline functions (very limited scope)
+  s = s.replace(/\(\s*([A-Za-z_$][\w$]*)\s*:\s*any\s*\)/g, '($1)');
+  return s;
+}
+
 // Helper: build DB-ready code from the shared workflow source
 function buildDbWorkflowCode() {
+  // Prefer pre-generated JS file if present (compiled and sanitized)
+  const generatedPath = path.join(__dirname, '../../shared/workflow/workflows/system-email-processing-workflow.generated.js');
+  if (fs.existsSync(generatedPath)) {
+    const code = fs.readFileSync(generatedPath, 'utf8');
+    if (code && code.includes('function execute(')) {
+      return code;
+    }
+    console.warn('[workflow-migration] Generated file found but does not contain execute() — falling back to TS extraction');
+  }
+
   const workflowPath = path.join(__dirname, '../../shared/workflow/workflows/system-email-processing-workflow.ts');
   if (!fs.existsSync(workflowPath)) {
     console.warn(`[workflow-migration] Shared workflow file not found at ${workflowPath}`);
@@ -23,7 +45,8 @@ function buildDbWorkflowCode() {
 
   const openBraceIx = src.indexOf('{', start);
   const afterOpen = src.substring(openBraceIx + 1);
-  const body = afterOpen.substring(0, afterOpen.lastIndexOf('}')).trim();
+  let body = afterOpen.substring(0, afterOpen.lastIndexOf('}')).trim();
+  body = sanitizeTsToJs(body);
 
   // Wrap body in a function named `execute` expected by the runtime
   return `async function execute(context) {\n${body}\n}`;
@@ -60,4 +83,3 @@ exports.down = async function down(_knex) {
   // No-op: we don’t re-embed old code. Manual rollback would be needed if required.
   console.log('[workflow-migration] Down migration is a no-op.');
 };
-
