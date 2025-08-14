@@ -166,6 +166,16 @@ export async function initializeApp() {
         logger.error('Failed to initialize extensions:', error);
         // Continue startup even if extensions fail to load
       }
+
+      // Register enterprise storage providers for runtime factory
+      try {
+        const { S3StorageProvider } = await import('../../../ee/server/src/lib/storage/providers/S3StorageProvider');
+        (global as any).S3StorageProvider = S3StorageProvider;
+        logger.info('Registered S3StorageProvider for enterprise edition');
+      } catch (error) {
+        logger.error('Failed to register S3StorageProvider:', error);
+        // Continue startup even if S3 provider fails to register
+      }
     }
 
     // Development environment setup (non-critical)
