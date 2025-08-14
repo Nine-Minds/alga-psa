@@ -18,6 +18,7 @@ import { Label } from 'server/src/components/ui/Label';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import ViewSwitcher, { ViewSwitcherOption } from 'server/src/components/ui/ViewSwitcher';
 import { Search, Eye, EyeOff } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
 
 const UserManagement = (): JSX.Element => {
   const [users, setUsers] = useState<IUser[]>([]);
@@ -147,7 +148,7 @@ const UserManagement = (): JSX.Element => {
 
         // For client portal users, we'll create with a temporary password if none provided
         // They'll set their actual password through the invitation
-        const password = newUser.password || crypto.randomUUID();
+        const password = newUser.password || uuidv4();
         
         // Then create the user with client portal role
         const createdUser = await addUser({

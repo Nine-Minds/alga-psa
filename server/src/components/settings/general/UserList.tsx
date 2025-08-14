@@ -10,7 +10,7 @@ import { MoreVertical, Pen, Trash2, Mail } from 'lucide-react';
 import { sendPortalInvitation } from 'server/src/lib/actions/portal-actions/portalInvitationActions';
 import CompanyDetails from 'server/src/components/companies/CompanyDetails';
 import toast from 'react-hot-toast';
-import { getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
+import { getUsersCompanyInfo } from 'server/src/lib/actions/user-actions/userCompanyActions';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,45 +72,39 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate, sele
   }, [users.length]); // Only re-run when the number of users changes
 
   useEffect(() => {
-    // Fetch associated company for client users via their contact
+    // Fetch associated company for client users in bulk
     const fetchCompaniesForUsers = async () => {
-      const usersToFetch = users.filter(
-        (u) => u.user_type === 'client' && u.contact_id && userCompanies[u.user_id] === undefined
-      );
+      const usersToFetch = users
+        .filter((u) => u.user_type === 'client' && userCompanies[u.user_id] === undefined)
+        .map((u) => u.user_id);
 
       if (usersToFetch.length === 0) return;
 
-      const results = await Promise.all(
-        usersToFetch.map(async (u) => {
-          try {
-            const contact = await getContactByContactNameId(u.contact_id!);
-            if (contact && contact.company_id) {
-              const companyName = (contact as any).company_name || 'Unnamed Company';
-              return { userId: u.user_id, company: { company_id: contact.company_id, company_name: companyName } };
-            }
-            return { userId: u.user_id, company: null };
-          } catch (e) {
-            console.error('Error fetching company for user', u.user_id, e);
-            return { userId: u.user_id, company: null };
-          }
-        })
-      );
-
-      const map: Record<string, { company_id: string; company_name: string } | null> = {};
-      results.forEach((r) => {
-        map[r.userId] = r.company;
-      });
-      setUserCompanies((prev) => ({ ...prev, ...map }));
+      try {
+        const result = await getUsersCompanyInfo(usersToFetch);
+        const map: Record<string, { company_id: string; company_name: string } | null> = {};
+        result.forEach((row) => {
+          map[row.user_id] = row.company_id
+            ? { company_id: row.company_id, company_name: row.company_name || 'Unnamed Company' }
+            : null;
+        });
+        setUserCompanies((prev) => ({ ...prev, ...map }));
+      } catch (e) {
+        console.error('Error fetching companies for users', e);
+      }
     };
 
     if (users.length > 0) {
       fetchCompaniesForUsers();
     }
-  }, [users]);
+  }, [users, userCompanies]);
 
   // Filter by selected company if provided (client users only)
   const visibleUsers = React.useMemo(() => {
     if (!selectedCompanyId) return users;
+    const clientUsers = users.filter((u) => u.user_type === 'client');
+    const allResolved = clientUsers.every((u) => userCompanies[u.user_id] !== undefined);
+    if (!allResolved) return users; // avoid flicker while resolving
     return users.filter((u) => userCompanies[u.user_id]?.company_id === selectedCompanyId);
   }, [users, userCompanies, selectedCompanyId]);
 

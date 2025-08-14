@@ -8,6 +8,7 @@ import { checkPortalInvitationLimit, formatRateLimitError } from '../../security
 import { TenantEmailService } from '../../services/TenantEmailService';
 import { UserService } from '../../api/services/UserService';
 import { runAsSystem, createSystemContext } from '../../api/services/SystemContext';
+import { hasPermission } from '../../auth/rbac';
 
 export interface SendInvitationResult {
   success: boolean;
@@ -54,6 +55,12 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
     }
 
     const { knex, tenant } = await createTenantKnex();
+
+    // RBAC: ensure user has permission to invite users
+    const canInvite = await hasPermission(user, 'user', 'invite', knex);
+    if (!canInvite) {
+      return { success: false, error: 'Permission denied: Cannot invite users' };
+    }
 
     if (!tenant) {
       throw new Error('Tenant is requried');
