@@ -55,6 +55,18 @@ function buildDbWorkflowCode() {
 exports.up = async function up(knex) {
   console.log('[workflow-migration] Updating System Email Processing workflow code...');
 
+  // Attempt to run the generator to ensure the latest code is available
+  try {
+    const { spawnSync } = require('child_process');
+    const scriptPath = path.join(__dirname, '../../scripts/generate-system-email-workflow.cjs');
+    const result = spawnSync(process.execPath, [scriptPath], { stdio: 'inherit' });
+    if (result.status !== 0) {
+      console.warn('[workflow-migration] Generator script exited with non-zero status; proceeding with fallback.');
+    }
+  } catch (e) {
+    console.warn('[workflow-migration] Failed to run generator script; proceeding with fallback.', e && e.message ? e.message : e);
+  }
+
   const dbCode = buildDbWorkflowCode();
   if (!dbCode) {
     console.log('[workflow-migration] Skipping update; unable to construct DB workflow code');
