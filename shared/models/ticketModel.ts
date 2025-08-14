@@ -77,8 +77,7 @@ export const createCommentSchema = z.object({
   is_internal: z.boolean().optional(),
   is_resolution: z.boolean().optional(),
   author_type: z.enum(['internal', 'contact', 'system']).optional(),
-  author_id: z.string().uuid('Author ID must be a valid UUID').optional(),
-  metadata: z.record(z.unknown()).optional()
+  author_id: z.string().uuid('Author ID must be a valid UUID').optional()
 });
 
 // =============================================================================
@@ -163,7 +162,6 @@ export interface CreateCommentValidationInput {
   is_resolution?: boolean;
   author_type?: 'internal' | 'contact' | 'system';
   author_id?: string;
-  metadata?: any;
 }
 
 export interface CreateTicketOutput {
@@ -186,7 +184,6 @@ export interface CreateCommentInput {
   is_resolution?: boolean;
   author_type?: 'internal' | 'contact' | 'system';
   author_id?: string;
-  metadata?: any;
 }
 
 export interface CreateCommentOutput {
@@ -1068,7 +1065,6 @@ export class TicketModel {
       is_resolution: validatedData.is_resolution || false,
       author_type: dbAuthorType as any,
       user_id: validatedData.author_id || null,
-      metadata: validatedData.metadata ? JSON.stringify(validatedData.metadata) : null,
       created_at: now,
       updated_at: now
     };
