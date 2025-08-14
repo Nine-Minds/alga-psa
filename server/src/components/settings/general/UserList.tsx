@@ -6,8 +6,9 @@ import { useDrawer } from "server/src/context/DrawerContext";
 import { DataTable } from 'server/src/components/ui/DataTable';
 import UserAvatar from '../../ui/UserAvatar';
 import { getUserAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
-import { MoreVertical, Pen, Trash2, Mail } from 'lucide-react';
+import { MoreVertical, Pen, Trash2, Mail, Building2 } from 'lucide-react';
 import { sendPortalInvitation } from 'server/src/lib/actions/portal-actions/portalInvitationActions';
+import CompanyDetails from 'server/src/components/companies/CompanyDetails';
 import toast from 'react-hot-toast';
 import {
   DropdownMenu,
@@ -105,6 +106,20 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate }) =>
     openDrawer(<UserDetails userId={userId} onUpdate={onUpdate} />);
   };
 
+  const handleCompanyClick = async (companyId: string) => {
+    if (companyId) {
+      // Fetch the company data first
+      const { getCompanyById } = await import('server/src/lib/actions/company-actions/companyActions');
+      const company = await getCompanyById(companyId);
+      if (company) {
+        openDrawer(<CompanyDetails company={company} />);
+      }
+    }
+  };
+
+  // Check if we should show the Client column (when we have client portal users)
+  const hasClientUsers = users.some(u => u.user_type === 'client');
+
   const columns = [
     {
       title: 'First Name',
@@ -132,6 +147,28 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate }) =>
       dataIndex: 'email',
       width: '20%'
     },
+    ...(hasClientUsers ? [{
+      title: 'Client',
+      dataIndex: 'company',
+      width: '20%',
+      render: (company: any, record: IUser) => {
+        if (!company) {
+          return <span className="text-gray-400">No Company</span>;
+        }
+        return (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              handleCompanyClick(company.company_id);
+            }}
+            className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline"
+          >
+            <Building2 className="h-4 w-4" />
+            <span>{company.company_name}</span>
+          </button>
+        );
+      }
+    }] : []),
     {
       title: 'Role',
       dataIndex: 'roles',
