@@ -1,4 +1,5 @@
 import { IframeBridge } from './bridge';
+import type { HostToClientMessage } from './types';
 
 /**
  * Returns the current short-lived session token after bootstrap.
@@ -9,10 +10,10 @@ export function getToken(bridge: IframeBridge): Promise<string> {
   if (existing) return Promise.resolve(existing);
 
   return new Promise((resolve) => {
-    const off = bridge.on((evt) => {
-      if (evt.type === 'bootstrap' && evt.payload?.session?.token) {
+    const off = bridge.on((evt: HostToClientMessage) => {
+      if (evt.type === 'bootstrap' && evt.payload.session.token) {
         off();
-        resolve(evt.payload.session.token as string);
+        resolve(evt.payload.session.token);
       }
     });
   });
