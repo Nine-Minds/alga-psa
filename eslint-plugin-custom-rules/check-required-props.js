@@ -15,14 +15,17 @@ export default {
     // Collect local identifiers bound to our UI Button component
     // We scope the rule primarily to Buttons imported from .../ui/Button
     const buttonLocalNames = new Set();
+    
+    // Updated regex to catch all Button import patterns including aliases
+    const buttonPathRegex = /(@\/components\/ui\/[Bb]utton|[\\/](ui[\\/])?[Bb]utton)(\.tsx?)?$/i;
+    
     for (const node of sourceCode.ast.body || []) {
       if (node.type === 'ImportDeclaration') {
         const src = node.source && node.source.value;
         if (
           typeof src === 'string' &&
           (
-            src.endsWith('/ui/Button') ||
-            src.endsWith('/ui/button') ||
+            buttonPathRegex.test(src) ||
             src === 'server/src/components/ui/Button' ||
             src === '../../components/ui/Button' ||
             src === '../components/ui/Button' ||
