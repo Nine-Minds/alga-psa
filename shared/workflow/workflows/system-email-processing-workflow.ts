@@ -245,7 +245,8 @@ export async function systemEmailProcessingWorkflow(context) {
     if (!ticketDefaults) {
       console.error(`No inbound ticket defaults configured for tenant ${tenant}. Email processing cannot continue.`);
       setState('ERROR_NO_TICKET_DEFAULTS');
-      throw new Error(`No inbound ticket defaults configured for tenant ${tenant}. Please configure default ticket settings for email processing.`);
+      // Exit early without attempting ticket creation when defaults are missing
+      return;
     }
     
     console.log('Using ticket defaults:', ticketDefaults);

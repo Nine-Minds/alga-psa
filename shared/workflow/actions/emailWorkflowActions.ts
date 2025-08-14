@@ -691,7 +691,7 @@ export async function createChannelFromEmail(
           channel_name: channelData.channel_name,
           description: channelData.description || '',
           is_default: channelData.is_default || false,
-          is_active: true,
+          is_inactive: false,
           created_at: new Date(),
           updated_at: new Date()
         });
