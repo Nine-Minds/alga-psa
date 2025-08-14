@@ -4,10 +4,11 @@ import { createTenantKnex, runWithTenant } from '../../db';
 import { getCurrentUser } from '../user-actions/userActions';
 import { PortalInvitationService } from '../../services/PortalInvitationService';
 import { sendPortalInvitationEmail } from '../../email/sendPortalInvitationEmail';
-import { checkPortalInvitationLimit, formatRateLimitError } from '../../security/rateLimiting';
+import { getSystemEmailService } from '../../email';
 import { TenantEmailService } from '../../services/TenantEmailService';
 import { UserService } from '../../api/services/UserService';
 import { runAsSystem, createSystemContext } from '../../api/services/SystemContext';
+import { hasPermission } from '../../auth/rbac';
 
 export interface SendInvitationResult {
   success: boolean;
@@ -55,41 +56,30 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
 
     const { knex, tenant } = await createTenantKnex();
 
+    // RBAC: ensure user has permission to invite users
+    const canInvite = await hasPermission(user, 'user', 'invite', knex);
+    if (!canInvite) {
+      return { success: false, error: 'Permission denied: Cannot invite users' };
+    }
+
     if (!tenant) {
       throw new Error('Tenant is requried');
     }
 
-    // Validate email settings are configured for this tenant
-    // const emailValidation = await TenantEmailService.validateEmailSettings(tenant);
-    
-    // if (!emailValidation.valid) {
-    //   return { 
-    //     success: false, 
-    //     error: emailValidation.error || 'Email settings are not properly configured.'
-    //   };
-    // }
-
-    // Check rate limits first
-    const rateLimitResult = await checkPortalInvitationLimit(contactId);
-    if (!rateLimitResult.success) {
-      const errorMessage = await formatRateLimitError(rateLimitResult.msBeforeNext);
-      return { success: false, error: errorMessage };
+    // Ensure system email is configured before proceeding (avoid burning rate limits when misconfigured)
+    const systemEmailService = await getSystemEmailService();
+    const emailConfigured = await systemEmailService.isConfigured();
+    if (!emailConfigured) {
+      return { success: false, error: 'Email service is disabled or not configured' };
     }
 
-    // Validate contact is portal admin
+    // Get contact details
     const contact = await knex('contacts')
       .where({ tenant, contact_name_id: contactId })
       .first();
 
     if (!contact) {
       return { success: false, error: 'Contact not found' };
-    }
-
-    if (!contact.is_client_admin) {
-      return { 
-        success: false, 
-        error: 'Contact must be marked as a client admin to receive portal invitations' 
-      };
     }
 
     // Use a transaction to ensure atomicity
@@ -100,28 +90,42 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
         throw new Error(invitationResult.error || 'Failed to create invitation');
       }
 
-      // Get company information for email template
-      const company = await trx('companies')
-        .where({ tenant, company_id: contact.company_id })
+      // Get the tenant's default company (MSP company) for reply-to email
+      const tenantDefaultCompany = await trx('tenant_companies')
+        .join('companies', 'companies.company_id', 'tenant_companies.company_id')
+        .where({ 
+          'tenant_companies.tenant': tenant,
+          'tenant_companies.is_default': true 
+        })
+        .select('companies.*')
         .first();
       
-      // Get company's default location for contact information
-      const defaultLocation = await trx('company_locations')
+      if (!tenantDefaultCompany) {
+        throw new Error('No default company configured for this tenant. Please set a default company in General Settings.');
+      }
+      
+      // Get MSP company's default location for reply-to email
+      const mspLocation = await trx('company_locations')
         .where({ 
           tenant, 
-          company_id: contact.company_id,
+          company_id: tenantDefaultCompany.company_id,
           is_default: true,
           is_active: true
         })
         .first();
       
-      if (!defaultLocation) {
-        throw new Error('Company must have a default location configured to send portal invitations');
+      if (!mspLocation) {
+        throw new Error('Default company must have a default location configured to send portal invitations');
       }
       
-      if (!defaultLocation.email) {
-        throw new Error('Company\'s default location must have a contact email configured');
+      if (!mspLocation.email) {
+        throw new Error('Default company\'s location must have a contact email configured');
       }
+      
+      // Get the client's company info for the email template
+      const clientCompany = contact.company_id ? await trx('companies')
+        .where({ tenant, company_id: contact.company_id })
+        .first() : null;
 
       // Generate portal setup URL
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
@@ -134,13 +138,13 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
       await sendPortalInvitationEmail({
         email: contact.email,
         contactName: contact.full_name,
-        companyName: company?.company_name || 'Your Company',
+        companyName: clientCompany?.company_name || tenantDefaultCompany.company_name,  // Client's company name or MSP name
         portalLink: portalSetupUrl,
         expirationTime: expirationTime,
         tenant: tenant,
-        companyLocationEmail: defaultLocation.email,
-        companyLocationPhone: defaultLocation.phone || 'Not provided',
-        fromName: `${company?.company_name || 'Your Company'} Portal`
+        companyLocationEmail: mspLocation.email,  // MSP's email for reply-to
+        companyLocationPhone: mspLocation.phone || 'Not provided',  // MSP's phone
+        fromName: `${tenantDefaultCompany.company_name} Portal`  // MSP's name for the portal
       });
 
       return {
@@ -267,6 +271,32 @@ export async function completePortalSetup(
       } catch (error) {
         console.error('Error creating user account:', error);
         return { success: false, error: error instanceof Error ? error.message : 'Failed to create user account' } as CompleteSetupResult;
+      }
+
+      // Assign appropriate role based on contact's is_client_admin flag
+      try {
+        // Get the full contact details to check is_client_admin
+        const fullContact = await knex('contacts')
+          .where({ tenant, contact_name_id: contact.contact_name_id })
+          .first();
+        
+        // Find the appropriate role
+        const roleName = fullContact?.is_client_admin ? 'Client Admin' : 'Client User';
+        const role = await knex('roles')
+          .where({ tenant, role_name: roleName, client: true })
+          .first();
+        
+        if (role) {
+          // Assign the role to the user
+          await knex('user_roles').insert({
+            user_id: newUser.user_id,
+            role_id: role.role_id,
+            tenant
+          });
+        }
+      } catch (roleError) {
+        console.warn('Failed to assign role to user:', roleError);
+        // Continue even if role assignment fails - user can still login
       }
 
       // Mark that the user has set their password (not using a temporary password)

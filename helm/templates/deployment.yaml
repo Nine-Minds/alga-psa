@@ -282,6 +282,26 @@ spec:
             value: "{{ .Values.email.user }}"
           - name: EMAIL_PASSWORD
             value: "{{ .Values.email.password }}"
+          # Optional: Explicit provider type. If omitted, factory auto-detects 'resend' by RESEND_API_KEY
+          {{- if .Values.email.provider }}
+          - name: EMAIL_PROVIDER_TYPE
+            value: "{{ .Values.email.provider }}"
+          {{- end }}
+          # RESEND configuration (preferred for system emails). Use secret if available, else value.
+          {{- if and .Values.email.resendApiKeySecret.name .Values.email.resendApiKeySecret.key }}
+          - name: RESEND_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.email.resendApiKeySecret.name | quote }}
+                key: {{ .Values.email.resendApiKeySecret.key | quote }}
+          {{- else if .Values.email.resendApiKey }}
+          - name: RESEND_API_KEY
+            value: "{{ .Values.email.resendApiKey }}"
+          {{- end }}
+          {{- if .Values.email.resendBaseUrl }}
+          - name: RESEND_BASE_URL
+            value: "{{ .Values.email.resendBaseUrl }}"
+          {{- end }}
 
           # ----------- LLM ----------------
           - name: OPENAI_API_KEY

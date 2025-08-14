@@ -97,11 +97,6 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       return;
     }
 
-    if (!isPortalAdmin) {
-      toast.error("Contact must be marked as Portal Administrator to receive invitations");
-      return;
-    }
-
     setIsSendingInvitation(true);
     try {
       const result = await sendPortalInvitation(contact.contact_name_id);
@@ -279,7 +274,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                     Portal Administrator
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    When invited, users with this flag will be created with admin role in the client portal
+                    When enabled, the user will be created with Client Admin role. When disabled, they'll get Client User role.
                   </p>
                 </div>
                 <Switch
@@ -309,21 +304,13 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                   <Button
                     id="send-invite-button"
                     onClick={handleSendInvitation}
-                    disabled={!currentUserPermissions.canInvite || !isPortalAdmin || isSendingInvitation}
+                    disabled={!currentUserPermissions.canInvite || isSendingInvitation}
                     className="flex items-center gap-2"
-                    title={!isPortalAdmin ? "Enable Portal Administrator to send invitation" : undefined}
                   >
                     <Mail className="h-4 w-4" />
                     {isSendingInvitation ? "Sending..." : "Send Portal Invitation"}
                   </Button>
                 </div>
-                {!isPortalAdmin && (
-                  <Alert>
-                    <AlertDescription>
-                      Enable Portal Administrator to send an invitation. Currently, only admin invitations are supported.
-                    </AlertDescription>
-                  </Alert>
-                )}
                 </div>
               </div>
             </div>

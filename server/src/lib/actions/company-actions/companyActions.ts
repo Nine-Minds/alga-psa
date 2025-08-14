@@ -390,10 +390,15 @@ export async function getAllCompaniesPaginated(params: CompanyPaginationParams =
       const countResult = await baseQuery.clone().count('* as count').first();
       const totalCount = parseInt(countResult?.count as string || '0', 10);
 
-      // Get paginated companies with location data
+      // Get paginated companies with location data and default flag
       let companiesQuery = baseQuery
+        .leftJoin('tenant_companies as tc', function() {
+          this.on('c.company_id', '=', 'tc.company_id')
+              .andOn('c.tenant', '=', 'tc.tenant');
+        })
         .select(
           'c.*',
+          'tc.is_default',
           trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`),
           'cl.phone as location_phone',
           'cl.email as location_email',
@@ -602,6 +607,26 @@ export async function deleteCompany(companyId: string): Promise<{
       return {
         success: false,
         message: 'Company not found'
+      };
+    }
+
+    // Check if this is the tenant's default company
+    const isDefaultCompany = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const tenantCompany = await trx('tenant_companies')
+        .where({ 
+          company_id: companyId, 
+          tenant,
+          is_default: true 
+        })
+        .first();
+      return !!tenantCompany;
+    });
+    
+    if (isDefaultCompany) {
+      return {
+        success: false,
+        code: 'DEFAULT_COMPANY_PROTECTED',
+        message: 'Cannot delete the default company. Please set another company as default in General Settings first.'
       };
     }
 

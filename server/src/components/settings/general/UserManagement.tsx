@@ -6,6 +6,10 @@ import UserList from './UserList';
 import { getAllUsers, addUser, getUserWithRoles, deleteUser, getMSPRoles, getClientPortalRoles } from 'server/src/lib/actions/user-actions/userActions';
 import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
 import { addContact } from 'server/src/lib/actions/contact-actions/contactActions';
+import { sendPortalInvitation } from 'server/src/lib/actions/portal-actions/portalInvitationActions';
+import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import { createTenantKnex } from 'server/src/lib/db';
+import toast from 'react-hot-toast';
 import { IUser, IRole } from 'server/src/interfaces/auth.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { Button } from 'server/src/components/ui/Button';
@@ -14,6 +18,7 @@ import { Label } from 'server/src/components/ui/Label';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import ViewSwitcher, { ViewSwitcherOption } from 'server/src/components/ui/ViewSwitcher';
 import { Search, Eye, EyeOff } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
 
 const UserManagement = (): JSX.Element => {
   const [users, setUsers] = useState<IUser[]>([]);
@@ -26,6 +31,7 @@ const UserManagement = (): JSX.Element => {
   const [showNewUserForm, setShowNewUserForm] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [portalType, setPortalType] = useState<'msp' | 'client'>('msp');
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [newUser, setNewUser] = useState({ 
     firstName: '', 
     lastName: '', 
@@ -92,7 +98,6 @@ const UserManagement = (): JSX.Element => {
   const fetchCompanies = async (): Promise<void> => {
     try {
       const fetchedCompanies = await getAllCompanies();
-      console.log('Fetched companies:', fetchedCompanies);
       setCompanies(fetchedCompanies);
     } catch (err) {
       console.error('Error fetching companies:', err);
@@ -118,10 +123,18 @@ const UserManagement = (): JSX.Element => {
       // Clear any previous errors
       setError(null);
       
-      // Validate required fields
-      if (!newUser.firstName || !newUser.lastName || !newUser.email || !newUser.password) {
-        setError('Please fill in all required fields');
-        return;
+      // Validate required fields based on portal type
+      if (portalType === 'msp') {
+        if (!newUser.firstName || !newUser.lastName || !newUser.email || !newUser.password) {
+          setError('Please fill in all required fields');
+          return;
+        }
+      } else {
+        // For client portal, password is optional (they'll set it via invitation)
+        if (!newUser.firstName || !newUser.lastName || !newUser.email) {
+          setError('Please fill in all required fields');
+          return;
+        }
       }
 
       if (portalType === 'client') {
@@ -133,12 +146,16 @@ const UserManagement = (): JSX.Element => {
           is_inactive: false
         });
 
+        // For client portal users, we'll create with a temporary password if none provided
+        // They'll set their actual password through the invitation
+        const password = newUser.password || uuidv4();
+        
         // Then create the user with client portal role
         const createdUser = await addUser({
           firstName: newUser.firstName,
           lastName: newUser.lastName,
           email: newUser.email,
-          password: newUser.password,
+          password: password,
           roleId: newUser.role || (roles.length > 0 ? roles[0].role_id : undefined),
           userType: 'client',
           contactId: contact.contact_name_id
@@ -148,6 +165,28 @@ const UserManagement = (): JSX.Element => {
         const updatedUser = await getUserWithRoles(createdUser.user_id);
         if (updatedUser) {
           await fetchUsers(); // Refresh the entire list
+          
+          // Automatically send portal invitation if no password was provided
+          if (!newUser.password) {
+            try {
+              const invitationResult = await sendPortalInvitation(contact.contact_name_id);
+              if (invitationResult.success) {
+                toast.success('User created and portal invitation sent successfully!');
+              } else {
+                toast('User created but invitation failed: ' + invitationResult.error, {
+                  icon: '⚠️',
+                  duration: 5000
+                });
+              }
+            } catch (inviteError) {
+              toast('User created but failed to send invitation. You can send it manually from the user list.', {
+                icon: '⚠️',
+                duration: 5000
+              });
+            }
+          } else {
+            toast.success('Client portal user created successfully!');
+          }
         }
       } else {
         // Create MSP user
@@ -202,6 +241,7 @@ const UserManagement = (): JSX.Element => {
   const handlePortalTypeChange = (type: 'msp' | 'client') => {
     setPortalType(type);
     setShowNewUserForm(false);
+    setSelectedCompanyId(null);
     setNewUser({ 
       firstName: '', 
       lastName: '', 
@@ -243,7 +283,7 @@ const UserManagement = (): JSX.Element => {
       </CardHeader>
       <CardContent>
         <div className="flex justify-between mb-4">
-          <div className="flex gap-6">
+          <div className="flex gap-6 items-center">
             <div className="relative">
               <Input
                 type="text"
@@ -262,6 +302,22 @@ const UserManagement = (): JSX.Element => {
                 placeholder="Select Status"
               />
             </div>
+            {portalType === 'client' && (
+              <div className="relative z-10">
+                <CompanyPicker
+                  id="user-management-company-filter"
+                  companies={companies}
+                  selectedCompanyId={selectedCompanyId}
+                  onSelect={(companyId) => setSelectedCompanyId(companyId)}
+                  filterState="active"
+                  onFilterStateChange={() => {}}
+                  clientTypeFilter="all"
+                  onClientTypeFilterChange={() => {}}
+                  placeholder="Select client company"
+                  fitContent={true}
+                />
+              </div>
+            )}
           </div>
           <Button 
             id={`create-new-${portalType}-user-btn`} 
@@ -302,7 +358,9 @@ const UserManagement = (): JSX.Element => {
                 />
               </div>
               <div>
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">
+                  Password {portalType === 'client' && <span className="text-sm text-gray-500">(Optional - user can set via invitation)</span>}
+                </Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -310,6 +368,7 @@ const UserManagement = (): JSX.Element => {
                     value={newUser.password}
                     onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                     className="pr-10"
+                    placeholder={portalType === 'client' ? 'Leave blank to send invitation' : 'Enter password'}
                   />
                   <button
                     type="button"
@@ -323,18 +382,26 @@ const UserManagement = (): JSX.Element => {
                     )}
                   </button>
                 </div>
+                {portalType === 'client' && !newUser.password && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    A portal invitation will be sent for the user to set their password
+                  </p>
+                )}
               </div>
               {portalType === 'client' && (
                 <div className="relative z-20">
-                  <CustomSelect
-                    label="Client Company"
-                    value={newUser.companyId}
-                    onValueChange={(value) => setNewUser({ ...newUser, companyId: value })}
-                    options={companies.map((company): SelectOption => ({ 
-                      value: company.company_id, 
-                      label: company.company_name 
-                    }))}
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Client Company</label>
+                  <CompanyPicker
+                    id="new-user-company-picker"
+                    companies={companies}
+                    selectedCompanyId={newUser.companyId || null}
+                    onSelect={(companyId) => setNewUser({ ...newUser, companyId: companyId || '' })}
+                    filterState="active"
+                    onFilterStateChange={() => {}}
+                    clientTypeFilter="all"
+                    onClientTypeFilterChange={() => {}}
                     placeholder="Select Company (Optional)"
+                    fitContent={false}
                   />
                 </div>
               )}
@@ -383,7 +450,12 @@ const UserManagement = (): JSX.Element => {
         {loading ? (
           <p>Loading users...</p>
         ) : (
-          <UserList users={filteredUsers} onUpdate={fetchUsers} onDeleteUser={handleDeleteUser} />
+          <UserList 
+            users={filteredUsers} 
+            onUpdate={fetchUsers} 
+            onDeleteUser={handleDeleteUser} 
+            selectedCompanyId={portalType === 'client' ? selectedCompanyId : null}
+          />
         )}
       </CardContent>
     </Card>

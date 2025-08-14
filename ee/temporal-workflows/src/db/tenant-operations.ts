@@ -44,12 +44,35 @@ export async function createTenantInDB(
           .insert({
             company_name: input.companyName,
             tenant: tenantId,
+            client_type: 'company',
+            is_inactive: false,
+            properties: {
+              type: 'msp',
+              is_system_company: true,
+              created_by: 'tenant_setup'
+            },
             created_at: knex.fn.now(),
             updated_at: knex.fn.now()
           })
           .returning('company_id');
         companyId = companyResult[0].company_id;
         log.info('Company created', { companyId, companyName: input.companyName, tenantId });
+        
+        // Create default location for the MSP company with email from the tenant setup
+        await trx('company_locations')
+          .insert({
+            company_id: companyId,
+            tenant: tenantId,
+            location_name: 'Main Office',
+            email: input.email,  // Use the admin email as the default contact email
+            phone: '',
+            address_line1: '',
+            is_default: true,
+            is_active: true,
+            created_at: knex.fn.now(),
+            updated_at: knex.fn.now()
+          });
+        log.info('Default location created', { companyId, email: input.email });
         
         // Note: Not updating tenant with company_id as column doesn't exist in schema
       }
