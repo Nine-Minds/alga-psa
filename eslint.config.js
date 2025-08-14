@@ -92,6 +92,7 @@ export default [
         sourceType: "module",
         project: [
           path.join(__dirname, 'server/tsconfig.json'),
+          path.join(__dirname, 'server/tsconfig.test.json'),
           path.join(__dirname, 'ee/server/tsconfig.json'),
           path.join(__dirname, 'shared/tsconfig.json'),
           path.join(__dirname, 'services/workflow-worker/tsconfig.json'),
