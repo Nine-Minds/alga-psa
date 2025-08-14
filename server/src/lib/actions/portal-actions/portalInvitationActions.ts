@@ -4,7 +4,7 @@ import { createTenantKnex, runWithTenant } from '../../db';
 import { getCurrentUser } from '../user-actions/userActions';
 import { PortalInvitationService } from '../../services/PortalInvitationService';
 import { sendPortalInvitationEmail } from '../../email/sendPortalInvitationEmail';
-import { checkPortalInvitationLimit, formatRateLimitError } from '../../security/rateLimiting';
+import { getSystemEmailService } from '../../email';
 import { TenantEmailService } from '../../services/TenantEmailService';
 import { UserService } from '../../api/services/UserService';
 import { runAsSystem, createSystemContext } from '../../api/services/SystemContext';
@@ -66,21 +66,11 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
       throw new Error('Tenant is requried');
     }
 
-    // Validate email settings are configured for this tenant
-    // const emailValidation = await TenantEmailService.validateEmailSettings(tenant);
-    
-    // if (!emailValidation.valid) {
-    //   return { 
-    //     success: false, 
-    //     error: emailValidation.error || 'Email settings are not properly configured.'
-    //   };
-    // }
-
-    // Check rate limits first
-    const rateLimitResult = await checkPortalInvitationLimit(contactId);
-    if (!rateLimitResult.success) {
-      const errorMessage = await formatRateLimitError(rateLimitResult.msBeforeNext);
-      return { success: false, error: errorMessage };
+    // Ensure system email is configured before proceeding (avoid burning rate limits when misconfigured)
+    const systemEmailService = await getSystemEmailService();
+    const emailConfigured = await systemEmailService.isConfigured();
+    if (!emailConfigured) {
+      return { success: false, error: 'Email service is disabled or not configured' };
     }
 
     // Get contact details

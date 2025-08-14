@@ -72,9 +72,7 @@ export class PortalInvitationService {
         return { success: false, error: 'Contact not found' };
       }
 
-      if (!contact.is_client_admin) {
-        return { success: false, error: 'Contact must be marked as a client admin to receive portal invitations' };
-      }
+      // Allow inviting any contact (not limited to client admins)
 
       // Generate secure token
       const token = this.generateSecureToken();
@@ -91,9 +89,11 @@ export class PortalInvitationService {
         .first();
 
       if (existingInvitation) {
-        return { 
-          success: false, 
-          error: 'An active invitation already exists for this contact. Please wait for it to expire or be used before sending another.' 
+        // Reuse existing active invitation to allow resending without error
+        return {
+          success: true,
+          invitationId: existingInvitation.invitation_id,
+          token: existingInvitation.token
         };
       }
 
@@ -158,9 +158,7 @@ export class PortalInvitationService {
         return { success: false, error: 'Contact not found' };
       }
 
-      if (!contact.is_client_admin) {
-        return { success: false, error: 'Contact must be marked as a client admin to receive portal invitations' };
-      }
+      // Allow inviting any contact (not limited to client admins)
 
       // Generate secure token
       const token = this.generateSecureToken();
@@ -177,9 +175,11 @@ export class PortalInvitationService {
         .first();
 
       if (existingInvitation) {
-        return { 
-          success: false, 
-          error: 'An active invitation already exists for this contact. Please wait for it to expire or be used before sending another.' 
+        // Reuse existing active invitation to allow resending without error
+        return {
+          success: true,
+          invitationId: existingInvitation.invitation_id,
+          token: existingInvitation.token
         };
       }
 

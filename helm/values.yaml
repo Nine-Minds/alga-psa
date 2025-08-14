@@ -226,6 +226,16 @@ email:
   port: 465
   user: ""
   password: ""
+  # Optional: explicitly set provider ("smtp" or "resend"). If omitted, factory auto-detects based on RESEND_API_KEY
+  provider: ""
+  # For RESEND: prefer providing via secret
+  resendApiKeySecret:
+    name: ""   # e.g., resend-credentials
+    key:  ""   # e.g., RESEND_API_KEY
+  # Or provide inline for dev/testing (DO NOT use in production)
+  resendApiKey: ""
+  # Optional custom base URL for self-hosted Resend or proxy
+  resendBaseUrl: ""
 
 
 crypto:
