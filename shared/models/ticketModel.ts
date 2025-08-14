@@ -77,8 +77,7 @@ export const createCommentSchema = z.object({
   is_internal: z.boolean().optional(),
   is_resolution: z.boolean().optional(),
   author_type: z.enum(['internal', 'contact', 'system']).optional(),
-  author_id: z.string().uuid('Author ID must be a valid UUID').optional(),
-  metadata: z.record(z.unknown()).optional()
+  author_id: z.string().uuid('Author ID must be a valid UUID').optional()
 });
 
 // =============================================================================
@@ -163,7 +162,6 @@ export interface CreateCommentValidationInput {
   is_resolution?: boolean;
   author_type?: 'internal' | 'contact' | 'system';
   author_id?: string;
-  metadata?: any;
 }
 
 export interface CreateTicketOutput {
@@ -186,7 +184,6 @@ export interface CreateCommentInput {
   is_resolution?: boolean;
   author_type?: 'internal' | 'contact' | 'system';
   author_id?: string;
-  metadata?: any;
 }
 
 export interface CreateCommentOutput {
@@ -1059,18 +1056,6 @@ export class TicketModel {
       }
     })();
 
-    // Some deployments may not have a 'metadata' column on comments.
-    // Detect presence and omit if absent to avoid 42703 errors.
-    let includeMetadata = false;
-    try {
-      const col = await trx.raw(
-        "SELECT 1 FROM information_schema.columns WHERE table_name = 'comments' AND column_name = 'metadata' LIMIT 1"
-      );
-      includeMetadata = Array.isArray(col?.rows) && col.rows.length > 0;
-    } catch (_) {
-      includeMetadata = false;
-    }
-
     const baseCommentData: any = {
       comment_id: commentId,
       tenant,
@@ -1083,9 +1068,6 @@ export class TicketModel {
       created_at: now,
       updated_at: now
     };
-    if (includeMetadata && validatedData.metadata) {
-      baseCommentData.metadata = JSON.stringify(validatedData.metadata);
-    }
 
     await trx('comments').insert(baseCommentData);
 

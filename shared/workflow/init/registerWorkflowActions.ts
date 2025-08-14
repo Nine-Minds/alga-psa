@@ -1955,8 +1955,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
       { name: 'format', type: 'string', required: false },
       { name: 'source', type: 'string', required: false },
       { name: 'author_type', type: 'string', required: false },
-      { name: 'author_id', type: 'string', required: false },
-      { name: 'metadata', type: 'object', required: false }
+      { name: 'author_id', type: 'string', required: false }
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
@@ -1967,8 +1966,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
           format: params.format,
           source: params.source,
           author_type: params.author_type,
-          author_id: params.author_id,
-          metadata: params.metadata
+          author_id: params.author_id
         }, context.tenant);
         
         return {
