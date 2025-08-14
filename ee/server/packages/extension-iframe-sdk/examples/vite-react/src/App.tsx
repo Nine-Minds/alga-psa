@@ -73,7 +73,7 @@ export default function App() {
         <Text as="strong" size="md" weight={600}>Resize Demo</Text>
         <Stack>
           <SizeReporter />
-          <Button onClick={() => reportResize(document.documentElement.scrollHeight)}>
+          <Button id="report-height-button" onClick={() => reportResize(document.documentElement.scrollHeight)}>
             Report Height
           </Button>
         </Stack>
