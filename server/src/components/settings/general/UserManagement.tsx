@@ -30,6 +30,7 @@ const UserManagement = (): JSX.Element => {
   const [showNewUserForm, setShowNewUserForm] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [portalType, setPortalType] = useState<'msp' | 'client'>('msp');
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [newUser, setNewUser] = useState({ 
     firstName: '', 
     lastName: '', 
@@ -239,6 +240,7 @@ const UserManagement = (): JSX.Element => {
   const handlePortalTypeChange = (type: 'msp' | 'client') => {
     setPortalType(type);
     setShowNewUserForm(false);
+    setSelectedCompanyId(null);
     setNewUser({ 
       firstName: '', 
       lastName: '', 
@@ -280,7 +282,7 @@ const UserManagement = (): JSX.Element => {
       </CardHeader>
       <CardContent>
         <div className="flex justify-between mb-4">
-          <div className="flex gap-6">
+          <div className="flex gap-6 items-center">
             <div className="relative">
               <Input
                 type="text"
@@ -299,6 +301,22 @@ const UserManagement = (): JSX.Element => {
                 placeholder="Select Status"
               />
             </div>
+            {portalType === 'client' && (
+              <div className="relative z-10">
+                <CompanyPicker
+                  id="user-management-company-filter"
+                  companies={companies}
+                  selectedCompanyId={selectedCompanyId}
+                  onSelect={(companyId) => setSelectedCompanyId(companyId)}
+                  filterState="active"
+                  onFilterStateChange={() => {}}
+                  clientTypeFilter="all"
+                  onClientTypeFilterChange={() => {}}
+                  placeholder="Select client company"
+                  fitContent={true}
+                />
+              </div>
+            )}
           </div>
           <Button 
             id={`create-new-${portalType}-user-btn`} 
@@ -431,7 +449,12 @@ const UserManagement = (): JSX.Element => {
         {loading ? (
           <p>Loading users...</p>
         ) : (
-          <UserList users={filteredUsers} onUpdate={fetchUsers} onDeleteUser={handleDeleteUser} />
+          <UserList 
+            users={filteredUsers} 
+            onUpdate={fetchUsers} 
+            onDeleteUser={handleDeleteUser} 
+            selectedCompanyId={portalType === 'client' ? selectedCompanyId : null}
+          />
         )}
       </CardContent>
     </Card>

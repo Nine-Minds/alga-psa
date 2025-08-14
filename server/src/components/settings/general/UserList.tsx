@@ -6,10 +6,11 @@ import { useDrawer } from "server/src/context/DrawerContext";
 import { DataTable } from 'server/src/components/ui/DataTable';
 import UserAvatar from '../../ui/UserAvatar';
 import { getUserAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
-import { MoreVertical, Pen, Trash2, Mail, Building2 } from 'lucide-react';
+import { MoreVertical, Pen, Trash2, Mail } from 'lucide-react';
 import { sendPortalInvitation } from 'server/src/lib/actions/portal-actions/portalInvitationActions';
 import CompanyDetails from 'server/src/components/companies/CompanyDetails';
 import toast from 'react-hot-toast';
+import { getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,12 +24,14 @@ interface UserListProps {
   users: IUser[];
   onDeleteUser: (userId: string) => Promise<void>;
   onUpdate: () => void;
+  selectedCompanyId?: string | null;
 }
 
-const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate }) => {
+const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate, selectedCompanyId = null }) => {
   const [userToDelete, setUserToDelete] = useState<IUser | null>(null);
   const [userAvatars, setUserAvatars] = useState<Record<string, string | null>>({});
   const [sendingInvitation, setSendingInvitation] = useState<string | null>(null);
+  const [userCompanies, setUserCompanies] = useState<Record<string, { company_id: string; company_name: string } | null>>({});
   const { openDrawer } = useDrawer();
 
   useEffect(() => {
@@ -67,6 +70,49 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate }) =>
       fetchAvatarUrls();
     }
   }, [users.length]); // Only re-run when the number of users changes
+
+  useEffect(() => {
+    // Fetch associated company for client users via their contact
+    const fetchCompaniesForUsers = async () => {
+      const usersToFetch = users.filter(
+        (u) => u.user_type === 'client' && u.contact_id && userCompanies[u.user_id] === undefined
+      );
+
+      if (usersToFetch.length === 0) return;
+
+      const results = await Promise.all(
+        usersToFetch.map(async (u) => {
+          try {
+            const contact = await getContactByContactNameId(u.contact_id!);
+            if (contact && contact.company_id) {
+              const companyName = (contact as any).company_name || 'Unnamed Company';
+              return { userId: u.user_id, company: { company_id: contact.company_id, company_name: companyName } };
+            }
+            return { userId: u.user_id, company: null };
+          } catch (e) {
+            console.error('Error fetching company for user', u.user_id, e);
+            return { userId: u.user_id, company: null };
+          }
+        })
+      );
+
+      const map: Record<string, { company_id: string; company_name: string } | null> = {};
+      results.forEach((r) => {
+        map[r.userId] = r.company;
+      });
+      setUserCompanies((prev) => ({ ...prev, ...map }));
+    };
+
+    if (users.length > 0) {
+      fetchCompaniesForUsers();
+    }
+  }, [users]);
+
+  // Filter by selected company if provided (client users only)
+  const visibleUsers = React.useMemo(() => {
+    if (!selectedCompanyId) return users;
+    return users.filter((u) => userCompanies[u.user_id]?.company_id === selectedCompanyId);
+  }, [users, userCompanies, selectedCompanyId]);
 
   const handleDeleteClick = async (user: IUser): Promise<void> => {
     setUserToDelete(user);
@@ -112,7 +158,13 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate }) =>
       const { getCompanyById } = await import('server/src/lib/actions/company-actions/companyActions');
       const company = await getCompanyById(companyId);
       if (company) {
-        openDrawer(<CompanyDetails company={company} />);
+        openDrawer(
+          <CompanyDetails
+            company={company}
+            isInDrawer={true}
+            quickView={true}
+          />
+        );
       }
     }
   };
@@ -147,28 +199,34 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate }) =>
       dataIndex: 'email',
       width: '20%'
     },
-    ...(hasClientUsers ? [{
-      title: 'Client',
-      dataIndex: 'company',
-      width: '20%',
-      render: (company: any, record: IUser) => {
-        if (!company) {
-          return <span className="text-gray-400">No Company</span>;
-        }
-        return (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              handleCompanyClick(company.company_id);
-            }}
-            className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline"
-          >
-            <Building2 className="h-4 w-4" />
-            <span>{company.company_name}</span>
-          </button>
-        );
-      }
-    }] : []),
+    ...(hasClientUsers
+      ? [{
+          title: 'Client',
+          dataIndex: 'company',
+          width: '20%',
+          render: (_: any, record: IUser) => {
+            const company = userCompanies[record.user_id];
+            if (company === undefined) {
+              return <span className="text-gray-400">Loading...</span>;
+            }
+            if (!company) {
+              return <span className="text-gray-400">No Company</span>;
+            }
+            return (
+              <button
+                id={`open-company-details-${record.user_id}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleCompanyClick(company.company_id);
+                }}
+                className="text-blue-500 hover:underline text-left whitespace-normal break-words"
+              >
+                {company.company_name}
+              </button>
+            );
+          },
+        }]
+      : []),
     {
       title: 'Role',
       dataIndex: 'roles',
@@ -248,10 +306,7 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate }) =>
 
   return (
     <div>
-      <DataTable
-        data={users}
-        columns={columns}
-      />
+      <DataTable data={visibleUsers} columns={columns} />
 
       {userToDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
