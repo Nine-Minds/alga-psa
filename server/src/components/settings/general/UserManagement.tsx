@@ -5,9 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'serve
 import UserList from './UserList';
 import { getAllUsers, addUser, getUserWithRoles, deleteUser, getMSPRoles, getClientPortalRoles } from 'server/src/lib/actions/user-actions/userActions';
 import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
-import { addContact } from 'server/src/lib/actions/contact-actions/contactActions';
+import { addContact, getContactsByCompany, getAllContacts, getContactsEligibleForInvitation } from 'server/src/lib/actions/contact-actions/contactActions';
 import { sendPortalInvitation, createClientPortalUser } from 'server/src/lib/actions/portal-actions/portalInvitationActions';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import { createTenantKnex } from 'server/src/lib/db';
 import toast from 'react-hot-toast';
 import { IUser, IRole } from 'server/src/interfaces/auth.interfaces';
@@ -24,6 +25,7 @@ const UserManagement = (): JSX.Element => {
   const [users, setUsers] = useState<IUser[]>([]);
   const [roles, setRoles] = useState<IRole[]>([]);
   const [companies, setCompanies] = useState<ICompany[]>([]);
+  const [contacts, setContacts] = useState<any[]>([]);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
@@ -32,6 +34,7 @@ const UserManagement = (): JSX.Element => {
   const [showPassword, setShowPassword] = useState(false);
   const [portalType, setPortalType] = useState<'msp' | 'client'>('msp');
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [newUser, setNewUser] = useState({ 
     firstName: '', 
     lastName: '', 
@@ -40,6 +43,7 @@ const UserManagement = (): JSX.Element => {
     role: '',
     companyId: ''
   });
+  const [requirePwdChange, setRequirePwdChange] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -47,8 +51,22 @@ const UserManagement = (): JSX.Element => {
     fetchRoles();
     if (portalType === 'client') {
       fetchCompanies();
+      fetchContacts();
     }
   }, [portalType]);
+
+  useEffect(() => {
+    if (portalType === 'client') {
+      fetchContacts();
+    }
+    setSelectedContactId(null);
+  }, [selectedCompanyId]);
+
+  useEffect(() => {
+    if (portalType === 'client') {
+      fetchContacts();
+    }
+  }, [newUser.password]);
 
   const fetchUsers = async (): Promise<void> => {
     try {
@@ -105,6 +123,28 @@ const UserManagement = (): JSX.Element => {
     }
   };
 
+  
+const fetchContacts = async (): Promise<void> => {
+    try {
+      const invitationMode = portalType === 'client' && !newUser.password;
+      if (invitationMode) {
+        const cs = await getContactsEligibleForInvitation(selectedCompanyId || undefined, 'active' as any);
+        setContacts(cs);
+      } else {
+        if (selectedCompanyId) {
+          const cs = await getContactsByCompany(selectedCompanyId, 'active' as any);
+          setContacts(cs);
+        } else {
+          const cs = await getAllContacts('active' as any);
+          setContacts(cs);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching contacts:', err);
+      setContacts([]);
+    }
+  };
+
   const filteredUsers = users.filter(user => {
     const isStatusMatch =
       filterStatus === 'all' ||
@@ -138,46 +178,48 @@ const UserManagement = (): JSX.Element => {
       }
 
       if (portalType === 'client') {
-        // Default: send invitation (no password set)
         if (!newUser.password) {
-          // Ensure contact exists (create or update) and then send invite
-          const contact = await addContact({
-            full_name: `${newUser.firstName} ${newUser.lastName}`,
-            email: newUser.email,
-            company_id: newUser.companyId || undefined,
-            is_inactive: false
-          });
-
-          try {
-            const invitationResult = await sendPortalInvitation(contact.contact_name_id);
-            if (invitationResult.success) {
-              toast.success('Portal invitation sent successfully!');
-            } else {
-              toast(invitationResult.error || 'Failed to send invitation', { icon: '⚠️', duration: 5000 });
+          if (selectedContactId) {
+            try {
+              const invitationResult = await sendPortalInvitation(selectedContactId);
+              if (invitationResult.success) {
+                toast.success('Portal invitation sent successfully!');
+              } else {
+                toast(invitationResult.error || 'Failed to send invitation', { icon: '⚠️', duration: 5000 });
+              }
+            } catch (inviteError) {
+              toast('Failed to send invitation. You can send it manually from the user list.', { icon: '⚠️', duration: 5000 });
             }
-          } catch (inviteError) {
-            toast('Failed to send invitation. You can send it manually from the user list.', { icon: '⚠️', duration: 5000 });
+          } else {
+            const contact = await addContact({
+              full_name: `${newUser.firstName} ${newUser.lastName}`,
+              email: newUser.email,
+              company_id: newUser.companyId || undefined,
+              is_inactive: false
+            });
+            try {
+              const invitationResult = await sendPortalInvitation(contact.contact_name_id);
+              if (invitationResult.success) {
+                toast.success('Portal invitation sent successfully!');
+              } else {
+                toast(invitationResult.error || 'Failed to send invitation', { icon: '⚠️', duration: 5000 });
+              }
+            } catch (inviteError) {
+              toast('Failed to send invitation. You can send it manually from the user list.', { icon: '⚠️', duration: 5000 });
+            }
           }
-
           await fetchUsers();
         } else {
-          // Optional path: set password manually and create user without invitation
-          const result = await createClientPortalUser({
-            password: newUser.password,
-            contact: {
-              email: newUser.email,
-              fullName: `${newUser.firstName} ${newUser.lastName}`,
-              companyId: newUser.companyId || '',
-              isClientAdmin: false
-            }
-          });
-
+          const result = await createClientPortalUser(
+            selectedContactId
+              ? { password: newUser.password, contactId: selectedContactId, requirePasswordChange: requirePwdChange }
+              : { password: newUser.password, contact: { email: newUser.email, fullName: `${newUser.firstName} ${newUser.lastName}`, companyId: newUser.companyId || '', isClientAdmin: false }, requirePasswordChange: requirePwdChange }
+          );
           if (result.success) {
             toast.success('Client portal user created successfully!');
           } else {
             throw new Error(result.error || 'Failed to create client portal user');
           }
-
           await fetchUsers();
         }
       } else {
@@ -324,95 +366,132 @@ const UserManagement = (): JSX.Element => {
               Create New {portalType === 'msp' ? 'MSP User' : 'Client Portal User'}
             </h3>
             <div className="space-y-2">
-              <div>
-                <Label htmlFor="firstName">First Name</Label>
-                <Input
-                  id="firstName"
-                  value={newUser.firstName}
-                  onChange={(e) => setNewUser({ ...newUser, firstName: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="lastName">Last Name</Label>
-                <Input
-                  id="lastName"
-                  value={newUser.lastName}
-                  onChange={(e) => setNewUser({ ...newUser, lastName: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={newUser.email}
-                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="password">
-                  Password {portalType === 'client' && <span className="text-sm text-gray-500">(Leave blank to send invitation)</span>}
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    value={newUser.password}
-                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                    className="pr-10"
-                    placeholder={portalType === 'client' ? 'Leave blank to send invitation' : 'Enter password'}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  >
-                    {showPassword ? (
-                      <Eye className="h-5 w-5 text-gray-400" />
-                    ) : (
-                      <EyeOff className="h-5 w-5 text-gray-400" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left column: manual details */}
+                <div className="space-y-2">
+                  <div>
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input
+                      id="firstName"
+                      value={newUser.firstName}
+                      onChange={(e) => setNewUser({ ...newUser, firstName: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input
+                      id="lastName"
+                      value={newUser.lastName}
+                      onChange={(e) => setNewUser({ ...newUser, lastName: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={newUser.email}
+                      onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                    />
+                  </div>
+                  {portalType === 'client' && (
+                    <div className="relative z-20">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Client Company (optional)</label>
+                      <CompanyPicker
+                        id="new-user-company-picker"
+                        companies={companies}
+                        selectedCompanyId={newUser.companyId || null}
+                        onSelect={(companyId) => setNewUser({ ...newUser, companyId: companyId || '' })}
+                        filterState="active"
+                        onFilterStateChange={() => {}}
+                        clientTypeFilter="all"
+                        onClientTypeFilterChange={() => {}}
+                        placeholder="Select Company (Optional)"
+                        fitContent={false}
+                      />
+                    </div>
+                  )}
+                  <div className="relative z-20">
+                    <CustomSelect
+                      label="Primary Role"
+                      value={newUser.role}
+                      onValueChange={(value) => setNewUser({ ...newUser, role: value })}
+                      options={roles.map((role): SelectOption => ({ 
+                        value: role.role_id, 
+                        label: role.role_name 
+                      }))}
+                      placeholder="Select Role"
+                    />
+                  </div>
+                </div>
+
+                {/* Right column: existing contact OR set password */}
+                <div className="space-y-4">
+                  {portalType === 'client' && (
+                    <div className="relative z-20">
+                      <ContactPicker
+                        id="new-user-contact-picker"
+                        contacts={contacts}
+                        value={selectedContactId || ''}
+                        onValueChange={(cid) => {
+                          setSelectedContactId(cid || null);
+                          if (cid) {
+                            const c = contacts.find((x) => x.contact_name_id === cid);
+                            if (c) {
+                              const parts = (c.full_name || '').trim().split(' ');
+                              setNewUser({
+                                ...newUser,
+                                firstName: parts[0] || c.full_name || '',
+                                lastName: parts.slice(1).join(' '),
+                                email: c.email || '',
+                                companyId: c.company_id || ''
+                              });
+                            }
+                          }
+                        }}
+                        companyId={newUser.companyId || undefined}
+                        label={newUser.password ? 'Select existing contact (optional)' : 'Select existing contact'}
+                        placeholder={newUser.password ? 'Select existing contact (filters by company)' : 'Select contact to invite'}
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <Label htmlFor="password">
+                      Password {portalType === 'client' && <span className="text-sm text-gray-500">(Leave blank to send invitation)</span>}
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        value={newUser.password}
+                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                        className="pr-10"
+                        placeholder={portalType === 'client' ? 'Leave blank to send invitation' : 'Enter password'}
+                        autoComplete="new-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                      >
+                        {showPassword ? (
+                          <Eye className="h-5 w-5 text-gray-400" />
+                        ) : (
+                          <EyeOff className="h-5 w-5 text-gray-400" />
+                        )}
+                      </button>
+                    </div>
+                    {portalType === 'client' && (
+                      <p className="text-sm text-gray-500 mt-1">
+                        {newUser.password
+                          ? 'User will be created with this password (no invitation will be sent)'
+                          : 'No password required — we will send a portal invitation for the user to set it'}
+                      </p>
                     )}
-                  </button>
+                  </div>
                 </div>
-                {portalType === 'client' && (
-                  <p className="text-sm text-gray-500 mt-1">
-                    {newUser.password
-                      ? 'User will be created with this password (no invitation will be sent)'
-                      : 'No password required — we will send a portal invitation for the user to set it'}
-                  </p>
-                )}
               </div>
-              {portalType === 'client' && (
-                <div className="relative z-20">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Client Company</label>
-                  <CompanyPicker
-                    id="new-user-company-picker"
-                    companies={companies}
-                    selectedCompanyId={newUser.companyId || null}
-                    onSelect={(companyId) => setNewUser({ ...newUser, companyId: companyId || '' })}
-                    filterState="active"
-                    onFilterStateChange={() => {}}
-                    clientTypeFilter="all"
-                    onClientTypeFilterChange={() => {}}
-                    placeholder="Select Company (Optional)"
-                    fitContent={false}
-                  />
-                </div>
-              )}
-              <div className="relative z-20">
-                <CustomSelect
-                  label="Primary Role"
-                  value={newUser.role}
-                  onValueChange={(value) => setNewUser({ ...newUser, role: value })}
-                  options={roles.map((role): SelectOption => ({ 
-                    value: role.role_id, 
-                    label: role.role_name 
-                  }))}
-                  placeholder="Select Role"
-                />
-              </div>
-              {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-              <div className="flex gap-2">
+<div className="flex gap-2">
                 <Button 
                   id={`submit-new-${portalType}-user-btn`} 
                   onClick={handleCreateUser}

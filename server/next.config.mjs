@@ -43,6 +43,7 @@ const nextConfig = {
     // and ensure packages from root workspace are resolved
     config.resolve = {
       ...config.resolve,
+      extensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
       extensionAlias: {
         '.js': ['.js', '.ts', '.tsx']
       },
@@ -55,6 +56,9 @@ const nextConfig = {
         // Also map deep EE paths used without the @ee alias to CE stubs
         // This ensures CE builds don't fail when code references ee/server/src directly
         'ee/server/src': process.env.NEXT_PUBLIC_EDITION === 'enterprise'
+          ? path.join(__dirname, '../ee/server/src')
+          : path.join(__dirname, 'src/empty'),
+        '../ee/server/src': process.env.NEXT_PUBLIC_EDITION === 'enterprise'
           ? path.join(__dirname, '../ee/server/src')
           : path.join(__dirname, 'src/empty')
       },
