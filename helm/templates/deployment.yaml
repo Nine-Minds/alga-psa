@@ -347,6 +347,9 @@ spec:
           # NEXTAUTH_URL is configured via .env file to allow dynamic updates during port forwarding
           - name: NEXTAUTH_URL
             value: "https://{{ .Values.host }}"
+          # Public base URL for links in emails and client-side code
+          - name: NEXT_PUBLIC_BASE_URL
+            value: "https://{{ .Values.host }}"
           - name: NEXTAUTH_SECRET
             valueFrom:
               secretKeyRef:
