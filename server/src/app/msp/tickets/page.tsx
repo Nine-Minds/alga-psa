@@ -1,4 +1,4 @@
-import { getConsolidatedTicketListData } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
+import { getConsolidatedTicketListPageData } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import TicketingDashboardContainer from 'server/src/components/tickets/TicketingDashboardContainer';
 import { Suspense } from 'react';
@@ -11,10 +11,10 @@ export default async function TicketsPage() {
       throw new Error('User not found');
     }
 
-    // Fetch consolidated data for the ticket list
-    const consolidatedData = await getConsolidatedTicketListData(user, {
+    // Fetch consolidated data for the ticket list (page-based)
+    const consolidatedData = await getConsolidatedTicketListPageData(user, {
       channelFilterState: 'active'
-    });
+    }, 1, 10);
 
     return (
       <div id="tickets-page-container" className="bg-gray-100">

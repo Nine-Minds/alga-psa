@@ -1197,6 +1197,239 @@ export async function getConsolidatedTicketListData(
 }
 
 /**
+ * Page-based ticket fetch with total count for classic pagination
+ */
+export async function getTicketsPage(
+  user: IUser,
+  filters: ITicketListFilters,
+  page: number = 1,
+  pageSize: number = 10
+): Promise<{ tickets: ITicketListItem[]; totalCount: number; page: number; pageSize: number }> {
+  const {knex: db, tenant} = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'read', trx)) {
+      throw new Error('Permission denied: Cannot view tickets');
+    }
+
+    try {
+      const validatedFilters = validateData(ticketListFiltersSchema, filters) as ITicketListFilters;
+
+      if (validatedFilters.channelId === '$undefined') validatedFilters.channelId = undefined;
+      if (validatedFilters.categoryId === '$undefined') validatedFilters.categoryId = undefined;
+      if (validatedFilters.companyId === '$undefined') validatedFilters.companyId = undefined;
+      if (validatedFilters.contactId === '$undefined') validatedFilters.contactId = undefined;
+
+      // Base select for page data
+      let dataQuery = trx('tickets as t')
+        .select(
+          't.*',
+          's.name as status_name',
+          'p.priority_name',
+          'p.color as priority_color',
+          'c.channel_name',
+          'cat.category_name',
+          'comp.company_name',
+          trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
+          trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name")
+        )
+        .leftJoin('statuses as s', function() {
+          this.on('t.status_id', 's.status_id')
+             .andOn('t.tenant', 's.tenant')
+        })
+        .leftJoin('priorities as p', function() {
+          this.on('t.priority_id', 'p.priority_id')
+             .andOn('t.tenant', 'p.tenant')
+             .andOnVal('p.item_type', '=', 'ticket')
+        })
+        .leftJoin('channels as c', function() {
+          this.on('t.channel_id', 'c.channel_id')
+             .andOn('t.tenant', 'c.tenant')
+        })
+        .leftJoin('categories as cat', function() {
+          this.on('t.category_id', 'cat.category_id')
+             .andOn('t.tenant', 'cat.tenant')
+        })
+        .leftJoin('companies as comp', function() {
+          this.on('t.company_id', 'comp.company_id')
+             .andOn('t.tenant', 'comp.tenant')
+        })
+        .leftJoin('users as u', function() {
+          this.on('t.entered_by', 'u.user_id')
+             .andOn('t.tenant', 'u.tenant')
+        })
+        .leftJoin('users as au', function() {
+          this.on('t.assigned_to', 'au.user_id')
+             .andOn('t.tenant', 'au.tenant')
+        })
+        .where({ 't.tenant': tenant });
+
+      // Base count query
+      let countQuery = trx('tickets as t')
+        .count<{ count: string }[]>({ count: trx.raw('*') })
+        .where({ 't.tenant': tenant });
+
+      // Helper to apply filters to both queries
+      const applyFilters = (query: Knex.QueryBuilder) => {
+        if (validatedFilters.channelId) {
+          query.where('t.channel_id', validatedFilters.channelId);
+        } else if (validatedFilters.channelFilterState !== 'all') {
+          const channelSubquery = trx('channels')
+            .select('channel_id')
+            .where('tenant', tenant)
+            .where('is_inactive', validatedFilters.channelFilterState === 'inactive');
+          query.whereIn('t.channel_id', channelSubquery);
+        }
+
+        if (validatedFilters.showOpenOnly) {
+          query.whereExists(function() {
+            this.select('*')
+                .from('statuses')
+                .whereRaw('statuses.status_id = t.status_id')
+                .andWhere('statuses.is_closed', false)
+                .andWhere('statuses.tenant', tenant);
+          });
+        } else if (validatedFilters.statusId && validatedFilters.statusId !== 'all') {
+          query.where('t.status_id', validatedFilters.statusId);
+        }
+
+        if (validatedFilters.priorityId && validatedFilters.priorityId !== 'all') {
+          query.where('t.priority_id', validatedFilters.priorityId);
+        }
+
+        if (validatedFilters.categoryId && validatedFilters.categoryId !== 'all') {
+          query.where('t.category_id', validatedFilters.categoryId);
+        }
+
+        if (validatedFilters.companyId) {
+          query.where('t.company_id', validatedFilters.companyId);
+        }
+
+        if (validatedFilters.contactId) {
+          query.where('t.contact_name_id', validatedFilters.contactId);
+        }
+
+        if (validatedFilters.searchQuery) {
+          const searchTerm = `%${validatedFilters.searchQuery}%`;
+          query.where(function(this: any) {
+            this.where('t.title', 'ilike', searchTerm)
+                .orWhere('t.ticket_number', 'ilike', searchTerm);
+          });
+        }
+      };
+
+      applyFilters(dataQuery);
+      applyFilters(countQuery as unknown as Knex.QueryBuilder);
+
+      // Sorting + offset/limit
+      const safePage = Math.max(1, Number(page) || 1);
+      const safePageSize = Math.max(1, Number(pageSize) || 10);
+      const offset = (safePage - 1) * safePageSize;
+
+      dataQuery = dataQuery
+        .orderBy('t.entered_at', 'desc')
+        .orderBy('t.ticket_id', 'desc')
+        .offset(offset)
+        .limit(safePageSize);
+
+      const [rows, countRows] = await Promise.all([
+        dataQuery,
+        countQuery
+      ]);
+
+      const totalCount = Number(countRows?.[0]?.count ?? 0);
+
+      const ticketListItems = rows.map((ticket: any): ITicketListItem => {
+        const {
+          status_id,
+          priority_id,
+          channel_id,
+          category_id,
+          entered_by,
+          status_name,
+          priority_name,
+          priority_color,
+          channel_name,
+          category_name,
+          company_name,
+          entered_by_name,
+          assigned_to_name,
+          ...rest
+        } = ticket;
+
+        return {
+          status_id: status_id || null,
+          priority_id: priority_id || null,
+          channel_id: channel_id || null,
+          category_id: category_id || null,
+          entered_by: entered_by || null,
+          status_name: status_name || 'Unknown',
+          priority_name: priority_name || 'Unknown',
+          priority_color: priority_color || '#6B7280',
+          channel_name: channel_name || 'Unknown',
+          category_name: category_name || 'Unknown',
+          company_name: company_name || 'Unknown',
+          entered_by_name: entered_by_name || 'Unknown',
+          assigned_to_name: assigned_to_name || 'Unknown',
+          ...convertDates(rest)
+        };
+      });
+
+      return {
+        tickets: validateData(z.array(ticketListItemSchema), ticketListItems),
+        totalCount,
+        page: safePage,
+        pageSize: safePageSize
+      };
+    } catch (error) {
+      console.error('Failed to fetch paged tickets:', error);
+      throw new Error('Failed to fetch tickets');
+    }
+  });
+}
+
+/**
+ * Consolidated options + first page of tickets
+ */
+export async function getConsolidatedTicketListPageData(
+  user: IUser,
+  filters: ITicketListFilters,
+  page: number = 1,
+  pageSize: number = 10
+) {
+  const {knex: db, tenant} = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'read', trx)) {
+      throw new Error('Permission denied: Cannot view tickets');
+    }
+
+    try {
+      const [formOptions, ticketsData] = await Promise.all([
+        getTicketFormOptions(user),
+        getTicketsPage(user, filters, page, pageSize)
+      ]);
+
+      return {
+        options: formOptions,
+        tickets: ticketsData.tickets,
+        totalCount: ticketsData.totalCount,
+        page: ticketsData.page,
+        pageSize: ticketsData.pageSize
+      };
+    } catch (error) {
+      console.error('Failed to fetch consolidated ticket list page data:', error);
+      throw new Error('Failed to fetch ticket list data');
+    }
+  });
+}
+/**
  * Load more tickets using cursor-based pagination
  * This is used for the "Load More" button in the ticket list
  */

@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import TicketingDashboard from './TicketingDashboard';
-import { loadMoreTickets } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
+import { getTicketsPage } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
 import { ITicketListItem, ITicketCategory, ITicketListFilters } from 'server/src/interfaces/ticket.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
@@ -22,7 +22,9 @@ interface TicketingDashboardContainerProps {
       users: IUser[];
     };
     tickets: ITicketListItem[];
-    nextCursor: string | null;
+    totalCount: number;
+    page: number;
+    pageSize: number;
   };
   currentUser: IUser;
 }
@@ -33,7 +35,9 @@ export default function TicketingDashboardContainer({
 }: TicketingDashboardContainerProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [tickets, setTickets] = useState<ITicketListItem[]>(consolidatedData.tickets);
-  const [nextCursor, setNextCursor] = useState<string | null>(consolidatedData.nextCursor);
+  const [totalCount, setTotalCount] = useState<number>(consolidatedData.totalCount);
+  const [currentPage, setCurrentPage] = useState<number>(consolidatedData.page || 1);
+  const [pageSize] = useState<number>(consolidatedData.pageSize || 10);
   const [activeFilters, setActiveFilters] = useState<Partial<ITicketListFilters>>(() => {
     return {
       statusId: 'open',
@@ -47,7 +51,7 @@ export default function TicketingDashboardContainer({
     };
   });
 
-  const fetchTickets = useCallback(async (filters: Partial<ITicketListFilters>, cursor?: string | null) => {
+  const fetchTickets = useCallback(async (filters: Partial<ITicketListFilters>, page?: number) => {
     if (!currentUser) {
       toast.error('You must be logged in to perform this action');
       return;
@@ -64,41 +68,30 @@ export default function TicketingDashboardContainer({
         channelFilterState: filters.channelFilterState || 'active',
         showOpenOnly: (filters.statusId === 'open') || (filters.showOpenOnly === true) 
       };
-
-      const result = await loadMoreTickets(
-        currentUser,
-        currentFiltersWithDefaults,
-        cursor ?? undefined
-      );
-      
-      if (cursor) { 
-        setTickets(prev => [...prev, ...result.tickets]);
-      } else { 
-        setTickets(result.tickets);
-      }
-      setNextCursor(result.nextCursor);
-      setActiveFilters(currentFiltersWithDefaults); 
+      const targetPage = page || 1;
+      const result = await getTicketsPage(currentUser, currentFiltersWithDefaults, targetPage, pageSize);
+      setTickets(result.tickets);
+      setTotalCount(result.totalCount);
+      setCurrentPage(result.page);
+      setActiveFilters(currentFiltersWithDefaults);
 
     } catch (error) {
       console.error('Error fetching tickets:', error);
       toast.error('Failed to fetch tickets');
-      if (!cursor) {
-        setTickets([]);
-        setNextCursor(null);
-      }
+      setTickets([]);
+      setTotalCount(0);
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser]);
+  }, [currentUser, pageSize]);
 
-  const handleLoadMore = useCallback(async () => {
-    if (nextCursor) {
-      await fetchTickets(activeFilters, nextCursor);
-    }
-  }, [fetchTickets, activeFilters, nextCursor]);
+  // DataTable page change
+  const handlePageChange = useCallback(async (newPage: number) => {
+    await fetchTickets(activeFilters, newPage);
+  }, [fetchTickets, activeFilters]);
 
   const handleFiltersChanged = useCallback(async (newFilters: Partial<ITicketListFilters>) => {
-    await fetchTickets(newFilters, null); // Fetch page 1
+    await fetchTickets(newFilters, 1); // Fetch page 1
   }, [fetchTickets]);
 
   const mappedAndFilteredChannels = consolidatedData.options.channelOptions.map(channel => ({
@@ -120,12 +113,16 @@ export default function TicketingDashboardContainer({
       initialPriorities={consolidatedData.options.priorityOptions}
       initialCategories={consolidatedData.options.categories}
       initialCompanies={consolidatedData.options.companies}
-      nextCursor={nextCursor}
-      onLoadMore={handleLoadMore} 
+      nextCursor={null}
+      onLoadMore={async () => { /* no-op */ }} 
       onFiltersChanged={handleFiltersChanged}
       initialFilterValues={activeFilters}
       isLoadingMore={isLoading}
       user={currentUser}
+      currentPage={currentPage}
+      pageSize={pageSize}
+      totalItems={totalCount}
+      onPageChange={handlePageChange}
     />
   );
 }

@@ -46,6 +46,10 @@ interface TicketingDashboardProps {
   initialFilterValues: Partial<ITicketListFilters>;
   isLoadingMore: boolean;
   user?: IUser;
+  currentPage?: number;
+  pageSize?: number;
+  totalItems?: number;
+  onPageChange?: (page: number) => void;
 }
 
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -74,7 +78,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   onFiltersChanged,
   initialFilterValues,
   isLoadingMore,
-  user
+  user,
+  currentPage,
+  pageSize,
+  totalItems,
+  onPageChange
 }) => {
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['ticket']);
@@ -663,6 +671,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               {...withDataAutomationId({ id: `${id}-tickets-table` })}
               data={ticketsWithIds}
               columns={columns}
+              pagination={true}
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={totalItems}
+              onPageChange={onPageChange}
             />
             
             {/* Load More Button */}
