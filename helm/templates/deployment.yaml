@@ -49,7 +49,8 @@ spec:
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       volumes:
-        {{- if .Values.server.persistence.enabled }}
+        {{- /* Only mount storage volume when using local storage (S3 not enabled) */}}
+        {{- if and .Values.server.persistence.enabled (not .Values.config.storage.providers.s3.enabled) }}
         - name: storage-volume
           {{- if .Values.server.persistence.existingClaim }}
           persistentVolumeClaim:
@@ -393,7 +394,7 @@ spec:
             value: "{{ .Values.secrets_provider.vault.tenantSecretPathTemplate }}"
           {{- end }}
           {{- end }}
-         {{- if .Values.server.persistence.enabled }}
+         {{- if and .Values.server.persistence.enabled (not .Values.config.storage.providers.s3.enabled) }}
           volumeMounts:
             - name: storage-volume
               mountPath: {{ .Values.server.persistence.mountPath }}
