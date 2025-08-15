@@ -159,7 +159,7 @@ export async function initializeApp() {
     if (isEnterprise) {
       // Initialize extensions
       try {
-        const { initializeExtensions } = await import('../../../ee/server/src/lib/extensions/initialize');
+        const { initializeExtensions } = await import('@ee/lib/extensions/initialize');
         await initializeExtensions();
         logger.info('Extension system initialized');
       } catch (error) {
@@ -168,13 +168,13 @@ export async function initializeApp() {
       }
 
       // Register enterprise storage providers for runtime factory
+      // Use @ee alias so CE builds resolve to stubs and TypeScript is happy
       try {
-        const { S3StorageProvider } = await import('../../../ee/server/src/lib/storage/providers/S3StorageProvider');
+        const { S3StorageProvider } = await import('@ee/lib/storage/providers/S3StorageProvider');
         (global as any).S3StorageProvider = S3StorageProvider;
         logger.info('Registered S3StorageProvider for enterprise edition');
       } catch (error) {
-        logger.error('Failed to register S3StorageProvider:', error);
-        // Continue startup even if S3 provider fails to register
+        logger.warn('S3StorageProvider not available; continuing without S3 provider');
       }
     }
 
