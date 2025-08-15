@@ -289,3 +289,52 @@ export interface ExtensionRegistry {
   getComponentsByType(type: ExtensionComponentType, options: ExtensionInitOptions): Promise<ExtensionComponentDefinition[]>;
   getComponentsBySlot(slot: string, options: ExtensionInitOptions): Promise<ExtensionComponentDefinition[]>;
 }
+
+/**
+ * UI helper types used by the client-side ExtensionContext provider
+ */
+export interface NavigationService {
+  navigate(path: string): void;
+  getCurrentRoute(): string;
+  onNavigate(callback: (path: string) => void): () => void;
+}
+
+export interface ApiService {
+  get(path: string, options?: any): Promise<any>;
+  post(path: string, data?: any, options?: any): Promise<any>;
+  put(path: string, data?: any, options?: any): Promise<any>;
+  delete(path: string, options?: any): Promise<any>;
+}
+
+export interface UIService {
+  toast(message: string, type?: 'info' | 'error' | 'success' | 'warning'): void;
+  confirm(message: string, title?: string): Promise<boolean>;
+  modal(content: any, options?: any): Promise<void>;
+}
+
+export interface StorageService {
+  get<T>(key: string): Promise<T | null>;
+  set<T>(key: string, value: T): Promise<void>;
+  remove(key: string): Promise<void>;
+  clear(): Promise<void>;
+}
+
+export interface UserInfo {
+  id: string;
+  email?: string;
+  name?: string;
+  roles?: string[];
+  [key: string]: any;
+}
+
+/**
+ * UI Extension Context exposed to client-side components
+ */
+export interface UiExtensionContext {
+  navigation: NavigationService;
+  api: ApiService;
+  storage: StorageService;
+  ui: UIService;
+  tenantId: string;
+  user: UserInfo;
+}

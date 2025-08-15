@@ -2,8 +2,8 @@ import React, { createContext, useContext, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import { useToast } from '@/hooks/use-toast';
 import { ExtensionStorageService } from '../storage/ExtensionStorageService';
-import type { 
-  ExtensionContext as IExtensionContext,
+import type {
+  UiExtensionContext as IExtensionContext,
   NavigationService,
   ApiService,
   StorageService,
