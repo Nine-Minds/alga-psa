@@ -29,7 +29,8 @@ export default [
       ".ai/**/*",
       "**/build/**/*",
       "server/public/**/*",
-      "shared/workflow/workflows/system-email-processing-workflow.ts" // Plain JS for workflow runtime compatibility
+      "shared/workflow/workflows/system-email-processing-workflow.ts", // Plain JS for workflow runtime compatibility
+      "server/src/invoice-templates/assemblyscript/**/*" // AssemblyScript files have different syntax
     ],
 
     // Define language options for JS files
@@ -77,7 +78,8 @@ export default [
       ".ai/**/*",
       "**/build/**/*",
       "server/public/**/*",
-      "shared/workflow/workflows/system-email-processing-workflow.ts"
+      "shared/workflow/workflows/system-email-processing-workflow.ts",
+      "server/src/invoice-templates/assemblyscript/**/*" // AssemblyScript files have different syntax
     ],
 
     languageOptions: {

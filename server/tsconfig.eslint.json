@@ -9,8 +9,10 @@
     "scripts/**/*.ts",
     "src/test/**/*.ts",
     "src/test/**/*.tsx",
-    "src/invoice-templates/assemblyscript/**/*.ts",
-    "src/lib/workflows/**/*.ts"
+    "src/lib/workflows/**/*.ts",
+    "index.ts",
+    "tailwind.config.ts",
+    "vitest.config.ts"
   ],
   "exclude": [
     "node_modules",
