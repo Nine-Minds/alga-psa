@@ -3,11 +3,11 @@
 import React, { useCallback, useRef, useState } from 'react';
 
 // Server UI components
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
-import { Button } from 'server/src/components/ui/Button';
-import { Input } from 'server/src/components/ui/Input';
-import { Label } from 'server/src/components/ui/Label';
-import { TextArea } from 'server/src/components/ui/TextArea';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Label } from '@/components/ui/Label';
+import { TextArea } from '@/components/ui/TextArea';
 import Link from 'next/link';
 
 // EE server actions

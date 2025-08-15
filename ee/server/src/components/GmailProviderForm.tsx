@@ -8,19 +8,19 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button } from 'server/src/components/ui/Button';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Alert, AlertDescription } from '@/components/ui/Alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Shield } from 'lucide-react';
-import type { EmailProvider } from 'server/src/components/EmailProviderConfiguration';
-import { createEmailProvider, updateEmailProvider, upsertEmailProvider, getHostedGmailConfig, initiateOAuth } from 'server/src/lib/actions/email-actions/emailProviderActions';
-import { useOAuthPopup } from 'server/src/components/providers/gmail/useOAuthPopup';
-import { BasicConfigCard } from 'server/src/components/providers/gmail/BasicConfigCard';
-import { ProcessingSettingsCard } from 'server/src/components/providers/gmail/ProcessingSettingsCard';
-import { OAuthSection } from 'server/src/components/providers/gmail/OAuthSection';
-import { baseGmailProviderSchema } from 'server/src/components/providers/gmail/schemas';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { getInboundTicketDefaults } from 'server/src/lib/actions/email-actions/inboundTicketDefaultsActions';
+import type { EmailProvider } from '@/components/EmailProviderConfiguration';
+import { createEmailProvider, updateEmailProvider, upsertEmailProvider, getHostedGmailConfig, initiateOAuth } from '@/lib/actions/email-actions/emailProviderActions';
+import { useOAuthPopup } from '@/components/providers/gmail/useOAuthPopup';
+import { BasicConfigCard } from '@/components/providers/gmail/BasicConfigCard';
+import { ProcessingSettingsCard } from '@/components/providers/gmail/ProcessingSettingsCard';
+import { OAuthSection } from '@/components/providers/gmail/OAuthSection';
+import { baseGmailProviderSchema } from '@/components/providers/gmail/schemas';
+import CustomSelect from '@/components/ui/CustomSelect';
+import { getInboundTicketDefaults } from '@/lib/actions/email-actions/inboundTicketDefaultsActions';
 
 type EEGmailProviderFormData = import('server/src/components/providers/gmail/schemas').BaseGmailProviderFormData;
 

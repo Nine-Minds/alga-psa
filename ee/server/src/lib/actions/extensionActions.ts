@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createTenantKnex } from 'server/src/lib/db'
+import { createTenantKnex } from '@/lib/db'
 import { withTransaction } from '@alga-psa/shared/db'
 import { ExtensionRegistry } from '../extensions/registry'
 import { ExtensionStorageService } from '../extensions/storage/storageService'

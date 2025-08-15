@@ -5,7 +5,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
-import { hashPassword, generateSecurePassword } from '../../../../../server/src/utils/encryption/encryption';
+import { hashPassword, generateSecurePassword } from '@/utils/encryption/encryption';
 
 export interface TenantCreationInput {
   tenantName: string;

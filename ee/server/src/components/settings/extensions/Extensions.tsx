@@ -7,12 +7,12 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
-import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
-import { ContainerComponent } from 'server/src/types/ui-reflection/types';
+import { ReflectionContainer } from '@/lib/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from '@/lib/ui-reflection/useAutomationIdAndRegister';
+import { ContainerComponent } from '@/lib/ui-reflection/types';
 import { Extension } from '../../../lib/extensions/types';
 import { PlusIcon, AlertCircleIcon, CheckCircleIcon, XCircleIcon, Settings, EyeIcon } from 'lucide-react';
-import logger from 'server/src/utils/logger';
+import logger from '@/utils/logger';
 import { fetchExtensions, toggleExtension, uninstallExtension } from '../../../lib/actions/extensionActions';
 
 /**

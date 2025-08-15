@@ -1,4 +1,4 @@
-import { TenantEntity } from '../../../../server/src/interfaces';
+import { TenantEntity } from '@/interfaces';
 
 export interface IMessage extends TenantEntity {
   id?: string;

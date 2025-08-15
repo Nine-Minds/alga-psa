@@ -153,11 +153,12 @@ const nextConfig = {
 
     // In CE builds, replace any deep import of the EE S3 provider with the CE stub.
     // This also catches relative paths like ../../../ee/server/src/lib/storage/providers/S3StorageProvider
+    // and @ee alias imports like @ee/lib/storage/providers/S3StorageProvider
     if (process.env.NEXT_PUBLIC_EDITION !== 'enterprise') {
       config.plugins = config.plugins || [];
       config.plugins.push(
         new webpack.NormalModuleReplacementPlugin(
-          /(.*)ee[\\\/]server[\\\/]src[\\\/]lib[\\\/]storage[\\\/]providers[\\\/]S3StorageProvider(\.[jt]s)?$/,
+          /(.*)(ee[\\\/]server[\\\/]src[\\\/]|@ee[\\\/])lib[\\\/]storage[\\\/]providers[\\\/]S3StorageProvider(\.[jt]s)?$/,
           path.join(__dirname, 'src/empty/lib/storage/providers/S3StorageProvider')
         )
       );

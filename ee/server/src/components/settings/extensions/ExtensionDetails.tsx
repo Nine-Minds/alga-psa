@@ -8,12 +8,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ReflectionContainer } from '../../../../../server/src/lib/ui-reflection/ReflectionContainer';
-import { useAutomationIdAndRegister } from '../../../../../server/src/lib/ui-reflection/useAutomationIdAndRegister';
-import { ContainerComponent } from '../../../../../server/src/lib/ui-reflection/types';
+import { ReflectionContainer } from '@/lib/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from '@/lib/ui-reflection/useAutomationIdAndRegister';
+import { ContainerComponent } from '@/lib/ui-reflection/types';
 import { Extension } from '../../../lib/extensions/types';
 import { ChevronLeftIcon, InfoIcon, SettingsIcon, PackageIcon, ShieldIcon, AlertCircleIcon, CheckCircleIcon, XCircleIcon } from 'lucide-react';
-import { logger } from '../../../../../server/src/utils/logger';
+import { logger } from '@/utils/logger';
 import { fetchExtensionById, toggleExtension, uninstallExtension } from '../../../lib/actions/extensionActions';
 import { ExtensionPermissions } from './ExtensionPermissions';
 

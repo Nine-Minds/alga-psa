@@ -6,8 +6,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
 import { createTestTenant, cleanupTestTenant } from '../../lib/testing/tenant-test-factory';
-import { authenticateUser } from '../../../../../server/src/lib/actions/auth';
-import { verifyPassword } from '../../../../../server/src/utils/encryption/encryption';
+import { authenticateUser } from '@/lib/actions/auth';
+import { verifyPassword } from '@/utils/encryption/encryption';
 import type { Knex } from 'knex';
 
 describe('Debug User Authentication', () => {
