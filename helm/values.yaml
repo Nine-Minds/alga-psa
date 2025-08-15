@@ -139,6 +139,15 @@ config:
         access_key: ''  # AWS access key
         secret_key: ''  # AWS secret key
         endpoint: ''    # Optional custom endpoint for S3-compatible services
+        # Optional secret reference to mount credentials from a Kubernetes Secret
+        secretRef:
+          # Name of the Secret that holds S3 credentials
+          name: "storage-credentials"
+          # Keys inside the Secret to use
+          accessKeyKey: "S3_ACCESS_KEY"
+          secretKeyKey: "S3_SECRET_KEY"
+          # Whether this chart should create the Secret (uses access_key/secret_key values below)
+          create: false
         # Storage quotas and limits
         max_file_size: 524288000  # 500MB in bytes
         allowed_mime_types:

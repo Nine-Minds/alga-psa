@@ -220,13 +220,13 @@ spec:
             - name: STORAGE_S3_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
-                  name: storage-credentials
-                  key: S3_ACCESS_KEY
+                  name: {{ .Values.config.storage.providers.s3.secretRef.name | default "storage-credentials" | quote }}
+                  key: {{ .Values.config.storage.providers.s3.secretRef.accessKeyKey | default "S3_ACCESS_KEY" | quote }}
             - name: STORAGE_S3_SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: storage-credentials
-                  key: S3_SECRET_KEY
+                  name: {{ .Values.config.storage.providers.s3.secretRef.name | default "storage-credentials" | quote }}
+                  key: {{ .Values.config.storage.providers.s3.secretRef.secretKeyKey | default "S3_SECRET_KEY" | quote }}
             {{- if .Values.config.storage.providers.s3.endpoint }}
             - name: STORAGE_S3_ENDPOINT
               value: "{{ .Values.config.storage.providers.s3.endpoint }}"

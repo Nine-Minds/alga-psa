@@ -159,7 +159,7 @@ export async function initializeApp() {
     if (isEnterprise) {
       // Initialize extensions
       try {
-        const { initializeExtensions } = await import('../../../ee/server/src/lib/extensions/initialize');
+        const { initializeExtensions } = await import('@ee/lib/extensions/initialize');
         await initializeExtensions();
         logger.info('Extension system initialized');
       } catch (error) {
