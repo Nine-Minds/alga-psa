@@ -2,7 +2,7 @@
  * Debug test to see what happens with failed login
  */
 
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 
 test('debug failed login behavior', async ({ page }) => {
   // Navigate to root path

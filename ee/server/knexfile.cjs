@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable no-undef */
 require('dotenv').config();
 const fs = require('fs');
@@ -67,7 +66,7 @@ const createConnectionWithTenant = (config, tenant) => {
 
 // Base configuration for migrations (uses postgres user)
 const migrationConfig = {
-  client: 'pg',
+  client: getClient(),
   connection: {
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
@@ -86,7 +85,7 @@ const migrationConfig = {
 
 // Base configuration for application (uses app_user)
 const appConfig = {
-  client: 'pg',
+  client: getClient(),
   connection: {
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
@@ -112,7 +111,7 @@ const knexfile = {
     }
   },
   test: {
-    client: 'pg',
+    client: getClient(),
     connection: {
       host: process.env.DB_HOST || 'localhost',
       port: process.env.DB_PORT || '5432',

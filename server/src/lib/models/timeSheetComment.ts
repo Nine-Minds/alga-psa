@@ -1,19 +1,9 @@
-// models/timeSheetComment.ts
-import { TenantEntity } from ".";
-import { createTenantKnex } from 'server/src/lib/db';
-import { ITimeSheetApproval, ITimeSheetComment } from 'server/src/interfaces/timeEntry.interfaces';
-import { IUser } from 'server/src/interfaces/auth.interfaces';
 import { Knex } from 'knex';
-import { useTenant } from 'server/src/components/TenantProvider';
+import { ITimeSheetApproval, ITimeSheetComment } from 'server/src/interfaces/timeEntry.interfaces';
 
 const TimeSheetComment = {
-  getByTimeSheetId: async (timeSheetId: string): Promise<ITimeSheetApproval | null> => {
-    const tenant = useTenant();
-    if (!tenant) {
-      throw new Error('tenant is not defined');
-    }
-    const {knex: db} = await createTenantKnex();
-    const comments = await db('time_sheet_comments')
+  getByTimeSheetId: async (knexOrTrx: Knex | Knex.Transaction, timeSheetId: string): Promise<ITimeSheetApproval | null> => {
+    const comments = await knexOrTrx('time_sheet_comments')
       .join('users', 'time_sheet_comments.user_id', 'users.user_id')
       .where({ 'time_sheet_comments.time_sheet_id': timeSheetId })
       .select(
@@ -24,11 +14,14 @@ const TimeSheetComment = {
       );
   
     if (comments.length === 0) {
-      return null; // or throw an error, depending on your error handling strategy
+      return null;
     }
   
     // Assuming the first comment's user is the time sheet owner
     const firstComment = comments[0];
+    
+    // Get tenant from the knex connection
+    const tenant = (knexOrTrx as any).client.config.searchPath || 'public';
   
     return {
       id: timeSheetId,
@@ -47,10 +40,9 @@ const TimeSheetComment = {
     } as ITimeSheetApproval;
   },
 
-  add: async (comment: Omit<ITimeSheetComment, 'comment_id' | 'created_at'>): Promise<string> => {
+  add: async (knexOrTrx: Knex | Knex.Transaction, comment: Omit<ITimeSheetComment, 'comment_id' | 'created_at' | 'tenant'>): Promise<string> => {
     try {
-      const {knex: db} = await createTenantKnex();
-      const [insertedComment] = await db<ITimeSheetComment>('time_sheet_comments')
+      const [insertedComment] = await knexOrTrx<ITimeSheetComment>('time_sheet_comments')
         .insert(comment)
         .returning('comment_id');
       return insertedComment.comment_id;

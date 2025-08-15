@@ -2,7 +2,7 @@
  * Debug test to see exact login error messages
  */
 
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
 import { createTestTenant } from '../../lib/testing/tenant-test-factory';
 import { rollbackTenant } from '../../lib/testing/tenant-creation';
@@ -26,7 +26,15 @@ test('debug exact login error messages', async ({ page }) => {
     // Also check what was actually created in the database
     const dbUser = await db('users')
       .where('email', tenantData.adminUser.email)
-      .first();
+      .first() as { 
+        user_id: string; 
+        email: string; 
+        is_active: boolean; 
+        is_inactive: boolean;
+        tenant: string;
+        hashed_password: string;
+        user_type: string;
+      } | undefined;
     
     console.log('User in database:', {
       user_id: dbUser?.user_id,

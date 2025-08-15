@@ -290,7 +290,7 @@ test.describe('Tenant Onboarding Integration Tests', () => {
       // Try to proceed - should handle gracefully
       try {
         await session.onboardingWizard.clickNext();
-      } catch (error) {
+      } catch {
         // Expected to fail due to network simulation
       }
 

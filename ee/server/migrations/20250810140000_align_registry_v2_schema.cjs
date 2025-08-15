@@ -287,7 +287,9 @@ exports.down = async function down(knex) {
     // Drop check constraint
     try {
       await knex.raw(`ALTER TABLE tenant_extension_install DROP CONSTRAINT tenant_extension_install_status_chk`);
-    } catch (_e) {}
+    } catch (_e) {
+      // Constraint may not exist in all environments, safe to ignore
+    }
     // Remove status / updated_at if they exist
     const hasStatus = await knex.schema.hasColumn('tenant_extension_install', 'status');
     if (hasStatus) {
@@ -310,7 +312,9 @@ exports.down = async function down(knex) {
       });
       try {
         await knex.raw(`UPDATE tenant_extension_install SET enabled = COALESCE(is_enabled, true)`);
-      } catch (_e) {}
+      } catch (_e) {
+      // Constraint may not exist in all environments, safe to ignore
+    }
       await knex.schema.alterTable('tenant_extension_install', (t) => {
         t.dropColumn('is_enabled');
       });
@@ -323,7 +327,9 @@ exports.down = async function down(knex) {
       });
       try {
         await knex.raw(`UPDATE tenant_extension_install SET installed_at = created_at`);
-      } catch (_e) {}
+      } catch (_e) {
+      // Constraint may not exist in all environments, safe to ignore
+    }
       await knex.schema.alterTable('tenant_extension_install', (t) => {
         t.dropColumn('created_at');
       });
@@ -333,7 +339,9 @@ exports.down = async function down(knex) {
       await knex.schema.alterTable('tenant_extension_install', (t) => {
         t.dropIndex(['tenant_id', 'registry_id'], 'tenant_extension_install_tenant_registry_idx');
       });
-    } catch (_e) {}
+    } catch (_e) {
+      // Constraint may not exist in all environments, safe to ignore
+    }
   }
 
   // extension_bundle: drop added columns and index
@@ -343,7 +351,9 @@ exports.down = async function down(knex) {
       await knex.schema.alterTable('extension_bundle', (t) => {
         t.dropIndex(['content_hash'], 'extension_bundle_content_hash_idx');
       });
-    } catch (_e) {}
+    } catch (_e) {
+      // Constraint may not exist in all environments, safe to ignore
+    }
     const hasStorageUrl = await knex.schema.hasColumn('extension_bundle', 'storage_url');
     if (hasStorageUrl) {
       await knex.schema.alterTable('extension_bundle', (t) => {
@@ -371,7 +381,9 @@ exports.down = async function down(knex) {
       await knex.schema.alterTable('extension_version', (t) => {
         t.dropIndex(['registry_id', 'version'], 'extension_version_registry_version_idx');
       });
-    } catch (_e) {}
+    } catch (_e) {
+      // Constraint may not exist in all environments, safe to ignore
+    }
   }
 
   // extension_registry: drop index; cannot reliably unset default
@@ -381,6 +393,8 @@ exports.down = async function down(knex) {
       await knex.schema.alterTable('extension_registry', (t) => {
         t.dropIndex(['publisher', 'name'], 'extension_registry_publisher_name_idx');
       });
-    } catch (_e) {}
+    } catch (_e) {
+      // Constraint may not exist in all environments, safe to ignore
+    }
   }
 };

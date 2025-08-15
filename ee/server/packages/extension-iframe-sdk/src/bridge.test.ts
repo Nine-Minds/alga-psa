@@ -4,13 +4,13 @@ import type { Envelope } from './types';
 
 const VERSION = '1';
 
-function dispatchFromParent(data: any, origin?: string) {
+function dispatchFromParent(data: unknown, origin?: string) {
   // In JSDOM, we dispatch directly on window. origin must match expectedParentOrigin (location.origin)
   const evt = new MessageEvent('message', {
     data,
     origin: origin ?? window.location.origin,
     // jsdom does not provide a separate parent window; using window is acceptable here
-    source: window as any,
+    source: window as Window,
   });
   window.dispatchEvent(evt);
 }
