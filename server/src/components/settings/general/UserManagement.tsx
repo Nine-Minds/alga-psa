@@ -32,6 +32,7 @@ const UserManagement = (): JSX.Element => {
   const [error, setError] = useState<string | null>(null);
   const [showNewUserForm, setShowNewUserForm] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [pwdReq, setPwdReq] = useState({minLength:false,hasUpper:false,hasLower:false,hasNumber:false,hasSpecial:false});
   const [portalType, setPortalType] = useState<'msp' | 'client'>('msp');
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
@@ -66,6 +67,18 @@ const UserManagement = (): JSX.Element => {
     if (portalType === 'client') {
       fetchContacts();
     }
+  }, [newUser.password]);
+
+  // Show live password requirements feedback when typing
+  useEffect(() => {
+    const pw = newUser.password || '';
+    setPwdReq({
+      minLength: pw.length >= 8,
+      hasUpper: /[A-Z]/.test(pw),
+      hasLower: /[a-z]/.test(pw),
+      hasNumber: /\d/.test(pw),
+      hasSpecial: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pw)
+    });
   }, [newUser.password]);
 
   const fetchUsers = async (): Promise<void> => {
@@ -210,10 +223,15 @@ const fetchContacts = async (): Promise<void> => {
           }
           await fetchUsers();
         } else {
+          // pwd validation
+          if (!(pwdReq.minLength && pwdReq.hasUpper && pwdReq.hasLower && pwdReq.hasNumber && pwdReq.hasSpecial)) {
+            toast.error('Password must be at least 8 characters and include upper, lower, number, and special character.');
+            return;
+          }
           const result = await createClientPortalUser(
             selectedContactId
-              ? { password: newUser.password, contactId: selectedContactId, requirePasswordChange: requirePwdChange }
-              : { password: newUser.password, contact: { email: newUser.email, fullName: `${newUser.firstName} ${newUser.lastName}`, companyId: newUser.companyId || '', isClientAdmin: false }, requirePasswordChange: requirePwdChange }
+              ? { password: newUser.password, contactId: selectedContactId, roleId: newUser.role, requirePasswordChange: requirePwdChange }
+              : { password: newUser.password, contact: { email: newUser.email, fullName: `${newUser.firstName} ${newUser.lastName}`, companyId: newUser.companyId || '', isClientAdmin: false }, roleId: newUser.role, requirePasswordChange: requirePwdChange }
           );
           if (result.success) {
             toast.success('Client portal user created successfully!');
@@ -328,7 +346,7 @@ const fetchContacts = async (): Promise<void> => {
               />
               <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             </div>
-            <div className="relative z-10">
+            <div className="relative z-[500]">
               <CustomSelect
                 value={filterStatus}
                 onValueChange={(value) => setFilterStatus(value as 'all' | 'active' | 'inactive')}
@@ -337,7 +355,7 @@ const fetchContacts = async (): Promise<void> => {
               />
             </div>
             {portalType === 'client' && (
-              <div className="relative z-10">
+              <div className="relative z-[500]">
                 <CompanyPicker
                   id="user-management-company-filter"
                   companies={companies}
@@ -347,18 +365,20 @@ const fetchContacts = async (): Promise<void> => {
                   onFilterStateChange={() => {}}
                   clientTypeFilter="all"
                   onClientTypeFilterChange={() => {}}
-                  placeholder="Select client company"
+                  placeholder="Select client"
                   fitContent={true}
                 />
               </div>
             )}
           </div>
-          <Button 
-            id={`create-new-${portalType}-user-btn`} 
-            onClick={() => setShowNewUserForm(true)}
-          >
-            Create New {portalType === 'msp' ? 'User' : 'Client User'}
-          </Button>
+          {!showNewUserForm && (
+            <Button 
+              id={`create-new-${portalType}-user-btn`} 
+              onClick={() => setShowNewUserForm(true)}
+            >
+              Create New {portalType === 'msp' ? 'User' : 'Client User'}
+            </Button>
+          )}
         </div>
         {showNewUserForm && (
           <div className="mb-4 p-4 border rounded-md">
@@ -370,7 +390,7 @@ const fetchContacts = async (): Promise<void> => {
                 {/* Left column: manual details */}
                 <div className="space-y-2">
                   <div>
-                    <Label htmlFor="firstName">First Name</Label>
+                    <Label htmlFor="firstName">First Name <span className="text-red-500">*</span></Label>
                     <Input
                       id="firstName"
                       value={newUser.firstName}
@@ -378,7 +398,7 @@ const fetchContacts = async (): Promise<void> => {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="lastName">Last Name</Label>
+                    <Label htmlFor="lastName">Last Name <span className="text-red-500">*</span></Label>
                     <Input
                       id="lastName"
                       value={newUser.lastName}
@@ -386,7 +406,7 @@ const fetchContacts = async (): Promise<void> => {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
                     <Input
                       id="email"
                       type="email"
@@ -395,8 +415,10 @@ const fetchContacts = async (): Promise<void> => {
                     />
                   </div>
                   {portalType === 'client' && (
-                    <div className="relative z-20">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Client Company (optional)</label>
+                    <div className="relative z-[500]">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Client 
+                        <span className="text-sm text-gray-500"> (optional)</span>
+                      </label>
                       <CompanyPicker
                         id="new-user-company-picker"
                         companies={companies}
@@ -406,12 +428,12 @@ const fetchContacts = async (): Promise<void> => {
                         onFilterStateChange={() => {}}
                         clientTypeFilter="all"
                         onClientTypeFilterChange={() => {}}
-                        placeholder="Select Company (Optional)"
+                        placeholder="Select Client"
                         fitContent={false}
                       />
                     </div>
                   )}
-                  <div className="relative z-20">
+                  <div className="relative z-[500]">
                     <CustomSelect
                       label="Primary Role"
                       value={newUser.role}
@@ -428,7 +450,9 @@ const fetchContacts = async (): Promise<void> => {
                 {/* Right column: existing contact OR set password */}
                 <div className="space-y-4">
                   {portalType === 'client' && (
-                    <div className="relative z-20">
+                    <div className="relative z-[500]">
+                      <Label className="block text-sm font-medium text-gray-700 mb-1">Existing Contact 
+                        <span className="text-sm text-gray-500"> (optional)</span> </Label>
                       <ContactPicker
                         id="new-user-contact-picker"
                         contacts={contacts}
@@ -451,13 +475,13 @@ const fetchContacts = async (): Promise<void> => {
                         }}
                         companyId={newUser.companyId || undefined}
                         label={newUser.password ? 'Select existing contact (optional)' : 'Select existing contact'}
-                        placeholder={newUser.password ? 'Select existing contact (filters by company)' : 'Select contact to invite'}
+                        placeholder={newUser.password ? 'Select existing contact' : 'Select contact to invite'}
                       />
                     </div>
                   )}
                   <div>
                     <Label htmlFor="password">
-                      Password {portalType === 'client' && <span className="text-sm text-gray-500">(Leave blank to send invitation)</span>}
+                      Password {portalType === 'msp' && <span className="text-red-500">*</span>} {portalType === 'client' && <span className="text-sm text-gray-500">(Leave blank to send invitation)</span>}
                     </Label>
                     <div className="relative">
                       <Input
@@ -482,16 +506,16 @@ const fetchContacts = async (): Promise<void> => {
                       </button>
                     </div>
                     {portalType === 'client' && (
-                      <p className="text-sm text-gray-500 mt-1">
+                      <div className={`mt-2 p-3 text-sm rounded-md border ${newUser.password ? 'bg-blue-50 border-blue-200' : 'bg-amber-50 border-amber-200'}`}>
                         {newUser.password
-                          ? 'User will be created with this password (no invitation will be sent)'
-                          : 'No password required — we will send a portal invitation for the user to set it'}
-                      </p>
+                          ? 'Setting a password will create the user immediately. They can log in right away.'
+                          : 'No password required — we will send a portal invitation for the user to set it.'}
+                      </div>
                     )}
                   </div>
                 </div>
               </div>
-<div className="flex gap-2">
+<div className="flex gap-2 justify-end">
                 <Button 
                   id={`submit-new-${portalType}-user-btn`} 
                   onClick={handleCreateUser}

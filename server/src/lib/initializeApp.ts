@@ -157,29 +157,25 @@ export async function initializeApp() {
 
     // Initialize enterprise features
     if (isEnterprise) {
-      // NOTE: Enterprise imports are commented out for CE builds
-      // These should only be uncommented when building the EE version
       
       // Initialize extensions
-      // try {
-      //   const { initializeExtensions } = await import('@ee/lib/extensions/initialize');
-      //   await initializeExtensions();
-      //   logger.info('Extension system initialized');
-      // } catch (error) {
-      //   logger.error('Failed to initialize extensions:', error);
-      //   // Continue startup even if extensions fail to load
-      // }
+       try {
+         const { initializeExtensions } = await import('@ee/lib/extensions/initialize');
+         await initializeExtensions();
+         logger.info('Extension system initialized');
+      } catch (error) {
+         logger.error('Failed to initialize extensions:', error);
+         // Continue startup even if extensions fail to load
+      }
 
       // Register enterprise storage providers for runtime factory
-      // try {
-      //   const { S3StorageProvider } = await import('@ee/lib/storage/providers/S3StorageProvider');
-      //   (global as any).S3StorageProvider = S3StorageProvider;
-      //   logger.info('Registered S3StorageProvider for enterprise edition');
-      // } catch (error) {
-      //   logger.warn('S3StorageProvider not available; continuing without S3 provider');
-      // }
-      
-      logger.info('Running in Enterprise mode (imports disabled for CE build)');
+       try {
+         const { S3StorageProvider } = await import('@ee/lib/storage/providers/S3StorageProvider');
+         (global as any).S3StorageProvider = S3StorageProvider;
+         logger.info('Registered S3StorageProvider for enterprise edition');
+      } catch (error) {
+         logger.warn('S3StorageProvider not available; continuing without S3 provider');
+      }
     }
 
     // Development environment setup (non-critical)
