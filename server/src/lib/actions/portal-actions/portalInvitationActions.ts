@@ -52,6 +52,7 @@ export interface InvitationHistoryItem {
 export interface CreateClientPortalUserParams {
   contactId?: string;
   password: string;
+  roleId?: string;
   contact?: {
     email: string;
     fullName: string;
@@ -89,7 +90,6 @@ export async function createClientPortalUser(
 
     // Create user and assign role
     const result = await knex.transaction(async (trx) => {
-      const systemContext = createSystemContext(tenant);
       const userService = new UserService();
 
       // 1) Resolve or create contact
@@ -101,15 +101,16 @@ export async function createClientPortalUser(
           .first();
         if (!contact && params.contact) {
           // Create new contact since provided ID not found and details are available
+          const normalizedCompanyId = params.contact.companyId && params.contact.companyId.trim() !== '' ? params.contact.companyId : null
           const [createdContact] = await trx('contacts')
             .insert({
               tenant,
               contact_name_id: trx.raw('gen_random_uuid()'),
               full_name: params.contact.fullName,
-              email: params.contact.email,
-              company_id: params.contact.companyId,
+              email: params.contact.email.toLowerCase(),
+              company_id: normalizedCompanyId,
               is_client_admin: !!params.contact.isClientAdmin,
-              is_active: true,
+              is_inactive: false,
               created_at: trx.raw('now()'),
               updated_at: trx.raw('now()')
             })
@@ -120,19 +121,25 @@ export async function createClientPortalUser(
 
       if (!contact && params.contact) {
         // Try to find by email + company; else create
-        contact = await trx('contacts')
-          .where({ tenant, email: params.contact.email, company_id: params.contact.companyId })
-          .first();
+        const normalizedCompanyId = params.contact.companyId && params.contact.companyId.trim() !== '' ? params.contact.companyId : null;
+        const q = trx('contacts')
+          .where({ tenant, email: params.contact.email.toLowerCase() });
+        if (normalizedCompanyId) {
+          q.andWhere('company_id', normalizedCompanyId);
+        } else {
+          q.whereNull('company_id');
+        }
+        contact = await q.first();
         if (!contact) {
           const [createdContact] = await trx('contacts')
             .insert({
               tenant,
               contact_name_id: trx.raw('gen_random_uuid()'),
               full_name: params.contact.fullName,
-              email: params.contact.email,
-              company_id: params.contact.companyId,
+              email: params.contact.email.toLowerCase(),
+              company_id: normalizedCompanyId,
               is_client_admin: !!params.contact.isClientAdmin,
-              is_active: true,
+              is_inactive: false,
               created_at: trx.raw('now()'),
               updated_at: trx.raw('now()')
             })
@@ -175,26 +182,49 @@ export async function createClientPortalUser(
         throw new Error('A user with this username already exists in this organization');
       }
 
-      const created = await userService.create({
-        username: contact.email,
-        email: contact.email,
-        password: params.password,
-        first_name: firstName,
-        last_name: lastName,
-        contact_id: contact.contact_name_id,
-        user_type: 'client',
-        is_inactive: false,
-        two_factor_enabled: false,
-        is_google_user: false
-      }, systemContext);
+      // 3a) Insert user within the same transaction to satisfy FK on (tenant, contact_id)
+      const { hashPassword } = await import('server/src/utils/encryption/encryption');
+      const hashedPassword = await hashPassword(params.password);
+      const [created] = await trx('users')
+        .insert({
+          tenant,
+          user_id: trx.raw('gen_random_uuid()'),
+          username: contact.email,
+          email: contact.email.toLowerCase(),
+          first_name: firstName,
+          last_name: lastName,
+          phone: null,
+          timezone: null,
+          hashed_password: hashedPassword,
+          user_type: 'client',
+          contact_id: contact.contact_name_id,
+          is_inactive: false,
+          two_factor_enabled: false,
+          is_google_user: false,
+          created_at: trx.raw('now()'),
+          updated_at: trx.raw('now()')
+        })
+        .returning('*');
 
-      // 4) Assign role
-      const roleName = contact?.is_client_admin ? 'Client Admin' : 'Client User';
-      const role = await trx('roles')
-        .where({ tenant, role_name: roleName, client: true })
-        .first();
-      if (role) {
-        await trx('user_roles').insert({ user_id: (created as any).user_id, role_id: role.role_id, tenant });
+      // 4) Assign role (prefer UI-selected roleId; fallback to contact's admin flag)
+      let targetRoleId: string | undefined = undefined;
+      if (params.roleId) {
+        const uiRole = await trx('roles')
+          .where({ tenant, role_id: params.roleId })
+          .first();
+        if (uiRole) {
+          targetRoleId = uiRole.role_id;
+        }
+      }
+      if (!targetRoleId) {
+        const roleName = contact?.is_client_admin ? 'Client Admin' : 'Client User';
+        const fallbackRole = await trx('roles')
+          .where({ tenant, role_name: roleName, client: true })
+          .first();
+        if (fallbackRole) targetRoleId = fallbackRole.role_id;
+      }
+      if (targetRoleId) {
+        await trx('user_roles').insert({ user_id: created.user_id, role_id: targetRoleId, tenant });
       }
 
       // 5) Set password-related preferences
@@ -203,20 +233,20 @@ export async function createClientPortalUser(
         if (params.requirePasswordChange) {
           // Force change on first login
           await UserPreferences.upsert(trx, {
-            user_id: (created as any).user_id,
+            user_id: created.user_id,
             setting_name: 'must_change_password',
             setting_value: true,
             updated_at: new Date()
           });
           await UserPreferences.upsert(trx, {
-            user_id: (created as any).user_id,
+            user_id: created.user_id,
             setting_name: 'has_reset_password',
             setting_value: false,
             updated_at: new Date()
           });
         } else {
           await UserPreferences.upsert(trx, {
-            user_id: (created as any).user_id,
+            user_id: created.user_id,
             setting_name: 'has_reset_password',
             setting_value: true,
             updated_at: new Date()
