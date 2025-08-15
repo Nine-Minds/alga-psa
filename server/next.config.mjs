@@ -1,6 +1,7 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
+import webpack, { NormalModuleReplacementPlugin } from 'webpack';
 // import CopyPlugin from 'copy-webpack-plugin';
 
 const require = createRequire(import.meta.url);
@@ -51,6 +52,11 @@ const nextConfig = {
         '@ee': process.env.NEXT_PUBLIC_EDITION === 'enterprise'
           ? path.join(__dirname, '../ee/server/src')
           : path.join(__dirname, 'src/empty'), // Point to empty implementations for CE builds
+        // Also map deep EE paths used without the @ee alias to CE stubs
+        // This ensures CE builds don't fail when code references ee/server/src directly
+        'ee/server/src': process.env.NEXT_PUBLIC_EDITION === 'enterprise'
+          ? path.join(__dirname, '../ee/server/src')
+          : path.join(__dirname, 'src/empty')
       },
       modules: [
         ...config.resolve.modules || ['node_modules'],
@@ -143,6 +149,18 @@ const nextConfig = {
       //     ],
       //   })
       // );
+    }
+
+    // In CE builds, replace any deep import of the EE S3 provider with the CE stub.
+    // This also catches relative paths like ../../../ee/server/src/lib/storage/providers/S3StorageProvider
+    if (process.env.NEXT_PUBLIC_EDITION !== 'enterprise') {
+      config.plugins = config.plugins || [];
+      config.plugins.push(
+        new NormalModuleReplacementPlugin(
+          /(.*)ee[\\\/]server[\\\/]src[\\\/]lib[\\\/]storage[\\\/]providers[\\\/]S3StorageProvider(\.[jt]s)?$/,
+          path.join(__dirname, 'src/empty/lib/storage/providers/S3StorageProvider')
+        )
+      );
     }
 
     return config;
