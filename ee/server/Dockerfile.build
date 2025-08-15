@@ -21,6 +21,8 @@ COPY tsconfig.base.json ./
 COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/assemblyscript
 
 RUN npm install
+## Ensure workspace installs for server and shared so node_modules exist per workspace
+RUN npm install --workspace=server --workspace=shared
 
 # Builder stage for compiling the application
 FROM deps AS builder
@@ -100,12 +102,16 @@ COPY --from=builder /app/server/seeds/ ./server/seeds/
 COPY --from=builder /app/server/src/ ./server/src/
 COPY --from=builder /app/secrets ./secrets
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/server/node_modules ./server/node_modules
 
 # Copy EE migrations (they get merged during build-enterprise.sh)
 COPY --from=builder /app/ee/server/migrations/ ./server/migrations/
 
 COPY server/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
+
+# Ensure tsx is available on PATH at runtime for `npm start`
+RUN npm install -g tsx
 
 # Create build timestamp for verification
 RUN echo "BUILD_TIME=$(date)" > /app/build-info.txt && \
