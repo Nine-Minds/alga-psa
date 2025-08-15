@@ -1,7 +1,7 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
-import webpack, { NormalModuleReplacementPlugin } from 'webpack';
+import webpack from 'webpack';
 // import CopyPlugin from 'copy-webpack-plugin';
 
 const require = createRequire(import.meta.url);
@@ -156,7 +156,7 @@ const nextConfig = {
     if (process.env.NEXT_PUBLIC_EDITION !== 'enterprise') {
       config.plugins = config.plugins || [];
       config.plugins.push(
-        new NormalModuleReplacementPlugin(
+        new webpack.NormalModuleReplacementPlugin(
           /(.*)ee[\\\/]server[\\\/]src[\\\/]lib[\\\/]storage[\\\/]providers[\\\/]S3StorageProvider(\.[jt]s)?$/,
           path.join(__dirname, 'src/empty/lib/storage/providers/S3StorageProvider')
         )
