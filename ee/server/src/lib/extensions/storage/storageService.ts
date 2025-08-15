@@ -3,9 +3,9 @@
  * 
  * Provides extension data storage with tenant isolation
  */
-import { createTenantKnex } from '../../../../../../server/src/lib/db';
-import logger from '../../../../../../shared/core/logger';
-import { getRedisClient } from '../../../../../../server/src/config/redisConfig';
+import { createTenantKnex } from '@/lib/db';
+import logger from '@alga-psa/shared/core/logger';
+import { getRedisClient } from '@/config/redisConfig';
 import { 
   ExtensionStorageService as IExtensionStorageService,
   StorageOptions

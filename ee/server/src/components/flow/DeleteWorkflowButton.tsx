@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import styles from '../../../../../server/src/app/msp/workflows/Workflows.module.css';
+import styles from '@/app/msp/workflows/Workflows.module.css';
 import Popup from './Popup';
 import { useRouter } from 'next/navigation';
 

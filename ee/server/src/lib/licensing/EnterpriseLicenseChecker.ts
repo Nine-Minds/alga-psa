@@ -1,4 +1,4 @@
-import { ILicenseChecker, LicenseCheckResult } from '../../../../../server/src/lib/licensing/LicenseChecker';
+import { ILicenseChecker, LicenseCheckResult } from '@/lib/licensing/LicenseChecker';
 
 export class EnterpriseLicenseChecker implements ILicenseChecker {
   private readonly DEFAULT_USER_LIMIT = 50;

@@ -9,17 +9,17 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Button } from 'server/src/components/ui/Button';
-import { Input } from 'server/src/components/ui/Input';
-import { Label } from 'server/src/components/ui/Label';
-import { Switch } from 'server/src/components/ui/Switch';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Label } from '@/components/ui/Label';
+import { Switch } from '@/components/ui/Switch';
+import { Alert, AlertDescription } from '@/components/ui/Alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { CheckCircle, Clock, Shield } from 'lucide-react';
-import type { EmailProvider } from 'server/src/components/EmailProviderConfiguration';
-import { createEmailProvider, updateEmailProvider, upsertEmailProvider, getHostedMicrosoftConfig } from 'server/src/lib/actions/email-actions/emailProviderActions';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { getInboundTicketDefaults } from 'server/src/lib/actions/email-actions/inboundTicketDefaultsActions';
+import type { EmailProvider } from '@/components/EmailProviderConfiguration';
+import { createEmailProvider, updateEmailProvider, upsertEmailProvider, getHostedMicrosoftConfig } from '@/lib/actions/email-actions/emailProviderActions';
+import CustomSelect from '@/components/ui/CustomSelect';
+import { getInboundTicketDefaults } from '@/lib/actions/email-actions/inboundTicketDefaultsActions';
 
 const eeMicrosoftProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),

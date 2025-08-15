@@ -8,8 +8,8 @@ import {
     S3
 } from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
-import { BaseStorageProvider, UploadResult, StorageError, RangeOptions } from 'server/src/lib/storage/providers/StorageProvider';
-import { S3ProviderConfig, StorageCapabilities } from 'server/src/types/storage';
+import { BaseStorageProvider, UploadResult, StorageError, RangeOptions } from '@/lib/storage/providers/StorageProvider';
+import { S3ProviderConfig, StorageCapabilities } from '@/types/storage';
 
 export class S3StorageProvider extends BaseStorageProvider {
     private readonly client: S3Client;
