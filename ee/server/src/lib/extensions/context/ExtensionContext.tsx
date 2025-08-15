@@ -9,7 +9,7 @@ import type {
   StorageService,
   UIService,
   UserInfo
-} from '../descriptors/types';
+} from '../types';
 
 interface ExtensionContextProviderProps {
   extensionId: string;
