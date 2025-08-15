@@ -13,7 +13,7 @@
  * - Never uses targetOrigin="*" except in dev explicitly guarded via NODE_ENV !== 'production' or global __ALGA_DEV__ flag
  */
 
-import { buildExtUiSrc as buildExtUiSrcShared } from '../../assets/url.shared';
+import { buildExtUiSrc as buildExtUiSrcShared } from '@/lib/extensions/assets/url.shared';
 
 const ENVELOPE_VERSION = '1' as const;
 const HASH_REGEX = /^sha256:[0-9a-f]{64}$/i;
