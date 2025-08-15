@@ -149,6 +149,7 @@ export function ExtensionContextProvider({
       toast: (message: string, type = 'info') => {
         toast({
           title: message,
+          description: '',
           variant: type === 'error' ? 'destructive' : 'default'
         });
       },
