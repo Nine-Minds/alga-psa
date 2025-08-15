@@ -4,8 +4,13 @@
     "noEmit": true
   },
   "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "scripts/**/*.ts",
     "src/test/**/*.ts",
-    "src/test/**/*.tsx"
+    "src/test/**/*.tsx",
+    "src/invoice-templates/assemblyscript/**/*.ts",
+    "src/lib/workflows/**/*.ts"
   ],
   "exclude": [
     "node_modules",
