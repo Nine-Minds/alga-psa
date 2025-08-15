@@ -12,7 +12,7 @@ import {
   ITimePeriodView
 } from 'server/src/interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
-import TimeSheetComment from 'server/src/interfaces/timeSheetComment';
+import TimeSheetComment from 'server/src/lib/models/timeSheetComment';
 import { formatISO } from 'date-fns';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { 
