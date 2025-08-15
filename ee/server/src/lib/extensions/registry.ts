@@ -3,8 +3,8 @@
  * 
  * This service manages extension registration, initialization, and lifecycle.
  */
-import { createTenantKnex } from '../../../../../server/src/lib/db';
-import logger from '../../../../../shared/core/logger';
+import { createTenantKnex } from '@/lib/db';
+import logger from '@alga-psa/shared/core/logger';
 import { ExtensionStorageService } from './storage/storageService';
 import {
   Extension,
