@@ -6,10 +6,10 @@ import { useDrawer } from "server/src/context/DrawerContext";
 import { DataTable } from 'server/src/components/ui/DataTable';
 import UserAvatar from '../../ui/UserAvatar';
 import { getUserAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
-import { MoreVertical, Pen, Trash2, Mail } from 'lucide-react';
-import { sendPortalInvitation } from 'server/src/lib/actions/portal-actions/portalInvitationActions';
+import { MoreVertical, Pen, Trash2 } from 'lucide-react';
+
 import CompanyDetails from 'server/src/components/companies/CompanyDetails';
-import toast from 'react-hot-toast';
+
 import { getUsersCompanyInfo } from 'server/src/lib/actions/user-actions/userCompanyActions';
 import {
   DropdownMenu,
@@ -30,7 +30,6 @@ interface UserListProps {
 const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate, selectedCompanyId = null }) => {
   const [userToDelete, setUserToDelete] = useState<IUser | null>(null);
   const [userAvatars, setUserAvatars] = useState<Record<string, string | null>>({});
-  const [sendingInvitation, setSendingInvitation] = useState<string | null>(null);
   const [userCompanies, setUserCompanies] = useState<Record<string, { company_id: string; company_name: string } | null>>({});
   const { openDrawer } = useDrawer();
 
@@ -119,28 +118,7 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate, sele
     }
   };
 
-  const handleSendInvitation = async (user: IUser): Promise<void> => {
-    if (!user.contact_id) {
-      toast.error('This user does not have an associated contact');
-      return;
-    }
-    
-    setSendingInvitation(user.user_id);
-    try {
-      const result = await sendPortalInvitation(user.contact_id);
-      
-      if (result.success) {
-        toast.success(result.message || 'Portal invitation sent successfully!');
-      } else {
-        toast.error(result.error || 'Failed to send invitation');
-      }
-    } catch (error) {
-      console.error('Error sending portal invitation:', error);
-      toast.error('Failed to send invitation');
-    } finally {
-      setSendingInvitation(null);
-    }
-  };
+  
 
   const handleEditClick = (userId: string) => {
     openDrawer(<UserDetails userId={userId} onUpdate={onUpdate} />);
@@ -267,20 +245,6 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate, sele
               <Pen size={14} className="mr-2" />
               Edit
             </DropdownMenuItem>
-            {record.user_type === 'client' && record.contact_id && (
-              <DropdownMenuItem
-                id={`send-invitation-menu-item-${record.user_id}`}
-                onClick={(e: React.MouseEvent) => {
-                  e.stopPropagation();
-                  handleSendInvitation(record);
-                }}
-                disabled={sendingInvitation === record.user_id}
-                className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
-              >
-                <Mail size={14} className="mr-2" />
-                {sendingInvitation === record.user_id ? 'Sending...' : 'Send Portal Invitation'}
-              </DropdownMenuItem>
-            )}
             <DropdownMenuItem
               id={`remove-user-menu-item-${record.user_id}`}
               onClick={(e: React.MouseEvent) => {

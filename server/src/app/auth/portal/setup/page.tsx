@@ -13,6 +13,7 @@ import {
   verifyPortalToken, 
   completePortalSetup 
 } from 'server/src/lib/actions/portal-actions/portalInvitationActions';
+import { signIn } from 'next-auth/react';
 
 interface ContactInfo {
   contact_name_id: string;
@@ -117,9 +118,25 @@ export default function PortalSetupPage() {
       const result = await completePortalSetup(token, formData.password);
       
       if (result.success) {
-        toast.success('Portal account created successfully!');
-        // Redirect to client portal login page
-        router.push('/client-portal/dashboard?message=Account created successfully. Please sign in.');
+        // Attempt auto sign-in with the new credentials
+        try {
+          const signinRes = await signIn('credentials', {
+            username: result.username,
+            password: formData.password,
+            redirect: false
+          });
+          if (signinRes && (signinRes as any).error) {
+            // Fallback to manual sign-in if auto sign-in fails
+            toast.success('Account ready. Please sign in.');
+            router.push('/client-portal/dashboard?message=Account created successfully. Please sign in.');
+          } else {
+            toast.success('Welcome to the client portal!');
+            router.push('/client-portal/dashboard');
+          }
+        } catch (e) {
+          toast.success('Account ready. Please sign in.');
+          router.push('/client-portal/dashboard?message=Account created successfully. Please sign in.');
+        }
       } else {
         toast.error(result.error || 'Failed to create account');
       }

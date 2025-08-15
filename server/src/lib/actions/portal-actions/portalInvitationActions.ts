@@ -58,6 +58,7 @@ export interface CreateClientPortalUserParams {
     companyId: string;
     isClientAdmin?: boolean;
   };
+  requirePasswordChange?: boolean;
 }
 
 export async function createClientPortalUser(
@@ -196,15 +197,31 @@ export async function createClientPortalUser(
         await trx('user_roles').insert({ user_id: (created as any).user_id, role_id: role.role_id, tenant });
       }
 
-      // 5) Mark password set
+      // 5) Set password-related preferences
       try {
         const UserPreferences = await import('../../models/userPreferences').then(m => m.default);
-        await UserPreferences.upsert(trx, {
-          user_id: (created as any).user_id,
-          setting_name: 'has_reset_password',
-          setting_value: true,
-          updated_at: new Date()
-        });
+        if (params.requirePasswordChange) {
+          // Force change on first login
+          await UserPreferences.upsert(trx, {
+            user_id: (created as any).user_id,
+            setting_name: 'must_change_password',
+            setting_value: true,
+            updated_at: new Date()
+          });
+          await UserPreferences.upsert(trx, {
+            user_id: (created as any).user_id,
+            setting_name: 'has_reset_password',
+            setting_value: false,
+            updated_at: new Date()
+          });
+        } else {
+          await UserPreferences.upsert(trx, {
+            user_id: (created as any).user_id,
+            setting_name: 'has_reset_password',
+            setting_value: true,
+            updated_at: new Date()
+          });
+        }
       } catch {}
 
       return created as any;
