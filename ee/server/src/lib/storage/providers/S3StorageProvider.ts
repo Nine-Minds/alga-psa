@@ -18,11 +18,14 @@ export class S3StorageProvider extends BaseStorageProvider {
     constructor(config: S3ProviderConfig) {
         super('s3', config);
 
-        const { region, bucket, accessKey, secretKey } = config;
+        const { region, bucket, accessKey, secretKey, endpoint } = config;
 
         this.bucket = bucket;
+        const forcePathStyle = String(process.env.STORAGE_S3_FORCE_PATH_STYLE ?? (endpoint ? 'true' : 'false')) === 'true';
         this.client = new S3Client({
             region,
+            endpoint,
+            forcePathStyle,
             credentials: {
                 accessKeyId: accessKey,
                 secretAccessKey: secretKey,

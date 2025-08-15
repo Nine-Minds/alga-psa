@@ -49,7 +49,8 @@ spec:
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       volumes:
-        {{- if .Values.server.persistence.enabled }}
+        {{- /* Only mount storage volume when using local storage (S3 not enabled) */}}
+        {{- if and .Values.server.persistence.enabled (not .Values.config.storage.providers.s3.enabled) }}
         - name: storage-volume
           {{- if .Values.server.persistence.existingClaim }}
           persistentVolumeClaim:
@@ -67,6 +68,11 @@ spec:
           command: ["./entrypoint.sh"]
           imagePullPolicy: {{ .Values.server.pullPolicy }}
           env:
+          # ----------- EDITION ----------------
+          - name: NEXT_PUBLIC_EDITION
+            value: "{{ .Values.edition | default "community" }}"
+          - name: EDITION
+            value: "{{ .Values.edition | default "community" }}"
           # ----------- APP ----------------
           - name: VERSION
             value: "{{ .Values.version }}"
@@ -202,13 +208,13 @@ spec:
           - name: STORAGE_S3_ACCESS_KEY
             valueFrom:
               secretKeyRef:
-                name: storage-credentials
-                key: S3_ACCESS_KEY
+                name: {{ .Values.config.storage.providers.s3.secretRef.name | default "storage-credentials" | quote }}
+                key: {{ .Values.config.storage.providers.s3.secretRef.accessKeyKey | default "S3_ACCESS_KEY" | quote }}
           - name: STORAGE_S3_SECRET_KEY
             valueFrom:
               secretKeyRef:
-                name: storage-credentials
-                key: S3_SECRET_KEY
+                name: {{ .Values.config.storage.providers.s3.secretRef.name | default "storage-credentials" | quote }}
+                key: {{ .Values.config.storage.providers.s3.secretRef.secretKeyKey | default "S3_SECRET_KEY" | quote }}
           {{- if .Values.config.storage.providers.s3.endpoint }}
           - name: STORAGE_S3_ENDPOINT
             value: "{{ .Values.config.storage.providers.s3.endpoint }}"
@@ -408,7 +414,7 @@ spec:
             value: "{{ .Values.secrets_provider.vault.tenantSecretPathTemplate }}"
           {{- end }}
           {{- end }}
-         {{- if .Values.server.persistence.enabled }}
+         {{- if and .Values.server.persistence.enabled (not .Values.config.storage.providers.s3.enabled) }}
           volumeMounts:
             - name: storage-volume
               mountPath: {{ .Values.server.persistence.mountPath }}
