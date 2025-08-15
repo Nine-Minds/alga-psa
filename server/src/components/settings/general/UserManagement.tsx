@@ -6,7 +6,7 @@ import UserList from './UserList';
 import { getAllUsers, addUser, getUserWithRoles, deleteUser, getMSPRoles, getClientPortalRoles } from 'server/src/lib/actions/user-actions/userActions';
 import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
 import { addContact } from 'server/src/lib/actions/contact-actions/contactActions';
-import { sendPortalInvitation } from 'server/src/lib/actions/portal-actions/portalInvitationActions';
+import { sendPortalInvitation, createClientPortalUser } from 'server/src/lib/actions/portal-actions/portalInvitationActions';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import { createTenantKnex } from 'server/src/lib/db';
 import toast from 'react-hot-toast';
@@ -138,55 +138,47 @@ const UserManagement = (): JSX.Element => {
       }
 
       if (portalType === 'client') {
-        // Create contact first for client portal users
-        const contact = await addContact({
-          full_name: `${newUser.firstName} ${newUser.lastName}`,
-          email: newUser.email,
-          company_id: newUser.companyId || undefined,
-          is_inactive: false
-        });
+        // Default: send invitation (no password set)
+        if (!newUser.password) {
+          // Ensure contact exists (create or update) and then send invite
+          const contact = await addContact({
+            full_name: `${newUser.firstName} ${newUser.lastName}`,
+            email: newUser.email,
+            company_id: newUser.companyId || undefined,
+            is_inactive: false
+          });
 
-        // For client portal users, we'll create with a temporary password if none provided
-        // They'll set their actual password through the invitation
-        const password = newUser.password || uuidv4();
-        
-        // Then create the user with client portal role
-        const createdUser = await addUser({
-          firstName: newUser.firstName,
-          lastName: newUser.lastName,
-          email: newUser.email,
-          password: password,
-          roleId: newUser.role || (roles.length > 0 ? roles[0].role_id : undefined),
-          userType: 'client',
-          contactId: contact.contact_name_id
-        });
-
-        // Fetch the updated user with roles
-        const updatedUser = await getUserWithRoles(createdUser.user_id);
-        if (updatedUser) {
-          await fetchUsers(); // Refresh the entire list
-          
-          // Automatically send portal invitation if no password was provided
-          if (!newUser.password) {
-            try {
-              const invitationResult = await sendPortalInvitation(contact.contact_name_id);
-              if (invitationResult.success) {
-                toast.success('User created and portal invitation sent successfully!');
-              } else {
-                toast('User created but invitation failed: ' + invitationResult.error, {
-                  icon: '⚠️',
-                  duration: 5000
-                });
-              }
-            } catch (inviteError) {
-              toast('User created but failed to send invitation. You can send it manually from the user list.', {
-                icon: '⚠️',
-                duration: 5000
-              });
+          try {
+            const invitationResult = await sendPortalInvitation(contact.contact_name_id);
+            if (invitationResult.success) {
+              toast.success('Portal invitation sent successfully!');
+            } else {
+              toast(invitationResult.error || 'Failed to send invitation', { icon: '⚠️', duration: 5000 });
             }
-          } else {
-            toast.success('Client portal user created successfully!');
+          } catch (inviteError) {
+            toast('Failed to send invitation. You can send it manually from the user list.', { icon: '⚠️', duration: 5000 });
           }
+
+          await fetchUsers();
+        } else {
+          // Optional path: set password manually and create user without invitation
+          const result = await createClientPortalUser({
+            password: newUser.password,
+            contact: {
+              email: newUser.email,
+              fullName: `${newUser.firstName} ${newUser.lastName}`,
+              companyId: newUser.companyId || '',
+              isClientAdmin: false
+            }
+          });
+
+          if (result.success) {
+            toast.success('Client portal user created successfully!');
+          } else {
+            throw new Error(result.error || 'Failed to create client portal user');
+          }
+
+          await fetchUsers();
         }
       } else {
         // Create MSP user
@@ -359,7 +351,7 @@ const UserManagement = (): JSX.Element => {
               </div>
               <div>
                 <Label htmlFor="password">
-                  Password {portalType === 'client' && <span className="text-sm text-gray-500">(Optional - user can set via invitation)</span>}
+                  Password {portalType === 'client' && <span className="text-sm text-gray-500">(Leave blank to send invitation)</span>}
                 </Label>
                 <div className="relative">
                   <Input
@@ -382,9 +374,11 @@ const UserManagement = (): JSX.Element => {
                     )}
                   </button>
                 </div>
-                {portalType === 'client' && !newUser.password && (
+                {portalType === 'client' && (
                   <p className="text-sm text-gray-500 mt-1">
-                    A portal invitation will be sent for the user to set their password
+                    {newUser.password
+                      ? 'User will be created with this password (no invitation will be sent)'
+                      : 'No password required — we will send a portal invitation for the user to set it'}
                   </p>
                 )}
               </div>
@@ -423,7 +417,7 @@ const UserManagement = (): JSX.Element => {
                   id={`submit-new-${portalType}-user-btn`} 
                   onClick={handleCreateUser}
                 >
-                  Create {portalType === 'msp' ? 'User' : 'Client User'}
+                  {portalType === 'msp' ? 'Create User' : newUser.password ? 'Create User' : 'Send Portal Invitation'}
                 </Button>
                 <Button 
                   id={`cancel-new-${portalType}-user-btn`} 
