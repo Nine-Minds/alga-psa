@@ -72,7 +72,12 @@ async function main() {
     try {
       token = await getAppOnlyToken();
     } catch (err) {
+      const status = err.response?.status;
+      const body = err.response?.data;
       console.error('Failed to obtain app-only token:', err.message || err);
+      if (status || body) {
+        console.error('Token endpoint response:', { status, body });
+      }
       process.exit(1);
     }
   }
@@ -114,4 +119,3 @@ async function main() {
 }
 
 main();
-
