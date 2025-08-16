@@ -107,7 +107,21 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         throw new Error('Microsoft OAuth credentials not configured');
       }
 
-      const tokenUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
+      // Determine tenant authority for single-tenant apps
+      const vendorTenantId = this.config.provider_config?.tenant_id;
+      let tenantAuthority = vendorTenantId || process.env.MICROSOFT_TENANT_ID;
+      if (!tenantAuthority) {
+        try {
+          const secretProvider = await getSecretProviderInstance();
+          tenantAuthority = await secretProvider.getTenantSecret(this.config.tenant, 'microsoft_tenant_id')
+            || await secretProvider.getAppSecret('MICROSOFT_TENANT_ID')
+            || 'common';
+        } catch {
+          tenantAuthority = 'common';
+        }
+      }
+
+      const tokenUrl = `https://login.microsoftonline.com/${encodeURIComponent(tenantAuthority)}/oauth2/v2.0/token`;
       const params = new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,

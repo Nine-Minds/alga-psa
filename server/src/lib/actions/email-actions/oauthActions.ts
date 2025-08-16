@@ -57,8 +57,17 @@ export async function initiateEmailOAuth(params: {
       hosted: isHosted
     };
 
+    // Determine Microsoft tenant authority for single-tenant apps
+    let msTenantAuthority: string | undefined;
+    if (provider === 'microsoft') {
+      msTenantAuthority = process.env.MICROSOFT_TENANT_ID
+        || (await secretProvider.getAppSecret('MICROSOFT_TENANT_ID'))
+        || (await secretProvider.getTenantSecret(user.tenant, 'microsoft_tenant_id'))
+        || 'common';
+    }
+
     const authUrl = provider === 'microsoft'
-      ? generateMicrosoftAuthUrl(clientId, state.redirectUri, state)
+      ? generateMicrosoftAuthUrl(clientId, state.redirectUri, state, undefined as any, msTenantAuthority)
       : generateGoogleAuthUrl(clientId, state.redirectUri, state);
 
     return { success: true, authUrl, state: Buffer.from(JSON.stringify(state)).toString('base64') };
@@ -66,4 +75,3 @@ export async function initiateEmailOAuth(params: {
     return { success: false, error: err?.message || 'Failed to initiate OAuth' };
   }
 }
-
