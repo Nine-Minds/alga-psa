@@ -18,6 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { ExternalLink, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
 import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from '../lib/actions/email-actions/emailProviderActions';
+import { initiateEmailOAuth } from 'server/src/lib/actions/email-actions/oauthActions';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { getInboundTicketDefaults } from 'server/src/lib/actions/email-actions/inboundTicketDefaultsActions';
 
@@ -186,25 +187,16 @@ export function MicrosoftProviderForm({
         providerId = result.provider.id;
       }
 
-      // Get OAuth URL from API
-      const response = await fetch('/api/email/oauth/initiate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          provider: 'microsoft',
-          redirectUri: formData.redirectUri,
-          providerId: providerId
-        })
+      // Get OAuth URL via server action
+      const oauthInit = await initiateEmailOAuth({
+        provider: 'microsoft',
+        redirectUri: formData.redirectUri,
+        providerId: providerId,
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to initiate OAuth');
+      if (!oauthInit.success) {
+        throw new Error(oauthInit.error || 'Failed to initiate OAuth');
       }
-
-      const { authUrl } = await response.json();
+      const { authUrl } = oauthInit;
 
       // Open OAuth popup
       const popup = window.open(
