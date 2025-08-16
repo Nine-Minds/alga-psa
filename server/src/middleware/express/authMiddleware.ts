@@ -102,6 +102,12 @@ export async function apiKeyAuthMiddleware(
     return next();
   }
 
+  // Skip API key requirement for OAuth initiation when user is authenticated via session
+  // The route itself checks session via getCurrentUser and returns 401 if not logged in
+  if (req.path === '/api/email/oauth/initiate' || req.path === '/api/email/oauth/initiate/') {
+    return next();
+  }
+
   const apiKey = req.headers['x-api-key'] as string;
   
   if (!apiKey) {

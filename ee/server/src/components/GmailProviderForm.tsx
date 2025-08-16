@@ -13,7 +13,8 @@ import { Alert, AlertDescription } from '@/components/ui/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Shield } from 'lucide-react';
 import type { EmailProvider } from '@/components/EmailProviderConfiguration';
-import { createEmailProvider, updateEmailProvider, upsertEmailProvider, getHostedGmailConfig, initiateOAuth } from '@/lib/actions/email-actions/emailProviderActions';
+import { createEmailProvider, updateEmailProvider, upsertEmailProvider, getHostedGmailConfig } from '@/lib/actions/email-actions/emailProviderActions';
+import { initiateEmailOAuth } from '@/lib/actions/email-actions/oauthActions';
 import { useOAuthPopup } from '@/components/providers/gmail/useOAuthPopup';
 import { BasicConfigCard } from '@/components/providers/gmail/BasicConfigCard';
 import { ProcessingSettingsCard } from '@/components/providers/gmail/ProcessingSettingsCard';
@@ -185,10 +186,9 @@ export function GmailProviderForm({
       }
 
       // Get OAuth URL from server action (hosted OAuth configuration)
-      const oauthResult = await initiateOAuth({
+      const oauthResult = await initiateEmailOAuth({
         provider: 'google',
         providerId,
-        hosted: true,
       });
       if (!oauthResult.success || !oauthResult.authUrl) {
         throw new Error(oauthResult.error || 'Failed to initiate OAuth');
