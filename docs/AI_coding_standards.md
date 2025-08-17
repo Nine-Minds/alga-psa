@@ -9,20 +9,6 @@
 
 Prefer radix components over other libraries
 
-## Import Paths
-
-- **Always use full relative paths** instead of `@` aliases
-- Example:
-  ```tsx
-  // Good
-  import { Button } from 'server/src/components/ui/Button';
-  import { createUser } from 'server/src/lib/actions/user-actions/userActions';
-  
-  // Bad - Don't use @ imports
-  import { Button } from '@/components/ui/Button';
-  import { createUser } from '@/lib/actions/user-actions/userActions';
-  ```
-
 ## UI Components
 
 **IMPORTANT: All interactive elements (buttons, inputs, selects, etc.) MUST have unique `id` attributes for the reflection UI system. See Component ID Guidelines section for naming conventions.**

@@ -3,6 +3,8 @@ import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
 import { withTransaction } from '@alga-psa/shared/db';
 import { publishEvent } from '@alga-psa/shared/events/publisher.js';
 import { randomBytes } from 'crypto';
+import { MicrosoftGraphAdapter } from '@/services/email/providers/MicrosoftGraphAdapter';
+import type { EmailProviderConfig } from '@/interfaces/email.interfaces';
 
 interface MicrosoftNotification {
   changeType: string;
@@ -69,12 +71,9 @@ export async function POST(request: NextRequest) {
             return;
           }
 
-          // Validate client state
-          const vendorConfig = typeof provider.vendor_config === 'string' 
-            ? JSON.parse(provider.vendor_config) 
-            : provider.vendor_config;
-
-          if (notification.clientState !== vendorConfig.clientState) {
+          // Validate clientState against primary source (email_providers.webhook_verification_token)
+          const webhookToken = provider.webhook_verification_token;
+          if (webhookToken && notification.clientState !== webhookToken) {
             console.error(`Invalid client state for provider ${provider.id}`);
             return;
           }
@@ -86,29 +85,78 @@ export async function POST(request: NextRequest) {
             return;
           }
 
-          // Publish INBOUND_EMAIL_RECEIVED event
-          await publishEvent({
-            eventType: 'INBOUND_EMAIL_RECEIVED',
-            tenant: provider.tenant,
-            payload: {
-              tenantId: provider.tenant,
-              tenant: provider.tenant,
-              providerId: provider.id,
-              providerType: 'microsoft',
-              mailbox: provider.mailbox,
-              messageId: messageId,
-              changeType: notification.changeType,
-              webhookData: {
-                subscriptionId: notification.subscriptionId,
-                resource: notification.resource,
-                resourceData: notification.resourceData,
-                timestamp: new Date().toISOString()
-              }
-            }
-          });
+          // Build provider config to fetch full email details
+          const msConfig = await trx('microsoft_email_provider_config')
+            .where('email_provider_id', provider.id)
+            .andWhere('tenant', provider.tenant)
+            .first();
 
-          processedNotifications.push(messageId);
-          console.log(`Published event for Microsoft email: ${messageId} from ${provider.mailbox}`);
+          const providerConfig: EmailProviderConfig = {
+            id: provider.id,
+            tenant: provider.tenant,
+            name: provider.provider_name || provider.mailbox,
+            provider_type: 'microsoft',
+            mailbox: provider.mailbox,
+            folder_to_monitor: 'Inbox',
+            active: provider.is_active,
+            webhook_notification_url: provider.webhook_notification_url,
+            webhook_subscription_id: provider.webhook_subscription_id,
+            webhook_verification_token: provider.webhook_verification_token,
+            webhook_expires_at: provider.webhook_expires_at,
+            connection_status: provider.connection_status || provider.status || 'connected',
+            created_at: provider.created_at,
+            updated_at: provider.updated_at,
+            provider_config: msConfig ? {
+              client_id: msConfig.client_id,
+              client_secret: msConfig.client_secret,
+              tenant_id: msConfig.tenant_id,
+              access_token: msConfig.access_token,
+              refresh_token: msConfig.refresh_token,
+              token_expires_at: msConfig.token_expires_at,
+            } : {},
+          } as any;
+
+          try {
+            const adapter = new MicrosoftGraphAdapter(providerConfig);
+            await adapter.connect();
+            const details = await adapter.getMessageDetails(messageId);
+            await publishEvent({
+              eventType: 'INBOUND_EMAIL_RECEIVED',
+              tenant: provider.tenant,
+              payload: {
+                tenantId: provider.tenant,
+                tenant: provider.tenant,
+                providerId: provider.id,
+                emailData: details,
+              },
+            });
+            processedNotifications.push(messageId);
+            console.log(`Published enriched event for Microsoft email: ${messageId} from ${provider.mailbox}`);
+          } catch (detailErr: any) {
+            console.warn(`Failed to fetch/publish Microsoft message ${messageId}: ${detailErr?.message || detailErr}`);
+            // Fallback: publish minimal event to acknowledge
+            await publishEvent({
+              eventType: 'INBOUND_EMAIL_RECEIVED',
+              tenant: provider.tenant,
+              payload: {
+                tenantId: provider.tenant,
+                tenant: provider.tenant,
+                providerId: provider.id,
+                emailData: {
+                  id: messageId,
+                  provider: 'microsoft',
+                  providerId: provider.id,
+                  tenant: provider.tenant,
+                  receivedAt: new Date().toISOString(),
+                  from: { email: '', name: undefined },
+                  to: [],
+                  subject: notification.resourceData?.subject || '',
+                  body: { text: '', html: undefined },
+                } as any,
+              },
+            });
+            processedNotifications.push(messageId);
+          }
         });
       } catch (error) {
         console.error('Error processing Microsoft notification:', error);

@@ -124,6 +124,7 @@ export async function GET(request: NextRequest) {
     const secretProvider = await getSecretProviderInstance();
     let clientId: string | null = null;
     let clientSecret: string | null = null;
+    let tenantAuthority: string | null = null;
     const nextauthUrl = process.env.NEXTAUTH_URL || (await secretProvider.getAppSecret('NEXTAUTH_URL')) || '';
     const isHostedFlow = nextauthUrl.startsWith('https://algapsa.com');
     
@@ -131,10 +132,12 @@ export async function GET(request: NextRequest) {
       // Use app-level configuration
       clientId = await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID') || null;
       clientSecret = await secretProvider.getAppSecret('MICROSOFT_CLIENT_SECRET') || null;
+      tenantAuthority = await secretProvider.getAppSecret('MICROSOFT_TENANT_ID') || null;
     } else {
       // Use tenant-specific or fallback credentials
       clientId = process.env.MICROSOFT_CLIENT_ID || await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_client_id') || null;
       clientSecret = process.env.MICROSOFT_CLIENT_SECRET || await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_client_secret') || null;
+      tenantAuthority = process.env.MICROSOFT_TENANT_ID || await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_tenant_id') || null;
     }
     
     const redirectUri = stateData.redirectUri || `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/microsoft/callback`;
@@ -173,7 +176,8 @@ export async function GET(request: NextRequest) {
 
     // Exchange authorization code for tokens
     try {
-      const tokenUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
+      const authority = tenantAuthority || 'common';
+      const tokenUrl = `https://login.microsoftonline.com/${encodeURIComponent(authority)}/oauth2/v2.0/token`;
       const params = new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,
