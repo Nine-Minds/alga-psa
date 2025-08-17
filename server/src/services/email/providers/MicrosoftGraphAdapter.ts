@@ -108,7 +108,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       }
 
       // Determine tenant authority for single-tenant apps
-      const vendorTenantId = this.config.provider_config?.tenant_id;
+      const vendorTenantId = (this.config.provider_config as any)?.tenant_id || this.config.provider_config?.tenantId;
       let tenantAuthority = vendorTenantId || process.env.MICROSOFT_TENANT_ID;
       if (!tenantAuthority) {
         try {

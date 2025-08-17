@@ -47,10 +47,10 @@ export async function initiateEmailOAuth(params: {
 
     if (isHosted) {
       if (provider === 'google') {
-        clientId = await secretProvider.getAppSecret('GOOGLE_CLIENT_ID');
+        clientId = (await secretProvider.getAppSecret('GOOGLE_CLIENT_ID')) || null;
         effectiveRedirectUri = effectiveRedirectUri || (await secretProvider.getAppSecret('GOOGLE_REDIRECT_URI')) || 'https://api.algapsa.com/api/auth/google/callback';
       } else {
-        clientId = await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID');
+        clientId = (await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID')) || null;
         effectiveRedirectUri = effectiveRedirectUri || (await secretProvider.getAppSecret('MICROSOFT_REDIRECT_URI')) || 'https://api.algapsa.com/api/auth/microsoft/callback';
       }
     } else {

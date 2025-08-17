@@ -205,12 +205,13 @@ export function GmailProviderForm({
         providerId: providerId,
       });
 
-      if (!oauthResult.success || !oauthResult.authUrl) {
+      if (!oauthResult.success) {
         throw new Error(oauthResult.error || 'Failed to initiate OAuth');
       }
+      const { authUrl } = oauthResult;
 
       // Open popup and handle callback + auto-submit
-      openOAuthPopup(oauthResult.authUrl, {
+      openOAuthPopup(authUrl, {
         onAfterSuccess: () => {},
         onAutoSubmit: (oauthDataForSubmit) => {
           form.handleSubmit((data) => onSubmit(data, oauthDataForSubmit))();
