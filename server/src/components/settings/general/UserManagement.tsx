@@ -495,13 +495,14 @@ const fetchContacts = async (): Promise<void> => {
                       />
                       <button
                         type="button"
+                        id={showPassword ? 'hide-password-button' : 'show-password-button'}
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute inset-y-0 right-0 pr-3 flex items-center"
                       >
                         {showPassword ? (
-                          <Eye className="h-5 w-5 text-gray-400" />
-                        ) : (
                           <EyeOff className="h-5 w-5 text-gray-400" />
+                        ) : (
+                          <Eye className="h-5 w-5 text-gray-400" />
                         )}
                       </button>
                     </div>

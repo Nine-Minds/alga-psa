@@ -245,6 +245,7 @@ export default function PortalSetupPage() {
                 />
                 <button
                   type="button"
+                  id={showPassword ? 'hide-password-button' : 'show-password-button'}
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 flex items-center pr-3"
                 >
