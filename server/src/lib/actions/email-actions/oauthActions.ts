@@ -17,7 +17,7 @@ export async function initiateEmailOAuth(params: {
   try {
     // RBAC: validate permission based on intent (create vs update)
     const isUpdate = !!params.providerId;
-    const resource = 'emailproviders';
+    const resource = 'system_settings';
     const action = isUpdate ? 'update' : 'create';
     const permitted = await hasPermission(user as any, resource, action);
     if (!permitted) {
