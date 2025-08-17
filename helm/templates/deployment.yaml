@@ -380,6 +380,26 @@ spec:
           {{- end }}
           {{- end }}
 
+          # ----------- MICROSOFT INTEGRATION ----------------
+          {{- if .Values.microsoft_integration.enabled }}
+          {{- if .Values.microsoft_integration.client_id }}
+          - name: MICROSOFT_CLIENT_ID
+            value: "{{ .Values.microsoft_integration.client_id }}"
+          {{- end }}
+          {{- if .Values.microsoft_integration.client_secret }}
+          - name: MICROSOFT_CLIENT_SECRET
+            value: "{{ .Values.microsoft_integration.client_secret }}"
+          {{- end }}
+          {{- if .Values.microsoft_integration.tenant_id }}
+          - name: MICROSOFT_TENANT_ID
+            value: "{{ .Values.microsoft_integration.tenant_id }}"
+          {{- end }}
+          {{- if .Values.microsoft_integration.redirect_uri }}
+          - name: MICROSOFT_REDIRECT_URI
+            value: "{{ .Values.microsoft_integration.redirect_uri }}"
+          {{- end }}
+          {{- end }}
+
           # ----------- SECRET PROVIDER ----------------
           # Composite secret provider configuration
           - name: SECRET_READ_CHAIN

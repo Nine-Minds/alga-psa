@@ -264,6 +264,17 @@ gmail_integration:
   project_id: ""
   redirect_uri: ""
 
+# Microsoft Graph (Microsoft 365) integration
+microsoft_integration:
+  enabled: false
+  # Azure AD App Registration (delegated) credentials
+  client_id: ""
+  client_secret: ""
+  # Use tenant GUID for single-tenant; use 'common' only for multi-tenant
+  tenant_id: ""
+  # OAuth redirect URI configured in the app registration
+  redirect_uri: ""
+
 # Secret Provider Configuration
 # Controls how secrets are read and written across different providers
 secrets:
