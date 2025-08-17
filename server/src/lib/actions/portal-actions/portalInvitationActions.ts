@@ -80,7 +80,7 @@ export async function createClientPortalUser(
     }
 
     if (!tenant) {
-      throw new Error('Tenant is requried');
+      throw new Error('Tenant is required');
     }
 
     // Validate input
@@ -90,8 +90,6 @@ export async function createClientPortalUser(
 
     // Create user and assign role
     const result = await knex.transaction(async (trx) => {
-      const userService = new UserService();
-
       // 1) Resolve or create contact
       let contact: any = null;
 
@@ -283,7 +281,7 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
     }
 
     if (!tenant) {
-      throw new Error('Tenant is requried');
+      throw new Error('Tenant is required');
     }
 
     // Ensure system email is configured before proceeding (avoid burning rate limits when misconfigured)
@@ -358,7 +356,7 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
 
       // Generate portal setup URL with robust base URL fallback
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || (process.env.HOST ? `https://${process.env.HOST}` : '');
-      const portalSetupUrl = `${baseUrl}/auth/portal/setup?token=${invitationResult.token}`;
+      const portalSetupUrl = `${baseUrl}/auth/portal/setup?token=${encodeURIComponent(invitationResult.token || '')}`;
 
       // Calculate expiration time for display
       const expirationTime = '24 hours';

@@ -371,13 +371,28 @@ export async function getContactsEligibleForInvitation(
     throw new Error('SYSTEM_ERROR: Tenant configuration not found');
   }
 
+  // RBAC: ensure user has permission to read contacts
+  const { getCurrentUser } = await import('../user-actions/userActions');
+  const { hasPermission } = await import('../../auth/rbac');
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+  
+  // Check permission to read contacts
+  const canRead = await hasPermission(currentUser, 'contact', 'read', db);
+    
+  if (!canRead) {
+    throw new Error('Permission denied: Cannot read contacts');
+  }
+
   try {
     const contacts = await withTransaction(db, async (trx: Knex.Transaction) => {
       const q = trx('contacts as c')
         .leftJoin('users as u', function(this: Knex.JoinClause) {
           this.on('u.contact_id', 'c.contact_name_id')
             .andOn('u.tenant', 'c.tenant')
-            .andOnVal('u.user_type', 'client');
+            .andOn(trx.raw('u.user_type = ?', ['client']));
         })
         .leftJoin('companies as comp', function(this: Knex.JoinClause) {
           this.on('c.company_id', 'comp.company_id')
