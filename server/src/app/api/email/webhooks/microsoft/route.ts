@@ -88,6 +88,7 @@ export async function POST(request: NextRequest) {
           // Build provider config to fetch full email details
           const msConfig = await trx('microsoft_email_provider_config')
             .where('email_provider_id', provider.id)
+            .andWhere('tenant', provider.tenant)
             .first();
 
           const providerConfig: EmailProviderConfig = {

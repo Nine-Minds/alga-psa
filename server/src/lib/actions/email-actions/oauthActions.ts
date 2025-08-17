@@ -2,6 +2,8 @@
 
 import { getCurrentUser } from '../user-actions/userActions';
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
+import { hasPermission } from '../../auth/rbac';
+import { createTenantKnex } from '../../db';
 import { generateMicrosoftAuthUrl, generateGoogleAuthUrl, generateNonce, type OAuthState } from '@/utils/email/oauthHelpers';
 
 export async function initiateEmailOAuth(params: {
@@ -13,6 +15,26 @@ export async function initiateEmailOAuth(params: {
   if (!user) return { success: false, error: 'Unauthorized' };
 
   try {
+    // RBAC: validate permission based on intent (create vs update)
+    const isUpdate = !!params.providerId;
+    const resource = 'emailproviders';
+    const action = isUpdate ? 'update' : 'create';
+    const permitted = await hasPermission(user as any, resource, action);
+    if (!permitted) {
+      return { success: false, error: 'Forbidden: insufficient permissions' };
+    }
+
+    // If providerId is specified, ensure it belongs to the caller's tenant
+    if (params.providerId) {
+      const { knex, tenant } = await createTenantKnex();
+      const exists = await knex('email_providers')
+        .where({ id: params.providerId, tenant })
+        .first();
+      if (!exists) {
+        return { success: false, error: 'Invalid providerId for tenant' };
+      }
+    }
+
     const { provider, providerId, redirectUri } = params;
     const secretProvider = await getSecretProviderInstance();
 

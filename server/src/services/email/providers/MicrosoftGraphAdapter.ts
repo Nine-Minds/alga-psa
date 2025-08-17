@@ -170,6 +170,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         const knex = await getAdminConnection();
         await knex('microsoft_email_provider_config')
           .where('email_provider_id', this.config.id)
+          .andWhere('tenant', this.config.tenant)
           .update({
             access_token: this.accessToken,
             refresh_token: this.refreshToken,
@@ -229,11 +230,13 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         // email_providers: set webhook_id for lookup by route
         await knex('email_providers')
           .where('id', this.config.id)
+          .andWhere('tenant', this.config.tenant)
           .update({ webhook_id: response.data.id, updated_at: new Date().toISOString() });
 
         // microsoft_email_provider_config: track subscription specific fields
         await knex('microsoft_email_provider_config')
           .where('email_provider_id', this.config.id)
+          .andWhere('tenant', this.config.tenant)
           .update({
             webhook_subscription_id: response.data.id,
             webhook_expires_at: response.data.expirationDateTime,
@@ -272,6 +275,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         const knex = await getAdminConnection();
         await knex('microsoft_email_provider_config')
           .where('email_provider_id', this.config.id)
+          .andWhere('tenant', this.config.tenant)
           .update({ webhook_expires_at: newExpiry, updated_at: new Date().toISOString() });
       } catch (dbErr: any) {
         this.log('warn', `Failed to persist webhook renewal: ${dbErr?.message}`);
