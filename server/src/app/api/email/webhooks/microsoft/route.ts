@@ -60,21 +60,44 @@ export async function POST(request: NextRequest) {
         const providerId = notification.subscriptionId;
         
         await withTransaction(knex, async (trx) => {
-          // Look up provider by subscription ID
-          const provider = await trx('email_providers')
-            .where('webhook_id', providerId)
-            .where('provider_type', 'microsoft')
-            .first();
+        // Look up provider by subscription ID via microsoft vendor config (consistent with Google design)
+        const row = await trx('microsoft_email_provider_config as mc')
+          .join('email_providers as ep', function() {
+            this.on('mc.email_provider_id', '=', 'ep.id')
+                .andOn('mc.tenant', '=', 'ep.tenant');
+          })
+          .where('mc.webhook_subscription_id', providerId)
+          // Enforce tenant scoping via clientState when available
+          .modify((qb: any) => {
+            if (notification.clientState) {
+              // We use tenant UUID as clientState during subscription creation
+              qb.andWhere('mc.tenant', notification.clientState as any);
+            }
+          })
+          .andWhere('ep.provider_type', 'microsoft')
+          .first(
+            'ep.*',
+            trx.raw('mc.client_id as mc_client_id'),
+            trx.raw('mc.client_secret as mc_client_secret'),
+            trx.raw('mc.tenant_id as mc_tenant_id'),
+            trx.raw('mc.access_token as mc_access_token'),
+            trx.raw('mc.refresh_token as mc_refresh_token'),
+            trx.raw('mc.token_expires_at as mc_token_expires_at'),
+            trx.raw('mc.webhook_subscription_id as mc_webhook_subscription_id'),
+            trx.raw('mc.webhook_expires_at as mc_webhook_expires_at'),
+            trx.raw('mc.webhook_verification_token as mc_webhook_verification_token')
+          );
 
-          if (!provider) {
-            console.error(`Provider not found for subscription: ${providerId}`);
-            return;
-          }
+        if (!row) {
+          console.error(`Provider not found for subscription: ${providerId}`);
+          return;
+        }
 
           // Validate clientState against primary source (email_providers.webhook_verification_token)
-          const webhookToken = provider.webhook_verification_token;
-          if (webhookToken && notification.clientState !== webhookToken) {
-            console.error(`Invalid client state for provider ${provider.id}`);
+          // Validate clientState if present (we set it to our tenant UUID)
+          const storedToken = (row as any).mc_webhook_verification_token as string | undefined;
+          if (storedToken && notification.clientState && notification.clientState !== storedToken) {
+            console.error(`Invalid client state for provider ${row.id}`);
             return;
           }
 
@@ -86,34 +109,33 @@ export async function POST(request: NextRequest) {
           }
 
           // Build provider config to fetch full email details
-          const msConfig = await trx('microsoft_email_provider_config')
-            .where('email_provider_id', provider.id)
-            .andWhere('tenant', provider.tenant)
-            .first();
+          // Derive webhook URL from environment (provider row doesn't store it in prod schema)
+          const baseUrl = process.env.NGROK_URL || process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+          const derivedWebhookUrl = `${baseUrl}/api/email/webhooks/microsoft`;
 
           const providerConfig: EmailProviderConfig = {
-            id: provider.id,
-            tenant: provider.tenant,
-            name: provider.provider_name || provider.mailbox,
+            id: row.id,
+            tenant: row.tenant,
+            name: row.provider_name || row.mailbox,
             provider_type: 'microsoft',
-            mailbox: provider.mailbox,
+            mailbox: row.mailbox,
             folder_to_monitor: 'Inbox',
-            active: provider.is_active,
-            webhook_notification_url: provider.webhook_notification_url,
-            webhook_subscription_id: provider.webhook_subscription_id,
-            webhook_verification_token: provider.webhook_verification_token,
-            webhook_expires_at: provider.webhook_expires_at,
-            connection_status: provider.connection_status || provider.status || 'connected',
-            created_at: provider.created_at,
-            updated_at: provider.updated_at,
-            provider_config: msConfig ? {
-              client_id: msConfig.client_id,
-              client_secret: msConfig.client_secret,
-              tenant_id: msConfig.tenant_id,
-              access_token: msConfig.access_token,
-              refresh_token: msConfig.refresh_token,
-              token_expires_at: msConfig.token_expires_at,
-            } : {},
+            active: row.is_active,
+            webhook_notification_url: (row as any).webhook_notification_url || derivedWebhookUrl,
+            webhook_subscription_id: row.mc_webhook_subscription_id,
+            webhook_verification_token: (row as any).webhook_verification_token || undefined,
+            webhook_expires_at: row.mc_webhook_expires_at,
+            connection_status: (row as any).connection_status || row.status || 'connected',
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+            provider_config: {
+              client_id: (row as any).mc_client_id,
+              client_secret: (row as any).mc_client_secret,
+              tenant_id: (row as any).mc_tenant_id,
+              access_token: (row as any).mc_access_token,
+              refresh_token: (row as any).mc_refresh_token,
+              token_expires_at: (row as any).mc_token_expires_at,
+            },
           } as any;
 
           try {
@@ -122,31 +144,31 @@ export async function POST(request: NextRequest) {
             const details = await adapter.getMessageDetails(messageId);
             await publishEvent({
               eventType: 'INBOUND_EMAIL_RECEIVED',
-              tenant: provider.tenant,
+              tenant: row.tenant,
               payload: {
-                tenantId: provider.tenant,
-                tenant: provider.tenant,
-                providerId: provider.id,
+                tenantId: row.tenant,
+                tenant: row.tenant,
+                providerId: row.id,
                 emailData: details,
               },
             });
             processedNotifications.push(messageId);
-            console.log(`Published enriched event for Microsoft email: ${messageId} from ${provider.mailbox}`);
+            console.log(`Published enriched event for Microsoft email: ${messageId} from ${row.mailbox}`);
           } catch (detailErr: any) {
             console.warn(`Failed to fetch/publish Microsoft message ${messageId}: ${detailErr?.message || detailErr}`);
             // Fallback: publish minimal event to acknowledge
             await publishEvent({
               eventType: 'INBOUND_EMAIL_RECEIVED',
-              tenant: provider.tenant,
+              tenant: row.tenant,
               payload: {
-                tenantId: provider.tenant,
-                tenant: provider.tenant,
-                providerId: provider.id,
+                tenantId: row.tenant,
+                tenant: row.tenant,
+                providerId: row.id,
                 emailData: {
                   id: messageId,
                   provider: 'microsoft',
-                  providerId: provider.id,
-                  tenant: provider.tenant,
+                  providerId: row.id,
+                  tenant: row.tenant,
                   receivedAt: new Date().toISOString(),
                   from: { email: '', name: undefined },
                   to: [],
