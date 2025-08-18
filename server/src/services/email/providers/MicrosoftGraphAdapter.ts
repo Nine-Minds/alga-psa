@@ -210,11 +210,14 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         throw new Error('Webhook notification URL not configured');
       }
 
+      // Microsoft Graph limit for Outlook message subscriptions is 4230 minutes (~70.5 hours)
+      // Use a safe window (e.g., 60 hours) to avoid 400 due to out-of-range expiration
+      const expirationMs = 60 * 60 * 1000 * 60; // 60 hours in ms
       const subscription = {
         changeType: 'created',
         notificationUrl: webhookUrl,
         resource: `/me/mailFolders('${this.config.folder_to_monitor}')/messages`,
-        expirationDateTime: new Date(Date.now() + (3 * 24 * 60 * 60 * 1000)).toISOString(), // 3 days
+        expirationDateTime: new Date(Date.now() + expirationMs).toISOString(),
         clientState: this.config.webhook_verification_token || 'email-webhook-verification',
       };
 

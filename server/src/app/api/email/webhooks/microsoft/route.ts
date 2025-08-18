@@ -25,12 +25,33 @@ interface MicrosoftWebhookPayload {
   value: MicrosoftNotification[];
 }
 
+// Handle GET for Microsoft validation handshake
+export async function GET(request: NextRequest) {
+  try {
+    const url = request.nextUrl;
+    const validationToken = url.searchParams.get('validationtoken') || url.searchParams.get('validationToken');
+    if (validationToken) {
+      console.log('Microsoft webhook validation (GET) received');
+      return new NextResponse(validationToken, {
+        status: 200,
+        headers: { 'Content-Type': 'text/plain' }
+      });
+    }
+    // If no token, just acknowledge
+    return new NextResponse('OK', { status: 200 });
+  } catch (error) {
+    console.error('Microsoft webhook GET handler error:', error);
+    return new NextResponse('Internal Server Error', { status: 500 });
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Handle subscription validation
-    const validationToken = request.headers.get('validationtoken');
+    // Microsoft may send validation either via querystring (GET) or header on POST in some flows/tests
+    const validationToken = request.headers.get('validationtoken') || request.headers.get('ValidationToken');
     if (validationToken) {
-      console.log('Microsoft webhook validation request received');
+      console.log('Microsoft webhook validation (POST) received');
       return new NextResponse(validationToken, {
         status: 200,
         headers: {
