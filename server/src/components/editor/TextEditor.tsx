@@ -158,14 +158,18 @@ export default function TextEditor({
   }, [editor, onContentChange]);
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full min-w-0">
       {children}
-      <div className="min-h-[100px] h-full w-full bg-white border border-gray-200 rounded-lg p-4 overflow-auto">
+      <div className="min-h-[100px] h-full w-full bg-white border border-gray-200 rounded-lg p-4 overflow-auto min-w-0">
         <BlockNoteView
           editor={editor}
           theme="light"
-          className="w-full"
+          className="w-full min-w-0 [&_.ProseMirror]:break-words [&_.ProseMirror]:max-w-full [&_.ProseMirror]:min-w-0"
           editable={true}
+          style={{
+            overflowWrap: 'break-word',
+            minWidth: 0
+          }}
         />
       </div>
     </div>

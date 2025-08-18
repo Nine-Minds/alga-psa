@@ -950,13 +950,13 @@ const handleClose = () => {
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>
             <div className="bg-gray-100">
                 <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-5">
+                    <div className="flex items-center space-x-5 min-w-0 flex-1">
                         {/* Only show the Back button if NOT in a drawer, using BackNav */}
                         {!isInDrawer && (
                             <BackNav href="/msp/tickets">Back to Tickets</BackNav>
                         )}
-                        <h6 className="text-sm font-medium">#{ticket.ticket_number}</h6>
-                        <h1 className="text-xl font-bold">{ticket.title}</h1>
+                        <h6 className="text-sm font-medium whitespace-nowrap">#{ticket.ticket_number}</h6>
+                        <h1 className="text-xl font-bold break-words max-w-full min-w-0 flex-1" style={{overflowWrap: 'break-word', wordBreak: 'break-word', whiteSpace: 'pre-wrap'}}>{ticket.title}</h1>
                     </div>
                     
                     {/* Add popout button only when in drawer */}
@@ -1012,8 +1012,8 @@ const handleClose = () => {
                     cancelLabel="Cancel"
                 />
 
-                <div className="flex gap-6">
-                    <div className="flex-grow col-span-2" id="ticket-main-content">
+                <div className="flex gap-6 min-w-0">
+                    <div className="flex-grow col-span-2 min-w-0" id="ticket-main-content">
                         <Suspense fallback={<div id="ticket-info-skeleton" className="animate-pulse bg-gray-200 h-64 rounded-lg mb-6"></div>}>
                             <div className="mb-6">
                                 <TicketInfo
