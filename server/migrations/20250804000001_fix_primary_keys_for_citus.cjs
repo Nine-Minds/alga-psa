@@ -55,7 +55,7 @@ exports.up = async function(knex) {
       
       if (!hasTenant.rows[0].has_tenant) {
         console.log(`  Table ${table} does not have tenant column, skipping`);
-        continue;
+        return;
       }
       
       // Check current primary key
@@ -73,13 +73,13 @@ exports.up = async function(knex) {
       
       if (currentPK.rows.length === 0) {
         console.log(`  Table ${table} has no primary key, skipping`);
-        continue;
+        return;
       }
       
       const pkColumns = currentPK.rows[0].columns;
       if (pkColumns.includes('tenant')) {
         console.log(`  Table ${table} already has tenant in primary key, skipping`);
-        continue;
+        return;
       }
       
       console.log(`  Fixing primary key for ${table}...`);
