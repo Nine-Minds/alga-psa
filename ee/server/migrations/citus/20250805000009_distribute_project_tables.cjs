@@ -25,9 +25,6 @@ exports.up = async function(knex) {
     'project_tasks',
     'project_ticket_links',
     'time_entries'
-    // 'project_task_links', // Table doesn't exist yet
-    // 'project_status_mappings', // Table doesn't exist yet
-    // 'time_entry_extensions' // Table doesn't exist yet
   ];
   
   for (const table of tables) {

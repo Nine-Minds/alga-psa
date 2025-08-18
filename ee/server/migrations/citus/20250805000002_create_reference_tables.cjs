@@ -33,8 +33,6 @@ exports.up = async function(knex) {
     
     // Standard lookup tables (without tenant columns)
     'countries',
-    // 'currencies', - removed as requested
-    // 'invoice_templates', - Has tenant column, moved to distributed tables
     'standard_categories',
     'standard_channels',
     'standard_invoice_templates',
@@ -61,7 +59,6 @@ exports.up = async function(knex) {
     // 'verification_tokens', - Has tenant column, moved to distributed tables
     // 'tenant_companies', - Has tenant_id column, moved to distributed tables
   ];
-  
   let successCount = 0;
   let failedTables = [];
   

@@ -176,7 +176,7 @@ exports.up = async function(knex) {
     }
   }
   
-  // Process reference tables
+  // Process reference tables with special handling
   for (const table of referenceTables) {
     try {
       console.log(`\nProcessing ${table} as reference table...`);
@@ -215,13 +215,75 @@ exports.up = async function(knex) {
         continue;
       }
       
-      // Create reference table
-      console.log(`  Creating reference table ${table}...`);
-      await knex.raw(`SELECT create_reference_table('${table}')`);
-      console.log(`    ✓ Created reference table ${table}`);
+      // Special handling for tables with foreign keys to distributed tables
+      if (table === 'standard_statuses' || table === 'tenant_companies' || table === 'time_period_settings') {
+        console.log(`  ${table} has foreign keys to distributed tables, distributing instead of making reference...`);
+        
+        // Check if table has tenant column
+        const hasTenantColumn = await knex.raw(`
+          SELECT column_name 
+          FROM information_schema.columns 
+          WHERE table_name = '${table}' 
+          AND column_name IN ('tenant', 'tenant_id')
+          LIMIT 1
+        `);
+        
+        if (hasTenantColumn.rows.length) {
+          const tenantColumn = hasTenantColumn.rows[0].column_name;
+          
+          // Drop foreign key constraints
+          console.log(`  Dropping foreign key constraints for ${table}...`);
+          const fkConstraints = await knex.raw(`
+            SELECT conname
+            FROM pg_constraint
+            WHERE conrelid = '${table}'::regclass
+            AND contype = 'f'
+          `);
+          
+          for (const fk of fkConstraints.rows) {
+            try {
+              await knex.raw(`ALTER TABLE ${table} DROP CONSTRAINT ${fk.conname}`);
+              console.log(`    ✓ Dropped FK: ${fk.conname}`);
+            } catch (e) {
+              console.log(`    - Could not drop FK ${fk.conname}: ${e.message}`);
+            }
+          }
+          
+          // Drop triggers
+          console.log(`  Dropping triggers for ${table}...`);
+          const triggers = await knex.raw(`
+            SELECT tgname
+            FROM pg_trigger
+            WHERE tgrelid = '${table}'::regclass
+            AND tgisinternal = false
+          `);
+          
+          for (const trigger of triggers.rows) {
+            try {
+              await knex.raw(`DROP TRIGGER IF EXISTS ${trigger.tgname} ON ${table}`);
+              console.log(`    ✓ Dropped trigger: ${trigger.tgname}`);
+            } catch (e) {
+              console.log(`    - Could not drop trigger ${trigger.tgname}: ${e.message}`);
+            }
+          }
+          
+          // Distribute the table
+          console.log(`  Distributing ${table}...`);
+          const columnToUse = tenantColumn === 'tenant_id' ? 'tenant_id' : 'tenant';
+          await knex.raw(`SELECT create_distributed_table('${table}', '${columnToUse}', colocate_with => 'tenants')`);
+          console.log(`    ✓ Distributed ${table}`);
+        } else {
+          console.log(`  ${table} does not have tenant column, cannot distribute`);
+        }
+      } else {
+        // Regular reference table creation
+        console.log(`  Creating reference table ${table}...`);
+        await knex.raw(`SELECT create_reference_table('${table}')`);
+        console.log(`    ✓ Created reference table ${table}`);
+      }
       
     } catch (error) {
-      console.error(`  ✗ Failed to create reference table ${table}: ${error.message}`);
+      console.error(`  ✗ Failed to process ${table}: ${error.message}`);
       console.log(`  Continuing with remaining tables...`);
     }
   }
