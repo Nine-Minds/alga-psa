@@ -308,6 +308,26 @@ spec:
             value: "{{ .Values.email.user }}"
           - name: EMAIL_PASSWORD
             value: "{{ .Values.email.password }}"
+          # Optional: Explicit provider type. If omitted, factory auto-detects 'resend' by RESEND_API_KEY
+          {{- if .Values.email.provider }}
+          - name: EMAIL_PROVIDER_TYPE
+            value: "{{ .Values.email.provider }}"
+          {{- end }}
+          # RESEND configuration (preferred for system emails). Use secret if available, else value.
+          {{- if and .Values.email.resendApiKeySecret.name .Values.email.resendApiKeySecret.key }}
+          - name: RESEND_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.email.resendApiKeySecret.name | quote }}
+                key: {{ .Values.email.resendApiKeySecret.key | quote }}
+          {{- else if .Values.email.resendApiKey }}
+          - name: RESEND_API_KEY
+            value: "{{ .Values.email.resendApiKey }}"
+          {{- end }}
+          {{- if .Values.email.resendBaseUrl }}
+          - name: RESEND_BASE_URL
+            value: "{{ .Values.email.resendBaseUrl }}"
+          {{- end }}
 
           # ----------- LLM ----------------
           - name: OPENAI_API_KEY
@@ -346,6 +366,9 @@ spec:
           # ----------- AUTH ----------------
           - name: NEXTAUTH_URL
             value: "https://{{ .Values.devPod.host | default .Values.host }}"
+          # Public base URL for links in emails and client-side code
+          - name: NEXT_PUBLIC_BASE_URL
+            value: "https://{{ .Values.devPod.host | default .Values.host }}"
           - name: NEXTAUTH_SECRET
             valueFrom:
               secretKeyRef:
@@ -360,6 +383,40 @@ spec:
             value: "{{ .Values.google_auth.client_id }}"
           - name: GOOGLE_OAUTH_CLIENT_SECRET
             value: "{{ .Values.google_auth.client_secret }}"
+          {{- end }}
+
+          # ----------- GMAIL INTEGRATION ----------------
+          {{- if .Values.gmail_integration.enabled }}
+          - name: GOOGLE_CLIENT_ID
+            value: "{{ .Values.gmail_integration.client_id }}"
+          - name: GOOGLE_CLIENT_SECRET
+            value: "{{ .Values.gmail_integration.client_secret }}"
+          - name: GOOGLE_PROJECT_ID
+            value: "{{ .Values.gmail_integration.project_id }}"
+          {{- if .Values.gmail_integration.redirect_uri }}
+          - name: GOOGLE_REDIRECT_URI
+            value: "{{ .Values.gmail_integration.redirect_uri }}"
+          {{- end }}
+          {{- end }}
+
+          # ----------- MICROSOFT INTEGRATION ----------------
+          {{- if .Values.microsoft_integration.enabled }}
+          {{- if .Values.microsoft_integration.client_id }}
+          - name: MICROSOFT_CLIENT_ID
+            value: "{{ .Values.microsoft_integration.client_id }}"
+          {{- end }}
+          {{- if .Values.microsoft_integration.client_secret }}
+          - name: MICROSOFT_CLIENT_SECRET
+            value: "{{ .Values.microsoft_integration.client_secret }}"
+          {{- end }}
+          {{- if .Values.microsoft_integration.tenant_id }}
+          - name: MICROSOFT_TENANT_ID
+            value: "{{ .Values.microsoft_integration.tenant_id }}"
+          {{- end }}
+          {{- if .Values.microsoft_integration.redirect_uri }}
+          - name: MICROSOFT_REDIRECT_URI
+            value: "{{ .Values.microsoft_integration.redirect_uri }}"
+          {{- end }}
           {{- end }}
 
           # ----------- SECRET PROVIDER ----------------
