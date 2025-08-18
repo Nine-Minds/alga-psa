@@ -17,71 +17,86 @@ export async function GET(request: NextRequest) {
     const error = searchParams.get('error');
     const errorDescription = searchParams.get('error_description');
 
+    // Helper: return a safe HTML page that posts a base64-encoded payload to the opener and closes
+    const respondWithPostMessage = (payload: any) => {
+      const encoded = Buffer.from(JSON.stringify(payload)).toString('base64');
+      const html = `<!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>Microsoft OAuth Callback</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, Helvetica, Arial, sans-serif; padding: 24px; }
+            .container { max-width: 640px; margin: 0 auto; }
+            .status { margin-top: 12px; color: #444; }
+            pre { background: #f6f8fa; padding: 12px; overflow: auto; border-radius: 6px; }
+            .ok { color: #0a7f2e; }
+            .err { color: #b00020; }
+            button { margin-top: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h3>Microsoft OAuth ${payload.success ? 'Success' : 'Error'}</h3>
+            <div id="status" class="status">Completing sign-in…</div>
+            <div id="details-wrap" style="display:none">
+              <p class="${payload.success ? 'ok' : 'err'}">${payload.success ? 'Authorized successfully.' : 'Authorization failed.'}</p>
+              <pre id="details"></pre>
+              <button onclick="window.close()">Close window</button>
+            </div>
+          </div>
+          <script>
+            (function(){
+              try {
+                var payload = JSON.parse(atob('${encoded}'));
+                var target = window.opener || window.parent;
+                if (target && target !== window) {
+                  target.postMessage(payload, '*');
+                }
+              } catch (e) { /* ignore */ }
+              try { window.close(); } catch (_) {}
+              // If the window didn't close (popup blockers), show details for the user
+              setTimeout(function(){
+                if (!window.closed) {
+                  document.getElementById('status').textContent = 'You can close this window.';
+                  var wrap = document.getElementById('details-wrap');
+                  var pre = document.getElementById('details');
+                  wrap.style.display = 'block';
+                  try { pre.textContent = JSON.stringify(JSON.parse(atob('${encoded}')), null, 2); } catch(_) { pre.textContent = 'Unable to display details.'; }
+                }
+              }, 100);
+            })();
+          </script>
+          <noscript>
+            <div class="status">JavaScript is required to complete sign-in. Please close this window.</div>
+          </noscript>
+        </body>
+      </html>`;
+      return new NextResponse(html, { status: 200, headers: { 'Content-Type': 'text/html' } });
+    };
+
     // Handle OAuth errors
     if (error) {
       console.error('Microsoft OAuth error:', error, errorDescription);
-      
-      // Return HTML that communicates with the parent window
-      return new NextResponse(
-        `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Microsoft OAuth Callback</title>
-          </head>
-          <body>
-            <script>
-              window.opener.postMessage({
-                type: 'oauth-callback',
-                provider: 'microsoft',
-                success: false,
-                error: '${error}',
-                errorDescription: '${errorDescription || ''}'
-              }, '*');
-              window.close();
-            </script>
-          </body>
-        </html>
-        `,
-        {
-          status: 200,
-          headers: {
-            'Content-Type': 'text/html',
-          },
-        }
-      );
+      return respondWithPostMessage({
+        type: 'oauth-callback',
+        provider: 'microsoft',
+        success: false,
+        error,
+        errorDescription: errorDescription || ''
+      });
     }
 
     // Validate required parameters
     if (!code || !state) {
-      return new NextResponse(
-        `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Microsoft OAuth Callback</title>
-          </head>
-          <body>
-            <script>
-              window.opener.postMessage({
-                type: 'oauth-callback',
-                provider: 'microsoft',
-                success: false,
-                error: 'missing_parameters',
-                errorDescription: 'Authorization code or state parameter is missing'
-              }, '*');
-              window.close();
-            </script>
-          </body>
-        </html>
-        `,
-        {
-          status: 200,
-          headers: {
-            'Content-Type': 'text/html',
-          },
-        }
-      );
+      return respondWithPostMessage({
+        type: 'oauth-callback',
+        provider: 'microsoft',
+        success: false,
+        error: 'missing_parameters',
+        errorDescription: 'Authorization code or state parameter is missing'
+      });
     }
 
     // Parse state to get tenant and other info
@@ -90,34 +105,13 @@ export async function GET(request: NextRequest) {
       stateData = JSON.parse(Buffer.from(state, 'base64').toString());
     } catch (e) {
       console.error('Failed to parse state:', e);
-      return new NextResponse(
-        `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Microsoft OAuth Callback</title>
-          </head>
-          <body>
-            <script>
-              window.opener.postMessage({
-                type: 'oauth-callback',
-                provider: 'microsoft',
-                success: false,
-                error: 'invalid_state',
-                errorDescription: 'Invalid state parameter'
-              }, '*');
-              window.close();
-            </script>
-          </body>
-        </html>
-        `,
-        {
-          status: 200,
-          headers: {
-            'Content-Type': 'text/html',
-          },
-        }
-      );
+      return respondWithPostMessage({
+        type: 'oauth-callback',
+        provider: 'microsoft',
+        success: false,
+        error: 'invalid_state',
+        errorDescription: 'Invalid state parameter'
+      });
     }
 
     // Get OAuth client credentials - prefer server-side NEXTAUTH_URL for hosted detection
@@ -140,38 +134,28 @@ export async function GET(request: NextRequest) {
       tenantAuthority = process.env.MICROSOFT_TENANT_ID || await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_tenant_id') || null;
     }
     
-    const redirectUri = stateData.redirectUri || `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/microsoft/callback`;
+    // Resolve redirect URI with priority:
+    // 1) Hosted: app-level MICROSOFT_REDIRECT_URI
+    // 2) Self-hosted: process.env or tenant secret microsoft_redirect_uri
+    // 3) State-provided redirectUri (from initiation)
+    // 4) Fallback to NEXT_PUBLIC_BASE_URL + route
+    const hostedRedirect = await secretProvider.getAppSecret('MICROSOFT_REDIRECT_URI');
+    const tenantRedirect = await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_redirect_uri');
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')) || 'http://localhost:3000';
+    const redirectUri = (isHostedFlow
+      ? hostedRedirect
+      : (process.env.MICROSOFT_REDIRECT_URI || tenantRedirect)
+    ) || stateData.redirectUri || `${baseUrl}/api/auth/microsoft/callback`;
 
     if (!clientId || !clientSecret) {
       console.error('Microsoft OAuth credentials not configured');
-      return new NextResponse(
-        `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Microsoft OAuth Callback</title>
-          </head>
-          <body>
-            <script>
-              window.opener.postMessage({
-                type: 'oauth-callback',
-                provider: 'microsoft',
-                success: false,
-                error: 'configuration_error',
-                errorDescription: 'OAuth credentials not configured'
-              }, '*');
-              window.close();
-            </script>
-          </body>
-        </html>
-        `,
-        {
-          status: 200,
-          headers: {
-            'Content-Type': 'text/html',
-          },
-        }
-      );
+      return respondWithPostMessage({
+        type: 'oauth-callback',
+        provider: 'microsoft',
+        success: false,
+        error: 'configuration_error',
+        errorDescription: 'OAuth credentials not configured'
+      });
     }
 
     // Exchange authorization code for tokens
@@ -199,101 +183,58 @@ export async function GET(request: NextRequest) {
       const expiresAt = new Date(Date.now() + expires_in * 1000);
 
       // Return success with tokens
-      return new NextResponse(
-        `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Microsoft OAuth Callback</title>
-          </head>
-          <body>
-            <script>
-              window.opener.postMessage({
-                type: 'oauth-callback',
-                provider: 'microsoft',
-                success: true,
-                data: {
-                  accessToken: '${access_token}',
-                  refreshToken: '${refresh_token}',
-                  expiresAt: '${expiresAt.toISOString()}',
-                  code: '${code}',
-                  state: '${state}'
-                }
-              }, '*');
-              window.close();
-            </script>
-          </body>
-        </html>
-        `,
-        {
-          status: 200,
-          headers: {
-            'Content-Type': 'text/html',
-          },
+      return respondWithPostMessage({
+        type: 'oauth-callback',
+        provider: 'microsoft',
+        success: true,
+        data: {
+          accessToken: access_token,
+          refreshToken: refresh_token,
+          expiresAt: expiresAt.toISOString(),
+          code,
+          state
         }
-      );
+      });
     } catch (tokenError: any) {
       console.error('Failed to exchange authorization code:', tokenError.response?.data || tokenError.message);
       
-      return new NextResponse(
-        `
-        <!DOCTYPE html>
+      return respondWithPostMessage({
+        type: 'oauth-callback',
+        provider: 'microsoft',
+        success: false,
+        error: 'token_exchange_failed',
+        errorDescription: tokenError.response?.data?.error_description || tokenError.message
+      });
+    }
+  } catch (error: any) {
+    console.error('Unexpected error in Microsoft OAuth callback:', error);
+    return new NextResponse(
+      (() => {
+        const encoded = Buffer.from(JSON.stringify({
+          type: 'oauth-callback',
+          provider: 'microsoft',
+          success: false,
+          error: 'unexpected_error',
+          errorDescription: error?.message || 'Unexpected error'
+        })).toString('base64');
+        return `<!DOCTYPE html>
         <html>
           <head>
+            <meta charset="utf-8" />
             <title>Microsoft OAuth Callback</title>
           </head>
           <body>
             <script>
-              window.opener.postMessage({
-                type: 'oauth-callback',
-                provider: 'microsoft',
-                success: false,
-                error: 'token_exchange_failed',
-                errorDescription: '${tokenError.response?.data?.error_description || tokenError.message}'
-              }, '*');
-              window.close();
+              (function(){
+                try { var payload = JSON.parse(atob('${encoded}')); (window.opener||window.parent).postMessage(payload, '*'); } catch(_) {}
+                try { window.close(); } catch(_) {}
+                setTimeout(function(){ if(!window.closed){ document.body.innerHTML = '<p>Authorization failed. You can close this window.</p>'; } }, 100);
+              })();
             </script>
           </body>
-        </html>
-        `,
-        {
-          status: 200,
-          headers: {
-            'Content-Type': 'text/html',
-          },
-        }
-      );
-    }
-  } catch (error: any) {
-    console.error('Unexpected error in Microsoft OAuth callback:', error);
-    
-    return new NextResponse(
-      `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Microsoft OAuth Callback</title>
-        </head>
-        <body>
-          <script>
-            window.opener.postMessage({
-              type: 'oauth-callback',
-              provider: 'microsoft',
-              success: false,
-              error: 'unexpected_error',
-              errorDescription: '${error.message}'
-            }, '*');
-            window.close();
-          </script>
-        </body>
-      </html>
-      `,
-      {
-        status: 200,
-        headers: {
-          'Content-Type': 'text/html',
-        },
-      }
+        </html>`;
+      })(),
+      { status: 200, headers: { 'Content-Type': 'text/html' } }
     );
   }
 }

@@ -56,6 +56,7 @@ export function MicrosoftProviderForm({
   const [showClientSecret, setShowClientSecret] = useState(false);
   const [oauthStatus, setOauthStatus] = useState<'idle' | 'authorizing' | 'success' | 'error'>('idle');
   const [oauthData, setOauthData] = useState<any>(null);
+  const [oauthMessageReceived, setOauthMessageReceived] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [defaultsOptions, setDefaultsOptions] = useState<{ value: string; label: string }[]>([]);
 
@@ -213,8 +214,9 @@ export function MicrosoftProviderForm({
       const checkClosed = setInterval(() => {
         if (popup.closed) {
           clearInterval(checkClosed);
-          if (oauthStatus === 'authorizing') {
-            setOauthStatus('idle');
+          if (oauthStatus === 'authorizing' && !oauthMessageReceived) {
+            setOauthStatus('error');
+            setError('Authorization window closed before completing. Please try again.');
           }
         }
       }, 1000);
@@ -225,6 +227,7 @@ export function MicrosoftProviderForm({
         if (event.data.type === 'oauth-callback' && event.data.provider === 'microsoft') {
           clearInterval(checkClosed);
           popup?.close();
+          setOauthMessageReceived(true);
           
           if (event.data.success) {
             // Store the authorization code and tokens in OAuth data (not form)
