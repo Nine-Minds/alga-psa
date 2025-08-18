@@ -144,31 +144,31 @@ export async function POST(request: NextRequest) {
             const details = await adapter.getMessageDetails(messageId);
             await publishEvent({
               eventType: 'INBOUND_EMAIL_RECEIVED',
-              tenant: provider.tenant,
+              tenant: row.tenant,
               payload: {
-                tenantId: provider.tenant,
-                tenant: provider.tenant,
-                providerId: provider.id,
+                tenantId: row.tenant,
+                tenant: row.tenant,
+                providerId: row.id,
                 emailData: details,
               },
             });
             processedNotifications.push(messageId);
-            console.log(`Published enriched event for Microsoft email: ${messageId} from ${provider.mailbox}`);
+            console.log(`Published enriched event for Microsoft email: ${messageId} from ${row.mailbox}`);
           } catch (detailErr: any) {
             console.warn(`Failed to fetch/publish Microsoft message ${messageId}: ${detailErr?.message || detailErr}`);
             // Fallback: publish minimal event to acknowledge
             await publishEvent({
               eventType: 'INBOUND_EMAIL_RECEIVED',
-              tenant: provider.tenant,
+              tenant: row.tenant,
               payload: {
-                tenantId: provider.tenant,
-                tenant: provider.tenant,
-                providerId: provider.id,
+                tenantId: row.tenant,
+                tenant: row.tenant,
+                providerId: row.id,
                 emailData: {
                   id: messageId,
                   provider: 'microsoft',
-                  providerId: provider.id,
-                  tenant: provider.tenant,
+                  providerId: row.id,
+                  tenant: row.tenant,
                   receivedAt: new Date().toISOString(),
                   from: { email: '', name: undefined },
                   to: [],
