@@ -121,15 +121,24 @@ export async function GET(request: NextRequest) {
     let clientId: string | null = null;
     let clientSecret: string | null = null;
     
+    let credentialSource = 'unknown';
     if (isHostedFlow) {
       // Use app-level configuration
       clientId = await secretProvider.getAppSecret('GOOGLE_CLIENT_ID') || null;
       clientSecret = await secretProvider.getAppSecret('GOOGLE_CLIENT_SECRET') || null;
+      credentialSource = 'app_secret';
     } else {
       // Use tenant-specific or fallback credentials
-      clientId = await secretProvider.getAppSecret('GOOGLE_CLIENT_ID') || await secretProvider.getTenantSecret(stateData.tenant, 'google_client_id') || null;
-      clientSecret = await secretProvider.getAppSecret('GOOGLE_CLIENT_SECRET') || await secretProvider.getTenantSecret(stateData.tenant, 'google_client_secret') || null;
+      const envClientId = process.env.GOOGLE_CLIENT_ID || null;
+      const envClientSecret = process.env.GOOGLE_CLIENT_SECRET || null;
+      const tenantClientId = await secretProvider.getTenantSecret(stateData.tenant, 'google_client_id');
+      const tenantClientSecret = await secretProvider.getTenantSecret(stateData.tenant, 'google_client_secret');
+      clientId = envClientId || tenantClientId || null;
+      clientSecret = envClientSecret || tenantClientSecret || null;
+      credentialSource = envClientId && envClientSecret ? 'env' : 'tenant_secret';
     }
+    clientId = clientId?.trim() || null;
+    clientSecret = clientSecret?.trim() || null;
     
     // Resolve redirect URI with priority similar to Microsoft
     const hostedRedirect = await secretProvider.getAppSecret('GOOGLE_REDIRECT_URI');
@@ -139,6 +148,13 @@ export async function GET(request: NextRequest) {
       ? hostedRedirect
       : (process.env.GOOGLE_REDIRECT_URI || tenantRedirect)
     ) || stateData.redirectUri || `${baseUrl}/api/auth/google/callback`;
+
+    const maskedClientId = clientId ? `${clientId.substring(0, 4)}...${clientId.substring(clientId.length - 4)}` : 'null';
+    console.log('[Google OAuth] Using credentials', {
+      source: credentialSource,
+      clientId: maskedClientId,
+      redirectUri
+    });
 
     if (!clientId || !clientSecret) {
       console.error('Google OAuth credentials not configured');

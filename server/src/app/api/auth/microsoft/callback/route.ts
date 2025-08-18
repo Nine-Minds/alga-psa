@@ -122,17 +122,27 @@ export async function GET(request: NextRequest) {
     const nextauthUrl = process.env.NEXTAUTH_URL || (await secretProvider.getAppSecret('NEXTAUTH_URL')) || '';
     const isHostedFlow = nextauthUrl.startsWith('https://algapsa.com');
     
+    let credentialSource = 'unknown';
     if (isHostedFlow) {
       // Use app-level configuration
       clientId = await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID') || null;
       clientSecret = await secretProvider.getAppSecret('MICROSOFT_CLIENT_SECRET') || null;
       tenantAuthority = await secretProvider.getAppSecret('MICROSOFT_TENANT_ID') || null;
+      credentialSource = 'app_secret';
     } else {
       // Use tenant-specific or fallback credentials
-      clientId = process.env.MICROSOFT_CLIENT_ID || await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_client_id') || null;
-      clientSecret = process.env.MICROSOFT_CLIENT_SECRET || await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_client_secret') || null;
+      const envClientId = process.env.MICROSOFT_CLIENT_ID || null;
+      const envClientSecret = process.env.MICROSOFT_CLIENT_SECRET || null;
+      const tenantClientId = await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_client_id');
+      const tenantClientSecret = await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_client_secret');
+      clientId = envClientId || tenantClientId || null;
+      clientSecret = envClientSecret || tenantClientSecret || null;
       tenantAuthority = process.env.MICROSOFT_TENANT_ID || await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_tenant_id') || null;
+      credentialSource = envClientId && envClientSecret ? 'env' : 'tenant_secret';
     }
+    // Normalize whitespace just in case the secret was copied with spaces/newlines
+    clientId = clientId?.trim() || null;
+    clientSecret = clientSecret?.trim() || null;
     
     // Resolve redirect URI with priority:
     // 1) Hosted: app-level MICROSOFT_REDIRECT_URI
@@ -146,6 +156,15 @@ export async function GET(request: NextRequest) {
       ? hostedRedirect
       : (process.env.MICROSOFT_REDIRECT_URI || tenantRedirect)
     ) || stateData.redirectUri || `${baseUrl}/api/auth/microsoft/callback`;
+
+    // Log non-sensitive debug information to help diagnose invalid_client
+    const maskedClientId = clientId ? `${clientId.substring(0, 4)}...${clientId.substring(clientId.length - 4)}` : 'null';
+    console.log('[MS OAuth] Using credentials', {
+      source: credentialSource,
+      clientId: maskedClientId,
+      tenantAuthority: tenantAuthority || 'common',
+      redirectUri
+    });
 
     if (!clientId || !clientSecret) {
       console.error('Microsoft OAuth credentials not configured');
