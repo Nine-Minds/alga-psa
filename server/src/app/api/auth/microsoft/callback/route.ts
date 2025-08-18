@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
+import { createTenantKnex, runWithTenant } from '../../../../../lib/db';
+import { MicrosoftGraphAdapter } from '../../../../../services/email/providers/MicrosoftGraphAdapter';
 import axios from 'axios';
 
 export const dynamic = 'force-dynamic';
@@ -201,7 +203,95 @@ export async function GET(request: NextRequest) {
       // Calculate expiration time
       const expiresAt = new Date(Date.now() + expires_in * 1000);
 
-      // Return success with tokens
+      // Persist tokens and initialize webhook if we have provider context
+      if (stateData.providerId && stateData.tenant) {
+        try {
+          await runWithTenant(stateData.tenant, async () => {
+            const { knex } = await createTenantKnex();
+            // Save tokens
+            await knex('microsoft_email_provider_config')
+              .where('email_provider_id', stateData.providerId)
+              .andWhere('tenant', stateData.tenant)
+              .update({
+                access_token: access_token,
+                refresh_token: refresh_token || null,
+                token_expires_at: expiresAt.toISOString(),
+                updated_at: new Date().toISOString(),
+              });
+
+            // Mark provider connected
+            await knex('email_providers')
+              .where('id', stateData.providerId)
+              .andWhere('tenant', stateData.tenant)
+              .update({
+                status: 'connected',
+                error_message: null,
+                updated_at: knex.fn.now(),
+              });
+
+            // Build provider config and register webhook subscription
+            try {
+              const provider = await knex('email_providers')
+                .where('id', stateData.providerId)
+                .andWhere('tenant', stateData.tenant)
+                .first();
+
+              const msConfig = await knex('microsoft_email_provider_config')
+                .where('email_provider_id', stateData.providerId)
+                .andWhere('tenant', stateData.tenant)
+                .first();
+
+              if (provider && msConfig) {
+                const baseUrl = process.env.NGROK_URL
+                  || process.env.NEXT_PUBLIC_BASE_URL
+                  || process.env.NEXTAUTH_URL
+                  || 'http://localhost:3000';
+                const webhookUrl = `${baseUrl}/api/email/webhooks/microsoft`;
+
+                const providerConfig: any = {
+                  id: provider.id,
+                  tenant: provider.tenant,
+                  name: provider.provider_name || provider.mailbox,
+                  provider_type: 'microsoft',
+                  mailbox: provider.mailbox,
+                  folder_to_monitor: 'Inbox',
+                  active: provider.is_active,
+                  webhook_notification_url: webhookUrl,
+                  webhook_subscription_id: provider.webhook_subscription_id || null,
+                  webhook_verification_token: provider.webhook_verification_token || null,
+                  webhook_expires_at: provider.webhook_expires_at || null,
+                  connection_status: provider.status || 'connected',
+                  last_connection_test: provider.last_sync_at || null,
+                  connection_error_message: provider.error_message || null,
+                  created_at: provider.created_at,
+                  updated_at: provider.updated_at,
+                  provider_config: {
+                    client_id: msConfig.client_id,
+                    client_secret: msConfig.client_secret,
+                    tenant_id: msConfig.tenant_id,
+                    access_token: access_token,
+                    refresh_token: refresh_token || null,
+                    token_expires_at: expiresAt.toISOString(),
+                  },
+                };
+
+                const adapter = new MicrosoftGraphAdapter(providerConfig);
+                try {
+                  await adapter.registerWebhookSubscription();
+                } catch (subErr: any) {
+                  console.warn('⚠️ Failed to register Microsoft webhook subscription in callback:', subErr?.message || subErr);
+                }
+              }
+            } catch (e) {
+              console.warn('⚠️ Skipped webhook initialization after OAuth due to setup error:', (e as any)?.message || e);
+            }
+          });
+        } catch (persistErr: any) {
+          console.warn('⚠️ Failed to persist Microsoft OAuth tokens or initialize webhook:', persistErr?.message || persistErr);
+        }
+      }
+
+      // Return success with tokens back to the opener
       return respondWithPostMessage({
         type: 'oauth-callback',
         provider: 'microsoft',
