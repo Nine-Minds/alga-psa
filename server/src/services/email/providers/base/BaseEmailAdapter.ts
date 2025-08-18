@@ -76,9 +76,20 @@ export abstract class BaseEmailAdapter implements EmailProviderAdapter {
    * Handle errors consistently across providers
    */
   protected handleError(error: any, context: string): Error {
-    const errorMessage = `Error in ${context}: ${error.message || error}`;
+    // Try to extract helpful details from Axios-style errors
+    let details = '';
+    const res = error?.response;
+    if (res) {
+      const err = res.data?.error || res.data;
+      const code = err?.code || res.status;
+      const message = err?.message || res.statusText;
+      const inner = err?.innerError || err?.innererror;
+      const reqId = res.headers?.['request-id'] || res.headers?.['client-request-id'];
+      details = ` (code: ${code}${reqId ? `, request-id: ${reqId}` : ''}${inner?.dateTime ? `, time: ${inner.dateTime}` : ''})`;
+    }
+
+    const errorMessage = `Error in ${context}: ${error.message || error}${details}`;
     this.log('error', errorMessage, error);
-    
     return new Error(errorMessage);
   }
 

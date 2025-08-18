@@ -443,11 +443,12 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     try {
       this.log('info', `Initializing webhook subscription to ${webhookUrl}`);
 
+      const expirationMs = 60 * 60 * 1000 * 60; // ~60 hours within Graph limits
       const subscription = {
         changeType: 'created',
         notificationUrl: webhookUrl,
         resource: `/me/mailFolders('Inbox')/messages`,
-        expirationDateTime: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(), // 72 hours
+        expirationDateTime: new Date(Date.now() + expirationMs).toISOString(),
         clientState: this.config.webhook_verification_token || 'email-webhook-verification',
       };
 
@@ -461,10 +462,12 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         subscriptionId
       };
     } catch (error: any) {
-      this.log('error', 'Failed to initialize webhook', error);
+      // Let base adapter enrich the error with axios response details
+      const enriched = this.handleError(error, 'initializeWebhook');
+      this.log('error', 'Failed to initialize webhook', enriched);
       return {
         success: false,
-        error: error.message
+        error: enriched.message
       };
     }
   }
