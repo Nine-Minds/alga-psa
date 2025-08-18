@@ -12,7 +12,7 @@ exports.up = async function(knex) {
   // List of tables that need their primary key fixed to include tenant
   // Note: These tables need to have their existing single-column PK replaced with composite (tenant, id)
   const tablesToFix = [
-    { table: 'company_billing_cycles', oldPK: 'company_billing_cycles_pkey', idColumn: 'cycle_id' },
+    { table: 'company_billing_cycles', oldPK: 'company_billing_cycles_pkey', idColumn: 'billing_cycle_id' },
     { table: 'tax_rates', oldPK: 'tax_rates_pkey', idColumn: 'tax_rate_id' },
     { table: 'document_associations', oldPK: 'document_associations_pkey', idColumn: 'association_id' },
     { table: 'task_checklist_items', oldPK: 'task_checklist_items_pkey', idColumn: 'item_id' },
@@ -137,7 +137,7 @@ exports.down = async function(knex) {
   
   // Revert primary keys to exclude tenant (original state)
   const tablesToRevert = [
-    { table: 'company_billing_cycles', pk: 'company_billing_cycles_pkey', idColumn: 'cycle_id' },
+    { table: 'company_billing_cycles', pk: 'company_billing_cycles_pkey', idColumn: 'billing_cycle_id' },
     { table: 'tax_rates', pk: 'tax_rates_pkey', idColumn: 'tax_rate_id' },
     { table: 'document_associations', pk: 'document_associations_pkey', idColumn: 'association_id' },
     { table: 'task_checklist_items', pk: 'task_checklist_items_pkey', idColumn: 'item_id' },
