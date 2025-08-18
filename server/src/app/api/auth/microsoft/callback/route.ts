@@ -258,7 +258,8 @@ export async function GET(request: NextRequest) {
                   active: provider.is_active,
                   webhook_notification_url: webhookUrl,
                   webhook_subscription_id: provider.webhook_subscription_id || null,
-                  webhook_verification_token: provider.webhook_verification_token || null,
+                  // Use tenant as verification token to enforce tenant-scoped lookup in webhook handler
+                  webhook_verification_token: provider.webhook_verification_token || stateData.tenant,
                   webhook_expires_at: provider.webhook_expires_at || null,
                   connection_status: provider.status || 'connected',
                   last_connection_test: provider.last_sync_at || null,

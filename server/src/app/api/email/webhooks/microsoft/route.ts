@@ -67,6 +67,13 @@ export async function POST(request: NextRequest) {
                 .andOn('mc.tenant', '=', 'ep.tenant');
           })
           .where('mc.webhook_subscription_id', providerId)
+          // Enforce tenant scoping via clientState when available
+          .modify((qb: any) => {
+            if (notification.clientState) {
+              // We use tenant UUID as clientState during subscription creation
+              qb.andWhere('mc.tenant', notification.clientState as any);
+            }
+          })
           .andWhere('ep.provider_type', 'microsoft')
           .first(
             'ep.*',
@@ -77,7 +84,8 @@ export async function POST(request: NextRequest) {
             trx.raw('mc.refresh_token as mc_refresh_token'),
             trx.raw('mc.token_expires_at as mc_token_expires_at'),
             trx.raw('mc.webhook_subscription_id as mc_webhook_subscription_id'),
-            trx.raw('mc.webhook_expires_at as mc_webhook_expires_at')
+            trx.raw('mc.webhook_expires_at as mc_webhook_expires_at'),
+            trx.raw('mc.webhook_verification_token as mc_webhook_verification_token')
           );
 
         if (!row) {
@@ -86,12 +94,12 @@ export async function POST(request: NextRequest) {
         }
 
           // Validate clientState against primary source (email_providers.webhook_verification_token)
-          // Note: clientState validation optional; if stored, validate. Currently not persisted in mc table.
-          // const webhookToken = row.webhook_verification_token;
-          // if (webhookToken && notification.clientState !== webhookToken) {
-          //   console.error(`Invalid client state for provider ${row.id}`);
-          //   return;
-          // }
+          // Validate clientState if present (we set it to our tenant UUID)
+          const storedToken = (row as any).mc_webhook_verification_token as string | undefined;
+          if (storedToken && notification.clientState && notification.clientState !== storedToken) {
+            console.error(`Invalid client state for provider ${row.id}`);
+            return;
+          }
 
           // Extract message ID from resource
           const messageId = notification.resourceData?.id || extractMessageId(notification.resource);

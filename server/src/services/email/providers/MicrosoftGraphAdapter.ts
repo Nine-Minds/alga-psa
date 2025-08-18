@@ -240,6 +240,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
           .update({
             webhook_subscription_id: response.data.id,
             webhook_expires_at: response.data.expirationDateTime,
+            webhook_verification_token: this.config.webhook_verification_token || null,
             updated_at: new Date().toISOString(),
           });
       } catch (dbErr: any) {
