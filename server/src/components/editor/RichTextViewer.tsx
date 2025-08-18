@@ -136,7 +136,7 @@ export default function RichTextViewer({
         <BlockNoteView
           editor={editor}
           theme="light"
-          className="w-full"
+          className="w-full [&_.ProseMirror]:break-words [&_.ProseMirror]:overflow-wrap-anywhere [&_.ProseMirror]:max-w-full"
         />
       </div>
     </div>
