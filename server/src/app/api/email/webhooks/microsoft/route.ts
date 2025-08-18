@@ -101,6 +101,10 @@ export async function POST(request: NextRequest) {
           }
 
           // Build provider config to fetch full email details
+          // Derive webhook URL from environment (provider row doesn't store it in prod schema)
+          const baseUrl = process.env.NGROK_URL || process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+          const derivedWebhookUrl = `${baseUrl}/api/email/webhooks/microsoft`;
+
           const providerConfig: EmailProviderConfig = {
             id: row.id,
             tenant: row.tenant,
@@ -109,9 +113,9 @@ export async function POST(request: NextRequest) {
             mailbox: row.mailbox,
             folder_to_monitor: 'Inbox',
             active: row.is_active,
-            webhook_notification_url: row.webhook_notification_url,
+            webhook_notification_url: (row as any).webhook_notification_url || derivedWebhookUrl,
             webhook_subscription_id: row.mc_webhook_subscription_id,
-            webhook_verification_token: row.webhook_verification_token,
+            webhook_verification_token: (row as any).webhook_verification_token || undefined,
             webhook_expires_at: row.mc_webhook_expires_at,
             connection_status: (row as any).connection_status || row.status || 'connected',
             created_at: row.created_at,
