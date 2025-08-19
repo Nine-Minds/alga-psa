@@ -373,3 +373,15 @@ vaultAgent:
   role: alga-psa
   secretPath: secret/data/alga-psa/server
   sharedSecretPath: secret/data/alga-psa/shared
+
+# Istio sidecar configuration (esp. for Vault agent compatibility)
+# By default, exclude Vault's port 8200 from Envoy interception so
+# init containers/sidecars can reach Vault before Envoy is ready.
+istio:
+  sidecar:
+    # List of outbound ports to bypass Envoy (comma-joined in template)
+    excludeOutboundPorts: ["8200"]
+    # Optional CIDR ranges to bypass Envoy egress (string). Leave empty to disable.
+    excludeOutboundIPRanges: ""
+    # Optional CIDR ranges to allow via Envoy only (string). Leave empty to disable.
+    includeOutboundIPRanges: ""
