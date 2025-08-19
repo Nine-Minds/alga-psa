@@ -104,6 +104,16 @@ export async function addUser(userData: {
         throw new Error("A user with this email address already exists");
       }
 
+      // Check license limits for  MSP (internal) users
+      if (userData.userType !== 'client') {
+        const { getLicenseUsage } = await import('../../license/get-license-usage');
+        const usage = await getLicenseUsage(tenant!, trx);
+        
+        if (usage.limit !== null && usage.used >= usage.limit) {
+          throw new Error("You've reached your MSP user licence limit.");
+        }
+      }
+
       const [user] = await trx('users')
         .insert({
           first_name: userData.firstName,
@@ -142,6 +152,10 @@ export async function addUser(userData: {
     }
     // Pass through permission denied errors
     if (error.message === "Permission denied: Cannot create user") {
+      throw error;
+    }
+    // Pass through license limit errors
+    if (error.message === "You've reached your internal user licence limit.") {
       throw error;
     }
     throw new Error('Failed to add user');

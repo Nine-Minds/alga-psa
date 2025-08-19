@@ -49,6 +49,12 @@ const activities = proxyActivities<{
     workflowId?: string;
     error?: string;
   }): Promise<void>;
+  callbackToNmStore(input: {
+    sessionId: string;
+    algaTenantId?: string;
+    status: 'completed' | 'failed';
+    error?: string;
+  }): Promise<void>;
   // Customer tracking activities
   createCustomerCompanyActivity(input: {
     tenantName: string;
@@ -384,6 +390,25 @@ export async function tenantCreationWorkflow(
         // Log but don't fail the workflow if status update fails
         log.warn('Failed to update checkout session status to completed', {
           error: statusError instanceof Error ? statusError.message : 'Unknown error',
+          checkoutSessionId: input.checkoutSessionId,
+        });
+      }
+      
+      // Callback to nm-store with the tenant ID
+      try {
+        await activities.callbackToNmStore({
+          sessionId: input.checkoutSessionId,
+          algaTenantId: tenantResult.tenantId,
+          status: 'completed',
+        });
+        log.info('Successfully called back to nm-store with tenant ID', {
+          sessionId: input.checkoutSessionId,
+          tenantId: tenantResult.tenantId,
+        });
+      } catch (callbackError) {
+        // Log but don't fail the workflow if callback fails
+        log.warn('Failed to callback to nm-store', {
+          error: callbackError instanceof Error ? callbackError.message : 'Unknown error',
           checkoutSessionId: input.checkoutSessionId,
         });
       }

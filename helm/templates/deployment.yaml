@@ -390,6 +390,26 @@ spec:
           {{- end }}
           {{- end }}
 
+          # ----------- NM-STORE INTEGRATION ----------------
+          {{- if .Values.nm_store_integration }}
+          {{- if .Values.nm_store_integration.url }}
+          - name: NM_STORE_URL
+            value: "{{ .Values.nm_store_integration.url }}"
+          {{- end }}
+          {{- if .Values.nm_store_integration.use_shared_secret }}
+          - name: TEMPORAL_WEBHOOK_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: nm-store-db-secret
+                key: TEMPORAL_WEBHOOK_SECRET
+          - name: ALGA_WEBHOOK_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: nm-store-db-secret
+                key: ALGA_WEBHOOK_SECRET
+          {{- end }}
+          {{- end }}
+
           # ----------- MICROSOFT INTEGRATION ----------------
           {{- if .Values.microsoft_integration.enabled }}
           {{- if .Values.microsoft_integration.client_id }}

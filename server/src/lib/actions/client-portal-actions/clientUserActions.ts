@@ -293,7 +293,7 @@ export async function uploadContactAvatar(
       }
     }
   } else if (currentUser.user_type === 'internal') {
-    // Internal users can modify any contact's avatar by default
+    // MSP (internal) users can modify any contact's avatar by default
     console.log(`[uploadContactAvatar] Internal user ${currentUser.user_id} granted permission to modify contact avatar`);
     canModify = true;
   }
@@ -413,7 +413,7 @@ export async function deleteContactAvatar(
       }
     }
   } else if (currentUser.user_type === 'internal') {
-    // Internal users can delete any contact's avatar by default
+    // MSP (internal) users can delete any contact's avatar by default
     console.log(`[deleteContactAvatar] Internal user ${currentUser.user_id} granted permission to delete contact avatar`);
     canDelete = true;
   }

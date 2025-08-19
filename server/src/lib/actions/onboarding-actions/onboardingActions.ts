@@ -9,7 +9,6 @@ import { Knex } from 'knex';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
 import { createCompany } from 'server/src/lib/actions/company-actions/companyActions';
 import { createCompanyContact } from 'server/src/lib/actions/contact-actions/contactActions';
-import { getLicenseChecker } from 'server/src/lib/licensing';
 import { updateTenantOnboardingStatus, saveTenantOnboardingProgress } from 'server/src/lib/actions/tenant-settings-actions/tenantSettingsActions';
 
 export interface OnboardingActionResult {
@@ -150,24 +149,22 @@ export async function addTeamMembers(members: TeamMember[]): Promise<OnboardingA
       return { success: false, error: 'No tenant found' };
     }
 
-    // Check license limits
+    // Check license limits for  MSP (internal) users
     const { knex } = await createTenantKnex();
-    const existingUsersCount = await knex('users')
-      .where({ tenant })
-      .count('* as count')
-      .first();
-
-    const currentCount = parseInt(existingUsersCount?.count as string || '0');
-    const newTotalCount = currentCount + members.length;
-
-    const licenseChecker = await getLicenseChecker();
-    const licenseStatus = await licenseChecker.checkUserLimit(newTotalCount);
-
-    if (!licenseStatus.allowed) {
-      return { 
-        success: false, 
-        error: licenseStatus.message || 'User limit exceeded'
-      };
+    const { getLicenseUsage } = await import('../../license/get-license-usage');
+    const usage = await getLicenseUsage(tenant);
+    
+    if (usage.limit !== null) {
+      // Count how many new members are being added
+      const newInternalUsers = members.length;
+      
+      if (usage.used + newInternalUsers > usage.limit) {
+        const canAdd = Math.max(0, usage.limit - usage.used);
+        return { 
+          success: false, 
+          error: `You've reached your internal user licence limit. You can add ${canAdd} more user${canAdd !== 1 ? 's' : ''}.`
+        };
+      }
     }
 
     const created: string[] = [];
@@ -271,7 +268,7 @@ export async function addTeamMembers(members: TeamMember[]): Promise<OnboardingA
         created, 
         alreadyExists,
         failed, 
-        licenseStatus: { current: licenseStatus.current, limit: licenseStatus.limit }
+        licenseStatus: { current: usage.used, limit: usage.limit }
       }
     };
   } catch (error) {
