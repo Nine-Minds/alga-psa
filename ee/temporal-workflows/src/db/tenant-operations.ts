@@ -59,6 +59,7 @@ export async function createTenantInDB(
         log.info('Company created', { companyId, companyName: input.companyName, tenantId });
         
         // Create default location for the MSP company with email from the tenant setup
+        // IMPORTANT: location_id must be provided as it's not nullable in the database
         await trx('company_locations')
           .insert({
             location_id: knex.raw('gen_random_uuid()'),
