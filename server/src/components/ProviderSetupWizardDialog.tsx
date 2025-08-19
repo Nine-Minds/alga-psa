@@ -64,11 +64,11 @@ export function ProviderSetupWizardDialog({ isOpen, onClose, onComplete, tenant 
       </DialogContent>
       <DialogFooter>
         {step === 'select' ? (
-          <Button variant="outline" onClick={handleClose}>Cancel</Button>
+          <Button id="provider-wizard-cancel" variant="outline" onClick={handleClose}>Cancel</Button>
         ) : (
           <>
-            <Button variant="outline" onClick={handleSetupCancel}>Back</Button>
-            <Button variant="ghost" onClick={handleClose}>Close</Button>
+            <Button id="provider-wizard-back" variant="outline" onClick={handleSetupCancel}>Back</Button>
+            <Button id="provider-wizard-close" variant="ghost" onClick={handleClose}>Close</Button>
           </>
         )}
       </DialogFooter>
