@@ -337,7 +337,7 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
 
               <div className="border-t pt-4">
                 <h3 className="text-sm font-medium text-gray-900 mb-2">Description</h3>
-                <div className="text-sm text-gray-700">
+                <div className="text-sm text-gray-700 break-words max-w-full overflow-hidden">
                   {(ticket.attributes?.description as string) ? (
                     <RichTextViewer
                       content={(() => {
@@ -351,6 +351,7 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
                         }
                         return ticket.attributes?.description as string;
                       })()}
+                      className="break-words max-w-full"
                     />
                   ) : (
                     'No description found.'
