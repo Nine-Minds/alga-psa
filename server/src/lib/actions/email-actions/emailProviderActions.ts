@@ -198,31 +198,50 @@ async function persistMicrosoftConfig(
     await secretProvider.setTenantSecret(tenant, 'microsoft_client_secret', effectiveClientSecret);
   }
   
-  // Delete existing config if any
-  await trx('microsoft_email_provider_config')
-    .where({ email_provider_id: providerId, tenant })
-    .delete();
-  
-  // Insert new config
-  const msConfig = await trx('microsoft_email_provider_config')
-    .insert({
-      email_provider_id: providerId,
-      tenant,
-      client_id: effectiveClientId || null,
-      client_secret: effectiveClientSecret || null,
-      tenant_id: effectiveTenantId,
-      redirect_uri: effectiveRedirectUri,
-      auto_process_emails: config.auto_process_emails,
-      max_emails_per_sync: config.max_emails_per_sync,
-      folder_filters: JSON.stringify(config.folder_filters || []),
-      access_token: config.access_token,
-      refresh_token: config.refresh_token,
-      token_expires_at: config.token_expires_at,
-      created_at: trx.fn.now(),
-      updated_at: trx.fn.now()
-    })
-    .returning('*')
-    .then((rows: any[]) => rows[0]);
+  // Upsert config while preserving existing sensitive/webhook fields when incoming values are NULL
+  const msConfig = await trx.raw(`
+    INSERT INTO microsoft_email_provider_config (
+      email_provider_id, tenant, client_id, client_secret, tenant_id, redirect_uri,
+      auto_process_emails, max_emails_per_sync, folder_filters,
+      access_token, refresh_token, token_expires_at,
+      webhook_subscription_id, webhook_expires_at, webhook_verification_token,
+      created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ON CONFLICT (email_provider_id, tenant) DO UPDATE SET
+      client_id = EXCLUDED.client_id,
+      client_secret = EXCLUDED.client_secret,
+      tenant_id = EXCLUDED.tenant_id,
+      redirect_uri = EXCLUDED.redirect_uri,
+      auto_process_emails = EXCLUDED.auto_process_emails,
+      max_emails_per_sync = EXCLUDED.max_emails_per_sync,
+      folder_filters = EXCLUDED.folder_filters,
+      -- Preserve existing sensitive values if the new value is NULL
+      access_token = COALESCE(EXCLUDED.access_token, microsoft_email_provider_config.access_token),
+      refresh_token = COALESCE(EXCLUDED.refresh_token, microsoft_email_provider_config.refresh_token),
+      token_expires_at = COALESCE(EXCLUDED.token_expires_at, microsoft_email_provider_config.token_expires_at),
+      -- Preserve existing webhook linkage if the new value is NULL
+      webhook_subscription_id = COALESCE(EXCLUDED.webhook_subscription_id, microsoft_email_provider_config.webhook_subscription_id),
+      webhook_expires_at = COALESCE(EXCLUDED.webhook_expires_at, microsoft_email_provider_config.webhook_expires_at),
+      webhook_verification_token = COALESCE(EXCLUDED.webhook_verification_token, microsoft_email_provider_config.webhook_verification_token),
+      updated_at = CURRENT_TIMESTAMP
+    RETURNING *
+  `, [
+    providerId,
+    tenant,
+    effectiveClientId || null,
+    effectiveClientSecret || null,
+    effectiveTenantId,
+    effectiveRedirectUri,
+    config.auto_process_emails,
+    config.max_emails_per_sync,
+    JSON.stringify(config.folder_filters || []),
+    config.access_token || null,
+    config.refresh_token || null,
+    config.token_expires_at || null,
+    null, // webhook_subscription_id (preserve existing if null)
+    null, // webhook_expires_at (preserve existing if null)
+    null  // webhook_verification_token (preserve existing if null)
+  ]).then((result: any) => result.rows[0]);
   
   if (msConfig) {
     // For jsonb columns, PostgreSQL automatically parses the JSON, so no need to JSON.parse
