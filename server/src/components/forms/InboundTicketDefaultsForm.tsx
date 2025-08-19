@@ -159,7 +159,7 @@ export function InboundTicketDefaultsForm({
     }
 
     if (!formData.channel_id || !formData.status_id || !formData.priority_id) {
-      setError('Channel, status, and priority are required');
+      setError('Board, status, and priority are required');
       return;
     }
 
@@ -289,7 +289,7 @@ export function InboundTicketDefaultsForm({
         <div className="grid grid-cols-2 gap-4">
           {/* Required Fields */}
           <div>
-            <Label htmlFor="channel_id">Channel *</Label>
+          <Label htmlFor="channel_id">Board *</Label>
             <ChannelPicker
               id="channel_id"
               channels={channels}
@@ -383,14 +383,14 @@ export function InboundTicketDefaultsForm({
                   handleDefaultChange('subcategory_id', '');
                 }
               }}
-              placeholder={formData.channel_id ? 'Select category' : 'Select channel first'}
+              placeholder={formData.channel_id ? 'Select category' : 'Select board first'}
               multiSelect={false}
               disabled={!formData.channel_id}
               showReset
               allowEmpty
             />
             {formData.channel_id && (fieldOptions.categories || []).filter(c => !c.parent_id && String(c.channel_id || '') === String(formData.channel_id)).length === 0 && (
-              <p className="text-xs text-muted-foreground mt-1">No categories found for the selected channel.</p>
+              <p className="text-xs text-muted-foreground mt-1">No categories found for the selected board.</p>
             )}
           </div>
 

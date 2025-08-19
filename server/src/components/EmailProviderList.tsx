@@ -41,6 +41,7 @@ interface EmailProviderListProps {
   onTestConnection: (provider: EmailProvider) => void;
   onRefresh: () => void;
   onRefreshWatchSubscription: (provider: EmailProvider) => void;
+  onAddClick?: () => void;
 }
 
 export function EmailProviderList({
@@ -49,7 +50,8 @@ export function EmailProviderList({
   onDelete,
   onTestConnection,
   onRefresh,
-  onRefreshWatchSubscription
+  onRefreshWatchSubscription,
+  onAddClick
 }: EmailProviderListProps) {
   const [defaultsOptions, setDefaultsOptions] = React.useState<{ value: string; label: string }[]>([]);
   const [updatingProviderId, setUpdatingProviderId] = React.useState<string | null>(null);
@@ -155,6 +157,11 @@ export function EmailProviderList({
           <p className="text-muted-foreground text-center mb-4">
             Add an email provider to start receiving and processing inbound emails as tickets.
           </p>
+          {onAddClick && (
+            <Button id="empty-add-provider-btn" onClick={onAddClick}>
+              Add Email Provider
+            </Button>
+          )}
         </CardContent>
       </Card>
     );

@@ -13,8 +13,9 @@ import { Plus, Settings, Trash2, CheckCircle, Clock } from 'lucide-react';
 import { MicrosoftProviderForm } from '@ee/components/MicrosoftProviderForm';
 import { EmailProviderList } from './EmailProviderList';
 import { GmailProviderForm } from '@ee/components/GmailProviderForm';
-import { EmailProviderSelector } from './EmailProviderSelector';
+import { ProviderSetupWizardDialog } from './ProviderSetupWizardDialog';
 import { InboundTicketDefaultsManager } from './admin/InboundTicketDefaultsManager';
+import { DrawerProvider, useDrawer } from 'server/src/context/DrawerContext';
 import { 
   getEmailProviders, 
   deleteEmailProvider, 
@@ -83,7 +84,7 @@ export interface EmailProviderConfigurationProps {
   onProviderDeleted?: (providerId: string) => void;
 }
 
-export function EmailProviderConfiguration({
+function EmailProviderConfigurationContent({
   onProviderAdded,
   onProviderUpdated,
   onProviderDeleted
@@ -91,13 +92,11 @@ export function EmailProviderConfiguration({
   const [providers, setProviders] = useState<EmailProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showProviderSelector, setShowProviderSelector] = useState(false);
-  const [isSetupMode, setIsSetupMode] = useState(false);
-  const [setupProviderType, setSetupProviderType] = useState<'microsoft' | 'google' | null>(null);
-  const [selectedProvider, setSelectedProvider] = useState<EmailProvider | null>(null);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [showDefaultsManager, setShowDefaultsManager] = useState(false);
   const [tenant, setTenant] = useState<string>('');
   const [activeSection, setActiveSection] = useState<'providers' | 'defaults'>('providers');
+  const { openDrawer, closeDrawer } = useDrawer();
 
   // Load existing providers on component mount
   useEffect(() => {
@@ -126,12 +125,7 @@ export function EmailProviderConfiguration({
     return () => window.removeEventListener('open-defaults-tab', openDefaults);
   }, []);
 
-  // Update UI state based on providers
-  useEffect(() => {
-    if (!loading) {
-      setShowProviderSelector(providers.length === 0 && !isSetupMode);
-    }
-  }, [providers, loading, isSetupMode]);
+  // Wizard handles add flow; no inline auto-open
 
   const loadProviders = async () => {
     try {
@@ -147,17 +141,10 @@ export function EmailProviderConfiguration({
     }
   };
 
-  const handleProviderAdded = (provider: EmailProvider) => {
-    setProviders(prev => [...prev, provider]);
-    setIsSetupMode(false);
-    setSetupProviderType(null);
-    setShowProviderSelector(false);
-    onProviderAdded?.(provider);
-  };
+  // Add handled via wizard; we refresh list on completion
 
   const handleProviderUpdated = (provider: EmailProvider) => {
     setProviders(prev => prev.map(p => p.id === provider.id ? provider : p));
-    setSelectedProvider(null);
     onProviderUpdated?.(provider);
   };
 
@@ -167,11 +154,7 @@ export function EmailProviderConfiguration({
       
       setProviders(prev => prev.filter(p => p.id !== providerId));
       
-      // After deletion, show provider selector if no providers remain
-      const remainingProviders = providers.filter(p => p.id !== providerId);
-      if (remainingProviders.length === 0) {
-        setShowProviderSelector(true);
-      }
+      // No inline selector; wizard handles starting setup
       
       onProviderDeleted?.(providerId);
     } catch (err: any) {
@@ -222,24 +205,38 @@ export function EmailProviderConfiguration({
     }
   };
 
-  const handleProviderSelected = (providerType: 'google' | 'microsoft') => {
-    setSetupProviderType(providerType);
-    setIsSetupMode(true);
-    setShowProviderSelector(false);
-  };
-
-  const handleSetupCancel = () => {
-    setIsSetupMode(false);
-    setSetupProviderType(null);
-    // Return to selector if no providers exist, otherwise to list
-    if (providers.length === 0) {
-      setShowProviderSelector(true);
-    }
-  };
+  // Inline add/setup flow removed in favor of wizard
 
   const handleEditCancel = () => {
-    setSelectedProvider(null);
-    // Always return to provider list when editing
+    closeDrawer();
+  };
+
+  const openEditDrawer = (provider: EmailProvider) => {
+    openDrawer(
+      (
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-xl font-semibold">Edit Email Provider</h2>
+            <p className="text-sm text-muted-foreground">Update configuration for {provider.providerName}</p>
+          </div>
+          {provider.providerType === 'microsoft' ? (
+            <MicrosoftProviderForm
+              tenant={tenant}
+              provider={provider}
+              onSuccess={(p) => { handleProviderUpdated(p); closeDrawer(); }}
+              onCancel={handleEditCancel}
+            />
+          ) : (
+            <GmailProviderForm
+              tenant={tenant}
+              provider={provider}
+              onSuccess={(p) => { handleProviderUpdated(p); closeDrawer(); }}
+              onCancel={handleEditCancel}
+            />
+          )}
+        </div>
+      )
+    );
   };
 
   if (loading) {
@@ -255,65 +252,7 @@ export function EmailProviderConfiguration({
 
   // Build right-hand content for Providers section
   const renderProvidersContent = () => {
-    // Show provider selector when no providers exist and not in setup mode
-    if (showProviderSelector) {
-      return (
-        <div className="space-y-6">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold tracking-tight">Email Provider Configuration</h2>
-            <p className="text-muted-foreground mt-2">
-              Set up inbound email processing to automatically create tickets from emails
-            </p>
-          </div>
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-          <EmailProviderSelector onProviderSelected={handleProviderSelected} />
-        </div>
-      );
-    }
-
-    // Show setup form when in setup mode
-    if (isSetupMode && setupProviderType) {
-      return (
-        <div className="space-y-6">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold tracking-tight">
-              Set up {setupProviderType === 'google' ? 'Gmail' : 'Microsoft 365'} Provider
-            </h2>
-            <p className="text-muted-foreground mt-2">
-              Configure your {setupProviderType === 'google' ? 'Gmail' : 'Microsoft 365'} account for inbound email processing
-            </p>
-          </div>
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-          <Card>
-            <CardContent className="pt-6">
-              {setupProviderType === 'microsoft' ? (
-                <MicrosoftProviderForm
-                  tenant={tenant}
-                  onSuccess={handleProviderAdded}
-                  onCancel={handleSetupCancel}
-                />
-              ) : (
-                <GmailProviderForm
-                  tenant={tenant}
-                  onSuccess={handleProviderAdded}
-                  onCancel={handleSetupCancel}
-                />
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      );
-    }
-
-    // Standard providers view
+    // Standard providers view with wizard-based add flow
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -325,8 +264,7 @@ export function EmailProviderConfiguration({
           </div>
           <Button 
             id="add-provider-btn"
-            onClick={() => setShowProviderSelector(true)}
-            disabled={providers.length > 0}
+            onClick={() => setWizardOpen(true)}
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Email Provider
@@ -339,44 +277,16 @@ export function EmailProviderConfiguration({
           </Alert>
         )}
 
-        {providers.length > 0 && (
-          <EmailProviderList
-            providers={providers}
-            onEdit={setSelectedProvider}
-            onDelete={handleProviderDeleted}
-            onTestConnection={handleTestConnection}
-            onRefresh={loadProviders}
-            onRefreshWatchSubscription={handleRefreshWatchSubscription}
-          />
-        )}
+        <EmailProviderList
+          providers={providers}
+          onEdit={openEditDrawer}
+          onDelete={handleProviderDeleted}
+          onTestConnection={handleTestConnection}
+          onRefresh={loadProviders}
+          onRefreshWatchSubscription={handleRefreshWatchSubscription}
+          onAddClick={() => setWizardOpen(true)}
+        />
 
-        {selectedProvider && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Edit Email Provider</CardTitle>
-              <CardDescription>
-                Update configuration for {selectedProvider.providerName}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {selectedProvider.providerType === 'microsoft' ? (
-                <MicrosoftProviderForm
-                  tenant={tenant}
-                  provider={selectedProvider}
-                  onSuccess={handleProviderUpdated}
-                  onCancel={handleEditCancel}
-                />
-              ) : (
-                <GmailProviderForm
-                  tenant={tenant}
-                  provider={selectedProvider}
-                  onSuccess={handleProviderUpdated}
-                  onCancel={handleEditCancel}
-                />
-              )}
-            </CardContent>
-          </Card>
-        )}
 
         {/* Help Information */}
         <Card>
@@ -453,7 +363,15 @@ export function EmailProviderConfiguration({
       </div>
       <div className="flex-1 min-w-0">
         {activeSection === 'providers' ? (
-          renderProvidersContent()
+          <>
+            {renderProvidersContent()}
+            <ProviderSetupWizardDialog
+              isOpen={wizardOpen}
+              onClose={() => setWizardOpen(false)}
+              onComplete={async (provider) => { onProviderAdded?.(provider); setWizardOpen(false); await loadProviders(); }}
+              tenant={tenant}
+            />
+          </>
         ) : (
           <div className="space-y-4">
             <InboundTicketDefaultsManager onDefaultsChange={() => {
@@ -465,5 +383,13 @@ export function EmailProviderConfiguration({
         )}
       </div>
     </div>
+  );
+}
+
+export function EmailProviderConfiguration(props: EmailProviderConfigurationProps) {
+  return (
+    <DrawerProvider>
+      <EmailProviderConfigurationContent {...props} />
+    </DrawerProvider>
   );
 }

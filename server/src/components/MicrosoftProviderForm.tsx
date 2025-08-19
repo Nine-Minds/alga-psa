@@ -103,6 +103,8 @@ export function MicrosoftProviderForm({
     return () => window.removeEventListener('inbound-defaults-updated', onUpdate as any);
   }, []);
 
+  
+
   const onSubmit = async (data: MicrosoftProviderFormData) => {
     setHasAttemptedSubmit(true);
     
@@ -256,6 +258,28 @@ export function MicrosoftProviderForm({
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
+      {/* Error Display (moved to top for visibility) */}
+      {hasAttemptedSubmit && Object.keys(form.formState.errors).length > 0 && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            <p className="font-medium mb-2">Please fill in the required fields:</p>
+            <ul className="list-disc list-inside space-y-1">
+              {form.formState.errors.providerName && <li>Provider Name</li>}
+              {form.formState.errors.mailbox && <li>Email Address</li>}
+              {form.formState.errors.clientId && <li>Client ID</li>}
+              {form.formState.errors.clientSecret && <li>Client Secret</li>}
+              {form.formState.errors.redirectUri && <li>Redirect URI</li>}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       {/* Basic Configuration */}
       <Card>
         <CardHeader>
@@ -483,28 +507,6 @@ export function MicrosoftProviderForm({
 
         </CardContent>
       </Card>
-
-      {/* Error Display */}
-      {hasAttemptedSubmit && Object.keys(form.formState.errors).length > 0 && (
-        <Alert variant="destructive">
-          <AlertDescription>
-            <p className="font-medium mb-2">Please fill in the required fields:</p>
-            <ul className="list-disc list-inside space-y-1">
-              {form.formState.errors.providerName && <li>Provider Name</li>}
-              {form.formState.errors.mailbox && <li>Email Address</li>}
-              {form.formState.errors.clientId && <li>Client ID</li>}
-              {form.formState.errors.clientSecret && <li>Client Secret</li>}
-              {form.formState.errors.redirectUri && <li>Redirect URI</li>}
-            </ul>
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
 
       {/* Form Actions */}
       <div className="flex items-center justify-end space-x-2">
