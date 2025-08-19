@@ -59,16 +59,19 @@ export async function createTenantInDB(
         log.info('Company created', { companyId, companyName: input.companyName, tenantId });
         
         // Create default location for the MSP company with email from the tenant setup
-        // IMPORTANT: location_id must be provided as it's not nullable in the database
+        // Insert minimal required fields to satisfy NOT NULL constraints
         await trx('company_locations')
           .insert({
             location_id: knex.raw('gen_random_uuid()'),
             company_id: companyId,
             tenant: tenantId,
             location_name: 'Main Office',
-            email: input.email,  // Use the admin email as the default contact email
+            email: input.email, // default contact email
             phone: '',
-            address_line1: '',
+            address_line1: 'N/A', // required, placeholder per migration convention
+            city: 'N/A', // required by schema
+            country_code: 'XX', // required by schema (ISO-3166 alpha-2)
+            country_name: 'Unknown', // required by schema
             is_default: true,
             is_active: true,
             created_at: knex.fn.now(),
