@@ -13,11 +13,13 @@ import { Search, Building2 } from 'lucide-react';
 interface EmailProviderSelectorProps {
   onProviderSelected: (providerType: 'google' | 'microsoft') => void;
   onCancel?: () => void;
+  hideHeader?: boolean;
 }
 
 export function EmailProviderSelector({ 
   onProviderSelected, 
-  onCancel 
+  onCancel,
+  hideHeader = false,
 }: EmailProviderSelectorProps) {
   
   const handleProviderClick = (providerType: 'google' | 'microsoft') => {
@@ -27,13 +29,15 @@ export function EmailProviderSelector({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="text-center">
-        <h3 className="text-lg font-semibold">Choose Your Email Provider</h3>
-        <p className="text-muted-foreground mt-2">
-          Select the email service you want to use for inbound email processing. 
-          You can only configure one email provider per account.
-        </p>
-      </div>
+      {!hideHeader && (
+        <div className="text-center">
+          <h3 className="text-lg font-semibold">Choose Your Email Provider</h3>
+          <p className="text-muted-foreground mt-2">
+            Select the email service you want to use for inbound email processing. 
+            You can configure multiple email providers per account.
+          </p>
+        </div>
+      )}
 
       {/* Provider Selection Cards */}
       <div id="email-provider-selector" className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">

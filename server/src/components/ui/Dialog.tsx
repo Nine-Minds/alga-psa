@@ -133,7 +133,7 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
         <RadixDialog.Content
           ref={dialogRef}
           {...withDataAutomationId(updateDialog)}
-          className={`fixed top-1/2 left-1/2 bg-white rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} z-50 focus-within:ring-2 focus-within:ring-purple-100 focus-within:ring-offset-2`}
+          className={`fixed top-1/2 left-1/2 bg-white rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} z-50 focus-within:ring-2 focus-within:ring-purple-100 focus-within:ring-offset-2 max-h-[90vh] overflow-hidden flex flex-col`}
           style={dialogStyle}
           onKeyDown={onKeyDown}
           onOpenAutoFocus={onOpenAutoFocus}
@@ -152,7 +152,7 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
               </div>
             )}
           </div>
-          <div className="px-6 pt-3 pb-6">
+          <div className="px-6 pt-3 pb-6 flex-1 overflow-auto">
             <ReflectionParentContext.Provider value={updateDialog.id}>
               {children}
             </ReflectionParentContext.Provider>

@@ -84,6 +84,8 @@ export function GmailProviderForm({
     return () => window.removeEventListener('inbound-defaults-updated', onUpdate as any);
   }, []);
 
+  
+
   const onSubmit = async (data: EEGmailProviderFormData, providedOauthData?: any) => {
     setHasAttemptedSubmit(true);
     
@@ -220,6 +222,25 @@ export function GmailProviderForm({
         </AlertDescription>
       </Alert>
 
+      {/* Error Display (at top for visibility) */}
+      {hasAttemptedSubmit && Object.keys(form.formState.errors).length > 0 && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            <p className="font-medium mb-2">Please fill in the required fields:</p>
+            <ul className="list-disc list-inside space-y-1">
+              {form.formState.errors.providerName && <li>Provider Name</li>}
+              {form.formState.errors.mailbox && <li>Gmail Address</li>}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       <BasicConfigCard
         form={form}
         hasAttemptedSubmit={hasAttemptedSubmit}
@@ -295,24 +316,6 @@ export function GmailProviderForm({
         </CardContent>
       </Card>
 
-      {/* Error Display */}
-      {hasAttemptedSubmit && Object.keys(form.formState.errors).length > 0 && (
-        <Alert variant="destructive">
-          <AlertDescription>
-            <p className="font-medium mb-2">Please fill in the required fields:</p>
-            <ul className="list-disc list-inside space-y-1">
-              {form.formState.errors.providerName && <li>Provider Name</li>}
-              {form.formState.errors.mailbox && <li>Gmail Address</li>}
-            </ul>
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
 
       {/* OAuth Warning */}
       {oauthStatus !== 'success' && (
