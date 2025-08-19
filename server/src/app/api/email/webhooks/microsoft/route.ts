@@ -108,13 +108,6 @@ export async function POST(request: NextRequest) {
                 .andOn('mc.tenant', '=', 'ep.tenant');
           })
           .where('mc.webhook_subscription_id', providerId)
-          // Enforce tenant scoping via clientState when available
-          .modify((qb: any) => {
-            if (notification.clientState) {
-              // We use tenant UUID as clientState during subscription creation
-              qb.andWhere('mc.tenant', notification.clientState as any);
-            }
-          })
           .andWhere('ep.provider_type', 'microsoft')
           .first(
             'ep.*',
@@ -134,12 +127,18 @@ export async function POST(request: NextRequest) {
           return;
         }
 
-          // Validate clientState against primary source (email_providers.webhook_verification_token)
-          // Validate clientState if present (we set it to our tenant UUID)
+          // Validate clientState against stored verification token if present
+          // Note: MicrosoftGraphAdapter sets clientState to webhook_verification_token (not tenant ID)
           const storedToken = (row as any).mc_webhook_verification_token as string | undefined;
-          if (storedToken && notification.clientState && notification.clientState !== storedToken) {
-            console.error(`Invalid client state for provider ${row.id}`);
-            return;
+          if (storedToken) {
+            if (!notification.clientState) {
+              console.error(`Missing clientState for provider ${row.id}`);
+              return;
+            }
+            if (notification.clientState !== storedToken) {
+              console.error(`Invalid client state for provider ${row.id}`);
+              return;
+            }
           }
 
           // Extract message ID from resource
