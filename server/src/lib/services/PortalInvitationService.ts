@@ -218,63 +218,65 @@ export class PortalInvitationService {
     try {
       const { knex, tenant } = await createTenantKnex();
 
-      // Clean up expired tokens first
-      await this.cleanupExpiredTokens();
+      // Use a transaction to reduce connection pool usage
+      return await knex.transaction(async (trx) => {
+        // Clean up expired tokens first (within transaction)
+        await trx('portal_invitations')
+          .where('expires_at', '<', trx.fn.now())
+          .del();
+        
+        // Find the invitation
+        const invitation = await trx('portal_invitations as pi')
+          .join('contacts as c', function() {
+            this.on('pi.tenant', '=', 'c.tenant')
+                .andOn('pi.contact_id', '=', 'c.contact_name_id');
+          })
+          .join('companies as comp', function() {
+            this.on('c.tenant', '=', 'comp.tenant')
+                .andOn('c.company_id', '=', 'comp.company_id');
+          })
+          // Do not require tenant context here; derive tenant from invitation
+          .where({
+            'pi.token': token,
+            'pi.used_at': null
+          })
+          .where('pi.expires_at', '>', trx.fn.now())
+          .select(
+            'pi.*',
+            'c.full_name',
+            'c.email as contact_email',
+            'comp.company_name'
+          )
+          .first();
 
-      const invitations = await knex('portal_invitations');
-      console.log(invitations);
-      
-      // Find the invitation
-      const invitation = await knex('portal_invitations as pi')
-        .join('contacts as c', function() {
-          this.on('pi.tenant', '=', 'c.tenant')
-              .andOn('pi.contact_id', '=', 'c.contact_name_id');
-        })
-        .join('companies as comp', function() {
-          this.on('c.tenant', '=', 'comp.tenant')
-              .andOn('c.company_id', '=', 'comp.company_id');
-        })
-        // Do not require tenant context here; derive tenant from invitation
-        .where({
-          'pi.token': token,
-          'pi.used_at': null
-        })
-        .where('pi.expires_at', '>', knex.fn.now())
-        .select(
-          'pi.*',
-          'c.full_name',
-          'c.email as contact_email',
-          'comp.company_name'
-        )
-        .first();
-
-      if (!invitation) {
-        return { 
-          valid: false, 
-          error: 'Invalid or expired invitation token' 
-        };
-      }
-
-      return {
-        valid: true,
-        tenant: (invitation as any).tenant,
-        contact: {
-          contact_name_id: invitation.contact_id,
-          full_name: invitation.full_name,
-          email: invitation.contact_email,
-          company_name: invitation.company_name
-        },
-        invitation: {
-          invitation_id: invitation.invitation_id,
-          contact_id: invitation.contact_id,
-          token: invitation.token,
-          email: invitation.email,
-          expires_at: invitation.expires_at,
-          created_at: invitation.created_at,
-          used_at: invitation.used_at,
-          metadata: invitation.metadata
+        if (!invitation) {
+          return { 
+            valid: false, 
+            error: 'Invalid or expired invitation token' 
+          };
         }
-      };
+
+        return {
+          valid: true,
+          tenant: (invitation as any).tenant,
+          contact: {
+            contact_name_id: invitation.contact_id,
+            full_name: invitation.full_name,
+            email: invitation.contact_email,
+            company_name: invitation.company_name
+          },
+          invitation: {
+            invitation_id: invitation.invitation_id,
+            contact_id: invitation.contact_id,
+            token: invitation.token,
+            email: invitation.email,
+            expires_at: invitation.expires_at,
+            created_at: invitation.created_at,
+            used_at: invitation.used_at,
+            metadata: invitation.metadata
+          }
+        };
+      });
 
     } catch (error) {
       console.error('Error verifying portal invitation token:', error);
@@ -289,17 +291,20 @@ export class PortalInvitationService {
     try {
       const { knex, tenant } = await createTenantKnex();
 
-      const updateCount = await knex('portal_invitations')
-        .where({
-          tenant,
-          token,
-          used_at: null
-        })
-        .update({
-          used_at: knex.fn.now()
-        });
+      // Use a transaction to ensure atomicity
+      return await knex.transaction(async (trx) => {
+        const updateCount = await trx('portal_invitations')
+          .where({
+            tenant,
+            token,
+            used_at: null
+          })
+          .update({
+            used_at: trx.fn.now()
+          });
 
-      return updateCount > 0;
+        return updateCount > 0;
+      });
 
     } catch (error) {
       console.error('Error marking token as used:', error);
@@ -363,32 +368,35 @@ export class PortalInvitationService {
     try {
       const { knex, tenant } = await createTenantKnex();
 
-      // Delete expired tokens directly
-      // Since expires_at is timestamptz, PostgreSQL handles timezone conversion automatically
-      const deletedRows = await knex('portal_invitations')
-        .where('expires_at', '<', knex.fn.now())
-        .del();
-      
-      const deletedCount = deletedRows || 0;
-      
-      if (deletedCount > 0) {
-        console.log(`Cleaned up ${deletedCount} expired portal invitation tokens`);
+      // Use a transaction for cleanup operations
+      return await knex.transaction(async (trx) => {
+        // Delete expired tokens directly
+        // Since expires_at is timestamptz, PostgreSQL handles timezone conversion automatically
+        const deletedRows = await trx('portal_invitations')
+          .where('expires_at', '<', trx.fn.now())
+          .del();
         
-        // Log to audit_logs if needed
-        await knex('audit_logs').insert({
-          audit_id: knex.raw('gen_random_uuid()'),
-          tenant: tenant || '00000000-0000-0000-0000-000000000000',
-          table_name: 'portal_invitations',
-          operation: 'CLEANUP',
-          record_id: '00000000-0000-0000-0000-000000000000',
-          changed_data: { deleted_count: deletedCount },
-          details: { operation: 'automated_cleanup', deleted_count: deletedCount },
-          user_id: '00000000-0000-0000-0000-000000000000',
-          timestamp: knex.fn.now()
-        });
-      }
+        const deletedCount = deletedRows || 0;
+        
+        if (deletedCount > 0) {
+          console.log(`Cleaned up ${deletedCount} expired portal invitation tokens`);
+          
+          // Log to audit_logs if needed
+          await trx('audit_logs').insert({
+            audit_id: trx.raw('gen_random_uuid()'),
+            tenant: tenant || '00000000-0000-0000-0000-000000000000',
+            table_name: 'portal_invitations',
+            operation: 'CLEANUP',
+            record_id: '00000000-0000-0000-0000-000000000000',
+            changed_data: { deleted_count: deletedCount },
+            details: { operation: 'automated_cleanup', deleted_count: deletedCount },
+            user_id: '00000000-0000-0000-0000-000000000000',
+            timestamp: trx.fn.now()
+          });
+        }
 
-      return deletedCount;
+        return deletedCount;
+      });
 
     } catch (error) {
       console.error('Error cleaning up expired tokens:', error);
