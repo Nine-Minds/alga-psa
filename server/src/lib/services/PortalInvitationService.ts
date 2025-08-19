@@ -3,6 +3,7 @@ import { getCurrentUser } from '../actions/user-actions/userActions';
 import { checkPortalInvitationLimit, formatRateLimitError } from '../security/rateLimiting';
 import crypto from 'crypto';
 import { Knex } from 'knex';
+import { withTransaction } from '@alga-psa/shared/db';
 
 export interface PortalInvitation {
   invitation_id: string;
@@ -216,16 +217,38 @@ export class PortalInvitationService {
    */
   static async verifyToken(token: string): Promise<TokenVerificationResult> {
     try {
-      const { knex, tenant } = await createTenantKnex();
+      const { knex } = await createTenantKnex();
 
-      // Use a transaction to reduce connection pool usage
-      return await knex.transaction(async (trx) => {
-        // Clean up expired tokens first (within transaction)
+      // Use withTransaction helper for proper connection management
+      return await withTransaction(knex, async (trx) => {
+        // First, find the invitation to get its tenant
+        // This initial query needs to scan all shards, but it's necessary
+        // to determine which tenant the token belongs to
+        const tokenInfo = await trx('portal_invitations')
+          .where({
+            token,
+            used_at: null
+          })
+          .where('expires_at', '>', trx.fn.now())
+          .select('tenant', 'contact_id')
+          .first();
+
+        if (!tokenInfo) {
+          return { 
+            valid: false, 
+            error: 'Invalid or expired invitation token' 
+          };
+        }
+
+        const tokenTenant = tokenInfo.tenant;
+
+        // Clean up expired tokens for this tenant (single-shard query)
         await trx('portal_invitations')
+          .where('tenant', tokenTenant)
           .where('expires_at', '<', trx.fn.now())
           .del();
         
-        // Find the invitation
+        // Now fetch the full invitation with joins (single-shard query)
         const invitation = await trx('portal_invitations as pi')
           .join('contacts as c', function() {
             this.on('pi.tenant', '=', 'c.tenant')
@@ -235,7 +258,7 @@ export class PortalInvitationService {
             this.on('c.tenant', '=', 'comp.tenant')
                 .andOn('c.company_id', '=', 'comp.company_id');
           })
-          // Do not require tenant context here; derive tenant from invitation
+          .where('pi.tenant', tokenTenant)
           .where({
             'pi.token': token,
             'pi.used_at': null
@@ -291,8 +314,8 @@ export class PortalInvitationService {
     try {
       const { knex, tenant } = await createTenantKnex();
 
-      // Use a transaction to ensure atomicity
-      return await knex.transaction(async (trx) => {
+      // Use withTransaction helper for proper connection management
+      return await withTransaction(knex, async (trx) => {
         const updateCount = await trx('portal_invitations')
           .where({
             tenant,
@@ -363,27 +386,28 @@ export class PortalInvitationService {
 
   /**
    * Clean up expired tokens
+   * @param trx - Optional transaction to use for cleanup
    */
-  static async cleanupExpiredTokens(): Promise<number> {
+  static async cleanupExpiredTokens(trx?: Knex.Transaction): Promise<number> {
     try {
       const { knex, tenant } = await createTenantKnex();
 
-      // Use a transaction for cleanup operations
-      return await knex.transaction(async (trx) => {
-        // Delete expired tokens directly
-        // Since expires_at is timestamptz, PostgreSQL handles timezone conversion automatically
-        const deletedRows = await trx('portal_invitations')
-          .where('expires_at', '<', trx.fn.now())
+      // Use provided transaction or create a new one
+      const cleanup = async (tx: Knex.Transaction) => {
+        // Delete expired tokens for this tenant only (single-shard query)
+        const deletedRows = await tx('portal_invitations')
+          .where('tenant', tenant)
+          .where('expires_at', '<', tx.fn.now())
           .del();
         
         const deletedCount = deletedRows || 0;
         
         if (deletedCount > 0) {
-          console.log(`Cleaned up ${deletedCount} expired portal invitation tokens`);
+          console.log(`Cleaned up ${deletedCount} expired portal invitation tokens for tenant ${tenant}`);
           
           // Log to audit_logs if needed
-          await trx('audit_logs').insert({
-            audit_id: trx.raw('gen_random_uuid()'),
+          await tx('audit_logs').insert({
+            audit_id: tx.raw('gen_random_uuid()'),
             tenant: tenant || '00000000-0000-0000-0000-000000000000',
             table_name: 'portal_invitations',
             operation: 'CLEANUP',
@@ -391,12 +415,15 @@ export class PortalInvitationService {
             changed_data: { deleted_count: deletedCount },
             details: { operation: 'automated_cleanup', deleted_count: deletedCount },
             user_id: '00000000-0000-0000-0000-000000000000',
-            timestamp: trx.fn.now()
+            timestamp: tx.fn.now()
           });
         }
 
         return deletedCount;
-      });
+      };
+
+      // If transaction provided, use it; otherwise create a new one with withTransaction
+      return trx ? cleanup(trx) : withTransaction(knex, cleanup);
 
     } catch (error) {
       console.error('Error cleaning up expired tokens:', error);
