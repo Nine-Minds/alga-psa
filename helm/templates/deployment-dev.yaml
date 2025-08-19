@@ -36,6 +36,8 @@ spec:
           export {{ $k }}="{{ $v }}"
           {{- end -}}
           {{- end }}`}}
+        # Fix for Vault + Istio compatibility - exclude Vault traffic from Istio proxy
+        traffic.sidecar.istio.io/excludeOutboundIPRanges: "10.43.191.106/32"
         {{- end }}
       labels:
         {{- include "sebastian.selectorLabels" . | nindent 8 }}
