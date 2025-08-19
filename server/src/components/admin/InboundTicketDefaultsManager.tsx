@@ -231,7 +231,7 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
                     {/* Defaults Preview */}
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <span className="font-medium">Channel:</span> {nameById(fieldOptions.channels, defaultConfig.channel_id)}
+                        <span className="font-medium">Board:</span> {nameById(fieldOptions.channels, defaultConfig.channel_id)}
                       </div>
                       <div>
                         <span className="font-medium">Status:</span> {nameById(fieldOptions.statuses, defaultConfig.status_id)}

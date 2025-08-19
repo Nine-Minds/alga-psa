@@ -25,11 +25,18 @@ export function useOAuthPopup<T = any>(options: UseOAuthPopupOptions) {
   const { provider, countdownSeconds = 10 } = options;
 
   const [oauthStatus, setOauthStatus] = useState<OAuthStatus>("idle");
+  // Track latest status in a ref to avoid stale closures inside intervals
+  const oauthStatusRef = useRef<OAuthStatus>("idle");
   const [oauthData, setOauthData] = useState<T | null>(null);
   const [autoSubmitCountdown, setAutoSubmitCountdown] = useState<number | null>(null);
 
   const countdownIntervalRef = useRef<number | null>(null);
   const popupCheckIntervalRef = useRef<number | null>(null);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    oauthStatusRef.current = oauthStatus;
+  }, [oauthStatus]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -75,8 +82,10 @@ export function useOAuthPopup<T = any>(options: UseOAuthPopupOptions) {
               window.clearInterval(popupCheckIntervalRef.current);
               popupCheckIntervalRef.current = null;
             }
-            if (oauthStatus === "authorizing") {
+            // Use ref to avoid stale state from closure
+            if (oauthStatusRef.current === "authorizing") {
               setOauthStatus("idle");
+              handlers.onError?.("Authorization window was closed before completing.");
             }
           }
         }, 1000);
@@ -141,7 +150,7 @@ export function useOAuthPopup<T = any>(options: UseOAuthPopupOptions) {
         handlers.onError?.(err?.message || "OAuth popup failed");
       }
     },
-    [provider, countdownSeconds, oauthStatus]
+    [provider, countdownSeconds]
   );
 
   return {
