@@ -37,7 +37,15 @@ spec:
           {{- end -}}
           {{- end }}`}}
         # Fix for Vault + Istio compatibility - exclude Vault traffic from Istio proxy
-        traffic.sidecar.istio.io/excludeOutboundIPRanges: "10.43.191.106/32"
+        {{- with .Values.istio.sidecar.excludeOutboundPorts }}
+        traffic.sidecar.istio.io/excludeOutboundPorts: "{{ join "," . }}"
+        {{- end }}
+        {{- with .Values.istio.sidecar.excludeOutboundIPRanges }}
+        traffic.sidecar.istio.io/excludeOutboundIPRanges: "{{ . }}"
+        {{- end }}
+        {{- with .Values.istio.sidecar.includeOutboundIPRanges }}
+        traffic.sidecar.istio.io/includeOutboundIPRanges: "{{ . }}"
+        {{- end }}
         {{- end }}
       labels:
         {{- include "sebastian.selectorLabels" . | nindent 8 }}
